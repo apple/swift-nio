@@ -102,13 +102,16 @@ internal final class SelectableEventLoop: EventLoop {
     private var internalState: InternalState = .runningAndAcceptingNewRegistrations // protected by the EventLoop thread
     private var externalState: ExternalState = .open // protected by externalStateLock
 
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+#else
     let iovecs: UnsafeMutableBufferPointer<IOVector>
     let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
 
     // Used for gathering UDP writes.
     let msgs: UnsafeMutableBufferPointer<MMsgHdr>
     let addresses: UnsafeMutableBufferPointer<sockaddr_storage>
-    
+#endif
+
     // Used for UDP control messages.
     private(set) var controlMessageStorage: UnsafeControlMessageStorage
 
@@ -187,10 +190,12 @@ Further information:
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
+#if !(SWIFTNIO_USE_IO_URING && os(Linux))
         self.iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: Socket.writevLimitIOVectors)
         self.storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: Socket.writevLimitIOVectors)
         self.msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: Socket.writevLimitIOVectors)
+#endif
         self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
@@ -208,10 +213,12 @@ Further information:
                "illegal internal state on deinit: \(self.internalState)")
         assert(self.externalState == .resourcesReclaimed,
                "illegal external state on shutdown: \(self.externalState)")
+#if !(SWIFTNIO_USE_IO_URING && os(Linux))
         self.iovecs.deallocate()
         self.storageRefs.deallocate()
         self.msgs.deallocate()
         self.addresses.deallocate()
+#endif
         self.controlMessageStorage.deallocate()
     }
 
@@ -257,6 +264,26 @@ Further information:
 
         try channel.reregister(selector: self._selector, interested: channel.interestedEvent)
     }
+
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+
+    internal func writeAsync(channel: any SelectableChannel, pointer: UnsafeRawBufferPointer) throws -> Void {
+        try channel.writeAsync(selector: self._selector, pointer: pointer)
+    }
+
+    internal func writeAsync(channel: any SelectableChannel, iovecs: UnsafeBufferPointer<IOVector>) throws -> Void {
+        try channel.writeAsync(selector: self._selector, iovecs: iovecs)
+    }
+
+    internal func sendFileAsync(channel: any SelectableChannel, src: CInt, offset: Int64, count: UInt32) throws -> Void {
+        try channel.sendFileAsync(selector: self._selector, src: src, offset: offset, count: count)
+    }
+
+    internal func sendmsgAsync(channel: DatagramChannel, msghdr: UnsafePointer<msghdr>) throws -> Void {
+        try channel.sendmsgAsync(selector: self._selector, msghdr: msghdr)
+    }
+
+#endif
 
     /// - see: `EventLoop.inEventLoop`
     @usableFromInline
@@ -472,6 +499,38 @@ Further information:
                     strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask),
                     onLoopBegin: { self._tasksLock.withLock { () -> Void in self._pendingTaskPop = true } }
                 ) { ev in
+#if SWIFTNIO_USE_IO_URING
+                    switch (ev.type) {
+                    case .io(var io):
+                        switch ev.registration.channel {
+                        case .serverSocketChannel(let chan):
+                            self.handleEvent(io, channel: chan)
+                        case .socketChannel(let chan):
+                            self.handleEvent(io, channel: chan)
+                        case .datagramChannel(let chan):
+                            self.handleEvent(io, channel: chan)
+                        case .pipeChannel(let chan, let direction):
+                            if io.contains(.reset) {
+                                // .reset needs special treatment here because we're dealing with two separate pipes instead
+                                // of one socket. So we turn .reset input .readEOF/.writeEOF.
+                                io.subtract([.reset])
+                                io.formUnion([direction == .input ? .readEOF : .writeEOF])
+                            }
+                            self.handleEvent(io, channel: chan)
+                        }
+                    case .asyncWriteResult(let result):
+                        switch ev.registration.channel {
+                            case .socketChannel(let channel):
+                                channel.didAsyncWrite(result: result)
+                            case .datagramChannel(let channel):
+                                channel.didAsyncWrite(result: result)
+                            case .pipeChannel(let channel, _ /*direction*/):
+                                channel.didAsyncWrite(result: result)
+                            default:
+                                assert(false) // FIXME
+                        }
+                    }
+#else
                     switch ev.registration.channel {
                     case .serverSocketChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
@@ -489,6 +548,7 @@ Further information:
                         }
                         self.handleEvent(ev.io, channel: chan)
                     }
+#endif
                 }
             }
 

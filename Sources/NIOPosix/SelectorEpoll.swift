@@ -249,7 +249,7 @@ extension Selector: _SelectorBackendProtocol {
                         continue
                     }
 
-                    try body((SelectorEvent(io: selectorEvent, registration: registration)))
+                    try body(SelectorEvent(registration: registration, io: selectorEvent))
                 }
             }
         }

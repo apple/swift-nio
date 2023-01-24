@@ -14,8 +14,9 @@
 
 import NIOCore
 
-#if SWIFTNIO_USE_IO_URING
-#if os(Linux) || os(Android)
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+
+import CNIOLinux
 
 /// Represents the `poll` filters/events we might use from io_uring:
 ///
@@ -104,7 +105,7 @@ extension Selector: _SelectorBackendProtocol {
     }
 
     func initialiseState0() throws {
-        try ring.io_uring_queue_init()
+        try ring.queue_init()
         self.selectorFD = ring.fd
 
         // eventfd are always singleshot and re-register each time around
@@ -116,10 +117,10 @@ extension Selector: _SelectorBackendProtocol {
 
         self.eventFD = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
 
-        ring.io_uring_prep_poll_add(fileDescriptor: self.eventFD,
-                                    pollMask: URing.POLLIN,
-                                    registrationID:SelectorRegistrationID(rawValue: 0),
-                                    multishot:false) // wakeups
+        ring.prep_poll_add(fileDescriptor: self.eventFD,
+                           pollMask: URing.POLLIN,
+                           registrationID:SelectorRegistrationID(rawValue: 0),
+                           multishot:false) // wakeups
 
         self.lifecycleState = .open
         _debugPrint("URingSelector up and running fd [\(self.selectorFD)] wakeups on event_fd [\(self.eventFD)]")
@@ -133,13 +134,11 @@ extension Selector: _SelectorBackendProtocol {
                                   fileDescriptor: CInt,
                                   interested: SelectorEventSet,
                                   registrationID: SelectorRegistrationID) throws {
-        _debugPrint("register interested \(interested) uringEventSet [\(interested.uringEventSet)] registrationID[\(registrationID)]")
-        self.deferredReregistrationsPending = true
-        ring.io_uring_prep_poll_add(fileDescriptor: fileDescriptor,
-                                    pollMask: interested.uringEventSet,
-                                    registrationID: registrationID,
-                                    submitNow: !deferReregistrations,
-                                    multishot: multishot)
+        _debugPrint("register0: interested \(interested) uringEventSet [\(interested.uringEventSet)] registrationID[\(registrationID)]")
+        ring.prep_poll_add(fileDescriptor: fileDescriptor,
+                           pollMask: interested.uringEventSet,
+                           registrationID: registrationID,
+                           multishot: multishot)
     }
 
     func reregister0<S: Selectable>(selectable: S,
@@ -147,39 +146,52 @@ extension Selector: _SelectorBackendProtocol {
                                     oldInterested: SelectorEventSet,
                                     newInterested: SelectorEventSet,
                                     registrationID: SelectorRegistrationID) throws {
-        _debugPrint("Re-register old \(oldInterested) new \(newInterested) uringEventSet [\(oldInterested.uringEventSet)] reg.uringEventSet [\(newInterested.uringEventSet)]")
-
-        self.deferredReregistrationsPending = true
+        _debugPrint("Re-register0: old \(oldInterested) new \(newInterested) uringEventSet [\(oldInterested.uringEventSet)] reg.uringEventSet [\(newInterested.uringEventSet)]")
         if multishot {
-            ring.io_uring_poll_update(fileDescriptor: fileDescriptor,
-                                      newPollmask: newInterested.uringEventSet,
-                                      oldPollmask: oldInterested.uringEventSet,
-                                      registrationID: registrationID,
-                                      submitNow: !deferReregistrations,
-                                      multishot: true)
+            ring.poll_update(fileDescriptor: fileDescriptor,
+                             newPollMask: newInterested.uringEventSet,
+                             oldPollMask: oldInterested.uringEventSet,
+                             registrationID: registrationID,
+                             multishot: true)
         } else {
-            ring.io_uring_prep_poll_remove(fileDescriptor: fileDescriptor,
-                                           pollMask: oldInterested.uringEventSet,
-                                           registrationID: registrationID,
-                                           submitNow:!deferReregistrations,
-                                           link: true) // next event linked will cancel if this event fails
+            ring.prep_poll_remove(fileDescriptor: fileDescriptor,
+                                  pollMask: oldInterested.uringEventSet,
+                                  registrationID: registrationID,
+                                  link: true) // next event linked will cancel if this event fails
 
-            ring.io_uring_prep_poll_add(fileDescriptor: fileDescriptor,
-                                        pollMask: newInterested.uringEventSet,
-                                        registrationID: registrationID,
-                                        submitNow: !deferReregistrations,
-                                        multishot: false)
+            ring.prep_poll_add(fileDescriptor: fileDescriptor,
+                               pollMask: newInterested.uringEventSet,
+                               registrationID: registrationID,
+                               multishot: false)
         }
     }
 
     func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-        _debugPrint("deregister interested \(selectable) reg.interested.uringEventSet [\(oldInterested.uringEventSet)]")
+        _debugPrint("deregister0: interested \(selectable) reg.interested.uringEventSet [\(oldInterested.uringEventSet)]")
+        ring.prep_poll_remove(fileDescriptor: fileDescriptor,
+                              pollMask: oldInterested.uringEventSet,
+                              registrationID: registrationID)
+    }
 
-        self.deferredReregistrationsPending = true
-        ring.io_uring_prep_poll_remove(fileDescriptor: fileDescriptor,
-                                       pollMask: oldInterested.uringEventSet,
-                                       registrationID: registrationID,
-                                       submitNow:!deferReregistrations)
+    func writeAsync0(fileDescriptor: CInt, pointer: UnsafeRawBufferPointer, registrationID: SelectorRegistrationID) throws {
+        ring.prep_write(fileDescriptor: fileDescriptor,
+                        pointer: pointer,
+                        registrationID: registrationID)
+    }
+
+    func writeAsync0(fileDescriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>, registrationID: SelectorRegistrationID) throws {
+        ring.prep_writev(fileDescriptor: fileDescriptor,
+                         iovecs: iovecs,
+                         registrationID: registrationID)
+    }
+
+    func sendFileAsync0(fileDescriptor: CInt, src: CInt, offset: Int64, count: UInt32, registrationID: SelectorRegistrationID) throws {
+        let pipe = try pipeCache.get()
+        ring.prep_sendfile(fileDescriptor, src, offset, count, registrationID, pipe)
+    }
+
+    func sendmsgAsync0(fileDescriptor: CInt, msghdr: UnsafePointer<msghdr>, registrationID: SelectorRegistrationID) throws {
+        ring.prep_sendmsg(fileDescriptor, msghdr, registrationID)
     }
 
     private func shouldRefreshPollForEvent(selectorEvent:SelectorEventSet) -> Bool {
@@ -203,33 +215,27 @@ extension Selector: _SelectorBackendProtocol {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
 
+        ring.flush()
+
         var ready: Int = 0
-
-        // flush reregistration of pending modifications if needed (nop in SQPOLL mode)
-        // basically this elides all reregistrations and deregistrations into a single
-        // syscall instead of one for each. Future improvement would be to also merge
-        // the pending pollmasks (now each change will be queued, but we could also
-        // merge the masks for reregistrations) - but the most important thing is to
-        // only trap into the kernel once for the set of changes, so needs to be measured.
-        if deferReregistrations && self.deferredReregistrationsPending {
-            self.deferredReregistrationsPending = false
-            ring.io_uring_flush()
-        }
-
         switch strategy {
         case .now:
-            _debugPrint("whenReady.now")
-            ready = Int(ring.io_uring_peek_batch_cqe(events: events, maxevents: UInt32(eventsCapacity), multishot:multishot))
+            _debugPrint(#function + ": now")
+            var pendingSQEs = 0
+            ready = ring.peekBatchCQE(events: events, maxEvents: eventsCapacity, pendingSQEs: &pendingSQEs, multishot: self.multishot)
         case .blockUntilTimeout(let timeAmount):
-            _debugPrint("whenReady.blockUntilTimeout")
-            ready = try Int(ring.io_uring_wait_cqe_timeout(events: events, maxevents: UInt32(eventsCapacity), timeout:timeAmount, multishot:multishot))
+            _debugPrint(#function + ": until \(timeAmount)")
+            ready = try ring.waitCQE(events: events, timeout: timeAmount, multishot: multishot)
         case .block:
-            _debugPrint("whenReady.block")
-            ready = Int(ring.io_uring_peek_batch_cqe(events: events, maxevents: UInt32(eventsCapacity), multishot:multishot)) // first try to consume any existing
-
-            if (ready <= 0)   // otherwise block (only single supported, but we will use batch peek cqe next run around...
-            {
-                ready = try ring.io_uring_wait_cqe(events: events, maxevents: UInt32(eventsCapacity), multishot:multishot)
+            _debugPrint(#function + ": block")
+            var pendingSQEs = 0
+            ready = ring.peekBatchCQE(events: events, maxEvents: eventsCapacity, pendingSQEs: &pendingSQEs, multishot: self.multishot) // first try to consume any existing
+            if (ready <= 0) {
+                // otherwise block (only single supported, but we will use batch peek cqe next run around...
+                if pendingSQEs > 0 {
+                    ring.flush()
+                }
+                ready = try ring.waitCQE(events: events, multishot: multishot)
             }
         }
 
@@ -238,90 +244,99 @@ extension Selector: _SelectorBackendProtocol {
         for i in 0..<ready {
             let event = events[i]
 
-            switch event.fd {
-            case self.eventFD: // we don't run these as multishots to avoid tons of events when many wakeups are done
-                    _debugPrint("wakeup successful for event.fd [\(event.fd)]")
-                    var val = EventFd.eventfd_t()
-                    ring.io_uring_prep_poll_add(fileDescriptor: self.eventFD,
-                                                pollMask: URing.POLLIN,
-                                                registrationID: SelectorRegistrationID(rawValue: 0),
-                                                submitNow: false,
-                                                multishot: false)
-                    do {
-                        _ = try EventFd.eventfd_read(fd: self.eventFD, value: &val) // consume wakeup event
-                        _debugPrint("read val [\(val)] from event.fd [\(event.fd)]")
-                    } catch  {
-                    }
-            default:
-                if let registration = registrations[Int(event.fd)] {
+            if event.fd == self.eventFD {
 
-                    _debugPrint("We found a registration for event.fd [\(event.fd)]") // \(registration)
+                _debugPrint("wakeup successful for event.fd [\(event.fd)]")
+                var val = EventFd.eventfd_t()
+                ring.prep_poll_add(fileDescriptor: self.eventFD,
+                                   pollMask: URing.POLLIN,
+                                   registrationID: SelectorRegistrationID(rawValue: 0),
+                                   multishot: false)
+                do {
+                    _ = try EventFd.eventfd_read(fd: self.eventFD, value: &val) // consume wakeup event
+                    _debugPrint("read val [\(val)] from event.fd [\(event.fd)]")
+                } catch  {
+                }
+            }
+            else if let registration = registrations[Int(event.fd)] {
 
-                    // The io_uring backend only has 16 bits available for the registration id
-                    guard event.registrationID == UInt16(truncatingIfNeeded:registration.registrationID.rawValue) else {
-                        _debugPrint("The event.registrationID [\(event.registrationID)] !=  registration.selectableregistrationID [\(registration.registrationID)], skipping to next event")
-                        continue
-                    }
+                _debugPrint("We found a registration for event.fd [\(event.fd)]") // \(registration)
 
-                    var selectorEvent = SelectorEventSet(uringEvent: event.pollMask)
+                // The io_uring backend only has 16 bits available for the registration id
+                guard event.registrationID == UInt16(truncatingIfNeeded: registration.registrationID.rawValue) else {
+                    _debugPrint("The event.registrationID [\(event.registrationID)] !=  registration.selectableregistrationID [\(registration.registrationID)], skipping to next event")
+                    continue
+                }
 
-                    _debugPrint("selectorEvent [\(selectorEvent)] registration.interested [\(registration.interested)]")
+                switch event.type {
+                    case ._none:
+                        assert(false)
+                        _debugPrint("internal error")
+                    case .poll(let pollMask, let pollCancelled):
+                        var selectorEventSet = SelectorEventSet(uringEvent: pollMask)
 
-                    // we only want what the user is currently registered for & what we got
-                    selectorEvent = selectorEvent.intersection(registration.interested)
+                        _debugPrint("selectorEventSet[\(selectorEventSet)] registration.interested [\(registration.interested)]")
 
-                    _debugPrint("intersection [\(selectorEvent)]")
+                        // we only want what the user is currently registered for & what we got
+                        selectorEventSet = selectorEventSet.intersection(registration.interested)
 
-                    if selectorEvent.contains(.readEOF) {
-                       _debugPrint("selectorEvent.contains(.readEOF) [\(selectorEvent.contains(.readEOF))]")
-                    }
+                        _debugPrint("intersection[\(selectorEventSet)]")
 
-                    if multishot == false { // must be before guard, otherwise lost wake
-                        ring.io_uring_prep_poll_add(fileDescriptor: event.fd,
-                                                    pollMask: registration.interested.uringEventSet,
-                                                    registrationID: registration.registrationID,
-                                                    submitNow: false,
-                                                    multishot: false)
-
-                        if event.pollCancelled {
-                            _debugPrint("Received event.pollCancelled")
+                        if selectorEventSet.contains(.readEOF) {
+                            _debugPrint("selectorEventSet.contains(.readEOF) [\(selectorEventSet.contains(.readEOF))]")
                         }
-                    }
 
-                    guard selectorEvent != ._none else {
-                        _debugPrint("selectorEvent != ._none / [\(selectorEvent)] [\(registration.interested)] [\(SelectorEventSet(uringEvent: event.pollMask))] [\(event.pollMask)] [\(event.fd)]")
-                        continue
-                    }
+                        if multishot == false { // must be before guard, otherwise lost wake
+                            ring.prep_poll_add(fileDescriptor: event.fd,
+                                               pollMask: registration.interested.uringEventSet,
+                                               registrationID: registration.registrationID,
+                                               multishot: false)
 
-                    // This is only needed due to the edge triggered nature of liburing, possibly
-                    // we can get away with only updating (force triggering an event if available) for
-                    // partial reads (where we currently give up after N iterations)
-                    if multishot && self.shouldRefreshPollForEvent(selectorEvent:selectorEvent) { // can be after guard as it is multishot
-                        ring.io_uring_poll_update(fileDescriptor: event.fd,
-                                                  newPollmask: registration.interested.uringEventSet,
-                                                  oldPollmask: registration.interested.uringEventSet,
-                                                  registrationID: registration.registrationID,
-                                                  submitNow: false)
-                    }
+                            if pollCancelled {
+                                _debugPrint("Received event.pollCancelled")
+                            }
+                        }
 
-                    _debugPrint("running body [\(NIOThread.current)] \(selectorEvent) \(SelectorEventSet(uringEvent: event.pollMask))")
+                        guard selectorEventSet != ._none else {
+                            _debugPrint("selectorEvent != ._none / [\(selectorEventSet)] [\(registration.interested)] [\(selectorEventSet)]")
+                            continue
+                        }
 
-                    try body((SelectorEvent(io: selectorEvent, registration: registration)))
+                        // This is only needed due to the edge triggered nature of liburing, possibly
+                        // we can get away with only updating (force triggering an event if available) for
+                        // partial reads (where we currently give up after N iterations)
+                        if multishot && self.shouldRefreshPollForEvent(selectorEvent: selectorEventSet) { // can be after guard as it is multishot
+                            ring.poll_update(fileDescriptor: event.fd,
+                                             newPollMask: registration.interested.uringEventSet,
+                                             oldPollMask: registration.interested.uringEventSet,
+                                             registrationID: registration.registrationID)
+                        }
 
-               } else { // remove any polling if we don't have a registration for it
-                    _debugPrint("We had no registration for event.fd [\(event.fd)] event.pollMask [\(event.pollMask)] event.registrationID [\(event.registrationID)], it should be deregistered already")
-                    if multishot == false {
-                        ring.io_uring_prep_poll_remove(fileDescriptor: event.fd,
-                                                       pollMask: event.pollMask,
-                                                       registrationID: SelectorRegistrationID(rawValue: UInt32(event.registrationID)),
-                                                       submitNow: false)
+                        let selectorEvent = SelectorEvent(registration: registration, type: .io(selectorEventSet))
+                        _debugPrint("running body \(selectorEvent)")
+                        try body(selectorEvent)
+
+                    case .write(let result):
+                        let selectorEvent = SelectorEvent(registration: registration, type: .asyncWriteResult(result))
+                        _debugPrint("running body \(selectorEvent)")
+                        try body(selectorEvent)
+                }
+            }
+            else { // remove any polling if we don't have a registration for it
+                _debugPrint("We had no registration for event [\(event)]")
+                if multishot == false {
+                    switch event.type {
+                        case .poll(let pollMask, _):
+                            ring.prep_poll_remove(fileDescriptor: event.fd,
+                                                        pollMask: pollMask,
+                                                  registrationID: SelectorRegistrationID(rawValue: UInt32(event.registrationID)))
+                        default:
+                            break
                     }
                 }
             }
         }
 
-        self.deferredReregistrationsPending = false // none pending as we will flush here
-        ring.io_uring_flush() // flush reregisteration of the polls if needed (nop in SQPOLL mode)
         growEventArrayIfNeeded(ready: ready)
     }
 
@@ -337,7 +352,7 @@ extension Selector: _SelectorBackendProtocol {
             // Therefore, we assert here that close will always succeed and if not, that's a NIO bug we need to know
             // about.
 
-            ring.io_uring_queue_exit() // This closes the ring selector fd for us
+            ring.queue_exit() // This closes the ring selector fd for us
             self.selectorFD = -1
 
             try! Posix.close(descriptor: self.eventFD)
@@ -357,7 +372,5 @@ extension Selector: _SelectorBackendProtocol {
         }
     }
 }
-
-#endif
 
 #endif

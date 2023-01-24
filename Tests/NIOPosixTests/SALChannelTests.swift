@@ -32,6 +32,7 @@ final class SALChannelTest: XCTestCase, SALTest {
     }
 
     func testBasicConnectedChannel() throws {
+#if !(SWIFTNIO_USE_IO_URING && os(Linux))
         let localAddress = try! SocketAddress(ipAddress: "0.1.2.3", port: 4)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
         let buffer = ByteBuffer(string: "xxx")
@@ -57,9 +58,11 @@ final class SALChannelTest: XCTestCase, SALTest {
                 channel.close()
             }
         }.salWait()
+#endif
     }
 
     func testWritesFromWritabilityNotificationsDoNotGetLostIfWePreviouslyWroteEverything() {
+#if !(SWIFTNIO_USE_IO_URING && os(Linux))
         // This is a unit test, doing what
         //     testWriteAndFlushFromReentrantFlushNowTriggeredOutOfWritabilityWhereOuterSaysAllWrittenAndInnerDoesNot
         // does but in a deterministic way, without having to send actual bytes.
@@ -135,10 +138,10 @@ final class SALChannelTest: XCTestCase, SALTest {
 
             // Before sending back the writable notification, we know that that'll trigger a Channel writability change
             XCTAssertTrue(writableNotificationStepExpectation.compareExchange(expected: 1, desired: 2, ordering: .relaxed).exchanged)
-            let writableEvent = SelectorEvent(io: [.write],
-                                              registration: NIORegistration(channel: .socketChannel(channel),
+            let writableEvent = SelectorEvent(registration: NIORegistration(channel: .socketChannel(channel),
                                                                             interested:  [.write],
-                                                                            registrationID: .initialRegistrationID))
+                                                                            registrationID: .initialRegistrationID),
+                                              io: [.write])
             try self.assertWaitingForNotification(result: writableEvent)
             try self.assertWrite(expectedFD: .max,
                                  expectedBytes: buffer.getSlice(at: 1, length: 1)!,
@@ -181,6 +184,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 return channel.writeAndFlush(buffer)
             }
         }.salWait())
+#endif
     }
 
     func testWeSurviveIfIgnoringSIGPIPEFails() {
@@ -229,10 +233,17 @@ final class SALChannelTest: XCTestCase, SALTest {
         g.enter()
 
         XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            let readEvent = SelectorEvent(io: [.read],
-                                          registration: NIORegistration(channel: .socketChannel(channel),
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+            let readEvent = SelectorEvent(registration: NIORegistration(channel: .socketChannel(channel),
                                                                         interested: [.read],
-                                                                        registrationID: .initialRegistrationID))
+                                                                        registrationID: .initialRegistrationID),
+                                          type: .io([.read]))
+#else
+            let readEvent = SelectorEvent(registration: NIORegistration(channel: .socketChannel(channel),
+                                                                        interested: [.read],
+                                                                        registrationID: .initialRegistrationID),
+                                          io: [.read])
+#endif
             try self.assertWaitingForNotification(result: readEvent)
             try self.assertRead(expectedFD: .max, expectedBufferSpace: 2048, return: buffer)
         }) {
@@ -322,5 +333,4 @@ final class SALChannelTest: XCTestCase, SALTest {
                 }
         }.salWait())
     }
-
 }

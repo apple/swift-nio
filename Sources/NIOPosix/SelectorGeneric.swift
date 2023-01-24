@@ -92,6 +92,59 @@ internal let isEarlyEOFDeliveryWorkingOnThisOS: Bool = {
     #endif
 }()
 
+#if SWIFTNIO_USE_IO_URING
+
+internal class Cache<Element> {
+    private let maxSize : Int
+    private let ctor: (Cache<Element>) throws -> Element
+    private let dtor: (Element) -> Void
+    private var cache : [Element]
+
+    init(maxSize: Int, ctor: @escaping (Cache<Element>) throws -> Element, dtor: @escaping (Element) -> Void) {
+        self.maxSize = maxSize
+        self.ctor = ctor
+        self.dtor = dtor
+        self.cache = [Element]()
+    }
+
+    deinit {
+        while !cache.isEmpty {
+            let e = cache.removeLast()
+            dtor(e)
+        }
+    }
+
+    func get() throws -> Element {
+        if cache.isEmpty {
+            return try ctor(self)
+        }
+        else {
+            return cache.removeLast()
+        }
+    }
+
+    func put(_ e: Element) {
+        if (cache.count == maxSize) {
+            dtor(e)
+        }
+        else {
+            cache.append(e)
+        }
+    }
+}
+
+internal struct Pipe {
+    let cache: Cache<Pipe>
+    let read: Int32
+    let write: Int32
+
+    func release() {
+        cache.put(self)
+    }
+}
+
+#endif
+
 /// This protocol defines the methods that are expected to be found on
 /// `Selector`. While defined as a protocol there is no expectation that any
 /// object other than `Selector` will implement this protocol: instead, this
@@ -104,6 +157,14 @@ protocol _SelectorBackendProtocol {
     func register0<S: Selectable>(selectable: S, fileDescriptor: CInt, interested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
     func reregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
     func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
+
+#if SWIFTNIO_USE_IO_URING
+    func writeAsync0(fileDescriptor: CInt, pointer: UnsafeRawBufferPointer, registrationID: SelectorRegistrationID) throws
+    func writeAsync0(fileDescriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>, registrationID: SelectorRegistrationID) throws
+    func sendFileAsync0(fileDescriptor: CInt, src: CInt, offset: Int64, count: UInt32, registrationID: SelectorRegistrationID) throws
+    func sendmsgAsync0(fileDescriptor: CInt, msghdr: UnsafePointer<msghdr>, registrationID: SelectorRegistrationID) throws
+#endif
+
     /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
     func wakeup0() throws
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
@@ -137,20 +198,32 @@ internal class Selector<R: Registration>  {
     // Here we add the stored properties that are used by the specific backends
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     typealias EventType = kevent
-    #elseif os(Linux) || os(Android)
-    #if !SWIFTNIO_USE_IO_URING
-    typealias EventType = Epoll.epoll_event
-    var earliestTimer: NIODeadline = .distantFuture
-    var eventFD: CInt = -1 // -1 == we're closed
-    var timerFD: CInt = -1 // -1 == we're closed
-    #else
+    #elseif SWIFTNIO_USE_IO_URING && os(Linux)
     typealias EventType = URingEvent
     var eventFD: CInt = -1 // -1 == we're closed
     var ring = URing()
     let multishot = URing.io_uring_use_multishot_poll // if true, we run with streaming multishot polls
-    let deferReregistrations = true // if true we only flush once at reentring whenReady() - saves syscalls
-    var deferredReregistrationsPending = false // true if flush needed when reentring whenReady()
-    #endif
+    let pipeCache = Cache<Pipe>(maxSize: 8,
+        ctor: { cache in
+            let fds = UnsafeMutablePointer<Int32>.allocate(capacity: 2)
+            defer { fds.deallocate() }
+            let rc = pipe(fds)
+            if rc == 0 {
+                return Pipe(cache: cache, read: fds[0], write: fds[1])
+            }
+            else {
+                throw IOError(errnoCode: errno, reason: "pipe")
+            }
+        },
+        dtor: { pipe in
+            Glibc.close(pipe.read)
+            Glibc.close(pipe.write)
+        })
+    #elseif os(Linux) || os(Android)
+    typealias EventType = Epoll.epoll_event
+    var earliestTimer: NIODeadline = .distantFuture
+    var eventFD: CInt = -1 // -1 == we're closed
+    var timerFD: CInt = -1 // -1 == we're closed
     #else
     #error("Unsupported platform, no suitable selector backend (we need kqueue or epoll support)")
     #endif
@@ -278,6 +351,38 @@ internal class Selector<R: Registration>  {
         }
     }
 
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+
+    func writeAsync(selectable: Selectable, pointer: UnsafeRawBufferPointer) throws {
+        try selectable.withUnsafeHandle { fileDescriptor in
+            let reg = registrations[Int(fileDescriptor)]!
+            try self.writeAsync0(fileDescriptor: fileDescriptor, pointer: pointer, registrationID: reg.registrationID)
+        }
+    }
+
+    func writeAsync(selectable: Selectable, iovecs: UnsafeBufferPointer<IOVector>) throws {
+        try selectable.withUnsafeHandle { fileDescriptor in
+            let reg = registrations[Int(fileDescriptor)]!
+            try self.writeAsync0(fileDescriptor: fileDescriptor, iovecs: iovecs, registrationID: reg.registrationID)
+        }
+    }
+
+    func sendFileAsync(selectable: Selectable, src: CInt, offset: Int64, count: UInt32) throws {
+        try selectable.withUnsafeHandle { fileDescriptor in
+            let reg = registrations[Int(fileDescriptor)]!
+            try self.sendFileAsync0(fileDescriptor: fileDescriptor, src: src, offset: offset, count: count, registrationID: reg.registrationID)
+        }
+    }
+
+    func sendmsgAsync(selectable: Selectable, msghdr: UnsafePointer<msghdr>) throws {
+        try selectable.withUnsafeHandle { fileDescriptor in
+            let reg = registrations[Int(fileDescriptor)]!
+            try self.sendmsgAsync0(fileDescriptor: fileDescriptor, msghdr: msghdr, registrationID: reg.registrationID)
+        }
+    }
+
+#endif
+
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///
     /// - parameters:
@@ -324,19 +429,18 @@ extension Selector: CustomStringConvertible {
 }
 
 /// An event that is triggered once the `Selector` was able to select something.
+
 struct SelectorEvent<R> {
     public let registration: R
-    public var io: SelectorEventSet
-
-    /// Create new instance
-    ///
-    /// - parameters:
-    ///     - io: The `SelectorEventSet` that triggered this event.
-    ///     - registration: The registration that belongs to the event.
-    init(io: SelectorEventSet, registration: R) {
-        self.io = io
-        self.registration = registration
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+    enum EventType {
+        case io(SelectorEventSet)
+        case asyncWriteResult(Int32)
     }
+    public let type: EventType
+#else
+    public var io: SelectorEventSet
+#endif
 }
 
 extension Selector where R == NIORegistration {

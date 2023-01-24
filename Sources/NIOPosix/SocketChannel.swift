@@ -132,7 +132,6 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         try self.socket.finishConnect()
     }
 
-
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.register(selectable: self.socket,
                               interested: interested,
@@ -147,6 +146,22 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.reregister(selectable: self.socket, interested: interested)
     }
+
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+
+    override func writeAsync(selector: Selector<NIORegistration>, pointer: UnsafeRawBufferPointer) throws {
+        try selector.writeAsync(selectable: self.socket, pointer: pointer)
+    }
+
+    override func writeAsync(selector: Selector<NIORegistration>, iovecs: UnsafeBufferPointer<IOVector>) throws {
+        try selector.writeAsync(selectable: self.socket, iovecs: iovecs)
+    }
+
+    override func sendFileAsync(selector: Selector<NIORegistration>, src: CInt, offset: Int64, count: UInt32) throws {
+        try selector.sendFileAsync(selectable: self.socket, src: src, offset: offset, count: count)
+    }
+
+#endif
 }
 
 /// A `Channel` for a server socket.
@@ -344,9 +359,14 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         // We do nothing here: flushes are no-ops.
     }
 
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+    override func flushNow() {
+    }
+#else
     override func flushNow() -> IONotificationState {
         return IONotificationState.unregister
     }
+#endif
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.register(selectable: self.socket,
@@ -423,12 +443,24 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             throw err
         }
 
-        self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
-                                                          iovecs: eventLoop.iovecs,
-                                                          addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs,
-                                                          controlMessageStorage: eventLoop.controlMessageStorage)
-
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        let msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: 1)
+        let iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: 1)
+        let storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: 1)
+        let addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: 1)
+        let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
+#else
+        let msgs = eventLoop.msgs
+        let iovecs = eventLoop.iovecs
+        let addresses = eventLoop.addresses
+        let storageRefs = eventLoop.storageRefs
+        let controlMessageStorage = eventLoop.controlMessageStorage
+#endif
+        self.pendingWrites = PendingDatagramWritesManager(msgs: msgs,
+                                                          iovecs: iovecs,
+                                                          addresses: addresses,
+                                                          storageRefs: storageRefs,
+                                                          controlMessageStorage: controlMessageStorage)
         try super.init(
             socket: socket,
             parent: nil,
@@ -441,11 +473,24 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         self.vectorReadManager = nil
         try socket.setNonBlocking()
-        self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
-                                                          iovecs: eventLoop.iovecs,
-                                                          addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs,
-                                                          controlMessageStorage: eventLoop.controlMessageStorage)
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        let msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: 1)
+        let iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: 1)
+        let storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: 1)
+        let addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: 1)
+        let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
+#else
+        let msgs = eventLoop.msgs
+        let iovecs = eventLoop.iovecs
+        let addresses = eventLoop.addresses
+        let storageRefs = eventLoop.storageRefs
+        let controlMessageStorage = eventLoop.controlMessageStorage
+#endif
+        self.pendingWrites = PendingDatagramWritesManager(msgs: msgs,
+                                                          iovecs: iovecs,
+                                                          addresses: addresses,
+                                                          storageRefs: storageRefs,
+                                                          controlMessageStorage: controlMessageStorage)
         try super.init(
             socket: socket,
             parent: parent,
@@ -788,6 +833,30 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.pendingWrites.failAll(error: error, close: true)
     }
 
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+
+    override func writeToSocket() throws {
+        try self.pendingWrites.triggerAsnycWriteOperation { msghdr in
+            try self.selectableEventLoop.sendmsgAsync(channel: self, msghdr: msghdr)
+        }
+    }
+
+    func sendmsgAsync(selector: Selector<NIORegistration>, msghdr: UnsafePointer<msghdr>) throws {
+        try selector.sendmsgAsync(selectable: self.socket, msghdr: msghdr)
+    }
+
+    func didAsyncWrite(result: Int32) {
+        let (writabilityChange, flushAgain) = self.pendingWrites.didAsyncWrite(written: result)
+        if writabilityChange {
+            self.pipeline.syncOperations.fireChannelWritabilityChanged()
+        }
+        if flushAgain {
+            self.flushNow()
+        }
+    }
+
+#else
+
     override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
             scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
@@ -810,7 +879,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return result
     }
 
-
+#endif
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {

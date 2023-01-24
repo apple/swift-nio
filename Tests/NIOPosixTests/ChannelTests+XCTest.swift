@@ -29,6 +29,7 @@ extension ChannelTests {
       return [
                 ("testBasicLifecycle", testBasicLifecycle),
                 ("testManyManyWrites", testManyManyWrites),
+                ("testEmtyWrite", testEmptyWrite),
                 ("testWritevLotsOfData", testWritevLotsOfData),
                 ("testParentsOfSocketChannels", testParentsOfSocketChannels),
                 ("testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings", testPendingWritesEmptyWritesWorkAndWeDontWriteUnflushedThings),

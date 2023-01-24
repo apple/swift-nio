@@ -26,7 +26,14 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         eventLoop: SelectableEventLoop,
         recvAllocator: RecvByteBufferAllocator
     ) throws {
-        self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        let iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: NIOPosix.Socket.writevLimitIOVectors)
+        let storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: NIOPosix.Socket.writevLimitIOVectors)
+#else
+        let iovecs = eventLoop.iovecs
+        let storageRefs = eventLoop.storageRefs
+#endif
+        self.pendingWrites = PendingStreamWritesManager(iovecs: iovecs, storageRefs: storageRefs)
         self.connectTimeoutScheduled = nil
         try super.init(
             socket: socket,
@@ -159,6 +166,46 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         return result
     }
 
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+
+    override func writeToSocket() throws {
+        try self.pendingWrites.triggerAppropriateAsyncWriteOperations(
+            scalarBufferAsyncWriteOperation: { ptr in
+                try self.selectableEventLoop.writeAsync(channel: self, pointer: ptr)
+            },
+            vectorBufferAsyncWriteOperation: { iovecs in
+                try self.selectableEventLoop.writeAsync(channel: self, iovecs: iovecs)
+            },
+            scalarFileAsyncWriteOperation: { descriptor, index, endIndex in
+                let count = (endIndex - index)
+                try self.selectableEventLoop.sendFileAsync(channel: self, src: descriptor, offset: Int64(index), count: UInt32(count))
+            })
+    }
+
+    func didAsyncWrite(result: Int32) {
+        if (result > 0) {
+            let (writabilityChange, flushAgain) = self.pendingWrites.didAsyncWrite(written: Int(result))
+            if writabilityChange {
+                self.pipeline.syncOperations.fireChannelWritabilityChanged()
+            }
+            if flushAgain {
+                self.flushNow()
+            }
+        }
+        else {
+            self.pendingWrites.releaseData()
+            let errnoCode = -result
+            if errnoCode == EAGAIN {
+                self.flushNow()
+            }
+            else {
+                assert(false)
+            }
+        }
+    }
+
+#else
+
     final override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
             guard ptr.count > 0 else {
@@ -175,6 +222,8 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         })
         return result
     }
+
+#endif
 
     final override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         do {

@@ -374,9 +374,20 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     // MARK: Methods to override in subclasses.
+
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+
+    func writeToSocket() throws {
+        fatalError("must be overridden")
+    }
+
+#else
+
     func writeToSocket() throws -> OverallWriteResult {
         fatalError("must be overridden")
     }
+
+#endif
 
     /// Read data from the underlying socket and dispatch it to the `ChannelPipeline`
     ///
@@ -436,14 +447,14 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         fatalError("this must be overridden by sub class")
     }
 
-    /// Buffer a write in preparation for a flush.
-    func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        fatalError("this must be overridden by sub class")
-    }
-
     /// Mark a flush point. This is called when flush is received, and instructs
     /// the implementation to record the flush.
     func markFlushPoint() {
+        fatalError("this must be overridden by sub class")
+    }
+
+    /// Buffer a write in preparation for a flush.
+    func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         fatalError("this must be overridden by sub class")
     }
 
@@ -500,6 +511,19 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         return try self.socket.remoteAddress()
     }
 
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+
+    func flushNow() {
+        do {
+            try self.writeToSocket()
+        }
+        catch let err {
+            self.close0(error: err, mode: .all, promise: nil)
+        }
+    }
+
+#else
+
     /// Flush data to the underlying socket and return if this socket needs to be registered for write notifications.
     ///
     /// This method can be called re-entrantly but it will return immediately because the first call is responsible
@@ -523,8 +547,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             self.inFlushNow = false
         }
 
-        var newWriteRegistrationState: IONotificationState = .unregister
         do {
+            var newWriteRegistrationState: IONotificationState = .unregister
             while newWriteRegistrationState == .unregister && self.hasFlushedPendingWrites() && self.isOpen {
                 assert(self.lifecycleManager.isActive)
                 let writeResult = try self.writeToSocket()
@@ -540,7 +564,13 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                     self.pipeline.syncOperations.fireChannelWritabilityChanged()
                 }
             }
-        } catch let err {
+
+            assert((newWriteRegistrationState == .register && self.hasFlushedPendingWrites()) ||
+                   (newWriteRegistrationState == .unregister && !self.hasFlushedPendingWrites()),
+                   "illegal flushNow decision: \(newWriteRegistrationState) and \(self.hasFlushedPendingWrites())")
+            return newWriteRegistrationState
+        }
+        catch let err {
             // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
             // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
             if self.readIfNeeded0() {
@@ -561,12 +591,9 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             // we handled all writes
             return .unregister
         }
-
-        assert((newWriteRegistrationState == .register && self.hasFlushedPendingWrites()) ||
-               (newWriteRegistrationState == .unregister && !self.hasFlushedPendingWrites()),
-               "illegal flushNow decision: \(newWriteRegistrationState) and \(self.hasFlushedPendingWrites())")
-        return newWriteRegistrationState
     }
+
+#endif
 
     public final func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
@@ -722,16 +749,30 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return
         }
 
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        guard self.lifecycleManager.isActive else {
+            return
+        }
+
+        let isFlushPending = self.hasFlushedPendingWrites()
+        self.markFlushPoint()
+
+        if !isFlushPending {
+            self.flushNow()
+        }
+#else
         self.markFlushPoint()
 
         guard self.lifecycleManager.isActive else {
             return
         }
 
-        if !isWritePending() && flushNow() == .register {
+        let isWritePending = self.interestedEvent.contains(.write)
+        if !isWritePending && flushNow() == .register {
             assert(self.lifecycleManager.isPreRegistered)
             registerForWritable()
         }
+#endif
     }
 
     public func read0() {
@@ -877,7 +918,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
     }
 
-
     public final func register0(promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
@@ -938,6 +978,15 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
         self.finishConnect()  // If we were connecting, that has finished.
 
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // the only case when it happen with Uring is a socket connect,
+        // writtable event is not needed anymore
+        //let isFlushPending = self.hasFlushedPendingWrites()
+        //if !isFlushPending {
+        //    self.flushNow()
+        //}
+        self.unregisterForWritable()
+#else
         switch self.flushNow() {
         case .unregister:
             // Everything was written or connect was complete, let's unregister from writable.
@@ -946,6 +995,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             assert(!self.isOpen || self.interestedEvent.contains(.write))
             () // nothing to do because given that we just received `writable`, we're still registered for writable.
         }
+#endif
     }
 
     private func finishConnect() {
@@ -1222,10 +1272,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         // Do nothing
     }
 
-    private func isWritePending() -> Bool {
-        return self.interestedEvent.contains(.write)
-    }
-
     private final func safeReregister(interested: SelectorEventSet) {
         self.eventLoop.assertInEventLoop()
         assert(self.lifecycleManager.isRegisteredFully)
@@ -1309,6 +1355,22 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         fatalError("must override")
     }
+
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+
+    func writeAsync(selector: Selector<NIORegistration>, pointer: UnsafeRawBufferPointer) throws {
+        fatalError("must override")
+    }
+
+    func writeAsync(selector: Selector<NIORegistration>, iovecs: UnsafeBufferPointer<IOVector>) throws {
+        fatalError("must override")
+    }
+
+    func sendFileAsync(selector: Selector<NIORegistration>, src: CInt, offset: Int64, count: UInt32) throws {
+        fatalError("must override")
+    }
+
+#endif
 }
 
 extension BaseSocketChannel {
