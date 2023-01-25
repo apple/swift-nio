@@ -102,8 +102,7 @@ internal final class SelectableEventLoop: EventLoop {
     private var internalState: InternalState = .runningAndAcceptingNewRegistrations // protected by the EventLoop thread
     private var externalState: ExternalState = .open // protected by externalStateLock
 
-    let iovecs: UnsafeMutableBufferPointer<IOVector>
-    let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
+    let bufferPool: Pool<UnsafeMutableRawBufferPointer>
 
     // Used for gathering UDP writes.
     let msgs: UnsafeMutableBufferPointer<MMsgHdr>
@@ -187,8 +186,12 @@ Further information:
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
-        self.iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: Socket.writevLimitIOVectors)
-        self.storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: Socket.writevLimitIOVectors)
+        self.bufferPool = Pool<UnsafeMutableRawBufferPointer>(maxSize: 16,
+            ctor: {
+                let byteCount = (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride) * Socket.writevLimitIOVectors
+                return UnsafeMutableRawBufferPointer.allocate(byteCount: byteCount, alignment: MemoryLayout<IOVector>.alignment)
+            },
+            dtor: { buffer in buffer.deallocate() })
         self.msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: Socket.writevLimitIOVectors)
         self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
@@ -208,8 +211,6 @@ Further information:
                "illegal internal state on deinit: \(self.internalState)")
         assert(self.externalState == .resourcesReclaimed,
                "illegal external state on shutdown: \(self.externalState)")
-        self.iovecs.deallocate()
-        self.storageRefs.deallocate()
         self.msgs.deallocate()
         self.addresses.deallocate()
         self.controlMessageStorage.deallocate()

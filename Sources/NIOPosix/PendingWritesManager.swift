@@ -23,18 +23,23 @@ private struct PendingStreamWrite {
 ///
 /// - parameters:
 ///    - pending: The currently pending writes.
-///    - iovecs: Pre-allocated storage (per `EventLoop`) for `iovecs`.
-///    - storageRefs: Pre-allocated storage references (per `EventLoop`) to manage the lifetime of the buffers to be passed to `writev`.
+///    - bufferPool: Pool of buffers to use for iovecs and storageRefs
 ///    - body: The function that actually does the vector write (usually `writev`).
 /// - returns: A tuple of the number of items attempted to write and the result of the write operation.
 private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
-                                           iovecs: UnsafeMutableBufferPointer<IOVector>,
-                                           storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+                                           bufferPool: Pool<UnsafeMutableRawBufferPointer>,
                                            _ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (itemCount: Int, writeResult: IOResult<Int>) {
-    assert(iovecs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal writev")
+    let buffer = bufferPool.get()
+    defer { bufferPool.put(buffer) }
+
+    var count = (buffer.count / (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride))
+    assert(count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal writev")
 
     // Clamp the number of writes we're willing to issue to the limit for writev.
-    let count = min(pending.flushedChunks, Socket.writevLimitIOVectors)
+    count = min(pending.flushedChunks, count)
+
+    let iovecs = (buffer.baseAddress!).bindMemory(to: IOVector.self, capacity: count)
+    let storageRefs = (buffer.baseAddress! + (count * MemoryLayout<IOVector>.stride)).bindMemory(to: Unmanaged<AnyObject>.self, capacity: count)
 
     // the numbers of storage refs that we need to decrease later.
     var numberOfUsedStorageSlots = 0
@@ -67,7 +72,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
             storageRefs[i].release()
         }
     }
-    let result = try body(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
+    let result = try body(UnsafeBufferPointer(start: iovecs, count: numberOfUsedStorageSlots))
     /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
     return (numberOfUsedStorageSlots, result)
 }
@@ -279,8 +284,7 @@ private struct PendingStreamWritesState {
 /// currently pending writes.
 final class PendingStreamWritesManager: PendingWritesManager {
     private var state = PendingStreamWritesState()
-    private var iovecs: UnsafeMutableBufferPointer<IOVector>
-    private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
+    private let bufferPool: Pool<UnsafeMutableRawBufferPointer>
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag = ManagedAtomic(true)
@@ -416,8 +420,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         assert(self.state.isFlushPending && !self.state.isEmpty && self.isOpen,
                "vector write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
         let result = try doPendingWriteVectorOperation(pending: self.state,
-                                                       iovecs: self.iovecs,
-                                                       storageRefs: self.storageRefs,
+                                                       bufferPool: bufferPool,
                                                        { try operation($0) })
         return self.didWrite(itemCount: result.itemCount, result: result.writeResult)
     }
@@ -440,11 +443,9 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// one `Channel` on the same `EventLoop` at the same time.
     ///
     /// - parameters:
-    ///     - iovecs: A pre-allocated array of `IOVector` elements
-    ///     - storageRefs: A pre-allocated array of storage management tokens used to keep storage elements alive during a vector write operation
-    init(iovecs: UnsafeMutableBufferPointer<IOVector>, storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) {
-        self.iovecs = iovecs
-        self.storageRefs = storageRefs
+    ///     - bufferPool: Pool of buffers to be used for iovecs and storage references
+    init(bufferPool: Pool<UnsafeMutableRawBufferPointer>) {
+        self.bufferPool = bufferPool
     }
 }
 

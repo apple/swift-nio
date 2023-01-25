@@ -63,10 +63,9 @@ fileprivate extension Error {
 
 /// Does the setup required to trigger a `sendmmsg`.
 private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWritesState,
-                                                   iovecs: UnsafeMutableBufferPointer<IOVector>,
+                                                   bufferPool: Pool<UnsafeMutableRawBufferPointer>,
                                                    msgs: UnsafeMutableBufferPointer<MMsgHdr>,
                                                    addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
-                                                   storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
                                                    controlMessageStorage: UnsafeControlMessageStorage,
                                                    _ body: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> IOResult<Int> {
     assert(msgs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal sendmmsg")
@@ -76,6 +75,13 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
     // the numbers of storage refs that we need to decrease later.
     var c = 0
     var toWrite: Int = 0
+
+    let buffer = bufferPool.get()
+    defer { bufferPool.put(buffer) }
+
+    let count = (buffer.count / (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride))
+    let iovecs = (buffer.baseAddress!).bindMemory(to: IOVector.self, capacity: count)
+    let storageRefs = (buffer.baseAddress! + (count * MemoryLayout<IOVector>.stride)).bindMemory(to: Unmanaged<AnyObject>.self, capacity: count)
 
     for p in pending.flushedWrites {
         // Must not write more than Int32.max in one go.
@@ -134,7 +140,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 
             let msg = msghdr(msg_name: address,
                              msg_namelen: addressLen,
-                             msg_iov: iovecs.baseAddress! + c,
+                             msg_iov: iovecs + c,
                              msg_iovlen: 1,
                              msg_control: controlMessageBytePointer.baseAddress,
                              msg_controllen: .init(controlMessageBytePointer.count),
@@ -379,17 +385,12 @@ extension PendingDatagramWritesState {
 /// value. The most important purpose of this object is to call `sendto` or `sendmmsg` depending on the writes held and
 /// the availability of the functions.
 final class PendingDatagramWritesManager: PendingWritesManager {
+
+    private let bufferPool: Pool<UnsafeMutableRawBufferPointer>
+
     /// Storage for mmsghdr structures. Only present on Linux because Darwin does not support
     /// gathering datagram writes.
     private var msgs: UnsafeMutableBufferPointer<MMsgHdr>
-
-    /// Storage for the references to the buffers used when we perform gathering writes. Only present
-    /// on Linux because Darwin does not support gathering datagram writes.
-    private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
-
-    /// Storage for iovec structures. Only present on Linux because this is only needed when we call
-    /// sendmmsg: sendto doesn't require any iovecs.
-    private var iovecs: UnsafeMutableBufferPointer<IOVector>
 
     /// Storage for sockaddr structures. Only present on Linux because Darwin does not support gathering
     /// writes.
@@ -416,15 +417,13 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
     ///     - storageRefs: A pre-allocated array of storage management tokens used to keep storage elements alive during a vector write operation
     ///     - controlMessageStorage: Pre-allocated memory for storing cmsghdr data during a vector write operation.
-    init(msgs: UnsafeMutableBufferPointer<MMsgHdr>,
-         iovecs: UnsafeMutableBufferPointer<IOVector>,
+    init(bufferPool: Pool<UnsafeMutableRawBufferPointer>,
+         msgs: UnsafeMutableBufferPointer<MMsgHdr>,
          addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
-         storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
          controlMessageStorage: UnsafeControlMessageStorage) {
+        self.bufferPool = bufferPool
         self.msgs = msgs
-        self.iovecs = iovecs
         self.addresses = addresses
-        self.storageRefs = storageRefs
         self.controlMessageStorage = controlMessageStorage
     }
 
@@ -626,10 +625,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
                "illegal state for vector datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
         return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
-                                                                       iovecs: self.iovecs,
+                                                                       bufferPool: self.bufferPool,
                                                                        msgs: self.msgs,
                                                                        addresses: self.addresses,
-                                                                       storageRefs: self.storageRefs,
                                                                        controlMessageStorage: self.controlMessageStorage,
                                                                        { try vectorWriteOperation($0) }),
                              messages: self.msgs)

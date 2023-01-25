@@ -47,43 +47,42 @@ private extension SocketAddress {
 
 class PendingDatagramWritesManagerTests: XCTestCase {
     private func withPendingDatagramWritesManager(_ body: (PendingDatagramWritesManager) throws -> Void) rethrows {
-        try withExtendedLifetime(NSObject()) { o in
-            var iovecs: [IOVector] = Array(repeating: iovec(), count: Socket.writevLimitIOVectors + 1)
-            var managed: [Unmanaged<AnyObject>] = Array(repeating: Unmanaged.passUnretained(o), count: Socket.writevLimitIOVectors + 1)
-            var msgs: [MMsgHdr] = Array(repeating: MMsgHdr(), count: Socket.writevLimitIOVectors + 1)
-            var addresses: [sockaddr_storage] = Array(repeating: sockaddr_storage(), count: Socket.writevLimitIOVectors + 1)
-            var controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
-            defer {
-                controlMessageStorage.deallocate()
+        let bufferPool = Pool<UnsafeMutableRawBufferPointer>(maxSize: 16,
+            ctor: {
+                let byteCount = (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride) * Socket.writevLimitIOVectors
+                let ptr = UnsafeMutableRawPointer.allocate(byteCount: byteCount + MemoryLayout<UInt32>.stride, alignment: MemoryLayout<IOVector>.alignment)
+                ptr.storeBytes(of: 0xdeadbee, toByteOffset: byteCount, as: UInt32.self)
+                return UnsafeMutableRawBufferPointer(start: ptr, count: byteCount)
+            },
+            dtor: { buffer in
+                XCTAssertEqual(0xdeadbee, buffer.baseAddress!.load(fromByteOffset: buffer.count, as: UInt32.self))
+                buffer.deallocate()
             }
-            /* put a canary value at the end */
-            iovecs[iovecs.count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!, iov_len: 0xdeadbee)
-            try iovecs.withUnsafeMutableBufferPointer { iovecs in
-                try managed.withUnsafeMutableBufferPointer { managed in
-                    try msgs.withUnsafeMutableBufferPointer { msgs in
-                        try addresses.withUnsafeMutableBufferPointer { addresses in
-                            let pwm = NIOPosix.PendingDatagramWritesManager(msgs: msgs,
-                                                                            iovecs: iovecs,
-                                                                            addresses: addresses,
-                                                                            storageRefs: managed,
-                                                                            controlMessageStorage: controlMessageStorage)
-                            XCTAssertTrue(pwm.isEmpty)
-                            XCTAssertTrue(pwm.isOpen)
-                            XCTAssertFalse(pwm.isFlushPending)
-                            XCTAssertTrue(pwm.isWritable)
+        )
 
-                            try body(pwm)
+        var msgs: [MMsgHdr] = Array(repeating: MMsgHdr(), count: Socket.writevLimitIOVectors + 1)
+        var addresses: [sockaddr_storage] = Array(repeating: sockaddr_storage(), count: Socket.writevLimitIOVectors + 1)
+        var controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
+        defer {
+            controlMessageStorage.deallocate()
+        }
 
-                            XCTAssertTrue(pwm.isEmpty)
-                            XCTAssertFalse(pwm.isFlushPending)
-                        }
-                    }
-                }
+        try msgs.withUnsafeMutableBufferPointer { msgs in
+            try addresses.withUnsafeMutableBufferPointer { addresses in
+                let pwm = NIOPosix.PendingDatagramWritesManager(bufferPool: bufferPool,
+                                                                msgs: msgs,
+                                                                addresses: addresses,
+                                                                controlMessageStorage: controlMessageStorage)
+                XCTAssertTrue(pwm.isEmpty)
+                XCTAssertTrue(pwm.isOpen)
+                XCTAssertFalse(pwm.isFlushPending)
+                XCTAssertTrue(pwm.isWritable)
+
+                try body(pwm)
+
+                XCTAssertTrue(pwm.isEmpty)
+                XCTAssertFalse(pwm.isFlushPending)
             }
-            /* assert that the canary values are still okay, we should definitely have never written those */
-            XCTAssertEqual(managed.last!.toOpaque(), Unmanaged.passUnretained(o).toOpaque())
-            XCTAssertEqual(0xdeadbee, Int(bitPattern: iovecs.last!.iov_base))
-            XCTAssertEqual(0xdeadbee, iovecs.last!.iov_len)
         }
     }
 
