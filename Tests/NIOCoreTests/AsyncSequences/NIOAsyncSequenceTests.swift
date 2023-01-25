@@ -391,9 +391,16 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
         let task: Task<Int?, Never> = Task {
             let iterator = sequence.makeAsyncIterator()
-            return await iterator.next()
+            let value = await iterator.next()
+
+            // Sleeping here a bit to make sure we hit the case where
+            // we are streaming and still retain the iterator.
+            try? await Task.sleep(nanoseconds: 1_000_000)
+
+            return value
         }
-        try await Task.sleep(nanoseconds: 1_000_000)
+
+        try await Task.sleep(nanoseconds: 2_000_000)
 
         _ = self.source.yield(contentsOf: [1])
 
