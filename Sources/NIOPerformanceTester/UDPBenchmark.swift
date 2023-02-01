@@ -17,7 +17,7 @@ import NIOPosix
 final class UDPBenchmark {
     /// Request to send.
     private let data: ByteBuffer
-    /// Number of reqeusts to send in each run.
+    /// Number of requests to send in each run.
     private let numberOfRequests: Int
     /// Setting for `.datagramVectorReadMessageCount`
     private let vectorReads: Int
