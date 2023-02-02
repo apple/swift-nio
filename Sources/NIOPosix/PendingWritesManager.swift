@@ -27,19 +27,15 @@ private struct PendingStreamWrite {
 ///    - body: The function that actually does the vector write (usually `writev`).
 /// - returns: A tuple of the number of items attempted to write and the result of the write operation.
 private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
-                                           bufferPool: Pool<UnsafeMutableRawBufferPointer>,
+                                           bufferPool: Pool<PooledBuffer>,
                                            _ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (itemCount: Int, writeResult: IOResult<Int>) {
     let buffer = bufferPool.get()
     defer { bufferPool.put(buffer) }
-
-    var count = (buffer.count / (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride))
-    assert(count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal writev")
+    let (iovecs, storageRefs) = buffer.get()
 
     // Clamp the number of writes we're willing to issue to the limit for writev.
+    var count = min(iovecs.count, storageRefs.count)
     count = min(pending.flushedChunks, count)
-
-    let iovecs = (buffer.baseAddress!).bindMemory(to: IOVector.self, capacity: count)
-    let storageRefs = (buffer.baseAddress! + (count * MemoryLayout<IOVector>.stride)).bindMemory(to: Unmanaged<AnyObject>.self, capacity: count)
 
     // the numbers of storage refs that we need to decrease later.
     var numberOfUsedStorageSlots = 0
@@ -72,7 +68,7 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
             storageRefs[i].release()
         }
     }
-    let result = try body(UnsafeBufferPointer(start: iovecs, count: numberOfUsedStorageSlots))
+    let result = try body(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
     /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
     return (numberOfUsedStorageSlots, result)
 }
@@ -284,7 +280,7 @@ private struct PendingStreamWritesState {
 /// currently pending writes.
 final class PendingStreamWritesManager: PendingWritesManager {
     private var state = PendingStreamWritesState()
-    private let bufferPool: Pool<UnsafeMutableRawBufferPointer>
+    private let bufferPool: Pool<PooledBuffer>
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag = ManagedAtomic(true)
@@ -444,7 +440,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     ///
     /// - parameters:
     ///     - bufferPool: Pool of buffers to be used for iovecs and storage references
-    init(bufferPool: Pool<UnsafeMutableRawBufferPointer>) {
+    init(bufferPool: Pool<PooledBuffer>) {
         self.bufferPool = bufferPool
     }
 }

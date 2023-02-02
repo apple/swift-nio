@@ -63,7 +63,7 @@ fileprivate extension Error {
 
 /// Does the setup required to trigger a `sendmmsg`.
 private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWritesState,
-                                                   bufferPool: Pool<UnsafeMutableRawBufferPointer>,
+                                                   bufferPool: Pool<PooledBuffer>,
                                                    msgs: UnsafeMutableBufferPointer<MMsgHdr>,
                                                    addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
                                                    controlMessageStorage: UnsafeControlMessageStorage,
@@ -78,10 +78,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 
     let buffer = bufferPool.get()
     defer { bufferPool.put(buffer) }
-
-    let count = (buffer.count / (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride))
-    let iovecs = (buffer.baseAddress!).bindMemory(to: IOVector.self, capacity: count)
-    let storageRefs = (buffer.baseAddress! + (count * MemoryLayout<IOVector>.stride)).bindMemory(to: Unmanaged<AnyObject>.self, capacity: count)
+    let (iovecs, storageRefs) = buffer.get()
 
     for p in pending.flushedWrites {
         // Must not write more than Int32.max in one go.
@@ -140,7 +137,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 
             let msg = msghdr(msg_name: address,
                              msg_namelen: addressLen,
-                             msg_iov: iovecs + c,
+                             msg_iov: iovecs.baseAddress! + c,
                              msg_iovlen: 1,
                              msg_control: controlMessageBytePointer.baseAddress,
                              msg_controllen: .init(controlMessageBytePointer.count),
@@ -386,7 +383,7 @@ extension PendingDatagramWritesState {
 /// the availability of the functions.
 final class PendingDatagramWritesManager: PendingWritesManager {
 
-    private let bufferPool: Pool<UnsafeMutableRawBufferPointer>
+    private var bufferPool: Pool<PooledBuffer>
 
     /// Storage for mmsghdr structures. Only present on Linux because Darwin does not support
     /// gathering datagram writes.
@@ -412,12 +409,11 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// one `Channel` on the same `EventLoop` at the same time.
     ///
     /// - parameters:
+    ///     - bufferPool: a pool of buffers to be used for IOVector and storage references
     ///     - msgs: A pre-allocated array of `MMsgHdr` elements
-    ///     - iovecs: A pre-allocated array of `IOVector` elements
     ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
-    ///     - storageRefs: A pre-allocated array of storage management tokens used to keep storage elements alive during a vector write operation
     ///     - controlMessageStorage: Pre-allocated memory for storing cmsghdr data during a vector write operation.
-    init(bufferPool: Pool<UnsafeMutableRawBufferPointer>,
+    init(bufferPool: Pool<PooledBuffer>,
          msgs: UnsafeMutableBufferPointer<MMsgHdr>,
          addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
          controlMessageStorage: UnsafeControlMessageStorage) {

@@ -12,29 +12,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-public class Pool<Element> {
+protocol PoolElement {
+    init()
+    func evictedFromPool()
+}
+
+
+class Pool<Element: PoolElement> {
     private let maxSize: Int
-    private let ctor: () -> Element
-    private let dtor: (Element) -> Void
     private var elements: [Element]
 
-    public init(maxSize: Int, ctor: @escaping () -> Element, dtor: @escaping (Element) -> Void) {
+    public init(maxSize: Int) {
         self.maxSize = maxSize
-        self.ctor = ctor
-        self.dtor = dtor
         self.elements = [Element]()
     }
 
     deinit {
-        while !elements.isEmpty {
-            let e = elements.removeLast()
-            dtor(e)
+        for e in elements {
+            e.evictedFromPool()
         }
     }
 
     public func get() -> Element {
         if elements.isEmpty {
-            return ctor()
+            return Element()
         }
         else {
             return elements.removeLast()
@@ -43,7 +44,7 @@ public class Pool<Element> {
 
     public func put(_ e: Element) {
         if (elements.count == maxSize) {
-            dtor(e)
+            e.evictedFromPool()
         }
         else {
             elements.append(e)

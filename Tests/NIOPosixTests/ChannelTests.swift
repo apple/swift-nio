@@ -209,19 +209,7 @@ public final class ChannelTests: XCTestCase {
     }
 
     private func withPendingStreamWritesManager(_ body: (PendingStreamWritesManager) throws -> Void) rethrows {
-        let bufferPool = Pool<UnsafeMutableRawBufferPointer>(maxSize: 16,
-            ctor: {
-                let byteCount = (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride) * Socket.writevLimitIOVectors
-                let ptr = UnsafeMutableRawPointer.allocate(byteCount: byteCount + MemoryLayout<UInt32>.stride, alignment: MemoryLayout<IOVector>.alignment)
-                ptr.storeBytes(of: 0xdeadbee, toByteOffset: byteCount, as: UInt32.self)
-                return UnsafeMutableRawBufferPointer(start: ptr, count: byteCount)
-            },
-            dtor: { buffer in
-                XCTAssertEqual(0xdeadbee, buffer.baseAddress!.load(fromByteOffset: buffer.count, as: UInt32.self))
-                buffer.deallocate()
-            }
-        )
-
+        let bufferPool = Pool<PooledBuffer>(maxSize: 16)
         let pwm = NIOPosix.PendingStreamWritesManager(bufferPool: bufferPool)
 
         XCTAssertTrue(pwm.isEmpty)

@@ -47,19 +47,7 @@ private extension SocketAddress {
 
 class PendingDatagramWritesManagerTests: XCTestCase {
     private func withPendingDatagramWritesManager(_ body: (PendingDatagramWritesManager) throws -> Void) rethrows {
-        let bufferPool = Pool<UnsafeMutableRawBufferPointer>(maxSize: 16,
-            ctor: {
-                let byteCount = (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride) * Socket.writevLimitIOVectors
-                let ptr = UnsafeMutableRawPointer.allocate(byteCount: byteCount + MemoryLayout<UInt32>.stride, alignment: MemoryLayout<IOVector>.alignment)
-                ptr.storeBytes(of: 0xdeadbee, toByteOffset: byteCount, as: UInt32.self)
-                return UnsafeMutableRawBufferPointer(start: ptr, count: byteCount)
-            },
-            dtor: { buffer in
-                XCTAssertEqual(0xdeadbee, buffer.baseAddress!.load(fromByteOffset: buffer.count, as: UInt32.self))
-                buffer.deallocate()
-            }
-        )
-
+        let bufferPool = Pool<PooledBuffer>(maxSize: 16)
         var msgs: [MMsgHdr] = Array(repeating: MMsgHdr(), count: Socket.writevLimitIOVectors + 1)
         var addresses: [sockaddr_storage] = Array(repeating: sockaddr_storage(), count: Socket.writevLimitIOVectors + 1)
         var controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)

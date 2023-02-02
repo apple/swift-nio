@@ -30,6 +30,39 @@ internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
 #endif
 }
 
+struct PooledBuffer: PoolElement {
+    private let bufferSize: Int
+    private let buffer: UnsafeMutableRawPointer
+
+    init() {
+        self.bufferSize = (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride) * Socket.writevLimitIOVectors
+#if DEBUG
+        self.buffer = UnsafeMutableRawPointer.allocate(byteCount: bufferSize + MemoryLayout<UInt32>.stride, alignment: MemoryLayout<IOVector>.alignment)
+        self.buffer.storeBytes(of: 0xdeadbee, toByteOffset: bufferSize, as: UInt32.self)
+#else
+        self.buffer = UnsafeMutableRawPointer.allocate(byteCount: bufferSize, alignment: MemoryLayout<IOVector>.alignment)
+#endif
+    }
+
+    func evictedFromPool() {
+#if DEBUG
+        assert(0xdeadbee == self.buffer.load(fromByteOffset: self.bufferSize, as: UInt32.self))
+#endif
+        self.buffer.deallocate()
+    }
+
+    func get() -> (UnsafeMutableBufferPointer<IOVector>, UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) {
+        let count = self.bufferSize / (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride)
+        let iovecs = self.buffer.bindMemory(to: IOVector.self, capacity: count)
+        let storageRefs = (self.buffer + (count * MemoryLayout<IOVector>.stride)).bindMemory(to: Unmanaged<AnyObject>.self, capacity: count)
+        assert((iovecs >= self.buffer) && (iovecs <= (self.buffer + self.bufferSize)))
+        assert((storageRefs >= self.buffer) && (storageRefs <= (self.buffer + self.bufferSize)))
+        assert((iovecs + count) == storageRefs)
+        assert((storageRefs + count) <= (self.buffer + bufferSize))
+        return (UnsafeMutableBufferPointer(start: iovecs, count: count), UnsafeMutableBufferPointer(start: storageRefs, count: count))
+    }
+}
+
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
 /// The whole processing of I/O and tasks is done by a `NIOThread` that is tied to the `SelectableEventLoop`. This `NIOThread`
 /// is guaranteed to never change!
@@ -102,7 +135,7 @@ internal final class SelectableEventLoop: EventLoop {
     private var internalState: InternalState = .runningAndAcceptingNewRegistrations // protected by the EventLoop thread
     private var externalState: ExternalState = .open // protected by externalStateLock
 
-    let bufferPool: Pool<UnsafeMutableRawBufferPointer>
+    let bufferPool: Pool<PooledBuffer>
 
     // Used for gathering UDP writes.
     let msgs: UnsafeMutableBufferPointer<MMsgHdr>
@@ -186,12 +219,7 @@ Further information:
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
-        self.bufferPool = Pool<UnsafeMutableRawBufferPointer>(maxSize: 16,
-            ctor: {
-                let byteCount = (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride) * Socket.writevLimitIOVectors
-                return UnsafeMutableRawBufferPointer.allocate(byteCount: byteCount, alignment: MemoryLayout<IOVector>.alignment)
-            },
-            dtor: { buffer in buffer.deallocate() })
+        self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
         self.msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: Socket.writevLimitIOVectors)
         self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
