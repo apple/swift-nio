@@ -17,12 +17,11 @@ protocol PoolElement {
     func evictedFromPool()
 }
 
-
 class Pool<Element: PoolElement> {
     private let maxSize: Int
     private var elements: [Element]
 
-    public init(maxSize: Int) {
+    init(maxSize: Int) {
         self.maxSize = maxSize
         self.elements = [Element]()
     }
@@ -33,7 +32,7 @@ class Pool<Element: PoolElement> {
         }
     }
 
-    public func get() -> Element {
+    func get() -> Element {
         if elements.isEmpty {
             return Element()
         }
@@ -42,7 +41,7 @@ class Pool<Element: PoolElement> {
         }
     }
 
-    public func put(_ e: Element) {
+    func put(_ e: Element) {
         if (elements.count == maxSize) {
             e.evictedFromPool()
         }
