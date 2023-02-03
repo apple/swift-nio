@@ -263,9 +263,6 @@ private struct PendingDatagramWritesState {
     /// - returns: A closure that the caller _needs_ to run which will fulfill the promises of the writes, and a `WriteResult` that indicates if we could write
     ///     everything or not.
     private mutating func didVectorWrite(written: Int, messages: UnsafeMutableBufferPointer<MMsgHdr>) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
-        var fillers: [DatagramWritePromiseFiller] = []
-        fillers.reserveCapacity(written)
-
         // This was a vector write. We wrote `written` number of messages.
         let writes = messages[messages.startIndex...messages.index(messages.startIndex, offsetBy: written - 1)]
         var promiseFiller: DatagramWritePromiseFiller?
@@ -394,7 +391,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// Storage for sockaddr structures. Only present on Linux because Darwin does not support gathering
     /// writes.
     private var addresses: UnsafeMutableBufferPointer<sockaddr_storage>
-    
+
     private var controlMessageStorage: UnsafeControlMessageStorage
 
     private var state = PendingDatagramWritesState()
