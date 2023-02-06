@@ -1098,3 +1098,43 @@ if #available(macOS 10.15, *) {
         )
     )
 }
+
+try measureAndPrint(
+    desc: "udp_10k_writes",
+    benchmark: UDPBenchmark(
+        data: ByteBuffer(repeating: 42, count: 1000),
+        numberOfRequests: 10_000,
+        vectorReads: 1,
+        vectorWrites: 1
+    )
+)
+
+try measureAndPrint(
+    desc: "udp_10k_vector_writes",
+    benchmark: UDPBenchmark(
+        data: ByteBuffer(repeating: 42, count: 1000),
+        numberOfRequests: 10_000,
+        vectorReads: 1,
+        vectorWrites: 10
+    )
+)
+
+try measureAndPrint(
+    desc: "udp_10k_vector_reads",
+    benchmark: UDPBenchmark(
+        data: ByteBuffer(repeating: 42, count: 1000),
+        numberOfRequests: 10_000,
+        vectorReads: 10,
+        vectorWrites: 1
+    )
+)
+
+try measureAndPrint(
+    desc: "udp_10k_vector_reads_and_writes",
+    benchmark: UDPBenchmark(
+        data: ByteBuffer(repeating: 42, count: 1000),
+        numberOfRequests: 10_000,
+        vectorReads: 10,
+        vectorWrites: 10
+    )
+)
