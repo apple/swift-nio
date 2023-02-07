@@ -30,6 +30,44 @@ internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
 #endif
 }
 
+struct PooledBuffer: PoolElement {
+    private let bufferSize: Int
+    private let buffer: UnsafeMutableRawPointer
+
+    init() {
+        precondition(MemoryLayout<IOVector>.alignment >= MemoryLayout<Unmanaged<AnyObject>>.alignment)
+        self.bufferSize = (MemoryLayout<IOVector>.stride + MemoryLayout<Unmanaged<AnyObject>>.stride) * Socket.writevLimitIOVectors
+        var byteCount = self.bufferSize
+        debugOnly {
+            byteCount += MemoryLayout<UInt32>.stride
+        }
+        self.buffer = UnsafeMutableRawPointer.allocate(byteCount: byteCount, alignment: MemoryLayout<IOVector>.alignment)
+        debugOnly {
+            self.buffer.storeBytes(of: 0xdeadbee, toByteOffset: self.bufferSize, as: UInt32.self)
+        }
+    }
+
+    func evictedFromPool() {
+        debugOnly {
+            assert(0xdeadbee == self.buffer.load(fromByteOffset: self.bufferSize, as: UInt32.self))
+        }
+        self.buffer.deallocate()
+    }
+
+    func get() -> (UnsafeMutableBufferPointer<IOVector>, UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) {
+        let count = Socket.writevLimitIOVectors
+        let iovecs = self.buffer.bindMemory(to: IOVector.self, capacity: count)
+        let storageRefs = (self.buffer + (count * MemoryLayout<IOVector>.stride)).bindMemory(to: Unmanaged<AnyObject>.self, capacity: count)
+        assert(UnsafeMutableRawPointer(iovecs) >= self.buffer)
+        assert(UnsafeMutableRawPointer(iovecs) <= (self.buffer + self.bufferSize))
+        assert(UnsafeMutableRawPointer(storageRefs) >= self.buffer)
+        assert(UnsafeMutableRawPointer(storageRefs) <= (self.buffer + self.bufferSize))
+        assert(UnsafeMutableRawPointer(iovecs + count) == UnsafeMutableRawPointer(storageRefs))
+        assert(UnsafeMutableRawPointer(storageRefs + count) <= (self.buffer + bufferSize))
+        return (UnsafeMutableBufferPointer(start: iovecs, count: count), UnsafeMutableBufferPointer(start: storageRefs, count: count))
+    }
+}
+
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
 /// The whole processing of I/O and tasks is done by a `NIOThread` that is tied to the `SelectableEventLoop`. This `NIOThread`
 /// is guaranteed to never change!
@@ -102,8 +140,7 @@ internal final class SelectableEventLoop: EventLoop {
     private var internalState: InternalState = .runningAndAcceptingNewRegistrations // protected by the EventLoop thread
     private var externalState: ExternalState = .open // protected by externalStateLock
 
-    let iovecs: UnsafeMutableBufferPointer<IOVector>
-    let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
+    let bufferPool: Pool<PooledBuffer>
 
     // Used for gathering UDP writes.
     let msgs: UnsafeMutableBufferPointer<MMsgHdr>
@@ -187,8 +224,7 @@ Further information:
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
-        self.iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: Socket.writevLimitIOVectors)
-        self.storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: Socket.writevLimitIOVectors)
+        self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
         self.msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: Socket.writevLimitIOVectors)
         self.addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: Socket.writevLimitIOVectors)
         self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
@@ -208,8 +244,6 @@ Further information:
                "illegal internal state on deinit: \(self.internalState)")
         assert(self.externalState == .resourcesReclaimed,
                "illegal external state on shutdown: \(self.externalState)")
-        self.iovecs.deallocate()
-        self.storageRefs.deallocate()
         self.msgs.deallocate()
         self.addresses.deallocate()
         self.controlMessageStorage.deallocate()

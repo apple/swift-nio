@@ -209,30 +209,18 @@ public final class ChannelTests: XCTestCase {
     }
 
     private func withPendingStreamWritesManager(_ body: (PendingStreamWritesManager) throws -> Void) rethrows {
-        try withExtendedLifetime(NSObject()) { o in
-            var iovecs: [IOVector] = Array(repeating: iovec(), count: Socket.writevLimitIOVectors + 1)
-            var managed: [Unmanaged<AnyObject>] = Array(repeating: Unmanaged.passUnretained(o), count: Socket.writevLimitIOVectors + 1)
-            /* put a canary value at the end */
-            iovecs[iovecs.count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!, iov_len: 0xdeadbee)
-            try iovecs.withUnsafeMutableBufferPointer { iovecs in
-                try managed.withUnsafeMutableBufferPointer { managed in
-                    let pwm = NIOPosix.PendingStreamWritesManager(iovecs: iovecs, storageRefs: managed)
-                    XCTAssertTrue(pwm.isEmpty)
-                    XCTAssertTrue(pwm.isOpen)
-                    XCTAssertFalse(pwm.isFlushPending)
-                    XCTAssertTrue(pwm.isWritable)
+        let bufferPool = Pool<PooledBuffer>(maxSize: 16)
+        let pwm = NIOPosix.PendingStreamWritesManager(bufferPool: bufferPool)
 
-                    try body(pwm)
+        XCTAssertTrue(pwm.isEmpty)
+        XCTAssertTrue(pwm.isOpen)
+        XCTAssertFalse(pwm.isFlushPending)
+        XCTAssertTrue(pwm.isWritable)
 
-                    XCTAssertTrue(pwm.isEmpty)
-                    XCTAssertFalse(pwm.isFlushPending)
-                }
-            }
-            /* assert that the canary values are still okay, we should definitely have never written those */
-            XCTAssertEqual(managed.last!.toOpaque(), Unmanaged.passUnretained(o).toOpaque())
-            XCTAssertEqual(0xdeadbee, Int(bitPattern: iovecs.last!.iov_base))
-            XCTAssertEqual(0xdeadbee, iovecs.last!.iov_len)
-        }
+        try body(pwm)
+
+        XCTAssertTrue(pwm.isEmpty)
+        XCTAssertFalse(pwm.isFlushPending)
     }
 
     /// A frankenstein testing monster. It asserts that for `PendingStreamWritesManager` `pwm` and `EventLoopPromises` `promises`

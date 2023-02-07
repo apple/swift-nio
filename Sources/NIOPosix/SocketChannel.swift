@@ -423,10 +423,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             throw err
         }
 
-        self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
-                                                          iovecs: eventLoop.iovecs,
+        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
+                                                          msgs: eventLoop.msgs,
                                                           addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs,
                                                           controlMessageStorage: eventLoop.controlMessageStorage)
 
         try super.init(
@@ -441,10 +440,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         self.vectorReadManager = nil
         try socket.setNonBlocking()
-        self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
-                                                          iovecs: eventLoop.iovecs,
+        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
+                                                          msgs: eventLoop.msgs,
                                                           addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs,
                                                           controlMessageStorage: eventLoop.controlMessageStorage)
         try super.init(
             socket: socket,

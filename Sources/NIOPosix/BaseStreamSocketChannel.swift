@@ -26,7 +26,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         eventLoop: SelectableEventLoop,
         recvAllocator: RecvByteBufferAllocator
     ) throws {
-        self.pendingWrites = PendingStreamWritesManager(iovecs: eventLoop.iovecs, storageRefs: eventLoop.storageRefs)
+        self.pendingWrites = PendingStreamWritesManager(bufferPool: eventLoop.bufferPool)
         self.connectTimeoutScheduled = nil
         try super.init(
             socket: socket,
