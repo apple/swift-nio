@@ -384,10 +384,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// storage for IOVector and the references to the buffers used when we perform gathering writes. Only present
     /// on Linux because Darwin does not support gathering datagram writes.
     private var bufferPool: Pool<PooledBuffer>
-
-#if SWIFTNIO_USE_IO_URING && os(Linux)
     private var buffer: PooledBuffer?
-#endif
 
     /// Storage for mmsghdr structures. Only present on Linux because Darwin does not support
     /// gathering datagram writes.
@@ -517,8 +514,6 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         return self.state.currentBestWriteMechanism
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
     func triggerAsnycWriteOperation(asyncWriteOperation: (UnsafePointer<msghdr>) throws -> Void) throws -> Void {
         let pdw = self.state.nextWrite
         if let pdw = pdw {
@@ -604,8 +599,6 @@ final class PendingDatagramWritesManager: PendingWritesManager {
             }
         }
     }
-
-#endif
 
     /// Triggers the appropriate write operation. This is a fancy way of saying trigger either `sendto` or `sendmmsg`.
     /// On platforms that do not support a gathering write operation,

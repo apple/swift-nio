@@ -82,12 +82,22 @@ private func _debugPrint(_ s: @autoclosure () -> String) {
     #endif
 }
 
+fileprivate extension UInt64 {
+    init(_ userData: URing.UserData) {
+        let rawValue = IntegerBitPacking.packUInt32UInt16UInt8(
+            UInt32(truncatingIfNeeded: userData.fileDescriptor),
+            userData.registrationID,
+            userData.eventType.rawValue)
+        self = ((rawValue << 1) + 1)
+   }
+}
+
 final internal class URing {
 
     // a user_data 64-bit payload which is set in the SQE and returned in the CQE.
     // We're using 56 of those 64 bits, 32 for the file descriptor, 16 for a "registration ID" and 8
     // for the type of event issued (poll/modify/delete).
-    private struct UserData {
+    fileprivate struct UserData {
         let fileDescriptor: CInt
         let registrationID: UInt16 // SelectorRegistrationID truncated, only have room for bottom 16 bits (could be expanded to 24 if required)
         let eventType: CQEEventType
@@ -106,14 +116,6 @@ final internal class URing {
             self = .init(CInt(unpacked.0),
                         SelectorRegistrationID(rawValue: UInt32(unpacked.1)),
                         CQEEventType(rawValue:unpacked.2)!)
-        }
-
-        @inlinable func asUInt64() -> UInt64 {
-            let rawValue = IntegerBitPacking.packUInt32UInt16UInt8(
-                UInt32(truncatingIfNeeded: self.fileDescriptor),
-                self.registrationID,
-                self.eventType.rawValue)
-            return ((rawValue << 1) + 1)
         }
     }
 
@@ -276,7 +278,7 @@ final internal class URing {
 
     // we stuff event type into the upper byte, the next 3 bytes gives us the sequence number (16M before wrap) and final 4 bytes are fd.
     func prep_poll_add(fileDescriptor: CInt, pollMask: UInt32, registrationID: SelectorRegistrationID, multishot: Bool = true) -> () {
-        let userData = UserData(fileDescriptor, registrationID, CQEEventType.poll).asUInt64()
+        let userData = UInt64(UserData(fileDescriptor, registrationID, CQEEventType.poll))
 
         _debugPrint("URing.prep_poll_add: " +
             "fd[\(fileDescriptor)] " +
@@ -295,8 +297,8 @@ final internal class URing {
     }
 
     func prep_poll_remove(fileDescriptor: CInt, pollMask: UInt32, registrationID: SelectorRegistrationID, link: Bool = false) -> () {
-        let pollUserData = UserData(fileDescriptor, registrationID, CQEEventType.poll).asUInt64()
-        let reqUserData = UserData(fileDescriptor,  registrationID, CQEEventType.pollDelete).asUInt64()
+        let pollUserData = UInt64(UserData(fileDescriptor, registrationID, CQEEventType.poll))
+        let reqUserData = UInt64(UserData(fileDescriptor,  registrationID, CQEEventType.pollDelete))
 
         _debugPrint("URing.prep_poll_remove: " +
             "fd[\(fileDescriptor)] " +
@@ -318,8 +320,8 @@ final internal class URing {
     // the update/multishot polls are
     func poll_update(fileDescriptor: CInt, newPollMask: UInt32, oldPollMask: UInt32, registrationID: SelectorRegistrationID, multishot: Bool = true) {
         
-        let oldUserData = UserData(fileDescriptor, registrationID, CQEEventType.poll).asUInt64()
-        let newUserData = UserData(fileDescriptor, registrationID, CQEEventType.pollModify).asUInt64()
+        let oldUserData = UInt64(UserData(fileDescriptor, registrationID, CQEEventType.poll))
+        let newUserData = UInt64(UserData(fileDescriptor, registrationID, CQEEventType.pollModify))
 
         _debugPrint("URing.poll_update: " +
             "fd[\(fileDescriptor)] " +
@@ -341,7 +343,7 @@ final internal class URing {
     }
 
     func prep_write(fileDescriptor: CInt, pointer: UnsafeRawBufferPointer, registrationID: SelectorRegistrationID) {
-        let userData = UserData(fileDescriptor, registrationID, CQEEventType.write).asUInt64()
+        let userData = UInt64(UserData(fileDescriptor, registrationID, CQEEventType.write))
 
         _debugPrint("URing.prep_write: " +
             "fd[\(fileDescriptor)] " +
@@ -357,23 +359,12 @@ final internal class URing {
     }
 
     func prep_writev(fileDescriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>, registrationID: SelectorRegistrationID) {
-        let userData = UserData(fileDescriptor, registrationID, CQEEventType.write).asUInt64()
-
-        func bytesToWrite(_ iovecs: UnsafeBufferPointer<IOVector>) -> Int {
-            var bytes = 0
-            for idx in 0..<iovecs.count {
-                bytes += iovecs[idx].iov_len
-            }
-            return bytes
-        }
+        let userData = UInt64(UserData(fileDescriptor, registrationID, CQEEventType.write))
 
         _debugPrint("URing.prep_writev: " +
             "fd[\(fileDescriptor)] " +
             "iovecs[\(iovecs)] " +
-            "bytesToWrite[\(bytesToWrite(iovecs))] " +
             "userData=[0x\(String(userData>>1, radix: 16))]")
-
-        assert(bytesToWrite(iovecs) > 0)
 
         self.withSQE { sqe in
             io_uring_prep_writev(sqe, fileDescriptor, iovecs.baseAddress, UInt32(iovecs.count), 0)
@@ -415,7 +406,7 @@ final internal class URing {
     }
 
     func prep_sendmsg(_ fileDescriptor: CInt, _ msghdr: UnsafePointer<msghdr>, _ registrationID: SelectorRegistrationID) {
-        let userData = UserData(fileDescriptor, registrationID, CQEEventType.write).asUInt64()
+        let userData = UInt64(UserData(fileDescriptor, registrationID, CQEEventType.write))
 
         _debugPrint("URing.prep_sendmsg: " +
             "fd[\(fileDescriptor)] msghdr[\(msghdr)] " +
