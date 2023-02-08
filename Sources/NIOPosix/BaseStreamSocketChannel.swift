@@ -26,14 +26,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         eventLoop: SelectableEventLoop,
         recvAllocator: RecvByteBufferAllocator
     ) throws {
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-        let iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: NIOPosix.Socket.writevLimitIOVectors)
-        let storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: NIOPosix.Socket.writevLimitIOVectors)
-#else
-        let iovecs = eventLoop.iovecs
-        let storageRefs = eventLoop.storageRefs
-#endif
-        self.pendingWrites = PendingStreamWritesManager(iovecs: iovecs, storageRefs: storageRefs)
+        self.pendingWrites = PendingStreamWritesManager(bufferPool: eventLoop.bufferPool)
         self.connectTimeoutScheduled = nil
         try super.init(
             socket: socket,

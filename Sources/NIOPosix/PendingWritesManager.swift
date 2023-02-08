@@ -23,53 +23,55 @@ private struct PendingStreamWrite {
 ///
 /// - parameters:
 ///    - pending: The currently pending writes.
-///    - iovecs: Pre-allocated storage (per `EventLoop`) for `iovecs`.
-///    - storageRefs: Pre-allocated storage references (per `EventLoop`) to manage the lifetime of the buffers to be passed to `writev`.
+///    - bufferPool: Pool of buffers to use for iovecs and storageRefs
 ///    - body: The function that actually does the vector write (usually `writev`).
 /// - returns: A tuple of the number of items attempted to write and the result of the write operation.
 private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
-                                           iovecs: UnsafeMutableBufferPointer<IOVector>,
-                                           storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+                                           bufferPool: Pool<PooledBuffer>,
                                            _ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (itemCount: Int, writeResult: IOResult<Int>) {
-    assert(iovecs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal writev")
+    let buffer = bufferPool.get()
+    defer { bufferPool.put(buffer) }
 
-    // Clamp the number of writes we're willing to issue to the limit for writev.
-    let count = min(pending.flushedChunks, Socket.writevLimitIOVectors)
+    return try buffer.withUnsafePointers { iovecs, storageRefs in
+        // Clamp the number of writes we're willing to issue to the limit for writev.
+        var count = min(iovecs.count, storageRefs.count)
+        count = min(pending.flushedChunks, count)
 
-    // the numbers of storage refs that we need to decrease later.
-    var numberOfUsedStorageSlots = 0
-    var toWrite: Int = 0
+        // the numbers of storage refs that we need to decrease later.
+        var numberOfUsedStorageSlots = 0
+        var toWrite: Int = 0
 
-    loop: for i in 0..<count {
-        let p = pending[i]
-        switch p.data {
-        case .byteBuffer(let buffer):
-            // Must not write more than Int32.max in one go.
-            guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
+        loop: for i in 0..<count {
+            let p = pending[i]
+            switch p.data {
+            case .byteBuffer(let buffer):
+                // Must not write more than Int32.max in one go.
+                guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
+                    break loop
+                }
+                let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
+                toWrite += numericCast(toWriteForThisBuffer)
+
+                buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                    storageRefs[i] = storageRef.retain()
+                    iovecs[i] = IOVector(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
+                }
+                numberOfUsedStorageSlots += 1
+            case .fileRegion:
+                assert(numberOfUsedStorageSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
+                // We found a FileRegion so stop collecting
                 break loop
             }
-            let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
-            toWrite += numericCast(toWriteForThisBuffer)
-
-            buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-                storageRefs[i] = storageRef.retain()
-                iovecs[i] = IOVector(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
+        }
+        defer {
+            for i in 0..<numberOfUsedStorageSlots {
+                storageRefs[i].release()
             }
-            numberOfUsedStorageSlots += 1
-        case .fileRegion:
-            assert(numberOfUsedStorageSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
-            // We found a FileRegion so stop collecting
-            break loop
         }
+        let result = try body(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
+        /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
+        return (numberOfUsedStorageSlots, result)
     }
-    defer {
-        for i in 0..<numberOfUsedStorageSlots {
-            storageRefs[i].release()
-        }
-    }
-    let result = try body(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
-    /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
-    return (numberOfUsedStorageSlots, result)
 }
 
 /// The result of a single write operation, usually `write`, `sendfile` or `writev`.
@@ -180,9 +182,7 @@ private struct PendingStreamWritesState {
         self.pendingWrites.mark()
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
-    mutating func didAsyncWrite(_ written: Int, _ storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) -> (EventLoopPromise<Void>?, Bool) {
+    mutating func didAsyncWrite(_ written: Int, _ buffer: PooledBuffer?) -> (EventLoopPromise<Void>?, Bool) {
         var promise0: EventLoopPromise<Void>?
         var unaccountedWrites = written
         var idx: Int = 0
@@ -199,7 +199,9 @@ private struct PendingStreamWritesState {
                 unaccountedWrites -= headItemReadableBytes
 
                 if case .byteBuffer = pw.data {
-                    storageRefs[idx].release()
+                    buffer!.withUnsafePointers { _, storageRefs in
+                        storageRefs[idx].release()
+                    }
                     idx += 1
                 }
             }
@@ -207,13 +209,19 @@ private struct PendingStreamWritesState {
             if let promise = self.fullyWrittenFirst() {
                 if let p = promise0 {
                     p.futureResult.cascade(to: promise)
-                } else {
+                }
+                else {
                     promise0 = promise
                 }
             }
         }
 
+        return removeEmptyFlushedChunks(promise0)
+    }
+
+    mutating func removeEmptyFlushedChunks(_ promise0: EventLoopPromise<Void>?) -> (EventLoopPromise<Void>?, Bool) {
         let flushedChunks = self.flushedChunks
+        var promise0 = promise0
         for _ in 0..<flushedChunks {
             let pw = self.pendingWrites.first!
             let headItemReadableBytes = pw.data.readableBytes
@@ -224,7 +232,8 @@ private struct PendingStreamWritesState {
             if let promise = self.fullyWrittenFirst() {
                 if let p = promise0 {
                     p.futureResult.cascade(to: promise)
-                } else {
+                }
+                else {
                     promise0 = promise
                 }
             }
@@ -232,64 +241,64 @@ private struct PendingStreamWritesState {
         return (promise0, self.pendingWrites.hasMark)
     }
 
-    func releaseData(_ iovecs: UnsafeMutableBufferPointer<IOVector>,
-                     _ storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) {
-        let count = min(iovecs.count, storageRefs.count)
-        for idx in 0..<count {
-            if iovecs[idx].iov_len == 0 {
-                break
+    func releaseData(_ buffer: PooledBuffer) {
+        buffer.withUnsafePointers { iovecs, storageRefs in
+            let count = min(iovecs.count, storageRefs.count)
+            for idx in 0..<count {
+                if iovecs[idx].iov_len == 0 {
+                    break
+                }
+                storageRefs[idx].release()
             }
-            storageRefs[idx].release()
         }
     }
 
-    func prepareIOVectors(_ iovecs: UnsafeMutableBufferPointer<IOVector>,
-                          _ storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) -> UnsafeBufferPointer<IOVector> {
-        var count = min(Socket.writevLimitIOVectors, iovecs.count)
-        count = min(count, storageRefs.count)
-        count = min(count, self.flushedChunks)
+    func prepareIOVectors(to buffer: inout PooledBuffer) -> UnsafeBufferPointer<IOVector> {
+        buffer.withUnsafePointers { iovecs, storageRefs in
+            var count = min(Socket.writevLimitIOVectors, iovecs.count)
+            count = min(count, storageRefs.count)
+            count = min(count, self.flushedChunks)
 
-        // the numbers of storage refs that we need to decrease later.
-        var numberOfUsedSlots = 0
-        var toWrite: Int = 0
+            // the numbers of storage refs that we need to decrease later.
+            var numberOfUsedSlots = 0
+            var toWrite: Int = 0
 
-        loop: for idx in 0..<count {
-            let p = self[idx]
-            switch p.data {
-            case .byteBuffer(let buffer):
-                // Must not write more than Int32.max in one go.
-                /* FIXME: pronably worth to split that buffer
-                guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
+            loop: for idx in 0..<count {
+                let p = self[idx]
+                switch p.data {
+                case .byteBuffer(let buffer):
+                    // Must not write more than Int32.max in one go.
+                    /* FIXME: probably worth to split that buffer
+                    guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
+                        break loop
+                    }
+                    */
+                    let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
+                    if toWriteForThisBuffer > 0 {
+                        toWrite += numericCast(toWriteForThisBuffer)
+                        buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                            iovecs[numberOfUsedSlots] = IOVector(
+                                iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!),
+                                iov_len: numericCast(toWriteForThisBuffer))
+                            storageRefs[numberOfUsedSlots] = storageRef.retain()
+                        }
+                        numberOfUsedSlots += 1
+                    }
+                case .fileRegion:
+                    assert(numberOfUsedSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
+                    // We found a FileRegion so stop collecting
                     break loop
                 }
-                */
-                let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
-                if toWriteForThisBuffer > 0 {
-                    toWrite += numericCast(toWriteForThisBuffer)
-                    buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-                        iovecs[numberOfUsedSlots] = IOVector(
-                            iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!),
-                            iov_len: numericCast(toWriteForThisBuffer))
-                        storageRefs[numberOfUsedSlots] = storageRef.retain()
-                    }
-                    numberOfUsedSlots += 1
-                }
-            case .fileRegion:
-                assert(numberOfUsedSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
-                // We found a FileRegion so stop collecting
-                break loop
             }
-        }
 
-        count = min(iovecs.count, storageRefs.count)
-        if numberOfUsedSlots < count {
-            iovecs[numberOfUsedSlots].iov_len = 0
-        }
+            count = min(iovecs.count, storageRefs.count)
+            if numberOfUsedSlots < count {
+                iovecs[numberOfUsedSlots].iov_len = 0
+            }
 
-        return UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedSlots)
+            return UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedSlots)
+        }
     }
-
-#endif
 
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `writev`).
     ///
@@ -390,8 +399,8 @@ private struct PendingStreamWritesState {
 /// currently pending writes.
 final class PendingStreamWritesManager: PendingWritesManager {
     private var state = PendingStreamWritesState()
-    private var iovecs: UnsafeMutableBufferPointer<IOVector>
-    private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
+    private let bufferPool: Pool<PooledBuffer>
+    private var buffer: PooledBuffer?
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag = ManagedAtomic(true)
@@ -440,8 +449,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         return self.state.currentBestWriteMechanism
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
+    /// To be used with asynch IO, like URing
     func triggerAppropriateAsyncWriteOperations(scalarBufferAsyncWriteOperation: (UnsafeRawBufferPointer) throws -> Void,
                                                 vectorBufferAsyncWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> Void,
                                                 scalarFileAsyncWriteOperation: (CInt, Int, Int) throws -> Void) throws {
@@ -449,17 +457,21 @@ final class PendingStreamWritesManager: PendingWritesManager {
         switch writeMechanism {
         case .scalarBufferWrite:
             switch self.state[0].data {
-            case .byteBuffer(let buffer):
-                let toWrite = min(Socket.writevLimitBytes, buffer.readableBytes)
+            case .byteBuffer(let byteBuffer):
+                let toWrite = min(Socket.writevLimitBytes, byteBuffer.readableBytes)
                 if toWrite > 0 {
-                    try buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-                        self.storageRefs[0] = storageRef.retain()
-                        try scalarBufferAsyncWriteOperation(ptr)
+                    assert(self.buffer == nil)
+                    self.buffer = self.bufferPool.get()
+                    try self.buffer!.withUnsafePointers { _ , storageRefs in 
+                        try byteBuffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                            storageRefs[0] = storageRef.retain()
+                            try scalarBufferAsyncWriteOperation(ptr)
+                        }
                     }
                 }
                 else {
                     // can happen if empty buffer sent
-                    let (promise, flushAgain) = self.state.didAsyncWrite(0, self.storageRefs)
+                    let (promise, flushAgain) = self.state.removeEmptyFlushedChunks(nil)
                     assert(!flushAgain)
                     promise?.succeed(())
                 }
@@ -467,7 +479,9 @@ final class PendingStreamWritesManager: PendingWritesManager {
                 preconditionFailure("called \(#function) but first item to write was a FileRegion")
             }
         case .vectorBufferWrite:
-            let iovecs = self.state.prepareIOVectors(self.iovecs, self.storageRefs)
+            assert(self.buffer == nil)
+            self.buffer = self.bufferPool.get()
+            let iovecs = self.state.prepareIOVectors(to: &self.buffer!)
             try vectorBufferAsyncWriteOperation(iovecs)
         case .scalarFileWrite:
             switch self.state[0].data {
@@ -483,7 +497,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
                     }
                 }
                 else {
-                    let (promise, flushAgain) = self.state.didAsyncWrite(0, self.storageRefs)
+                    let (promise, flushAgain) = self.state.removeEmptyFlushedChunks(nil)
                     assert(!flushAgain)
                     promise?.succeed(())
                 }
@@ -496,7 +510,11 @@ final class PendingStreamWritesManager: PendingWritesManager {
     }
 
     func didAsyncWrite(written: Int) -> (Bool, Bool) {
-        let (promise, flushAgain) = self.state.didAsyncWrite(written, self.storageRefs)
+        let (promise, flushAgain) = self.state.didAsyncWrite(written, self.buffer)
+        if let buffer = self.buffer {
+            self.bufferPool.put(buffer)
+            self.buffer = nil
+        }
 
         var writabilityChange = false
         if self.state.bytes < waterMark.low {
@@ -510,10 +528,10 @@ final class PendingStreamWritesManager: PendingWritesManager {
     }
 
     func releaseData() {
-        self.state.releaseData(self.iovecs, self.storageRefs)
+        self.state.releaseData(self.buffer!)
+        self.bufferPool.put(self.buffer!)
+        self.buffer = nil
     }
-
-#endif
 
     /// Triggers the appropriate write operation. This is a fancy way of saying trigger either `write`, `writev` or
     /// `sendfile`.
@@ -602,8 +620,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         assert(self.state.isFlushPending && !self.state.isEmpty && self.isOpen,
                "vector write called in illegal state: flush pending: \(self.state.isFlushPending), empty: \(self.state.isEmpty), isOpen: \(self.isOpen)")
         let result = try doPendingWriteVectorOperation(pending: self.state,
-                                                       iovecs: self.iovecs,
-                                                       storageRefs: self.storageRefs,
+                                                       bufferPool: bufferPool,
                                                        { try operation($0) })
         return self.didWrite(itemCount: result.itemCount, result: result.writeResult)
     }
@@ -633,21 +650,10 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// will not complete, so each PendingWritesManager has own vector becoming an owner of the provided.
     ///
     /// - parameters:
-    ///     - iovecs: A pre-allocated array of `IOVector` elements
-    ///     - storageRefs: A pre-allocated array of storage management tokens used to keep storage elements alive during a vector write operation
-    init(iovecs: UnsafeMutableBufferPointer<IOVector>, storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) {
-        self.iovecs = iovecs
-        self.storageRefs = storageRefs
+    ///     - bufferPool: Pool of buffers to be used for iovecs and storage references
+    init(bufferPool: Pool<PooledBuffer>) {
+        self.bufferPool = bufferPool
     }
-
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
-    deinit {
-        self.iovecs.deallocate()
-        self.storageRefs.deallocate()
-    }
-
-#endif
 }
 
 internal enum WriteMechanism {

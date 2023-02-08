@@ -228,41 +228,18 @@ public final class ChannelTests: XCTestCase {
     }
 
     private func withPendingStreamWritesManager(_ body: (PendingStreamWritesManager) throws -> Void) rethrows {
-        try withExtendedLifetime(NSObject()) { o in
-            let count = Socket.writevLimitIOVectors + 1
-            let iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: count)
-            let managed = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: count)
+        let bufferPool = Pool<PooledBuffer>(maxSize: 16)
+        let pwm = NIOPosix.PendingStreamWritesManager(bufferPool: bufferPool)
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-            // With Uring the PendingWritesManager suppose 'iovecs' and 'managed'
-            // are allocated by the caller and PendingWritesManager become an owner
-#else
-            defer {
-                iovecs.deallocate()
-                managed.deallocate()
-            }
-#endif
+        XCTAssertTrue(pwm.isEmpty)
+        XCTAssertTrue(pwm.isOpen)
+        XCTAssertFalse(pwm.isFlushPending)
+        XCTAssertTrue(pwm.isWritable)
 
-            /* put a canary value at the end */
-            iovecs[count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!, iov_len: 0xdeadbee)
-            managed.assign(repeating: Unmanaged.passUnretained(o))
+        try body(pwm)
 
-            let pwm = NIOPosix.PendingStreamWritesManager(iovecs: iovecs, storageRefs: managed)
-            XCTAssertTrue(pwm.isEmpty)
-            XCTAssertTrue(pwm.isOpen)
-            XCTAssertFalse(pwm.isFlushPending)
-            XCTAssertTrue(pwm.isWritable)
-
-            try body(pwm)
-
-            XCTAssertTrue(pwm.isEmpty)
-            XCTAssertFalse(pwm.isFlushPending)
-
-            /* assert that the canary values are still okay, we should definitely have never written those */
-            XCTAssertEqual(managed.last!.toOpaque(), Unmanaged.passUnretained(o).toOpaque())
-            XCTAssertEqual(0xdeadbee, Int(bitPattern: iovecs.last!.iov_base))
-            XCTAssertEqual(0xdeadbee, iovecs.last!.iov_len)
-        }
+        XCTAssertTrue(pwm.isEmpty)
+        XCTAssertFalse(pwm.isFlushPending)
     }
 
     /// A frankenstein testing monster. It asserts that for `PendingStreamWritesManager` `pwm` and `EventLoopPromises` `promises`

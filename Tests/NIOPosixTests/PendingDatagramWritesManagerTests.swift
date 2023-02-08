@@ -47,52 +47,37 @@ private extension SocketAddress {
 
 class PendingDatagramWritesManagerTests: XCTestCase {
     private func withPendingDatagramWritesManager(_ body: (PendingDatagramWritesManager) throws -> Void) rethrows {
-        try withExtendedLifetime(NSObject()) { o in
+        let bufferPool = Pool<PooledBuffer>(maxSize: 16)
 
-            let count = (Socket.writevLimitIOVectors + 1)
-            let msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: count)
-            let iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: count)
-            let addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: count)
-            let managed = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: count)
-            let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
+        let count = (Socket.writevLimitIOVectors + 1)
+        let msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: count)
+        let addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: count)
+        var controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
 
 #if SWIFTNIO_USE_IO_URING && os(Linux)
-            // With Uring the PendingDatagramWritesManager suppose 'msgs', 'iovecs', 'addresses', 'managed'
-            // and 'controlMessageStorage' are allocated by the caller and PendingDatagramWritesManager become an owner
+        // With Uring the PendingDatagramWritesManager suppose 'msgs', 'iovecs', 'addresses', 'managed'
+        // and 'controlMessageStorage' are allocated by the caller and PendingDatagramWritesManager become an owner
 #else
-            defer {
-                msgs.deallocate()
-                iovecs.deallocate()
-                addresses.deallocate()
-                managed.deallocate()
-                controlMessageStorage.deallocate()
-            }
+        defer {
+            msgs.deallocate()
+            addresses.deallocate()
+            controlMessageStorage.deallocate()
+        }
 #endif
 
-            /* put a canary value at the end */
-            iovecs[count - 1] = iovec(iov_base: UnsafeMutableRawPointer(bitPattern: 0xdeadbeef)!, iov_len: 0xdeadbeef)
-            managed.assign(repeating: Unmanaged.passUnretained(o))
+        let pwm = NIOPosix.PendingDatagramWritesManager(bufferPool: bufferPool,
+                                                        msgs: msgs,
+                                                        addresses: addresses,
+                                                        controlMessageStorage: controlMessageStorage)
+        XCTAssertTrue(pwm.isEmpty)
+        XCTAssertTrue(pwm.isOpen)
+        XCTAssertFalse(pwm.isFlushPending)
+        XCTAssertTrue(pwm.isWritable)
 
-            let pwm = NIOPosix.PendingDatagramWritesManager(msgs: msgs,
-                                                            iovecs: iovecs,
-                                                            addresses: addresses,
-                                                            storageRefs: managed,
-                                                            controlMessageStorage: controlMessageStorage)
-            XCTAssertTrue(pwm.isEmpty)
-            XCTAssertTrue(pwm.isOpen)
-            XCTAssertFalse(pwm.isFlushPending)
-            XCTAssertTrue(pwm.isWritable)
+        try body(pwm)
 
-            try body(pwm)
-
-            XCTAssertTrue(pwm.isEmpty)
-            XCTAssertFalse(pwm.isFlushPending)
-
-            /* assert that the canary values are still okay, we should definitely have never written those */
-            XCTAssertEqual(managed.last!.toOpaque(), Unmanaged.passUnretained(o).toOpaque())
-            XCTAssertEqual(0xdeadbeef, Int(bitPattern: iovecs.last!.iov_base))
-            XCTAssertEqual(0xdeadbeef, iovecs.last!.iov_len)
-        }
+        XCTAssertTrue(pwm.isEmpty)
+        XCTAssertFalse(pwm.isFlushPending)
     }
 
     /// A frankenstein testing monster. It asserts that for `PendingDatagramWritesManager` `pwm` and `EventLoopPromises` `promises`

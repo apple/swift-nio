@@ -445,22 +445,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
 #if SWIFTNIO_USE_IO_URING && os(Linux)
         let msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: 1)
-        let iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: 1)
-        let storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: 1)
         let addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: 1)
         let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
 #else
         let msgs = eventLoop.msgs
-        let iovecs = eventLoop.iovecs
         let addresses = eventLoop.addresses
-        let storageRefs = eventLoop.storageRefs
         let controlMessageStorage = eventLoop.controlMessageStorage
 #endif
-        self.pendingWrites = PendingDatagramWritesManager(msgs: msgs,
-                                                          iovecs: iovecs,
+        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
+                                                          msgs: msgs,
                                                           addresses: addresses,
-                                                          storageRefs: storageRefs,
                                                           controlMessageStorage: controlMessageStorage)
+
         try super.init(
             socket: socket,
             parent: nil,
@@ -475,21 +471,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         try socket.setNonBlocking()
 #if SWIFTNIO_USE_IO_URING && os(Linux)
         let msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: 1)
-        let iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: 1)
-        let storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: 1)
         let addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: 1)
         let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
 #else
         let msgs = eventLoop.msgs
-        let iovecs = eventLoop.iovecs
         let addresses = eventLoop.addresses
-        let storageRefs = eventLoop.storageRefs
         let controlMessageStorage = eventLoop.controlMessageStorage
 #endif
-        self.pendingWrites = PendingDatagramWritesManager(msgs: msgs,
-                                                          iovecs: iovecs,
+        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
+                                                          msgs: msgs,
                                                           addresses: addresses,
-                                                          storageRefs: storageRefs,
                                                           controlMessageStorage: controlMessageStorage)
         try super.init(
             socket: socket,
