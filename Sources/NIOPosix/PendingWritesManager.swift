@@ -31,46 +31,47 @@ private func doPendingWriteVectorOperation(pending: PendingStreamWritesState,
                                            _ body: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>) throws -> (itemCount: Int, writeResult: IOResult<Int>) {
     let buffer = bufferPool.get()
     defer { bufferPool.put(buffer) }
-    let (iovecs, storageRefs) = buffer.get()
 
-    // Clamp the number of writes we're willing to issue to the limit for writev.
-    var count = min(iovecs.count, storageRefs.count)
-    count = min(pending.flushedChunks, count)
+    return try buffer.withUnsafePointers { iovecs, storageRefs in
+        // Clamp the number of writes we're willing to issue to the limit for writev.
+        var count = min(iovecs.count, storageRefs.count)
+        count = min(pending.flushedChunks, count)
 
-    // the numbers of storage refs that we need to decrease later.
-    var numberOfUsedStorageSlots = 0
-    var toWrite: Int = 0
+        // the numbers of storage refs that we need to decrease later.
+        var numberOfUsedStorageSlots = 0
+        var toWrite: Int = 0
 
-    loop: for i in 0..<count {
-        let p = pending[i]
-        switch p.data {
-        case .byteBuffer(let buffer):
-            // Must not write more than Int32.max in one go.
-            guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
+        loop: for i in 0..<count {
+            let p = pending[i]
+            switch p.data {
+            case .byteBuffer(let buffer):
+                // Must not write more than Int32.max in one go.
+                guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
+                    break loop
+                }
+                let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
+                toWrite += numericCast(toWriteForThisBuffer)
+
+                buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                    storageRefs[i] = storageRef.retain()
+                    iovecs[i] = IOVector(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
+                }
+                numberOfUsedStorageSlots += 1
+            case .fileRegion:
+                assert(numberOfUsedStorageSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
+                // We found a FileRegion so stop collecting
                 break loop
             }
-            let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
-            toWrite += numericCast(toWriteForThisBuffer)
-
-            buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-                storageRefs[i] = storageRef.retain()
-                iovecs[i] = IOVector(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
+        }
+        defer {
+            for i in 0..<numberOfUsedStorageSlots {
+                storageRefs[i].release()
             }
-            numberOfUsedStorageSlots += 1
-        case .fileRegion:
-            assert(numberOfUsedStorageSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
-            // We found a FileRegion so stop collecting
-            break loop
         }
+        let result = try body(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
+        /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
+        return (numberOfUsedStorageSlots, result)
     }
-    defer {
-        for i in 0..<numberOfUsedStorageSlots {
-            storageRefs[i].release()
-        }
-    }
-    let result = try body(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
-    /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
-    return (numberOfUsedStorageSlots, result)
 }
 
 /// The result of a single write operation, usually `write`, `sendfile` or `writev`.
