@@ -32,7 +32,11 @@ final class SALChannelTest: XCTestCase, SALTest {
     }
 
     func testBasicConnectedChannel() throws {
-#if !(SWIFTNIO_USE_IO_URING && os(Linux))
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#endif
         let localAddress = try! SocketAddress(ipAddress: "0.1.2.3", port: 4)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
         let buffer = ByteBuffer(string: "xxx")
@@ -58,11 +62,14 @@ final class SALChannelTest: XCTestCase, SALTest {
                 channel.close()
             }
         }.salWait()
-#endif
     }
 
-    func testWritesFromWritabilityNotificationsDoNotGetLostIfWePreviouslyWroteEverything() {
-#if !(SWIFTNIO_USE_IO_URING && os(Linux))
+    func testWritesFromWritabilityNotificationsDoNotGetLostIfWePreviouslyWroteEverything() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         // This is a unit test, doing what
         //     testWriteAndFlushFromReentrantFlushNowTriggeredOutOfWritabilityWhereOuterSaysAllWrittenAndInnerDoesNot
         // does but in a deterministic way, without having to send actual bytes.
