@@ -258,6 +258,16 @@ extension EventLoopIterator: Sendable {}
 /// effect as blocking in this case.
 public protocol EventLoop: EventLoopGroup {
     /// Returns `true` if the current `NIOThread` is the same as the `NIOThread` that is tied to this `EventLoop`. `false` otherwise.
+    ///
+    /// This method is intended principally as an optimization point, allowing users to write code that can provide fast-paths when this
+    /// property is true. It is _not suitable_ as a correctness guard. Code must be correct if this value returns `false` _even if_
+    /// the event loop context is actually held. That's because this property is allowed to produce false-negatives
+    ///
+    /// Implementers may implement this method in a way that may produce false-negatives: that is, this value may return `false` in
+    /// cases where the code in question actually is executing on the event loop. It may _never_ produce false positives: this value
+    /// must never return `true` when event loop context is not actually held.
+    ///
+    /// If it is necessary for correctness to confirm that you're on an event loop, prefer ``preconditionInEventLoop(file:line:)-7ukrq``.
     var inEventLoop: Bool { get }
     
     #if swift(>=5.7)
@@ -342,10 +352,18 @@ public protocol EventLoop: EventLoopGroup {
 
     /// Asserts that the current thread is the one tied to this `EventLoop`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
+    ///
+    /// This method may never produce false positives or false negatives in conforming implementations. It may never
+    /// terminate the process when event loop context is actually held, and it may never fail to terminate the process
+    /// when event loop context is not held.
     func preconditionInEventLoop(file: StaticString, line: UInt)
 
     /// Asserts that the current thread is _not_ the one tied to this `EventLoop`.
     /// Otherwise, the process will be abnormally terminated as per the semantics of `preconditionFailure(_:file:line:)`.
+    ///
+    /// This method may never produce false positives or false negatives in conforming implementations. It may never
+    /// terminate the process when event loop context is not held, and it may never fail to terminate the process
+    /// when event loop context is held.
     func preconditionNotInEventLoop(file: StaticString, line: UInt)
 
     /// Return a succeeded `Void` future.
