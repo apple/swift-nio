@@ -1138,3 +1138,8 @@ try measureAndPrint(
         vectorWrites: 10
     )
 )
+
+try measureAndPrint(
+    desc: "tcp_100k_messages_throughput",
+    benchmark: TCPThroughputBenchmark(messages: 100_000, messageSize: 500)
+)
