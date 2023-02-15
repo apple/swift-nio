@@ -4,9 +4,9 @@ import NIOPosix
 /// Test measure a TCP channel throughput.
 /// Server send 100K messages to the client,
 /// measure the time from the very first message sent by the server
-/// to the last message received by the clien.
+/// to the last message received by the client.
 
-class TCPThroughputBenchmark: Benchmark {
+final class TCPThroughputBenchmark: Benchmark {
 
     private let messages: Int
     private let messageSize: Int
@@ -41,8 +41,7 @@ class TCPThroughputBenchmark: Benchmark {
         public typealias InboundOut = ByteBuffer
 
         public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-            if buffer.readableBytes >= MemoryLayout<UInt16>.size {
-                let messageSize = buffer.getInteger(at: buffer.readerIndex, as: UInt16.self)!
+            if let messageSize = buffer.getInteger(at: buffer.readerIndex, as: UInt16.self) {
                 if buffer.readableBytes >= messageSize {
                     context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: Int(messageSize))!))
                     return .continue
@@ -94,7 +93,7 @@ class TCPThroughputBenchmark: Benchmark {
 
         self.clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHandler(ByteToMessageHandler(StreamDecoder())).flatMap { v in
+                channel.pipeline.addHandler(ByteToMessageHandler(StreamDecoder())).flatMap { _ in
                     channel.pipeline.addHandler(ClientHandler(self))
                 }
             }
@@ -104,7 +103,7 @@ class TCPThroughputBenchmark: Benchmark {
         var message = self.serverChannel.allocator.buffer(capacity: self.messageSize)
         message.writeInteger(UInt16(messageSize), as:UInt16.self)
         for idx in 0..<(self.messageSize - MemoryLayout<UInt16>.stride) {
-            message.writeInteger(UInt8(idx%(Int(UInt8.max)+1)), endianness:.little, as:UInt8.self)
+            message.writeInteger(UInt8(truncatingIfNeeded: idx), endianness:.little, as:UInt8.self)
         }
         self.message = message
 
