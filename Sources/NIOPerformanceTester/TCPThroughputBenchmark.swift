@@ -20,6 +20,7 @@ import NIOPosix
 /// measure the time from the very first message sent by the server
 /// to the last message received by the client.
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class TCPThroughputBenchmark: Benchmark {
 
     private let messages: Int

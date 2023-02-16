@@ -1139,7 +1139,9 @@ try measureAndPrint(
     )
 )
 
-try measureAndPrint(
-    desc: "tcp_100k_messages_throughput",
-    benchmark: TCPThroughputBenchmark(messages: 100_000, messageSize: 500)
-)
+if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {
+    try measureAndPrint(
+        desc: "tcp_100k_messages_throughput",
+        benchmark: TCPThroughputBenchmark(messages: 100_000, messageSize: 500)
+    )
+}
