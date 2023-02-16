@@ -178,7 +178,23 @@ extension Selector: _SelectorBackendProtocol {
         var ev = Epoll.epoll_event()
         _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_DEL, fd: fileDescriptor, event: &ev)
     }
-    
+
+    func writeAsync0(fileDescriptor: CInt, pointer: UnsafeRawBufferPointer, registrationID: SelectorRegistrationID) throws {
+        fatalError("Not supported for Epoll")
+    }
+
+    func writeAsync0(fileDescriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>, registrationID: SelectorRegistrationID) throws {
+        fatalError("Not supported for Epoll")
+    }
+
+    func sendFileAsync0(fileDescriptor: CInt, src: CInt, offset: Int64, count: UInt32, registrationID: SelectorRegistrationID) throws {
+        fatalError("Not supported for Epoll")
+    }
+
+    func sendmsgAsync0(fileDescriptor: CInt, msghdr: UnsafePointer<msghdr>, registrationID: SelectorRegistrationID) throws {
+        fatalError("Not supported for Epoll")
+    }
+
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///
     /// - parameters:

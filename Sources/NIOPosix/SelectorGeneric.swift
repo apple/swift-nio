@@ -158,12 +158,10 @@ protocol _SelectorBackendProtocol {
     func reregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
     func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
 
-#if SWIFTNIO_USE_IO_URING
     func writeAsync0(fileDescriptor: CInt, pointer: UnsafeRawBufferPointer, registrationID: SelectorRegistrationID) throws
     func writeAsync0(fileDescriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>, registrationID: SelectorRegistrationID) throws
     func sendFileAsync0(fileDescriptor: CInt, src: CInt, offset: Int64, count: UInt32, registrationID: SelectorRegistrationID) throws
     func sendmsgAsync0(fileDescriptor: CInt, msghdr: UnsafePointer<msghdr>, registrationID: SelectorRegistrationID) throws
-#endif
 
     /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
     func wakeup0() throws
