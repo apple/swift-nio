@@ -150,4 +150,21 @@ size_t CNIOLinux_CMSG_SPACE(size_t payloadSizeBytes) {
 
 const int CNIOLinux_SO_TIMESTAMP = SO_TIMESTAMP;
 const int CNIOLinux_SO_RCVTIMEO = SO_RCVTIMEO;
+
+int CNIOLinux_supports_udp_segment() {
+    #ifndef UDP_SEGMENT
+    return -1;
+    #else
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd == -1) {
+        return -1;
+    }
+
+    int gso_size = 512;
+    int rc = setsockopt(fd, IPPROTO_UDP, UDP_SEGMENT, &gso_size, sizeof(gso_size));
+    close(fd);
+    return rc;
+    #endif
+}
+
 #endif
