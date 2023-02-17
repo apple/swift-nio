@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(iOS) && !os(tvOS) && !os(watchOS)
 import NIOPosix
 import Foundation
 
@@ -23,3 +24,4 @@ struct SystemCrashTests {
             _ = try? NIOPipeBootstrap(group: group).withPipes(inputDescriptor: .max, outputDescriptor: .max - 1).wait()
         })
 }
+#endif
