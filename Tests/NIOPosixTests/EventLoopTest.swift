@@ -1479,8 +1479,8 @@ public final class EventLoopTest : XCTestCase {
         }.wait())
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     func testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 3)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1494,8 +1494,8 @@ public final class EventLoopTest : XCTestCase {
         }.wait())
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     func testAsyncToFutureConversionSuccess() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1509,6 +1509,7 @@ public final class EventLoopTest : XCTestCase {
     }
 
     func testAsyncToFutureConversionFailure() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())

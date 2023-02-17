@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(iOS) && !os(tvOS) && !os(watchOS)
 let crashTestSuites: [String: Any] = [
     "EventLoopCrashTests": EventLoopCrashTests(),
     "ByteBufferCrashTests": ByteBufferCrashTests(),
@@ -19,3 +20,4 @@ let crashTestSuites: [String: Any] = [
     "HTTPCrashTests": HTTPCrashTests(),
     "StrictCrashTests": StrictCrashTests(),
 ]
+#endif

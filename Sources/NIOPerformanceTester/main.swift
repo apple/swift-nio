@@ -1083,7 +1083,7 @@ try measureAndPrint(
     )
 )
 
-if #available(macOS 10.15, *) {
+if #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) {
     try measureAndPrint(
         desc: "asyncwriter_single_writes_1M_times",
         benchmark: NIOAsyncWriterSingleWritesBenchmark(
