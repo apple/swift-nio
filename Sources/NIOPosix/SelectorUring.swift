@@ -186,8 +186,7 @@ extension Selector: _SelectorBackendProtocol {
     }
 
     func sendFileAsync0(fileDescriptor: CInt, src: CInt, offset: Int64, count: UInt32, registrationID: SelectorRegistrationID) throws {
-        let pipe = try pipeCache.get()
-        ring.prep_sendfile(fileDescriptor, src, offset, count, registrationID, pipe)
+        ring.prep_sendfile(fileDescriptor, src, offset, count, registrationID)
     }
 
     func sendmsgAsync0(fileDescriptor: CInt, msghdr: UnsafePointer<msghdr>, registrationID: SelectorRegistrationID) throws {

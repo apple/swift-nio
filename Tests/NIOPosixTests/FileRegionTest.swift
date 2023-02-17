@@ -19,6 +19,9 @@ import NIOCore
 class FileRegionTest : XCTestCase {
 
     func testWriteFileRegion() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("Send file not supported for URing.")
+#else
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -64,9 +67,13 @@ class FileRegionTest : XCTestCase {
             buffer.writeBytes(bytes)
             try countingHandler.assertReceived(buffer: buffer)
         }
+#endif
     }
 
     func testWriteEmptyFileRegionDoesNotHang() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("Send file not supported for URing.")
+#else
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -107,9 +114,13 @@ class FileRegionTest : XCTestCase {
             try clientChannel.writeAndFlush(NIOAny(fr)).wait()
             try futures.forEach { try $0.wait() }
         }
+#endif
     }
 
     func testOutstandingFileRegionsWork() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("Send file not supported for URing.")
+#else
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -169,9 +180,13 @@ class FileRegionTest : XCTestCase {
             buffer.writeBytes(bytes)
             try countingHandler.assertReceived(buffer: buffer)
         }
+#endif
     }
 
     func testWholeFileFileRegion() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("Send file not supported for URing.")
+#else
         try withTemporaryFile(content: "hello") { fd, path in
             let handle = try NIOFileHandle(path: path)
             let region = try FileRegion(fileHandle: handle)
@@ -182,9 +197,13 @@ class FileRegionTest : XCTestCase {
             XCTAssertEqual(5, region.readableBytes)
             XCTAssertEqual(5, region.endIndex)
         }
+#endif
     }
 
     func testWholeEmptyFileFileRegion() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("Send file not supported for URing.")
+#else
         try withTemporaryFile(content: "") { _, path in
             let handle = try NIOFileHandle(path: path)
             let region = try FileRegion(fileHandle: handle)
@@ -195,9 +214,13 @@ class FileRegionTest : XCTestCase {
             XCTAssertEqual(0, region.readableBytes)
             XCTAssertEqual(0, region.endIndex)
         }
+#endif
     }
 
     func testFileRegionDuplicatesShareSeekPointer() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("Send file not supported for URing.")
+#else
         try withTemporaryFile(content: "0123456789") { fh1, path in
             let fh2 = try fh1.duplicate()
 
@@ -219,9 +242,13 @@ class FileRegionTest : XCTestCase {
             XCTAssertEqual(Array("01234".utf8), fr1Bytes)
             XCTAssertEqual(Array("56789".utf8), fr2Bytes)
         }
+#endif
     }
 
-    func testMassiveFileRegionThatJustAboutWorks() {
+    func testMassiveFileRegionThatJustAboutWorks() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("Send file not supported for URing.")
+#else
         withTemporaryFile(content: "0123456789") { fh, path in
             // just in case someone uses 32bit platforms
             let readerIndex = UInt64(_UInt56.max) < UInt64(Int.max) ? Int(_UInt56.max) : Int.max
@@ -229,9 +256,13 @@ class FileRegionTest : XCTestCase {
             XCTAssertEqual(readerIndex, fr.readerIndex)
             XCTAssertEqual(Int.max, fr.endIndex)
         }
+#endif
     }
 
-    func testMassiveFileRegionReaderIndexWorks() {
+    func testMassiveFileRegionReaderIndexWorks() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("Send file not supported for URing.")
+#else
         withTemporaryFile(content: "0123456789") { fh, path in
             // just in case someone uses 32bit platforms
             let readerIndex = (UInt64(_UInt56.max) < UInt64(Int.max) ? Int(_UInt56.max) : Int.max) - 1000
@@ -242,9 +273,13 @@ class FileRegionTest : XCTestCase {
                 fr.moveReaderIndex(forwardBy: 1)
             }
         }
+#endif
     }
 
     func testFileRegionAndIODataFitsInACoupleOfEnums() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("Send file not supported for URing.")
+#else
         enum Level4 {
             case case1(FileRegion)
             case case2(FileRegion)
@@ -278,5 +313,6 @@ class FileRegionTest : XCTestCase {
             XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case2(.case3(.case4(.fileRegion(fr)))))), 24)
             XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case3(.case4(.case1(fr))))), 24)
         })
+#endif
     }
 }
