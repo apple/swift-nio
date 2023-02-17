@@ -110,8 +110,6 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
         try super.shutdownSocket(mode: mode)
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
     override func writeAsync(selector: Selector<NIORegistration>, pointer: UnsafeRawBufferPointer) throws {
         try selector.writeAsync(selectable: self.pipePair.outputFD, pointer: pointer)
     }
@@ -119,8 +117,6 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
     override func writeAsync(selector: Selector<NIORegistration>, iovecs: UnsafeBufferPointer<IOVector>) throws {
         try selector.writeAsync(selectable: self.pipePair.outputFD, iovecs: iovecs)
     }
-
-#endif
 }
 
 extension PipeChannel: CustomStringConvertible {
