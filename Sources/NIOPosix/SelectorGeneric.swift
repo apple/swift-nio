@@ -349,8 +349,6 @@ internal class Selector<R: Registration>  {
         }
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
     func writeAsync(selectable: Selectable, pointer: UnsafeRawBufferPointer) throws {
         try selectable.withUnsafeHandle { fileDescriptor in
             let reg = registrations[Int(fileDescriptor)]!
@@ -378,8 +376,6 @@ internal class Selector<R: Registration>  {
             try self.sendmsgAsync0(fileDescriptor: fileDescriptor, msghdr: msghdr, registrationID: reg.registrationID)
         }
     }
-
-#endif
 
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///

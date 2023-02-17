@@ -159,9 +159,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         return result
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
-    override func writeToSocket() throws {
+    override func writeToSocketAsync() throws {
         try self.pendingWrites.triggerAppropriateAsyncWriteOperations(
             scalarBufferAsyncWriteOperation: { ptr in
                 try self.selectableEventLoop.writeAsync(channel: self, pointer: ptr)
@@ -182,22 +180,20 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 self.pipeline.syncOperations.fireChannelWritabilityChanged()
             }
             if flushAgain {
-                self.flushNow()
+                self.flushNowAsync()
             }
         }
         else {
             self.pendingWrites.releaseData()
             let errnoCode = -result
             if errnoCode == EAGAIN {
-                self.flushNow()
+                self.flushNowAsync()
             }
             else {
                 assert(false)
             }
         }
     }
-
-#else
 
     final override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
@@ -215,8 +211,6 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         })
         return result
     }
-
-#endif
 
     final override func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         do {

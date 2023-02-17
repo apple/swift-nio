@@ -50,9 +50,9 @@ internal protocol SelectableChannel: Channel {
 
     func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
     func writeAsync(selector: Selector<NIORegistration>, pointer: UnsafeRawBufferPointer) throws
+
     func writeAsync(selector: Selector<NIORegistration>, iovecs: UnsafeBufferPointer<IOVector>) throws
+
     func sendFileAsync(selector: Selector<NIORegistration>, src: CInt, offset: Int64, count: UInt32) throws
-#endif
 }

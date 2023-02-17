@@ -256,8 +256,6 @@ Further information:
         try channel.reregister(selector: self._selector, interested: channel.interestedEvent)
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
     internal func writeAsync(channel: any SelectableChannel, pointer: UnsafeRawBufferPointer) throws -> Void {
         try channel.writeAsync(selector: self._selector, pointer: pointer)
     }
@@ -273,8 +271,6 @@ Further information:
     internal func sendmsgAsync(channel: DatagramChannel, msghdr: UnsafePointer<msghdr>) throws -> Void {
         try channel.sendmsgAsync(selector: self._selector, msghdr: msghdr)
     }
-
-#endif
 
     /// - see: `EventLoop.inEventLoop`
     @usableFromInline

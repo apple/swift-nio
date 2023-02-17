@@ -147,8 +147,6 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         try selector.reregister(selectable: self.socket, interested: interested)
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
     override func writeAsync(selector: Selector<NIORegistration>, pointer: UnsafeRawBufferPointer) throws {
         try selector.writeAsync(selectable: self.socket, pointer: pointer)
     }
@@ -160,8 +158,6 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     override func sendFileAsync(selector: Selector<NIORegistration>, src: CInt, offset: Int64, count: UInt32) throws {
         try selector.sendFileAsync(selectable: self.socket, src: src, offset: offset, count: count)
     }
-
-#endif
 }
 
 /// A `Channel` for a server socket.
@@ -359,14 +355,13 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         // We do nothing here: flushes are no-ops.
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-    override func flushNow() {
+    override func flushNowAsync() {
+        // We do nothing here
     }
-#else
+
     override func flushNow() -> IONotificationState {
         return IONotificationState.unregister
     }
-#endif
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.register(selectable: self.socket,
@@ -824,9 +819,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.pendingWrites.failAll(error: error, close: true)
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
-    override func writeToSocket() throws {
+    override func writeToSocketAsync() throws {
         try self.pendingWrites.triggerAsnycWriteOperation { msghdr in
             try self.selectableEventLoop.sendmsgAsync(channel: self, msghdr: msghdr)
         }
@@ -842,11 +835,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             self.pipeline.syncOperations.fireChannelWritabilityChanged()
         }
         if flushAgain {
-            self.flushNow()
+            self.flushNowAsync()
         }
     }
-
-#else
 
     override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
@@ -870,7 +861,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         return result
     }
 
-#endif
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {

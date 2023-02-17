@@ -375,19 +375,13 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     // MARK: Methods to override in subclasses.
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
-    func writeToSocket() throws {
+    func writeToSocketAsync() throws {
         fatalError("must be overridden")
     }
-
-#else
 
     func writeToSocket() throws -> OverallWriteResult {
         fatalError("must be overridden")
     }
-
-#endif
 
     /// Read data from the underlying socket and dispatch it to the `ChannelPipeline`
     ///
@@ -511,18 +505,14 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         return try self.socket.remoteAddress()
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
-    func flushNow() {
+    func flushNowAsync() {
         do {
-            try self.writeToSocket()
+            try self.writeToSocketAsync()
         }
         catch let err {
             self.close0(error: err, mode: .all, promise: nil)
         }
     }
-
-#else
 
     /// Flush data to the underlying socket and return if this socket needs to be registered for write notifications.
     ///
@@ -592,8 +582,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return .unregister
         }
     }
-
-#endif
 
     public final func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
@@ -758,7 +746,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.markFlushPoint()
 
         if !isFlushPending {
-            self.flushNow()
+            self.flushNowAsync()
         }
 #else
         self.markFlushPoint()
@@ -1356,8 +1344,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         fatalError("must override")
     }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-
     func writeAsync(selector: Selector<NIORegistration>, pointer: UnsafeRawBufferPointer) throws {
         fatalError("must override")
     }
@@ -1369,8 +1355,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     func sendFileAsync(selector: Selector<NIORegistration>, src: CInt, offset: Int64, count: UInt32) throws {
         fatalError("must override")
     }
-
-#endif
 }
 
 extension BaseSocketChannel {

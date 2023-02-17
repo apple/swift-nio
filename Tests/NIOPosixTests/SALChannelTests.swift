@@ -36,7 +36,7 @@ final class SALChannelTest: XCTestCase, SALTest {
         // SAL tests use socket channels which are not registered in the selector,
         // so they can't work properly
         throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
-#endif
+#else
         let localAddress = try! SocketAddress(ipAddress: "0.1.2.3", port: 4)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
         let buffer = ByteBuffer(string: "xxx")
@@ -62,6 +62,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 channel.close()
             }
         }.salWait()
+#endif
     }
 
     func testWritesFromWritabilityNotificationsDoNotGetLostIfWePreviouslyWroteEverything() throws {
