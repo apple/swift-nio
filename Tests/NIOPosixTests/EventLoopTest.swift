@@ -19,6 +19,7 @@ import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public final class EventLoopTest : XCTestCase {
 
     public func testSchedule() throws {
