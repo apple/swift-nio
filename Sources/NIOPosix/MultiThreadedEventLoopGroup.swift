@@ -378,21 +378,14 @@ internal struct ScheduledTask {
     let task: () -> Void
     private let failFn: (Error) ->()
     @usableFromInline
-    internal let _readyTime: NIODeadline
+    internal let readyTime: NIODeadline
 
     @usableFromInline
     init(id: UInt64, _ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
         self.id = id
         self.task = task
         self.failFn = failFn
-        self._readyTime = time
-    }
-
-    func readyIn(_ t: NIODeadline) -> TimeAmount {
-        if _readyTime < t {
-            return .nanoseconds(0)
-        }
-        return _readyTime - t
+        self.readyTime = time
     }
 
     func fail(_ error: Error) {
@@ -403,22 +396,31 @@ internal struct ScheduledTask {
 extension ScheduledTask: CustomStringConvertible {
     @usableFromInline
     var description: String {
-        return "ScheduledTask(readyTime: \(self._readyTime))"
+        return "ScheduledTask(readyTime: \(self.readyTime))"
     }
 }
 
 extension ScheduledTask: Comparable {
     @usableFromInline
     static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
-        if lhs._readyTime == rhs._readyTime {
+        if lhs.readyTime == rhs.readyTime {
             return lhs.id < rhs.id
         } else {
-            return lhs._readyTime < rhs._readyTime
+            return lhs.readyTime < rhs.readyTime
         }
     }
 
     @usableFromInline
     static func == (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
         return lhs.id == rhs.id
+    }
+}
+
+extension NIODeadline {
+    func readyIn(_ target: NIODeadline) -> TimeAmount {
+        if self < target {
+            return .nanoseconds(0)
+        }
+        return self - target
     }
 }
