@@ -499,7 +499,7 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             } else {
                 XCTFail("Timed out waiting for lock")
             }
-            XCTAssertThrowsError(try scheduled.futureResult.wait()) { error in
+            await XCTAssertThrowsError(try await scheduled.futureResult.get()) { error in
                 XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
             }
         }
