@@ -320,7 +320,7 @@ public final class EmbeddedEventLoopTest: XCTestCase {
             XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
         }
 
-        class Thing {
+        class Thing @unchecked Sendable {
             private let deallocated: ConditionLock<Int>
 
             init(_ deallocated: ConditionLock<Int>) {

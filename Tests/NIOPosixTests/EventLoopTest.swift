@@ -811,7 +811,7 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        class Thing {
+        class Thing @unchecked Sendable {
             private let deallocated: ConditionLock<Int>
             
             init(_ deallocated: ConditionLock<Int>) {
