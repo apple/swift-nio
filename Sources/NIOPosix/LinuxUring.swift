@@ -84,11 +84,10 @@ private func _debugPrint(_ s: @autoclosure () -> String) {
 
 fileprivate extension UInt64 {
     init(_ userData: URing.UserData) {
-        let rawValue = IntegerBitPacking.packUInt32UInt16UInt8(
+        self = IntegerBitPacking.packUInt32UInt16UInt8(
             UInt32(truncatingIfNeeded: userData.fileDescriptor),
             userData.registrationID,
             userData.eventType.rawValue)
-        self = ((rawValue << 1) + 1)
    }
 }
 
@@ -112,50 +111,10 @@ final internal class URing {
         }
 
         @inlinable init(rawValue: UInt64) {
-            let unpacked = IntegerBitPacking.unpackUInt32UInt16UInt8(rawValue >> 1)
+            let unpacked = IntegerBitPacking.unpackUInt32UInt16UInt8(rawValue)
             self = .init(CInt(unpacked.0),
                         SelectorRegistrationID(rawValue: UInt32(unpacked.1)),
                         CQEEventType(rawValue:unpacked.2)!)
-        }
-    }
-
-    private class SendFileRequest {
-        let fileDescriptor: CInt
-        let src: CInt
-        let registrationID: UInt16
-        let bytes: UInt32
-        let pipe: Pipe
-        var opsDone: Int
-
-        init(_ fileDescriptor: CInt, _ src: CInt, _ registrationID: SelectorRegistrationID, _ bytes: UInt32, _ pipe: Pipe) {
-            self.fileDescriptor = fileDescriptor
-            self.src = src
-            self.registrationID = UInt16(truncatingIfNeeded: registrationID.rawValue)
-            self.pipe = pipe
-            self.bytes = bytes
-            self.opsDone = 0
-        }
-
-        deinit {
-            pipe.release()
-        }
-
-        func opDone() -> Bool {
-            opsDone += 1
-            assert(opsDone <= 2)
-            return (opsDone == 2)
-        }
-    }
-
-    private struct SendFileUserData {
-        let request: SendFileRequest
-        var offs: Int64
-        var bytesProcessed: UInt32
-
-        init(_ request: SendFileRequest, _ offs: Int64) {
-            self.request = request
-            self.offs = offs
-            self.bytesProcessed = 0
         }
     }
 
@@ -378,31 +337,13 @@ final internal class URing {
             "out[fd=\(fdOut), offs=\(offsOut)] " +
             "count=\(count)")
 
-        //let _offs = UnsafeMutablePointer<Int64>.allocate(capacity: 1)
-        //_offs.pointee = offsIn
         self.withSQE { sqe in
             io_uring_prep_splice(sqe, fdIn, offsIn, fdOut, offsOut, count, flags)
         }
     }
 
-    func prep_sendfile(_ fileDescriptor: CInt, _ src: CInt, _ offs: Int64, _ count: UInt32, _ registrationID: SelectorRegistrationID, _ pipe: Pipe) {
-
-        _debugPrint("URing.prep_sendfile: fileDescriptor=\(fileDescriptor) src[\(src)] offs[\(offs)] count[\(count)]")
-        let request = SendFileRequest(fileDescriptor, src, registrationID, count, pipe)
-
-        self.withSQE { sqe in
-            let userData = UnsafeMutablePointer<SendFileUserData>.allocate(capacity: 1)
-            userData.initialize(to: SendFileUserData(request, offs))
-            io_uring_prep_splice(sqe, src, offs, pipe.write, -1, count, 0)
-            io_uring_sqe_set_data(sqe, userData)
-        }
-
-        self.withSQE { sqe in
-            let userData = UnsafeMutablePointer<SendFileUserData>.allocate(capacity: 1)
-            userData.initialize(to: SendFileUserData(request, -1))
-            io_uring_prep_splice(sqe, pipe.read, -1, fileDescriptor, -1, count, 0)
-            io_uring_sqe_set_data(sqe, userData)
-        }
+    func prep_sendfile(_ fileDescriptor: CInt, _ src: CInt, _ offs: Int64, _ count: UInt32, _ registrationID: SelectorRegistrationID) {
+        fatalError("Send file not supported for uring")
     }
 
     func prep_sendmsg(_ fileDescriptor: CInt, _ msghdr: UnsafePointer<msghdr>, _ registrationID: SelectorRegistrationID) {
@@ -440,126 +381,73 @@ final internal class URing {
     private func _processCQE(events: UnsafeMutablePointer<URingEvent>, count: inout Int, pendingSQEs: inout Int, multishot: Bool, cqe: UnsafeMutablePointer<io_uring_cqe>) {
         let userData64 : UInt64 = io_uring_cqe_get_data64(cqe)
         let result = cqe.pointee.res
-        if (userData64 & 1) != 0 {
-            let userData = UserData(rawValue: userData64)
-
-            switch userData.eventType {
-            case .poll:
-                _debugPrint("URing: CQE/poll, fd[\(userData.fileDescriptor)] userData[0x\(String(userData64, radix: 16))] result[\(result)]")
-                switch result {
-                case -ECANCELED:
-                    var pollError: UInt32 = 0
-                    assert(userData.fileDescriptor >= 0, "fd must be zero or greater")
-                    var pollCancelled = false
-                    if multishot { // -ECANCELED for streaming polls, should signal error
-                        pollError = URing.POLLERR | URing.POLLHUP
-                    } else {       // this just signals that Selector just should resubmit a new fresh poll
-                        pollCancelled = true
-                    }
-                    let eventKey = EventKey(userData.fileDescriptor, userData.registrationID)
-                    _processPollCQE(events, &count, eventKey, pollError, pollCancelled)
-                // We can validly receive an EBADF as a close() can race vis-a-vis pending SQE:s
-                // with polls / pollModifications - in that case, we should just discard the result.
-                // This is similar to the assert in BaseSocketChannel and is due to the lack
-                // of implicit synchronization with regard to registration changes for io_uring
-                // - we simply can't know when the kernel will process our SQE without
-                // heavy-handed synchronization which would dump performance.
-                // Discussion here:
-                // https://github.com/apple/swift-nio/pull/1804#discussion_r621304055
-                // including clarifications from @isilence (one of the io_uring developers)
-                case -EBADF:
-                    _debugPrint("Failed poll with -EBADF for cqe[\(cqe)]")
-                case ..<0: // other errors
-                    fatalError("Failed poll with unexpected error (\(result) for cqe[\(cqe)]")
-                case 0: // successfull chained add for singleshots, not an event
-                    break
-                default: // positive success
-                    assert(userData.fileDescriptor >= 0, "fd must be zero or greater")
-                    let eventKey = EventKey(userData.fileDescriptor, userData.registrationID)
-                    _processPollCQE(events, &count, eventKey, UInt32(result), false)
+        let userData = UserData(rawValue: userData64)
+        switch userData.eventType {
+        case .poll:
+            _debugPrint("URing: CQE/poll, fd[\(userData.fileDescriptor)] userData[0x\(String(userData64, radix: 16))] result[\(result)]")
+            switch result {
+            case -ECANCELED:
+                var pollError: UInt32 = 0
+                assert(userData.fileDescriptor >= 0, "fd must be zero or greater")
+                var pollCancelled = false
+                if multishot { // -ECANCELED for streaming polls, should signal error
+                    pollError = URing.POLLERR | URing.POLLHUP
+                } else {       // this just signals that Selector just should resubmit a new fresh poll
+                    pollCancelled = true
                 }
-
-            case .pollModify: // we only get this for multishot modifications
-                _debugPrint("URing: CQE/pollModify, fd[\(userData.fileDescriptor)] userData=[0x\(String(userData64, radix: 16))] result[\(result)]")
-                switch result {
-                case -ECANCELED: // -ECANCELED for streaming polls, should signal error
-                    assert(userData.fileDescriptor >= 0, "fd must be zero or greater")
-                    let eventKey = EventKey(userData.fileDescriptor, userData.registrationID)
-                    _processPollCQE(events, &count, eventKey, URing.POLLERR, false)
-                case -EALREADY:
-                    _debugPrint("Failed pollModify with -EALREADY for cqe[\(cqe)]")
-                case -ENOENT:
-                    _debugPrint("Failed pollModify with -ENOENT for cqe[\(cqe)]")
-                // See the description for EBADF handling above in the poll case for rationale of allowing EBADF.
-                case -EBADF:
-                    _debugPrint("Failed pollModify with -EBADF for cqe[\(cqe)]")
-                case ..<0: // other errors
-                    fatalError("Failed pollModify with unexpected error (\(result) for cqe[\(cqe)]")
-                case 0: // successfull chained add, not an event
-                    break
-                default: // positive success
-                    fatalError("pollModify returned > 0")
-                }
-
-            case .write:
-                _debugPrint("URing: CQE/write, fd[\(userData.fileDescriptor)] result[\(result)]")
-                let idx = count
-                count += 1
-                events[idx] = URingEvent(userData.fileDescriptor, userData.registrationID, .write(result))
-
-            default:
+                let eventKey = EventKey(userData.fileDescriptor, userData.registrationID)
+                _processPollCQE(events, &count, eventKey, pollError, pollCancelled)
+            // We can validly receive an EBADF as a close() can race vis-a-vis pending SQE:s
+            // with polls / pollModifications - in that case, we should just discard the result.
+            // This is similar to the assert in BaseSocketChannel and is due to the lack
+            // of implicit synchronization with regard to registration changes for io_uring
+            // - we simply can't know when the kernel will process our SQE without
+            // heavy-handed synchronization which would dump performance.
+            // Discussion here:
+            // https://github.com/apple/swift-nio/pull/1804#discussion_r621304055
+            // including clarifications from @isilence (one of the io_uring developers)
+            case -EBADF:
+                _debugPrint("Failed poll with -EBADF for cqe[\(cqe)]")
+            case ..<0: // other errors
+                fatalError("Failed poll with unexpected error (\(result) for cqe[\(cqe)]")
+            case 0: // successfull chained add for singleshots, not an event
                 break
+            default: // positive success
+                assert(userData.fileDescriptor >= 0, "fd must be zero or greater")
+                let eventKey = EventKey(userData.fileDescriptor, userData.registrationID)
+                _processPollCQE(events, &count, eventKey, UInt32(result), false)
             }
-        }
-        else {
-            let userData = UnsafeMutablePointer<SendFileUserData>(bitPattern: Int(userData64))!
-            let request = userData.pointee.request
-            if result > 0 {
-                userData.pointee.bytesProcessed += UInt32(result)
-                assert(userData.pointee.bytesProcessed <= request.bytes)
-                if userData.pointee.bytesProcessed >= request.bytes {
-                    request.opsDone += 1
-                    let opsDone = request.opsDone
-                    _debugPrint("URing: CQE/sendFile, result[\(result)] offs[\(userData.pointee.offs)] opsDone[\(opsDone)]")
-                    if opsDone == 2 {
-                        let idx = count
-                        count += 1
-                        events[idx] = URingEvent(request.fileDescriptor, request.registrationID, .write(Int32(request.bytes)))
-                    }
-                    userData.deallocate()
-                }
-                else {
-                    let pipe = request.pipe
-                    var offs = userData.pointee.offs
-                    let bytes = (request.bytes - userData.pointee.bytesProcessed)
-                    _debugPrint("URing: CQE/sendFile, result[\(result)] offs[\(userData.pointee.offs)] bytes[\(bytes)]")
-                    if offs >= 0 {
-                        // source file -> write side of the pipe
-                        offs += Int64(userData.pointee.bytesProcessed)
-                        self.withSQE { sqe in
-                            io_uring_prep_splice(sqe, request.src, offs, pipe.write, -1, bytes, 0)
-                            io_uring_sqe_set_data(sqe, userData)
-                        }
-                    }
-                    else {
-                        // read side of the pipe -> destination socket
-                        self.withSQE { sqe in
-                            io_uring_prep_splice(sqe, pipe.read, -1, request.fileDescriptor, -1, bytes, 0)
-                            io_uring_sqe_set_data(sqe, userData)
-                        }
-                    }
-                    pendingSQEs += 1
-                }
+
+        case .pollModify: // we only get this for multishot modifications
+            _debugPrint("URing: CQE/pollModify, fd[\(userData.fileDescriptor)] userData=[0x\(String(userData64, radix: 16))] result[\(result)]")
+            switch result {
+            case -ECANCELED: // -ECANCELED for streaming polls, should signal error
+                assert(userData.fileDescriptor >= 0, "fd must be zero or greater")
+                let eventKey = EventKey(userData.fileDescriptor, userData.registrationID)
+                _processPollCQE(events, &count, eventKey, URing.POLLERR, false)
+            case -EALREADY:
+                _debugPrint("Failed pollModify with -EALREADY for cqe[\(cqe)]")
+            case -ENOENT:
+                _debugPrint("Failed pollModify with -ENOENT for cqe[\(cqe)]")
+            // See the description for EBADF handling above in the poll case for rationale of allowing EBADF.
+            case -EBADF:
+                _debugPrint("Failed pollModify with -EBADF for cqe[\(cqe)]")
+            case ..<0: // other errors
+                fatalError("Failed pollModify with unexpected error (\(result) for cqe[\(cqe)]")
+            case 0: // successfull chained add, not an event
+                break
+            default: // positive success
+                fatalError("pollModify returned > 0")
             }
-            else {
-                request.opsDone += 1
-                if request.opsDone == 2 {
-                    let idx = count
-                    count += 1
-                    events[idx] = URingEvent(request.fileDescriptor, request.registrationID, .write(Int32(request.bytes)))
-                }
-                userData.deallocate()
-            }
+
+        case .write:
+            _debugPrint("URing: CQE/write, fd[\(userData.fileDescriptor)] result[\(result)]")
+            let idx = count
+            count += 1
+            events[idx] = URingEvent(userData.fileDescriptor, userData.registrationID, .write(result))
+
+        default:
+            break
         }
     }
 

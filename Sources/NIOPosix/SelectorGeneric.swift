@@ -92,59 +92,6 @@ internal let isEarlyEOFDeliveryWorkingOnThisOS: Bool = {
     #endif
 }()
 
-#if SWIFTNIO_USE_IO_URING
-
-internal class Cache<Element> {
-    private let maxSize : Int
-    private let ctor: (Cache<Element>) throws -> Element
-    private let dtor: (Element) -> Void
-    private var cache : [Element]
-
-    init(maxSize: Int, ctor: @escaping (Cache<Element>) throws -> Element, dtor: @escaping (Element) -> Void) {
-        self.maxSize = maxSize
-        self.ctor = ctor
-        self.dtor = dtor
-        self.cache = [Element]()
-    }
-
-    deinit {
-        while !cache.isEmpty {
-            let e = cache.removeLast()
-            dtor(e)
-        }
-    }
-
-    func get() throws -> Element {
-        if cache.isEmpty {
-            return try ctor(self)
-        }
-        else {
-            return cache.removeLast()
-        }
-    }
-
-    func put(_ e: Element) {
-        if (cache.count == maxSize) {
-            dtor(e)
-        }
-        else {
-            cache.append(e)
-        }
-    }
-}
-
-internal struct Pipe {
-    let cache: Cache<Pipe>
-    let read: Int32
-    let write: Int32
-
-    func release() {
-        cache.put(self)
-    }
-}
-
-#endif
-
 /// This protocol defines the methods that are expected to be found on
 /// `Selector`. While defined as a protocol there is no expectation that any
 /// object other than `Selector` will implement this protocol: instead, this
@@ -201,22 +148,6 @@ internal class Selector<R: Registration>  {
     var eventFD: CInt = -1 // -1 == we're closed
     var ring = URing()
     let multishot = URing.io_uring_use_multishot_poll // if true, we run with streaming multishot polls
-    let pipeCache = Cache<Pipe>(maxSize: 8,
-        ctor: { cache in
-            let fds = UnsafeMutablePointer<Int32>.allocate(capacity: 2)
-            defer { fds.deallocate() }
-            let rc = pipe(fds)
-            if rc == 0 {
-                return Pipe(cache: cache, read: fds[0], write: fds[1])
-            }
-            else {
-                throw IOError(errnoCode: errno, reason: "pipe")
-            }
-        },
-        dtor: { pipe in
-            Glibc.close(pipe.read)
-            Glibc.close(pipe.write)
-        })
     #elseif os(Linux) || os(Android)
     typealias EventType = Epoll.epoll_event
     var earliestTimer: NIODeadline = .distantFuture
