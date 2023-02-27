@@ -11,6 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(iOS) && !os(tvOS) && !os(watchOS)
 import NIOCore
 import NIOPosix
 import class Foundation.Process
@@ -220,3 +222,4 @@ func main() throws {
 }
 
 try main()
+#endif

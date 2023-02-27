@@ -629,7 +629,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     private func singleReadFromSocket() throws -> ReadResult {
         var rawAddress = sockaddr_storage()
         var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
-        var buffer = self.recvAllocator.buffer(allocator: self.allocator)
         var readResult = ReadResult.none
 
         // These control bytes must not escape the current call stack
@@ -640,24 +639,26 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
 
-        for i in 1...self.maxMessagesPerRead {
+        for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
                 throw ChannelError.eof
             }
-            buffer.clear()
 
             var controlBytes = UnsafeReceivedControlBytes(controlBytesBuffer: controlBytesBuffer)
 
-            let result = try buffer.withMutableWritePointer {
-                try self.socket.recvmsg(pointer: $0,
-                                        storage: &rawAddress,
-                                        storageLen: &rawAddressLength,
-                                        controlBytes: &controlBytes)
+            let (buffer, result) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer in
+                return try buffer.withMutableWritePointer { pointer in
+                    try self.socket.recvmsg(pointer: pointer,
+                                            storage: &rawAddress,
+                                            storageLen: &rawAddressLength,
+                                            controlBytes: &controlBytes)
+                }
             }
+
             switch result {
             case .processed(let bytesRead):
                 assert(self.isOpen)
-                let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
+                self.recvBufferPool.record(actualReadBytes: bytesRead)
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
@@ -673,9 +674,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                             metadata: metadata)
                 assert(self.isActive)
                 self.pipeline.syncOperations.fireChannelRead(NIOAny(msg))
-                if mayGrow && i < maxMessagesPerRead {
-                    buffer = recvAllocator.buffer(allocator: allocator)
-                }
                 readResult = .some
             case .wouldBlock(let bytesRead):
                 assert(bytesRead == 0)
@@ -687,10 +685,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     private func vectorReadFromSocket() throws -> ReadResult {
         #if os(Linux) || os(FreeBSD) || os(Android)
-        var buffer = self.recvAllocator.buffer(allocator: self.allocator)
         var readResult = ReadResult.none
 
-        readLoop: for i in 1...self.maxMessagesPerRead {
+        readLoop: for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
                 throw ChannelError.eof
             }
@@ -699,19 +696,21 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
                 break readLoop
             }
-            buffer.clear()
 
-            // This force-unwrap is safe, as we checked whether this is nil in the caller.
-            let result = try vectorReadManager.readFromSocket(
-                socket: self.socket,
-                buffer: &buffer,
-                parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo)
+            let (_, result) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer -> DatagramVectorReadManager.ReadResult in
+                // This force-unwrap is safe, as we checked whether this is nil in the caller.
+                try vectorReadManager.readFromSocket(
+                    socket: self.socket,
+                    buffer: &buffer,
+                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo)
+            }
+
             switch result {
             case .some(let results, let totalRead):
                 assert(self.isOpen)
                 assert(self.isActive)
 
-                let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
+                self.recvBufferPool.record(actualReadBytes: totalRead)
                 readPending = false
 
                 var messageIterator = results.makeIterator()
@@ -719,9 +718,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     pipeline.fireChannelRead(NIOAny(message))
                 }
 
-                if mayGrow && i < maxMessagesPerRead {
-                    buffer = recvAllocator.buffer(allocator: allocator)
-                }
                 readResult = .some
             case .none:
                 break readLoop

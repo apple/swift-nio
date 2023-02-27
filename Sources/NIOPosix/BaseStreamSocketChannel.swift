@@ -109,21 +109,24 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
 
     final override func readFromSocket() throws -> ReadResult {
         self.eventLoop.assertInEventLoop()
-        // Just allocate one time for the while read loop. This is fine as ByteBuffer is a struct and uses COW.
-        var buffer = self.recvAllocator.buffer(allocator: allocator)
         var result = ReadResult.none
-        for i in 1...self.maxMessagesPerRead {
+        for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen && !self.inputShutdown else {
                 throw ChannelError.eof
             }
+
+            let (buffer, readResult) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer in
+                try buffer.withMutableWritePointer { pointer in
+                    try self.socket.read(pointer: pointer)
+                }
+            }
+
             // Reset reader and writerIndex and so allow to have the buffer filled again. This is better here than at
             // the end of the loop to not do an allocation when the loop exits.
-            buffer.clear()
-            switch try buffer.withMutableWritePointer(body: { try self.socket.read(pointer: $0) }) {
+            switch readResult {
             case .processed(let bytesRead):
                 if bytesRead > 0 {
-                    let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
-
+                    self.recvBufferPool.record(actualReadBytes: bytesRead)
                     self.readPending = false
 
                     assert(self.isActive)
@@ -136,10 +139,6 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                         // Also this will allow us to call fireChannelReadComplete() which may give the user the chance to flush out all pending
                         // writes.
                         return result
-                    } else if mayGrow && i < self.maxMessagesPerRead {
-                        // if the ByteBuffer may grow on the next allocation due we used all the writable bytes we should allocate a new `ByteBuffer` to allow ramping up how much data
-                        // we are able to read on the next read operation.
-                        buffer = self.recvAllocator.buffer(allocator: allocator)
                     }
                 } else {
                     if self.inputShutdown {

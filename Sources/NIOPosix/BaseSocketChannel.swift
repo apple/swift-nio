@@ -246,7 +246,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     // MARK: Variables, on EventLoop thread only
     var readPending = false
     var pendingConnect: Optional<EventLoopPromise<Void>>
-    var recvAllocator: RecvByteBufferAllocator
+    var recvBufferPool: PooledRecvBufferAllocator
     var maxMessagesPerRead: UInt = 4
     private var inFlushNow: Bool = false // Guard against re-entrance of flushNow() method.
     private var autoRead: Bool = true
@@ -471,7 +471,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.selectableEventLoop = eventLoop
         self.closePromise = eventLoop.makePromise()
         self.parent = parent
-        self.recvAllocator = recvAllocator
+        self.recvBufferPool = .init(capacity: Int(self.maxMessagesPerRead), recvAllocator: recvAllocator)
         // As the socket may already be connected we should ensure we start with the correct addresses cached.
         self._addressCache = .init(local: try? socket.localAddress(), remote: try? socket.remoteAddress())
         self.lifecycleManager = SocketChannelLifecycleManager(
@@ -606,7 +606,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         case _ as ChannelOptions.Types.AllocatorOption:
             bufferAllocator = value as! ByteBufferAllocator
         case _ as ChannelOptions.Types.RecvAllocatorOption:
-            recvAllocator = value as! RecvByteBufferAllocator
+            self.recvBufferPool.recvAllocator = value as! RecvByteBufferAllocator
         case _ as ChannelOptions.Types.AutoReadOption:
             let auto = value as! Bool
             let old = self.autoRead
@@ -622,7 +622,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 }
             }
         case _ as ChannelOptions.Types.MaxMessagesPerReadOption:
-            maxMessagesPerRead = value as! UInt
+            self.maxMessagesPerRead = value as! UInt
+            self.recvBufferPool.updateCapacity(to: Int(self.maxMessagesPerRead))
         default:
             fatalError("option \(option) not supported")
         }
@@ -653,7 +654,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         case _ as ChannelOptions.Types.AllocatorOption:
             return bufferAllocator as! Option.Value
         case _ as ChannelOptions.Types.RecvAllocatorOption:
-            return recvAllocator as! Option.Value
+            return self.recvBufferPool.recvAllocator as! Option.Value
         case _ as ChannelOptions.Types.AutoReadOption:
             return autoRead as! Option.Value
         case _ as ChannelOptions.Types.MaxMessagesPerReadOption:
