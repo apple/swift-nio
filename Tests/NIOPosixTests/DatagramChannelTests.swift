@@ -117,7 +117,7 @@ class DatagramChannelTests: XCTestCase {
             .bind(host: host, port: 0)
             .wait()
     }
-    
+
     private var supportsIPv6: Bool {
         do {
             let ipv6Loopback = try SocketAddress(ipAddress: "::1", port: 0)
@@ -651,27 +651,27 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
         #endif
     }
-    
+
     // Mostly to check the types don't go pop as internally converts between bool and int and back.
     func testSetGetEcnNotificationOption() {
         XCTAssertNoThrow(try {
             // IPv4
             try self.firstChannel.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
             XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
-            
+
             try self.secondChannel.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
             XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
-            
+
             // IPv6
             guard self.supportsIPv6 else {
                 // Skip on non-IPv6 systems
                 return
             }
-            
+
             let channel1 = try buildChannel(group: self.group, host: "::1")
             try channel1.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
             XCTAssertTrue(try channel1.getOption(ChannelOptions.explicitCongestionNotification).wait())
-            
+
             let channel2 = try buildChannel(group: self.group, host: "::1")
             try channel2.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
             XCTAssertFalse(try channel2.getOption(ChannelOptions.explicitCongestionNotification).wait())
@@ -689,7 +689,7 @@ class DatagramChannelTests: XCTestCase {
             } else {
                 receiveBootstrap = DatagramBootstrap(group: group)
             }
-                
+
             let receiveChannel = try receiveBootstrap
                 .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
                 .channelOption(ChannelOptions.receivePacketInfo, value: receivePacketInfo)
@@ -707,7 +707,7 @@ class DatagramChannelTests: XCTestCase {
             defer {
                 XCTAssertNoThrow(try sendChannel.close().wait())
             }
-            
+
             let ecnStates: [NIOExplicitCongestionNotificationState] = [.transportNotCapable,
                                                                        .congestionExperienced,
                                                                        .transportCapableFlag0,
@@ -750,33 +750,33 @@ class DatagramChannelTests: XCTestCase {
         }
         return NIOPacketInfo(destinationAddress: destinationAddress, interfaceIndex: ingressIfaceIndex)
     }
-    
+
     func testEcnSendReceiveIPV4() {
         testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: false, vectorSend: false)
     }
-    
+
     func testEcnSendReceiveIPV6() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: false, vectorSend: false)
     }
-    
+
     func testEcnSendReceiveIPV4VectorRead() {
         testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: false)
     }
-    
+
     func testEcnSendReceiveIPV6VectorRead() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: false)
     }
-    
+
     func testEcnSendReceiveIPV4VectorReadVectorWrite() {
         testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: true)
     }
-    
+
     func testEcnSendReceiveIPV6VectorReadVectorWrite() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
@@ -1135,5 +1135,161 @@ class DatagramChannelTests: XCTestCase {
             wrappingInAddressedEnvelope: false,
             resultsIn: .success(())
         )
+    }
+
+    func testGSOIsUnsupportedOnNonLinuxPlatforms() throws {
+        #if !os(Linux)
+        XCTAssertFalse(System.supportsUDPSegmentationOffload)
+        #endif
+    }
+
+    func testSetGSOOption() throws {
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: 1024)
+        if System.supportsUDPSegmentationOffload {
+            XCTAssertNoThrow(try didSet.wait())
+        } else {
+            XCTAssertThrowsError(try didSet.wait()) { error in
+                XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+            }
+        }
+    }
+
+    func testGetGSOOption() throws {
+        let getOption = self.firstChannel.getOption(ChannelOptions.datagramSegmentSize)
+        if System.supportsUDPSegmentationOffload {
+            XCTAssertEqual(try getOption.wait(), 0) // not-set
+        } else {
+            XCTAssertThrowsError(try getOption.wait()) { error in
+                XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+            }
+        }
+    }
+
+    func testLargeScalarWriteWithGSO() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        // We're going to enable GSO with a segment size of 1000, send one large buffer which
+        // contains ten 1000-byte segments. Each segment will contain the bytes corresponding to
+        // the index of the segment. We validate that the receiver receives 10 datagrams, each
+        // corresponding to one segment from the buffer.
+        let segmentSize: CInt = 1000
+        let segments = 10
+
+        // Enable GSO
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: segmentSize)
+        XCTAssertNoThrow(try didSet.wait())
+
+        // Form a handful of segments
+        let buffers = (0..<segments).map { i in
+            ByteBuffer(repeating: UInt8(i), count: Int(segmentSize))
+        }
+
+        // Coalesce the segments into a single buffer.
+        var buffer = self.firstChannel.allocator.buffer(capacity: segments * Int(segmentSize))
+        for segment in buffers {
+            buffer.writeImmutableBuffer(segment)
+        }
+
+        for byte in UInt8(0) ..< UInt8(10) {
+            buffer.writeRepeatingByte(byte, count: Int(segmentSize))
+        }
+
+        // Write the single large buffer.
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+
+        // The receiver will receive separate segments.
+        let receivedBuffers = try self.secondChannel.waitForDatagrams(count: segments)
+        let receivedBytes = receivedBuffers.map { $0.data.readableBytes }.reduce(0, +)
+        XCTAssertEqual(Int(segmentSize) * segments, receivedBytes)
+
+        var unusedIndexes = Set(buffers.indices)
+        for envelope in receivedBuffers {
+            if let index = buffers.firstIndex(of: envelope.data) {
+                XCTAssertNotNil(unusedIndexes.remove(index))
+            } else {
+                XCTFail("No matching buffer")
+            }
+        }
+    }
+
+    func testLargeVectorWriteWithGSO() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        // Similar to the test above, but with multiple writes.
+        let segmentSize: CInt = 1000
+        let segments = 10
+
+        // Enable GSO
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: segmentSize)
+        XCTAssertNoThrow(try didSet.wait())
+
+        // Form a handful of segments
+        let buffers = (0..<segments).map { i in
+            ByteBuffer(repeating: UInt8(i), count: Int(segmentSize))
+        }
+
+        // Coalesce the segments into a single buffer.
+        var buffer = self.firstChannel.allocator.buffer(capacity: segments * Int(segmentSize))
+        for segment in buffers {
+            buffer.writeImmutableBuffer(segment)
+        }
+
+        for byte in UInt8(0) ..< UInt8(10) {
+            buffer.writeRepeatingByte(byte, count: Int(segmentSize))
+        }
+
+        // Write the single large buffer.
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        let write1 = self.firstChannel.write(NIOAny(writeData))
+        let write2 = self.firstChannel.write(NIOAny(writeData))
+        self.firstChannel.flush()
+        XCTAssertNoThrow(try write1.wait())
+        XCTAssertNoThrow(try write2.wait())
+
+        // The receiver will receive separate segments.
+        let receivedBuffers = try self.secondChannel.waitForDatagrams(count: segments)
+        let receivedBytes = receivedBuffers.map { $0.data.readableBytes }.reduce(0, +)
+        XCTAssertEqual(Int(segmentSize) * segments, receivedBytes)
+
+        let keysWithValues = buffers.indices.map { index in (index, 2) }
+        var indexCounts = Dictionary(uniqueKeysWithValues: keysWithValues)
+        for envelope in receivedBuffers {
+            if let index = buffers.firstIndex(of: envelope.data) {
+                indexCounts[index, default: 0] -= 1
+                XCTAssertGreaterThanOrEqual(indexCounts[index]!, 0)
+            } else {
+                XCTFail("No matching buffer")
+            }
+        }
+    }
+
+    func testWriteBufferAtGSOSegmentCountLimit() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        let segmentSize = 10
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
+        XCTAssertNoThrow(try didSet.wait())
+
+        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * 64)
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        let read = try self.secondChannel.waitForDatagrams(count: 64)
+        XCTAssertEqual(read.map { $0.data.readableBytes }.reduce(0, +), 64 * segmentSize)
+    }
+
+    func testWriteBufferAboveGSOSegmentCountLimitShouldError() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        let segmentSize = 10
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
+        XCTAssertNoThrow(try didSet.wait())
+
+        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * 65)
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        // The kernel limits messages to a maximum of 64 segments; any more should result in an error.
+        XCTAssertThrowsError(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait()) {
+            XCTAssert($0 is IOError)
+        }
     }
 }

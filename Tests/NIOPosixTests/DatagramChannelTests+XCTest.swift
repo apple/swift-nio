@@ -75,6 +75,13 @@ extension DatagramChannelTests {
                 ("testConnectingSocketAfterFlushingExistingMessages", testConnectingSocketAfterFlushingExistingMessages),
                 ("testConnectingSocketFailsBufferedWrites", testConnectingSocketFailsBufferedWrites),
                 ("testReconnectingSocketFailsBufferedWrites", testReconnectingSocketFailsBufferedWrites),
+                ("testGSOIsUnsupportedOnNonLinuxPlatforms", testGSOIsUnsupportedOnNonLinuxPlatforms),
+                ("testSetGSOOption", testSetGSOOption),
+                ("testGetGSOOption", testGetGSOOption),
+                ("testLargeScalarWriteWithGSO", testLargeScalarWriteWithGSO),
+                ("testLargeVectorWriteWithGSO", testLargeVectorWriteWithGSO),
+                ("testWriteBufferAtGSOSegmentCountLimit", testWriteBufferAtGSOSegmentCountLimit),
+                ("testWriteBufferAboveGSOSegmentCountLimitShouldError", testWriteBufferAboveGSOSegmentCountLimitShouldError),
            ]
    }
 }
