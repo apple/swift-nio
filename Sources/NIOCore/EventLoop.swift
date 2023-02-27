@@ -445,7 +445,8 @@ public struct TimeAmount: Hashable, Sendable {
     /// The nanoseconds representation of the `TimeAmount`.
     public let nanoseconds: Int64
 
-    private init(_ nanoseconds: Int64) {
+    /* private but */ @inlinable
+    init(_ nanoseconds: Int64) {
         self.nanoseconds = nanoseconds
     }
 
@@ -454,6 +455,7 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of nanoseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    @inlinable
     public static func nanoseconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount)
     }
@@ -463,6 +465,7 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    @inlinable
     public static func microseconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * 1000)
     }
@@ -472,6 +475,7 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    @inlinable
     public static func milliseconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * (1000 * 1000))
     }
@@ -481,6 +485,7 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    @inlinable
     public static func seconds(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * (1000 * 1000 * 1000))
     }
@@ -490,6 +495,7 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    @inlinable
     public static func minutes(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * (1000 * 1000 * 1000 * 60))
     }
@@ -499,12 +505,14 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    @inlinable
     public static func hours(_ amount: Int64) -> TimeAmount {
         return TimeAmount(amount * (1000 * 1000 * 1000 * 60 * 60))
     }
 }
 
 extension TimeAmount: Comparable {
+    @inlinable
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
         return lhs.nanoseconds < rhs.nanoseconds
     }
@@ -512,30 +520,37 @@ extension TimeAmount: Comparable {
 
 extension TimeAmount: AdditiveArithmetic {
     /// The zero value for `TimeAmount`.
+    @inlinable
     public static var zero: TimeAmount {
         return TimeAmount.nanoseconds(0)
     }
 
+    @inlinable
     public static func + (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds + rhs.nanoseconds)
     }
 
+    @inlinable
     public static func +=(lhs: inout TimeAmount, rhs: TimeAmount) {
         lhs = lhs + rhs
     }
 
+    @inlinable
     public static func - (lhs: TimeAmount, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds - rhs.nanoseconds)
     }
 
+    @inlinable
     public static func -=(lhs: inout TimeAmount, rhs: TimeAmount) {
         lhs = lhs - rhs
     }
 
+    @inlinable
     public static func * <T: BinaryInteger>(lhs: T, rhs: TimeAmount) -> TimeAmount {
         return TimeAmount(Int64(lhs) * rhs.nanoseconds)
     }
 
+    @inlinable
     public static func * <T: BinaryInteger>(lhs: TimeAmount, rhs: T) -> TimeAmount {
         return TimeAmount(lhs.nanoseconds * Int64(rhs))
     }
@@ -563,13 +578,14 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
     public typealias Value = UInt64
 
     // This really should be an UInt63 but we model it as Int64 with >=0 assert
-    private var _uptimeNanoseconds: Int64 {
+    /* private but */ @usableFromInline var _uptimeNanoseconds: Int64 {
         didSet {
             assert(self._uptimeNanoseconds >= 0)
         }
     }
 
     /// The nanoseconds since boot representation of the `NIODeadline`.
+    @inlinable
     public var uptimeNanoseconds: UInt64 {
         return .init(self._uptimeNanoseconds)
     }
@@ -577,7 +593,7 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
     public static let distantPast = NIODeadline(0)
     public static let distantFuture = NIODeadline(.init(Int64.max))
 
-    private init(_ nanoseconds: Int64) {
+    /* private but */ @inlinable init(_ nanoseconds: Int64) {
         precondition(nanoseconds >= 0)
         self._uptimeNanoseconds = nanoseconds
     }
@@ -593,8 +609,8 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
     /// we make that call here, directly from NIO.
     ///
     /// - TODO: Investigate optimizing the call to `DispatchTime.now()` away on other platforms too.
-    @inline(__always)
-    private static func timeNow() -> UInt64 {
+    @inlinable
+    static func timeNow() -> UInt64 {
 #if os(Linux)
         var ts = timespec()
         clock_gettime(CLOCK_MONOTONIC, &ts)
@@ -607,38 +623,55 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
 #endif // os(Linux)
     }
 
+    @inlinable
     public static func now() -> NIODeadline {
         return NIODeadline.uptimeNanoseconds(timeNow())
     }
 
+    @inlinable
     public static func uptimeNanoseconds(_ nanoseconds: UInt64) -> NIODeadline {
         return NIODeadline(Int64(min(UInt64(Int64.max), nanoseconds)))
+    }
+
+    @inlinable
+    public static func == (lhs: NIODeadline, rhs: NIODeadline) -> Bool {
+        return lhs.uptimeNanoseconds == rhs.uptimeNanoseconds
+    }
+
+    @inlinable
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.uptimeNanoseconds)
     }
 }
 
 extension NIODeadline: Comparable {
+    @inlinable
     public static func < (lhs: NIODeadline, rhs: NIODeadline) -> Bool {
         return lhs.uptimeNanoseconds < rhs.uptimeNanoseconds
     }
 
+    @inlinable
     public static func > (lhs: NIODeadline, rhs: NIODeadline) -> Bool {
         return lhs.uptimeNanoseconds > rhs.uptimeNanoseconds
     }
 }
 
 extension NIODeadline: CustomStringConvertible {
+    @inlinable
     public var description: String {
         return self.uptimeNanoseconds.description
     }
 }
 
 extension NIODeadline {
+    @inlinable
     public static func - (lhs: NIODeadline, rhs: NIODeadline) -> TimeAmount {
         // This won't ever crash, NIODeadlines are guaranteed to be within 0 ..< 2^63-1 nanoseconds so the result can
         // definitely be stored in a TimeAmount (which is an Int64).
         return .nanoseconds(Int64(lhs.uptimeNanoseconds) - Int64(rhs.uptimeNanoseconds))
     }
 
+    @inlinable
     public static func + (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
         let partial: Int64
         let overflow: Bool
@@ -653,6 +686,7 @@ extension NIODeadline {
         return NIODeadline(partial)
     }
 
+    @inlinable
     public static func - (lhs: NIODeadline, rhs: TimeAmount) -> NIODeadline {
         if rhs.nanoseconds < 0 {
             // The addition won't crash because the worst that could happen is `UInt64(Int64.max) + UInt64(Int64.max)`
