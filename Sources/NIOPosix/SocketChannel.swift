@@ -502,7 +502,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // Receiving packet info is only supported for IP
                 throw ChannelError.operationUnsupported
             }
-            break
+        case _ as ChannelOptions.Types.DatagramSegmentSize:
+            guard System.supportsUDPSegmentationOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            let segmentSize = value as! ChannelOptions.Types.DatagramSegmentSize.Value
+            try self.socket.setUDPSegmentSize(segmentSize)
         default:
             try super.setOption0(option, value: value)
         }
@@ -546,6 +551,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // Receiving packet info is only supported for IP
                 throw ChannelError.operationUnsupported
             }
+        case _ as ChannelOptions.Types.DatagramSegmentSize:
+            guard System.supportsUDPSegmentationOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            return try self.socket.getUDPSegmentSize() as! Option.Value
         default:
             return try super.getOption0(option)
         }

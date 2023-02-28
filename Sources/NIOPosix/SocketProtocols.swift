@@ -52,7 +52,7 @@ protocol SocketProtocol: BaseSocketProtocol {
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
                  controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int>
-    
+
     func sendmsg(pointer: UnsafeRawBufferPointer,
                  destinationPtr: UnsafePointer<sockaddr>?,
                  destinationSize: socklen_t,
