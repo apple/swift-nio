@@ -382,16 +382,7 @@ extension PendingDatagramWritesState {
 final class PendingDatagramWritesManager: PendingWritesManager {
 
     private var bufferPool: Pool<PooledBuffer>
-
-    /// Storage for mmsghdr structures. Only present on Linux because Darwin does not support
-    /// gathering datagram writes.
-    private var msgs: UnsafeMutableBufferPointer<MMsgHdr>
-
-    /// Storage for sockaddr structures. Only present on Linux because Darwin does not support gathering
-    /// writes.
-    private var addresses: UnsafeMutableBufferPointer<sockaddr_storage>
-
-    private var controlMessageStorage: UnsafeControlMessageStorage
+    private var msgBufferPool: Pool<PooledMsgBuffer>
 
     private var state = PendingDatagramWritesState()
 
@@ -411,14 +402,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - msgs: A pre-allocated array of `MMsgHdr` elements
     ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
     ///     - controlMessageStorage: Pre-allocated memory for storing cmsghdr data during a vector write operation.
-    init(bufferPool: Pool<PooledBuffer>,
-         msgs: UnsafeMutableBufferPointer<MMsgHdr>,
-         addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
-         controlMessageStorage: UnsafeControlMessageStorage) {
+    init(bufferPool: Pool<PooledBuffer>, msgBufferPool: Pool<PooledMsgBuffer>) {
         self.bufferPool = bufferPool
-        self.msgs = msgs
-        self.addresses = addresses
-        self.controlMessageStorage = controlMessageStorage
+        self.msgBufferPool = msgBufferPool
     }
 
     /// Mark the flush checkpoint.
@@ -618,13 +604,19 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private func triggerVectorBufferWrite(vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
         assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
                "illegal state for vector datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
-        return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
-                                                                       bufferPool: self.bufferPool,
-                                                                       msgs: self.msgs,
-                                                                       addresses: self.addresses,
-                                                                       controlMessageStorage: self.controlMessageStorage,
-                                                                       { try vectorWriteOperation($0) }),
-                             messages: self.msgs)
+
+        let msgBuffer = self.msgBufferPool.get()
+        defer { self.msgBufferPool.put(msgBuffer) }
+
+        return try msgBuffer.withUnsafePointers { msgs, addresses in
+            return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
+                                                                           bufferPool: self.bufferPool,
+                                                                           msgs: msgs,
+                                                                           addresses: addresses,
+                                                                           controlMessageStorage: msgBuffer.controlMessageStorage,
+                                                                           { try vectorWriteOperation($0) }),
+                                 messages: msgs)
+        }
     }
 
     private func fulfillPromise(_ promise: PendingDatagramWritesState.DatagramWritePromiseFiller?) {
