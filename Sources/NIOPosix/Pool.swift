@@ -165,8 +165,8 @@ extension PooledBuffer {
             // Here we set up our memory bindings.
             let storage = unsafeDowncast(baseStorage, to: Self.self)
             storage.withUnsafeMutablePointers { headPointer, tailPointer in
-                UnsafeRawPointer(tailPointer).bindMemory(to: IOVector.self, capacity: iovectorCount)
-                UnsafeRawPointer(tailPointer + headPointer.pointee.spaceForIOVectors).bindMemory(to: Unmanaged<AnyObject>.self, capacity: iovectorCount)
+                UnsafeRawPointer(tailPointer + headPointer.pointee.iovectorOffset).bindMemory(to: IOVector.self, capacity: iovectorCount)
+                UnsafeRawPointer(tailPointer + headPointer.pointee.bufferOwnersOffset).bindMemory(to: Unmanaged<AnyObject>.self, capacity: iovectorCount)
                 UnsafeRawPointer(tailPointer + headPointer.pointee.memorySentinelOffset).bindMemory(to: MemorySentinel.self, capacity: 1)
             }
 
