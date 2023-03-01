@@ -1267,15 +1267,28 @@ class DatagramChannelTests: XCTestCase {
     func testWriteBufferAtGSOSegmentCountLimit() throws {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
 
+        var segments = 64
         let segmentSize = 10
         let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
         XCTAssertNoThrow(try didSet.wait())
 
-        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * 64)
-        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
-        let read = try self.secondChannel.waitForDatagrams(count: 64)
-        XCTAssertEqual(read.map { $0.data.readableBytes }.reduce(0, +), 64 * segmentSize)
+        func send(byteCount: Int) throws {
+            let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: byteCount)
+            let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+            try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait()
+        }
+
+        do {
+            try send(byteCount: segments * segmentSize)
+        } catch let e as IOError where e.errnoCode == EINVAL {
+            // Some older kernel versions report EINVAL with 64 segments. Tolerate that
+            // failure and try again with a lower limit.
+            segments = 61
+            try send(byteCount: segments * segmentSize)
+        }
+
+        let read = try self.secondChannel.waitForDatagrams(count: segments)
+        XCTAssertEqual(read.map { $0.data.readableBytes }.reduce(0, +), segments * segmentSize)
     }
 
     func testWriteBufferAboveGSOSegmentCountLimitShouldError() throws {
