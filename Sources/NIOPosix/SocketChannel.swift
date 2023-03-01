@@ -608,7 +608,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         // These control bytes must not escape the current call stack
         let controlBytesBuffer: UnsafeMutableRawBufferPointer
-
         if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
             controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
         } else {
@@ -797,7 +796,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // normal write
                 // Control bytes must not escape current stack.
                 var controlBytes = UnsafeOutboundControlBytes(
-                     controlBytes: self.selectableEventLoop.controlMessageStorage[0])
+                    controlBytes: self.selectableEventLoop.controlMessageStorage[0])
                 controlBytes.appendExplicitCongestionState(metadata: metadata,
                                                            protocolFamily: self.localAddress?.protocol)
                 return try self.socket.sendmsg(pointer: ptr,
