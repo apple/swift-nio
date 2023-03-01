@@ -310,7 +310,18 @@ extension NIOThreadPool {
     }
     #endif
 
+    #if swift(>=5.7)
+    @available(*, noasync, message: "this can end up blocking the calling thread")
     public func syncShutdownGracefully() throws {
+        try self._syncShutdownGracefully()
+    }
+    #else
+    public func syncShutdownGracefully() throws {
+        try self._syncShutdownGracefully()
+    }
+    #endif
+
+    private func _syncShutdownGracefully() throws {
         let errorStorageLock = NIOLock()
         var errorStorage: Swift.Error? = nil
         let continuation = DispatchWorkItem {}
