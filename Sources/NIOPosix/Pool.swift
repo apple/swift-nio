@@ -203,7 +203,7 @@ extension Int {
     }
 }
 
-final class PooledMsgBuffer: PoolElement {
+struct PooledMsgBuffer: PoolElement {
 
     private typealias MemorySentinel = UInt32
     private static let sentinelValue = MemorySentinel(0xdeadbeef)
@@ -286,19 +286,12 @@ final class PooledMsgBuffer: PoolElement {
     }
 
     private var storage: BackingStorage
-    public var controlMessageStorage: UnsafeControlMessageStorage
 
     init() {
         self.storage = .create(count: Socket.writevLimitIOVectors)
-        self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
-
         self.storage.withUnsafeMutableTypedPointers { _, _, sentinelPointer in
             sentinelPointer.pointee = Self.sentinelValue
         }
-    }
-
-    deinit {
-        self.controlMessageStorage.deallocate()
     }
 
     func evictedFromPool() {
@@ -313,6 +306,15 @@ final class PooledMsgBuffer: PoolElement {
         }
         return try self.storage.withUnsafeMutableTypedPointers { msgs, addresses, _ in
             return try body(msgs, addresses)
+        }
+    }
+
+    func withUnsafePointersWithStorageManagement<ReturnValue>(
+            _ body: (UnsafeMutableBufferPointer<MMsgHdr>, UnsafeMutableBufferPointer<sockaddr_storage>, Unmanaged<AnyObject>) throws -> ReturnValue
+    ) rethrows -> ReturnValue {
+        let storageRef: Unmanaged<AnyObject> = Unmanaged.passUnretained(self.storage)
+        return try self.storage.withUnsafeMutableTypedPointers { msgs, addresses, _ in
+            try body(msgs, addresses, storageRef)
         }
     }
 }

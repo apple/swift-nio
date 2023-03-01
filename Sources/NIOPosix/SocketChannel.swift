@@ -423,7 +423,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             throw err
         }
 
-        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool, msgBufferPool: eventLoop.msgBufferPool)
+        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
+                                                          msgBufferPool: eventLoop.msgBufferPool,
+                                                          controlMessageStorage: eventLoop.controlMessageStorage)
 
         try super.init(
             socket: socket,
@@ -437,7 +439,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         self.vectorReadManager = nil
         try socket.setNonBlocking()
-        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool, msgBufferPool: eventLoop.msgBufferPool)
+        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
+                                                          msgBufferPool: eventLoop.msgBufferPool,
+                                                          controlMessageStorage: eventLoop.controlMessageStorage)
         try super.init(
             socket: socket,
             parent: parent,
@@ -604,17 +608,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         // These control bytes must not escape the current call stack
         let controlBytesBuffer: UnsafeMutableRawBufferPointer
-        var msgBuffer: PooledMsgBuffer?
-
-        defer {
-            if let msgBuffer = msgBuffer {
-                self.selectableEventLoop.msgBufferPool.put(msgBuffer)
-            }
-        }
 
         if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
-            msgBuffer = self.selectableEventLoop.msgBufferPool.get()
-            controlBytesBuffer = msgBuffer!.controlMessageStorage[0]
+            controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
         } else {
             controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
         }
@@ -800,10 +796,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
                 // normal write
                 // Control bytes must not escape current stack.
-                let msgBuffer = self.selectableEventLoop.msgBufferPool.get()
-                defer { self.selectableEventLoop.msgBufferPool.put(msgBuffer) }
-
-                var controlBytes = UnsafeOutboundControlBytes(controlBytes: msgBuffer.controlMessageStorage[0])
+                var controlBytes = UnsafeOutboundControlBytes(
+                     controlBytes: self.selectableEventLoop.controlMessageStorage[0])
                 controlBytes.appendExplicitCongestionState(metadata: metadata,
                                                            protocolFamily: self.localAddress?.protocol)
                 return try self.socket.sendmsg(pointer: ptr,

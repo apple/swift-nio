@@ -381,8 +381,9 @@ extension PendingDatagramWritesState {
 /// the availability of the functions.
 final class PendingDatagramWritesManager: PendingWritesManager {
 
-    private var bufferPool: Pool<PooledBuffer>
-    private var msgBufferPool: Pool<PooledMsgBuffer>
+    private let bufferPool: Pool<PooledBuffer>
+    private let msgBufferPool: Pool<PooledMsgBuffer>
+    private let controlMessageStorage: UnsafeControlMessageStorage
 
     private var state = PendingDatagramWritesState()
 
@@ -402,9 +403,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - msgs: A pre-allocated array of `MMsgHdr` elements
     ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
     ///     - controlMessageStorage: Pre-allocated memory for storing cmsghdr data during a vector write operation.
-    init(bufferPool: Pool<PooledBuffer>, msgBufferPool: Pool<PooledMsgBuffer>) {
+    init(bufferPool: Pool<PooledBuffer>, msgBufferPool: Pool<PooledMsgBuffer>, controlMessageStorage: UnsafeControlMessageStorage) {
         self.bufferPool = bufferPool
         self.msgBufferPool = msgBufferPool
+        self.controlMessageStorage = controlMessageStorage
     }
 
     /// Mark the flush checkpoint.
@@ -613,7 +615,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                                                                            bufferPool: self.bufferPool,
                                                                            msgs: msgs,
                                                                            addresses: addresses,
-                                                                           controlMessageStorage: msgBuffer.controlMessageStorage,
+                                                                           controlMessageStorage: self.controlMessageStorage,
                                                                            { try vectorWriteOperation($0) }),
                                  messages: msgs)
         }
