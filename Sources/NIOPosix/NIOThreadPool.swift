@@ -326,7 +326,7 @@ extension NIOThreadPool {
     }
 
     #if swift(>=5.7)
-    @available(*, noasync, message: "this can end up blocking the calling thread")
+    @available(*, noasync, message: "this can end up blocking the calling thread", renamed: "shutdownGracefully()")
     public func syncShutdownGracefully() throws {
         try self._syncShutdownGracefully()
     }
