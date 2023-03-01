@@ -1283,6 +1283,9 @@ class DatagramChannelTests: XCTestCase {
         } catch let e as IOError where e.errnoCode == EINVAL {
             // Some older kernel versions report EINVAL with 64 segments. Tolerate that
             // failure and try again with a lower limit.
+            self.firstChannel = try self.buildChannel(group: self.group)
+            let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
+            XCTAssertNoThrow(try didSet.wait())
             segments = 61
             try send(byteCount: segments * segmentSize)
         }
