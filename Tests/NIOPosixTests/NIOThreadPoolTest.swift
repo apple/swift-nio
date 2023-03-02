@@ -16,6 +16,7 @@ import XCTest
 @testable import NIOPosix
 import Dispatch
 import NIOConcurrencyHelpers
+import NIOEmbedded
 
 class NIOThreadPoolTest: XCTestCase {
     func testThreadNamesAreSetUp() {
@@ -106,6 +107,22 @@ class NIOThreadPoolTest: XCTestCase {
             XCTAssertNotNil(threadOne)
             XCTAssertNotNil(threadTwo)
             XCTAssertEqual(threadOne, threadTwo)
+        }
+    }
+
+    func testAsyncShutdownWorks() throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        XCTAsyncTest {
+            let threadPool = NIOThreadPool(numberOfThreads: 17)
+            let eventLoop = NIOAsyncTestingEventLoop()
+
+            threadPool.start()
+            try await threadPool.shutdownGracefully()
+
+            let future = threadPool.runIfActive(eventLoop: eventLoop) {
+                XCTFail("This shouldn't run because the pool is shutdown.")
+            }
+            await XCTAssertThrowsError(try await future.get())
         }
     }
 }
