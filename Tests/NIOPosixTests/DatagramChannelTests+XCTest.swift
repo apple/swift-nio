@@ -82,6 +82,13 @@ extension DatagramChannelTests {
                 ("testLargeVectorWriteWithGSO", testLargeVectorWriteWithGSO),
                 ("testWriteBufferAtGSOSegmentCountLimit", testWriteBufferAtGSOSegmentCountLimit),
                 ("testWriteBufferAboveGSOSegmentCountLimitShouldError", testWriteBufferAboveGSOSegmentCountLimitShouldError),
+                ("testGROIsUnsupportedOnNonLinuxPlatforms", testGROIsUnsupportedOnNonLinuxPlatforms),
+                ("testSetGROOption", testSetGROOption),
+                ("testGetGROOption", testGetGROOption),
+                ("testChannelCanReceiveLargeBufferWithGROUsingScalarReads", testChannelCanReceiveLargeBufferWithGROUsingScalarReads),
+                ("testChannelCanReceiveLargeBufferWithGROUsingVectorReads", testChannelCanReceiveLargeBufferWithGROUsingVectorReads),
+                ("testChannelCanReceiveMultipleLargeBuffersWithGROUsingScalarReads", testChannelCanReceiveMultipleLargeBuffersWithGROUsingScalarReads),
+                ("testChannelCanReceiveMultipleLargeBuffersWithGROUsingVectorReads", testChannelCanReceiveMultipleLargeBuffersWithGROUsingVectorReads),
            ]
    }
 }

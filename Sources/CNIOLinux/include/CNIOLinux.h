@@ -108,5 +108,6 @@ extern const int CNIOLinux_SO_TIMESTAMP;
 extern const int CNIOLinux_SO_RCVTIMEO;
 
 int CNIOLinux_supports_udp_segment();
+int CNIOLinux_supports_udp_gro();
 #endif
 #endif

@@ -1308,4 +1308,105 @@ class DatagramChannelTests: XCTestCase {
             XCTAssert($0 is IOError)
         }
     }
+
+    func testGROIsUnsupportedOnNonLinuxPlatforms() throws {
+        #if !os(Linux)
+        XCTAssertFalse(System.supportsUDPReceiveOffload)
+        #endif
+    }
+
+    func testSetGROOption() throws {
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true)
+        if System.supportsUDPReceiveOffload {
+            XCTAssertNoThrow(try didSet.wait())
+        } else {
+            XCTAssertThrowsError(try didSet.wait()) { error in
+                XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+            }
+        }
+    }
+
+    func testGetGROOption() throws {
+        let getOption = self.firstChannel.getOption(ChannelOptions.datagramReceiveOffload)
+        if System.supportsUDPReceiveOffload {
+            XCTAssertEqual(try getOption.wait(), false) // not-set
+
+            // Now set and check.
+            XCTAssertNoThrow(try self.firstChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+            XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.datagramReceiveOffload).wait())
+        } else {
+            XCTAssertThrowsError(try getOption.wait()) { error in
+                XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+            }
+        }
+    }
+
+    func testReceiveLargeBufferWithGRO(segments: Int, segmentSize: Int, writes: Int, vectorReads: Int? = nil) throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+        try XCTSkipUnless(System.supportsUDPReceiveOffload, "UDP_GRO is not supported on this platform")
+
+        /// Set GSO on the first channel.
+        XCTAssertNoThrow(try self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize)).wait())
+        /// Set GRO on the second channel.
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+        /// The third channel has neither set.
+
+        // Enable on second channel
+        if let vectorReads = vectorReads {
+            XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.datagramVectorReadMessageCount, value: vectorReads).wait())
+        }
+
+        /// Increase the size of the read buffer for the second and third channels.
+        let fixed = FixedSizeRecvByteBufferAllocator(capacity: 1 << 16)
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.recvAllocator, value: fixed).wait())
+        XCTAssertNoThrow(try self.thirdChannel.setOption(ChannelOptions.recvAllocator, value: fixed).wait())
+
+        // Write a large datagrams on the first channel. They should be split and then accumulated on the receive side.
+        // Form a large buffer to write from the first channel.
+        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * segments)
+
+        // Write to the channel with GRO enabled.
+        do {
+            let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+            let promises = (0 ..< writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
+            self.firstChannel.flush()
+            XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
+
+            // GRO is enabled so we expect a `writes` datagrams.
+            let datagrams = try self.secondChannel.waitForDatagrams(count: writes)
+            for datagram in datagrams {
+                XCTAssertEqual(datagram.data.readableBytes, segments * segmentSize)
+            }
+        }
+
+        // Write to the channel whithout GRO.
+        do {
+            let writeData = AddressedEnvelope(remoteAddress: self.thirdChannel.localAddress!, data: buffer)
+            let promises = (0 ..< writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
+            self.firstChannel.flush()
+            XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
+
+            // GRO is not enabled so we expect a `writes * segments` datagrams.
+            let datagrams = try self.thirdChannel.waitForDatagrams(count: writes * segments)
+            for datagram in datagrams {
+                XCTAssertEqual(datagram.data.readableBytes, segmentSize)
+            }
+        }
+    }
+
+    func testChannelCanReceiveLargeBufferWithGROUsingScalarReads() throws {
+        try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 1)
+    }
+
+    func testChannelCanReceiveLargeBufferWithGROUsingVectorReads() throws {
+        try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 1, vectorReads: 4)
+    }
+
+    func testChannelCanReceiveMultipleLargeBuffersWithGROUsingScalarReads() throws {
+        try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 4)
+    }
+
+    func testChannelCanReceiveMultipleLargeBuffersWithGROUsingVectorReads() throws {
+        try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 4, vectorReads: 4)
+    }
 }

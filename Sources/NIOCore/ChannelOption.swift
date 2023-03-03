@@ -204,6 +204,19 @@ extension ChannelOptions {
             public init() { }
         }
 
+        /// ``DatagramReceiveOffload`` sets the 'UDP_GRO' socket option which allows for datagrams to be accumulated
+        /// by the kernel (or in some cases, the NIC) and reduces traversals in the kernel's networking layer.
+        ///
+        /// This option is currently only supported on Linux (5.10 and newer). Support can be checked
+        /// using ``System/supportsUDPReceiveOffload``.
+        ///
+        /// - Note: users should ensure they use an appropriate receive buffer allocator when enabling this option.
+        ///   The default allocator for datagram channels uses fixed sized buffers of 2048 bytes.
+        public struct DatagramReceiveOffload: ChannelOption, Sendable {
+            public typealias Value = Bool
+            public init() { }
+        }
+
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
         public struct ExplicitCongestionNotificationsOption: ChannelOption, Sendable {
             public typealias Value = Bool
@@ -332,6 +345,9 @@ public struct ChannelOptions {
 
     /// - seealso: `DatagramSegmentSize`
     public static let datagramSegmentSize = Types.DatagramSegmentSize()
+
+    /// - seealso: `DatagramReceiveOffload`
+    public static let datagramReceiveOffload = Types.DatagramReceiveOffload()
 
     /// - seealso: `ExplicitCongestionNotificationsOption`
     public static let explicitCongestionNotification = Types.ExplicitCongestionNotificationsOption()
