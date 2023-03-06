@@ -338,4 +338,18 @@ typealias IOVector = iovec
             try NIOBSDSocket.getUDPSegmentSize(socket: $0)
         }
     }
+
+    /// Sets the value for the 'UDP_GRO' socket option.
+    func setUDPReceiveOffload(_ enabled: Bool) throws {
+        try self.withUnsafeHandle {
+            try NIOBSDSocket.setUDPReceiveOffload(enabled, socket: $0)
+        }
+    }
+
+    /// Returns the value of the 'UDP_GRO' socket option.
+    func getUDPReceiveOffload() throws -> Bool {
+        return try self.withUnsafeHandle {
+            try NIOBSDSocket.getUDPReceiveOffload(socket: $0)
+        }
+    }
 }

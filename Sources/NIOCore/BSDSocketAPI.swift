@@ -339,10 +339,14 @@ extension NIOBSDSocket.Option {
 
 #if os(Linux)
 extension NIOBSDSocket.Option {
-    // Note: UDP_SEGMENT is not available on all Linux platforms so the value is hardcoded.
+    // Note: UDP_SEGMENT and UDP_GRO are not available on all Linux platforms so values are
+    // hardcoded.
 
     /// Use UDP segmentation offload (UDP_SEGMENT, or 'GSO'). Only available on Linux.
     public static let udp_segment = NIOBSDSocket.Option(rawValue: 103)
+
+    /// Use UDP generic receive offload (GRO). Only available on Linux.
+    public static let udp_gro = NIOBSDSocket.Option(rawValue: 104)
 }
 #endif
 
