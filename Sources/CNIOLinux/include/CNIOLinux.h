@@ -22,6 +22,7 @@
 #include <sys/sysinfo.h>
 #include <sys/socket.h>
 #include <sched.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <pthread.h>
 #include <netinet/ip.h>
@@ -107,7 +108,7 @@ size_t CNIOLinux_CMSG_SPACE(size_t);
 extern const int CNIOLinux_SO_TIMESTAMP;
 extern const int CNIOLinux_SO_RCVTIMEO;
 
-int CNIOLinux_supports_udp_segment();
-int CNIOLinux_supports_udp_gro();
+bool CNIOLinux_supports_udp_segment();
+bool CNIOLinux_supports_udp_gro();
 #endif
 #endif

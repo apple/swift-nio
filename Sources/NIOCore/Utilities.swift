@@ -207,7 +207,7 @@ extension System {
     /// Returns true if the platform supports 'UDP_SEGMENT' (GSO).
     ///
     /// The option can be enabled by setting the ``DatagramSegmentSize`` channel option.
-    public static let supportsUDPSegmentationOffload: Bool = CNIOLinux_supports_udp_segment() == 0
+    public static let supportsUDPSegmentationOffload: Bool = CNIOLinux_supports_udp_segment()
     #else
     /// Returns true if the platform supports 'UDP_SEGMENT' (GSO).
     ///
@@ -219,7 +219,7 @@ extension System {
     /// Returns true if the platform supports 'UDP_GRO'.
     ///
     /// The option can be enabled by setting the ``DatagramReceiveOffload`` channel option.
-    public static let supportsUDPReceiveOffload: Bool = CNIOLinux_supports_udp_gro() == 0
+    public static let supportsUDPReceiveOffload: Bool = CNIOLinux_supports_udp_gro()
     #else
     /// Returns true if the platform supports 'UDP_GRO'.
     ///
