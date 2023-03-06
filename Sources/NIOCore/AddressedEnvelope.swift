@@ -27,22 +27,40 @@ public struct AddressedEnvelope<DataType> {
         self.remoteAddress = remoteAddress
         self.data = data
     }
-    
+
     public init(remoteAddress: SocketAddress, data: DataType, metadata: Metadata?) {
         self.remoteAddress = remoteAddress
         self.data = data
         self.metadata = metadata
     }
-    
+
     /// Any metadata associated with an `AddressedEnvelope`
     public struct Metadata: Hashable, Sendable {
         /// Details of any congestion state.
         public var ecnState: NIOExplicitCongestionNotificationState
         public var packetInfo: NIOPacketInfo?
-        
+
+        /// The size of data segments.
+        ///
+        /// For outbound messages setting this option informs the kernel to split the data from the
+        /// addressed envelope into segments of this size. Note that not all platforms support
+        /// this option and support should be checked with ``System/supportsUDPSegmentationOffload``.
+        ///
+        /// For inbound messages this value may be set with the segment size set by the sender if
+        /// the ``ChannelOptions/Types/DatagramReceiveOffload`` option is set. Support for that
+        /// option should be checked with ``System/supportsUDPReceiveOffload``.
+        public var segmentSize: Int?
+
+        public init() {
+            self.ecnState = .transportNotCapable
+            self.packetInfo = nil
+            self.segmentSize = nil
+        }
+
         public init(ecnState: NIOExplicitCongestionNotificationState) {
             self.ecnState = ecnState
             self.packetInfo = nil
+            self.segmentSize = nil
         }
 
         public init(ecnState: NIOExplicitCongestionNotificationState, packetInfo: NIOPacketInfo?) {
