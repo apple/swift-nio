@@ -21,6 +21,7 @@
 #include <sys/timerfd.h>
 #include <sys/sysinfo.h>
 #include <sys/socket.h>
+#include <sys/utsname.h>
 #include <sched.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -110,5 +111,8 @@ extern const int CNIOLinux_SO_RCVTIMEO;
 
 bool CNIOLinux_supports_udp_segment();
 bool CNIOLinux_supports_udp_gro();
+
+int CNIOLinux_system_info(struct utsname* uname_data);
+
 #endif
 #endif

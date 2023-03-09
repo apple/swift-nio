@@ -104,7 +104,7 @@ var targets: [PackageDescription.Target] = [
     .testTarget(name: "NIOEmbeddedTests",
                 dependencies: ["NIOConcurrencyHelpers", "NIOCore", "NIOEmbedded"]),
     .testTarget(name: "NIOPosixTests",
-                dependencies: ["NIOPosix", "NIOCore", "NIOFoundationCompat", "NIOTestUtils", "NIOConcurrencyHelpers", "NIOEmbedded"]),
+                dependencies: ["NIOPosix", "NIOCore", "NIOFoundationCompat", "NIOTestUtils", "NIOConcurrencyHelpers", "NIOEmbedded", "CNIOLinux"]),
     .testTarget(name: "NIOConcurrencyHelpersTests",
                 dependencies: ["NIOConcurrencyHelpers", "NIOCore"]),
     .testTarget(name: "NIODataStructuresTests",

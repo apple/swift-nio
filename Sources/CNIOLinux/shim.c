@@ -24,6 +24,7 @@ void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug(void) {}
 #include <sched.h>
 #include <stdio.h>
 #include <sys/prctl.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 #include <assert.h>
 #include <time.h>
@@ -175,6 +176,10 @@ bool CNIOLinux_supports_udp_gro() {
     #else
     return supports_udp_sockopt(UDP_GRO, 1);
     #endif
+}
+
+int CNIOLinux_system_info(struct utsname* uname_data) {
+    return uname(uname_data);
 }
 
 #endif
