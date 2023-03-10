@@ -512,6 +512,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             }
             let segmentSize = value as! ChannelOptions.Types.DatagramSegmentSize.Value
             try self.socket.setUDPSegmentSize(segmentSize)
+        case _ as ChannelOptions.Types.DatagramReceiveOffload:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            let enable = value as! ChannelOptions.Types.DatagramReceiveOffload.Value
+            try self.socket.setUDPReceiveOffload(enable)
         default:
             try super.setOption0(option, value: value)
         }
@@ -560,6 +566,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 throw ChannelError.operationUnsupported
             }
             return try self.socket.getUDPSegmentSize() as! Option.Value
+        case _ as ChannelOptions.Types.DatagramReceiveOffload:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            return try self.socket.getUDPReceiveOffload() as! Option.Value
         default:
             return try super.getOption0(option)
         }

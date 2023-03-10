@@ -297,5 +297,35 @@ extension NIOBSDSocket {
         throw ChannelError.operationUnsupported
         #endif
     }
+
+    static func setUDPReceiveOffload(_ enabled: Bool, socket: NIOBSDSocket.Handle) throws {
+        #if os(Linux)
+        var isEnabled: CInt = enabled ? 1 : 0
+        try Self.setsockopt(socket: socket,
+                            level: .udp,
+                            option_name: .udp_gro,
+                            option_value: &isEnabled,
+                            option_len: socklen_t(MemoryLayout<CInt>.size))
+        #else
+        throw ChannelError.operationUnsupported
+        #endif
+    }
+
+    static func getUDPReceiveOffload(socket: NIOBSDSocket.Handle) throws -> Bool {
+        #if os(Linux)
+        var enabled: CInt = 0
+        var optionLength = socklen_t(MemoryLayout<CInt>.size)
+        try withUnsafeMutablePointer(to: &enabled) { enabledBytes in
+            try Self.getsockopt(socket: socket,
+                                level: .udp,
+                                option_name: .udp_gro,
+                                option_value: enabledBytes,
+                                option_len: &optionLength)
+        }
+        return enabled != 0
+        #else
+        throw ChannelError.operationUnsupported
+        #endif
+    }
 }
 #endif
