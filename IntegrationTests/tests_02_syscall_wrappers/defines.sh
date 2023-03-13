@@ -16,6 +16,11 @@
 set -eu
 
 function make_package() {
+    if [[ ! -d "$tmpdir/syscallwrapper/Sources/syscallwrapper/" ]]; then
+        mkdir "$tmpdir/syscallwrapper/Sources/syscallwrapper/"
+        mv "$tmpdir"/syscallwrapper/Sources/*.swift "$tmpdir/syscallwrapper/Sources/syscallwrapper/"
+    fi
+
     cat > "$tmpdir/syscallwrapper/Package.swift" <<"EOF"
 // swift-tools-version:5.5
 // The swift-tools-version declares the minimum version of Swift required to build this package.
