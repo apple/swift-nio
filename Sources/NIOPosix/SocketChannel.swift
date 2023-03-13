@@ -424,8 +424,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
 
         self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
-                                                          msgs: eventLoop.msgs,
-                                                          addresses: eventLoop.addresses,
+                                                          msgBufferPool: eventLoop.msgBufferPool,
                                                           controlMessageStorage: eventLoop.controlMessageStorage)
 
         try super.init(
@@ -441,8 +440,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.vectorReadManager = nil
         try socket.setNonBlocking()
         self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
-                                                          msgs: eventLoop.msgs,
-                                                          addresses: eventLoop.addresses,
+                                                          msgBufferPool: eventLoop.msgBufferPool,
                                                           controlMessageStorage: eventLoop.controlMessageStorage)
         try super.init(
             socket: socket,
@@ -816,7 +814,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                destinationPtr: destinationPtr,
                                                destinationSize: destinationSize,
                                                controlBytes: controlBytes.validControlBytes)
-
             },
             vectorWriteOperation: { msgs in
                 return try self.socket.sendmmsg(msgs: msgs)

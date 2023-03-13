@@ -103,11 +103,8 @@ internal final class SelectableEventLoop: EventLoop {
     private var externalState: ExternalState = .open // protected by externalStateLock
 
     let bufferPool: Pool<PooledBuffer>
+    let msgBufferPool: Pool<PooledMsgBuffer>
 
-    // Used for gathering UDP writes.
-    let msgs: UnsafeMutableBufferPointer<MMsgHdr>
-    let addresses: UnsafeMutableBufferPointer<sockaddr_storage>
-    
     // Used for UDP control messages.
     private(set) var controlMessageStorage: UnsafeControlMessageStorage
 
@@ -187,8 +184,7 @@ Further information:
         self._selector = selector
         self.thread = thread
         self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
-        self.msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: Socket.writevLimitIOVectors)
-        self.addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: Socket.writevLimitIOVectors)
+        self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
         self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
@@ -206,8 +202,6 @@ Further information:
                "illegal internal state on deinit: \(self.internalState)")
         assert(self.externalState == .resourcesReclaimed,
                "illegal external state on shutdown: \(self.externalState)")
-        self.msgs.deallocate()
-        self.addresses.deallocate()
         self.controlMessageStorage.deallocate()
     }
 

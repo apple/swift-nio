@@ -48,30 +48,22 @@ private extension SocketAddress {
 class PendingDatagramWritesManagerTests: XCTestCase {
     private func withPendingDatagramWritesManager(_ body: (PendingDatagramWritesManager) throws -> Void) rethrows {
         let bufferPool = Pool<PooledBuffer>(maxSize: 16)
-        var msgs: [MMsgHdr] = Array(repeating: MMsgHdr(), count: Socket.writevLimitIOVectors + 1)
-        var addresses: [sockaddr_storage] = Array(repeating: sockaddr_storage(), count: Socket.writevLimitIOVectors + 1)
+        let msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
         var controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
         defer {
             controlMessageStorage.deallocate()
         }
+        let pwm = NIOPosix.PendingDatagramWritesManager(bufferPool: bufferPool, msgBufferPool: msgBufferPool, controlMessageStorage: controlMessageStorage)
 
-        try msgs.withUnsafeMutableBufferPointer { msgs in
-            try addresses.withUnsafeMutableBufferPointer { addresses in
-                let pwm = NIOPosix.PendingDatagramWritesManager(bufferPool: bufferPool,
-                                                                msgs: msgs,
-                                                                addresses: addresses,
-                                                                controlMessageStorage: controlMessageStorage)
-                XCTAssertTrue(pwm.isEmpty)
-                XCTAssertTrue(pwm.isOpen)
-                XCTAssertFalse(pwm.isFlushPending)
-                XCTAssertTrue(pwm.isWritable)
+        XCTAssertTrue(pwm.isEmpty)
+        XCTAssertTrue(pwm.isOpen)
+        XCTAssertFalse(pwm.isFlushPending)
+        XCTAssertTrue(pwm.isWritable)
 
-                try body(pwm)
+        try body(pwm)
 
-                XCTAssertTrue(pwm.isEmpty)
-                XCTAssertFalse(pwm.isFlushPending)
-            }
-        }
+        XCTAssertTrue(pwm.isEmpty)
+        XCTAssertFalse(pwm.isFlushPending)
     }
 
     /// A frankenstein testing monster. It asserts that for `PendingDatagramWritesManager` `pwm` and `EventLoopPromises` `promises`
