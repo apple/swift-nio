@@ -16,6 +16,9 @@ import NIOConcurrencyHelpers
 import NIOCore
 @testable import NIOPosix
 import XCTest
+#if os(Linux)
+import CNIOLinux
+#endif
 
 extension Channel {
     func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
@@ -1344,6 +1347,7 @@ class DatagramChannelTests: XCTestCase {
     func testReceiveLargeBufferWithGRO(segments: Int, segmentSize: Int, writes: Int, vectorReads: Int? = nil) throws {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
         try XCTSkipUnless(System.supportsUDPReceiveOffload, "UDP_GRO is not supported on this platform")
+        try XCTSkipUnless(try self.hasGoodGROSupport())
 
         /// Set GSO on the first channel.
         XCTAssertNoThrow(try self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize)).wait())
@@ -1372,7 +1376,7 @@ class DatagramChannelTests: XCTestCase {
             self.firstChannel.flush()
             XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
 
-            // GRO is enabled so we expect a `writes` datagrams.
+            // GRO is well supported; we expect `writes` datagrams.
             let datagrams = try self.secondChannel.waitForDatagrams(count: writes)
             for datagram in datagrams {
                 XCTAssertEqual(datagram.data.readableBytes, segments * segmentSize)
@@ -1409,4 +1413,135 @@ class DatagramChannelTests: XCTestCase {
     func testChannelCanReceiveMultipleLargeBuffersWithGROUsingVectorReads() throws {
         try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 4, vectorReads: 4)
     }
+
+    private func hasGoodGROSupport() throws -> Bool {
+        // Source code for UDP_GRO was added in Linux 5.0. However, this support is somewhat limited
+        // and some sources indicate support was actually added in 5.10 (perhaps more widely
+        // supported). There is no way (or at least, no obvious way) to detect when support was
+        // properly fleshed out on a given kernel version.
+        //
+        // Anecdotally we have observed UDP_GRO works on 5.15 but not on 5.4. The effect of UDP_GRO
+        // not working is that datagrams aren't agregated... in other words, GRO not being enabled.
+        // This is fine because it's not always the case that datagrams can be aggregated so
+        // applications must be able to tolerate this.
+        //
+        // It does however make testing GRO somewhat challenging. We need to know when we can assert
+        // that datagrams will be aggregated. To do this we run a simple check on loopback (as we
+        // use this for all other UDP_GRO tests) and check whether datagrams are aggregated on the
+        // receive side. If they aren't then we we don't bother with further testing and instead
+        // validate that our kernel is older than 5.15.
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+        try XCTSkipUnless(System.supportsUDPReceiveOffload, "UDP_GRO is not supported on this platform")
+        let sender = try! self.buildChannel(group: self.group)
+        let receiver = try! self.buildChannel(group: self.group)
+        defer {
+            XCTAssertNoThrow(try sender.close().wait())
+            XCTAssertNoThrow(try receiver.close().wait())
+        }
+
+        let segments = 2
+        let segmentSize = 1000
+
+        XCTAssertNoThrow(try sender.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize)).wait())
+        XCTAssertNoThrow(try receiver.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+        let allocator = FixedSizeRecvByteBufferAllocator(capacity: 1 << 16)
+        XCTAssertNoThrow(try receiver.setOption(ChannelOptions.recvAllocator, value: allocator).wait())
+
+        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * segments)
+        let writeData = AddressedEnvelope(remoteAddress: receiver.localAddress!, data: buffer)
+        XCTAssertNoThrow(try sender.writeAndFlush(NIOAny(writeData)).wait())
+
+        let received = try receiver.waitForDatagrams(count: 1)
+        let hasGoodGROSupport = received.first!.data.readableBytes == buffer.readableBytes
+
+        if !hasGoodGROSupport {
+            // Not well supported: check we receive enough datagrams of the expected size.
+            let datagrams = try receiver.waitForDatagrams(count: segments)
+            for datagram in datagrams {
+                XCTAssertEqual(datagram.data.readableBytes, segmentSize)
+            }
+
+            #if os(Linux)
+            let info = System.systemInfo
+            // If our kernel is more recent than 5.15 and we don't have good GRO support then
+            // something has gone wrong (or our assumptions about kernel support are incorrect).
+            if let major = info.release.major, let minor = info.release.minor {
+                if major >= 6 || (major == 5 && minor >= 15) {
+                    XCTFail("Platform does not have good GRO support: \(info.release.release)")
+                }
+            } else {
+                XCTFail("Unable to determine Linux x.y release from '\(info.release.release)'")
+            }
+            #endif
+        }
+
+        return hasGoodGROSupport
+    }
+}
+
+extension System {
+    #if os(Linux)
+    internal static let systemInfo: SystemInfo = {
+        var info = utsname()
+        assert(CNIOLinux_system_info(&info) == 0)
+        return SystemInfo(utsname: info)
+    }()
+
+    struct SystemInfo {
+        var machine: String
+        var nodeName: String
+        var sysName: String
+        var release: Release
+        var version: String
+
+        struct Release {
+            var release: String
+
+            var major: Int?
+            var minor: Int?
+
+            init(parsing release: String) {
+                self.release = release
+
+                let components = release.split(separator: ".", maxSplits: 1)
+
+                if components.count == 2 {
+                    self.major = Int(components[0])
+                    self.minor = components[1].split(separator: ".").first.map(String.init).flatMap(Int.init)
+                } else {
+                    self.major = nil
+                    self.minor = nil
+                }
+            }
+        }
+
+        init(utsname info: utsname) {
+            self.machine = withUnsafeBytes(of: info.machine) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                return pointer.map { String(cString: $0) } ?? ""
+            }
+
+            self.nodeName = withUnsafeBytes(of: info.nodename) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                return pointer.map { String(cString: $0) } ?? ""
+            }
+
+            self.sysName = withUnsafeBytes(of: info.sysname) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                return pointer.map { String(cString: $0) } ?? ""
+            }
+
+            self.version = withUnsafeBytes(of: info.version) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                return pointer.map { String(cString: $0) } ?? ""
+            }
+
+            self.release = withUnsafeBytes(of: info.release) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                let release = pointer.map { String(cString: $0) } ?? ""
+                return Release(parsing: release)
+            }
+        }
+    }
+    #endif
 }
