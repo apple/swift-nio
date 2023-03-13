@@ -30,7 +30,13 @@ tmpdir=$(mktemp -d /tmp/.swift-nio-syscall-wrappers-sh-test_XXXXXX)
 mkdir "$tmpdir/syscallwrapper"
 cd "$tmpdir/syscallwrapper"
 swift package init --type=executable
-cat > "$tmpdir/syscallwrapper/Sources/syscallwrapper/main.swift" <<EOF
+
+main_path="$tmpdir/syscallwrapper/Sources/main.swift"
+if [[ -d "$tmpdir/syscallwrapper/Sources/syscallwrapper/" ]]; then
+    main_path="$tmpdir/syscallwrapper/Sources/syscallwrapper/main.swift"
+fi
+
+cat > "$main_path" <<EOF
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 import Darwin
 #else
