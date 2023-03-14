@@ -1483,7 +1483,8 @@ extension System {
     #if os(Linux)
     internal static let systemInfo: SystemInfo = {
         var info = utsname()
-        assert(CNIOLinux_system_info(&info) == 0)
+        let rc = CNIOLinux_system_info(&info)
+        assert(rc == 0)
         return SystemInfo(utsname: info)
     }()
 
