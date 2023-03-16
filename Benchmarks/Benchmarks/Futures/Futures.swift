@@ -19,10 +19,9 @@ extension BenchmarkRunner {}
 
 @_dynamicReplacement(for: registerBenchmarks)
 func benchmarks() {
-    Benchmark.defaultConfiguration = .init(metrics:[.wallClock, .mallocCountTotal],
+    Benchmark.defaultConfiguration = .init(metrics:[.wallClock, .mallocCountTotal, .throughput],
                                            warmupIterations: 0,
-                                           scalingFactor: .kilo,
-                                           maxDuration: .milliseconds(500),
+                                           maxDuration: .seconds(1),
                                            maxIterations: Int.max)
 
    Benchmark("future_whenallsucceed_100k_immediately_succeeded_off_loop") { benchmark in

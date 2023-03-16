@@ -18,34 +18,35 @@ extension BenchmarkRunner {}
 
 @_dynamicReplacement(for: registerBenchmarks)
 func benchmarks() {
-    Benchmark.defaultConfiguration = .init(warmupIterations: 0,
+    Benchmark.defaultConfiguration = .init(metrics:[.wallClock,
+                                                    .mallocCountTotal,
+                                                    .contextSwitches,
+                                                    .threads,
+                                                    .threadsRunning,
+                                                    .syscalls,
+                                                    .readSyscalls,
+                                                    .writeSyscalls,
+                                                    .throughput],
+                                           warmupIterations: 0,
                                            maxDuration: .seconds(1),
-                                           maxIterations: Int.max,
-                                           thresholds: [.wallClock: BenchmarkResult.PercentileThresholds.strict])
+                                           maxIterations: Int.max)
 
-    func measureAndPrint<B: NIOPerformanceTester.Benchmark>(benchmark: BenchmarkSupport.Benchmark,
-                                                            running: B) throws {
-        try running.setUp()
-        defer {
-            running.tearDown()
-        }
-
-        blackHole(try running.run())
-    }
-
-    func measureAndPrint<B: NIOPerformanceTester.AsyncBenchmark>(benchmark: BenchmarkSupport.Benchmark,
-                                                            running: B) async throws {
-        try await running.setUp()
-        defer {
-            running.tearDown()
-        }
-
-        blackHole(try await running.run())
-    }
-
+    let mediumConfiguration = Benchmark.Configuration(metrics:[.wallClock,
+                                                               .mallocCountTotal,
+                                                               .contextSwitches,
+                                                               .threads,
+                                                               .threadsRunning,
+                                                               .syscalls,
+                                                               .readSyscalls,
+                                                               .writeSyscalls,
+                                                               .throughput],
+                                                      warmupIterations: 0,
+                                                      scalingFactor: .kilo,
+                                                      maxDuration: .seconds(1),
+                                                      maxIterations: Int.max)
 
     Benchmark("udp_10k_writes") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: UDPBenchmark(
                 data: ByteBuffer(repeating: 42, count: 1000),
@@ -56,14 +57,13 @@ func benchmarks() {
         )
     }
 
-
     Benchmark("channel_pipeline_1m_events") { benchmark in
-        try measureAndPrint(benchmark: benchmark,
+        try runNIOBenchmark(benchmark: benchmark,
                             running: ChannelPipelineBenchmark(runCount: 1_000_000))
     }
 
     Benchmark("circular_buffer_into_byte_buffer_1kb") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: CircularBufferIntoByteBufferBenchmark(
                 iterations: 10_000,
@@ -73,7 +73,7 @@ func benchmarks() {
     }
 
     Benchmark("circular_buffer_into_byte_buffer_1mb") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: CircularBufferIntoByteBufferBenchmark(
                 iterations: 20,
@@ -83,7 +83,7 @@ func benchmarks() {
     }
 
     Benchmark("byte_to_message_decoder_decode_many_small") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: ByteToMessageDecoderDecodeManySmallsBenchmark(
                 iterations: 200,
@@ -93,18 +93,15 @@ func benchmarks() {
     }
 
     // TODO: This needs extra validation
-    Benchmark("generate_10k_random_request_keys",
-              configuration: .init(scalingFactor:.kilo)) { benchmark in
+    Benchmark("generate_10k_random_request_keys") { benchmark in
         let numKeys = 10_000
-        for _ in benchmark.scaledIterations {
-            blackHole( (0 ..< numKeys).reduce(into: 0, { result, _ in
-                result &+= NIOWebSocketClientUpgrader.randomRequestKey().count
-            }))
-        }
+        blackHole( (0 ..< numKeys).reduce(into: 0, { result, _ in
+            result &+= NIOWebSocketClientUpgrader.randomRequestKey().count
+        }))
     }
 
     Benchmark("lock_1_thread_10M_ops") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: NIOLockBenchmark(
                 numberOfThreads: 1,
@@ -114,7 +111,7 @@ func benchmarks() {
     }
 
     Benchmark("lock_2_threads_10M_ops") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: NIOLockBenchmark(
                 numberOfThreads: 2,
@@ -124,7 +121,7 @@ func benchmarks() {
     }
 
     Benchmark("lock_4_threads_10M_ops") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: NIOLockBenchmark(
                 numberOfThreads: 4,
@@ -134,7 +131,7 @@ func benchmarks() {
     }
 
     Benchmark("lock_8_threads_10M_ops") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: NIOLockBenchmark(
                 numberOfThreads: 8,
@@ -144,28 +141,28 @@ func benchmarks() {
     }
 
     Benchmark("schedule_100k_tasks") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: SchedulingBenchmark(numTasks: 100_000)
         )
     }
 
     Benchmark("schedule_and_run_100k_tasks") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: SchedulingAndRunningBenchmark(numTasks: 100_000)
         )
     }
 
     Benchmark("execute_100k_tasks") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: ExecuteBenchmark(numTasks: 100_000)
         )
     }
 
     Benchmark("circularbuffer_copy_to_array_10k_times_1kb") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: CircularBufferViewCopyToArrayBenchmark(
                 iterations: 10_000,
@@ -175,7 +172,7 @@ func benchmarks() {
     }
 
     Benchmark("deadline_now_1M_times") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: DeadlineNowBenchmark(
                 iterations: 1_000_000
@@ -185,7 +182,7 @@ func benchmarks() {
 
     Benchmark("asyncwriter_single_writes_1M_times") { benchmark in
         if #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) {
-            try await measureAndPrint(
+            try await runNIOBenchmark(
                 benchmark: benchmark,
                 running: NIOAsyncWriterSingleWritesBenchmark(
                     iterations: 1_000_000
@@ -196,7 +193,7 @@ func benchmarks() {
 
     Benchmark("asyncsequenceproducer_consume_1M_times") { benchmark in
         if #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) {
-            try await measureAndPrint(
+            try await runNIOBenchmark(
                 benchmark: benchmark,
                 running: NIOAsyncSequenceProducerBenchmark(
                     iterations: 1_000_000
@@ -204,5 +201,4 @@ func benchmarks() {
             )
         }
     }
-
 }

@@ -17,10 +17,18 @@ extension BenchmarkRunner {}
 
 @_dynamicReplacement(for: registerBenchmarks)
 func benchmarks() {
-    Benchmark.defaultConfiguration = .init(warmupIterations: 0,
+    Benchmark.defaultConfiguration = .init(metrics:[.wallClock,
+                                                    .mallocCountTotal,
+                                                    .contextSwitches,
+                                                    .threads,
+                                                    .threadsRunning,
+                                                    .syscalls,
+                                                    .readSyscalls,
+                                                    .writeSyscalls,
+                                                    .throughput],
+                                           warmupIterations: 0,
                                            maxDuration: .seconds(1),
-                                           maxIterations: Int.max,
-                                           thresholds: [.wallClock: BenchmarkResult.PercentileThresholds.strict])
+                                           maxIterations: Int.max)
 
     func measureAndPrint<B: NIOPerformanceTester.Benchmark>(benchmark: BenchmarkSupport.Benchmark,
                                                             running: B) throws {

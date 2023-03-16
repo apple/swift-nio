@@ -19,11 +19,22 @@ extension BenchmarkRunner {}
 
 @_dynamicReplacement(for: registerBenchmarks)
 func benchmarks() {
-    Benchmark.defaultConfiguration = .init(metrics:[.wallClock, .mallocCountTotal],
+    Benchmark.defaultConfiguration = .init(metrics:[.wallClock, .mallocCountTotal, .throughput],
                                            warmupIterations: 0,
-                                           scalingFactor: .kilo,
-                                           maxDuration: .milliseconds(500),
+                                           maxDuration: .seconds(1),
                                            maxIterations: Int.max)
+
+    let mediumConfiguration = Benchmark.Configuration(metrics:[.wallClock, .mallocCountTotal],
+                                                      warmupIterations: 0,
+                                                      scalingFactor: .kilo,
+                                                      maxDuration: .seconds(1),
+                                                      maxIterations: Int.max)
+
+    let largeConfiguration = Benchmark.Configuration(metrics:[.wallClock, .mallocCountTotal],
+                                                      warmupIterations: 0,
+                                                      scalingFactor: .mega,
+                                                      maxDuration: .seconds(1),
+                                                      maxIterations: Int.max)
 
     Benchmark("bytebuffer_write_12MB_short_string_literals") { benchmark in
         let bufferSize = 12 * 1024 * 1024
@@ -58,16 +69,14 @@ func benchmarks() {
         blackHole(readableBytes)
     }
 
-    Benchmark("bytebuffer_write_12MB_medium_string_literals",
-              configuration: .init(scalingFactor: .kilo)) { benchmark in
+    // MARK: Extra check iteration count
+    Benchmark("bytebuffer_write_12MB_medium_string_literals") { benchmark in
         let bufferSize = 12 * 1024 * 1024
         var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
 
-        for _ in benchmark.scaledIterations {
-            buffer.clear()
-            for _ in  0 ..< (bufferSize / 24) {
-                buffer.writeString("012345678901234567890123")
-            }
+        buffer.clear()
+        for _ in  0 ..< (bufferSize / 24) {
+            buffer.writeString("012345678901234567890123")
         }
 
         let readableBytes = buffer.readableBytes
@@ -110,7 +119,7 @@ func benchmarks() {
     }
 
     Benchmark("bytebuffer_lots_of_rw",
-              configuration: .init(scalingFactor: .mega)) { benchmark in
+              configuration: largeConfiguration) { benchmark in
         let dispatchData = ("A" as StaticString).withUTF8Buffer { ptr in
             DispatchData(bytes: UnsafeRawBufferPointer(start: UnsafeRawPointer(ptr.baseAddress), count: ptr.count))
         }
@@ -155,9 +164,10 @@ func benchmarks() {
 
     }
 
-    Benchmark("bytebuffer_write_http_response_ascii_only_as_string") { benchmark in
+    Benchmark("bytebuffer_write_http_response_ascii_only_as_string",
+              configuration: mediumConfiguration) { benchmark in
         var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
-        for _ in 0..<20_000 {
+        for _ in benchmark.scaledIterations {
             writeExampleHTTPResponseAsString(buffer: &buffer)
             buffer.writeString(htmlASCIIOnly)
             buffer.clear()
@@ -166,7 +176,7 @@ func benchmarks() {
     }
 
     Benchmark("bytebuffer_write_http_response_ascii_only_as_staticstring",
-              configuration: .init(scalingFactor: .mega)) { benchmark in
+              configuration: largeConfiguration) { benchmark in
         var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
         for _ in benchmark.scaledIterations {
             writeExampleHTTPResponseAsStaticString(buffer: &buffer)
@@ -177,7 +187,7 @@ func benchmarks() {
     }
 
     Benchmark("bytebuffer_write_http_response_some_nonascii_as_string",
-              configuration: .init(scalingFactor: .mega)) { benchmark in
+              configuration: largeConfiguration) { benchmark in
         var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
         for _ in benchmark.scaledIterations {
             writeExampleHTTPResponseAsString(buffer: &buffer)
@@ -188,7 +198,7 @@ func benchmarks() {
     }
 
     Benchmark("bytebuffer_write_http_response_some_nonascii_as_staticstring",
-    configuration: .init(scalingFactor: .mega)) { benchmark in
+              configuration: largeConfiguration) { benchmark in
         var buffer = ByteBufferAllocator().buffer(capacity: 16 * 1024)
         for _ in benchmark.scaledIterations {
             writeExampleHTTPResponseAsStaticString(buffer: &buffer)
@@ -199,7 +209,7 @@ func benchmarks() {
     }
 
     Benchmark("byte_buffer_view_iterator_1mb") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: ByteBufferViewIteratorBenchmark(
                 iterations: 20,
@@ -209,7 +219,7 @@ func benchmarks() {
     }
 
     Benchmark("byte_buffer_view_contains_12mb") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: ByteBufferViewContainsBenchmark(
                 iterations: 5,
@@ -220,7 +230,7 @@ func benchmarks() {
 
 
     Benchmark("bytebuffer_rw_10_uint32s") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: ByteBufferReadWriteMultipleIntegersBenchmark<UInt32>(
                 iterations: 100_000,
@@ -230,7 +240,7 @@ func benchmarks() {
     }
 
     Benchmark("bytebuffer_multi_rw_10_uint32s") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: ByteBufferMultiReadWriteTenIntegersBenchmark<UInt32>(
                 iterations: 1_000_000
@@ -239,7 +249,7 @@ func benchmarks() {
     }
 
     Benchmark("bytebufferview_copy_to_array_100k_times_1kb") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: ByteBufferViewCopyToArrayBenchmark(
                 iterations: 100_000,

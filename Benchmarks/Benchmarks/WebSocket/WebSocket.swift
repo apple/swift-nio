@@ -19,24 +19,13 @@ extension BenchmarkRunner {}
 
 @_dynamicReplacement(for: registerBenchmarks)
 func benchmarks() {
-    Benchmark.defaultConfiguration = .init(metrics:[.wallClock, .mallocCountTotal],
+    Benchmark.defaultConfiguration = .init(metrics:[.wallClock, .mallocCountTotal, .throughput],
                                            warmupIterations: 0,
-                                           scalingFactor: .one,
-                                           maxDuration: .milliseconds(500),
+                                           maxDuration: .seconds(1),
                                            maxIterations: Int.max)
-    
-    func measureAndPrint<B: NIOPerformanceTester.Benchmark>(benchmark: BenchmarkSupport.Benchmark,
-                                                            running: B) throws {
-        try running.setUp()
-        defer {
-            running.tearDown()
-        }
-        
-        blackHole(try running.run())
-    }
-    
+
     Benchmark("websocket_encode_50b_space_at_front_100k_frames_cow") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 50,
@@ -49,7 +38,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_encode_50b_space_at_front_1m_frames_cow_masking") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 50,
@@ -62,7 +51,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_encode_1kb_space_at_front_1m_frames_cow") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 1024,
@@ -75,7 +64,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_encode_50b_no_space_at_front_100k_frames_cow") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 50,
@@ -88,7 +77,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_encode_1kb_no_space_at_front_100k_frames_cow") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 1024,
@@ -101,7 +90,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_encode_50b_space_at_front_100k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 50,
@@ -114,7 +103,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_encode_50b_space_at_front_10k_frames_masking") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 50,
@@ -127,7 +116,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_encode_1kb_space_at_front_10k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 1024,
@@ -140,7 +129,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_encode_50b_no_space_at_front_100k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 50,
@@ -153,7 +142,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_encode_1kb_no_space_at_front_10k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameEncoderBenchmark(
                 dataSize: 1024,
@@ -166,7 +155,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_decode_125b_10k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameDecoderBenchmark(
                 dataSize: 125,
@@ -176,7 +165,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_decode_125b_with_a_masking_key_10k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameDecoderBenchmark(
                 dataSize: 125,
@@ -187,7 +176,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_decode_64kb_10k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameDecoderBenchmark(
                 dataSize: Int(UInt16.max),
@@ -197,7 +186,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_decode_64kb_with_a_masking_key_10k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameDecoderBenchmark(
                 dataSize: Int(UInt16.max),
@@ -208,7 +197,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_decode_64kb_+1_10k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameDecoderBenchmark(
                 dataSize: Int(UInt16.max) + 1,
@@ -218,7 +207,7 @@ func benchmarks() {
     }
     
     Benchmark("websocket_decode_64kb_+1_with_a_masking_key_10k_frames") { benchmark in
-        try measureAndPrint(
+        try runNIOBenchmark(
             benchmark: benchmark,
             running: WebSocketFrameDecoderBenchmark(
                 dataSize: Int(UInt16.max) + 1,
