@@ -21,6 +21,8 @@ import Dispatch
 import NIOWebSocket
 
 public var group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+
+// TODO: Do we need to do this as the benchmark process will be killed of for each test?
 /*defer {
     try! group.syncShutdownGracefully()
 }
@@ -32,6 +34,8 @@ public let serverChannel = try! ServerBootstrap(group: group)
             channel.pipeline.addHandler(SimpleHTTPServer())
         }
     }.bind(host: "127.0.0.1", port: 0).wait()
+
+// TODO: Do we need to do this as the benchmark process will be killed of for each test?
 /*
 defer {
     try! serverChannel.close().wait()
