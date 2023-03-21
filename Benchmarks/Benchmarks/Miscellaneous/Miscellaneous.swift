@@ -15,13 +15,22 @@
 import NIOPerformanceTester
 import NIOWebSocket
 import NIOCore
+import Benchmark
 
-import BenchmarkSupport
-@main
-extension BenchmarkRunner {}
+let benchmarks = {
+    var thresholds: [BenchmarkMetric: BenchmarkThresholds]
 
-@_dynamicReplacement(for: registerBenchmarks)
-func benchmarks() {
+    if Benchmark.checkAbsoluteThresholds {
+        // We could read this from an external source like a JSON file here and
+        // set whatever absolute thresholds we want per metric
+        let absolute: BenchmarkThresholds.AbsoluteThresholds = [.p50: .milliseconds(158),
+                                                                .p99: .milliseconds(159)]
+
+        thresholds = [BenchmarkMetric.wallClock: BenchmarkThresholds(absolute: absolute)]
+    } else {
+        thresholds = [BenchmarkMetric.wallClock: BenchmarkThresholds.relaxed]
+    }
+
     Benchmark.defaultConfiguration = .init(metrics:[.wallClock,
                                                     .mallocCountTotal,
                                                     .contextSwitches,
@@ -151,7 +160,8 @@ func benchmarks() {
         )
     }
 
-    Benchmark("schedule_and_run_100k_tasks") { benchmark in
+    Benchmark("schedule_and_run_100k_tasks",
+              configuration: .init(thresholds: thresholds)) { benchmark in
         try runNIOBenchmark(
             benchmark: benchmark,
             running: SchedulingAndRunningBenchmark(numTasks: 100_000)

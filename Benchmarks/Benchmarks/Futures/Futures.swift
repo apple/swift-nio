@@ -15,14 +15,9 @@
 import NIOPerformanceTester
 import NIOCore
 import Dispatch
+import Benchmark
 
-import BenchmarkSupport
-@main
-extension BenchmarkRunner {}
-
-
-@_dynamicReplacement(for: registerBenchmarks)
-func benchmarks() {
+let benchmarks = {
     Benchmark.defaultConfiguration = .init(metrics:[.wallClock, .mallocCountTotal, .throughput],
                                            warmupIterations: 0,
                                            maxDuration: .seconds(1),

@@ -7,7 +7,7 @@ let package = Package(
     name: "Benchmarks",
     platforms: [.macOS(.v13)],
     dependencies: [
-        .package(url: "https://github.com/ordo-one/package-benchmark", .upToNextMajor(from: "0.9.0")),
+        .package(url: "https://github.com/ordo-one/package-benchmark", .upToNextMajor(from: "1.0.0")),
         .package(path: "../../swift-nio")
     ],
     targets: [
@@ -27,7 +27,8 @@ let package = Package(
             name: "ByteBuffer",
             dependencies: [
                 "NIOPerformanceTester",
-                .product(name: "BenchmarkSupport", package: "package-benchmark"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "BenchmarkPlugin", package: "package-benchmark"),
             ],
             path: "Benchmarks/ByteBuffer"
         ),
@@ -36,7 +37,8 @@ let package = Package(
             name: "Futures",
             dependencies: [
                 "NIOPerformanceTester",
-                .product(name: "BenchmarkSupport", package: "package-benchmark"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "BenchmarkPlugin", package: "package-benchmark"),
             ],
             path: "Benchmarks/Futures"
         ),
@@ -45,7 +47,8 @@ let package = Package(
             name: "HTTPRequests",
             dependencies: [
                 "NIOPerformanceTester",
-                .product(name: "BenchmarkSupport", package: "package-benchmark"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "BenchmarkPlugin", package: "package-benchmark"),
             ],
             path: "Benchmarks/HTTPRequests"
         ),
@@ -54,7 +57,8 @@ let package = Package(
             name: "HTTPHeaders",
             dependencies: [
                 "NIOPerformanceTester",
-                .product(name: "BenchmarkSupport", package: "package-benchmark"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "BenchmarkPlugin", package: "package-benchmark"),
             ],
             path: "Benchmarks/HTTPHeaders"
         ),
@@ -63,7 +67,8 @@ let package = Package(
             name: "WebSocket",
             dependencies: [
                 "NIOPerformanceTester",
-                .product(name: "BenchmarkSupport", package: "package-benchmark"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "BenchmarkPlugin", package: "package-benchmark"),
             ],
             path: "Benchmarks/WebSocket"
         ),
@@ -72,7 +77,8 @@ let package = Package(
             name: "Miscellaneous",
             dependencies: [
                 "NIOPerformanceTester",
-                .product(name: "BenchmarkSupport", package: "package-benchmark"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "BenchmarkPlugin", package: "package-benchmark"),
             ],
             path: "Benchmarks/Miscellaneous"
         ),
@@ -81,7 +87,8 @@ let package = Package(
             name: "UDPAndTCP",
             dependencies: [
                 "NIOPerformanceTester",
-                .product(name: "BenchmarkSupport", package: "package-benchmark"),
+                .product(name: "Benchmark", package: "package-benchmark"),
+                .product(name: "BenchmarkPlugin", package: "package-benchmark"),
             ],
             path: "Benchmarks/UDPAndTCP"
         )

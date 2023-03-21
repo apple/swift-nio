@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOPerformanceTester
-import BenchmarkSupport
+import Benchmark
 
 func runNIOBenchmark<B: NIOPerformanceTester.Benchmark>(benchmark: BenchmarkSupport.Benchmark,
                                                         running: B) throws {

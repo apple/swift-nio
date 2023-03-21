@@ -14,15 +14,9 @@
 
 import NIOPerformanceTester
 import NIOHTTP1
+import Benchmark
 
-import BenchmarkSupport
-@main
-extension BenchmarkRunner {}
-
-
-// swiftlint disable: attributes
-@_dynamicReplacement(for: registerBenchmarks)
-func benchmarks() {
+let benchmarks = {
     Benchmark.defaultConfiguration = .init(metrics:[.wallClock, .mallocCountTotal, .throughput],
                                            warmupIterations: 0,
                                            maxDuration: .seconds(1),
