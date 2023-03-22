@@ -57,4 +57,18 @@ class LinuxTest: XCTestCase {
         }
         #endif
     }
+
+    func testCoreCountMax() throws {
+        #if os(Linux) || os(Android)
+        try [
+            ("max 100000", nil),
+            ("75000 100000", 1),
+            ("200000 100000", 2)
+        ].forEach { (content, count) in
+            try withTemporaryFile(content: content) { (_, path) in
+                XCTAssertEqual(Linux.coreCount(maxPath: path), count)
+            }
+        }
+        #endif
+    }
 }

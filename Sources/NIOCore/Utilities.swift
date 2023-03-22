@@ -99,7 +99,9 @@ public enum System {
             .map { $0.ProcessorMask.nonzeroBitCount }
             .reduce(0, +)
 #elseif os(Linux) || os(Android)
-        if let quota = Linux.coreCount(quota: Linux.cfsQuotaPath, period: Linux.cfsPeriodPath) {
+        if let quota2 = Linux.coreCount(maxPath: Linux.cfsCpuMaxPath) {
+            return quota2
+        } else if let quota = Linux.coreCount(quota: Linux.cfsQuotaPath, period: Linux.cfsPeriodPath) {
             return quota
         } else if let cpusetCount = Linux.coreCount(cpuset: Linux.cpuSetPath) {
             return cpusetCount

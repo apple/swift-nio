@@ -21,6 +21,7 @@ enum Linux {
     static let cfsQuotaPath = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
     static let cfsPeriodPath = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
     static let cpuSetPath = "/sys/fs/cgroup/cpuset/cpuset.cpus"
+    static let cfsCpuMaxPath = "/sys/fs/cgroup/cpu.max"
 
     private static func firstLineOfFile(path: String) throws -> Substring {
         let fh = try NIOFileHandle(path: path)
@@ -59,6 +60,7 @@ enum Linux {
         return cpuset.map(countCoreIds).reduce(0, +)
     }
 
+    // cgroup1
     static func coreCount(quota quotaPath: String,  period periodPath: String) -> Int? {
         guard
             let quota = try? Int(firstLineOfFile(path: quotaPath)),
@@ -67,6 +69,16 @@ enum Linux {
         guard
             let period = try? Int(firstLineOfFile(path: periodPath)),
             period > 0
+        else { return nil }
+        return (quota - 1 + period) / period // always round up if fractional CPU quota requested
+    }
+
+    // cgroup2
+    static func coreCount(maxPath: String) -> Int? {
+        guard let maxDetails = try? firstLineOfFile(path: maxPath),
+              let spaceIndex = maxDetails.firstIndex(of: " "),
+              let quota = Int(maxDetails[maxDetails.startIndex ..< spaceIndex]),
+              let period = Int(maxDetails[maxDetails.index(after: spaceIndex) ..< maxDetails.endIndex])
         else { return nil }
         return (quota - 1 + period) / period // always round up if fractional CPU quota requested
     }
