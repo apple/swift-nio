@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -60,6 +60,7 @@ extension NIOConcurrencyHelpersTests {
                 ("testLoadAndCASHammering", testLoadAndCASHammering),
                 ("testMultipleLoadsRacingWhilstStoresAreGoingOn", testMultipleLoadsRacingWhilstStoresAreGoingOn),
                 ("testNIOLockedValueBox", testNIOLockedValueBox),
+                ("testNIOLockedValueBoxHandlesThingsWithTransitiveClassesProperly", testNIOLockedValueBoxHandlesThingsWithTransitiveClassesProperly),
            ]
    }
 }
