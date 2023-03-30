@@ -24,6 +24,7 @@ void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug(void) {}
 #include <sched.h>
 #include <stdio.h>
 #include <sys/prctl.h>
+#include <sys/utsname.h>
 #include <unistd.h>
 #include <assert.h>
 #include <time.h>
@@ -150,4 +151,35 @@ size_t CNIOLinux_CMSG_SPACE(size_t payloadSizeBytes) {
 
 const int CNIOLinux_SO_TIMESTAMP = SO_TIMESTAMP;
 const int CNIOLinux_SO_RCVTIMEO = SO_RCVTIMEO;
+
+bool supports_udp_sockopt(int opt, int value) {
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd == -1) {
+        return false;
+    }
+    int rc = setsockopt(fd, IPPROTO_UDP, opt, &value, sizeof(value));
+    close(fd);
+    return rc == 0;
+}
+
+bool CNIOLinux_supports_udp_segment() {
+    #ifndef UDP_SEGMENT
+    return false;
+    #else
+    return supports_udp_sockopt(UDP_SEGMENT, 512);
+    #endif
+}
+
+bool CNIOLinux_supports_udp_gro() {
+    #ifndef UDP_GRO
+    return false;
+    #else
+    return supports_udp_sockopt(UDP_GRO, 1);
+    #endif
+}
+
+int CNIOLinux_system_info(struct utsname* uname_data) {
+    return uname(uname_data);
+}
+
 #endif

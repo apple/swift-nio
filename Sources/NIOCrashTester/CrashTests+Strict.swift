@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if !os(iOS) && !os(tvOS) && !os(watchOS)
 import NIOPosix
 
 struct StrictCrashTests {
@@ -27,3 +28,4 @@ struct StrictCrashTests {
         }
     }
 }
+#endif

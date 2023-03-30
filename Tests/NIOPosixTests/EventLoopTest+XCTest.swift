@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -56,6 +56,7 @@ extension EventLoopTest {
                 ("testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies", testRepeatedTaskThatIsCancelledAfterRunningAtLeastTwiceNotifies),
                 ("testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished", testRepeatedTaskThatCancelsItselfNotifiesOnlyWhenFinished),
                 ("testCancelledScheduledTasksDoNotHoldOnToRunClosure", testCancelledScheduledTasksDoNotHoldOnToRunClosure),
+                ("testCancelledScheduledTasksDoNotHoldOnToRunClosureEvenIfTheyWereTheNextTaskToExecute", testCancelledScheduledTasksDoNotHoldOnToRunClosureEvenIfTheyWereTheNextTaskToExecute),
                 ("testIllegalCloseOfEventLoopFails", testIllegalCloseOfEventLoopFails),
                 ("testSubtractingDeadlineFromPastAndFuturesDeadlinesWorks", testSubtractingDeadlineFromPastAndFuturesDeadlinesWorks),
                 ("testCallingSyncShutdownGracefullyMultipleTimesShouldNotHang", testCallingSyncShutdownGracefullyMultipleTimesShouldNotHang),
@@ -89,6 +90,8 @@ extension EventLoopTest {
                 ("testEventLoopGroupsWithoutAnyImplementationAreValid", testEventLoopGroupsWithoutAnyImplementationAreValid),
                 ("testCallingAnyOnAnMTELGThatIsNotSelfDoesNotReturnItself", testCallingAnyOnAnMTELGThatIsNotSelfDoesNotReturnItself),
                 ("testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation", testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation),
+                ("testAsyncToFutureConversionSuccess", testAsyncToFutureConversionSuccess),
+                ("testAsyncToFutureConversionFailure", testAsyncToFutureConversionFailure),
            ]
    }
 }

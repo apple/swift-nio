@@ -11,6 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(iOS) && !os(tvOS) && !os(watchOS)
 import NIOCore
 import NIOPosix
 import class Foundation.Process
@@ -98,8 +100,14 @@ func main() throws {
                          regex: String,
                          runResult: RunResult) throws -> InterpretedRunResult {
         struct NoOutputFound: Error {}
-
-        guard case .signal(Int(SIGILL)) = runResult else {
+        #if arch(i386) || arch(x86_64)
+        let expectedSignal = SIGILL
+        #elseif arch(arm) || arch(arm64)
+        let expectedSignal = SIGTRAP
+        #else
+        #error("unknown CPU architecture for which we don't know the expected signal for a crash")
+        #endif
+        guard case .signal(Int(expectedSignal)) = runResult  else {
             return .unexpectedRunResult(runResult)
         }
 
@@ -214,3 +222,4 @@ func main() throws {
 }
 
 try main()
+#endif

@@ -15,6 +15,7 @@
 import NIOCore
 import XCTest
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class NIOAsyncSequenceProducerBackPressureStrategiesHighLowWatermarkTests: XCTestCase {
     private var strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark!
 

@@ -1223,6 +1223,7 @@ extension EventLoopFuture {
 // MARK: wait
 
 extension EventLoopFuture {
+    #if swift(>=5.7)
     /// Wait for the resolution of this `EventLoopFuture` by blocking the current thread until it
     /// resolves.
     ///
@@ -1232,10 +1233,37 @@ extension EventLoopFuture {
     /// threads: it is primarily useful for testing, or for building interfaces between blocking
     /// and non-blocking code.
     ///
+    /// This is also forbidden in async contexts: prefer ``EventLoopFuture/get``.
+    ///
+    /// - returns: The value of the `EventLoopFuture` when it completes.
+    /// - throws: The error value of the `EventLoopFuture` if it errors.
+    @available(*, noasync, message: "wait() can block indefinitely, prefer get()", renamed: "get()")
+    @inlinable
+    public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value {
+        return try self._wait(file: file, line: line)
+    }
+    #else
+    /// Wait for the resolution of this `EventLoopFuture` by blocking the current thread until it
+    /// resolves.
+    ///
+    /// If the `EventLoopFuture` resolves with a value, that value is returned from `wait()`. If
+    /// the `EventLoopFuture` resolves with an error, that error will be thrown instead.
+    /// `wait()` will block whatever thread it is called on, so it must not be called on event loop
+    /// threads: it is primarily useful for testing, or for building interfaces between blocking
+    /// and non-blocking code.
+    ///
+    /// This is also forbidden in async contexts: prefer ``EventLoopFuture/get``.
+    ///
     /// - returns: The value of the `EventLoopFuture` when it completes.
     /// - throws: The error value of the `EventLoopFuture` if it errors.
     @inlinable
-    public func wait(file: StaticString = #fileID, line: UInt = #line) throws -> Value {
+    public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value {
+        return try self._wait(file: file, line: line)
+    }
+    #endif
+
+    @inlinable
+    func _wait(file: StaticString, line: UInt) throws -> Value {
         self.eventLoop._preconditionSafeToWait(file: file, line: line)
 
         let v: UnsafeMutableTransferBox<Result<Value, Error>?> = .init(nil)
@@ -2190,3 +2218,11 @@ extension EventLoopPromise: Sendable { }
 // that by way of the guarantees of the EventLoop protocol, so the compiler cannot
 // check it.
 extension EventLoopFuture: @unchecked Sendable { }
+
+extension EventLoopPromise where Value == Void {
+    // Deliver a successful result to the associated `EventLoopFuture<Void>` object.
+    @inlinable
+    public func succeed() {
+        succeed(Void())
+    }
+}

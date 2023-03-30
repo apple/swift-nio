@@ -63,10 +63,9 @@ fileprivate extension Error {
 
 /// Does the setup required to trigger a `sendmmsg`.
 private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWritesState,
-                                                   iovecs: UnsafeMutableBufferPointer<IOVector>,
+                                                   bufferPool: Pool<PooledBuffer>,
                                                    msgs: UnsafeMutableBufferPointer<MMsgHdr>,
                                                    addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
-                                                   storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
                                                    controlMessageStorage: UnsafeControlMessageStorage,
                                                    _ body: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> IOResult<Int> {
     assert(msgs.count >= Socket.writevLimitIOVectors, "Insufficiently sized buffer for a maximal sendmmsg")
@@ -77,78 +76,83 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
     var c = 0
     var toWrite: Int = 0
 
-    for p in pending.flushedWrites {
-        // Must not write more than Int32.max in one go.
-        // TODO(cory): I can't see this limit documented in a man page anywhere, but it seems
-        // plausible given that a similar limit exists for TCP. For now we assume it's present
-        // in UDP until I can do some research to validate the existence of this limit.
-        guard (Socket.writevLimitBytes - toWrite >= p.data.readableBytes) else {
-            if c == 0 {
-                // The first buffer is larger than the writev limit. Let's throw, and fall back to linear processing.
-                throw IOError(errnoCode: EMSGSIZE, reason: "synthetic error for overlarge write")
-            } else {
+    let buffer = bufferPool.get()
+    defer { bufferPool.put(buffer) }
+
+    return try buffer.withUnsafePointers { iovecs, storageRefs in
+        for p in pending.flushedWrites {
+            // Must not write more than Int32.max in one go.
+            // TODO(cory): I can't see this limit documented in a man page anywhere, but it seems
+            // plausible given that a similar limit exists for TCP. For now we assume it's present
+            // in UDP until I can do some research to validate the existence of this limit.
+            guard (Socket.writevLimitBytes - toWrite >= p.data.readableBytes) else {
+                if c == 0 {
+                    // The first buffer is larger than the writev limit. Let's throw, and fall back to linear processing.
+                    throw IOError(errnoCode: EMSGSIZE, reason: "synthetic error for overlarge write")
+                } else {
+                    break
+                }
+            }
+
+            // Must not write more than writevLimitIOVectors in one go
+            guard c < Socket.writevLimitIOVectors else {
                 break
             }
-        }
 
-        // Must not write more than writevLimitIOVectors in one go
-        guard c < Socket.writevLimitIOVectors else {
-            break
-        }
+            let toWriteForThisBuffer = p.data.readableBytes
+            toWrite += numericCast(toWriteForThisBuffer)
 
-        let toWriteForThisBuffer = p.data.readableBytes
-        toWrite += numericCast(toWriteForThisBuffer)
+            p.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                storageRefs[c] = storageRef.retain()
 
-        p.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-            storageRefs[c] = storageRef.retain()
-
-            /// From man page of `sendmsg(2)`:
-            ///
-            /// > The `msg_name` field is used on an unconnected socket to specify
-            /// > the target address for a datagram.  It points to a buffer
-            /// > containing the address; the `msg_namelen` field should be set to
-            /// > the size of the address.  For a connected socket, these fields
-            /// > should be specified as `NULL` and 0, respectively.
-            let address: UnsafeMutablePointer<sockaddr_storage>?
-            let addressLen: socklen_t
-            let protocolFamily: NIOBSDSocket.ProtocolFamily
-            if let envelopeAddress = p.address {
-                precondition(pending.remoteAddress == nil, "Pending write with address on connected socket.")
-                address = addresses.baseAddress! + c
-                addressLen = p.copySocketAddress(address!)
-                protocolFamily = envelopeAddress.protocol
-            } else {
-                guard let connectedRemoteAddress = pending.remoteAddress else {
-                    preconditionFailure("Pending write without address on unconnected socket.")
+                /// From man page of `sendmsg(2)`:
+                ///
+                /// > The `msg_name` field is used on an unconnected socket to specify
+                /// > the target address for a datagram.  It points to a buffer
+                /// > containing the address; the `msg_namelen` field should be set to
+                /// > the size of the address.  For a connected socket, these fields
+                /// > should be specified as `NULL` and 0, respectively.
+                let address: UnsafeMutablePointer<sockaddr_storage>?
+                let addressLen: socklen_t
+                let protocolFamily: NIOBSDSocket.ProtocolFamily
+                if let envelopeAddress = p.address {
+                    precondition(pending.remoteAddress == nil, "Pending write with address on connected socket.")
+                    address = addresses.baseAddress! + c
+                    addressLen = p.copySocketAddress(address!)
+                    protocolFamily = envelopeAddress.protocol
+                } else {
+                    guard let connectedRemoteAddress = pending.remoteAddress else {
+                        preconditionFailure("Pending write without address on unconnected socket.")
+                    }
+                    address = nil
+                    addressLen = 0
+                    protocolFamily = connectedRemoteAddress.protocol
                 }
-                address = nil
-                addressLen = 0
-                protocolFamily = connectedRemoteAddress.protocol
+
+                iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
+
+                var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[c])
+                controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: protocolFamily)
+                let controlMessageBytePointer = controlBytes.validControlBytes
+
+                let msg = msghdr(msg_name: address,
+                                 msg_namelen: addressLen,
+                                 msg_iov: iovecs.baseAddress! + c,
+                                 msg_iovlen: 1,
+                                 msg_control: controlMessageBytePointer.baseAddress,
+                                 msg_controllen: .init(controlMessageBytePointer.count),
+                                 msg_flags: 0)
+                msgs[c] = MMsgHdr(msg_hdr: msg, msg_len: 0)
             }
-
-            iovecs[c] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: numericCast(toWriteForThisBuffer))
-
-            var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[c])
-            controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: protocolFamily)
-            let controlMessageBytePointer = controlBytes.validControlBytes
-
-            let msg = msghdr(msg_name: address,
-                             msg_namelen: addressLen,
-                             msg_iov: iovecs.baseAddress! + c,
-                             msg_iovlen: 1,
-                             msg_control: controlMessageBytePointer.baseAddress,
-                             msg_controllen: .init(controlMessageBytePointer.count),
-                             msg_flags: 0)
-            msgs[c] = MMsgHdr(msg_hdr: msg, msg_len: CUnsignedInt(toWriteForThisBuffer))
+            c += 1
         }
-        c += 1
-    }
-    defer {
-        for i in 0..<c {
-            storageRefs[i].release()
+        defer {
+            for i in 0..<c {
+                storageRefs[i].release()
+            }
         }
+        return try body(UnsafeMutableBufferPointer(start: msgs.baseAddress!, count: c))
     }
-    return try body(UnsafeMutableBufferPointer(start: msgs.baseAddress!, count: c))
 }
 
 /// This holds the states of the currently pending datagram writes. The core is a `MarkedCircularBuffer` which holds all the
@@ -263,9 +267,6 @@ private struct PendingDatagramWritesState {
     /// - returns: A closure that the caller _needs_ to run which will fulfill the promises of the writes, and a `WriteResult` that indicates if we could write
     ///     everything or not.
     private mutating func didVectorWrite(written: Int, messages: UnsafeMutableBufferPointer<MMsgHdr>) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
-        var fillers: [DatagramWritePromiseFiller] = []
-        fillers.reserveCapacity(written)
-
         // This was a vector write. We wrote `written` number of messages.
         let writes = messages[messages.startIndex...messages.index(messages.startIndex, offsetBy: written - 1)]
         var promiseFiller: DatagramWritePromiseFiller?
@@ -379,23 +380,10 @@ extension PendingDatagramWritesState {
 /// value. The most important purpose of this object is to call `sendto` or `sendmmsg` depending on the writes held and
 /// the availability of the functions.
 final class PendingDatagramWritesManager: PendingWritesManager {
-    /// Storage for mmsghdr structures. Only present on Linux because Darwin does not support
-    /// gathering datagram writes.
-    private var msgs: UnsafeMutableBufferPointer<MMsgHdr>
 
-    /// Storage for the references to the buffers used when we perform gathering writes. Only present
-    /// on Linux because Darwin does not support gathering datagram writes.
-    private var storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
-
-    /// Storage for iovec structures. Only present on Linux because this is only needed when we call
-    /// sendmmsg: sendto doesn't require any iovecs.
-    private var iovecs: UnsafeMutableBufferPointer<IOVector>
-
-    /// Storage for sockaddr structures. Only present on Linux because Darwin does not support gathering
-    /// writes.
-    private var addresses: UnsafeMutableBufferPointer<sockaddr_storage>
-    
-    private var controlMessageStorage: UnsafeControlMessageStorage
+    private let bufferPool: Pool<PooledBuffer>
+    private let msgBufferPool: Pool<PooledMsgBuffer>
+    private let controlMessageStorage: UnsafeControlMessageStorage
 
     private var state = PendingDatagramWritesState()
 
@@ -411,20 +399,13 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// one `Channel` on the same `EventLoop` at the same time.
     ///
     /// - parameters:
+    ///     - bufferPool: a pool of buffers to be used for IOVector and storage references
     ///     - msgs: A pre-allocated array of `MMsgHdr` elements
-    ///     - iovecs: A pre-allocated array of `IOVector` elements
     ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
-    ///     - storageRefs: A pre-allocated array of storage management tokens used to keep storage elements alive during a vector write operation
     ///     - controlMessageStorage: Pre-allocated memory for storing cmsghdr data during a vector write operation.
-    init(msgs: UnsafeMutableBufferPointer<MMsgHdr>,
-         iovecs: UnsafeMutableBufferPointer<IOVector>,
-         addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
-         storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
-         controlMessageStorage: UnsafeControlMessageStorage) {
-        self.msgs = msgs
-        self.iovecs = iovecs
-        self.addresses = addresses
-        self.storageRefs = storageRefs
+    init(bufferPool: Pool<PooledBuffer>, msgBufferPool: Pool<PooledMsgBuffer>, controlMessageStorage: UnsafeControlMessageStorage) {
+        self.bufferPool = bufferPool
+        self.msgBufferPool = msgBufferPool
         self.controlMessageStorage = controlMessageStorage
     }
 
@@ -625,14 +606,19 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private func triggerVectorBufferWrite(vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
         assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
                "illegal state for vector datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
-        return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
-                                                                       iovecs: self.iovecs,
-                                                                       msgs: self.msgs,
-                                                                       addresses: self.addresses,
-                                                                       storageRefs: self.storageRefs,
-                                                                       controlMessageStorage: self.controlMessageStorage,
-                                                                       { try vectorWriteOperation($0) }),
-                             messages: self.msgs)
+
+        let msgBuffer = self.msgBufferPool.get()
+        defer { self.msgBufferPool.put(msgBuffer) }
+
+        return try msgBuffer.withUnsafePointers { msgs, addresses in
+            return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
+                                                                           bufferPool: self.bufferPool,
+                                                                           msgs: msgs,
+                                                                           addresses: addresses,
+                                                                           controlMessageStorage: self.controlMessageStorage,
+                                                                           { try vectorWriteOperation($0) }),
+                                 messages: msgs)
+        }
     }
 
     private func fulfillPromise(_ promise: PendingDatagramWritesState.DatagramWritePromiseFiller?) {

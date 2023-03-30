@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+#if !os(iOS) && !os(tvOS) && !os(watchOS)
 import NIOEmbedded
 import NIOCore
 import NIOHTTP1
@@ -41,3 +42,4 @@ struct HTTPCrashTests {
                                                "transfer-Encoding": "chunked"]))).wait()
         })
 }
+#endif

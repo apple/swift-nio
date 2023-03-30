@@ -45,11 +45,11 @@ Low-level protocol implementations are often a collection of [`ChannelHandler`][
 
 Protocol | Client | Server | Repository | Module | Comment
 --- |  --- | --- | --- | --- | ---
-HTTP/1 | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOHTTP1`](https://apple.github.io/swift-nio/docs/current/NIOHTTP1/index.html) | official NIO project
-HTTP/2 | ✅| ✅ | [apple/swift-nio-http2](https://github.com/apple/swift-nio-http2) | [`NIOHTTP2`](https://apple.github.io/swift-nio-http2/docs/current/NIOHTTP2/index.html) | official NIO project
-WebSocket | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOWebSocket`](https://apple.github.io/swift-nio/docs/current/NIOWebSocket/index.html) | official NIO project
-TLS | ✅ | ✅ | [apple/swift-nio-ssl](https://github.com/apple/swift-nio-ssl) | [`NIOSSL`](https://apple.github.io/swift-nio-ssl/docs/current/NIOSSL/index.html) | official NIO project
-SSH | ✅ | ✅ | [apple/swift-nio-ssh][repo-nio-ssh] | _n/a_ | official NIO project
+HTTP/1 | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOHTTP1`][nioh1] | official NIO project
+HTTP/2 | ✅| ✅ | [apple/swift-nio-http2](https://github.com/apple/swift-nio-http2) | [`NIOHTTP2`][nioh2] | official NIO project
+WebSocket | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOWebSocket`][niows] | official NIO project
+TLS | ✅ | ✅ | [apple/swift-nio-ssl](https://github.com/apple/swift-nio-ssl) | [`NIOSSL`][niossl] | official NIO project
+SSH | ✅ | ✅ | [apple/swift-nio-ssh][repo-nio-ssh] | [`NIOSSH`][niossh] | official NIO project
 
 
 #### High-level implementations
@@ -174,7 +174,7 @@ While it is possible to configure and register [`Channel`][c]s with [`EventLoop`
 
 For this reason, SwiftNIO ships a number of `Bootstrap` objects whose purpose is to streamline the creation of channels. Some `Bootstrap` objects also provide other functionality, such as support for Happy Eyeballs for making TCP connection attempts.
 
-Currently SwiftNIO ships with three `Bootstrap` objects in the `NIOPosix` module: [`ServerBootstrap`](https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/ServerBootstrap.html), for bootstrapping listening channels; [`ClientBootstrap`](https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/ClientBootstrap.html), for bootstrapping client TCP channels; and [`DatagramBootstrap`](https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/DatagramBootstrap.html) for bootstrapping UDP channels.
+Currently SwiftNIO ships with three `Bootstrap` objects in the `NIOPosix` module: [`ServerBootstrap`][sbootstrap], for bootstrapping listening channels; [`ClientBootstrap`][cbootstrap], for bootstrapping client TCP channels; and [`DatagramBootstrap`][dbootstrap] for bootstrapping UDP channels.
 
 #### ByteBuffer
 
@@ -210,7 +210,7 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 
 ## Documentation
 
- - [API documentation](https://apple.github.io/swift-nio/docs/current/NIOCore/index.html)
+ - [API documentation](https://swiftpackageindex.com/apple/swift-nio/main/documentation/nio)
 
 ## Example Usage
 
@@ -350,18 +350,26 @@ apt-get install -y git curl libatomic1 libxml2 netcat-openbsd lsof perl
 dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 ```
 
-[ch]: https://apple.github.io/swift-nio/docs/current/NIOCore/Protocols/ChannelHandler.html
-[c]: https://apple.github.io/swift-nio/docs/current/NIOCore/Protocols/Channel.html
-[chc]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/ChannelHandlerContext.html
-[ec]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/EmbeddedChannel.html
-[el]: https://apple.github.io/swift-nio/docs/current/NIOCore/Protocols/EventLoop.html
-[eel]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/EmbeddedEventLoop.html
-[elg]: https://apple.github.io/swift-nio/docs/current/NIOCore/Protocols/EventLoopGroup.html
-[bb]: https://apple.github.io/swift-nio/docs/current/NIOCore/Structs/ByteBuffer.html
-[elf]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/EventLoopFuture.html
-[elp]: https://apple.github.io/swift-nio/docs/current/NIOCore/Structs/EventLoopPromise.html
-[cp]: https://apple.github.io/swift-nio/docs/current/NIOCore/Classes/ChannelPipeline.html
-[mtelg]: https://apple.github.io/swift-nio/docs/current/NIOPosix/Classes/MultiThreadedEventLoopGroup.html
+[ch]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelhandler
+[c]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channel
+[chc]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelhandlercontext
+[ec]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioembedded/embeddedchannel
+[el]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloop
+[eel]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioembedded/embeddedeventloop
+[elg]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloopgroup
+[bb]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/bytebuffer
+[elf]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloopfuture
+[elp]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventlooppromise
+[cp]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelpipeline
+[sbootstrap]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/serverbootstrap
+[cbootstrap]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/clientbootstrap
+[dbootstrap]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/datagrambootstrap
+[mtelg]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/nioposix/multithreadedeventloopgroup
+[nioh1]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niohttp1
+[nioh2]: https://swiftpackageindex.com/apple/swift-nio-http2/main/documentation/niohttp2
+[niows]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niowebsocket
+[niossl]: https://swiftpackageindex.com/apple/swift-nio-ssl/main/documentation/niossl
+[niossh]: https://swiftpackageindex.com/apple/swift-nio-ssh/main/documentation/niossh
 [pthreads]: https://en.wikipedia.org/wiki/POSIX_Threads
 [kqueue]: https://en.wikipedia.org/wiki/Kqueue
 [epoll]: https://en.wikipedia.org/wiki/Epoll

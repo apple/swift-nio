@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -111,6 +111,7 @@ class LinuxMainRunner {
              testCase(NIOHTTP1TestServerTest.allTests),
              testCase(NIOHTTPClientResponseAggregatorTest.allTests),
              testCase(NIOHTTPServerRequestAggregatorTest.allTests),
+             testCase(NIOLoopBoundTests.allTests),
              testCase(NIOSingleStepByteToMessageDecoderTest.allTests),
              testCase(NIOTests.allTests),
              testCase(NIOThreadPoolTest.allTests),
@@ -119,6 +120,7 @@ class LinuxMainRunner {
              testCase(NonBlockingFileIOTest.allTests),
              testCase(PendingDatagramWritesManagerTests.allTests),
              testCase(PipeChannelTest.allTests),
+             testCase(PooledRecvBufferAllocatorTests.allTests),
              testCase(PriorityQueueTest.allTests),
              testCase(RawSocketBootstrapTests.allTests),
              testCase(SALChannelTest.allTests),

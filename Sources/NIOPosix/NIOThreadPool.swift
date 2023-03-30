@@ -310,7 +310,33 @@ extension NIOThreadPool {
     }
     #endif
 
+    /// Shuts down the thread pool gracefully.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @inlinable
+    public func shutdownGracefully() async throws {
+        return try await withCheckedThrowingContinuation { cont in
+            self.shutdownGracefully { error in
+                if let error = error {
+                    cont.resume(throwing: error)
+                } else {
+                    cont.resume()
+                }
+            }
+        }
+    }
+
+    #if swift(>=5.7)
+    @available(*, noasync, message: "this can end up blocking the calling thread", renamed: "shutdownGracefully()")
     public func syncShutdownGracefully() throws {
+        try self._syncShutdownGracefully()
+    }
+    #else
+    public func syncShutdownGracefully() throws {
+        try self._syncShutdownGracefully()
+    }
+    #endif
+
+    private func _syncShutdownGracefully() throws {
         let errorStorageLock = NIOLock()
         var errorStorage: Swift.Error? = nil
         let continuation = DispatchWorkItem {}
