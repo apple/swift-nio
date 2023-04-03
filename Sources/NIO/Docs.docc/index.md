@@ -26,8 +26,8 @@ Repo | Usage
 SwiftNIO has a number of products that provide different functionality. This package includes the following products:
 
 - ``NIO``. This is an umbrella module exporting [NIOCore][module-core], [NIOEmbedded][module-embedded] and [NIOPosix][module-posix].
-- [NIOCore][module-core]. This provides the core abstractions and types for using SwiftNIO (see ["Conceptual Overview"](#conceptual-overview) for more details). Most NIO extension projects that provide things like new [`EventLoop`s][el] and [`Channel`s][c] or new protocol implementations should only need to depend on [NIOCore][module-core].
-- [NIOPosix][module-posix]. This provides the primary [`EventLoopGroup`], [`EventLoop`][el], and [`Channel`s][c] for use on POSIX-based systems. This is our high performance core I/O layer. In general, this should only be imported by projects that plan to do some actual I/O, such as high-level protocol implementations or applications.
+- [NIOCore][module-core]. This provides the core abstractions and types for using SwiftNIO (see ["Conceptual Overview"](#Conceptual-Overview) for more details). Most NIO extension projects that provide things like new [`EventLoop`s][el] and [`Channel`s][c] or new protocol implementations should only need to depend on [NIOCore][module-core].
+- [NIOPosix][module-posix]. This provides the primary [`EventLoopGroup`][elg], [`EventLoop`][el], and [`Channel`s][c] for use on POSIX-based systems. This is our high performance core I/O layer. In general, this should only be imported by projects that plan to do some actual I/O, such as high-level protocol implementations or applications.
 - [NIOEmbedded][module-embedded]. This provides [`EmbeddedChannel`][ec] and [`EmbeddedEventLoop`][eel], implementations of the [NIOCore][module-core] abstractions that provide fine-grained control over their execution. These are most often used for testing, but can also be used to drive protocol implementations in a way that is decoupled from networking altogether.
 - [NIOConcurrencyHelpers][module-concurrency-helpers]. This provides a few low-level concurrency primitives that are used by NIO implementations, such as locks and atomics.
 - [NIOFoundationCompat][module-foundation-compatibility]. This extends a number of NIO types for better interoperation with Foundation data types. If you are working with Foundation data types such as `Data`, you should import this.
@@ -107,7 +107,7 @@ While it is possible to configure and register [`Channel`][c]s with [`EventLoop`
 
 For this reason, SwiftNIO ships a number of `Bootstrap` objects whose purpose is to streamline the creation of channels. Some `Bootstrap` objects also provide other functionality, such as support for Happy Eyeballs for making TCP connection attempts.
 
-Currently SwiftNIO ships with three `Bootstrap` objects in the [NIOPosix][module-posix] module: [`ServerBootstrap`](./NIOPosix/Classes/ServerBootstrap.html), for bootstrapping listening channels; [`ClientBootstrap`](./NIOPosix/Classes/ClientBootstrap.html), for bootstrapping client TCP channels; and [`DatagramBootstrap`](./NIOPosix/Classes/DatagramBootstrap.html) for bootstrapping UDP channels.
+Currently SwiftNIO ships with three `Bootstrap` objects in the [NIOPosix][module-posix] module: [`ServerBootstrap`][sb], for bootstrapping listening channels; [`ClientBootstrap`][cb], for bootstrapping client TCP channels; and [`DatagramBootstrap`][db] for bootstrapping UDP channels.
 
 #### ByteBuffer
 
@@ -151,29 +151,32 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 [repo-nio-transport-services]: https://github.com/apple/swift-nio-transport-services
 [repo-nio-ssh]: https://github.com/apple/swift-nio-ssh
 
-[module-core]: ./NIOCore
-[module-posix]: ./NIOPosix
-[module-embedded]: ./NIOEmbedded
-[module-concurrency-helpers]: ./NIOConcurrencyHelpers
-[module-embedded]: ./NIOEmbedded
-[module-foundation-compatibility]: ./NIOFoundationCompat
-[module-http1]: ./NIOHTTP1
-[module-tls]: ./NIOTLS
-[module-websocket]: ./NIOWebSocket
-[module-test-utilities]: ./NIOTestUtils
+[module-core]: ./niocore
+[module-posix]: ./nioposix
+[module-embedded]: ./nioembedded
+[module-concurrency-helpers]: ./nioconcurrencyhelpers
+[module-embedded]: ./nioembedded
+[module-foundation-compatibility]: ./niofoundationcompat
+[module-http1]: ./niohttp1
+[module-tls]: ./niotls
+[module-websocket]: ./niowebsocket
+[module-test-utilities]: ./niotestutils
 
-[ch]: ./NIOCore/Protocols/ChannelHandler.html
-[c]: ./NIOCore/Protocols/Channel.html
-[chc]: ./NIOCore/Classes/ChannelHandlerContext.html
-[ec]: ./NIOCore/Classes/EmbeddedChannel.html
-[el]: ./NIOCore/Protocols/EventLoop.html
-[eel]: ./NIOCore/Classes/EmbeddedEventLoop.html
-[elg]: ./NIOCore/Protocols/EventLoopGroup.html
-[bb]: ./NIOCore/Structs/ByteBuffer.html
-[elf]: ./NIOCore/Classes/EventLoopFuture.html
-[elp]: ./NIOCore/Structs/EventLoopPromise.html
-[cp]: ./NIOCore/Classes/ChannelPipeline.html
-[mtelg]: ./NIOPosix/Classes/MultiThreadedEventLoopGroup.html
+[ch]: ./niocore/channelhandler
+[c]: ./niocore/channel
+[chc]: ./niocore/channelhandlercontext
+[ec]: ./nioembedded/embeddedchannel
+[el]: ./niocore/eventloop
+[eel]: ./nioembedded/embeddedeventloop
+[elg]: ./niocore/eventloopgroup
+[bb]: ./niocore/bytebuffer
+[elf]: ./niocore/eventloopfuture
+[elp]: ./niocore/eventlooppromise
+[cp]: ./niocore/channelpipeline
+[mtelg]: ./nioposix/multithreadedeventloopgroup
+[sb]: ./nioposix/serverbootstrap
+[cb]: ./nioposix/clientbootstrap
+[db]: ./nioposix/datagrambootstrap
 [pthreads]: https://en.wikipedia.org/wiki/POSIX_Threads
 [kqueue]: https://en.wikipedia.org/wiki/Kqueue
 [epoll]: https://en.wikipedia.org/wiki/Epoll
