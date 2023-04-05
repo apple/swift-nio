@@ -58,6 +58,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     /// Send a write into the ``ChannelPipeline`` and flush it right away.
     ///
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
+    @inlinable
     @_spi(AsyncChannel)
     public func writeAndFlush(_ data: OutboundOut) async throws {
         try await self._outboundWriter.yield(data)
@@ -66,9 +67,21 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     /// Send a sequence of writes into the ``ChannelPipeline`` and flush them right away.
     ///
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
+    @inlinable
     @_spi(AsyncChannel)
-    public func writeAndFlush<Writes: Sequence>(contentsOf data: Writes) async throws where Writes.Element == OutboundOut {
-        try await self._outboundWriter.yield(contentsOf: data)
+    public func writeAndFlush<Writes: Sequence>(contentsOf sequence: Writes) async throws where Writes.Element == OutboundOut {
+        try await self._outboundWriter.yield(contentsOf: sequence)
+    }
+
+    /// Send a sequence of writes into the ``ChannelPipeline`` and flush them right away.
+    ///
+    /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
+    @inlinable
+    @_spi(AsyncChannel)
+    public func writeAndFlush<Sequence: AsyncSequence>(contentsOf sequence: Sequence) async throws where Sequence.Element == OutboundOut {
+        for try await data in sequence {
+            try await self._outboundWriter.yield(data)
+        }
     }
 
     /// Finishes the writer.
