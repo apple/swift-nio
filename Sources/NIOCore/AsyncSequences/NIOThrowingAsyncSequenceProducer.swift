@@ -498,8 +498,8 @@ extension NIOThrowingAsyncSequenceProducer {
 
                         return delegate
 
-                    case .resumeContinuationWithNilAndCallDidTerminate(let continuation):
-                        continuation.resume(returning: nil)
+                    case .resumeContinuationWithCancellationErrorAndCallDidTerminate(let continuation):
+                        continuation.resume(throwing: CancellationError())
                         let delegate = self._delegate
                         self._delegate = nil
 
@@ -868,9 +868,9 @@ extension NIOThrowingAsyncSequenceProducer {
         enum CancelledAction {
             /// Indicates that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case callDidTerminate
-            /// Indicates that the continuation should be resumed with `nil` and
+            /// Indicates that the continuation should be resumed with a `CancellationError` and
             /// that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
-            case resumeContinuationWithNilAndCallDidTerminate(CheckedContinuation<Element?, Error>)
+            case resumeContinuationWithCancellationErrorAndCallDidTerminate(CheckedContinuation<Element?, Error>)
             /// Indicates that nothing should be done.
             case none
         }
@@ -889,7 +889,7 @@ extension NIOThrowingAsyncSequenceProducer {
                 // and we can transition to finished here and inform the delegate
                 self._state = .finished(iteratorInitialized: iteratorInitialized)
 
-                return .resumeContinuationWithNilAndCallDidTerminate(continuation)
+                return .resumeContinuationWithCancellationErrorAndCallDidTerminate(continuation)
 
             case .streaming(_, _, continuation: .none, _, let iteratorInitialized):
                 self._state = .finished(iteratorInitialized: iteratorInitialized)
