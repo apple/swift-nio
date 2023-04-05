@@ -868,7 +868,7 @@ extension NIOThrowingAsyncSequenceProducer {
         enum CancelledAction {
             /// Indicates that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case callDidTerminate
-            /// Indicates that the continuation should be resumed with a `CancelationError` and
+            /// Indicates that the continuation should be resumed with a `CancellationError` and
             /// that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case resumeContinuationWithCancellationErrorAndCallDidTerminate(CheckedContinuation<Element?, Error>)
             /// Indicates that nothing should be done.
