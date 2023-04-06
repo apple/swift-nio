@@ -457,9 +457,11 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         try await Task.sleep(nanoseconds: 1_000_000)
 
         task.cancel()
-        let value = try await task.value
+        let result = await task.result
         XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
-        XCTAssertNil(value)
+        await XCTAssertThrowsError(try result.get()) { error in
+            XCTAssertTrue(error is CancellationError)
+        }
     }
 
     func testTaskCancel_whenStreaming_andNotSuspended() async throws {
