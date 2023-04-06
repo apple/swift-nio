@@ -57,8 +57,8 @@ final class AsyncChannelTests: XCTestCase {
                 try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: Never.self, outboundType: String.self)
             }
 
-            try await wrapped.outboundWriter.writeAndFlush("hello")
-            try await wrapped.outboundWriter.writeAndFlush("world")
+            try await wrapped.outboundWriter.write("hello")
+            try await wrapped.outboundWriter.write("world")
 
             let firstRead = try await channel.waitForOutboundWrite(as: String.self)
             let secondRead = try await channel.waitForOutboundWrite(as: String.self)
@@ -268,7 +268,7 @@ final class AsyncChannelTests: XCTestCase {
                 channel.pipeline.fireErrorCaught(TestError.bang)
             }
 
-            try await XCTAssertThrowsError(await wrapped.outboundWriter.writeAndFlush("hello")) { error in
+            try await XCTAssertThrowsError(await wrapped.outboundWriter.write("hello")) { error in
                 XCTAssertEqual(error as? TestError, .bang)
             }
         }
@@ -293,7 +293,7 @@ final class AsyncChannelTests: XCTestCase {
 
             await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
-                    try await wrapped.outboundWriter.writeAndFlush("hello")
+                    try await wrapped.outboundWriter.write("hello")
                     lock.withLockedValue {
                         XCTAssertTrue($0)
                     }
@@ -469,7 +469,7 @@ final class AsyncChannelTests: XCTestCase {
             let firstRead = try await iterator.next()
             XCTAssertEqual(firstRead, "hello")
 
-            try await wrapped.outboundWriter.writeAndFlush("world")
+            try await wrapped.outboundWriter.write("world")
             let write = try await channel.waitForOutboundWrite(as: String.self)
             XCTAssertEqual(write, "world")
 
