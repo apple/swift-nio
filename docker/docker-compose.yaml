@@ -34,6 +34,10 @@ services:
     <<: *common
     command: /bin/bash -xcl "./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-}"
 
+  documentation-check:
+    <<: *common
+    command: /bin/bash -xcl "./scripts/check-docs.sh"
+
   test:
     <<: *common
     command: /bin/bash -xcl "swift $${SWIFT_TEST_VERB-test} $${FORCE_TEST_DISCOVERY-} $${WARN_AS_ERROR_ARG-} $${SANITIZER_ARG-} $${IMPORT_CHECK_ARG-} && ./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-}"

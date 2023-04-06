@@ -12,16 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// ``NIOLoopBound`` is an always-``Sendable``, value-typed container allowing you access to ``Value`` if and only if
-/// you are accessing it on the right EventLoop``.
+/// ``NIOLoopBound`` is an always-`Sendable`, value-typed container allowing you access to ``value`` if and only if
+/// you are accessing it on the right ``EventLoop``.
 ///
-/// ``NIOLoopBound`` is useful to transport a value of a non-``Sendable`` type that needs to go from one place in
+/// ``NIOLoopBound`` is useful to transport a value of a non-`Sendable` type that needs to go from one place in
 /// your code to another where you (but not the compiler) know is on one and the same ``EventLoop``. Usually this
-/// involves `@Sendable` closures. This type is safe because it verifies (using `eventLoop.preconditionInEventLoop()`)
+/// involves `@Sendable` closures. This type is safe because it verifies (using ``EventLoop/preconditionInEventLoop(file:line:)-2fxvb``)
 /// that this is actually true.
 ///
 /// A ``NIOLoopBound`` can only be constructed, read from or written to when you are provably
-/// (through `eventLoop.preconditionInEventLoop()`) on the ``EventLoop`` associated with the ``NIOLoopBound``. Accessing
+/// (through ``EventLoop/preconditionInEventLoop(file:line:)-2fxvb``) on the ``EventLoop`` associated with the ``NIOLoopBound``. Accessing
 /// or constructing it from any other place will crash your program with a precondition as it would be undefined
 /// behaviour to do so.
 public struct NIOLoopBound<Value>: @unchecked Sendable {
@@ -54,22 +54,22 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     }
 }
 
-/// ``NIOLoopBoundBox`` is an always-``Sendable``, reference-typed container allowing you access to ``Value`` if and
+/// ``NIOLoopBoundBox`` is an always-`Sendable`, reference-typed container allowing you access to ``value`` if and
 /// only if you are accessing it on the right EventLoop``.
 ///
-/// ``NIOLoopBoundBox`` is useful to transport a value of a non-``Sendable`` type that needs to go from one place in
+/// ``NIOLoopBoundBox`` is useful to transport a value of a non-`Sendable` type that needs to go from one place in
 /// your code to another where you (but not the compiler) know is on one and the same ``EventLoop``. Usually this
-/// involves `@Sendable` closures. This type is safe because it verifies (using `eventLoop.preconditionInEventLoop()`)
+/// involves `@Sendable` closures. This type is safe because it verifies (using ``EventLoop/preconditionInEventLoop(file:line:)-7ukrq``)
 /// that this is actually true.
 ///
 /// A ``NIOLoopBoundBox`` can only be read from or written to when you are provably
-/// (through `eventLoop.preconditionInEventLoop()`) on the ``EventLoop`` associated with the ``NIOLoopBoundBox``. Accessing
+/// (through ``EventLoop/preconditionInEventLoop(file:line:)-2fxvb``) on the ``EventLoop`` associated with the ``NIOLoopBoundBox``. Accessing
 /// or constructing it from any other place will crash your program with a precondition as it would be undefined
 /// behaviour to do so.
 ///
 /// If constructing a ``NIOLoopBoundBox`` with a `value`, it is also required for the program to already be on `eventLoop`
-/// but if you have a ``NIOLoopBoundBox`` that contains an ``Optional`` type, you may initialise it _without a value_
-/// whilst off the ``EventLoop`` by using ``NIOLoopBoundBox.makeEmptyBox``. Any read/write access to `value`
+/// but if you have a ``NIOLoopBoundBox`` that contains an `Optional` type, you may initialise it _without a value_
+/// whilst off the ``EventLoop`` by using ``NIOLoopBoundBox/makeEmptyBox(valueType:eventLoop:)``. Any read/write access to ``value``
 /// afterwards will require you to be on `eventLoop`.
 public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     public let _eventLoop: EventLoop

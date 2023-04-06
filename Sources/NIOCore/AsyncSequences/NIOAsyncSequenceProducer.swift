@@ -79,7 +79,7 @@ public protocol NIOAsyncSequenceProducerDelegate: Sendable {
     func didTerminate()
 }
 
-/// This is an ``Swift/AsyncSequence`` that supports a unicast ``Swift/AsyncIterator``.
+/// This is an `AsyncSequence` that supports a unicast `AsyncIterator`.
 ///
 /// The goal of this sequence is to produce a stream of elements from the _synchronous_ world
 /// (e.g. elements from a ``Channel`` pipeline) and vend it to the _asynchronous_ world for consumption.
@@ -103,7 +103,7 @@ public struct NIOAsyncSequenceProducer<
     /// This struct contains two properties:
     /// 1. The ``source`` which should be retained by the producer and is used
     /// to yield new elements to the sequence.
-    /// 2. The ``sequence`` which is the actual ``Swift/AsyncSequence`` and
+    /// 2. The ``sequence`` which is the actual `AsyncSequence` and
     /// should be passed to the consumer.
     public struct NewSequence {
         /// The source of the ``NIOAsyncSequenceProducer`` used to yield and finish.
@@ -253,7 +253,7 @@ extension NIOAsyncSequenceProducer {
         /// The result of a call to ``NIOAsyncSequenceProducer/Source/yield(_:)``.
         public enum YieldResult: Hashable {
             /// Indicates that the caller should produce more elements for now. The delegate's ``NIOAsyncSequenceProducerDelegate/produceMore()``
-            /// will **NOT** get called, since the demand was already signalled through this ``YieldResult``
+            /// will **NOT** get called, since the demand was already signalled through this ``NIOAsyncSequenceProducer/Source/YieldResult``.
             case produceMore
             /// Indicates that the caller should stop producing elements. The delegate's ``NIOAsyncSequenceProducerDelegate/produceMore()``
             /// will get called once production should be resumed.

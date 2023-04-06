@@ -15,7 +15,7 @@
 import DequeModule
 import NIOConcurrencyHelpers
 
-/// This is an ``Swift/AsyncSequence`` that supports a unicast ``Swift/AsyncIterator``.
+/// This is an `AsyncSequence` that supports a unicast `AsyncIterator`.
 ///
 /// The goal of this sequence is to produce a stream of elements from the _synchronous_ world
 /// (e.g. elements from a ``Channel`` pipeline) and vend it to the _asynchronous_ world for consumption.
@@ -40,7 +40,7 @@ public struct NIOThrowingAsyncSequenceProducer<
     /// This struct contains two properties:
     /// 1. The ``source`` which should be retained by the producer and is used
     /// to yield new elements to the sequence.
-    /// 2. The ``sequence`` which is the actual ``Swift/AsyncSequence`` and
+    /// 2. The ``sequence`` which is the actual `AsyncSequence` and
     /// should be passed to the consumer.
     public struct NewSequence {
         /// The source of the ``NIOThrowingAsyncSequenceProducer`` used to yield and finish.

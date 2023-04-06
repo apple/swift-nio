@@ -14,6 +14,9 @@ services:
   integration-tests:
     image: swift-nio:22.04-main
 
+  documentation-check:
+    image: swift-nio:22.04-main
+
   test:
     image: swift-nio:22.04-main
     environment:
