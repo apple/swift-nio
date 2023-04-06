@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2022 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2022-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -53,24 +53,24 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     /// - Parameters:
     ///   - channel: The ``Channel`` to wrap.
     ///   - backpressureStrategy: The backpressure strategy of the ``NIOAsyncChannel/inboundStream``.
-    ///   - enableOutboundHalfClosure: If outbound half closure should be enabled. Outbound half closure is triggered once
+    ///   - isOutboundHalfClosureEnabled: If outbound half closure should be enabled. Outbound half closure is triggered once
     ///   the ``NIOAsyncChannelWriter`` is either finished or deinitialized.
-    ///   - inbound: The ``NIOAsyncChannel/inboundStream`` message's type.
-    ///   - outbound: The ``NIOAsyncChannel/outboundWriter`` message's type.
+    ///   - inboundType: The ``NIOAsyncChannel/inboundStream`` message's type.
+    ///   - outboundType: The ``NIOAsyncChannel/outboundWriter`` message's type.
     @inlinable
     @_spi(AsyncChannel)
     public init(
         synchronouslyWrapping channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        enableOutboundHalfClosure: Bool = true,
-        inbound: Inbound.Type = Inbound.self,
-        outbound: Outbound.Type = Outbound.self
+        isOutboundHalfClosureEnabled: Bool = true,
+        inboundType: Inbound.Type = Inbound.self,
+        outboundType: Outbound.Type = Outbound.self
     ) throws {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
         (self.inboundStream, self.outboundWriter) = try channel.syncAddAsyncHandlers(
             backpressureStrategy: backpressureStrategy,
-            enableOutboundHalfClosure: enableOutboundHalfClosure
+            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
     }
 
@@ -84,22 +84,22 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     /// - Parameters:
     ///   - channel: The ``Channel`` to wrap.
     ///   - backpressureStrategy: The backpressure strategy of the ``NIOAsyncChannel/inboundStream``.
-    ///   - enableOutboundHalfClosure: If outbound half closure should be enabled. Outbound half closure is triggered once
+    ///   - isOutboundHalfClosureEnabled: If outbound half closure should be enabled. Outbound half closure is triggered once
     ///   the ``NIOAsyncChannelWriter`` is either finished or deinitialized.
-    ///   - inbound: The ``NIOAsyncChannel/inboundStream`` message's type.
+    ///   - inboundType: The ``NIOAsyncChannel/inboundStream`` message's type.
     @inlinable
     @_spi(AsyncChannel)
     public init(
         synchronouslyWrapping channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        enableOutboundHalfClosure: Bool = true,
-        inboundIn: Inbound.Type = Inbound.self
+        isOutboundHalfClosureEnabled: Bool = true,
+        inboundType: Inbound.Type = Inbound.self
     ) throws where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
         (self.inboundStream, self.outboundWriter) = try channel.syncAddAsyncHandlers(
             backpressureStrategy: backpressureStrategy,
-            enableOutboundHalfClosure: enableOutboundHalfClosure
+            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
 
         self.outboundWriter.finish()
@@ -113,11 +113,11 @@ extension Channel {
     @_spi(AsyncChannel)
     public func syncAddAsyncHandlers<Inbound: Sendable, Outbound: Sendable>(
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        enableOutboundHalfClosure: Bool
+        isOutboundHalfClosureEnabled: Bool
     ) throws -> (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) {
         self.eventLoop.assertInEventLoop()
 
-        let closeRatchet = CloseRatchet()
+        let closeRatchet = CloseRatchet(isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled)
         let inboundStream = try NIOAsyncChannelInboundStream<Inbound>(
             channel: self,
             backpressureStrategy: backpressureStrategy,
@@ -125,7 +125,6 @@ extension Channel {
         )
         let writer = try NIOAsyncChannelOutboundWriter<Outbound>(
             channel: self,
-            enableOutboundHalfClosure: enableOutboundHalfClosure,
             closeRatchet: closeRatchet
         )
         return (inboundStream, writer)

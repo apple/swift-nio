@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2022 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2022-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -30,13 +30,11 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @inlinable
     init(
         channel: Channel,
-        enableOutboundHalfClosure: Bool,
         closeRatchet: CloseRatchet
     ) throws {
         let handler = NIOAsyncChannelOutboundWriterHandler<OutboundOut>(
             eventLoop: channel.eventLoop,
-            closeRatchet: closeRatchet,
-            enableOutboundHalfClosure: enableOutboundHalfClosure
+            closeRatchet: closeRatchet
         )
         let writer = _Writer.makeWriter(
             elementType: OutboundOut.self,
@@ -78,7 +76,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
     @inlinable
     @_spi(AsyncChannel)
-    public func writeAndFlush<Sequence: AsyncSequence>(contentsOf sequence: Sequence) async throws where Sequence.Element == OutboundOut {
+    public func writeAndFlush<Writes: AsyncSequence>(contentsOf sequence: Writes) async throws where Writes.Element == OutboundOut {
         for try await data in sequence {
             try await self._outboundWriter.yield(data)
         }

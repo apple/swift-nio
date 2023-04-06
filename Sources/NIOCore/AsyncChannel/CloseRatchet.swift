@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2022-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -21,13 +21,13 @@
 final class CloseRatchet {
     @usableFromInline
     enum State {
-        case notClosed
+        case notClosed(isOutboundHalfClosureEnabled: Bool)
         case readClosed
         case writeClosed
         case bothClosed
 
         @inlinable
-        mutating func closeRead() -> Action {
+        mutating func closeRead() -> CloseReadAction {
             switch self {
             case .notClosed:
                 self = .readClosed
@@ -41,11 +41,16 @@ final class CloseRatchet {
         }
 
         @inlinable
-        mutating func closeWrite() -> Action {
+        mutating func closeWrite() -> CloseWriteAction {
             switch self {
-            case .notClosed:
+            case .notClosed(let isOutboundHalfClosureEnabled):
                 self = .writeClosed
-                return .nothing
+
+                if isOutboundHalfClosureEnabled {
+                    return .closeOutput
+                } else {
+                    return .nothing
+                }
             case .readClosed:
                 self = .bothClosed
                 return .close
@@ -56,26 +61,33 @@ final class CloseRatchet {
     }
 
     @usableFromInline
-    enum Action {
+    var _state: State
+
+    @inlinable
+    init(isOutboundHalfClosureEnabled: Bool) {
+        self._state = .notClosed(isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled)
+    }
+
+    @usableFromInline
+    enum CloseReadAction {
         case nothing
         case close
     }
 
-    @usableFromInline
-    var _state: State
-
     @inlinable
-    init() {
-        self._state = .notClosed
-    }
-
-    @inlinable
-    func closeRead() -> Action {
+    func closeRead() -> CloseReadAction {
         return self._state.closeRead()
     }
 
+    @usableFromInline
+    enum CloseWriteAction {
+        case nothing
+        case close
+        case closeOutput
+    }
+
     @inlinable
-    func closeWrite() -> Action {
+    func closeWrite() -> CloseWriteAction {
         return self._state.closeWrite()
     }
 }

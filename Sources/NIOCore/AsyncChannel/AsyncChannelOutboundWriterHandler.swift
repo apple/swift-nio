@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2022-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -49,19 +49,13 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     @usableFromInline
     let closeRatchet: CloseRatchet
 
-    /// Indicates if the handler should do half closure.
-    @usableFromInline
-    let enableOutboundHalfClosure: Bool
-
     @inlinable
     init(
         eventLoop: EventLoop,
-        closeRatchet: CloseRatchet,
-        enableOutboundHalfClosure: Bool
+        closeRatchet: CloseRatchet
     ) {
         self.eventLoop = eventLoop
         self.closeRatchet = closeRatchet
-        self.enableOutboundHalfClosure = enableOutboundHalfClosure
     }
 
     @inlinable
@@ -87,9 +81,10 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
 
         switch self.closeRatchet.closeWrite() {
         case .nothing:
-            if self.enableOutboundHalfClosure {
-                self.context?.close(mode: .output, promise: nil)
-            }
+            break
+
+        case .closeOutput:
+            self.context?.close(mode: .output, promise: nil)
 
         case .close:
             self.context?.close(promise: nil)
