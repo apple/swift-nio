@@ -68,7 +68,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     ) throws {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
-        (self.inboundStream, self.outboundWriter) = try channel.syncAddAsyncHandlers(
+        (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
             backpressureStrategy: backpressureStrategy,
             isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
@@ -97,7 +97,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     ) throws where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
-        (self.inboundStream, self.outboundWriter) = try channel.syncAddAsyncHandlers(
+        (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
             backpressureStrategy: backpressureStrategy,
             isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
@@ -111,7 +111,7 @@ extension Channel {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     @_spi(AsyncChannel)
-    public func syncAddAsyncHandlers<Inbound: Sendable, Outbound: Sendable>(
+    public func _syncAddAsyncHandlers<Inbound: Sendable, Outbound: Sendable>(
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         isOutboundHalfClosureEnabled: Bool
     ) throws -> (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) {
