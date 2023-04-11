@@ -15,6 +15,9 @@ services:
   integration-tests:
     image: swift-nio:20.04-5.5
 
+  documentation-check:
+    image: swift-nio:20.04-5.5
+
   test:
     image: swift-nio:20.04-5.5
     environment:

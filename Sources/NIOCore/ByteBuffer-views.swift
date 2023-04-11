@@ -161,7 +161,7 @@ extension ByteBufferView: RangeReplaceableCollection {
     /// Reserves enough space in the underlying `ByteBuffer` such that this view can
     /// store the specified number of bytes without reallocation.
     ///
-    /// See the documentation for ``ByteBuffer.reserveCapacity(_:)`` for more details.
+    /// See the documentation for ``ByteBuffer/reserveCapacity(_:)`` for more details.
     @inlinable
     public mutating func reserveCapacity(_ minimumCapacity: Int) {
         let additionalCapacity = minimumCapacity - self.count

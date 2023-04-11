@@ -1233,7 +1233,7 @@ extension EventLoopFuture {
     /// threads: it is primarily useful for testing, or for building interfaces between blocking
     /// and non-blocking code.
     ///
-    /// This is also forbidden in async contexts: prefer ``EventLoopFuture/get``.
+    /// This is also forbidden in async contexts: prefer ``EventLoopFuture/get()``.
     ///
     /// - returns: The value of the `EventLoopFuture` when it completes.
     /// - throws: The error value of the `EventLoopFuture` if it errors.

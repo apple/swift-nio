@@ -8,7 +8,7 @@ SwiftNIO is a cross-platform asynchronous event-driven network application frame
 
 It's like Netty, but written for Swift.
 
-## Repository organization
+### Repository organization
 
 The SwiftNIO project is split across multiple repositories:
 
@@ -21,7 +21,7 @@ Repo | Usage
 [swift-nio-transport-services][repo-nio-transport-services] | First-class support for macOS, iOS, tvOS, and watchOS
 [swift-nio-ssh][repo-nio-ssh] | SSH support
 
-## Modules
+### Modules
 
 SwiftNIO has a number of products that provide different functionality. This package includes the following products:
 
@@ -36,7 +36,7 @@ SwiftNIO has a number of products that provide different functionality. This pac
 - [NIOWebSocket][module-websocket]. This provides a low-level WebSocket protocol implementation.
 - [NIOTestUtils][module-test-utilities]. This provides a number of helpers for testing projects that use SwiftNIO.
 
-## Conceptual Overview
+### Conceptual Overview
 
 SwiftNIO is fundamentally a low-level tool for building high-performance networking applications in Swift. It particularly targets those use-cases where using a "thread-per-connection" model of concurrency is inefficient or untenable. This is a common limitation when building servers that use a large number of relatively low-utilization connections, such as HTTP servers.
 
@@ -46,7 +46,7 @@ SwiftNIO does not aim to provide high-level solutions like, for example, web fra
 
 The following sections will describe the low-level tools that SwiftNIO provides, and provide a quick overview of how to work with them. If you feel comfortable with these concepts, then you can skip right ahead to the other sections of this document.
 
-### Basic Architecture
+#### Basic Architecture
 
 The basic building blocks of SwiftNIO are the following 8 types of objects:
 
@@ -61,7 +61,7 @@ The basic building blocks of SwiftNIO are the following 8 types of objects:
 
 All SwiftNIO applications are ultimately constructed of these various components.
 
-#### EventLoops and EventLoopGroups
+##### EventLoops and EventLoopGroups
 
 The basic I/O primitive of SwiftNIO is the event loop. The event loop is an object that waits for events (usually I/O related events, such as "data received") to happen and then fires some kind of callback when they do. In almost all SwiftNIO applications there will be relatively few event loops: usually only one or two per CPU core the application wants to use. Generally speaking event loops run for the entire lifetime of your application, spinning in an endless loop dispatching events.
 
@@ -71,7 +71,7 @@ In SwiftNIO today there is one [`EventLoopGroup`][elg] implementation, and two [
 
 [`EventLoop`][el]s have a number of important properties. Most vitally, they are the way all work gets done in SwiftNIO applications. In order to ensure thread-safety, any work that wants to be done on almost any of the other objects in SwiftNIO must be dispatched via an [`EventLoop`][el]. [`EventLoop`][el] objects own almost all the other objects in a SwiftNIO application, and understanding their execution model is critical for building high-performance SwiftNIO applications.
 
-#### Channels, Channel Handlers, Channel Pipelines, and Channel Contexts
+##### Channels, Channel Handlers, Channel Pipelines, and Channel Contexts
 
 While [`EventLoop`][el]s are critical to the way SwiftNIO works, most users will not interact with them substantially beyond asking them to create [`EventLoopPromise`][elp]s and to schedule work. The parts of a SwiftNIO application most users will spend the most time interacting with are [`Channel`][c]s and [`ChannelHandler`][ch]s.
 
@@ -93,7 +93,7 @@ SwiftNIO ships with many [`ChannelHandler`][ch]s built in that provide useful fu
 
 Additionally, SwiftNIO ships with a few [`Channel`][c] implementations. In particular, it ships with `ServerSocketChannel`, a [`Channel`][c] for sockets that accept inbound connections; `SocketChannel`, a [`Channel`][c] for TCP connections; and `DatagramChannel`, a [`Channel`][c] for UDP sockets. All of these are provided by the [NIOPosix][module-posix] module. It also provides[`EmbeddedChannel`][ec], a [`Channel`][c] primarily used for testing, provided by the [NIOEmbedded][module-embedded] module.
 
-##### A Note on Blocking
+###### A Note on Blocking
 
 One of the important notes about [`ChannelPipeline`][cp]s is that they are thread-safe. This is very important for writing SwiftNIO applications, as it allows you to write much simpler [`ChannelHandler`][ch]s in the knowledge that they will not require synchronization.
 
@@ -101,7 +101,7 @@ However, this is achieved by dispatching all code on the [`ChannelPipeline`][cp]
 
 This is a common concern while writing SwiftNIO applications. If it is useful to write code in a blocking style, it is highly recommended that you dispatch work to a different thread when you're done with it in your pipeline.
 
-#### Bootstrap
+##### Bootstrap
 
 While it is possible to configure and register [`Channel`][c]s with [`EventLoop`][el]s directly, it is generally more useful to have a higher-level abstraction to handle this work.
 
@@ -109,7 +109,7 @@ For this reason, SwiftNIO ships a number of `Bootstrap` objects whose purpose is
 
 Currently SwiftNIO ships with three `Bootstrap` objects in the [NIOPosix][module-posix] module: [`ServerBootstrap`][sb], for bootstrapping listening channels; [`ClientBootstrap`][cb], for bootstrapping client TCP channels; and [`DatagramBootstrap`][db] for bootstrapping UDP channels.
 
-#### ByteBuffer
+##### ByteBuffer
 
 The majority of the work in a SwiftNIO application involves shuffling buffers of bytes around. At the very least, data is sent and received to and from the network in the form of buffers of bytes. For this reason it's very important to have a high-performance data structure that is optimized for the kind of work SwiftNIO applications perform.
 
@@ -121,7 +121,7 @@ In general, it is highly recommended that you use the [`ByteBuffer`][bb] in its 
 
 For more details on the API of [`ByteBuffer`][bb], please see our API documentation, linked below.
 
-#### Promises and Futures
+##### Promises and Futures
 
 One major difference between writing concurrent code and writing synchronous code is that not all actions will complete immediately. For example, when you write data on a channel, it is possible that the event loop will not be able to immediately flush that write out to the network. For this reason, SwiftNIO provides [`EventLoopPromise<T>`][elp] and [`EventLoopFuture<T>`][elf] to manage operations that complete *asynchronously*. These types are provided by the [NIOCore][module-core] module.
 
@@ -133,7 +133,7 @@ Another important topic for consideration is the difference between how the prom
 
 There are several functions for applying callbacks to [`EventLoopFuture<T>`][elf], depending on how and when you want them to execute. Details of these functions is left to the API documentation.
 
-### Design Philosophy
+#### Design Philosophy
 
 SwiftNIO is designed to be a powerful tool for building networked applications and frameworks, but it is not intended to be the perfect solution for all levels of abstraction. SwiftNIO is tightly focused on providing the basic I/O primitives and protocol implementations at low levels of abstraction, leaving more expressive but slower abstractions to the wider community to build. The intention is that SwiftNIO will be a building block for server-side applications, not necessarily the framework those applications will use directly.
 
