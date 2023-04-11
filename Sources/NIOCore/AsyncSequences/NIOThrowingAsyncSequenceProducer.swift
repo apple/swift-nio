@@ -144,7 +144,7 @@ public struct NIOThrowingAsyncSequenceProducer<
         return .init(source: source, sequence: sequence)
     }
 
-    /// only used internally by``NIOAsyncSequenceProducer`` to reused most of the code
+    /// only used internally by``NIOAsyncSequenceProducer`` to reuse most of the code
     @inlinable
     internal static func makeNonThrowingSequence(
         elementType: Element.Type = Element.self,
