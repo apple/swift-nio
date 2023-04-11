@@ -147,9 +147,8 @@ public struct NIOAsyncSequenceProducer<
         backPressureStrategy: Strategy,
         delegate: Delegate
     ) -> NewSequence {
-        let newSequence = NIOThrowingAsyncSequenceProducer.makeSequence(
+        let newSequence = NIOThrowingAsyncSequenceProducer.makeNonThrowingSequence(
             elementType: Element.self,
-            failureType: Never.self,
             backPressureStrategy: backPressureStrategy,
             delegate: delegate
         )

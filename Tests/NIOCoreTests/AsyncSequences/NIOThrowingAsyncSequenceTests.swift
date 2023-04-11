@@ -463,6 +463,35 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             XCTAssertTrue(error is CancellationError)
         }
     }
+    
+    @available(*, deprecated, message: "tests the deprecated custom generic failure type")
+    func testTaskCancel_whenStreaming_andSuspended_withCustomErrorType() async throws {
+        struct CustomError: Error {}
+        // We are registering our demand and sleeping a bit to make
+        // sure our task runs when the demand is registered
+        let backPressureStrategy = MockNIOElementStreamBackPressureStrategy()
+        let delegate = MockNIOBackPressuredStreamSourceDelegate()
+        let new = NIOThrowingAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            failureType: CustomError.self,
+            backPressureStrategy: backPressureStrategy,
+            delegate: delegate
+        )
+        let sequence = new.sequence
+        let task: Task<Int?, Error> = Task {
+            let iterator = sequence.makeAsyncIterator()
+            return try await iterator.next()
+        }
+        try await Task.sleep(nanoseconds: 1_000_000)
+
+        task.cancel()
+        let result = await task.result
+        XCTAssertEqualWithoutAutoclosure(await delegate.events.prefix(1).collect(), [.didTerminate])
+        
+        try withExtendedLifetime(new.source) {
+            XCTAssertNil(try result.get())
+        }
+    }
 
     func testTaskCancel_whenStreaming_andNotSuspended() async throws {
         // We are registering our demand and sleeping a bit to make
@@ -515,9 +544,39 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         task.cancel()
 
-        let value = try await task.value
+        let result = await task.result
 
-        XCTAssertNil(value)
+        await XCTAssertThrowsError(try result.get()) { error in
+            XCTAssertTrue(error is CancellationError, "unexpected error \(error)")
+        }
+    }
+    
+    @available(*, deprecated, message: "tests the deprecated custom generic failure type")
+    func testTaskCancel_whenStreaming_andTaskIsAlreadyCancelled_withCustomErrorType() async throws {
+        struct CustomError: Error {}
+        let backPressureStrategy = MockNIOElementStreamBackPressureStrategy()
+        let delegate = MockNIOBackPressuredStreamSourceDelegate()
+        let new = NIOThrowingAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            failureType: CustomError.self,
+            backPressureStrategy: backPressureStrategy,
+            delegate: delegate
+        )
+        let sequence = new.sequence
+        let task: Task<Int?, Error> = Task {
+            // We are sleeping here to allow some time for us to cancel the task.
+            // Once the Task is cancelled we will call `next()`
+            try? await Task.sleep(nanoseconds: 1_000_000)
+            let iterator = sequence.makeAsyncIterator()
+            return try await iterator.next()
+        }
+
+        task.cancel()
+        
+        let result = await task.result
+        try withExtendedLifetime(new.source) {
+            XCTAssertNil(try result.get())
+        }
     }
 
     // MARK: - Next
