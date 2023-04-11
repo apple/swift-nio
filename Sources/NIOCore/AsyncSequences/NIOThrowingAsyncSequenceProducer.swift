@@ -546,7 +546,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
                     case .resumeContinuationWithCancellationErrorAndCallDidTerminate(let continuation):
                         // We have deprecated the generic Failure type in the public API and Failure should
-                        // now be `Swift.Error`. However, if users have not migrated to the new API the could
+                        // now be `Swift.Error`. However, if users have not migrated to the new API they could
                         // still use a custom generic Error type and this cast might fail.
                         // In addition, we use `NIOThrowingAsyncSequenceProducer` in the implementation of the
                         // non-throwing variant `NIOAsyncSequenceProducer` where `Failure` will be `Never` and
