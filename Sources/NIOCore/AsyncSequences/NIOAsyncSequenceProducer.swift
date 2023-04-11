@@ -198,7 +198,8 @@ extension NIOAsyncSequenceProducer {
 
         @inlinable
         public func next() async -> Element? {
-            return try! await self._throwingIterator.next()
+            // this call will only throw if cancelled and we want to just return nil in that case
+            return try? await self._throwingIterator.next()
         }
     }
 }
