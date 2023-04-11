@@ -487,7 +487,10 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         task.cancel()
         let result = await task.result
         XCTAssertEqualWithoutAutoclosure(await delegate.events.prefix(1).collect(), [.didTerminate])
-        XCTAssertNil(try result.get())
+        
+        try withExtendedLifetime(new.source) {
+            XCTAssertNil(try result.get())
+        }
     }
 
     func testTaskCancel_whenStreaming_andNotSuspended() async throws {
@@ -569,9 +572,11 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         task.cancel()
-
+        
         let result = await task.result
-        XCTAssertNil(try result.get())
+        try withExtendedLifetime(new.source) {
+            XCTAssertNil(try result.get())
+        }
     }
 
     // MARK: - Next
