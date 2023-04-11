@@ -946,7 +946,7 @@ extension NIOThrowingAsyncSequenceProducer {
                 // In addition, we use `NIOThrowingAsyncSequenceProducer` in the implementation of the
                 // non-throwing variant `NIOAsyncSequenceProducer` where `Failure` will be `Never` and
                 // this cast will fail as well.
-                // Everything is marked @inlinable and the Failure type is know at compile time,
+                // Everything is marked @inlinable and the Failure type is known at compile time,
                 // therefore this cast should be optimised away in release build.
                 if let failure = CancellationError() as? Failure {
                     self._state = .sourceFinished(
