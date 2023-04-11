@@ -546,12 +546,12 @@ extension NIOThrowingAsyncSequenceProducer {
 
                     case .resumeContinuationWithCancellationErrorAndCallDidTerminate(let continuation):
                         // We have deprecated the generic Failure type in the public API and Failure should
-                        // now be `Swift.Error`. However, if users have not migrated to the new API the could
+                        // now be `Swift.Error`. However, if users have not migrated to the new API they could
                         // still use a custom generic Error type and this cast might fail.
                         // In addition, we use `NIOThrowingAsyncSequenceProducer` in the implementation of the
                         // non-throwing variant `NIOAsyncSequenceProducer` where `Failure` will be `Never` and
                         // this cast will fail as well.
-                        // Everything is marked @inlinable and the Failure type is know at compile time,
+                        // Everything is marked @inlinable and the Failure type is known at compile time,
                         // therefore this cast should be optimised away in release build.
                         if let failure = CancellationError() as? Failure {
                             continuation.resume(throwing: failure)
@@ -941,12 +941,12 @@ extension NIOThrowingAsyncSequenceProducer {
                 // This can happen if the `Task` that calls `next()` is already cancelled.
                 
                 // We have deprecated the generic Failure type in the public API and Failure should
-                // now be `Swift.Error`. However, if users have not migrated to the new API the could
+                // now be `Swift.Error`. However, if users have not migrated to the new API they could
                 // still use a custom generic Error type and this cast might fail.
                 // In addition, we use `NIOThrowingAsyncSequenceProducer` in the implementation of the
                 // non-throwing variant `NIOAsyncSequenceProducer` where `Failure` will be `Never` and
                 // this cast will fail as well.
-                // Everything is marked @inlinable and the Failure type is know at compile time,
+                // Everything is marked @inlinable and the Failure type is known at compile time,
                 // therefore this cast should be optimised away in release build.
                 if let failure = CancellationError() as? Failure {
                     self._state = .sourceFinished(
