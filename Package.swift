@@ -68,7 +68,7 @@ var targets: [PackageDescription.Target] = [
         name: "CNIOLLHTTP",
         cSettings: [.define("LLHTTP_STRICT_MODE")]
     ),
-    .target(name: "NIOTLS", dependencies: ["NIO", "NIOCore"]),
+    .target(name: "NIOTLS", dependencies: ["NIO", "NIOCore", swiftCollections]),
     .executableTarget(name: "NIOChatServer",
                       dependencies: ["NIOPosix", "NIOCore", "NIOConcurrencyHelpers"],
                       exclude: ["README.md"]),
@@ -112,7 +112,7 @@ var targets: [PackageDescription.Target] = [
     .testTarget(name: "NIOHTTP1Tests",
                 dependencies: ["NIOCore", "NIOEmbedded", "NIOPosix", "NIOHTTP1", "NIOFoundationCompat", "NIOTestUtils"]),
     .testTarget(name: "NIOTLSTests",
-                dependencies: ["NIOCore", "NIOEmbedded", "NIOTLS", "NIOFoundationCompat"]),
+                dependencies: ["NIOCore", "NIOEmbedded", "NIOTLS", "NIOFoundationCompat", "NIOTestUtils"]),
     .testTarget(name: "NIOWebSocketTests",
                 dependencies: ["NIOCore", "NIOEmbedded", "NIOWebSocket"]),
     .testTarget(name: "NIOTestUtilsTests",
