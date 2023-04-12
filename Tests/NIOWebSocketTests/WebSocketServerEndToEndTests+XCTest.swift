@@ -44,3 +44,26 @@ extension WebSocketServerEndToEndTests {
    }
 }
 
+@available(macOS 12, iOS 15, watchOS 8, tvOS 15, *)
+extension AsyncWebSocketServerEndToEndTests {
+
+   @available(*, deprecated, message: "not actually deprecated. Just deprecated to allow deprecated tests (which test deprecated functionality) without warnings")
+   static var allTests : [(String, (AsyncWebSocketServerEndToEndTests) -> () async throws -> Void)] {
+      return [
+                ("testBasicUpgradeDance", testBasicUpgradeDance),
+                ("testUpgradeWithProtocolName", testUpgradeWithProtocolName),
+                ("testCanRejectUpgrade", testCanRejectUpgrade),
+                ("testCanDelayAcceptingUpgrade", testCanDelayAcceptingUpgrade),
+                ("testRequiresVersion13", testRequiresVersion13),
+                ("testRequiresVersionHeader", testRequiresVersionHeader),
+                ("testRequiresKeyHeader", testRequiresKeyHeader),
+                ("testUpgradeMayAddCustomHeaders", testUpgradeMayAddCustomHeaders),
+                ("testMayRegisterMultipleWebSocketEndpoints", testMayRegisterMultipleWebSocketEndpoints),
+                ("testSendAFewFrames", testSendAFewFrames),
+                ("testMaxFrameSize", testMaxFrameSize),
+                ("testAutomaticErrorHandling", testAutomaticErrorHandling),
+                ("testNoAutomaticErrorHandling", testNoAutomaticErrorHandling),
+           ]
+   }
+}
+

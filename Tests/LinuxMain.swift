@@ -48,6 +48,7 @@ class LinuxMainRunner {
              testCase(ApplicationProtocolNegotiationHandlerTests.allTests),
              testCase(AsyncSequenceCollectTests.allTests),
              testCase(AsyncTestingChannelTests.allTests),
+             testCase(AsyncWebSocketServerEndToEndTests.allTests),
              testCase(Base64Test.allTests),
              testCase(BaseObjectTest.allTests),
              testCase(BlockingIOThreadPoolTest.allTests),

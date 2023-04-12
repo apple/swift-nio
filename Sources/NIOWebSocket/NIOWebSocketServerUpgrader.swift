@@ -41,7 +41,7 @@ public struct NIOWebSocketUpgradeError: Error, Equatable {
     public static let unsupportedWebSocketTarget = NIOWebSocketUpgradeError(actualError: .unsupportedWebSocketTarget)
 }
 
-fileprivate extension HTTPHeaders {
+internal extension HTTPHeaders {
     func nonListHeader(_ name: String) throws -> String {
         let fields = self[canonicalForm: name]
         guard fields.count == 1 else {
@@ -54,7 +54,7 @@ fileprivate extension HTTPHeaders {
 /// A `HTTPServerProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// Users may frequently want to offer multiple websocket endpoints on the same port. For this
-/// reason, this `WebServerSocketUpgrader` only knows how to do the required parts of the upgrade and to
+/// reason, this `NIOWebSocketServerUpgrader` only knows how to do the required parts of the upgrade and to
 /// complete the handshake. Users are expected to provide a callback that examines the HTTP headers
 /// (including the path) and determines whether this is a websocket upgrade request that is acceptable
 /// to them.
@@ -225,18 +225,11 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
 
     public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
         let key: String
-        let version: String
 
         do {
-            key = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Key")
-            version = try upgradeRequest.headers.nonListHeader("Sec-WebSocket-Version")
+            key = try NIOWebsocketServerUpgraderLogic.getWebsocketKeyAndCheckVersion(from: upgradeRequest)
         } catch {
             return channel.eventLoop.makeFailedFuture(error)
-        }
-
-        // The version must be 13.
-        guard version == "13" else {
-            return channel.eventLoop.makeFailedFuture(NIOWebSocketUpgradeError.invalidUpgradeHeader)
         }
 
         return self.shouldUpgrade(channel, upgradeRequest).flatMapThrowing { extraHeaders in
@@ -247,19 +240,8 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
         }.map { (extraHeaders: HTTPHeaders) in
             var extraHeaders = extraHeaders
 
-            // Cool, we're good to go! Let's do our upgrade. We do this by concatenating the magic
-            // GUID to the base64-encoded key and taking a SHA1 hash of the result.
-            let acceptValue: String
-            do {
-                var hasher = SHA1()
-                hasher.update(string: key)
-                hasher.update(string: magicWebSocketGUID)
-                acceptValue = String(base64Encoding: hasher.finish())
-            }
-
-            extraHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")
-            extraHeaders.add(name: "Sec-WebSocket-Accept", value: acceptValue)
-            extraHeaders.replaceOrAdd(name: "Connection", value: "upgrade")
+            // Cool, we're good to go! Let's do our upgrade
+            NIOWebsocketServerUpgraderLogic.generateUpgradeHeaders(key: key, headers: &extraHeaders)
 
             return extraHeaders
         }
