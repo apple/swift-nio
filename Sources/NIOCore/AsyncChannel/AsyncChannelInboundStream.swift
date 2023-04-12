@@ -19,7 +19,7 @@
 @_spi(AsyncChannel)
 public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @usableFromInline
-    typealias Producer = NIOThrowingAsyncSequenceProducer<Inbound, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelInboundStreamChannelHandler<Inbound>.Delegate>
+    typealias Producer = NIOThrowingAsyncSequenceProducer<Inbound, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate>
 
     /// The underlying async sequence.
     @usableFromInline let _producer: Producer
@@ -31,7 +31,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
         closeRatchet: CloseRatchet
     ) throws {
         channel.eventLoop.preconditionInEventLoop()
-        let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound>(
+        let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound, Inbound>(
             eventLoop: channel.eventLoop,
             closeRatchet: closeRatchet
         )
@@ -47,7 +47,71 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
 
         let sequence = Producer.makeSequence(
             backPressureStrategy: strategy,
-            delegate: NIOAsyncChannelInboundStreamChannelHandler<Inbound>.Delegate(handler: handler)
+            delegate: NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate(handler: handler)
+        )
+        handler.source = sequence.source
+        try channel.pipeline.syncOperations.addHandler(handler)
+        self._producer = sequence.sequence
+    }
+
+    @inlinable
+    init<ChannelHandlerInboundIn: Sendable>(
+        channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (ChannelHandlerInboundIn) throws -> Inbound
+    ) throws {
+        channel.eventLoop.preconditionInEventLoop()
+        let handler = NIOAsyncChannelInboundStreamChannelHandler<ChannelHandlerInboundIn, Inbound>(
+            eventLoop: channel.eventLoop,
+            closeRatchet: closeRatchet,
+            transformationClosure: transformationClosure
+        )
+        let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
+
+        if let userProvided = backpressureStrategy {
+            strategy = userProvided
+        } else {
+            // Default strategy. These numbers are fairly arbitrary, but they line up with the default value of
+            // maxMessagesPerRead.
+            strategy = .init(lowWatermark: 2, highWatermark: 10)
+        }
+
+        let sequence = Producer.makeSequence(
+            backPressureStrategy: strategy,
+            delegate: NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate(handler: handler)
+        )
+        handler.source = sequence.source
+        try channel.pipeline.syncOperations.addHandler(handler)
+        self._producer = sequence.sequence
+    }
+
+    @inlinable
+    init(
+        channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        closeRatchet: CloseRatchet,
+        protocolNegotiationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
+    ) throws {
+        channel.eventLoop.preconditionInEventLoop()
+        let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, Inbound>(
+            eventLoop: channel.eventLoop,
+            closeRatchet: closeRatchet,
+            protocolNegotiationClosure: protocolNegotiationClosure
+        )
+        let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
+
+        if let userProvided = backpressureStrategy {
+            strategy = userProvided
+        } else {
+            // Default strategy. These numbers are fairly arbitrary, but they line up with the default value of
+            // maxMessagesPerRead.
+            strategy = .init(lowWatermark: 2, highWatermark: 10)
+        }
+
+        let sequence = Producer.makeSequence(
+            backPressureStrategy: strategy,
+            delegate: NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate(handler: handler)
         )
         handler.source = sequence.source
         try channel.pipeline.syncOperations.addHandler(handler)

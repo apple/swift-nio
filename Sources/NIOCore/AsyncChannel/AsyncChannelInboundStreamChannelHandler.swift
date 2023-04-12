@@ -16,7 +16,7 @@
 /// ``Channel`` into an asynchronous sequence that supports back-pressure.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
-internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Sendable>: ChannelDuplexHandler {
+internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Sendable, ProducerElement: Sendable>: ChannelDuplexHandler {
     @usableFromInline
     enum _ProducingState {
         // Not .stopProducing
@@ -37,10 +37,10 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
 
     @usableFromInline
     typealias Source = NIOThrowingAsyncSequenceProducer<
-        InboundIn,
+        ProducerElement,
         Error,
         NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark,
-        NIOAsyncChannelInboundStreamChannelHandler<InboundIn>.Delegate
+        NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate
     >.Source
 
     /// The source of the asynchronous sequence.
@@ -53,7 +53,7 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
 
     /// An array of reads which will be yielded to the source with the next channel read complete.
     @usableFromInline
-    var buffer: [InboundIn] = []
+    var buffer: [ProducerElement] = []
 
     /// The current producing state.
     @usableFromInline
@@ -67,10 +67,59 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     @usableFromInline
     let closeRatchet: CloseRatchet
 
+    /// A type indication what kind of transformation to apply to reads.
+    @usableFromInline
+    enum Transformation {
+        /// A synchronous transformation is applied to incoming reads. This is used when bootstrapping
+        case sync((InboundIn) throws -> ProducerElement)
+        /// In the case of protocol negotiation we are applying a future based transformation where we wait for the transformation
+        /// to finish before we yield it to the source.
+        case protocolNegotiation((InboundIn) -> EventLoopFuture<ProducerElement>)
+    }
+
+    /// The transformation applied to incoming reads.
+    @usableFromInline
+    let transformation: Transformation
+
     @inlinable
-    init(eventLoop: EventLoop, closeRatchet: CloseRatchet) {
+    init(
+        eventLoop: EventLoop,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (InboundIn) throws -> ProducerElement
+    ) {
         self.eventLoop = eventLoop
         self.closeRatchet = closeRatchet
+        self.transformation = .sync(transformationClosure)
+    }
+
+    @inlinable
+    init(
+        eventLoop: EventLoop,
+        closeRatchet: CloseRatchet,
+        protocolNegotiationClosure: @escaping (InboundIn) -> EventLoopFuture<ProducerElement>
+    ) where InboundIn == Channel {
+        self.eventLoop = eventLoop
+        self.closeRatchet = closeRatchet
+        self.transformation = .protocolNegotiation { channel in
+            return protocolNegotiationClosure(channel)
+                .flatMapErrorThrowing { error in
+                    // When protocol negotiation fails the only thing we can do is
+                    // to fire the error down the pipeline and close the channel.
+                    channel.pipeline.fireErrorCaught(error)
+                    channel.close(promise: nil)
+                    throw error
+                }
+        }
+    }
+
+    @inlinable
+    init(
+        eventLoop: EventLoop,
+        closeRatchet: CloseRatchet
+    ) where InboundIn == ProducerElement {
+        self.eventLoop = eventLoop
+        self.closeRatchet = closeRatchet
+        self.transformation = .sync { $0 }
     }
 
     @inlinable
@@ -86,10 +135,48 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
 
     @inlinable
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.buffer.append(self.unwrapInboundIn(data))
+        let unwrapped = self.unwrapInboundIn(data)
+
+        switch self.transformation {
+        case .sync(let transformation):
+            do {
+                try self.buffer.append(transformation(unwrapped))
+            } catch {
+                context.close(promise: nil)
+                context.fireErrorCaught(error)
+                return
+            }
+        case .protocolNegotiation(let protocolNegotiation):
+            let unsafeSelf = UnsafeTransfer(self)
+            let unsafeContext = UnsafeTransfer(context)
+            protocolNegotiation(unwrapped)
+                .whenComplete { result in
+                    unsafeSelf.wrappedValue._protocolNegotiationCompleted(context: unsafeContext.wrappedValue, result: result)
+                }
+        }
 
         // We forward on reads here to enable better channel composition.
         context.fireChannelRead(data)
+    }
+
+    @inlinable
+    func _protocolNegotiationCompleted(
+        context: ChannelHandlerContext,
+        result: Result<ProducerElement, Error>
+    ) {
+        context.eventLoop.preconditionInEventLoop()
+
+        switch result {
+        case .success(let transformed):
+            self.buffer.append(transformed)
+            // We are delivering out of band here since the future can complete at any point
+            self._deliverReads(context: context)
+
+        case .failure:
+            // Protocol negotiation failed. We already fired an error caught and closed the child channel
+            // Nothing more to do here.
+            break
+        }
     }
 
     @inlinable
@@ -215,33 +302,35 @@ extension NIOAsyncChannelInboundStreamChannelHandler {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension NIOAsyncChannelInboundStreamChannelHandler {
+@usableFromInline
+struct NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate: @unchecked Sendable, NIOAsyncSequenceProducerDelegate {
     @usableFromInline
-    struct Delegate: @unchecked Sendable, NIOAsyncSequenceProducerDelegate {
-        @usableFromInline
-        let eventLoop: EventLoop
+    let eventLoop: EventLoop
 
-        @usableFromInline
-        let handler: NIOAsyncChannelInboundStreamChannelHandler<InboundIn>
+    @usableFromInline
+    let _didTerminate: () -> Void
 
-        @inlinable
-        init(handler: NIOAsyncChannelInboundStreamChannelHandler<InboundIn>) {
-            self.eventLoop = handler.eventLoop
-            self.handler = handler
+    @usableFromInline
+    let _produceMore: () -> Void
+
+    @inlinable
+    init<InboundIn, ProducerElement>(handler: NIOAsyncChannelInboundStreamChannelHandler<InboundIn, ProducerElement>) {
+        self.eventLoop = handler.eventLoop
+        self._didTerminate = handler._didTerminate
+        self._produceMore = handler._produceMore
+    }
+
+    @inlinable
+    func didTerminate() {
+        self.eventLoop.execute {
+            self._didTerminate()
         }
+    }
 
-        @inlinable
-        func didTerminate() {
-            self.eventLoop.execute {
-                self.handler._didTerminate()
-            }
-        }
-
-        @inlinable
-        func produceMore() {
-            self.eventLoop.execute {
-                self.handler._produceMore()
-            }
+    @inlinable
+    func produceMore() {
+        self.eventLoop.execute {
+            self._produceMore()
         }
     }
 }

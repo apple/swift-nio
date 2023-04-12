@@ -104,6 +104,44 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
 
         self.outboundWriter.finish()
     }
+
+    @inlinable
+    @_spi(AsyncChannel)
+    public init<ChannelHandlerInboundIn: Sendable>(
+        synchronouslyWrapping channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isOutboundHalfClosureEnabled: Bool = true,
+        transformationClosure: @escaping (ChannelHandlerInboundIn) throws -> Inbound
+    ) throws {
+        channel.eventLoop.preconditionInEventLoop()
+        self.channel = channel
+        (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
+            backpressureStrategy: backpressureStrategy,
+            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+            transformationClosure: transformationClosure
+        )
+
+        self.outboundWriter.finish()
+    }
+
+    @inlinable
+    @_spi(AsyncChannel)
+    public init(
+        synchronouslyWrapping channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isOutboundHalfClosureEnabled: Bool = true,
+        protocolNegotiationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
+    ) throws {
+        channel.eventLoop.preconditionInEventLoop()
+        self.channel = channel
+        (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
+            backpressureStrategy: backpressureStrategy,
+            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+            protocolNegotiationClosure: protocolNegotiationClosure
+        )
+
+        self.outboundWriter.finish()
+    }
 }
 
 extension Channel {
@@ -122,6 +160,56 @@ extension Channel {
             channel: self,
             backpressureStrategy: backpressureStrategy,
             closeRatchet: closeRatchet
+        )
+        let writer = try NIOAsyncChannelOutboundWriter<Outbound>(
+            channel: self,
+            closeRatchet: closeRatchet
+        )
+        return (inboundStream, writer)
+    }
+
+    // TODO: We need to remove the public and spi here once we make the AsyncChannel methods public
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @inlinable
+    @_spi(AsyncChannel)
+    public func _syncAddAsyncHandlers<ChannelHandlerInboundIn: Sendable, Inbound: Sendable, Outbound: Sendable>(
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        isOutboundHalfClosureEnabled: Bool,
+        transformationClosure: @escaping (ChannelHandlerInboundIn) throws -> Inbound
+    ) throws -> (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) {
+        self.eventLoop.assertInEventLoop()
+
+        let closeRatchet = CloseRatchet(isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled)
+        let inboundStream = try NIOAsyncChannelInboundStream<Inbound>(
+            channel: self,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            transformationClosure: transformationClosure
+        )
+        let writer = try NIOAsyncChannelOutboundWriter<Outbound>(
+            channel: self,
+            closeRatchet: closeRatchet
+        )
+        return (inboundStream, writer)
+    }
+
+    // TODO: We need to remove the public and spi here once we make the AsyncChannel methods public
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @inlinable
+    @_spi(AsyncChannel)
+    public func _syncAddAsyncHandlers<Inbound: Sendable, Outbound: Sendable>(
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        isOutboundHalfClosureEnabled: Bool,
+        protocolNegotiationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
+    ) throws -> (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) {
+        self.eventLoop.assertInEventLoop()
+
+        let closeRatchet = CloseRatchet(isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled)
+        let inboundStream = try NIOAsyncChannelInboundStream<Inbound>(
+            channel: self,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            protocolNegotiationClosure: protocolNegotiationClosure
         )
         let writer = try NIOAsyncChannelOutboundWriter<Outbound>(
             channel: self,
