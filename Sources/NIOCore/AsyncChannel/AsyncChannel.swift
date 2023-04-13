@@ -62,7 +62,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     public init(
         synchronouslyWrapping channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isOutboundHalfClosureEnabled: Bool = true,
+        isOutboundHalfClosureEnabled: Bool = false,
         inboundType: Inbound.Type = Inbound.self,
         outboundType: Outbound.Type = Outbound.self
     ) throws {
@@ -92,7 +92,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     public init(
         synchronouslyWrapping channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isOutboundHalfClosureEnabled: Bool = true,
+        isOutboundHalfClosureEnabled: Bool = false,
         inboundType: Inbound.Type = Inbound.self
     ) throws where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
@@ -110,7 +110,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     public init<ChannelHandlerInboundIn: Sendable>(
         synchronouslyWrapping channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isOutboundHalfClosureEnabled: Bool = true,
+        isOutboundHalfClosureEnabled: Bool = false,
         transformationClosure: @escaping (ChannelHandlerInboundIn) throws -> Inbound
     ) throws {
         channel.eventLoop.preconditionInEventLoop()
@@ -129,7 +129,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     public init(
         synchronouslyWrapping channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isOutboundHalfClosureEnabled: Bool = true,
+        isOutboundHalfClosureEnabled: Bool = false,
         protocolNegotiationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
     ) throws {
         channel.eventLoop.preconditionInEventLoop()

@@ -491,6 +491,8 @@ extension ServerBootstrap {
     ///   - port: The port to bind on.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
+    ///   - childChannelInboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's inbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
@@ -500,8 +502,10 @@ extension ServerBootstrap {
         host: String,
         port: Int,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
+        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
         childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isChildChannelOutboundHalfClosureEnabled: Bool
+        isChildChannelOutboundHalfClosureEnabled: Bool = false
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
         return try await self.bindAsyncChannel0(
             serverBackpressureStrategy: serverBackpressureStrategy,
@@ -518,6 +522,8 @@ extension ServerBootstrap {
     ///   - address: The `SocketAddress` to bind on.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
+    ///   - childChannelInboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's inbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
@@ -527,7 +533,9 @@ extension ServerBootstrap {
         to address: SocketAddress,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isChildChannelOutboundHalfClosureEnabled: Bool
+        childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
+        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
+        isChildChannelOutboundHalfClosureEnabled: Bool = false
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
         return try await self.bindAsyncChannel0(
             serverBackpressureStrategy: serverBackpressureStrategy,
@@ -542,6 +550,8 @@ extension ServerBootstrap {
     ///   - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
+    ///   - childChannelInboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's inbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
@@ -551,7 +561,9 @@ extension ServerBootstrap {
         unixDomainSocketPath: String,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isChildChannelOutboundHalfClosureEnabled: Bool
+        childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
+        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
+        isChildChannelOutboundHalfClosureEnabled: Bool = false
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
         return try await self.bindAsyncChannel0(
             serverBackpressureStrategy: serverBackpressureStrategy,
@@ -569,6 +581,8 @@ extension ServerBootstrap {
     ///   - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
+    ///   - childChannelInboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's inbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
@@ -579,7 +593,9 @@ extension ServerBootstrap {
         cleanupExistingSocketFile: Bool,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isChildChannelOutboundHalfClosureEnabled: Bool
+        childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
+        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
+        isChildChannelOutboundHalfClosureEnabled: Bool = false
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
         if cleanupExistingSocketFile {
             try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
@@ -599,6 +615,8 @@ extension ServerBootstrap {
     ///   - socket: The _Unix file descriptor_ representing the bound stream socket.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
+    ///   - childChannelInboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's inbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
@@ -608,7 +626,9 @@ extension ServerBootstrap {
         _ socket: NIOBSDSocket.Handle,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isChildChannelOutboundHalfClosureEnabled: Bool
+        childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
+        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
+        isChildChannelOutboundHalfClosureEnabled: Bool = false
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
             if enableMPTCP {
@@ -732,7 +752,7 @@ extension ServerBootstrap {
     /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func bindWithProtocolNegotiation<Handler: NIOProtocolNegotiationHandler>(
+    public func bind<Handler: NIOProtocolNegotiationHandler>(
         host: String,
         port: Int,
         protocolNegotiationHandlerType: Handler.Type,
@@ -918,11 +938,8 @@ extension ServerBootstrap {
                         synchronouslyWrapping: serverChannel,
                         backpressureStrategy: serverBackpressureStrategy,
                         protocolNegotiationClosure: { (channel: Channel) in
-                            channel.eventLoop
-                                .makeCompletedFuture {
-                                    try channel.pipeline.syncOperations.handler(type: protocolNegotiationHandlerType)
-                                }
-                                .flatMap { handler -> EventLoopFuture<NIOProtocolNegotiationResult< Handler.NegotiationResult>> in
+                            channel.pipeline.handler(type: protocolNegotiationHandlerType)
+                                .flatMap { handler -> EventLoopFuture<NIOProtocolNegotiationResult<Handler.NegotiationResult>> in
                                     handler.protocolNegotiationResult
                                 }.flatMap { result in
                                     ServerBootstrap.waitForFinalResult(result, eventLoop: eventLoop)

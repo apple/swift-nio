@@ -102,10 +102,6 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
         let switchFuture = self.completionHandler(result, context.channel)
         switchFuture
             .whenComplete { result in
-                // We must be in the event loop here to make sure no hops have happened
-                context.eventLoop.preconditionInEventLoop()
-
-
                 switch result {
                 case .success(let success):
                     // We first complete the negotiated promise and then unbuffer

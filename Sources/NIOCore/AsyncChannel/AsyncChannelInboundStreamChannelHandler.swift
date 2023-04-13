@@ -102,6 +102,8 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
         self.closeRatchet = closeRatchet
         self.transformation = .protocolNegotiation { channel in
             return protocolNegotiationClosure(channel)
+                // We might be on a future from a different EL so we have to hop to the channel here.
+                .hop(to: channel.eventLoop)
                 .flatMapErrorThrowing { error in
                     // When protocol negotiation fails the only thing we can do is
                     // to fire the error down the pipeline and close the channel.
@@ -142,14 +144,17 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
             do {
                 try self.buffer.append(transformation(unwrapped))
             } catch {
-                context.close(promise: nil)
                 context.fireErrorCaught(error)
+                context.close(promise: nil)
                 return
             }
         case .protocolNegotiation(let protocolNegotiation):
+            // The unsafe transfers here are required because we need to use self in whenComplete
+            // We are making sure to be on our event loop so we can safely use self in whenComplete
             let unsafeSelf = UnsafeTransfer(self)
             let unsafeContext = UnsafeTransfer(context)
             protocolNegotiation(unwrapped)
+                .hop(to: context.eventLoop)
                 .whenComplete { result in
                     unsafeSelf.wrappedValue._protocolNegotiationCompleted(context: unsafeContext.wrappedValue, result: result)
                 }
