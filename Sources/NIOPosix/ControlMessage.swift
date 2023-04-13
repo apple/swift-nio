@@ -89,10 +89,10 @@ struct UnsafeControlMessageCollection {
 // Add the `Collection` functionality to UnsafeControlMessageCollection.
 extension UnsafeControlMessageCollection: Collection {
     typealias Element = UnsafeControlMessage
-    
+
     struct Index: Equatable, Comparable {
         fileprivate var cmsgPointer: UnsafeMutablePointer<cmsghdr>?
-        
+
         static func < (lhs: UnsafeControlMessageCollection.Index,
                        rhs: UnsafeControlMessageCollection.Index) -> Bool {
             // nil is high, as that's the end of the collection.
@@ -105,12 +105,12 @@ extension UnsafeControlMessageCollection: Collection {
                 return false
             }
         }
-        
+
         fileprivate init(cmsgPointer: UnsafeMutablePointer<cmsghdr>?) {
             self.cmsgPointer = cmsgPointer
         }
     }
-    
+
     var startIndex: Index {
         var messageHeader = self.messageHeader
         return withUnsafePointer(to: &messageHeader) { messageHeaderPtr in
@@ -118,9 +118,9 @@ extension UnsafeControlMessageCollection: Collection {
             return Index(cmsgPointer: firstCMsg)
         }
     }
-    
+
     var endIndex: Index { return Index(cmsgPointer: nil) }
-    
+
     func index(after: Index) -> Index {
         var msgHdr = messageHeader
         return withUnsafeMutablePointer(to: &msgHdr) { messageHeaderPtr in
@@ -128,7 +128,7 @@ extension UnsafeControlMessageCollection: Collection {
                                                            after: after.cmsgPointer!))
         }
     }
-    
+
     public subscript(position: Index) -> Element {
         let cmsg = position.cmsgPointer!
         return UnsafeControlMessage(level: cmsg.pointee.cmsg_level,
@@ -152,13 +152,14 @@ struct UnsafeReceivedControlBytes {
 struct ControlMessageParser {
     var ecnValue: NIOExplicitCongestionNotificationState = .transportNotCapable // Default
     var packetInfo: NIOPacketInfo? = nil
+    var segmentSize: Int? = nil
 
     init(parsing controlMessagesReceived: UnsafeControlMessageCollection) {
         for controlMessage in controlMessagesReceived {
             self.receiveMessage(controlMessage)
         }
     }
-    
+
     #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
     private static let ipv4TosType = IP_RECVTOS
     #else
@@ -174,12 +175,14 @@ struct ControlMessageParser {
         }
         return readValue
     }
-    
+
     private mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
         if controlMessage.level == IPPROTO_IP {
             self.receiveIPv4Message(controlMessage)
         } else if controlMessage.level == IPPROTO_IPV6 {
             self.receiveIPv6Message(controlMessage)
+        } else if controlMessage.level == IPPROTO_UDP {
+            self.receiveUDPMessage(controlMessage)
         }
     }
 
@@ -225,6 +228,17 @@ struct ControlMessageParser {
             }
         }
     }
+
+    private mutating func receiveUDPMessage(_ controlMessage: UnsafeControlMessage) {
+        #if os(Linux)
+        if controlMessage.type == NIOBSDSocket.Option.udp_gro.rawValue {
+            if let data = controlMessage.data {
+                let readValue = ControlMessageParser._readCInt(data: data)
+                self.segmentSize = Int(readValue)
+            }
+        }
+        #endif
+    }
 }
 
 extension NIOExplicitCongestionNotificationState {
@@ -262,7 +276,7 @@ extension CInt {
 struct UnsafeOutboundControlBytes {
     private var controlBytes: UnsafeMutableRawBufferPointer
     private var writePosition: UnsafeMutableRawBufferPointer.Index
-    
+
     /// This structure must not outlive `controlBytes`
     init(controlBytes: UnsafeMutableRawBufferPointer) {
         self.controlBytes = controlBytes
@@ -279,24 +293,24 @@ struct UnsafeOutboundControlBytes {
                                                                    type: CInt,
                                                                    payload: PayloadType) {
         let writableBuffer = UnsafeMutableRawBufferPointer(fastRebase: self.controlBytes[writePosition...])
-        
+
         let requiredSize = NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout.stride(ofValue: payload))
         precondition(writableBuffer.count >= requiredSize, "Insufficient size for cmsghdr and data")
-        
+
         let bufferBase = writableBuffer.baseAddress!
         // Binding to cmsghdr is safe here as this is the only place where we bind to non-Raw.
         let cmsghdrPtr = bufferBase.bindMemory(to: cmsghdr.self, capacity: 1)
         cmsghdrPtr.pointee.cmsg_level = level
         cmsghdrPtr.pointee.cmsg_type = type
         cmsghdrPtr.pointee.cmsg_len = .init(NIOBSDSocketControlMessage.length(payloadSize: MemoryLayout.size(ofValue: payload)))
-        
+
         let dataPointer = NIOBSDSocketControlMessage.data(for: cmsghdrPtr)!
         precondition(dataPointer.count >= MemoryLayout<PayloadType>.stride)
         dataPointer.storeBytes(of: payload, as: PayloadType.self)
-        
+
         self.writePosition += requiredSize
     }
-    
+
     /// The result is only valid while this is valid.
     var validControlBytes: UnsafeMutableRawBufferPointer {
         if writePosition == 0 {
@@ -304,7 +318,7 @@ struct UnsafeOutboundControlBytes {
         }
         return UnsafeMutableRawBufferPointer(fastRebase: self.controlBytes[0 ..< self.writePosition])
     }
-    
+
 }
 
 extension UnsafeOutboundControlBytes {
@@ -330,12 +344,24 @@ extension UnsafeOutboundControlBytes {
             break
         }
     }
+
+    internal mutating func appendSegmentSize(metadata: AddressedEnvelope<ByteBuffer>.Metadata?) {
+        #if os(Linux)
+        guard let segmentSize = metadata?.segmentSize, System.supportsUDPSegmentationOffload else { return }
+        self.appendGenericControlMessage(level: .init(IPPROTO_UDP),
+                                         type: NIOBSDSocket.Option.udp_segment.rawValue,
+                                         payload: UInt16(segmentSize))
+        #endif
+    }
 }
 
 extension AddressedEnvelope.Metadata {
     /// It's assumed the caller has checked that congestion information is required before calling.
     internal init(from controlMessagesReceived: UnsafeControlMessageCollection) {
         let controlMessageReceiver = ControlMessageParser(parsing: controlMessagesReceived)
-        self.init(ecnState: controlMessageReceiver.ecnValue, packetInfo: controlMessageReceiver.packetInfo)
+        self.init()
+        self.ecnState = controlMessageReceiver.ecnValue
+        self.packetInfo = controlMessageReceiver.packetInfo
+        self.segmentSize = controlMessageReceiver.segmentSize
     }
 }

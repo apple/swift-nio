@@ -1380,6 +1380,7 @@ class DatagramChannelTests: XCTestCase {
             let datagrams = try self.secondChannel.waitForDatagrams(count: writes)
             for datagram in datagrams {
                 XCTAssertEqual(datagram.data.readableBytes, segments * segmentSize)
+                XCTAssertEqual(datagram.metadata?.segmentSize, segmentSize)
             }
         }
 
@@ -1394,6 +1395,7 @@ class DatagramChannelTests: XCTestCase {
             let datagrams = try self.thirdChannel.waitForDatagrams(count: writes * segments)
             for datagram in datagrams {
                 XCTAssertEqual(datagram.data.readableBytes, segmentSize)
+                XCTAssertNil(datagram.metadata?.segmentSize)
             }
         }
     }
@@ -1412,6 +1414,96 @@ class DatagramChannelTests: XCTestCase {
 
     func testChannelCanReceiveMultipleLargeBuffersWithGROUsingVectorReads() throws {
         try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 4, vectorReads: 4)
+    }
+
+    func testSegmentSizeSetViaMetadataOnUnsupportedPlatform() throws {
+        try XCTSkipIf(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is supported on this platform")
+
+        let buffer = ByteBuffer(repeating: 1, count: 1000)
+        var metadata = AddressedEnvelope<ByteBuffer>.Metadata()
+        // If GSO is not supported then setting the segment size is a no-op.
+        metadata.segmentSize = 100
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer, metadata: metadata)
+
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        let datagrams = try self.secondChannel.waitForDatagrams(count: 1)
+        for datagram in datagrams {
+            XCTAssertNil(datagram.metadata)
+            XCTAssertEqual(datagram.data.readableBytes, 1000)
+        }
+    }
+
+    func testSegmentSizeSetViaMetadata() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+        try XCTSkipUnless(System.supportsUDPReceiveOffload, "UDP_GRO is not supported on this platform")
+        try XCTSkipUnless(try self.hasGoodGROSupport())
+
+        // GSO can be enabled ad-hoc by setting the segment size in the metadata. This will also
+        // populate the metadata on the receive side.
+
+        // Set GRO and a larger receive allocator on the receiver.
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+        let fixed = FixedSizeRecvByteBufferAllocator(capacity: 1 << 16)
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.recvAllocator, value: fixed).wait())
+
+        let buffer = ByteBuffer(repeating: 1, count: 10_000)
+        var writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        var metadata = AddressedEnvelope<ByteBuffer>.Metadata()
+
+        let segmentSizes = [1000, 500, 250]
+
+        for segmentSize in segmentSizes {
+            metadata.segmentSize = segmentSize
+            writeData.metadata = metadata
+            XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        }
+
+        let datagrams = try self.secondChannel.waitForDatagrams(count: segmentSizes.count)
+        for (datagram, segmentSize) in zip(datagrams, segmentSizes) {
+            XCTAssertEqual(datagram.data.readableBytes, 10_000)
+            XCTAssertEqual(datagram.metadata?.segmentSize, segmentSize)
+        }
+    }
+
+    func testSegmentSizeFromMetadataTakesPrecedence() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+        try XCTSkipUnless(System.supportsUDPReceiveOffload, "UDP_GRO is not supported on this platform")
+        try XCTSkipUnless(try self.hasGoodGROSupport())
+
+        // Set GSO on the socket.
+        let socketOptionSegmentSize = 500
+        XCTAssertNoThrow(try self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(socketOptionSegmentSize)).wait())
+        // Set GRO and a larger receive allocator on the receiver.
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+        let fixed = FixedSizeRecvByteBufferAllocator(capacity: 1 << 16)
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.recvAllocator, value: fixed).wait())
+
+        let buffer = ByteBuffer(repeating: 1, count: 10_000)
+        var writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        var metadata = AddressedEnvelope<ByteBuffer>.Metadata()
+
+        // nil means defer to the size set on the socket.
+        let segmentSizes = [1000, nil, 250, nil]
+
+        for segmentSize in segmentSizes {
+            if let segmentSize = segmentSize {
+                metadata.segmentSize = segmentSize
+                writeData.metadata = metadata
+            } else {
+                writeData.metadata = nil
+            }
+            XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        }
+
+        let datagrams = try self.secondChannel.waitForDatagrams(count: segmentSizes.count)
+        for (datagram, segmentSize) in zip(datagrams, segmentSizes) {
+            XCTAssertEqual(datagram.data.readableBytes, 10_000)
+            if let segmentSize = segmentSize {
+                XCTAssertEqual(datagram.metadata?.segmentSize, segmentSize)
+            } else {
+                XCTAssertEqual(datagram.metadata?.segmentSize, socketOptionSegmentSize)
+            }
+        }
     }
 
     private func hasGoodGROSupport() throws -> Bool {

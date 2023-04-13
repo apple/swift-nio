@@ -370,6 +370,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 final class DatagramChannel: BaseSocketChannel<Socket> {
     private var reportExplicitCongestionNotifications = false
     private var receivePacketInfo = false
+    private var receiveSegmentSize = false
+
+    private var parseControlMessages: Bool {
+        return self.reportExplicitCongestionNotifications || self.receivePacketInfo || self.receiveSegmentSize
+    }
 
     // Guard against re-entrance of flushNow() method.
     private let pendingWrites: PendingDatagramWritesManager
@@ -517,6 +522,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 throw ChannelError.operationUnsupported
             }
             let enable = value as! ChannelOptions.Types.DatagramReceiveOffload.Value
+            self.receiveSegmentSize = enable
             try self.socket.setUDPReceiveOffload(enable)
         default:
             try super.setOption0(option, value: value)
@@ -619,7 +625,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         // These control bytes must not escape the current call stack
         let controlBytesBuffer: UnsafeMutableRawBufferPointer
-        if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
+        if self.parseControlMessages {
             controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
         } else {
             controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
@@ -648,8 +654,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
-                if self.reportExplicitCongestionNotifications || self.receivePacketInfo,
-                   let controlMessagesReceived = controlBytes.receivedControlMessages {
+                if self.parseControlMessages, let controlMessagesReceived = controlBytes.receivedControlMessages {
                     metadata = .init(from: controlMessagesReceived)
                 } else {
                     metadata = nil
@@ -688,7 +693,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 try vectorReadManager.readFromSocket(
                     socket: self.socket,
                     buffer: &buffer,
-                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo)
+                    parseControlMessages: self.parseControlMessages)
             }
 
             switch result {
@@ -810,6 +815,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     controlBytes: self.selectableEventLoop.controlMessageStorage[0])
                 controlBytes.appendExplicitCongestionState(metadata: metadata,
                                                            protocolFamily: self.localAddress?.protocol)
+                controlBytes.appendSegmentSize(metadata: metadata)
                 return try self.socket.sendmsg(pointer: ptr,
                                                destinationPtr: destinationPtr,
                                                destinationSize: destinationSize,

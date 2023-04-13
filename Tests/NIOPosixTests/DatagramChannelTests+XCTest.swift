@@ -89,6 +89,9 @@ extension DatagramChannelTests {
                 ("testChannelCanReceiveLargeBufferWithGROUsingVectorReads", testChannelCanReceiveLargeBufferWithGROUsingVectorReads),
                 ("testChannelCanReceiveMultipleLargeBuffersWithGROUsingScalarReads", testChannelCanReceiveMultipleLargeBuffersWithGROUsingScalarReads),
                 ("testChannelCanReceiveMultipleLargeBuffersWithGROUsingVectorReads", testChannelCanReceiveMultipleLargeBuffersWithGROUsingVectorReads),
+                ("testSegmentSizeSetViaMetadataOnUnsupportedPlatform", testSegmentSizeSetViaMetadataOnUnsupportedPlatform),
+                ("testSegmentSizeSetViaMetadata", testSegmentSizeSetViaMetadata),
+                ("testSegmentSizeFromMetadataTakesPrecedence", testSegmentSizeFromMetadataTakesPrecedence),
            ]
    }
 }

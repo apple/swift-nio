@@ -133,6 +133,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
 
                 var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[c])
                 controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: protocolFamily)
+                controlBytes.appendSegmentSize(metadata: p.metadata)
                 let controlMessageBytePointer = controlBytes.validControlBytes
 
                 let msg = msghdr(msg_name: address,
