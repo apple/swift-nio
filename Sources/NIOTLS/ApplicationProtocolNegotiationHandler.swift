@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+import DequeModule
 
 /// The result of an ALPN negotiation.
 ///
@@ -62,7 +63,7 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
 
     private let completionHandler: (ALPNResult, Channel) -> EventLoopFuture<Void>
     private var waitingForUser: Bool
-    private var eventBuffer: [NIOAny]
+    private var eventBuffer: Deque<NIOAny>
 
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
     /// callback.
@@ -125,15 +126,18 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
     }
 
     private func unbuffer(context: ChannelHandlerContext) {
-        for datum in eventBuffer {
+        // First we check if we have anything to unbuffer
+        guard !self.eventBuffer.isEmpty else {
+            return
+        }
+
+        // Now we unbuffer until there is nothing left.
+        // Importantly firing a channel read can lead to new reads being buffered due to reentrancy!
+        while let datum = self.eventBuffer.popFirst() {
             context.fireChannelRead(datum)
         }
-        let buffer = eventBuffer
-        eventBuffer = []
-        waitingForUser = false
-        if buffer.count > 0 {
-            context.fireChannelReadComplete()
-        }
+
+        context.fireChannelReadComplete()
     }
 }
 

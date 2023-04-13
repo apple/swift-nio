@@ -16,6 +16,7 @@ import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOTLS
+import NIOTestUtils
 
 private class ReadCompletedHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
@@ -27,6 +28,26 @@ private class ReadCompletedHandler: ChannelInboundHandler {
 
     public func channelReadComplete(context: ChannelHandlerContext) {
         readCompleteCount += 1
+    }
+}
+
+final class DuplicatingReadHandler: ChannelInboundHandler {
+    typealias InboundIn = String
+
+    private let channel: EmbeddedChannel
+
+    private var hasDuplicatedRead = false
+
+    init(embeddedChannel: EmbeddedChannel) {
+        self.channel = embeddedChannel
+    }
+
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        if !self.hasDuplicatedRead {
+            self.hasDuplicatedRead = true
+            try! self.channel.writeInbound(self.unwrapInboundIn(data))
+        }
+        context.fireChannelRead(data)
     }
 }
 
@@ -219,6 +240,38 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
 
         XCTAssertEqual(readCompleteHandler.readCompleteCount, 2)
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testUnbufferingHandlesReentrantReads() throws {
+        let channel = EmbeddedChannel()
+        let continuePromise = channel.eventLoop.makePromise(of: Void.self)
+
+        let handler = ApplicationProtocolNegotiationHandler { result in
+            continuePromise.futureResult
+        }
+        let readCompleteHandler = ReadCompletedHandler()
+
+        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.addHandler(DuplicatingReadHandler(embeddedChannel: channel)).wait()
+        try channel.pipeline.addHandler(readCompleteHandler).wait()
+
+        // Fire in the event.
+        channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
+
+        // Send a write, which is buffered.
+        try channel.writeInbound("a write")
+
+        // At this time, readComplete hasn't fired.
+        XCTAssertEqual(readCompleteHandler.readCompleteCount, 1)
+
+        // Now satisfy the future, which forces data unbuffering. This should fire readComplete.
+        continuePromise.succeed(())
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
+        XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
+
+        XCTAssertEqual(readCompleteHandler.readCompleteCount, 3)
 
         XCTAssertTrue(try channel.finish().isClean)
     }
