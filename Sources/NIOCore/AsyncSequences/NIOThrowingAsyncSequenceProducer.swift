@@ -35,7 +35,7 @@ public struct NIOThrowingAsyncSequenceProducer<
     Strategy: NIOAsyncSequenceProducerBackPressureStrategy,
     Delegate: NIOAsyncSequenceProducerDelegate
 >: Sendable {
-    /// Simple struct for the return type of ``NIOThrowingAsyncSequenceProducer/makeSequence(elementType:failureType:backPressureStrategy:delegate:)``.
+    /// Simple struct for the return type of ``NIOThrowingAsyncSequenceProducer/makeSequence(elementType:failureType:backPressureStrategy:delegate:)-8qauq``.
     ///
     /// This struct contains two properties:
     /// 1. The ``source`` which should be retained by the producer and is used
