@@ -137,7 +137,5 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension NIOWebSocketFrameAggregator: Sendable {}
-#endif

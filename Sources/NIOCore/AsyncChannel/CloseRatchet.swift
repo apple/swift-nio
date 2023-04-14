@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if swift(>=5.6)
+
 /// A helper type that lets ``NIOAsyncChannelAdapterHandler`` and ``NIOAsyncChannelWriterHandler`` collude
 /// to ensure that the ``Channel`` they share is closed appropriately.
 ///
@@ -91,4 +91,4 @@ final class CloseRatchet {
         return self._state.closeWrite()
     }
 }
-#endif
+

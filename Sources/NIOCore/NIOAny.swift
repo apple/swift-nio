@@ -257,10 +257,8 @@ public struct NIOAny {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension NIOAny: Sendable {}
-#endif
 
 extension NIOAny: CustomStringConvertible {
     public var description: String {

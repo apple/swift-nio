@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if swift(>=5.6)
+
 /// The inbound message asynchronous sequence of a ``NIOAsyncChannel``.
 ///
 /// This is a unicast async sequence that allows a single iterator to be created.
@@ -87,4 +87,4 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelInboundStream.AsyncIterator: Sendable {}
-#endif
+

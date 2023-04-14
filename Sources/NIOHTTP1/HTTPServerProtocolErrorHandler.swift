@@ -72,7 +72,5 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension HTTPServerProtocolErrorHandler: Sendable {}
-#endif

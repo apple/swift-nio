@@ -14,11 +14,7 @@
 
 import NIOCore
 import NIOConcurrencyHelpers
-#if compiler(>=5.6)
 @preconcurrency import Atomics
-#else
-import Atomics
-#endif
 
 /// `EventCounterHandler` is a `ChannelHandler` that counts and forwards all the events that it sees coming through
 /// the `ChannelPipeline`.
@@ -370,10 +366,8 @@ extension EventCounterHandler: ChannelDuplexHandler {
     }
 }
 
-#if compiler(>=5.6) && canImport(_Concurrency)
 // This is a workaround before ManagedAtomic gets Sendable conformance. Once the support
 // is ready, we should remove '@preconcurrency import' and declare Sendable directly.
 extension EventCounterHandler: Sendable {
 
 }
-#endif

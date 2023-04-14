@@ -19,7 +19,6 @@ import XCTest
 
 final class AsyncChannelTests: XCTestCase {
     func testAsyncChannelBasicFunctionality() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -45,11 +44,9 @@ final class AsyncChannelTests: XCTestCase {
 
             try await channel.close()
         }
-        #endif
     }
 
     func testAsyncChannelBasicWrites() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -68,11 +65,9 @@ final class AsyncChannelTests: XCTestCase {
 
             try await channel.close()
         }
-        #endif
     }
 
     func testDroppingTheWriterClosesTheWriteSideOfTheChannel() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -100,11 +95,9 @@ final class AsyncChannelTests: XCTestCase {
             withExtendedLifetime(inboundReader) {}
             channel.close(promise: nil)
         }
-        #endif
     }
 
     func testDroppingTheWriterDoesntCloseTheWriteSideOfTheChannelIfHalfClosureIsDisabled() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -132,11 +125,9 @@ final class AsyncChannelTests: XCTestCase {
             withExtendedLifetime(inboundReader) {}
             channel.close(promise: nil)
         }
-        #endif
     }
 
     func testDroppingTheWriterFirstLeadsToChannelClosureWhenReaderIsAlsoDropped() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -174,11 +165,9 @@ final class AsyncChannelTests: XCTestCase {
 
             try await channel.closeIgnoringSuppression()
         }
-        #endif
     }
 
     func testDroppingEverythingClosesTheChannel() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -206,11 +195,9 @@ final class AsyncChannelTests: XCTestCase {
 
             try await channel.closeIgnoringSuppression()
         }
-        #endif
     }
 
     func testReadsArePropagated() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -227,11 +214,9 @@ final class AsyncChannelTests: XCTestCase {
             let reads = try await Array(wrapped.inboundStream)
             XCTAssertEqual(reads, ["hello"])
         }
-        #endif
     }
 
     func testErrorsArePropagatedButAfterReads() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -252,11 +237,9 @@ final class AsyncChannelTests: XCTestCase {
                 XCTAssertEqual(error as? TestError, .bang)
             }
         }
-        #endif
     }
 
     func testErrorsArePropagatedToWriters() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -272,11 +255,9 @@ final class AsyncChannelTests: XCTestCase {
                 XCTAssertEqual(error as? TestError, .bang)
             }
         }
-        #endif
     }
 
     func testChannelBecomingNonWritableDelaysWriters() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -313,11 +294,9 @@ final class AsyncChannelTests: XCTestCase {
 
             try await channel.close().get()
         }
-        #endif
     }
 
     func testBufferDropsReadsIfTheReaderIsGone() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -342,11 +321,9 @@ final class AsyncChannelTests: XCTestCase {
 
             try await channel.closeIgnoringSuppression()
         }
-        #endif
     }
 
     func testManagingBackpressure() {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -452,11 +429,9 @@ final class AsyncChannelTests: XCTestCase {
             }
             XCTAssertEqual(readCounter.readCount, 16)
         }
-        #endif
     }
 
     func testCanWrapAChannelSynchronously() throws {
-        #if swift(>=5.6)
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
@@ -482,7 +457,6 @@ final class AsyncChannelTests: XCTestCase {
 
             try await channel.close()
         }
-        #endif
     }
 }
 

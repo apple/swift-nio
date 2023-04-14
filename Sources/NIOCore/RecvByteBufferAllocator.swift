@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 /// Allocates `ByteBuffer`s to be used to read bytes from a `Channel` and records the number of the actual bytes that were used.
-public protocol RecvByteBufferAllocator: NIOPreconcurrencySendable {
+public protocol RecvByteBufferAllocator: _NIOPreconcurrencySendable {
     /// Allocates a new `ByteBuffer` that will be used to read bytes from a `Channel`.
     func buffer(allocator: ByteBufferAllocator) -> ByteBuffer
 

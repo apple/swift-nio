@@ -191,7 +191,5 @@ public final class NIORawSocketBootstrap {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension NIORawSocketBootstrap: Sendable {}
-#endif

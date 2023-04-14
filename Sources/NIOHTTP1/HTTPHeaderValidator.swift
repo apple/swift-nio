@@ -88,10 +88,8 @@ public final class NIOHTTPResponseHeadersValidator: ChannelOutboundHandler, Remo
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension NIOHTTPRequestHeadersValidator: Sendable {}
 
 @available(*, unavailable)
 extension NIOHTTPResponseHeadersValidator: Sendable {}
-#endif

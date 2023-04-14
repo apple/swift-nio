@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if swift(>=5.6)
+
 /// A ``NIOAsyncChannelWriter`` is used to write and flush new outbound messages in a channel.
 ///
 /// The writer acts as a bridge between the Concurrency and NIO world. It allows to write and flush messages into the
@@ -90,4 +90,4 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         self._outboundWriter.finish()
     }
 }
-#endif
+

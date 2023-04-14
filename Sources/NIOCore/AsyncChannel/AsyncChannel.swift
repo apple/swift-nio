@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if swift(>=5.6)
+
 /// Wraps a NIO ``Channel`` object into a form suitable for use in Swift Concurrency.
 ///
 /// ``NIOAsyncChannel`` abstracts the notion of a NIO ``Channel`` into something that
@@ -130,4 +130,3 @@ extension Channel {
         return (inboundStream, writer)
     }
 }
-#endif
