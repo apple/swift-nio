@@ -78,7 +78,12 @@ final class AsyncChannelTests: XCTestCase {
 
             do {
                 let wrapped = try await channel.testingEventLoop.executeInContext {
-                    try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: Never.self, outboundType: Never.self)
+                    try NIOAsyncChannel(
+                        synchronouslyWrapping: channel,
+                        isOutboundHalfClosureEnabled: true,
+                        inboundType: Never.self,
+                        outboundType: Never.self
+                    )
                 }
                 inboundReader = wrapped.inboundStream
 
@@ -140,7 +145,12 @@ final class AsyncChannelTests: XCTestCase {
 
                 do {
                     let wrapped = try await channel.testingEventLoop.executeInContext {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: Never.self, outboundType: Never.self)
+                        try NIOAsyncChannel(
+                            synchronouslyWrapping: channel,
+                            isOutboundHalfClosureEnabled: true,
+                            inboundType: Never.self,
+                            outboundType: Never.self
+                        )
                     }
                     inboundReader = wrapped.inboundStream
 
