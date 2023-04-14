@@ -15,7 +15,7 @@ import NIOCore
 @testable import NIOEmbedded
 import XCTest
 import NIOConcurrencyHelpers
-@preconcurrency import Atomics
+import Atomics
 
 private class EmbeddedTestError: Error { }
 

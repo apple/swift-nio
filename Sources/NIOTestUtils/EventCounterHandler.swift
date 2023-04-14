@@ -14,7 +14,7 @@
 
 import NIOCore
 import NIOConcurrencyHelpers
-@preconcurrency import Atomics
+import Atomics
 
 /// `EventCounterHandler` is a `ChannelHandler` that counts and forwards all the events that it sees coming through
 /// the `ChannelPipeline`.
@@ -24,7 +24,7 @@ import NIOConcurrencyHelpers
 ///
 /// - note: Contrary to most `ChannelHandler`s, all of `EventCounterHandler`'s API is thread-safe meaning that you can
 ///         query the events received from any thread.
-public final class EventCounterHandler {
+public final class EventCounterHandler: Sendable {
     private let _channelRegisteredCalls = ManagedAtomic<Int>(0)
     private let _channelUnregisteredCalls = ManagedAtomic<Int>(0)
     private let _channelActiveCalls = ManagedAtomic<Int>(0)
@@ -364,10 +364,4 @@ extension EventCounterHandler: ChannelDuplexHandler {
         self._triggerUserOutboundEventCalls.wrappingIncrement(ordering: .relaxed)
         context.triggerUserOutboundEvent(event, promise: promise)
     }
-}
-
-// This is a workaround before ManagedAtomic gets Sendable conformance. Once the support
-// is ready, we should remove '@preconcurrency import' and declare Sendable directly.
-extension EventCounterHandler: Sendable {
-
 }
