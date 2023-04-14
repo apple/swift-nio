@@ -492,7 +492,7 @@ extension ServerBootstrap {
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
     ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's outbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
@@ -523,7 +523,7 @@ extension ServerBootstrap {
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
     ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's outbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
@@ -551,7 +551,7 @@ extension ServerBootstrap {
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
     ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's outbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
@@ -582,7 +582,7 @@ extension ServerBootstrap {
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
     ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's outbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
@@ -616,7 +616,7 @@ extension ServerBootstrap {
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
     ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's outbound type.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
