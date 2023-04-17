@@ -15,11 +15,10 @@
 @available(*, deprecated, renamed: "Sendable")
 public typealias NIOSendable = Swift.Sendable
 
-#if swift(>=5.6)
-@preconcurrency public protocol NIOPreconcurrencySendable: Sendable {}
-#else
-public protocol NIOPreconcurrencySendable {}
-#endif
+@preconcurrency public protocol _NIOPreconcurrencySendable: Sendable {}
+
+@available(*, deprecated, message: "use @preconcurrency and Sendable directly")
+public typealias NIOPreconcurrencySendable = _NIOPreconcurrencySendable
 
 /// ``UnsafeTransfer`` can be used to make non-`Sendable` values `Sendable`.
 /// As the name implies, the usage of this is unsafe because it disables the sendable checking of the compiler.

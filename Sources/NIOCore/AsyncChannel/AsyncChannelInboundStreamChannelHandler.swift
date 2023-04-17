@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if swift(>=5.6)
+
 /// A ``ChannelHandler`` that is used to transform the inbound portion of a NIO
 /// ``Channel`` into an asynchronous sequence that supports back-pressure.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
@@ -249,4 +249,4 @@ extension NIOAsyncChannelInboundStreamChannelHandler {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelInboundStreamChannelHandler: Sendable {}
-#endif
+

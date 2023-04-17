@@ -744,10 +744,8 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension HTTPDecoder: Sendable {}
-#endif
 
 /// Strategy to use when a HTTPDecoder is removed from a pipeline after a HTTP upgrade was detected.
 public enum RemoveAfterUpgradeStrategy: Sendable {

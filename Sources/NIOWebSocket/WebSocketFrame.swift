@@ -344,10 +344,8 @@ extension WebSocketFrame {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension WebSocketFrame._Storage: Sendable {}
-#endif
 
 extension WebSocketFrame._Storage: Equatable {
     static func ==(lhs: WebSocketFrame._Storage, rhs: WebSocketFrame._Storage) -> Bool {

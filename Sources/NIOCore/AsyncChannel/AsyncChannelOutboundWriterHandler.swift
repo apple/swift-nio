@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if swift(>=5.6)
+
 import DequeModule
 
 /// A ``ChannelHandler`` that is used to write the outbound portion of a NIO
@@ -172,4 +172,4 @@ extension NIOAsyncChannelOutboundWriterHandler {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelOutboundWriterHandler: Sendable {}
-#endif
+

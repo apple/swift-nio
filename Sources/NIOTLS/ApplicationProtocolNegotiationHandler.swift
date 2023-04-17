@@ -141,7 +141,5 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension ApplicationProtocolNegotiationHandler: Sendable {}
-#endif

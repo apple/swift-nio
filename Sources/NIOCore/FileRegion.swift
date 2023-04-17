@@ -82,10 +82,8 @@ public struct FileRegion {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension FileRegion: Sendable {}
-#endif
 
 extension FileRegion {
     /// Create a new `FileRegion` forming a complete file.

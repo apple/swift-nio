@@ -1153,7 +1153,7 @@ extension EventLoop {
 }
 
 /// Provides an endless stream of `EventLoop`s to use.
-public protocol EventLoopGroup: AnyObject, NIOPreconcurrencySendable {
+public protocol EventLoopGroup: AnyObject, _NIOPreconcurrencySendable {
     /// Returns the next `EventLoop` to use, this is useful for load balancing.
     ///
     /// The algorithm that is used to select the next `EventLoop` is specific to each `EventLoopGroup`. A common choice

@@ -43,7 +43,5 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension WebSocketProtocolErrorHandler: Sendable {}
-#endif
