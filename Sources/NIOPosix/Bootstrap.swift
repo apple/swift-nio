@@ -311,8 +311,9 @@ public final class ServerBootstrap {
     /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
-    ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
-    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `path`.
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
+    ///     unless `cleanupExistingSocketFile`is set to `true`.
+    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
     public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool) -> EventLoopFuture<Channel> {
         if cleanupExistingSocketFile {
             do {
@@ -547,37 +548,8 @@ extension ServerBootstrap {
     /// Bind the `ServerSocketChannel` to the `unixDomainSocketPath` parameter.
     ///
     /// - Parameters:
-    ///   - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
-    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
-    ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's outbound type.
-    ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
-    ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
-    /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
-    public func bind<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
-        unixDomainSocketPath: String,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
-        isChildChannelOutboundHalfClosureEnabled: Bool = false
-    ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
-        return try await self.bindAsyncChannel0(
-            serverBackpressureStrategy: serverBackpressureStrategy,
-            childBackpressureStrategy: childBackpressureStrategy,
-            isChildChannelOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled
-        ) {
-            try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
-        }
-    }
-
-    /// Bind the `ServerSocketChannel` to the `unixDomainSocketPath` parameter.
-    ///
-    /// - Parameters:
-    ///   - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
+    ///   - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
+    ///     unless `cleanupExistingSocketFile`is set to `true`.
     ///   - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
@@ -590,7 +562,7 @@ extension ServerBootstrap {
     @_spi(AsyncChannel)
     public func bind<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
         unixDomainSocketPath: String,
-        cleanupExistingSocketFile: Bool,
+        cleanupExistingSocketFile: Bool = false,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
@@ -789,36 +761,12 @@ extension ServerBootstrap {
         ) { address }
     }
 
-    /// Bind the `ServerSocketChannel` to the `unixDomainSocketPath` parameter.
-    /// Waiting for protocol negotiation to finish before yielding the channel to the returned ``NIOAsyncChannel``.
-    ///
-    /// - Parameters:
-    ///   - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
-    ///   - protocolNegotiationHandlerType: The protocol negotiation handler type that is awaited on. A handler of this type
-    ///   must be added to the pipeline in the child channel initializer.
-    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results. It is expected that the protocol negotiation handler
-    /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
-    public func bind<Handler: NIOProtocolNegotiationHandler>(
-        unixDomainSocketPath: String,
-        protocolNegotiationHandlerType: Handler.Type,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
-    ) async throws -> NIOAsyncChannel<Handler.NegotiationResult, Never> {
-        return try await self.bindAsyncChannelWithProtocolNegotiation0(
-            protocolNegotiationHandlerType: protocolNegotiationHandlerType,
-            serverBackpressureStrategy: serverBackpressureStrategy
-        ) {
-            try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
-        }
-    }
-
     /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
     /// Waiting for protocol negotiation to finish before yielding the channel to the returned ``NIOAsyncChannel``.
     ///
     /// - Parameters:
-    ///   - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
+    ///   - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
+    ///     unless `cleanupExistingSocketFile`is set to `true`.
     ///   - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
     ///   - protocolNegotiationHandlerType: The protocol negotiation handler type that is awaited on. A handler of this type
     ///   must be added to the pipeline in the child channel initializer.
@@ -829,7 +777,7 @@ extension ServerBootstrap {
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         unixDomainSocketPath: String,
-        cleanupExistingSocketFile: Bool,
+        cleanupExistingSocketFile: Bool = false,
         protocolNegotiationHandlerType: Handler.Type,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
     ) async throws -> NIOAsyncChannel<Handler.NegotiationResult, Never> {
@@ -931,7 +879,7 @@ extension ServerBootstrap {
                     )
 
                     // In the case of protocol negotiation we cannot wrap the child channels into
-                    // `NIOAsyncChannel`s for the user since we don't know the type. We rather exepect
+                    // `NIOAsyncChannel`s for the user since we don't know the type. We rather expect
                     // the user to wrap the child channels themselves when the negotiation is done
                     // and return the wrapped async channel as part of the negotiation result.
                     let asyncChannel = try NIOAsyncChannel<Handler.NegotiationResult, Never>(
@@ -1554,8 +1502,9 @@ public final class DatagramBootstrap {
     /// Bind the `DatagramChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
-    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. `path` must not exist, it will be created by the system.
-    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `path`.
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
+    ///     unless `cleanupExistingSocketFile`is set to `true`.
+    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
     public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool) -> EventLoopFuture<Channel> {
         if cleanupExistingSocketFile {
             do {

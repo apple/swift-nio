@@ -30,28 +30,17 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         closeRatchet: CloseRatchet
     ) throws {
-        channel.eventLoop.preconditionInEventLoop()
         let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound, Inbound>(
             eventLoop: channel.eventLoop,
             closeRatchet: closeRatchet
         )
-        let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
-        if let userProvided = backpressureStrategy {
-            strategy = userProvided
-        } else {
-            // Default strategy. These numbers are fairly arbitrary, but they line up with the default value of
-            // maxMessagesPerRead.
-            strategy = .init(lowWatermark: 2, highWatermark: 10)
-        }
-
-        let sequence = Producer.makeSequence(
-            backPressureStrategy: strategy,
-            delegate: NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate(handler: handler)
+        try self.init(
+            channel: channel,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            handler: handler
         )
-        handler.source = sequence.source
-        try channel.pipeline.syncOperations.addHandler(handler)
-        self._producer = sequence.sequence
     }
 
     @inlinable
@@ -61,29 +50,18 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
         closeRatchet: CloseRatchet,
         transformationClosure: @escaping (ChannelHandlerInboundIn) throws -> Inbound
     ) throws {
-        channel.eventLoop.preconditionInEventLoop()
         let handler = NIOAsyncChannelInboundStreamChannelHandler<ChannelHandlerInboundIn, Inbound>(
             eventLoop: channel.eventLoop,
             closeRatchet: closeRatchet,
             transformationClosure: transformationClosure
         )
-        let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
-        if let userProvided = backpressureStrategy {
-            strategy = userProvided
-        } else {
-            // Default strategy. These numbers are fairly arbitrary, but they line up with the default value of
-            // maxMessagesPerRead.
-            strategy = .init(lowWatermark: 2, highWatermark: 10)
-        }
-
-        let sequence = Producer.makeSequence(
-            backPressureStrategy: strategy,
-            delegate: NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate(handler: handler)
+        try self.init(
+            channel: channel,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            handler: handler
         )
-        handler.source = sequence.source
-        try channel.pipeline.syncOperations.addHandler(handler)
-        self._producer = sequence.sequence
     }
 
     @inlinable
@@ -93,12 +71,28 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
         closeRatchet: CloseRatchet,
         protocolNegotiationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
     ) throws {
-        channel.eventLoop.preconditionInEventLoop()
         let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, Inbound>(
             eventLoop: channel.eventLoop,
             closeRatchet: closeRatchet,
             protocolNegotiationClosure: protocolNegotiationClosure
         )
+
+        try self.init(
+            channel: channel,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            handler: handler
+        )
+    }
+
+    @inlinable
+    init<HandlerInbound: Sendable>(
+        channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        closeRatchet: CloseRatchet,
+        handler: NIOAsyncChannelInboundStreamChannelHandler<HandlerInbound, Inbound>
+    ) throws {
+        channel.eventLoop.preconditionInEventLoop()
         let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
         if let userProvided = backpressureStrategy {

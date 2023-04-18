@@ -67,7 +67,7 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     @usableFromInline
     let closeRatchet: CloseRatchet
 
-    /// A type indication what kind of transformation to apply to reads.
+    /// A type indicating what kind of transformation to apply to reads.
     @usableFromInline
     enum Transformation {
         /// A synchronous transformation is applied to incoming reads. This is used when bootstrapping

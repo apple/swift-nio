@@ -15,7 +15,31 @@
 @_spi(AsyncChannel) import NIOCore
 import DequeModule
 
-
+/// A helper ``ChannelInboundHandler`` that makes it easy to swap channel pipelines
+/// based on the result of an ALPN negotiation.
+///
+/// The standard pattern used by applications that want to use ALPN is to select
+/// an application protocol based on the result, optionally falling back to some
+/// default protocol. To do this in SwiftNIO requires that the channel pipeline be
+/// reconfigured based on the result of the ALPN negotiation. This channel handler
+/// encapsulates that logic in a generic form that doesn't depend on the specific
+/// TLS implementation in use by using ``TLSUserEvent``
+///
+/// The user of this channel handler provides a single closure that is called with
+/// an ``ALPNResult`` when the ALPN negotiation is complete. Based on that result
+/// the user is free to reconfigure the ``ChannelPipeline`` as required, and should
+/// return an ``EventLoopFuture`` that will complete when the pipeline is reconfigured.
+///
+/// Until the ``EventLoopFuture`` completes, this channel handler will buffer inbound
+/// data. When the ``EventLoopFuture`` completes, the buffered data will be replayed
+/// down the channel. Then, finally, this channel handler will automatically remove
+/// itself from the channel pipeline, leaving the pipeline in its final
+/// configuration.
+///
+/// Importantly, this is a typed variant of the ``ApplicationProtocolNegotiationHandler`` and allows the user to
+/// specify a type that must be returned from the supplied closure. The result will then be used to succeed the ``NIOTypedApplicationProtocolNegotiationHandler/protocolNegotiationResult``
+/// promise. This allows us to construct pipelines that include protocol negotiation handlers and be able to bridge them into ``NIOAsyncChannel``
+/// based bootstraps.
 @_spi(AsyncChannel)
 public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>: ChannelInboundHandler, RemovableChannelHandler, NIOProtocolNegotiationHandler {
     @_spi(AsyncChannel)
