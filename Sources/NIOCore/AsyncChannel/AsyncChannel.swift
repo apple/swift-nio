@@ -112,7 +112,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false,
         transformationClosure: @escaping (ChannelHandlerInboundIn) throws -> Inbound
-    ) throws {
+    ) throws where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
         (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
@@ -131,7 +131,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false,
         protocolNegotiationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
-    ) throws {
+    ) throws where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
         (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
