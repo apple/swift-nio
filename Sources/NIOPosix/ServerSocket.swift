@@ -106,7 +106,16 @@ import NIOCore
             guard let fd = result else {
                 return nil
             }
-            let sock = try Socket(socket: fd)
+
+            let sock: Socket
+            do {
+                sock = try Socket(socket: fd)
+            } catch {
+                // best effort
+                try? Posix.close(descriptor: fd)
+                throw error
+            }
+
             #if !os(Linux)
             if setNonBlocking {
                 do {
