@@ -925,7 +925,6 @@ extension ServerBootstrap {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension ServerBootstrap: Sendable {}
 

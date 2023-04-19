@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 @_spi(AsyncChannel) import NIOCore
-import DequeModule
 
 /// A helper ``ChannelInboundHandler`` that makes it easy to swap channel pipelines
 /// based on the result of an ALPN negotiation.
@@ -56,8 +55,7 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
     private let negotiatedPromise: EventLoopPromise<NIOProtocolNegotiationResult<NegotiationResult>>
 
     private let completionHandler: (ALPNResult, Channel) -> EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>
-    private var hasSeenTLSEvent = false
-    private var eventBuffer = Deque<NIOAny>()
+    private var stateMachine = ProtocolNegotiationHandlerStateMachine<NIOProtocolNegotiationResult<NegotiationResult>>()
 
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
     /// callback.
@@ -83,83 +81,81 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
     }
 
     @_spi(AsyncChannel)
-    public func channelInactive(context: ChannelHandlerContext) {
-        self.negotiatedPromise.fail(ChannelError.outputClosed)
-        context.fireChannelInactive()
-    }
-
-    @_spi(AsyncChannel)
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
-        guard let tlsEvent = event as? TLSUserEvent else {
+        switch self.stateMachine.userInboundEventTriggered(event: event) {
+        case .fireUserInboundEventTriggered:
             context.fireUserInboundEventTriggered(event)
-            return
-        }
 
-        if case .handshakeCompleted(let p) = tlsEvent {
-            self.handshakeCompleted(context: context, negotiatedProtocol: p)
-        } else {
-            context.fireUserInboundEventTriggered(event)
+        case .invokeUserClosure(let result):
+            self.invokeUserClosure(context: context, result: result)
         }
     }
 
     @_spi(AsyncChannel)
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        if self.hasSeenTLSEvent {
-            self.eventBuffer.append(data)
-        } else {
-            // We are being defensive here and just forward every read we get before we receive
-            // a TLSEvent. We really don't know what types these reads are and can't do much with them
+        switch self.stateMachine.channelRead(data: data) {
+        case .fireChannelRead:
             context.fireChannelRead(data)
+
+        case .none:
+            break
         }
     }
 
-    private func handshakeCompleted(context: ChannelHandlerContext, negotiatedProtocol: String?) {
-        self.hasSeenTLSEvent = true
+    @_spi(AsyncChannel)
+    public func channelInactive(context: ChannelHandlerContext) {
+        self.stateMachine.channelInactive()
+        
+        self.negotiatedPromise.fail(ChannelError.outputClosed)
+        context.fireChannelInactive()
+    }
 
-        let result: ALPNResult
-        if let negotiatedProtocol = negotiatedProtocol {
-            result = .negotiated(negotiatedProtocol)
-        } else {
-            result = .fallback
-        }
-
+    private func invokeUserClosure(context: ChannelHandlerContext, result: ALPNResult) {
         let switchFuture = self.completionHandler(result, context.channel)
-        switchFuture
-            .whenComplete { result in
-                switch result {
-                case .success(let success):
-                    // We first complete the negotiated promise and then unbuffer
-                    // This allows the users to setup their consumption.
-                    self.negotiatedPromise.succeed(success)
-                    self.unbuffer(context: context)
-                    context.pipeline.removeHandler(self, promise: nil)
 
-                case .failure(let error):
-                    self.negotiatedPromise.fail(error)
-                    context.pipeline.fireErrorCaught(error)
-                    self.unbuffer(context: context)
-                    context.pipeline.removeHandler(self, promise: nil)
-                }
+        switchFuture
+            .hop(to: context.eventLoop)
+            .whenComplete { result in
+                self.userFutureCompleted(context: context, result: result)
             }
     }
 
+    private func userFutureCompleted(context: ChannelHandlerContext, result: Result<NIOProtocolNegotiationResult<NegotiationResult>, Error>) {
+        switch self.stateMachine.userFutureCompleted(with: result) {
+        case .fireErrorCaughtAndRemoveHandler(let error):
+            self.negotiatedPromise.fail(error)
+            context.fireErrorCaught(error)
+            context.pipeline.removeHandler(self, promise: nil)
+
+        case .fireErrorCaughtAndStartUnbuffering(let error):
+            self.negotiatedPromise.fail(error)
+            context.fireErrorCaught(error)
+            self.unbuffer(context: context)
+
+        case .startUnbuffering(let value):
+            self.negotiatedPromise.succeed(value)
+            self.unbuffer(context: context)
+
+        case .removeHandler(let value):
+            self.negotiatedPromise.succeed(value)
+            context.pipeline.removeHandler(self, promise: nil)
+        }
+    }
+
     private func unbuffer(context: ChannelHandlerContext) {
-        // First we check if we have anything to unbuffer
-        guard !self.eventBuffer.isEmpty else {
-            return
-        }
+        while true {
+            switch self.stateMachine.unbuffer() {
+            case .fireChannelRead(let data):
+                context.fireChannelRead(data)
 
-        // Now we unbuffer until there is nothing left.
-        // Importantly firing a channel read can lead to new reads being buffered due to reentrancy!
-        while let datum = self.eventBuffer.popFirst() {
-            context.fireChannelRead(datum)
+            case .fireChannelReadCompleteAndRemoveHandler:
+                context.fireChannelReadComplete()
+                context.pipeline.removeHandler(self, promise: nil)
+                return
+            }
         }
-
-        context.fireChannelReadComplete()
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension NIOTypedApplicationProtocolNegotiationHandler: Sendable {}
-#endif

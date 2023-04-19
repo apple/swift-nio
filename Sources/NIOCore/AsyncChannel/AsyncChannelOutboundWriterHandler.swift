@@ -166,4 +166,3 @@ extension NIOAsyncChannelOutboundWriterHandler {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelOutboundWriterHandler: Sendable {}
-
