@@ -323,4 +323,137 @@ final class SALChannelTest: XCTestCase, SALTest {
         }.salWait())
     }
 
+    func testAcceptingInboundConnections() throws {
+        final class ConnectionRecorder: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+
+            let readCount = ManagedAtomic(0)
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                readCount.wrappingIncrement(ordering: .sequentiallyConsistent)
+                context.fireChannelRead(data)
+            }
+        }
+
+        let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
+        let remoteAddress = try! SocketAddress(ipAddress: "5.6.7.8", port: 10)
+        let channel = try self.makeBoundServerSocketChannel(localAddress: localAddress)
+
+        let socket = try self.makeSocket()
+
+        let readRecorder = ConnectionRecorder()
+        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
+            let readEvent = SelectorEvent(io: [.read],
+                                          registration: NIORegistration(channel: .serverSocketChannel(channel),
+                                                                        interested: [.read],
+                                                                        registrationID: .initialRegistrationID))
+            try self.assertWaitingForNotification(result: readEvent)
+            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
+            try self.assertLocalAddress(address: localAddress)
+            try self.assertRemoteAddress(address: remoteAddress)
+
+            // This accept is expected: we delay inbound channel registration by one EL tick.
+            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: nil)
+
+            // Then we register the inbound channel.
+            try self.assertRegister { selectable, eventSet, registration in
+                if case (.socketChannel(let channel), let registrationEventSet) =
+                    (registration.channel, registration.interested) {
+
+                    XCTAssertEqual(localAddress, channel.localAddress)
+                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                    XCTAssertEqual(eventSet, registrationEventSet)
+                    XCTAssertEqual(.reset, eventSet)
+                    return true
+                } else {
+                    return false
+                }
+            }
+            try self.assertReregister { selectable, eventSet in
+                XCTAssertEqual([.reset, .readEOF], eventSet)
+                return true
+            }
+            // because autoRead is on by default
+            try self.assertReregister { selectable, eventSet in
+                XCTAssertEqual([.reset, .readEOF, .read], eventSet)
+                return true
+            }
+
+            try self.assertParkedRightNow()
+        }) {
+            channel.pipeline.addHandler(readRecorder)
+        })
+
+        XCTAssertEqual(readRecorder.readCount.load(ordering: .sequentiallyConsistent), 1)
+    }
+
+    func testAcceptingInboundConnectionsDoesntUnregisterForReadIfTheSecondAcceptErrors() throws {
+        final class ConnectionRecorder: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+
+            let readCount = ManagedAtomic(0)
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                readCount.wrappingIncrement(ordering: .sequentiallyConsistent)
+                context.fireChannelRead(data)
+            }
+        }
+
+        let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
+        let remoteAddress = try! SocketAddress(ipAddress: "5.6.7.8", port: 10)
+        let channel = try self.makeBoundServerSocketChannel(localAddress: localAddress)
+
+        let socket = try self.makeSocket()
+
+        let readRecorder = ConnectionRecorder()
+        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
+            let readEvent = SelectorEvent(io: [.read],
+                                          registration: NIORegistration(channel: .serverSocketChannel(channel),
+                                                                        interested: [.read],
+                                                                        registrationID: .initialRegistrationID))
+            try self.assertWaitingForNotification(result: readEvent)
+            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
+            try self.assertLocalAddress(address: localAddress)
+            try self.assertRemoteAddress(address: remoteAddress)
+
+            // This accept is expected: we delay inbound channel registration by one EL tick. This one throws.
+            // We throw a deliberate error here: this one hits the buggy codepath.
+            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, throwing: NIOFcntlFailedError())
+
+            // Then we register the inbound channel from the first accept.
+            try self.assertRegister { selectable, eventSet, registration in
+                if case (.socketChannel(let channel), let registrationEventSet) =
+                    (registration.channel, registration.interested) {
+
+                    XCTAssertEqual(localAddress, channel.localAddress)
+                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                    XCTAssertEqual(eventSet, registrationEventSet)
+                    XCTAssertEqual(.reset, eventSet)
+                    return true
+                } else {
+                    return false
+                }
+            }
+            try self.assertReregister { selectable, eventSet in
+                XCTAssertEqual([.reset, .readEOF], eventSet)
+                return true
+            }
+            // because autoRead is on by default
+            try self.assertReregister { selectable, eventSet in
+                XCTAssertEqual([.reset, .readEOF, .read], eventSet)
+                return true
+            }
+
+            // Importantly, we should now be _parked_. This test is mostly testing in the absence:
+            // we expect not to see a reregister that removes readable.
+            try self.assertParkedRightNow()
+        }) {
+            channel.pipeline.addHandler(readRecorder)
+        })
+
+        XCTAssertEqual(readRecorder.readCount.load(ordering: .sequentiallyConsistent), 1)
+    }
+
 }
