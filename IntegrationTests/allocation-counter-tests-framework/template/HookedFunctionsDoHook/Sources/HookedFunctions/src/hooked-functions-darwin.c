@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <assert.h>
 #if __APPLE__
 
 #define _GNU_SOURCE
@@ -23,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -148,6 +150,37 @@ int replacement_posix_memalign(void **memptr, size_t alignment, size_t size) {
     JUMP_INTO_LIBC_FUN(posix_memalign, memptr, alignment, size);
 }
 
+int replacement_socket(int domain, int type, int protocol) {
+    int fd = socket(domain, type, protocol);
+    if (fd < 0) {
+        return fd;
+    }
+
+    track_open_fd(fd);
+    return fd;
+}
+
+int replacement_accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len) {
+    int fd = accept(socket, address, address_len);
+
+    if (fd < 0) {
+        return fd;
+    }
+
+    track_open_fd(fd);
+    return fd;
+}
+
+int replacement_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
+    // Should never be called.
+    assert(false);
+}
+
+int replacement_close(int fildes) {
+    track_closed_fd(fildes);
+    JUMP_INTO_LIBC_FUN(close, fildes);
+}
+
 DYLD_INTERPOSE(replacement_free, free)
 DYLD_INTERPOSE(replacement_malloc, malloc)
 DYLD_INTERPOSE(replacement_realloc, realloc)
@@ -161,4 +194,7 @@ DYLD_INTERPOSE(replacement_malloc_zone_valloc, malloc_zone_valloc)
 DYLD_INTERPOSE(replacement_malloc_zone_realloc, malloc_zone_realloc)
 DYLD_INTERPOSE(replacement_malloc_zone_memalign, malloc_zone_memalign)
 DYLD_INTERPOSE(replacement_malloc_zone_free, malloc_zone_free)
+DYLD_INTERPOSE(replacement_socket, socket)
+DYLD_INTERPOSE(replacement_accept, accept)
+DYLD_INTERPOSE(replacement_close, close)
 #endif
