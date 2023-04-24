@@ -16,6 +16,7 @@
 @_spi(AsyncChannel) @testable import NIOPosix
 import XCTest
 @_spi(AsyncChannel) import NIOTLS
+import NIOConcurrencyHelpers
 
 fileprivate final class LineDelimiterDecoder: ByteToMessageDecoder {
     private let newLine = "\n".utf8.first!
@@ -299,11 +300,34 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testAsyncChannelProtocolNegotiation_whenFails() throws {
+        final class CollectingHandler: ChannelInboundHandler {
+            typealias InboundIn = Channel
+
+            private let channels: NIOLockedValueBox<[Channel]>
+
+            init(channels: NIOLockedValueBox<[Channel]>) {
+                self.channels = channels
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                let channel = self.unwrapInboundIn(data)
+
+                self.channels.withLockedValue { $0.append(channel) }
+
+                context.fireChannelRead(data)
+            }
+        }
         XCTAsyncTest {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-            
+            let channels = NIOLockedValueBox<[Channel]>([Channel]())
+
             let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelInitializer { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(CollectingHandler(channels: channels))
+                    }
+                }
                 .childChannelOption(ChannelOptions.autoRead, value: true)
                 .childChannelInitializer { channel in
                     channel.eventLoop.makeCompletedFuture {
@@ -355,7 +379,14 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 
                 await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
                 
-                
+                let failedInboundChannel = channels.withLockedValue { channels -> Channel in
+                    XCTAssertEqual(channels.count, 2)
+                    return channels[0]
+                }
+
+                // We are waiting here to make sure the channel got closed
+                try await failedInboundChannel.closeFuture.get()
+
                 group.cancelAll()
             }
         }

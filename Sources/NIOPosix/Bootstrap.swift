@@ -893,6 +893,10 @@ extension ServerBootstrap {
                                     handler.protocolNegotiationResult
                                 }.flatMap { result in
                                     ServerBootstrap.waitForFinalResult(result, eventLoop: eventLoop)
+                                }.flatMapErrorThrowing { error in
+                                    channel.pipeline.fireErrorCaught(error)
+                                    channel.close(promise: nil)
+                                    throw error
                                 }
                         }
 
