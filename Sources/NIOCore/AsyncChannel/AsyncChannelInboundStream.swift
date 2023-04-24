@@ -25,67 +25,6 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @usableFromInline let _producer: Producer
 
     @inlinable
-    init(
-        channel: Channel,
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeRatchet: CloseRatchet
-    ) throws {
-        let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound, Inbound>(
-            eventLoop: channel.eventLoop,
-            closeRatchet: closeRatchet
-        )
-
-        try self.init(
-            channel: channel,
-            backpressureStrategy: backpressureStrategy,
-            closeRatchet: closeRatchet,
-            handler: handler
-        )
-    }
-
-    @inlinable
-    init<ChannelHandlerInboundIn: Sendable>(
-        channel: Channel,
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeRatchet: CloseRatchet,
-        transformationClosure: @escaping (ChannelHandlerInboundIn) throws -> Inbound
-    ) throws {
-        let handler = NIOAsyncChannelInboundStreamChannelHandler<ChannelHandlerInboundIn, Inbound>(
-            eventLoop: channel.eventLoop,
-            closeRatchet: closeRatchet,
-            transformationClosure: transformationClosure
-        )
-
-        try self.init(
-            channel: channel,
-            backpressureStrategy: backpressureStrategy,
-            closeRatchet: closeRatchet,
-            handler: handler
-        )
-    }
-
-    @inlinable
-    init(
-        channel: Channel,
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeRatchet: CloseRatchet,
-        protocolNegotiationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
-    ) throws {
-        let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, Inbound>(
-            eventLoop: channel.eventLoop,
-            closeRatchet: closeRatchet,
-            protocolNegotiationClosure: protocolNegotiationClosure
-        )
-
-        try self.init(
-            channel: channel,
-            backpressureStrategy: backpressureStrategy,
-            closeRatchet: closeRatchet,
-            handler: handler
-        )
-    }
-
-    @inlinable
     init<HandlerInbound: Sendable>(
         channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
@@ -110,6 +49,71 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
         handler.source = sequence.source
         try channel.pipeline.syncOperations.addHandler(handler)
         self._producer = sequence.sequence
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStream`` which is used when the pipeline got synchronously wrapped.
+    @inlinable
+    static func makeWrappingHandler(
+        channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        closeRatchet: CloseRatchet
+    ) throws -> NIOAsyncChannelInboundStream {
+        let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound, Inbound>.makeWrappingHandler(
+            eventLoop: channel.eventLoop,
+            closeRatchet: closeRatchet
+        )
+
+        return try .init(
+            channel: channel,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            handler: handler
+        )
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel.
+    @inlinable
+    static func makeBindingHandler(
+        channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
+    ) throws -> NIOAsyncChannelInboundStream {
+        let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, Inbound>.makeBindingHandler(
+            eventLoop: channel.eventLoop,
+            closeRatchet: closeRatchet,
+            transformationClosure: transformationClosure
+        )
+
+        return try .init(
+            channel: channel,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            handler: handler
+        )
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel when the child
+    /// channel does protocol negotiation.
+    @inlinable
+    static func makeProtocolNegotiationHandler(
+        channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
+    ) throws -> NIOAsyncChannelInboundStream {
+        let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, Inbound>.makeProtocolNegotiationHandler(
+            eventLoop: channel.eventLoop,
+            closeRatchet: closeRatchet,
+            transformationClosure: transformationClosure
+        )
+
+        return try .init(
+            channel: channel,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            handler: handler
+        )
     }
 }
 

@@ -665,9 +665,9 @@ extension ServerBootstrap {
         let serverChannelInit = self.serverChannelInit ?? { _ in eventLoop.makeSucceededFuture(()) }
         let childChannelInit = self.childChannelInit
         let childChannelOptions = self._childChannelOptions
-        
+
         let serverChannel = try makeServerChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup, self.enableMPTCP)
-        
+
         return try await eventLoop.submit {
             serverChannelOptions.applyAllChannelOptions(to: serverChannel).flatMap {
                 serverChannelInit(serverChannel)
@@ -681,19 +681,21 @@ extension ServerBootstrap {
                     // We are wrapping the inbound channels into `NIOAsyncChannel`s with the transformation
                     // closure of the `NIOAsyncChannel` that allows us to wrap them without adding
                     // wrapping/unwrapping handlers to the pipeline.
-                    let asyncChannel = try NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never>(
+                    let asyncChannel = try NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never>.wrapAsyncChannelForBootstrapBind(
                         synchronouslyWrapping: serverChannel,
                         backpressureStrategy: serverBackpressureStrategy,
                         transformationClosure: { channel in
-                            try NIOAsyncChannel(
-                                synchronouslyWrapping: channel,
-                                backpressureStrategy: childBackpressureStrategy,
-                                isOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled,
-                                inboundType: ChildChannelInbound.self,
-                                outboundType: ChildChannelOutbound.self
-                            )
+                            // We must hop to the child channel event loop here to add the async channel handlers
+                            channel.eventLoop.submit {
+                                try NIOAsyncChannel(
+                                    synchronouslyWrapping: channel,
+                                    backpressureStrategy: childBackpressureStrategy,
+                                    isOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled,
+                                    inboundType: ChildChannelInbound.self,
+                                    outboundType: ChildChannelOutbound.self
+                                )
+                            }
                         }
-
                     )
                     return register(eventLoop, serverChannel).map { asyncChannel }
                 } catch {
@@ -882,10 +884,10 @@ extension ServerBootstrap {
                     // `NIOAsyncChannel`s for the user since we don't know the type. We rather expect
                     // the user to wrap the child channels themselves when the negotiation is done
                     // and return the wrapped async channel as part of the negotiation result.
-                    let asyncChannel = try NIOAsyncChannel<Handler.NegotiationResult, Never>(
+                    let asyncChannel = try NIOAsyncChannel<Handler.NegotiationResult, Never>.wrapAsyncChannelForBootstrapBindWithProtocolNegotiation(
                         synchronouslyWrapping: serverChannel,
                         backpressureStrategy: serverBackpressureStrategy,
-                        protocolNegotiationClosure: { (channel: Channel) in
+                        transformationClosure: { (channel: Channel) in
                             channel.pipeline.handler(type: protocolNegotiationHandlerType)
                                 .flatMap { handler -> EventLoopFuture<NIOProtocolNegotiationResult<Handler.NegotiationResult>> in
                                     handler.protocolNegotiationResult

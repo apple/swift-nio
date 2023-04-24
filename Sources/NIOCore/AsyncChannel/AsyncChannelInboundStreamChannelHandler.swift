@@ -70,8 +70,10 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     /// A type indicating what kind of transformation to apply to reads.
     @usableFromInline
     enum Transformation {
-        /// A synchronous transformation is applied to incoming reads. This is used when bootstrapping
-        case sync((InboundIn) throws -> ProducerElement)
+        /// A synchronous transformation is applied to incoming reads. This is used when sync wrapping a channel.
+        case syncWrapping((InboundIn) -> ProducerElement)
+        /// This is used in the ServerBootstrap since we require to wrap the child channel on it's event loop but yield it on the parent's loop.
+        case bind((InboundIn) -> EventLoopFuture<ProducerElement>)
         /// In the case of protocol negotiation we are applying a future based transformation where we wait for the transformation
         /// to finish before we yield it to the source.
         case protocolNegotiation((InboundIn) -> EventLoopFuture<ProducerElement>)
@@ -85,43 +87,53 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     init(
         eventLoop: EventLoop,
         closeRatchet: CloseRatchet,
-        transformationClosure: @escaping (InboundIn) throws -> ProducerElement
+        transformation: Transformation
     ) {
         self.eventLoop = eventLoop
         self.closeRatchet = closeRatchet
-        self.transformation = .sync(transformationClosure)
+        self.transformation = transformation
     }
 
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used when the pipeline got synchronously wrapped.
     @inlinable
-    init(
-        eventLoop: EventLoop,
-        closeRatchet: CloseRatchet,
-        protocolNegotiationClosure: @escaping (InboundIn) -> EventLoopFuture<ProducerElement>
-    ) where InboundIn == Channel {
-        self.eventLoop = eventLoop
-        self.closeRatchet = closeRatchet
-        self.transformation = .protocolNegotiation { channel in
-            return protocolNegotiationClosure(channel)
-                // We might be on a future from a different EL so we have to hop to the channel here.
-                .hop(to: channel.eventLoop)
-                .flatMapErrorThrowing { error in
-                    // When protocol negotiation fails the only thing we can do is
-                    // to fire the error down the pipeline and close the channel.
-                    channel.pipeline.fireErrorCaught(error)
-                    channel.close(promise: nil)
-                    throw error
-                }
-        }
-    }
-
-    @inlinable
-    init(
+    static func makeWrappingHandler(
         eventLoop: EventLoop,
         closeRatchet: CloseRatchet
-    ) where InboundIn == ProducerElement {
-        self.eventLoop = eventLoop
-        self.closeRatchet = closeRatchet
-        self.transformation = .sync { $0 }
+    ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == ProducerElement {
+        return .init(
+            eventLoop: eventLoop,
+            closeRatchet: closeRatchet,
+            transformation: .syncWrapping { $0 }
+        )
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel.
+    @inlinable
+    static func makeBindingHandler(
+        eventLoop: EventLoop,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (Channel) -> EventLoopFuture<ProducerElement>
+    ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == Channel {
+        return .init(
+            eventLoop: eventLoop,
+            closeRatchet: closeRatchet,
+            transformation: .bind(transformationClosure)
+        )
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel when the child
+    /// channel does protocol negotiation.
+    @inlinable
+    static func makeProtocolNegotiationHandler(
+        eventLoop: EventLoop,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (Channel) -> EventLoopFuture<ProducerElement>
+    ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == Channel {
+        return .init(
+            eventLoop: eventLoop,
+            closeRatchet: closeRatchet,
+            transformation: .protocolNegotiation(transformationClosure)
+        )
     }
 
     @inlinable
@@ -140,14 +152,28 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
         let unwrapped = self.unwrapInboundIn(data)
 
         switch self.transformation {
-        case .sync(let transformation):
-            do {
-                try self.buffer.append(transformation(unwrapped))
-            } catch {
-                context.fireErrorCaught(error)
-                context.close(promise: nil)
-                return
-            }
+        case .syncWrapping(let transformation):
+            self.buffer.append(transformation(unwrapped))
+            // We forward on reads here to enable better channel composition.
+            context.fireChannelRead(data)
+
+        case .bind(let transformation):
+            // The unsafe transfers here are required because we need to use self in whenComplete
+            // We are making sure to be on our event loop so we can safely use self in whenComplete
+            let unsafeSelf = UnsafeTransfer(self)
+            let unsafeContext = UnsafeTransfer(context)
+            transformation(unwrapped)
+                .hop(to: context.eventLoop)
+                .whenComplete { result in
+                    unsafeSelf.wrappedValue._transformationCompleted(context: unsafeContext.wrappedValue, result: result)
+
+                    // We forward the read only after the transformation has been completed. This is super important
+                    // since we are setting up the NIOAsyncChannel handlers in the transformation and
+                    // we must make sure to only generate reads once they are setup. Reads can only
+                    // happen after the child channels hit `channelRead0` that's why we are holding the read here.
+                    context.fireChannelRead(data)
+                }
+
         case .protocolNegotiation(let protocolNegotiation):
             // The unsafe transfers here are required because we need to use self in whenComplete
             // We are making sure to be on our event loop so we can safely use self in whenComplete
@@ -156,16 +182,18 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
             protocolNegotiation(unwrapped)
                 .hop(to: context.eventLoop)
                 .whenComplete { result in
-                    unsafeSelf.wrappedValue._protocolNegotiationCompleted(context: unsafeContext.wrappedValue, result: result)
+                    unsafeSelf.wrappedValue._transformationCompleted(context: unsafeContext.wrappedValue, result: result)
                 }
-        }
 
-        // We forward on reads here to enable better channel composition.
-        context.fireChannelRead(data)
+            // We forwarding the read here right away since protocol negotiation often needs reads to progress.
+            // In this case, we expect the user to synchronously wrap the child channel into a NIOAsyncChannel
+            // hence we don't have the timing issue as in the `.bind` case.
+            context.fireChannelRead(data)
+        }
     }
 
     @inlinable
-    func _protocolNegotiationCompleted(
+    func _transformationCompleted(
         context: ChannelHandlerContext,
         result: Result<ProducerElement, Error>
     ) {
@@ -178,8 +206,8 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
             self._deliverReads(context: context)
 
         case .failure:
-            // Protocol negotiation failed. We already fired an error caught and closed the child channel
-            // Nothing more to do here.
+            // Transformation failed. Nothing to really do here this must be handled in the transformation
+            // futures themselves.
             break
         }
     }

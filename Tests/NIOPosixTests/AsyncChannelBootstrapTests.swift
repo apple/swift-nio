@@ -89,7 +89,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
     func testAsyncChannel() throws {
         XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
 
             let channel = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -133,7 +133,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
     func testAsyncChannelProtocolNegotiation() throws {
         XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
             
             let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -200,7 +200,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
     func testAsyncChannelNestedProtocolNegotiation() throws {
         XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
             
             let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -300,7 +300,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
     func testAsyncChannelProtocolNegotiation_whenFails() throws {
         XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
             
             let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
