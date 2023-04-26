@@ -16,7 +16,7 @@
 /// ``Channel`` into an asynchronous sequence that supports back-pressure.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
-internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Sendable>: ChannelDuplexHandler {
+internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Sendable, ProducerElement: Sendable>: ChannelDuplexHandler {
     @usableFromInline
     enum _ProducingState {
         // Not .stopProducing
@@ -37,10 +37,10 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
 
     @usableFromInline
     typealias Source = NIOThrowingAsyncSequenceProducer<
-        InboundIn,
+        ProducerElement,
         Error,
         NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark,
-        NIOAsyncChannelInboundStreamChannelHandler<InboundIn>.Delegate
+        NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate
     >.Source
 
     /// The source of the asynchronous sequence.
@@ -53,7 +53,7 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
 
     /// An array of reads which will be yielded to the source with the next channel read complete.
     @usableFromInline
-    var buffer: [InboundIn] = []
+    var buffer: [ProducerElement] = []
 
     /// The current producing state.
     @usableFromInline
@@ -67,10 +67,73 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     @usableFromInline
     let closeRatchet: CloseRatchet
 
+    /// A type indicating what kind of transformation to apply to reads.
+    @usableFromInline
+    enum Transformation {
+        /// A synchronous transformation is applied to incoming reads. This is used when sync wrapping a channel.
+        case syncWrapping((InboundIn) -> ProducerElement)
+        /// This is used in the ServerBootstrap since we require to wrap the child channel on it's event loop but yield it on the parent's loop.
+        case bind((InboundIn) -> EventLoopFuture<ProducerElement>)
+        /// In the case of protocol negotiation we are applying a future based transformation where we wait for the transformation
+        /// to finish before we yield it to the source.
+        case protocolNegotiation((InboundIn) -> EventLoopFuture<ProducerElement>)
+    }
+
+    /// The transformation applied to incoming reads.
+    @usableFromInline
+    let transformation: Transformation
+
     @inlinable
-    init(eventLoop: EventLoop, closeRatchet: CloseRatchet) {
+    init(
+        eventLoop: EventLoop,
+        closeRatchet: CloseRatchet,
+        transformation: Transformation
+    ) {
         self.eventLoop = eventLoop
         self.closeRatchet = closeRatchet
+        self.transformation = transformation
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used when the pipeline got synchronously wrapped.
+    @inlinable
+    static func makeWrappingHandler(
+        eventLoop: EventLoop,
+        closeRatchet: CloseRatchet
+    ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == ProducerElement {
+        return .init(
+            eventLoop: eventLoop,
+            closeRatchet: closeRatchet,
+            transformation: .syncWrapping { $0 }
+        )
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel.
+    @inlinable
+    static func makeBindingHandler(
+        eventLoop: EventLoop,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (Channel) -> EventLoopFuture<ProducerElement>
+    ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == Channel {
+        return .init(
+            eventLoop: eventLoop,
+            closeRatchet: closeRatchet,
+            transformation: .bind(transformationClosure)
+        )
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel when the child
+    /// channel does protocol negotiation.
+    @inlinable
+    static func makeProtocolNegotiationHandler(
+        eventLoop: EventLoop,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (Channel) -> EventLoopFuture<ProducerElement>
+    ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == Channel {
+        return .init(
+            eventLoop: eventLoop,
+            closeRatchet: closeRatchet,
+            transformation: .protocolNegotiation(transformationClosure)
+        )
     }
 
     @inlinable
@@ -86,10 +149,67 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
 
     @inlinable
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.buffer.append(self.unwrapInboundIn(data))
+        let unwrapped = self.unwrapInboundIn(data)
 
-        // We forward on reads here to enable better channel composition.
-        context.fireChannelRead(data)
+        switch self.transformation {
+        case .syncWrapping(let transformation):
+            self.buffer.append(transformation(unwrapped))
+            // We forward on reads here to enable better channel composition.
+            context.fireChannelRead(data)
+
+        case .bind(let transformation):
+            // The unsafe transfers here are required because we need to use self in whenComplete
+            // We are making sure to be on our event loop so we can safely use self in whenComplete
+            let unsafeSelf = NIOLoopBound(self, eventLoop: context.eventLoop)
+            let unsafeContext = NIOLoopBound(context, eventLoop: context.eventLoop)
+            transformation(unwrapped)
+                .hop(to: context.eventLoop)
+                .whenComplete { result in
+                    unsafeSelf.value._transformationCompleted(context: unsafeContext.value, result: result)
+
+                    // We forward the read only after the transformation has been completed. This is super important
+                    // since we are setting up the NIOAsyncChannel handlers in the transformation and
+                    // we must make sure to only generate reads once they are setup. Reads can only
+                    // happen after the child channels hit `channelRead0` that's why we are holding the read here.
+                    context.fireChannelRead(data)
+                }
+
+        case .protocolNegotiation(let protocolNegotiation):
+            // The unsafe transfers here are required because we need to use self in whenComplete
+            // We are making sure to be on our event loop so we can safely use self in whenComplete
+            let unsafeSelf = NIOLoopBound(self, eventLoop: context.eventLoop)
+            let unsafeContext = NIOLoopBound(context, eventLoop: context.eventLoop)
+            protocolNegotiation(unwrapped)
+                .hop(to: context.eventLoop)
+                .whenComplete { result in
+                    unsafeSelf.value._transformationCompleted(context: unsafeContext.value, result: result)
+                }
+
+            // We forwarding the read here right away since protocol negotiation often needs reads to progress.
+            // In this case, we expect the user to synchronously wrap the child channel into a NIOAsyncChannel
+            // hence we don't have the timing issue as in the `.bind` case.
+            context.fireChannelRead(data)
+        }
+    }
+
+    @inlinable
+    func _transformationCompleted(
+        context: ChannelHandlerContext,
+        result: Result<ProducerElement, Error>
+    ) {
+        context.eventLoop.preconditionInEventLoop()
+
+        switch result {
+        case .success(let transformed):
+            self.buffer.append(transformed)
+            // We are delivering out of band here since the future can complete at any point
+            self._deliverReads(context: context)
+
+        case .failure:
+            // Transformation failed. Nothing to really do here this must be handled in the transformation
+            // futures themselves.
+            break
+        }
     }
 
     @inlinable
@@ -215,33 +335,35 @@ extension NIOAsyncChannelInboundStreamChannelHandler {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension NIOAsyncChannelInboundStreamChannelHandler {
+@usableFromInline
+struct NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate: @unchecked Sendable, NIOAsyncSequenceProducerDelegate {
     @usableFromInline
-    struct Delegate: @unchecked Sendable, NIOAsyncSequenceProducerDelegate {
-        @usableFromInline
-        let eventLoop: EventLoop
+    let eventLoop: EventLoop
 
-        @usableFromInline
-        let handler: NIOAsyncChannelInboundStreamChannelHandler<InboundIn>
+    @usableFromInline
+    let _didTerminate: () -> Void
 
-        @inlinable
-        init(handler: NIOAsyncChannelInboundStreamChannelHandler<InboundIn>) {
-            self.eventLoop = handler.eventLoop
-            self.handler = handler
+    @usableFromInline
+    let _produceMore: () -> Void
+
+    @inlinable
+    init<InboundIn, ProducerElement>(handler: NIOAsyncChannelInboundStreamChannelHandler<InboundIn, ProducerElement>) {
+        self.eventLoop = handler.eventLoop
+        self._didTerminate = handler._didTerminate
+        self._produceMore = handler._produceMore
+    }
+
+    @inlinable
+    func didTerminate() {
+        self.eventLoop.execute {
+            self._didTerminate()
         }
+    }
 
-        @inlinable
-        func didTerminate() {
-            self.eventLoop.execute {
-                self.handler._didTerminate()
-            }
-        }
-
-        @inlinable
-        func produceMore() {
-            self.eventLoop.execute {
-                self.handler._produceMore()
-            }
+    @inlinable
+    func produceMore() {
+        self.eventLoop.execute {
+            self._produceMore()
         }
     }
 }
@@ -249,4 +371,3 @@ extension NIOAsyncChannelInboundStreamChannelHandler {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelInboundStreamChannelHandler: Sendable {}
-

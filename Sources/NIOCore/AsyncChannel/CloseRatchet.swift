@@ -91,4 +91,3 @@ final class CloseRatchet {
         return self._state.closeWrite()
     }
 }
-

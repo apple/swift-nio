@@ -114,12 +114,6 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     }
 
     @inlinable
-    func errorCaught(context: ChannelHandlerContext, error: Error) {
-        self.sink?.finish(error: error)
-        context.fireErrorCaught(error)
-    }
-
-    @inlinable
     func channelInactive(context: ChannelHandlerContext) {
         self.sink?.finish()
         context.fireChannelInactive()
@@ -172,4 +166,3 @@ extension NIOAsyncChannelOutboundWriterHandler {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelOutboundWriterHandler: Sendable {}
-
