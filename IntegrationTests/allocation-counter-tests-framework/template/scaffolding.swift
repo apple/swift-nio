@@ -143,7 +143,7 @@ func measureAndPrint(desc: String, trackFDs: Bool, fn: () -> Int) -> Void {
     print("DEBUG: \(measurements)")
 }
 
-public func measure(identifier: String, trackFDs: Bool = true, _ body: () -> Int) {
+public func measure(identifier: String, trackFDs: Bool = false, _ body: () -> Int) {
     measureAndPrint(desc: identifier, trackFDs: trackFDs) {
         return body()
     }
@@ -226,6 +226,6 @@ func measureAndPrint(desc: String, trackFDs: Bool, fn: @escaping () async -> Int
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public func measure(identifier: String, trackFDs: Bool = true, _ body: @escaping () async -> Int) {
+public func measure(identifier: String, trackFDs: Bool = false, _ body: @escaping () async -> Int) {
     measureAndPrint(desc: identifier, trackFDs: trackFDs, fn: body)
 }

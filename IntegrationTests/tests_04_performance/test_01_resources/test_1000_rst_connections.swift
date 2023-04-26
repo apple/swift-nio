@@ -28,7 +28,7 @@ func run(identifier: String) {
     let serverAddress = serverConnection.localAddress!
     let clientBootstrap = ClientBootstrap(group: group)
 
-    measure(identifier: identifier) {
+    measure(identifier: identifier, trackFDs: true) {
         let iterations = 1000
         for _ in 0..<iterations {
             let conn = clientBootstrap.connect(to: serverAddress)
