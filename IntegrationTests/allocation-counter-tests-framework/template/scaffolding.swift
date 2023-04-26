@@ -135,10 +135,7 @@ func measureAndPrint(desc: String, trackFDs: Bool, fn: () -> Int) -> Void {
     measurements.printTotalAllocations(description: desc)
     measurements.printRemainingAllocations(description: desc)
     measurements.printTotalAllocatedBytes(description: desc)
-    
-    if trackFDs {
-        measurements.printLeakedFDs(description: desc)
-    }
+    measurements.printLeakedFDs(description: desc)
     
     print("DEBUG: \(measurements)")
 }
@@ -218,11 +215,7 @@ func measureAndPrint(desc: String, trackFDs: Bool, fn: @escaping () async -> Int
     measurements.printTotalAllocations(description: desc)
     measurements.printRemainingAllocations(description: desc)
     measurements.printTotalAllocatedBytes(description: desc)
-    
-    if trackFDs {
-        measurements.printLeakedFDs(description: desc)
-    }
-    
+    measurements.printLeakedFDs(description: desc)
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
