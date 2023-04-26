@@ -160,12 +160,12 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
         case .bind(let transformation):
             // The unsafe transfers here are required because we need to use self in whenComplete
             // We are making sure to be on our event loop so we can safely use self in whenComplete
-            let unsafeSelf = UnsafeTransfer(self)
-            let unsafeContext = UnsafeTransfer(context)
+            let unsafeSelf = NIOLoopBound(self, eventLoop: context.eventLoop)
+            let unsafeContext = NIOLoopBound(context, eventLoop: context.eventLoop)
             transformation(unwrapped)
                 .hop(to: context.eventLoop)
                 .whenComplete { result in
-                    unsafeSelf.wrappedValue._transformationCompleted(context: unsafeContext.wrappedValue, result: result)
+                    unsafeSelf.value._transformationCompleted(context: unsafeContext.value, result: result)
 
                     // We forward the read only after the transformation has been completed. This is super important
                     // since we are setting up the NIOAsyncChannel handlers in the transformation and
@@ -177,12 +177,12 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
         case .protocolNegotiation(let protocolNegotiation):
             // The unsafe transfers here are required because we need to use self in whenComplete
             // We are making sure to be on our event loop so we can safely use self in whenComplete
-            let unsafeSelf = UnsafeTransfer(self)
-            let unsafeContext = UnsafeTransfer(context)
+            let unsafeSelf = NIOLoopBound(self, eventLoop: context.eventLoop)
+            let unsafeContext = NIOLoopBound(context, eventLoop: context.eventLoop)
             protocolNegotiation(unwrapped)
                 .hop(to: context.eventLoop)
                 .whenComplete { result in
-                    unsafeSelf.wrappedValue._transformationCompleted(context: unsafeContext.wrappedValue, result: result)
+                    unsafeSelf.value._transformationCompleted(context: unsafeContext.value, result: result)
                 }
 
             // We forwarding the read here right away since protocol negotiation often needs reads to progress.

@@ -649,7 +649,7 @@ extension ServerBootstrap {
     }
 
     private typealias MakeServerChannel = (_ eventLoop: SelectableEventLoop, _ childGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel
-    private typealias Register = (EventLoop, ServerSocketChannel) -> EventLoopFuture<Void>
+    private typealias Register = @Sendable (EventLoop, ServerSocketChannel) -> EventLoopFuture<Void>
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     private func bindAsyncChannel0<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
