@@ -78,7 +78,12 @@ final class AsyncChannelTests: XCTestCase {
 
             do {
                 let wrapped = try await channel.testingEventLoop.executeInContext {
-                    try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: Never.self, outboundType: Never.self)
+                    try NIOAsyncChannel(
+                        synchronouslyWrapping: channel,
+                        isOutboundHalfClosureEnabled: true,
+                        inboundType: Never.self,
+                        outboundType: Never.self
+                    )
                 }
                 inboundReader = wrapped.inboundStream
 
@@ -140,7 +145,12 @@ final class AsyncChannelTests: XCTestCase {
 
                 do {
                     let wrapped = try await channel.testingEventLoop.executeInContext {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: Never.self, outboundType: Never.self)
+                        try NIOAsyncChannel(
+                            synchronouslyWrapping: channel,
+                            isOutboundHalfClosureEnabled: true,
+                            inboundType: Never.self,
+                            outboundType: Never.self
+                        )
                     }
                     inboundReader = wrapped.inboundStream
 
@@ -239,24 +249,6 @@ final class AsyncChannelTests: XCTestCase {
         }
     }
 
-    func testErrorsArePropagatedToWriters() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
-        XCTAsyncTest(timeout: 5) {
-            let channel = NIOAsyncTestingChannel()
-            let wrapped = try await channel.testingEventLoop.executeInContext {
-                try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: Never.self, outboundType: String.self)
-            }
-
-            try await channel.testingEventLoop.executeInContext {
-                channel.pipeline.fireErrorCaught(TestError.bang)
-            }
-
-            try await XCTAssertThrowsError(await wrapped.outboundWriter.write("hello")) { error in
-                XCTAssertEqual(error as? TestError, .bang)
-            }
-        }
-    }
-
     func testChannelBecomingNonWritableDelaysWriters() {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
@@ -312,7 +304,7 @@ final class AsyncChannelTests: XCTestCase {
             do {
                 let strongSentinel: Sentinel? = Sentinel()
                 sentinel = strongSentinel!
-                try await XCTAsyncAssertNotNil(await channel.pipeline.handler(type: NIOAsyncChannelInboundStreamChannelHandler<Sentinel>.self).get())
+                try await XCTAsyncAssertNotNil(await channel.pipeline.handler(type: NIOAsyncChannelInboundStreamChannelHandler<Sentinel, Sentinel>.self).get())
                 try await channel.writeInbound(strongSentinel!)
                 _ = try await channel.readInbound(as: Sentinel.self)
             }

@@ -19,22 +19,19 @@
 @_spi(AsyncChannel)
 public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @usableFromInline
-    typealias Producer = NIOThrowingAsyncSequenceProducer<Inbound, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelInboundStreamChannelHandler<Inbound>.Delegate>
+    typealias Producer = NIOThrowingAsyncSequenceProducer<Inbound, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate>
 
     /// The underlying async sequence.
     @usableFromInline let _producer: Producer
 
     @inlinable
-    init(
+    init<HandlerInbound: Sendable>(
         channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeRatchet: CloseRatchet
+        closeRatchet: CloseRatchet,
+        handler: NIOAsyncChannelInboundStreamChannelHandler<HandlerInbound, Inbound>
     ) throws {
         channel.eventLoop.preconditionInEventLoop()
-        let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound>(
-            eventLoop: channel.eventLoop,
-            closeRatchet: closeRatchet
-        )
         let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
         if let userProvided = backpressureStrategy {
@@ -47,11 +44,76 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
 
         let sequence = Producer.makeSequence(
             backPressureStrategy: strategy,
-            delegate: NIOAsyncChannelInboundStreamChannelHandler<Inbound>.Delegate(handler: handler)
+            delegate: NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate(handler: handler)
         )
         handler.source = sequence.source
         try channel.pipeline.syncOperations.addHandler(handler)
         self._producer = sequence.sequence
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStream`` which is used when the pipeline got synchronously wrapped.
+    @inlinable
+    static func makeWrappingHandler(
+        channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        closeRatchet: CloseRatchet
+    ) throws -> NIOAsyncChannelInboundStream {
+        let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound, Inbound>.makeWrappingHandler(
+            eventLoop: channel.eventLoop,
+            closeRatchet: closeRatchet
+        )
+
+        return try .init(
+            channel: channel,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            handler: handler
+        )
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel.
+    @inlinable
+    static func makeBindingHandler(
+        channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
+    ) throws -> NIOAsyncChannelInboundStream {
+        let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, Inbound>.makeBindingHandler(
+            eventLoop: channel.eventLoop,
+            closeRatchet: closeRatchet,
+            transformationClosure: transformationClosure
+        )
+
+        return try .init(
+            channel: channel,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            handler: handler
+        )
+    }
+
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel when the child
+    /// channel does protocol negotiation.
+    @inlinable
+    static func makeProtocolNegotiationHandler(
+        channel: Channel,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        closeRatchet: CloseRatchet,
+        transformationClosure: @escaping (Channel) -> EventLoopFuture<Inbound>
+    ) throws -> NIOAsyncChannelInboundStream {
+        let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, Inbound>.makeProtocolNegotiationHandler(
+            eventLoop: channel.eventLoop,
+            closeRatchet: closeRatchet,
+            transformationClosure: transformationClosure
+        )
+
+        return try .init(
+            channel: channel,
+            backpressureStrategy: backpressureStrategy,
+            closeRatchet: closeRatchet,
+            handler: handler
+        )
     }
 }
 
@@ -87,4 +149,3 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelInboundStream.AsyncIterator: Sendable {}
-
