@@ -82,11 +82,22 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         /// to wait for the request to complete, but won't block anything.
         case requestEndPending
 
+        /// The server has closed the output partway through a request. The server will never
+        /// act again, but this may not be in error, so we'll forward the rest of this request to the server.
+        case sentCloseOutputRequestEndPending
+
+        /// The server has closed the output, and a complete request has been delivered.
+        /// It's never going to act again. Generally we expect this to be closely followed
+        /// by read EOF, but we need to keep reading to make that possible, so we
+        /// never suppress reads again.
+        case sentCloseOutput
+
         mutating func requestHeadReceived() {
             switch self {
             case .idle:
                 self = .requestAndResponseEndPending
-            case .requestAndResponseEndPending, .responseEndPending, .requestEndPending:
+            case .requestAndResponseEndPending, .responseEndPending, .requestEndPending,
+                    .sentCloseOutputRequestEndPending, .sentCloseOutput:
                 preconditionFailure("received request head in state \(self)")
             }
         }
@@ -100,7 +111,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 // We got a response while still receiving a request, which we have to
                 // wait for.
                 self = .requestEndPending
-            case .requestEndPending, .idle:
+            case .requestEndPending, .idle, .sentCloseOutput, .sentCloseOutputRequestEndPending:
                 preconditionFailure("Unexpectedly received a response in state \(self)")
             }
         }
@@ -114,8 +125,23 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 // We got a request and the response isn't done, wait for the
                 // response.
                 self = .responseEndPending
-            case .responseEndPending, .idle:
+            case .sentCloseOutputRequestEndPending:
+                // Got the request end we were waiting for.
+                self = .sentCloseOutput
+            case .responseEndPending, .idle, .sentCloseOutput:
                 preconditionFailure("Received second request")
+            }
+        }
+
+        mutating func closeOutputSent() {
+            switch self {
+            case .idle, .responseEndPending:
+                self = .sentCloseOutput
+            case .requestEndPending, .requestAndResponseEndPending:
+                self = .sentCloseOutputRequestEndPending
+            case .sentCloseOutput, .sentCloseOutputRequestEndPending:
+                // Weird to duplicate fail, but we tolerate it in both cases.
+                ()
             }
         }
     }
@@ -180,6 +206,11 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         case .acceptingEvents, .quiescingWaitingForRequestEnd:
             // Still accepting I/O
             ()
+        }
+
+        if self.state == .sentCloseOutput {
+            // Drop all events in this state.
+            return
         }
 
         if self.eventBuffer.count != 0 || self.state == .responseEndPending {
@@ -252,18 +283,20 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 // we're not in the middle of a request, let's just shut the door
                 self.lifecycleState = .quiescingLastRequestEndReceived
                 self.eventBuffer.removeAll()
-            case .idle:
+            case .idle, .sentCloseOutput:
                 // we're completely idle, let's just close
                 self.lifecycleState = .quiescingCompleted
                 self.eventBuffer.removeAll()
                 context.close(promise: nil)
-            case .requestEndPending, .requestAndResponseEndPending:
-                // we're in the middle of a request, we'll need to keep accepting events until we see the .end
+            case .requestEndPending, .requestAndResponseEndPending, .sentCloseOutputRequestEndPending:
+                // we're in the middle of a request, we'll need to keep accepting events until we see the .end.
+                // It's ok for us to forget we saw close output here, the lifecycle event will close for us.
                 self.lifecycleState = .quiescingWaitingForRequestEnd
             }
         case ChannelEvent.inputClosed:
             // We only buffer half-close if there are request parts we're waiting to send.
-            // Otherwise we deliver the half-close immediately.
+            // Otherwise we deliver the half-close immediately. Note that we deliver this
+            // even if the server has sent close output, as it's useful information.
             if case .responseEndPending = self.state, self.eventBuffer.count > 0 {
                 self.eventBuffer.append(.halfClose)
             } else {
@@ -414,6 +447,32 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         context.fireChannelInactive()
     }
 
+    public func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        var shouldRead = false
+
+        if mode == .output {
+            // We need to do special handling here. If the server is closing output they don't intend to write anymore.
+            // That means we want to drop anything up to the end of the in-flight request.
+            self.dropAllButInFlightRequest()
+            self.state.closeOutputSent()
+
+            // If there's a read pending, we should deliver it after we forward the close on.
+            shouldRead = self.readPending
+        }
+
+        context.close(mode: mode, promise: promise)
+
+        // Double-check readPending here in case something weird happened.
+        //
+        // Note that because of the state transition in closeOutputSent() above we likely won't actually
+        // forward any further reads to the user, unless they belong to a request currently streaming in.
+        // Any reads past that point will be dropped in channelRead().
+        if shouldRead && self.readPending {
+            self.readPending = false
+            context.read()
+        }
+    }
+
     /// A response has been sent: we can now start passing reads through
     /// again if there are no further pending requests, and send any read()
     /// call we may have swallowed.
@@ -468,6 +527,31 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             self.readPending = false
             context.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
         }
+    }
+
+    private func dropAllButInFlightRequest() {
+        // We're going to walk the request buffer up to the next `.head` and drop from there.
+        let maybeFirstHead = self.eventBuffer.firstIndex(where: { element in
+            switch element {
+            case .channelRead(let read):
+                switch self.unwrapInboundIn(read) {
+                case .head:
+                    return true
+                case .body, .end:
+                    return false
+                }
+            case .error, .halfClose:
+                // Leave these where they are, if they're before the next .head we still want to deliver them.
+                // If they're after the next .head, we don't care.
+                return false
+            }
+        })
+
+        guard let firstHead = maybeFirstHead else {
+            return
+        }
+
+        self.eventBuffer.removeSubrange(firstHead...)
     }
 }
 
