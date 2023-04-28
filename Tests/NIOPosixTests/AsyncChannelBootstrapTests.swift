@@ -143,7 +143,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 }
                 .bind(
                     host: "127.0.0.1",
-                    port: 1995,
+                    port: 0,
                     protocolNegotiationHandlerType: NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>.self
                 )
 
@@ -210,7 +210,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 }
                 .bind(
                     host: "127.0.0.1",
-                    port: 1995,
+                    port: 0,
                     protocolNegotiationHandlerType: NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>.self
                 )
 
@@ -333,7 +333,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 }
                 .bind(
                     host: "127.0.0.1",
-                    port: 1995,
+                    port: 0,
                     protocolNegotiationHandlerType: NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>.self
                 )
 
