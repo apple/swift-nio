@@ -618,7 +618,7 @@ extension NIOThrowingAsyncSequenceProducer {
                 failure: Failure?
             )
 
-            /// The state once a call to next has been cancelled. To reach this state we must cancel the source.
+            /// The state once a call to next has been cancelled. Cancel the source when entering this state.
             case cancelled(iteratorInitialized: Bool)
 
             /// The state once there can be no outstanding demand. This can happen if:
