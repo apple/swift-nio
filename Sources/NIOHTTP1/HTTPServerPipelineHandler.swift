@@ -463,6 +463,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         context.close(mode: mode, promise: promise)
 
         // Double-check readPending here in case something weird happened.
+        //
+        // Note that because of the state transition in closeOutputSent() above we likely won't actually
+        // forward any further reads to the user, unless they belong to a request currently streaming in.
+        // Any reads past that point will be dropped in channelRead().
         if shouldRead && self.readPending {
             self.readPending = false
             context.read()
