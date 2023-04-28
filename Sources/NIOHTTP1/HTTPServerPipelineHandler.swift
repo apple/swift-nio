@@ -140,9 +140,8 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             case .requestEndPending, .requestAndResponseEndPending:
                 self = .sentCloseOutputRequestEndPending
             case .sentCloseOutput, .sentCloseOutputRequestEndPending:
-                // Weird to duplicate fail. Tolerate this in release mode but forbid it in debug.
-                assertionFailure("sent close output twice")
-                self = .sentCloseOutput
+                // Weird to duplicate fail, but we tolerate it in both cases.
+                ()
             }
         }
     }
