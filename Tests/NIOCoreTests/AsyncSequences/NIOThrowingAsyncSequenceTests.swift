@@ -743,6 +743,36 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
+
+    func testIteratorThrows_whenCancelled() async {
+        _ = self.source.yield(contentsOf: Array(0..<100))
+        await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                var counter = 0
+                guard let sequence = self.sequence else {
+                    return XCTFail("Expected to have an AsyncSequence")
+                }
+
+                do {
+                    for try await next in sequence {
+                        XCTAssertEqual(next, counter)
+                        counter += 1
+                    }
+                    XCTFail("Expected that this throws")
+                } catch is CancellationError {
+                    // expected
+                } catch {
+                    XCTFail("Unexpected error: \(error)")
+                }
+
+                XCTAssertLessThan(counter, 100)
+            }
+
+            group.cancelAll()
+        }
+
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+    }
 }
 
 // This is needed until async let is supported to be used in autoclosures
