@@ -1496,4 +1496,31 @@ class EventLoopFutureTest : XCTestCase {
 
         XCTAssertEqual((1...10).reduce(0, +), try all.wait())
     }
+
+    func testAssertSuccess() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        promise.futureResult.assertSuccess { value in
+            XCTAssertEqual(value, "hello")
+        }
+        promise.succeed("hello")
+
+        XCTAssertNoThrow(try promise.futureResult.wait())
+    }
+
+    func testAssertFailure() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        promise.futureResult.assertFailure { error in
+            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
+        }
+        promise.fail(EventLoopFutureTestError.example)
+
+        XCTAssertThrowsError(try promise.futureResult.wait()) { error in
+            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
+        }
+    }
+
 }
