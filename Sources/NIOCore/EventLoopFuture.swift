@@ -1098,80 +1098,6 @@ extension EventLoopFuture {
         }
         return CallbackList()
     }
-
-    #if swift(>=5.7)
-    /// Adds an observer callback to this `EventLoopFuture` that is called when the
-    /// `EventLoopFuture` has a success result, asserting a failure if it encounters an error.
-    ///
-    /// - parameters:
-    ///     - callback: The callback that is called with the successful result of the `EventLoopFuture`.
-    @inlinable
-    @preconcurrency
-    public func assertSuccess(_ callback: @escaping @Sendable (Value) -> Void) {
-        self._assertSuccess(callback)
-    }
-    @usableFromInline typealias AssertSuccessCallback = @Sendable (Value) -> Void
-    #else
-    /// Adds an observer callback to this `EventLoopFuture` that is called when the
-    /// `EventLoopFuture` has a success result, asserting a failure if it encounters an error.
-    ///
-    /// - parameters:
-    ///     - callback: The callback that is called with the successful result of the `EventLoopFuture`.
-    @inlinable
-    public func assertSuccess(_ callback: @escaping (Value) -> Void) {
-        self._assertSuccess(callback)
-    }
-    @usableFromInline typealias AssertSuccessCallback = (Value) -> Void
-    #endif
-
-    @inlinable
-    func _assertSuccess(_ callback: @escaping AssertSuccessCallback) {
-        self.whenComplete { result in
-            switch result {
-            case .success(let value):
-                callback(value)
-            case .failure(let error):
-                assertionFailure("Expected success, but got failure: \(error)")
-            }
-        }
-    }
-
-    #if swift(>=5.7)
-    /// Adds an observer callback to this `EventLoopFuture` that is called when the
-    /// `EventLoopFuture` has a failure result, asserting a failure if it encounters a success.
-    ///
-    /// - parameters:
-    ///     - callback: The callback that is called with the error of the `EventLoopFuture`.
-    @inlinable
-    @preconcurrency
-    public func assertFailure(_ callback: @escaping @Sendable (Error) -> Void) {
-        self._assertFailure(callback)
-    }
-    @usableFromInline typealias AssertFailureCallback = @Sendable (Error) -> Void
-    #else
-    /// Adds an observer callback to this `EventLoopFuture` that is called when the
-    /// `EventLoopFuture` has a failure result, asserting a failure if it encounters a success.
-    ///
-    /// - parameters:
-    ///     - callback: The callback that is called with the error of the `EventLoopFuture`.
-    @inlinable
-    public func assertFailure(_ callback: @escaping (Error) -> Void) {
-        self._assertFailure(callback)
-    }
-    @usableFromInline typealias AssertFailureCallback = (Error) -> Void
-    #endif
-
-    @inlinable
-    func _assertFailure(_ callback: @escaping AssertFailureCallback) {
-        self.whenComplete { result in
-            switch result {
-            case .success(let value):
-                assertionFailure("Expected failure, but got success: \(value)")
-            case .failure(let error):
-                callback(error)
-            }
-        }
-    }
 }
 
 // MARK: and
@@ -2261,6 +2187,79 @@ extension EventLoopFuture {
     }
 }
 
+// MARK: assertion
+
+extension EventLoopFuture {
+    /// Returns a new `EventLoopFuture` that asserts the original future's success.
+    ///
+    /// If the original future fails, it triggers an assertion failure, causing a runtime error during development.
+    @inlinable
+    public func assertSuccess() -> EventLoopFuture<Value> {
+        let promise = self.eventLoop.makePromise(of: Value.self)
+        self.whenComplete { result in
+            switch result {
+            case .success(let value):
+                promise.succeed(value)
+            case .failure(let error):
+                assertionFailure("Expected success, but got failure: \(error)")
+                promise.fail(error)
+            }
+        }
+        return promise.futureResult
+    }
+
+    /// Returns a new `EventLoopFuture` that asserts the original future's failure.
+    ///
+    /// If the original future succeeds, it triggers an assertion failure, causing a runtime error during development.
+    @inlinable
+    public func assertFailure() -> EventLoopFuture<Value> {
+        let promise = self.eventLoop.makePromise(of: Value.self)
+        self.whenComplete { result in
+            switch result {
+            case .success(let value):
+                assertionFailure("Expected failure, but got success: \(value)")
+                promise.succeed(value)
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
+        return promise.futureResult
+    }
+
+    /// Returns a new `EventLoopFuture` that preconditions the original future's success.
+    ///
+    /// If the original future fails, it triggers a precondition failure, causing a runtime error during development.
+    @inlinable
+    public func ensureSuccess() -> EventLoopFuture<Value> {
+        let promise = self.eventLoop.makePromise(of: Value.self)
+        self.whenComplete { result in
+            switch result {
+            case .success(let value):
+                promise.succeed(value)
+            case .failure(let error):
+                preconditionFailure("Expected success, but got failure: \(error)")
+            }
+        }
+        return promise.futureResult
+    }
+
+    /// Returns a new `EventLoopFuture` that preconditions the original future's failure.
+    ///
+    /// If the original future succeeds, it triggers a precondition failure, causing a runtime error during development.
+    @inlinable
+    public func ensureFailure() -> EventLoopFuture<Value> {
+        let promise = self.eventLoop.makePromise(of: Value.self)
+        self.whenComplete { result in
+            switch result {
+            case .success(let value):
+                preconditionFailure("Expected failure, but got success: \(value)")
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
+        return promise.futureResult
+    }
+}
 
 /// An opaque identifier for a specific `EventLoopFuture`.
 ///
