@@ -1501,24 +1501,42 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
 
         let promise = eventLoop.makePromise(of: String.self)
-        promise.futureResult.assertSuccess { value in
-            XCTAssertEqual(value, "hello")
-        }
+        let assertedFuture = promise.futureResult.assertSuccess()
         promise.succeed("hello")
 
-        XCTAssertNoThrow(try promise.futureResult.wait())
+        XCTAssertNoThrow(try assertedFuture.wait())
     }
 
     func testAssertFailure() {
         let eventLoop = EmbeddedEventLoop()
 
         let promise = eventLoop.makePromise(of: String.self)
-        promise.futureResult.assertFailure { error in
-            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
-        }
+        let assertedFuture = promise.futureResult.assertFailure()
         promise.fail(EventLoopFutureTestError.example)
 
-        XCTAssertThrowsError(try promise.futureResult.wait()) { error in
+        XCTAssertThrowsError(try assertedFuture.wait()) { error in
+            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
+        }
+    }
+
+    func testEnsureSuccess() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let preconditionedFuture = promise.futureResult.ensureSuccess()
+        promise.succeed("hello")
+
+        XCTAssertNoThrow(try preconditionedFuture.wait())
+    }
+
+    func testEnsureFailure() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let preconditionedFuture = promise.futureResult.ensureFailure()
+        promise.fail(EventLoopFutureTestError.example)
+
+        XCTAssertThrowsError(try preconditionedFuture.wait()) { error in
             XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
         }
     }
