@@ -1098,6 +1098,80 @@ extension EventLoopFuture {
         }
         return CallbackList()
     }
+
+    #if swift(>=5.7)
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has a success result, asserting a failure if it encounters an error.
+    ///
+    /// - parameters:
+    ///     - callback: The callback that is called with the successful result of the `EventLoopFuture`.
+    @inlinable
+    @preconcurrency
+    public func assertSuccess(_ callback: @escaping @Sendable (Value) -> Void) {
+        self._assertSuccess(callback)
+    }
+    @usableFromInline typealias AssertSuccessCallback = @Sendable (Value) -> Void
+    #else
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has a success result, asserting a failure if it encounters an error.
+    ///
+    /// - parameters:
+    ///     - callback: The callback that is called with the successful result of the `EventLoopFuture`.
+    @inlinable
+    public func assertSuccess(_ callback: @escaping (Value) -> Void) {
+        self._assertSuccess(callback)
+    }
+    @usableFromInline typealias AssertSuccessCallback = (Value) -> Void
+    #endif
+
+    @inlinable
+    func _assertSuccess(_ callback: @escaping AssertSuccessCallback) {
+        self.whenComplete { result in
+            switch result {
+            case .success(let value):
+                callback(value)
+            case .failure(let error):
+                assertionFailure("Expected success, but got failure: \(error)")
+            }
+        }
+    }
+
+    #if swift(>=5.7)
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has a failure result, asserting a failure if it encounters a success.
+    ///
+    /// - parameters:
+    ///     - callback: The callback that is called with the error of the `EventLoopFuture`.
+    @inlinable
+    @preconcurrency
+    public func assertFailure(_ callback: @escaping @Sendable (Error) -> Void) {
+        self._assertFailure(callback)
+    }
+    @usableFromInline typealias AssertFailureCallback = @Sendable (Error) -> Void
+    #else
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has a failure result, asserting a failure if it encounters a success.
+    ///
+    /// - parameters:
+    ///     - callback: The callback that is called with the error of the `EventLoopFuture`.
+    @inlinable
+    public func assertFailure(_ callback: @escaping (Error) -> Void) {
+        self._assertFailure(callback)
+    }
+    @usableFromInline typealias AssertFailureCallback = (Error) -> Void
+    #endif
+
+    @inlinable
+    func _assertFailure(_ callback: @escaping AssertFailureCallback) {
+        self.whenComplete { result in
+            switch result {
+            case .success(let value):
+                assertionFailure("Expected failure, but got success: \(value)")
+            case .failure(let error):
+                callback(error)
+            }
+        }
+    }
 }
 
 // MARK: and
