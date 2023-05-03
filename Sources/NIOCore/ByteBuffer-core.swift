@@ -863,7 +863,7 @@ public struct ByteBuffer {
     }
 }
 
-extension ByteBuffer: CustomStringConvertible {
+extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
     /// A `String` describing this `ByteBuffer`. Example:
     ///
     ///     ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, storageCapacity: 1024, slice: 256..<768, storage: 0x0000000103001000 (1024 bytes)}
