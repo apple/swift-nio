@@ -2190,74 +2190,83 @@ extension EventLoopFuture {
 // MARK: assertion
 
 extension EventLoopFuture {
-    /// Returns a new `EventLoopFuture` that asserts the original future's success.
+    /// Attaches a callback to the `EventLoopFuture` that asserts the original future's success.
     ///
     /// If the original future fails, it triggers an assertion failure, causing a runtime error during development.
+    /// The assertion failure will include the file and line of the calling site.
+    ///
+    /// - parameters:
+    ///     - file: The file this function was called in, for debugging purposes.
+    ///     - line: The line this function was called on, for debugging purposes.
     @inlinable
-    public func assertSuccess() -> EventLoopFuture<Value> {
-        let promise = self.eventLoop.makePromise(of: Value.self)
-        self.whenComplete { result in
+    public func assertSuccess(file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Value> {
+        return self.always { result in
             switch result {
-            case .success(let value):
-                promise.succeed(value)
+            case .success:
+                ()
             case .failure(let error):
-                assertionFailure("Expected success, but got failure: \(error)")
-                promise.fail(error)
+                assertionFailure("Expected success, but got failure: \(error)", file: file, line: line)
             }
         }
-        return promise.futureResult
     }
-
-    /// Returns a new `EventLoopFuture` that asserts the original future's failure.
+    /// Attaches a callback to the `EventLoopFuture` that asserts the original future's failure.
     ///
     /// If the original future succeeds, it triggers an assertion failure, causing a runtime error during development.
+    /// The assertion failure will include the file and line of the calling site.
+    ///
+    /// - parameters:
+    ///     - file: The file this function was called in, for debugging purposes.
+    ///     - line: The line this function was called on, for debugging purposes.
     @inlinable
-    public func assertFailure() -> EventLoopFuture<Value> {
-        let promise = self.eventLoop.makePromise(of: Value.self)
-        self.whenComplete { result in
+    public func assertFailure(file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Value> {
+        return self.always { result in
             switch result {
             case .success(let value):
-                assertionFailure("Expected failure, but got success: \(value)")
-                promise.succeed(value)
-            case .failure(let error):
-                promise.fail(error)
+                assertionFailure("Expected failure, but got success: \(value)", file: file, line: line)
+            case .failure:
+                ()
             }
         }
-        return promise.futureResult
     }
 
-    /// Returns a new `EventLoopFuture` that preconditions the original future's success.
+    /// Attaches a callback to the `EventLoopFuture` that preconditions the original future's success.
     ///
     /// If the original future fails, it triggers a precondition failure, causing a runtime error during development.
+    /// The precondition failure will include the file and line of the calling site.
+    ///
+    /// - parameters:
+    ///     - file: The file this function was called in, for debugging purposes.
+    ///     - line: The line this function was called on, for debugging purposes.
     @inlinable
-    public func ensureSuccess() -> EventLoopFuture<Value> {
-        let promise = self.eventLoop.makePromise(of: Value.self)
-        self.whenComplete { result in
+    public func preconditionSuccess(file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Value> {
+        return self.always { result in
             switch result {
-            case .success(let value):
-                promise.succeed(value)
+            case .success:
+                ()
             case .failure(let error):
-                preconditionFailure("Expected success, but got failure: \(error)")
+                Swift.preconditionFailure("Expected success, but got failure: \(error)", file: file, line: line)
             }
         }
-        return promise.futureResult
     }
 
-    /// Returns a new `EventLoopFuture` that preconditions the original future's failure.
+    /// Attaches a callback to the `EventLoopFuture` that preconditions the original future's failure.
     ///
     /// If the original future succeeds, it triggers a precondition failure, causing a runtime error during development.
+    /// The precondition failure will include the file and line of the calling site.
+    ///
+    /// - parameters:
+    ///     - file: The file this function was called in, for debugging purposes.
+    ///     - line: The line this function was called on, for debugging purposes.
     @inlinable
-    public func ensureFailure() -> EventLoopFuture<Value> {
-        let promise = self.eventLoop.makePromise(of: Value.self)
-        self.whenComplete { result in
+    public func preconditionFailure(file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Value> {
+        return self.always { result in
             switch result {
             case .success(let value):
-                preconditionFailure("Expected failure, but got success: \(value)")
-            case .failure(let error):
-                promise.fail(error)
+                Swift.preconditionFailure("Expected failure, but got success: \(value)", file: file, line: line)
+            case .failure:
+                ()
             }
         }
-        return promise.futureResult
     }
 }
 
