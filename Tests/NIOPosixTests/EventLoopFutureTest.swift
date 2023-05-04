@@ -1496,4 +1496,49 @@ class EventLoopFutureTest : XCTestCase {
 
         XCTAssertEqual((1...10).reduce(0, +), try all.wait())
     }
+
+    func testAssertSuccess() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let assertedFuture = promise.futureResult.assertSuccess()
+        promise.succeed("hello")
+
+        XCTAssertNoThrow(try assertedFuture.wait())
+    }
+
+    func testAssertFailure() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let assertedFuture = promise.futureResult.assertFailure()
+        promise.fail(EventLoopFutureTestError.example)
+
+        XCTAssertThrowsError(try assertedFuture.wait()) { error in
+            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
+        }
+    }
+
+    func testPreconditionSuccess() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let preconditionedFuture = promise.futureResult.preconditionSuccess()
+        promise.succeed("hello")
+
+        XCTAssertNoThrow(try preconditionedFuture.wait())
+    }
+
+    func testPreconditionFailure() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise = eventLoop.makePromise(of: String.self)
+        let preconditionedFuture = promise.futureResult.preconditionFailure()
+        promise.fail(EventLoopFutureTestError.example)
+
+        XCTAssertThrowsError(try preconditionedFuture.wait()) { error in
+            XCTAssertEqual(error as? EventLoopFutureTestError, EventLoopFutureTestError.example)
+        }
+    }
+
 }
