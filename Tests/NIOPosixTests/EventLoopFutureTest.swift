@@ -1519,21 +1519,21 @@ class EventLoopFutureTest : XCTestCase {
         }
     }
 
-    func testEnsureSuccess() {
+    func testPreconditionSuccess() {
         let eventLoop = EmbeddedEventLoop()
 
         let promise = eventLoop.makePromise(of: String.self)
-        let preconditionedFuture = promise.futureResult.ensureSuccess()
+        let preconditionedFuture = promise.futureResult.preconditionSuccess()
         promise.succeed("hello")
 
         XCTAssertNoThrow(try preconditionedFuture.wait())
     }
 
-    func testEnsureFailure() {
+    func testPreconditionFailure() {
         let eventLoop = EmbeddedEventLoop()
 
         let promise = eventLoop.makePromise(of: String.self)
-        let preconditionedFuture = promise.futureResult.ensureFailure()
+        let preconditionedFuture = promise.futureResult.preconditionFailure()
         promise.fail(EventLoopFutureTestError.example)
 
         XCTAssertThrowsError(try preconditionedFuture.wait()) { error in
