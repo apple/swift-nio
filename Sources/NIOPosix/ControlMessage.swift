@@ -25,31 +25,37 @@ import CNIOWindows
 /// Supports multiple messages each with enough storage for multiple `cmsghdr`
 struct UnsafeControlMessageStorage: Collection {
     let bytesPerMessage: Int
+    let deallocateBuffer: Bool
     var buffer: UnsafeMutableRawBufferPointer
 
     /// Initialise which includes allocating memory
     /// parameter:
     /// - bytesPerMessage: How many bytes have been allocated for each supported message.
     /// - buffer: The memory allocated to use for control messages.
-    private init(bytesPerMessage: Int, buffer: UnsafeMutableRawBufferPointer) {
+    init(bytesPerMessage: Int, deallocateBuffer: Bool, buffer: UnsafeMutableRawBufferPointer) {
         self.bytesPerMessage = bytesPerMessage
+        self.deallocateBuffer = deallocateBuffer
         self.buffer = buffer
     }
+
+    // Guess that 4 Int32 payload messages is enough for anyone.
+    static var bytesPerMessage: Int { NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout<Int32>.stride) * 4 }
 
     /// Allocate new memory - Caller must call `deallocate` when no longer required.
     /// parameter:
     ///   - msghdrCount: How many `msghdr` structures will be fed from this buffer - we assume 4 Int32 cmsgs for each.
     static func allocate(msghdrCount: Int) -> UnsafeControlMessageStorage {
-        // Guess that 4 Int32 payload messages is enough for anyone.
-        let bytesPerMessage = NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout<Int32>.stride) * 4
+        let bytesPerMessage = Self.bytesPerMessage
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: bytesPerMessage * msghdrCount,
                                                              alignment: MemoryLayout<cmsghdr>.alignment)
-        return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, buffer: buffer)
+        return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, deallocateBuffer: true, buffer: buffer)
     }
 
     mutating func deallocate() {
-        self.buffer.deallocate()
-        self.buffer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer(bitPattern: 0x7eadbeef), count: 0)
+        if self.deallocateBuffer {
+            self.buffer.deallocate()
+            self.buffer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer(bitPattern: 0x7eadbeef), count: 0)
+        }
     }
 
     /// Get the part of the buffer for use with a message.
@@ -65,7 +71,6 @@ struct UnsafeControlMessageStorage: Collection {
     func index(after: Int) -> Int {
         return after + 1
     }
-
 }
 
 /// Representation of a `cmsghdr` and associated data.

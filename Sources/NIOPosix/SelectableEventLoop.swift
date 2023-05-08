@@ -185,7 +185,7 @@ Further information:
         self.thread = thread
         self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
         self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
-        self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
+        self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually
