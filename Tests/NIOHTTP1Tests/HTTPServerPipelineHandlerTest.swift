@@ -1165,4 +1165,20 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                        [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
                         .channelRead(HTTPServerRequestPart.end(nil))])
     }
+
+    func testWritesAfterCloseOutputAreDropped() throws {
+        // Send in a request
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Server sends a head.
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.head(self.responseHead)))
+
+        // Now the server sends close output
+        XCTAssertNoThrow(try channel.close(mode: .output).wait())
+
+        // Now, in error, the server sends .body and .end. Both pass unannounced.
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer()))))
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.end(nil)))
+    }
 }
