@@ -71,7 +71,7 @@ services:
       - FORCE_TEST_DISCOVERY=--enable-test-discovery
       - WARN_AS_ERROR_ARG=-Xswiftc -warnings-as-errors
       - IMPORT_CHECK_ARG=--explicit-target-dependency-import-check error
-      # - SANITIZER_ARG=--sanitize=thread # TSan broken still
+      - SANITIZER_ARG=--sanitize=thread
 
   performance-test:
     image: swift-nio:22.04-5.8

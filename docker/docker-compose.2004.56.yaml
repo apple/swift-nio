@@ -70,7 +70,7 @@ services:
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=161050
       - FORCE_TEST_DISCOVERY=--enable-test-discovery
       - WARN_AS_ERROR_ARG=-Xswiftc -warnings-as-errors
-      # - SANITIZER_ARG=--sanitize=thread # TSan broken still
+      - SANITIZER_ARG=--sanitize=thread
 
   performance-test:
     image: swift-nio:20.04-5.6
