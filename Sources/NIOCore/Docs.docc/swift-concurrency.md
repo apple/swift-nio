@@ -1,16 +1,16 @@
 # NIO and Swift Concurrency
 
-This article explains how to interface between NIO and Swift Concurrency 
+This article explains how to interface between NIO and Swift Concurrency.
 
 NIO was created before native Concurrency support in Swift existed, hence, NIO had to solve
-a few problems that have solutions in the language today. Since, the introduction of Swift Concurrency
-NIO has added numerous features to make the inter-op between NIOs channel eventing system and Swift's
+a few problems that have solutions in the language today. Since the introduction of Swift Concurrency,
+NIO has added numerous features to make the interop between NIO's ``Channel`` eventing system and Swift's
 Concurrency primitives as easy as possible.
 
 ### EventLoopFuture bridges
 
-The first bridges, that NIO introduced were adding methods on ``EventLoopFuture`` and ``EventLoopPromise``
-to bridge to and from Concurrency. Namely these bridges are ``EventLoopFuture/get()`` and ``EventLoopPromise/completeWithTask(_:)``.
+The first bridges that NIO introduced added methods on ``EventLoopFuture`` and ``EventLoopPromise``
+to bridge to and from Concurrency. These bridges are ``EventLoopFuture/get()`` and ``EventLoopPromise/completeWithTask(_:)``.
 
 > Warning: The future ``EventLoopFuture/get()`` method does not support task cancellation.
 
@@ -29,13 +29,13 @@ promise.completeWithTask {
 let result = try await promise.futureResult.get()
 ```
 
-> Note: The `completeWithTask` method is creating an unstructured task under the hood.
+> Note: The `completeWithTask` method creates an unstructured task under the hood.
 
 ### Channel bridges
 
 The ``EventLoopFuture`` and ``EventLoopPromise`` bridges already allow async code to interact with
-some of NIO's types. However, they only work where we need to bridge request-response like interfaces.
-On the other hand, NIO's' ``Channel`` type contains a ``ChannelPipeline`` which can be roughly 
+some of NIO's types. However, they only work where we need to bridge request-response-like interfaces.
+On the other hand, NIO's ``Channel`` type contains a ``ChannelPipeline`` which can be roughly 
 described as a bi-directional streaming pipeline. To bridge such a pipeline into Concurrency required
 new types. Importantly, these types need to uphold the channel's back-pressure and writability guarantees.
 NIO introduced the ``NIOThrowingAsyncSequenceProducer``, ``NIOAsyncSequenceProducer`` and the ``NIOAsyncWriter``
@@ -46,8 +46,8 @@ sections cover the details of the foundational types and how the `NIOAsyncChanne
 
 #### NIOThrowingAsyncSequenceProducer and NIOAsyncSequenceProducer
 
-The ``NIOThrowingAsyncSequenceProducer`` and ``NIOAsyncSequenceProducer`` are root asynchronous sequences
-similar to Swift's `AsyncStream`. Their core goal is to provide a back-pressured bridge between a
+The ``NIOThrowingAsyncSequenceProducer`` and ``NIOAsyncSequenceProducer`` are asynchronous sequences
+similar to Swift's `AsyncStream`. Their purpose is to provide a back-pressured bridge between a
 synchronous producer and an asynchronous consumer. These types are highly configurable and generic which
 makes them usable in a lot of places with very good performance; however, at the same time they are
 not the easiest types to hold. We recommend that you **never** expose them in public API but rather
@@ -56,11 +56,11 @@ wrap them in your own async sequence.
 #### NIOAsyncWriter
 
 The ``NIOAsyncWriter`` is used for bridging from an asynchronous producer to a synchronous consumer.
-It also has back-pressure support which allows the synchronous side to suspend calls to the
+It also has back-pressure support which allows the consumer to stop the producer by suspending the
 ``NIOAsyncWriter/yield(contentsOf:)`` method.
 
 
-> Important: Everything below this is currently not public API but can be test it by using `@_spi(AsyncChannel) import`.
+> Important: Everything below this is currently not public API but can be tested it by using `@_spi(AsyncChannel) import`.
 The APIs might change until they become publicly available.
 
 #### NIOAsyncChannel
@@ -68,7 +68,7 @@ The APIs might change until they become publicly available.
 The above types are used to bridge both the read and write side of a ``Channel`` into Swift Concurrency.
 This can be done by wrapping a ``Channel`` via the `NIOAsyncChannel/init(synchronouslyWrapping:backpressureStrategy:isOutboundHalfClosureEnabled:inboundType:outboundType:)`
 initializer. Under the hood, this initializer adds two channel handlers to the end of the channel's pipeline.
-These handlers bridge the read and write side of the channel. Additionally, the handlers are working together
+These handlers bridge the read and write side of the channel. Additionally, the handlers work together
 to close the channel once both the reading and the writing have finished.
 
 
@@ -76,8 +76,8 @@ This is how you can wrap an existing channel into a `NIOAsyncChannel`, consume t
 echo it back outbound.
 
 ```swift
-let channel = StringChannel()
-let asyncChannel = try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: String.self, outboundType: String.self)
+let channel = ...
+let asyncChannel = try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: ByteBuffer.self, outboundType: ByteBuffer.self)
 
 for try await inboundData in asyncChannel.inboundStream {
     try await asyncChannel.outboundWriter.write(inboundData)
@@ -86,7 +86,7 @@ for try await inboundData in asyncChannel.inboundStream {
 
 ### Async bootstrap
 
-The `NIOAsyncChannel` alone would already allow you to wrap your channels and use them from Concurrency;
+The `NIOAsyncChannel` alone allows you to wrap your channels and use them from Concurrency;
 however, you must be very careful at what point you wrap your channel otherwise you might lose some reads.
 Furthermore, with the introduction of `NIOAsyncChannel` we also recommend reevaluating where your
 business logic lives and thinking about moving it from channel handlers into Concurrency tasks. A good split is
@@ -99,14 +99,14 @@ Before diving into how these new bootstrap methods work there is one more proble
 #### Protocol Negotiation
 
 With the introduction of `NIOAsyncChannel` we are introducing concrete types to the channel's pipeline. The underlying
-bridging handlers of the `NIOAsyncChannel` are generic and unwrap the inbound and wrap the outbound data.
+bridging handlers of the `NIOAsyncChannel` are generic and automatically handle wrapping and unwrapping the outbound and inbound data.
 This means that once you wrap a ``Channel`` into a `NIOAsyncChannel` the inbound and outbound types
-need to be known. Moreover, these types are not allowed to change anymore otherwise it will result in
+need to be known. MMoreover, these types are not allowed to change at runtime, as type mismatches will result in
 runtime crashes.
-To solve the problem of protocol negotiation we had to introduce a new ``ChannelHandler`` protocol called
+To solve the problem of protocol negotiation we introduced a new ``ChannelHandler`` protocol called
 `NIOProtocolNegotiationHandler`. This protocol requires a single future property `NIOProtocolNegotiationHandler/protocolNegotiationResult`
 that is completed once the handler is finished with protocol negotiation. In the successful case,
-the future can either indicate that protocol negotiation is fully done by returning `NIOProtocolNegotiationResult/finished(_:)``or
+the future can either indicate that protocol negotiation is fully done by returning `NIOProtocolNegotiationResult/finished(_:)` or
 indicate that further protocol negotiation needs to be done by returning `NIOProtocolNegotiationResult/deferredResult(_:)`.
 
 #### ServerBootstrap
@@ -124,30 +124,31 @@ let serverChannel = try await ServerBootstrap(group: eventLoopGroup)
         childChannelOutboundType: ByteBuffer.self
     )
 
-    try await withThrowingDiscardingTaskGroup { group in
-        for try await connectionChannel in serverChannel.inboundStream {
-            group.addTask {
-                do {
-                    for try await inboundData in connectionChannel.inboundStream {
-                        try await  connectionChannel.outboundWriter.write(inboundData)
-                    }
-                } catch {
-                    // Handle errors
+try await withThrowingDiscardingTaskGroup { group in
+    for try await connectionChannel in serverChannel.inboundStream {
+        group.addTask {
+            do {
+                for try await inboundData in connectionChannel.inboundStream {
+                    try await connectionChannel.outboundWriter.write(inboundData)
                 }
+            } catch {
+                // Handle errors
             }
         }
     }
+}
 ```
 
-In the above code, we are bootstrapping a new TCP server which we assign to `serverChannel`. The type of 
-`serverChannel` is a `NIOAsyncChannel` of `NIOAsyncChannel`. This is due to the fact that each
-inbound connection gets its own separate child channel.
-Afterward, we are handling each inbound connection in a separate child task and echo the data back.
+In the above code, we are bootstrapping a new TCP server which we assign to `serverChannel`.
+The `serverChannel` is a `NIOAsyncChannel` whose inbound type is a `NIOAsyncChannel` and  whose 
+outbound type is `Never`. This is due to the fact that each inbound connection gets its own separate child channel.
+The inbound and outbound types of each inbound connection is `ByteBuffer` as specified in the bootstrap.
+Afterwards, we handle each inbound connection in separate child tasks and echo the data back.
 
-> Important: Make sure to use discarding task groups which are automatically reaping finished child tasks.
+> Important: Make sure to use discarding task groups which automatically reap finished child tasks.
 Normal task groups will result in a memory leak since they do not reap their child tasks automatically.
 
-The above works create for channels that do not have protocol negotiation handlers in their pipeline
+The above code works for channels that do not have protocol negotiation handlers in their pipeline
 since we can define the child channel's inbound and outbound type when calling `bind()`. In the case
 of protocol negotiation, we have to use a different bind method since now the types of the child channels
 are only known once protocol negotiation is done. Let's walk through how to setup a `ServerBootstrap`
@@ -166,7 +167,7 @@ struct ProtocolNegotiationError: Error {}
 ```
 
 Next, we have to setup our bootstrap. We are adding a `NIOTypedApplicationProtocolNegotiationHandler`
-to each child channel's pipeline This handler is listening to user inbound events of the type `TLSUserEvent`
+to each child channel's pipeline. This handler listens for user inbound events of the type `TLSUserEvent`
 and then calls the provided closure with the result. In our example, we are handling either `string`
 or `byte` application protocols. Importantly, we now have to wrap the channel into a `NIOAsyncChannel` ourselves and
 return the finished `NIOProtocolNegotiationResult`.
@@ -227,14 +228,14 @@ try await withThrowingDiscardingTaskGroup { group in
     for try await negotiationResult in serverChannel.inboundStream {
         group.addTask {
             do {
-                switch connectionChannel {
+                switch negotiationResult {
                 case .string(let channel):
-                    for try await value in channel.inboundStream {
-                        continuation.yield(.string(value))
+                    for try await inboundData in channel.inboundStream {
+                        try await channel.outboundWriter.write(inboundData)
                     }
                 case .byte(let channel):
                     for try await value in channel.inboundStream {
-                        continuation.yield(.byte(value))
+                        try await channel.outboundWriter.write(inboundData)
                     }   
                 }
             }
