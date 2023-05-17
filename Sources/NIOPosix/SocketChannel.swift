@@ -605,23 +605,21 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func readFromSocket() throws -> ReadResult {
         if self.vectorReadManager != nil {
             return try self.vectorReadFromSocket()
+        } else if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
+            let pooledMsgBuffer = self.selectableEventLoop.msgBufferPool.get()
+            defer { self.selectableEventLoop.msgBufferPool.put(pooledMsgBuffer) }
+            return try pooledMsgBuffer.withUnsafePointers { _, _, controlMessageStorage in
+                return try self.singleReadFromSocket(controlBytesBuffer: controlMessageStorage[0])
+            }
         } else {
-            return try self.singleReadFromSocket()
+            return try self.singleReadFromSocket(controlBytesBuffer: UnsafeMutableRawBufferPointer(start: nil, count: 0))
         }
     }
 
-    private func singleReadFromSocket() throws -> ReadResult {
+    private func singleReadFromSocket(controlBytesBuffer: UnsafeMutableRawBufferPointer) throws -> ReadResult {
         var rawAddress = sockaddr_storage()
         var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
         var readResult = ReadResult.none
-
-        // These control bytes must not escape the current call stack
-        let controlBytesBuffer: UnsafeMutableRawBufferPointer
-        if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
-            controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
-        } else {
-            controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-        }
 
         for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
