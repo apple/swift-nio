@@ -245,6 +245,8 @@ try await withThrowingDiscardingTaskGroup { group in
                         try await channel.outboundWriter.write(inboundData)
                     }   
                 }
+            } catch {
+                // Handle errors
             }
         }
     }
