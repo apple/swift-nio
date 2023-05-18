@@ -10,7 +10,7 @@ Concurrency primitives as easy as possible.
 ### EventLoopFuture bridges
 
 The first bridges that NIO introduced added methods on ``EventLoopFuture`` and ``EventLoopPromise``
-to bridge to and from Concurrency. These bridges are ``EventLoopFuture/get()`` and ``EventLoopPromise/completeWithTask(_:)``.
+to enable communication between Concurrency and NIO. These methods are ``EventLoopFuture/get()`` and ``EventLoopPromise/completeWithTask(_:)``.
 
 > Warning: The future ``EventLoopFuture/get()`` method does not support task cancellation.
 
@@ -34,7 +34,7 @@ let result = try await promise.futureResult.get()
 ### Channel bridges
 
 The ``EventLoopFuture`` and ``EventLoopPromise`` bridges already allow async code to interact with
-some of NIO's types. However, they only work where we need to bridge request-response-like interfaces.
+some of NIO's types. However, they only work where we have request-response-like interfaces.
 On the other hand, NIO's ``Channel`` type contains a ``ChannelPipeline`` which can be roughly 
 described as a bi-directional streaming pipeline. To bridge such a pipeline into Concurrency required
 new types. Importantly, these types need to uphold the channel's back-pressure and writability guarantees.
@@ -84,30 +84,23 @@ for try await inboundData in asyncChannel.inboundStream {
 }
 ```
 
+The above code works nicely; however, you must be very careful at what point you wrap your channel
+otherwise you might lose some reads. For example your channel might be created by a `ServerBootstrap`
+for a new inbound connection. The channel might start to produce reads as soon as it registered its
+IO which happens after your channel initializer ran. To avoid potentially losing reads the channel
+must be wrapped before it registered its IO.
+Another example is when the channel contains a handler that does protocol negotiation. Protocol negotiation handlers
+are usually waiting for some data to be exchanged before deciding what protocol to chose. Afterwards, they
+often modify the channel's pipeline and add the protocol appropriate handlers to it. This is another
+case where wrapping of the `Channel` into a `NIOAsyncChannel` needs to happen at the right time to avoid
+losing reads.
+
 ### Async bootstrap
 
-The `NIOAsyncChannel` alone allows you to wrap your channels and use them from Concurrency;
-however, you must be very careful at what point you wrap your channel otherwise you might lose some reads.
-Furthermore, with the introduction of `NIOAsyncChannel` we also recommend reevaluating where your
-business logic lives and thinking about moving it from channel handlers into Concurrency tasks. A good split is
-to put network protocol logic into channel handlers and business logic into tasks.
-To solve the above timing problems and guide users into the Concurrency based solution the various bootstraps
-gained new methods that directly return `NIOAsyncChannel`s.
-Before diving into how these new bootstrap methods work there is one more problem that needs to be called out -
- Protocol Negotiation.
+NIO offers three different kind of bootstraps `ServerBootstrap`, `ClientBootstrap` and `DatagramBootstrap`.
+The next section is going to focus on how to use the methods of these three types to bootstrap connections
+using `NIOAsyncChannel`.
 
-#### Protocol Negotiation
-
-With the introduction of `NIOAsyncChannel` we are introducing concrete types to the channel's pipeline. The underlying
-bridging handlers of the `NIOAsyncChannel` are generic and automatically handle wrapping and unwrapping the outbound and inbound data.
-This means that once you wrap a ``Channel`` into a `NIOAsyncChannel` the inbound and outbound types
-need to be known. MMoreover, these types are not allowed to change at runtime, as type mismatches will result in
-runtime crashes.
-To solve the problem of protocol negotiation we introduced a new ``ChannelHandler`` protocol called
-`NIOProtocolNegotiationHandler`. This protocol requires a single future property `NIOProtocolNegotiationHandler/protocolNegotiationResult`
-that is completed once the handler is finished with protocol negotiation. In the successful case,
-the future can either indicate that protocol negotiation is fully done by returning `NIOProtocolNegotiationResult/finished(_:)` or
-indicate that further protocol negotiation needs to be done by returning `NIOProtocolNegotiationResult/deferredResult(_:)`.
 
 #### ServerBootstrap
 
@@ -148,11 +141,25 @@ Afterwards, we handle each inbound connection in separate child tasks and echo t
 > Important: Make sure to use discarding task groups which automatically reap finished child tasks.
 Normal task groups will result in a memory leak since they do not reap their child tasks automatically.
 
-The above code works for channels that do not have protocol negotiation handlers in their pipeline
-since we can define the child channel's inbound and outbound type when calling `bind()`. In the case
-of protocol negotiation, we have to use a different bind method since now the types of the child channels
-are only known once protocol negotiation is done. Let's walk through how to setup a `ServerBootstrap`
-with protocol negotiation.
+#### ClientBootstrap
+> Important: Support for `ClientBootstrap` with `NIOAsyncChannel` hasn't landed yet.
+
+#### DatagramBootstrap
+> Important: Support for `DatagramBootstrap` with `NIOAsyncChannel` hasn't landed yet.
+
+#### Protocol negotiation
+
+The above bootstrap methods work great in the case where we know the types of the resulting channels
+at compile time. However, as mentioned previously protocol negotiation is another case where the timing
+of wrapping the ``Channel`` is important that we haven't covered with the `bind` methods that take
+an inbound and outbound type yet.
+To solve the problem of protocol negotiation, NIO introduced a new ``ChannelHandler`` protocol called
+`NIOProtocolNegotiationHandler`. This protocol requires a single future property `NIOProtocolNegotiationHandler/protocolNegotiationResult`
+that is completed once the handler is finished with protocol negotiation. In the successful case,
+the future can either indicate that protocol negotiation is fully done by returning `NIOProtocolNegotiationResult/finished(_:)` or
+indicate that further protocol negotiation needs to be done by returning `NIOProtocolNegotiationResult/deferredResult(_:)`.
+Additionally, the various bootstraps provide another set of `bind()` methods that handle protocol negotiation.
+Let's walk through how to setup a `ServerBootstrap` with protocol negotiation.
 
 First, we have to define our negotiation result. For this example, we are negotiating between a
 `String` based and `UInt8` based channel. Additionally, we also need an error that we can throw
@@ -243,3 +250,18 @@ try await withThrowingDiscardingTaskGroup { group in
     }
 }
 ```
+
+
+### General guidance
+
+#### Where should your code live?
+
+Before the introduction of Swift Concurrency both, implementations of network protocols and business logic,
+were often written inside ``ChannelHandler``s. This made it easier to get started; however, it came with
+some downsides. First, implementing business logic inside channel handlers requires the business logic to
+also handle all of the invariants that the ``ChannelHandler`` protocol brings with it. This often requires
+writing complex state machines. Additionally, the business logic becomes very tied to NIO and hard to
+port between different systems.
+Because of the above reasons we recommend to implement your business logic using Swift Concurrency primitives and the
+`NIOAsyncChannel` based bootstraps. Network protocol implementation should still be implemented as
+``ChannelHandler``s.
