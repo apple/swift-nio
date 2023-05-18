@@ -256,7 +256,7 @@ try await withThrowingDiscardingTaskGroup { group in
 
 #### Where should your code live?
 
-Before the introduction of Swift Concurrency both, implementations of network protocols and business logic,
+Before the introduction of Swift Concurrency both implementations of network protocols and business logic
 were often written inside ``ChannelHandler``s. This made it easier to get started; however, it came with
 some downsides. First, implementing business logic inside channel handlers requires the business logic to
 also handle all of the invariants that the ``ChannelHandler`` protocol brings with it. This often requires
