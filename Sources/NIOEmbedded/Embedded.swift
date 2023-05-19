@@ -255,8 +255,18 @@ class EmbeddedChannelCore: ChannelCore {
         }
     }
 
+    var allowRemoteHalfClosure: Bool {
+        get {
+            return self._allowRemoteHalfClosure.load(ordering: .sequentiallyConsistent)
+        }
+        set {
+            self._allowRemoteHalfClosure.store(newValue, ordering: .sequentiallyConsistent)
+        }
+    }
+
     private let _isOpen = ManagedAtomic(true)
     private let _isActive = ManagedAtomic(false)
+    private let _allowRemoteHalfClosure = ManagedAtomic(false)
 
     let eventLoop: EventLoop
     let closePromise: EventLoopPromise<Void>
@@ -552,7 +562,14 @@ public final class EmbeddedChannel: Channel {
     public var isActive: Bool { return channelcore.isActive }
 
     /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
-    public var allowRemoteHalfClosure: Bool = false
+    public var allowRemoteHalfClosure: Bool {
+        get {
+            return channelcore.allowRemoteHalfClosure
+        }
+        set {
+            channelcore.allowRemoteHalfClosure = newValue
+        }
+    }
 
     /// - see: `Channel.closeFuture`
     public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }

@@ -171,7 +171,14 @@ public final class NIOAsyncTestingChannel: Channel {
     public var isActive: Bool { return channelcore.isActive }
 
     /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
-    public var allowRemoteHalfClosure: Bool = false
+    public var allowRemoteHalfClosure: Bool {
+        get {
+            return channelcore.allowRemoteHalfClosure
+        }
+        set {
+            channelcore.allowRemoteHalfClosure = newValue
+        }
+    }
 
     /// - see: `Channel.closeFuture`
     public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
