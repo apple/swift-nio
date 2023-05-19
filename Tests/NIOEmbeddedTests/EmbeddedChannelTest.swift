@@ -489,7 +489,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(try options?.getOption(ChannelOptions.autoRead), true)
     }
 
-    func testSetGetChannelOptionAllowRemoteHalfClosueIsSupported() {
+    func testSetGetChannelOptionAllowRemoteHalfClosureIsSupported() {
         let channel = EmbeddedChannel()
         let options = channel.syncOptions
         XCTAssertNotNil(options)

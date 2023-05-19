@@ -170,6 +170,9 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - note: An ``NIOAsyncTestingChannel`` starts _inactive_ and can be activated, for example by calling `connect`.
     public var isActive: Bool { return channelcore.isActive }
 
+    /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
+    public var allowRemoteHalfClosure: Bool = false
+
     /// - see: `Channel.closeFuture`
     public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
 
@@ -362,7 +365,7 @@ public final class NIOAsyncTestingChannel: Channel {
             try self._readFromBuffer(buffer: &self.channelcore.outboundBuffer)
         }
     }
-    
+
     /// This method is similar to ``NIOAsyncTestingChannel/readOutbound(as:)`` but will wait if the outbound buffer is empty.
     /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s outbound buffer. If the
     /// first element was of a different type than requested, ``WrongTypeError`` will be thrown, if there
@@ -412,7 +415,7 @@ public final class NIOAsyncTestingChannel: Channel {
             try self._readFromBuffer(buffer: &self.channelcore.inboundBuffer)
         }
     }
-    
+
     /// This method is similar to ``NIOAsyncTestingChannel/readInbound(as:)`` but will wait if the inbound buffer is empty.
     /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s inbound buffer. If the
     /// first element was of a different type than requested, ``WrongTypeError`` will be thrown, if there
@@ -499,7 +502,7 @@ public final class NIOAsyncTestingChannel: Channel {
             throw error
         }
     }
-    
+
 
     @inlinable
     func _readFromBuffer<T>(buffer: inout CircularBuffer<NIOAny>) throws -> T? {
@@ -510,7 +513,7 @@ public final class NIOAsyncTestingChannel: Channel {
         }
         return try self._cast(buffer.removeFirst(), to: T.self)
     }
-    
+
     @inlinable
     func _cast<T>(_ element: NIOAny, to: T.Type = T.self) throws -> T {
         guard let t = self._channelCore.tryUnwrapData(element, as: T.self) else {
@@ -532,8 +535,12 @@ public final class NIOAsyncTestingChannel: Channel {
 
     @inlinable
     internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
-        // No options supported
-        fatalError("no options supported")
+        if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
+            self.allowRemoteHalfClosure = value as! Bool
+            return
+        }
+        // No other options supported
+        fatalError("option not supported")
     }
 
     /// - see: `Channel.getOption`
@@ -550,6 +557,9 @@ public final class NIOAsyncTestingChannel: Channel {
     internal func getOptionSync<Option: ChannelOption>(_ option: Option) -> Option.Value {
         if option is ChannelOptions.Types.AutoReadOption {
             return true as! Option.Value
+        }
+        if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
+            return self.allowRemoteHalfClosure as! Option.Value
         }
         fatalError("option \(option) not supported")
     }
