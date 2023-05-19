@@ -255,8 +255,18 @@ class EmbeddedChannelCore: ChannelCore {
         }
     }
 
+    var allowRemoteHalfClosure: Bool {
+        get {
+            return self._allowRemoteHalfClosure.load(ordering: .sequentiallyConsistent)
+        }
+        set {
+            self._allowRemoteHalfClosure.store(newValue, ordering: .sequentiallyConsistent)
+        }
+    }
+
     private let _isOpen = ManagedAtomic(true)
     private let _isActive = ManagedAtomic(false)
+    private let _allowRemoteHalfClosure = ManagedAtomic(false)
 
     let eventLoop: EventLoop
     let closePromise: EventLoopPromise<Void>
@@ -281,7 +291,7 @@ class EmbeddedChannelCore: ChannelCore {
     /// Contains the flushed items that went into the `Channel` (and on a regular channel would have hit the network).
     @usableFromInline
     var outboundBuffer: CircularBuffer<NIOAny> = CircularBuffer()
-    
+
     /// Contains observers that want to consume the first element that would be appended to the `outboundBuffer`
     @usableFromInline
     var outboundBufferConsumer: Deque<(NIOAny) -> Void> = []
@@ -294,7 +304,7 @@ class EmbeddedChannelCore: ChannelCore {
     /// regular `Channel` these items would be lost.
     @usableFromInline
     var inboundBuffer: CircularBuffer<NIOAny> = CircularBuffer()
-    
+
     /// Contains observers that want to consume the first element that would be appended to the `inboundBuffer`
     @usableFromInline
     var inboundBufferConsumer: Deque<(NIOAny) -> Void> = []
@@ -551,6 +561,16 @@ public final class EmbeddedChannel: Channel {
     /// - note: An `EmbeddedChannel` starts _inactive_ and can be activated, for example by calling `connect`.
     public var isActive: Bool { return channelcore.isActive }
 
+    /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
+    public var allowRemoteHalfClosure: Bool {
+        get {
+            return channelcore.allowRemoteHalfClosure
+        }
+        set {
+            channelcore.allowRemoteHalfClosure = newValue
+        }
+    }
+
     /// - see: `Channel.closeFuture`
     public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
 
@@ -749,7 +769,7 @@ public final class EmbeddedChannel: Channel {
         let handlers = handler.map { [$0] } ?? []
         self.init(handlers: handlers, loop: loop)
     }
-    
+
     /// Create a new instance.
     ///
     /// During creation it will automatically also register itself on the `EmbeddedEventLoop`.
@@ -776,8 +796,12 @@ public final class EmbeddedChannel: Channel {
 
     @inlinable
     internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
-        // No options supported
-        fatalError("no options supported")
+        if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
+            self.allowRemoteHalfClosure = value as! Bool
+            return
+        }
+        // No other options supported
+        fatalError("option not supported")
     }
 
     /// - see: `Channel.getOption`
@@ -790,6 +814,9 @@ public final class EmbeddedChannel: Channel {
     internal func getOptionSync<Option: ChannelOption>(_ option: Option) -> Option.Value {
         if option is ChannelOptions.Types.AutoReadOption {
             return true as! Option.Value
+        }
+        if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
+            return self.allowRemoteHalfClosure as! Option.Value
         }
         fatalError("option \(option) not supported")
     }
