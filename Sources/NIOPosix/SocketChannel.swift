@@ -800,16 +800,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
             scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
-                // normal write
-                // Control bytes must not escape current stack.
-                var controlBytes = UnsafeOutboundControlBytes(
-                    controlBytes: self.selectableEventLoop.controlMessageStorage[0])
-                controlBytes.appendExplicitCongestionState(metadata: metadata,
-                                                           protocolFamily: self.localAddress?.protocol)
-                return try self.socket.sendmsg(pointer: ptr,
-                                               destinationPtr: destinationPtr,
-                                               destinationSize: destinationSize,
-                                               controlBytes: controlBytes.validControlBytes)
+                let msgBuffer = self.selectableEventLoop.msgBufferPool.get()
+                defer { self.selectableEventLoop.msgBufferPool.put(msgBuffer) }
+                return try msgBuffer.withUnsafePointers { _, _, controlMessageStorage in
+                    var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[0])
+                    controlBytes.appendExplicitCongestionState(metadata: metadata,
+                                                            protocolFamily: self.localAddress?.protocol)
+                    return try self.socket.sendmsg(pointer: ptr,
+                                                   destinationPtr: destinationPtr,
+                                                   destinationSize: destinationSize,
+                                                   controlBytes: controlBytes.validControlBytes)
+                }
             },
             vectorWriteOperation: { msgs in
                 return try self.socket.sendmmsg(msgs: msgs)
@@ -817,7 +818,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         )
         return result
     }
-
 
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 
