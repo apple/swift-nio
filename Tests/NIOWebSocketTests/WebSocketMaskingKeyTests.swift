@@ -31,4 +31,11 @@ final class WebSocketMaskingKeyTests: XCTestCase {
             WebSocketMaskingKey.random(using: &generator) != [0, 0, 0, 0]
         }, "at least 1 of 1000 random masking keys should not be all zeros")
     }
+    
+    func testRandomMaskingKeyWithDefaultGenerator() {
+        let key1 = WebSocketMaskingKey.random()
+        let key2 = WebSocketMaskingKey.random()
+        
+        XCTAssertNotEqual(key1, key2)
+    }
 }
