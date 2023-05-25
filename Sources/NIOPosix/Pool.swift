@@ -285,7 +285,9 @@ struct PooledMsgBuffer: PoolElement {
                 let addressesBufferPointer = UnsafeMutableBufferPointer(
                     start: addressesPointer, count: headPointer.pointee.count
                 )
-                let controlMessageStorage = UnsafeControlMessageStorage(bytesPerMessage: UnsafeControlMessageStorage.bytesPerMessage, deallocateBuffer: false, buffer: controlDataPointer)
+                let controlMessageStorage = UnsafeControlMessageStorage.makeNotOwning(
+                    bytesPerMessage: UnsafeControlMessageStorage.bytesPerMessage,
+                    buffer: controlDataPointer)
                 return try body(msgHdrsBufferPointer, addressesBufferPointer, controlMessageStorage, sentinelPointer)
             }
         }

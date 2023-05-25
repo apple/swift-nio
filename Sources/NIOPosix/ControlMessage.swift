@@ -25,17 +25,18 @@ import CNIOWindows
 /// Supports multiple messages each with enough storage for multiple `cmsghdr`
 struct UnsafeControlMessageStorage: Collection {
     let bytesPerMessage: Int
-    let deallocateBuffer: Bool
     var buffer: UnsafeMutableRawBufferPointer
+    private let deallocateBuffer: Bool
 
     /// Initialise which includes allocating memory
     /// parameter:
     /// - bytesPerMessage: How many bytes have been allocated for each supported message.
     /// - buffer: The memory allocated to use for control messages.
-    init(bytesPerMessage: Int, deallocateBuffer: Bool, buffer: UnsafeMutableRawBufferPointer) {
+    /// - deallocateBuffer: buffer owning indicator
+    private init(bytesPerMessage: Int, buffer: UnsafeMutableRawBufferPointer, deallocateBuffer: Bool) {
         self.bytesPerMessage = bytesPerMessage
-        self.deallocateBuffer = deallocateBuffer
         self.buffer = buffer
+        self.deallocateBuffer = deallocateBuffer
     }
 
     // Guess that 4 Int32 payload messages is enough for anyone.
@@ -47,8 +48,16 @@ struct UnsafeControlMessageStorage: Collection {
     static func allocate(msghdrCount: Int) -> UnsafeControlMessageStorage {
         let bytesPerMessage = Self.bytesPerMessage
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: bytesPerMessage * msghdrCount,
-                                                             alignment: MemoryLayout<cmsghdr>.alignment)
-        return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, deallocateBuffer: true, buffer: buffer)
+                                                            alignment: MemoryLayout<cmsghdr>.alignment)
+        return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, buffer: buffer, deallocateBuffer: true)
+    }
+
+    /// Create an instance not owning the buffer
+    /// parameter:
+    /// - bytesPerMessage: How many bytes have been allocated for each supported message.
+    /// - buffer: The memory allocated to use for control messages.
+    static func makeNotOwning(bytesPerMessage: Int, buffer: UnsafeMutableRawBufferPointer) -> UnsafeControlMessageStorage {
+        return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, buffer: buffer, deallocateBuffer: false)
     }
 
     mutating func deallocate() {
