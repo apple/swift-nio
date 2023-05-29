@@ -57,6 +57,7 @@ struct UnsafeControlMessageStorage: Collection {
     /// - bytesPerMessage: How many bytes have been allocated for each supported message.
     /// - buffer: The memory allocated to use for control messages.
     static func makeNotOwning(bytesPerMessage: Int, buffer: UnsafeMutableRawBufferPointer) -> UnsafeControlMessageStorage {
+        precondition(buffer.count >= bytesPerMessage)
         return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, buffer: buffer, deallocateBuffer: false)
     }
 
