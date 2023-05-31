@@ -383,7 +383,6 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     private let bufferPool: Pool<PooledBuffer>
     private let msgBufferPool: Pool<PooledMsgBuffer>
-    private let controlMessageStorage: UnsafeControlMessageStorage
 
     private var state = PendingDatagramWritesState()
 
@@ -400,13 +399,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///
     /// - parameters:
     ///     - bufferPool: a pool of buffers to be used for IOVector and storage references
-    ///     - msgs: A pre-allocated array of `MMsgHdr` elements
-    ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
-    ///     - controlMessageStorage: Pre-allocated memory for storing cmsghdr data during a vector write operation.
-    init(bufferPool: Pool<PooledBuffer>, msgBufferPool: Pool<PooledMsgBuffer>, controlMessageStorage: UnsafeControlMessageStorage) {
+    ///     - msgBufferPool: a pool of buffers to be usded for `MMsgHdr`, `sockaddr_storage` and cmsghdr elements
+    init(bufferPool: Pool<PooledBuffer>, msgBufferPool: Pool<PooledMsgBuffer>) {
         self.bufferPool = bufferPool
         self.msgBufferPool = msgBufferPool
-        self.controlMessageStorage = controlMessageStorage
     }
 
     /// Mark the flush checkpoint.
@@ -610,12 +606,12 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         let msgBuffer = self.msgBufferPool.get()
         defer { self.msgBufferPool.put(msgBuffer) }
 
-        return try msgBuffer.withUnsafePointers { msgs, addresses in
+        return try msgBuffer.withUnsafePointers { msgs, addresses, controlMessageStorage in
             return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
                                                                            bufferPool: self.bufferPool,
                                                                            msgs: msgs,
                                                                            addresses: addresses,
-                                                                           controlMessageStorage: self.controlMessageStorage,
+                                                                           controlMessageStorage: controlMessageStorage,
                                                                            { try vectorWriteOperation($0) }),
                                  messages: msgs)
         }
