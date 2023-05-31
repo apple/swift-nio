@@ -111,7 +111,11 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 // We got a response while still receiving a request, which we have to
                 // wait for.
                 self = .requestEndPending
-            case .requestEndPending, .idle, .sentCloseOutput, .sentCloseOutputRequestEndPending:
+            case .sentCloseOutput, .sentCloseOutputRequestEndPending:
+                // This is a user error: they have sent close(mode: .output), but are continuing to write.
+                // The write will fail, so we can allow it to pass.
+                ()
+            case .requestEndPending, .idle:
                 preconditionFailure("Unexpectedly received a response in state \(self)")
             }
         }

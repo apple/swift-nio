@@ -11,6 +11,10 @@ More specialized modules provide concrete implementations of many of the abstrac
 
 ## Topics
 
+### Articles
+
+- <doc:swift-concurrency>
+
 ### Event Loops and Event Loop Groups
 
 - ``EventLoopGroup``
