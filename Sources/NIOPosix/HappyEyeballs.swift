@@ -305,7 +305,7 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     }
 
     @inlinable
-    init(
+    convenience init(
         resolver: Resolver,
         loop: EventLoop,
         host: String,
@@ -315,25 +315,16 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         connectionDelay: TimeAmount = .milliseconds(250),
         channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel>
     ) where ChannelBuilderResult == Void {
-        self.resolver = resolver
-        self.loop = loop
-        self.host = host
-        self.port = port
-        self.connectTimeout = connectTimeout
-        self.channelBuilderCallback = { eventLoop, protocolFamily in channelBuilderCallback(eventLoop, protocolFamily).map { ($0, ()) } }
-        self.resolutionTask = nil
-        self.connectionTask = nil
-        self.timeoutTask = nil
-
-        self.state = .idle
-        self.resolutionPromise = self.loop.makePromise()
-        self.error = NIOConnectionError(host: host, port: port)
-
-        precondition(resolutionDelay.nanoseconds > 0, "Resolution delay must be greater than zero, got \(resolutionDelay).")
-        self.resolutionDelay = resolutionDelay
-
-        precondition(connectionDelay >= .milliseconds(100) && connectionDelay <= .milliseconds(2000), "Connection delay must be between 100 and 2000 ms, got \(connectionDelay)")
-        self.connectionDelay = connectionDelay
+        self.init(
+            resolver: resolver,
+            loop: loop,
+            host: host,
+            port: port,
+            connectTimeout: connectTimeout,
+            resolutionDelay: resolutionDelay,
+            connectionDelay: connectionDelay) { loop, protocolFamily in
+                channelBuilderCallback(loop, protocolFamily).map { ($0, ()) }
+            }
     }
 
     /// Initiate a DNS resolution attempt using Happy Eyeballs 2.
@@ -354,12 +345,7 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     /// returns: An `EventLoopFuture` that fires with a connected `Channel`.
     @inlinable
     func resolveAndConnect() -> EventLoopFuture<Channel> where ChannelBuilderResult == Void {
-        // We dispatch ourselves onto the event loop, rather than do all the rest of our processing from outside it.
-        self.loop.execute {
-            self.timeoutTask = self.loop.scheduleTask(in: self.connectTimeout) { self.processInput(.connectTimeoutElapsed) }
-            self.processInput(.resolve)
-        }
-        return resolutionPromise.futureResult.map { $0.0 }
+        self.resolveAndConnect().map { $0.0 }
     }
 
     /// Spin the state machine.

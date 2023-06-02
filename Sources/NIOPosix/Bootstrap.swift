@@ -1353,6 +1353,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
 }
 
 // MARK: AsyncChannel based connect
+
 extension ClientBootstrap {
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///
@@ -1367,40 +1368,33 @@ extension ClientBootstrap {
     /// - Returns: A `NIOAsyncChannel` for the established connection.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func connect<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
+    public func connect<ChannelInbound: Sendable, ChannelOutbound: Sendable>(
         host: String,
         port: Int,
-        channelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        channelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
+        channelInboundType: ChannelInbound.Type = ChannelInbound.self,
+        channelOutboundType: ChannelOutbound.Type = ChannelOutbound.self,
         channelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false
-    ) async throws -> NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound> {
-        let loop = self.group.next()
-        let resolver = self.resolver ?? GetaddrinfoResolver(
-            loop: loop,
-            aiSocktype: .stream,
-            aiProtocol: .tcp
-        )
-
-        let connector = HappyEyeballsConnector<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>>(
-            resolver: resolver,
-            loop: loop,
+    ) async throws -> NIOAsyncChannel<ChannelInbound, ChannelOutbound> {
+        let eventLoop = self.group.next()
+        return try await self.connect(
             host: host,
             port: port,
-            connectTimeout: self.connectTimeout
-        ) { eventLoop, protocolFamily in
-            return self.initializeAndRegisterNewChannel(
-                eventLoop: eventLoop,
-                protocolFamily: protocolFamily,
-                channelInboundType: channelInboundType,
-                channelOutboundType: channelOutboundType,
-                channelBackpressureStrategy: channelBackpressureStrategy,
-                isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
-            ) {
-                $0.eventLoop.makeSucceededFuture(())
-            }.map { ($0.channel, $0) }
+            eventLoop: eventLoop
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                return try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    backpressureStrategy: channelBackpressureStrategy,
+                    isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+                    inboundType: channelInboundType,
+                    outboundType: channelOutboundType
+                )
+            }
         }
-        return try await connector.resolveAndConnect().map { $0.1 }.get()
+        postRegisterTransformation: { result in
+            eventLoop.makeSucceededFuture(result)
+        }
     }
 
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
@@ -1415,13 +1409,13 @@ extension ClientBootstrap {
     /// - Returns: A `NIOAsyncChannel` for the established connection.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func connect<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
+    public func connect<ChannelInbound: Sendable, ChannelOutbound: Sendable>(
         to address: SocketAddress,
-        channelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        channelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
+        channelInboundType: ChannelInbound.Type = ChannelInbound.self,
+        channelOutboundType: ChannelOutbound.Type = ChannelOutbound.self,
         channelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false
-    ) async throws -> NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound> {
+    ) async throws -> NIOAsyncChannel<ChannelInbound, ChannelOutbound> {
         return try await self.initializeAndRegisterNewChannel(
             eventLoop: self.group.next(),
             protocolFamily: address.protocol,
@@ -1431,7 +1425,7 @@ extension ClientBootstrap {
             isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         ) { channel in
             return self.connect(freshChannel: channel, address: address)
-        }.get()
+        }.map { $0.1 }.get()
     }
 
     /// Specify the `unixDomainSocket` path to connect to for the UDS `Channel` that will be established.
@@ -1446,13 +1440,13 @@ extension ClientBootstrap {
     /// - Returns: A `NIOAsyncChannel` for the established connection.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func connect<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
+    public func connect<ChannelInbound: Sendable, ChannelOutbound: Sendable>(
         unixDomainSocketPath: String,
-        channelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        channelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
+        channelInboundType: ChannelInbound.Type = ChannelInbound.self,
+        channelOutboundType: ChannelOutbound.Type = ChannelOutbound.self,
         channelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false
-    ) async throws -> NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound> {
+    ) async throws -> NIOAsyncChannel<ChannelInbound, ChannelOutbound> {
         let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
         return try await self.connect(
             to: address,
@@ -1475,24 +1469,48 @@ extension ClientBootstrap {
     /// - Returns: A `NIOAsyncChannel` for the established connection.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func withConnectedSocket<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
+    public func withConnectedSocket<ChannelInbound: Sendable, ChannelOutbound: Sendable>(
         _ socket: NIOBSDSocket.Handle,
-        channelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        channelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
+        channelInboundType: ChannelInbound.Type = ChannelInbound.self,
+        channelOutboundType: ChannelOutbound.Type = ChannelOutbound.self,
         channelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false
-    ) async throws -> NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound> {
+    ) async throws -> NIOAsyncChannel<ChannelInbound, ChannelOutbound> {
         let eventLoop = group.next()
-        let channelInitializer = self.channelInitializer
-        let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, socket: socket)
-        let channelOptions = self._channelOptions
+        return try await self.withConnectedSocket(
+            eventLoop: eventLoop,
+            socket: socket
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                return try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    backpressureStrategy: channelBackpressureStrategy,
+                    isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+                    inboundType: channelInboundType,
+                    outboundType: channelOutboundType
+                )
+            }
+        }
+        postRegisterTransformation: { result in
+            eventLoop.makeSucceededFuture(result)
+        }
+    }
 
-        @inline(__always)
-        @Sendable
-        func setupChannel() -> EventLoopFuture<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>> {
-            eventLoop.assertInEventLoop()
-            return channelOptions.applyAllChannelOptions(to: channel).flatMap {
-                channelInitializer(channel).flatMapThrowing {
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func initializeAndRegisterNewChannel<ChannelInbound: Sendable, ChannelOutbound: Sendable>(
+        eventLoop: EventLoop,
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        channelInboundType: ChannelInbound.Type = ChannelInbound.self,
+        channelOutboundType: ChannelOutbound.Type = ChannelOutbound.self,
+        channelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isOutboundHalfClosureEnabled: Bool = false,
+        _ body: @escaping (Channel) -> EventLoopFuture<Void>
+    ) -> EventLoopFuture<(Channel, NIOAsyncChannel<ChannelInbound, ChannelOutbound>)> {
+        self.initializeAndRegisterNewChannel(
+            eventLoop: eventLoop,
+            protocolFamily: protocolFamily,
+            channelInitializer: { channel in
+                channel.eventLoop.makeCompletedFuture {
                     return try NIOAsyncChannel(
                         synchronouslyWrapping: channel,
                         backpressureStrategy: channelBackpressureStrategy,
@@ -1501,117 +1519,45 @@ extension ClientBootstrap {
                         outboundType: channelOutboundType
                     )
                 }
-            }.flatMap { asyncChannel in
-                eventLoop.assertInEventLoop()
-                let promise = eventLoop.makePromise(of: Void.self)
-                channel.registerAlreadyConfigured0(promise: promise)
-                return promise.futureResult.map { asyncChannel }
-            }.flatMapError { error in
-                channel.close0(error: error, mode: .all, promise: nil)
-                return channel.eventLoop.makeFailedFuture(error)
-            }
-        }
-
-        if eventLoop.inEventLoop {
-            return try await setupChannel().get()
-        } else {
-            return try await eventLoop.flatSubmit { setupChannel() }.get()
-        }
-    }
-
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func initializeAndRegisterNewChannel<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
-        eventLoop: EventLoop,
-        protocolFamily: NIOBSDSocket.ProtocolFamily,
-        channelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        channelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
-        channelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isOutboundHalfClosureEnabled: Bool = false,
-        _ body: @escaping (Channel) -> EventLoopFuture<Void>
-    ) -> EventLoopFuture<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>> {
-        let channel: SocketChannel
-        do {
-            channel = try self.makeSocketChannel(eventLoop: eventLoop, protocolFamily: protocolFamily)
-        } catch {
-            return eventLoop.makeFailedFuture(error)
-        }
-        return self.initializeAndRegisterChannel(
-            channel: channel,
-            channelInboundType: channelInboundType,
-            channelOutboundType: channelOutboundType,
-            channelBackpressureStrategy: channelBackpressureStrategy,
-            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+            },
+            postRegisterTransformation: { result in
+                eventLoop.makeSucceededFuture(result)
+            },
             body
         )
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func initializeAndRegisterChannel<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
+    private func initializeAndRegisterChannel<ChannelInbound: Sendable, ChannelOutbound: Sendable>(
         channel: SocketChannel,
-        channelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        channelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
+        channelInboundType: ChannelInbound.Type = ChannelInbound.self,
+        channelOutboundType: ChannelOutbound.Type = ChannelOutbound.self,
         channelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false,
         _ body: @escaping (Channel) -> EventLoopFuture<Void>
-    ) -> EventLoopFuture<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>> {
-        let channelInitializer = self.channelInitializer
-        let channelOptions = self._channelOptions
-        let eventLoop = channel.eventLoop
-        let bindTarget = self.bindTarget
-
-        @inline(__always)
-        @Sendable
-        func setupChannel() -> EventLoopFuture<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>> {
-            eventLoop.assertInEventLoop()
-            return channelOptions
-                .applyAllChannelOptions(to: channel)
-                .flatMap {
-                    if let bindTarget = bindTarget {
-                        return channel
-                            .bind(to: bindTarget)
-                            .flatMap {
-                                channelInitializer(channel)
-                            }.flatMapThrowing {
-                                return try NIOAsyncChannel(
-                                    synchronouslyWrapping: channel,
-                                    backpressureStrategy: channelBackpressureStrategy,
-                                    isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
-                                    inboundType: channelInboundType,
-                                    outboundType: channelOutboundType
-                                )
-                            }
-                    } else {
-                        return channelInitializer(channel)
-                            .flatMapThrowing {
-                                return try NIOAsyncChannel(
-                                    synchronouslyWrapping: channel,
-                                    backpressureStrategy: channelBackpressureStrategy,
-                                    isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
-                                    inboundType: channelInboundType,
-                                    outboundType: channelOutboundType
-                                )
-                            }
-                    }
-                }.flatMap { (asyncChannel: NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>) in
-                    eventLoop.assertInEventLoop()
-                    return channel.registerAndDoSynchronously(body).map { asyncChannel }
-                }.flatMapError { error in
-                    channel.close0(error: error, mode: .all, promise: nil)
-                    return channel.eventLoop.makeFailedFuture(error)
-                }
-        }
-
-        if eventLoop.inEventLoop {
-            return setupChannel()
-        } else {
-            return eventLoop.flatSubmit {
-                setupChannel()
+    ) -> EventLoopFuture<NIOAsyncChannel<ChannelInbound, ChannelOutbound>> {
+        return self.initializeAndRegisterChannel(
+            channel: channel
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                return try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    backpressureStrategy: channelBackpressureStrategy,
+                    isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+                    inboundType: channelInboundType,
+                    outboundType: channelOutboundType
+                )
             }
+        } registration: { channel in
+            channel.registerAndDoSynchronously(body)
+        } postRegisterTransformation: { result in
+            channel.eventLoop.makeSucceededFuture(result)
         }
     }
 }
 
 // MARK: AsyncChannel based connect with protocol negotiation
+
 extension ClientBootstrap {
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///
@@ -1628,29 +1574,18 @@ extension ClientBootstrap {
         port: Int,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
-        let loop = self.group.next()
-        let resolver = self.resolver ?? GetaddrinfoResolver(
-            loop: loop,
-            aiSocktype: .stream,
-            aiProtocol: .tcp
-        )
-
-        let connector = HappyEyeballsConnector<Handler.NegotiationResult>(
-            resolver: resolver,
-            loop: loop,
+        let eventLoop = self.group.next()
+        return try await self.connect(
             host: host,
             port: port,
-            connectTimeout: self.connectTimeout
-        ) { eventLoop, protocolFamily in
-            return self.initializeAndRegisterNewChannel(
-                eventLoop: eventLoop,
-                protocolFamily: protocolFamily,
-                channelInitializer: channelInitializer
-            ) {
-                $0.eventLoop.makeSucceededFuture(())
+            eventLoop: eventLoop,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { handler in
+                handler.protocolNegotiationResult.flatMap { result in
+                    ServerBootstrap.waitForFinalResult(result, eventLoop: eventLoop)
+                }
             }
-        }
-        return try await connector.resolveAndConnect().map { $0.1 }.get()
+        )
     }
 
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
@@ -1709,46 +1644,16 @@ extension ClientBootstrap {
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
         let eventLoop = group.next()
-        let channelInitializer = { channel in
-            return self.channelInitializer(channel)
-                .flatMap { channelInitializer(channel) }
-        }
-        let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, socket: socket)
-        let channelOptions = self._channelOptions
-
-        @inline(__always)
-        @Sendable
-        func setupChannel() -> EventLoopFuture<Handler.NegotiationResult> {
-            eventLoop.assertInEventLoop()
-            return channelOptions
-                .applyAllChannelOptions(to: channel)
-                .flatMap {
-                    channelInitializer(channel)
-                }
-                .flatMap { handler in
-                    eventLoop.assertInEventLoop()
-                    let promise = eventLoop.makePromise(of: Void.self)
-                    channel.registerAlreadyConfigured0(promise: promise)
-                    return promise.futureResult
-                        .map {
-                            handler
-                        }
-                }.flatMap { (handler: Handler) -> EventLoopFuture<NIOProtocolNegotiationResult<Handler.NegotiationResult>> in
-                    handler.protocolNegotiationResult
-                }.flatMap { result in
+        return try await self.withConnectedSocket(
+            eventLoop: eventLoop,
+            socket: socket,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { handler in
+                handler.protocolNegotiationResult.flatMap { result in
                     ServerBootstrap.waitForFinalResult(result, eventLoop: eventLoop)
                 }
-                .flatMapError { error in
-                    channel.close0(error: error, mode: .all, promise: nil)
-                    return channel.eventLoop.makeFailedFuture(error)
-                }
-        }
-
-        if eventLoop.inEventLoop {
-            return try await setupChannel().get()
-        } else {
-            return try await eventLoop.flatSubmit { setupChannel() }.get()
-        }
+            }
+        )
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
@@ -1758,6 +1663,101 @@ extension ClientBootstrap {
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>,
         _ body: @escaping (Channel) -> EventLoopFuture<Void>
     ) -> EventLoopFuture<(Channel, Handler.NegotiationResult)> {
+        self.initializeAndRegisterNewChannel(
+            eventLoop: eventLoop,
+            protocolFamily: protocolFamily,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { handler in
+                handler.protocolNegotiationResult.flatMap { result in
+                    ServerBootstrap.waitForFinalResult(result, eventLoop: eventLoop)
+                }
+            },
+            body
+        )
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func initializeAndRegisterChannel<Handler: NIOProtocolNegotiationHandler>(
+        channel: SocketChannel,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>,
+        _ body: @escaping (Channel) -> EventLoopFuture<Void>
+    ) -> EventLoopFuture<Handler.NegotiationResult> {
+        self.initializeAndRegisterChannel(
+            channel: channel,
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                channel.registerAndDoSynchronously(body)
+            },
+            postRegisterTransformation: { handler in
+                handler.protocolNegotiationResult.flatMap { result in
+                    ServerBootstrap.waitForFinalResult(result, eventLoop: channel.eventLoop)
+                }
+            }
+        )
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    func connect<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        host: String,
+        port: Int,
+        eventLoop: EventLoop,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        let resolver = self.resolver ?? GetaddrinfoResolver(
+            loop: eventLoop,
+            aiSocktype: .stream,
+            aiProtocol: .tcp
+        )
+
+        let connector = HappyEyeballsConnector<PostRegistrationTransformationResult>(
+            resolver: resolver,
+            loop: eventLoop,
+            host: host,
+            port: port,
+            connectTimeout: self.connectTimeout
+        ) { eventLoop, protocolFamily in
+            return self.initializeAndRegisterNewChannel(
+                eventLoop: eventLoop,
+                protocolFamily: protocolFamily,
+                channelInitializer: channelInitializer,
+                postRegisterTransformation: postRegisterTransformation
+            ) {
+                $0.eventLoop.makeSucceededFuture(())
+            }
+        }
+        return try await connector.resolveAndConnect().map { $0.1 }.get()
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func withConnectedSocket<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        eventLoop: EventLoop,
+        socket: NIOBSDSocket.Handle,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, socket: socket)
+
+        return try await self.initializeAndRegisterChannel(
+            channel: channel,
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                let promise = eventLoop.makePromise(of: Void.self)
+                channel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            },
+            postRegisterTransformation: postRegisterTransformation
+        ).get()
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func initializeAndRegisterNewChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        eventLoop: EventLoop,
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>,
+        _ body: @escaping (Channel) -> EventLoopFuture<Void>
+    ) -> EventLoopFuture<(Channel, PostRegistrationTransformationResult)> {
         let channel: SocketChannel
         do {
             channel = try self.makeSocketChannel(eventLoop: eventLoop, protocolFamily: protocolFamily)
@@ -1767,16 +1767,20 @@ extension ClientBootstrap {
         return self.initializeAndRegisterChannel(
             channel: channel,
             channelInitializer: channelInitializer,
-            body
+            registration: { channel in
+                channel.registerAndDoSynchronously(body)
+            },
+            postRegisterTransformation: postRegisterTransformation
         ).map { (channel, $0) }
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func initializeAndRegisterChannel<Handler: NIOProtocolNegotiationHandler>(
+    private func initializeAndRegisterChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
         channel: SocketChannel,
-        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>,
-        _ body: @escaping (Channel) -> EventLoopFuture<Void>
-    ) -> EventLoopFuture<Handler.NegotiationResult> {
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let channelInitializer = { channel in
             return self.channelInitializer(channel)
                 .flatMap { channelInitializer(channel) }
@@ -1787,35 +1791,32 @@ extension ClientBootstrap {
 
         @inline(__always)
         @Sendable
-        func setupChannel() -> EventLoopFuture<Handler.NegotiationResult> {
+        func setupChannel() -> EventLoopFuture<PostRegistrationTransformationResult> {
             eventLoop.assertInEventLoop()
             return channelOptions
                 .applyAllChannelOptions(to: channel)
                 .flatMap {
-                if let bindTarget = bindTarget {
-                    return channel
-                        .bind(to: bindTarget)
-                        .flatMap {
-                            channelInitializer(channel)
-                        }
-                } else {
-                    return channelInitializer(channel)
-                }
-                }.flatMap { (handler: Handler) in
-                eventLoop.assertInEventLoop()
-                return channel.registerAndDoSynchronously(body)
-                    .map {
-                        handler
+                    if let bindTarget = bindTarget {
+                        return channel
+                            .bind(to: bindTarget)
+                            .flatMap {
+                                channelInitializer(channel)
+                            }
+                    } else {
+                        return channelInitializer(channel)
                     }
-            }.flatMap { (handler: Handler) -> EventLoopFuture<NIOProtocolNegotiationResult<Handler.NegotiationResult>> in
-                handler.protocolNegotiationResult
-            }.flatMap { result in
-                ServerBootstrap.waitForFinalResult(result, eventLoop: eventLoop)
-            }
-            .flatMapError { error in
-                channel.close0(error: error, mode: .all, promise: nil)
-                return channel.eventLoop.makeFailedFuture(error)
-            }
+                }.flatMap { (result: ChannelInitializerResult) in
+                    eventLoop.assertInEventLoop()
+                    return registration(channel).map {
+                        result
+                    }
+                }.flatMap { (result: ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult> in
+                    postRegisterTransformation(result)
+                }.flatMapError { error in
+                    eventLoop.assertInEventLoop()
+                    channel.close0(error: error, mode: .all, promise: nil)
+                    return channel.eventLoop.makeFailedFuture(error)
+                }
         }
 
         if eventLoop.inEventLoop {
