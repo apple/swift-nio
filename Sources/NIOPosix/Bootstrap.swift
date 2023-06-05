@@ -1502,7 +1502,7 @@ extension ClientBootstrap {
             port: port,
             eventLoop: eventLoop,
             channelInitializer: channelInitializer,
-            postRegisterTransformation: { handler in
+            postRegisterTransformation: { handler, eventLoop in
                 handler.protocolNegotiationResult.flatMap { result in
                     result.resolve(on: eventLoop)
                 }
@@ -1570,7 +1570,7 @@ extension ClientBootstrap {
             eventLoop: eventLoop,
             socket: socket,
             channelInitializer: channelInitializer,
-            postRegisterTransformation: { handler in
+            postRegisterTransformation: { handler, eventLoop in
                 handler.protocolNegotiationResult.flatMap { result in
                     result.resolve(on: eventLoop)
                 }
@@ -1589,7 +1589,7 @@ extension ClientBootstrap {
             eventLoop: eventLoop,
             protocolFamily: protocolFamily,
             channelInitializer: channelInitializer,
-            postRegisterTransformation: { handler in
+            postRegisterTransformation: { handler, eventLoop in
                 handler.protocolNegotiationResult.flatMap { result in
                     result.resolve(on: eventLoop)
                 }
@@ -1610,7 +1610,7 @@ extension ClientBootstrap {
             registration: { channel in
                 channel.registerAndDoSynchronously(body)
             },
-            postRegisterTransformation: { handler in
+            postRegisterTransformation: { handler, eventLoop in
                 handler.protocolNegotiationResult.flatMap { result in
                     result.resolve(on: channel.eventLoop)
                 }
@@ -1644,7 +1644,7 @@ extension ClientBootstrap {
             port: port,
             eventLoop: eventLoop,
             channelInitializer: channelInitializer,
-            postRegisterTransformation: { output in
+            postRegisterTransformation: { output, eventLoop in
                 eventLoop.makeSucceededFuture(output)
             }
         )
@@ -1668,7 +1668,7 @@ extension ClientBootstrap {
             eventLoop: eventLoop,
             protocolFamily: address.protocol,
             channelInitializer: channelInitializer,
-            postRegisterTransformation: { output in
+            postRegisterTransformation: { output, eventLoop in
                 eventLoop.makeSucceededFuture(output)
             }, { channel in
                 return self.connect(freshChannel: channel, address: address)
@@ -1713,7 +1713,7 @@ extension ClientBootstrap {
             eventLoop: eventLoop,
             socket: socket,
             channelInitializer: channelInitializer,
-            postRegisterTransformation: { output in
+            postRegisterTransformation: { output, eventLoop in
                 eventLoop.makeSucceededFuture(output)
             }
         )
@@ -1725,7 +1725,7 @@ extension ClientBootstrap {
         port: Int,
         eventLoop: EventLoop,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
     ) async throws -> PostRegistrationTransformationResult {
         let resolver = self.resolver ?? GetaddrinfoResolver(
             loop: eventLoop,
@@ -1757,7 +1757,7 @@ extension ClientBootstrap {
         eventLoop: EventLoop,
         socket: NIOBSDSocket.Handle,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
     ) async throws -> PostRegistrationTransformationResult {
         let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, socket: socket)
 
@@ -1778,7 +1778,7 @@ extension ClientBootstrap {
         eventLoop: EventLoop,
         protocolFamily: NIOBSDSocket.ProtocolFamily,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>,
         _ body: @escaping (Channel) -> EventLoopFuture<Void>
     ) -> EventLoopFuture<(Channel, PostRegistrationTransformationResult)> {
         let channel: SocketChannel
@@ -1802,7 +1802,7 @@ extension ClientBootstrap {
         channel: SocketChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let channelInitializer = { channel in
             return self.channelInitializer(channel)
@@ -1834,7 +1834,7 @@ extension ClientBootstrap {
                         result
                     }
                 }.flatMap { (result: ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult> in
-                    postRegisterTransformation(result)
+                    postRegisterTransformation(result, eventLoop)
                 }.flatMapError { error in
                     eventLoop.assertInEventLoop()
                     channel.close0(error: error, mode: .all, promise: nil)
