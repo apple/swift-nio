@@ -35,8 +35,7 @@ private final class LineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncod
     }
 
     func encode(data: ByteBuffer, out: inout ByteBuffer) throws {
-        var data = data
-        out.writeBuffer(&data)
+        out.writeImmutableBuffer(data)
         out.writeString("\n")
     }
 }
@@ -484,8 +483,8 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
             .connect(
                 to: .init(ipAddress: "127.0.0.1", port: port),
-                channelInboundType: String.self,
-                channelOutboundType: String.self
+                inboundType: String.self,
+                outboundType: String.self
             )
     }
 

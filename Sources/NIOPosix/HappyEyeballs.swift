@@ -141,6 +141,9 @@ private struct TargetIterator: IteratorProtocol {
 ///
 /// This class's private API is *not* thread-safe, and expects to be called from the
 /// event loop thread of the `loop` it is passed.
+///
+/// The `ChannelBuilderResult` generic type can used to tunnel an arbitrary type
+/// from the `channelBuilderCallback` to the `resolve` methods return value.
 internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     /// An enum for keeping track of connection state.
     private enum ConnectionState {
