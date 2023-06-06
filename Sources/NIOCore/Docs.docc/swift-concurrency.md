@@ -142,7 +142,25 @@ Afterwards, we handle each inbound connection in separate child tasks and echo t
 Normal task groups will result in a memory leak since they do not reap their child tasks automatically.
 
 #### ClientBootstrap
-> Important: Support for `ClientBootstrap` with `NIOAsyncChannel` hasn't landed yet.
+
+The client bootstrap is used to create a new TCP based client. Let's take a look at the new
+`NIOAsyncChannel` based connect methods.
+
+```swift
+let clientChannel = try await ClientBootstrap(group: eventLoopGroup)
+    .connect(
+        host: "127.0.0.1",
+        port: 0,
+        channelInboundType: ByteBuffer.self,
+        channelOutboundType: ByteBuffer.self
+    )
+
+clientChannel.outboundWriter.write(ByteBuffer(string: "hello"))
+
+for try await inboundData in clientChannel.inboundStream {
+    print(inboundData)
+}
+```
 
 #### DatagramBootstrap
 > Important: Support for `DatagramBootstrap` with `NIOAsyncChannel` hasn't landed yet.
@@ -158,7 +176,7 @@ To solve the problem of protocol negotiation, NIO introduced a new ``ChannelHand
 that is completed once the handler is finished with protocol negotiation. In the successful case,
 the future can either indicate that protocol negotiation is fully done by returning `NIOProtocolNegotiationResult/finished(_:)` or
 indicate that further protocol negotiation needs to be done by returning `NIOProtocolNegotiationResult/deferredResult(_:)`.
-Additionally, the various bootstraps provide another set of `bind()` methods that handle protocol negotiation.
+Additionally, the various bootstraps provide another set of `bind()`/`connect()` methods that handle protocol negotiation.
 Let's walk through how to setup a `ServerBootstrap` with protocol negotiation.
 
 First, we have to define our negotiation result. For this example, we are negotiating between a
