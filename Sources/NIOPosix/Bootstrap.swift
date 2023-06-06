@@ -1344,7 +1344,7 @@ extension ClientBootstrap {
     /// - Parameters:
     ///   - host: The host to connect to.
     ///   - port: The port to connect to.
-    ///   - channelBackpressureStrategy: The back pressure strategy used by the channel.
+    ///   - backpressureStrategy: The back pressure strategy used by the channel.
     ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
     ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
     ///   - inboundType: The channel's inbound type.
@@ -1380,7 +1380,7 @@ extension ClientBootstrap {
     ///
     /// - Parameters:
     ///   - address: The address to connect to.
-    ///   - channelBackpressureStrategy: The back pressure strategy used by the channel.
+    ///   - backpressureStrategy: The back pressure strategy used by the channel.
     ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
     ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
     ///   - inboundType: The channel's inbound type.
@@ -1414,7 +1414,7 @@ extension ClientBootstrap {
     ///
     /// - Parameters:
     ///   - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
-    ///   - channelBackpressureStrategy: The back pressure strategy used by the channel.
+    ///   - backpressureStrategy: The back pressure strategy used by the channel.
     ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
     ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
     ///   - inboundType: The channel's inbound type.
@@ -1448,7 +1448,7 @@ extension ClientBootstrap {
     ///
     /// - Parameters:
     ///   - descriptor: The _Unix file descriptor_ representing the connected stream socket.
-    ///   - channelBackpressureStrategy: The back pressure strategy used by the channel.
+    ///   - backpressureStrategy: The back pressure strategy used by the channel.
     ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
     ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
     ///   - inboundType: The channel's inbound type.
@@ -1628,8 +1628,8 @@ extension ClientBootstrap {
     /// - Parameters:
     ///   - host: The host to connect to.
     ///   - port: The port to connect to.
-    ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
-    ///   the protocol.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
@@ -1654,8 +1654,8 @@ extension ClientBootstrap {
     ///
     /// - Parameters:
     ///   - address: The address to connect to.
-    ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
-    ///   the protocol.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
@@ -1679,8 +1679,8 @@ extension ClientBootstrap {
     ///
     /// - Parameters:
     ///   - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
-    ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
-    ///   the protocol.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
@@ -1699,8 +1699,8 @@ extension ClientBootstrap {
     ///
     /// - Parameters:
     ///   - descriptor: The _Unix file descriptor_ representing the connected stream socket.
-    ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
-    ///   the protocol.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
