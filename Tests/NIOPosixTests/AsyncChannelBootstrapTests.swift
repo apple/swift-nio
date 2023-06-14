@@ -148,6 +148,7 @@ private final class AddressedEnvelopingHandler: ChannelDuplexHandler {
         let buffer = self.unwrapOutboundIn(data)
         if let remoteAddress = self.remoteAddress {
             context.write(self.wrapOutboundOut(AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)), promise: promise)
+            return
         }
 
         context.write(self.wrapOutboundOut(buffer), promise: promise)
@@ -172,6 +173,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     func testServerClientBootstrap_withAsyncChannel_andHostPort() throws {
         XCTAsyncTest {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+            defer {
+                try! eventLoopGroup.syncShutdownGracefully()
+            }
 
             let channel = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -217,6 +221,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     func testAsyncChannelProtocolNegotiation() throws {
         XCTAsyncTest {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+            defer {
+                try! eventLoopGroup.syncShutdownGracefully()
+            }
 
             let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -292,6 +299,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     func testAsyncChannelNestedProtocolNegotiation() throws {
         XCTAsyncTest {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+            defer {
+                try! eventLoopGroup.syncShutdownGracefully()
+            }
 
             let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -415,6 +425,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         }
         XCTAsyncTest {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+            defer {
+                try! eventLoopGroup.syncShutdownGracefully()
+            }
             let channels = NIOLockedValueBox<[Channel]>([Channel]())
 
             let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
@@ -502,6 +515,10 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     func testDatagramBootstrap_withAsyncChannel_andHostPort() throws {
         XCTAsyncTest {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+            defer {
+                try! eventLoopGroup.syncShutdownGracefully()
+            }
+
             let serverChannel = try await self.makeUDPServerChannel(eventLoopGroup: eventLoopGroup)
             let clientChannel = try await self.makeUDPClientChannel(
                 eventLoopGroup: eventLoopGroup,
@@ -521,20 +538,33 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     func testDatagramBootstrap_withProtocolNegotiation_andHostPort() throws {
         XCTAsyncTest {
             let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+            defer {
+                try! eventLoopGroup.syncShutdownGracefully()
+            }
+
+            // We are creating a channel here to get a random port from the system
+            let channel = try await DatagramBootstrap(group: eventLoopGroup)
+                .bind(
+                    to: .init(ipAddress: "127.0.0.1", port: 0),
+                    channelInitializer:  { channel -> EventLoopFuture<Channel> in channel.eventLoop.makeSucceededFuture(channel) }
+                )
+
+            let port = channel.localAddress!.port!
+            try await channel.close()
 
             try await withThrowingTaskGroup(of: NegotiationResult.self) { group in
                 group.addTask {
                     // We have to use a fixed port here since we only get the channel once protocol negotiation is done
                     try await self.makeUDPServerChannelWithProtocolNegotiation(
                         eventLoopGroup: eventLoopGroup,
-                        port: 1995
+                        port: port
                     )
                 }
                 group.addTask {
                     // We have to use a fixed port here since we only get the channel once protocol negotiation is done
                     try await self.makeUDPClientChannelWithProtocolNegotiation(
                         eventLoopGroup: eventLoopGroup,
-                        port: 1995,
+                        port: port,
                         proposedALPN: .string
                     )
                 }
@@ -642,7 +672,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             .bind(
                 host: "127.0.0.1",
                 port: port
-            ) { channel in
+            ) { channel -> EventLoopFuture<NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>> in
                 return channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
                     return try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
@@ -679,7 +709,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             .connect(
                 host: "127.0.0.1",
                 port: port
-            ) { channel in
+            ) { channel -> EventLoopFuture<NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>> in
                 return channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
                     return try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)

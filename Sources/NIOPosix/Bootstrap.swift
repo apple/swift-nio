@@ -2143,7 +2143,7 @@ extension DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop, socket: socket)
         }
-        return try await withNewChannel(
+        return try await self.makeConfiguredChannel(
             makeChannel: makeChannel(_:),
             channelInitializer: channelInitializer,
             registration: { channel in
@@ -2253,7 +2253,7 @@ extension DatagramBootstrap {
         port: Int,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
-        return try await connect0(
+        return try await self.connect0(
             makeSocketAddress: {
                 try SocketAddress.makeAddressResolvingHost(host, port: port)
             },
@@ -2264,7 +2264,7 @@ extension DatagramBootstrap {
         )
     }
 
-    /// Connect the `DatagramChannel` to `host` and `port`.
+    /// Connect the `DatagramChannel` to the `address`.
     ///
     /// - Parameters:
     ///   - address: The `SocketAddress` to connect to.
@@ -2277,7 +2277,7 @@ extension DatagramBootstrap {
         to address: SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
-        return try await connect0(
+        return try await self.connect0(
             makeSocketAddress: {
                 address
             },
@@ -2288,7 +2288,7 @@ extension DatagramBootstrap {
         )
     }
 
-    /// Connect the `DatagramChannel` to `host` and `port`.
+    /// Connect the `DatagramChannel` to the `unixDomainSocketPath`.
     ///
     /// - Parameters:
     ///   - unixDomainSocketPath: The path of the UNIX Domain Socket to connect to. `path` must not exist, it will be created by the system.
@@ -2301,7 +2301,7 @@ extension DatagramBootstrap {
         unixDomainSocketPath: String,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
-        return try await connect0(
+        return try await self.connect0(
             makeSocketAddress: {
                 try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
             },
@@ -2328,7 +2328,7 @@ extension DatagramBootstrap {
             )
         }
 
-        return try await withNewChannel(
+        return try await self.makeConfiguredChannel(
             makeChannel: makeChannel(_:),
             channelInitializer: channelInitializer,
             registration: { channel in
@@ -2356,7 +2356,7 @@ extension DatagramBootstrap {
             )
         }
 
-        return try await withNewChannel(
+        return try await self.makeConfiguredChannel(
             makeChannel: makeChannel(_:),
             channelInitializer: channelInitializer,
             registration: { channel in
@@ -2369,7 +2369,7 @@ extension DatagramBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func withNewChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
+    private func makeConfiguredChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
         makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
@@ -2442,7 +2442,7 @@ extension DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop, socket: socket)
         }
-        return try await withNewChannel(
+        return try await self.makeConfiguredChannel(
             makeChannel: makeChannel(_:),
             channelInitializer: { channel in
                 channel.eventLoop.makeCompletedFuture {
@@ -2703,7 +2703,7 @@ extension DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop, socket: socket)
         }
-        return try await withNewChannel(
+        return try await self.makeConfiguredChannel(
             makeChannel: makeChannel(_:),
             channelInitializer: channelInitializer,
             registration: { channel in
@@ -2821,7 +2821,7 @@ extension DatagramBootstrap {
         port: Int,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
-        return try await connect0(
+        return try await self.connect0(
             makeSocketAddress: {
                 try SocketAddress.makeAddressResolvingHost(host, port: port)
             },
@@ -2847,7 +2847,7 @@ extension DatagramBootstrap {
         to address: SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
-        return try await connect0(
+        return try await self.connect0(
             makeSocketAddress: {
                 address
             },
@@ -2873,7 +2873,7 @@ extension DatagramBootstrap {
         unixDomainSocketPath: String,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
-        return try await connect0(
+        return try await self.connect0(
             makeSocketAddress: {
                 try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
             },
