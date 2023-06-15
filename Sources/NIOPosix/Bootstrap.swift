@@ -491,11 +491,11 @@ extension ServerBootstrap {
     ///   - host: The host to bind on.
     ///   - port: The port to bind on.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
-    ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's outbound type.
+    ///   - childChannelBackpressureStrategy: The back pressure strategy used by the child channels.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
+    ///   - childChannelInboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's outbound type.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
@@ -503,17 +503,25 @@ extension ServerBootstrap {
         host: String,
         port: Int,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isChildChannelOutboundHalfClosureEnabled: Bool = false,
         childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isChildChannelOutboundHalfClosureEnabled: Bool = false
+        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
-        return try await self.bindAsyncChannel0(
-            serverBackpressureStrategy: serverBackpressureStrategy,
-            childBackpressureStrategy: childBackpressureStrategy,
-            isChildChannelOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled
-        ) {
-            return try SocketAddress.makeAddressResolvingHost(host, port: port)
+        return try await self.bind(
+            host: host,
+            port: port,
+            serverBackpressureStrategy: serverBackpressureStrategy
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    backpressureStrategy: childChannelBackpressureStrategy,
+                    isOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled,
+                    inboundType: childChannelInboundType,
+                    outboundType: childChannelOutboundType
+                )
+            }
         }
     }
 
@@ -522,27 +530,36 @@ extension ServerBootstrap {
     /// - Parameters:
     ///   - address: The `SocketAddress` to bind on.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
-    ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's outbound type.
+    ///   - childChannelBackpressureStrategy: The back pressure strategy used by the child channels.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
+    ///   - childChannelInboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's outbound type.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
     public func bind<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
         to address: SocketAddress,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isChildChannelOutboundHalfClosureEnabled: Bool = false,
         childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
-        isChildChannelOutboundHalfClosureEnabled: Bool = false
+        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
-        return try await self.bindAsyncChannel0(
-            serverBackpressureStrategy: serverBackpressureStrategy,
-            childBackpressureStrategy: childBackpressureStrategy,
-            isChildChannelOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled
-        ) { address }
+        return try await self.bind(
+            to: address,
+            serverBackpressureStrategy: serverBackpressureStrategy
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    backpressureStrategy: childChannelBackpressureStrategy,
+                    isOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled,
+                    inboundType: childChannelInboundType,
+                    outboundType: childChannelOutboundType
+                )
+            }
+        }
     }
 
     /// Bind the `ServerSocketChannel` to the `unixDomainSocketPath` parameter.
@@ -552,11 +569,11 @@ extension ServerBootstrap {
     ///     unless `cleanupExistingSocketFile`is set to `true`.
     ///   - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
-    ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's outbound type.
+    ///   - childChannelBackpressureStrategy: The back pressure strategy used by the child channels.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
+    ///   - childChannelInboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's outbound type.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
@@ -564,21 +581,26 @@ extension ServerBootstrap {
         unixDomainSocketPath: String,
         cleanupExistingSocketFile: Bool = false,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isChildChannelOutboundHalfClosureEnabled: Bool = false,
         childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
-        isChildChannelOutboundHalfClosureEnabled: Bool = false
+        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
-        if cleanupExistingSocketFile {
-            try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
-        }
-
         return try await self.bind(
             unixDomainSocketPath: unixDomainSocketPath,
-            serverBackpressureStrategy: serverBackpressureStrategy,
-            childBackpressureStrategy: childBackpressureStrategy,
-            isChildChannelOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled
-        )
+            cleanupExistingSocketFile: cleanupExistingSocketFile,
+            serverBackpressureStrategy: serverBackpressureStrategy
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    backpressureStrategy: childChannelBackpressureStrategy,
+                    isOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled,
+                    inboundType: childChannelInboundType,
+                    outboundType: childChannelOutboundType
+                )
+            }
+        }
     }
 
     /// Use the existing bound socket file descriptor.
@@ -586,281 +608,325 @@ extension ServerBootstrap {
     /// - Parameters:
     ///   - socket: The _Unix file descriptor_ representing the bound stream socket.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    ///   - childBackpressureStrategy: The back pressure strategy used by the child channels.
-    ///   - childChannelInboundType: The child channel's inbound type.
-    ///   - childChannelOutboundType: The child channel's outbound type.
+    ///   - childChannelBackpressureStrategy: The back pressure strategy used by the child channels.
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
+    ///   - childChannelInboundType: The child channel's inbound type.
+    ///   - childChannelOutboundType: The child channel's outbound type.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
     public func withBoundSocket<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
         _ socket: NIOBSDSocket.Handle,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isChildChannelOutboundHalfClosureEnabled: Bool = false,
         childChannelInboundType: ChildChannelInbound.Type = ChildChannelInbound.self,
-        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self,
-        isChildChannelOutboundHalfClosureEnabled: Bool = false
+        childChannelOutboundType: ChildChannelOutbound.Type = ChildChannelOutbound.self
     ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
-        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
-            if enableMPTCP {
-                throw ChannelError.operationUnsupported
-            }
-            return try ServerSocketChannel(socket: socket, eventLoop: eventLoop, group: childEventLoopGroup)
-        }
-        return try await self.bindAsyncChannel0(
-            makeServerChannel: makeChannel,
-            serverBackpressureStrategy: serverBackpressureStrategy,
-            childBackpressureStrategy: childBackpressureStrategy,
-            isChildChannelOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled
-        ) { (eventLoop, serverChannel) in
-            let promise = eventLoop.makePromise(of: Void.self)
-            serverChannel.registerAlreadyConfigured0(promise: promise)
-            return promise.futureResult
-        }
-    }
-
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func bindAsyncChannel0<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        isChildChannelOutboundHalfClosureEnabled: Bool,
-        _ makeSocketAddress: () throws -> SocketAddress
-    ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never> {
-        let address = try makeSocketAddress()
-
-        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
-            return try ServerSocketChannel(eventLoop: eventLoop,
-                                           group: childEventLoopGroup,
-                                           protocolFamily: address.protocol,
-                                           enableMPTCP: enableMPTCP)
-        }
-
-        return try await self.bindAsyncChannel0(
-            makeServerChannel: makeChannel,
-            serverBackpressureStrategy: serverBackpressureStrategy,
-            childBackpressureStrategy: childBackpressureStrategy,
-            isChildChannelOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled
-        ) { (eventLoop, serverChannel) in
-            serverChannel.registerAndDoSynchronously { serverChannel in
-                serverChannel.bind(to: address)
+        return try await self.bind(
+            socket,
+            serverBackpressureStrategy: serverBackpressureStrategy
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    backpressureStrategy: childChannelBackpressureStrategy,
+                    isOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled,
+                    inboundType: childChannelInboundType,
+                    outboundType: childChannelOutboundType
+                )
             }
         }
-    }
-
-    private typealias MakeServerChannel = (_ eventLoop: SelectableEventLoop, _ childGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel
-    private typealias Register = @Sendable (EventLoop, ServerSocketChannel) -> EventLoopFuture<Void>
-
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func bindAsyncChannel0<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
-        makeServerChannel: MakeServerChannel,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        isChildChannelOutboundHalfClosureEnabled: Bool,
-        _ register: @escaping Register
-    ) async throws -> NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never>  {
-        let eventLoop = self.group.next()
-        let childEventLoopGroup = self.childGroup
-        let serverChannelOptions = self._serverChannelOptions
-        let serverChannelInit = self.serverChannelInit ?? { _ in eventLoop.makeSucceededFuture(()) }
-        let childChannelInit = self.childChannelInit
-        let childChannelOptions = self._childChannelOptions
-
-        let serverChannel = try makeServerChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup, self.enableMPTCP)
-
-        return try await eventLoop.submit {
-            serverChannelOptions.applyAllChannelOptions(to: serverChannel).flatMap {
-                serverChannelInit(serverChannel)
-            }.flatMap {
-                do {
-                    try serverChannel.pipeline.syncOperations.addHandler(
-                        AcceptHandler(childChannelInitializer: childChannelInit, childChannelOptions: childChannelOptions),
-                        name: "AcceptHandler"
-                    )
-
-                    // We are wrapping the inbound channels into `NIOAsyncChannel`s with the transformation
-                    // closure of the `NIOAsyncChannel` that allows us to wrap them without adding
-                    // wrapping/unwrapping handlers to the pipeline.
-                    let asyncChannel = try NIOAsyncChannel<NIOAsyncChannel<ChildChannelInbound, ChildChannelOutbound>, Never>.wrapAsyncChannelForBootstrapBind(
-                        synchronouslyWrapping: serverChannel,
-                        backpressureStrategy: serverBackpressureStrategy,
-                        transformationClosure: { channel in
-                            // We must hop to the child channel event loop here to add the async channel handlers
-                            channel.eventLoop.submit {
-                                try NIOAsyncChannel(
-                                    synchronouslyWrapping: channel,
-                                    backpressureStrategy: childBackpressureStrategy,
-                                    isOutboundHalfClosureEnabled: isChildChannelOutboundHalfClosureEnabled,
-                                    inboundType: ChildChannelInbound.self,
-                                    outboundType: ChildChannelOutbound.self
-                                )
-                            }
-                        }
-                    )
-                    return register(eventLoop, serverChannel).map { asyncChannel }
-                } catch {
-                    return eventLoop.makeFailedFuture(error)
-                }
-            }.flatMapError { error in
-                serverChannel.close0(error: error, mode: .all, promise: nil)
-                return eventLoop.makeFailedFuture(error)
-            }
-        }.flatMap {
-            $0
-        }.get()
     }
 }
 
 // MARK: AsyncChannel based bind with protocol negotiation
 extension ServerBootstrap {
     /// Bind the `ServerSocketChannel` to the `host` and `port` parameters.
-    /// Waiting for protocol negotiation to finish before yielding the channel to the returned ``NIOAsyncChannel``.
     ///
     /// - Parameters:
     ///   - host: The host to bind on.
     ///   - port: The port to bind on.
-    ///   - protocolNegotiationHandlerType: The protocol negotiation handler type that is awaited on. A handler of this type
-    ///   must be added to the pipeline in the child channel initializer.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results. It is expected that the protocol negotiation handler
-    /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
+    ///   - childChannelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
+    ///   the protocol.
+    /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         host: String,
         port: Int,
-        protocolNegotiationHandlerType: Handler.Type,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> NIOAsyncChannel<Handler.NegotiationResult, Never> {
-        return try await self.bindAsyncChannelWithProtocolNegotiation0(
-            protocolNegotiationHandlerType: protocolNegotiationHandlerType,
-            serverBackpressureStrategy: serverBackpressureStrategy
-        ) {
-            return try SocketAddress.makeAddressResolvingHost(host, port: port)
-        }
-    }
+        let address = try SocketAddress.makeAddressResolvingHost(host, port: port)
 
+        return try await self.bind(
+            to: address,
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer
+        )
+    }
+    
     /// Bind the `ServerSocketChannel` to the `address` parameter.
-    /// Waiting for protocol negotiation to finish before yielding the channel to the returned ``NIOAsyncChannel``.
     ///
     /// - Parameters:
     ///   - address: The `SocketAddress` to bind on.
-    ///   - protocolNegotiationHandlerType: The protocol negotiation handler type that is awaited on. A handler of this type
-    ///   must be added to the pipeline in the child channel initializer.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results. It is expected that the protocol negotiation handler
-    /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
+    ///   - childChannelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
+    ///   the protocol.
+    /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         to address: SocketAddress,
-        protocolNegotiationHandlerType: Handler.Type,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> NIOAsyncChannel<Handler.NegotiationResult, Never> {
-        return try await self.bindAsyncChannelWithProtocolNegotiation0(
-            protocolNegotiationHandlerType: protocolNegotiationHandlerType,
-            serverBackpressureStrategy: serverBackpressureStrategy
-        ) { address }
+        return try await bind0(
+            makeServerChannel: { eventLoop, childEventLoopGroup, enableMPTCP in
+                try ServerSocketChannel(
+                    eventLoop: eventLoop,
+                    group: childEventLoopGroup,
+                    protocolFamily: address.protocol,
+                    enableMPTCP: enableMPTCP
+                )
+            },
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer,
+            registration: { serverChannel in
+                serverChannel.registerAndDoSynchronously { serverChannel in
+                    serverChannel.bind(to: address)
+                }
+            },
+            postRegisterTransformation: { handler, eventLoop in
+                eventLoop.assertInEventLoop()
+                return handler.protocolNegotiationResult.flatMap { result in
+                    result.resolve(on: eventLoop)
+                }
+            }
+        ).get()
     }
-
+    
     /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
-    /// Waiting for protocol negotiation to finish before yielding the channel to the returned ``NIOAsyncChannel``.
     ///
     /// - Parameters:
     ///   - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
     ///     unless `cleanupExistingSocketFile`is set to `true`.
     ///   - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
-    ///   - protocolNegotiationHandlerType: The protocol negotiation handler type that is awaited on. A handler of this type
-    ///   must be added to the pipeline in the child channel initializer.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results. It is expected that the protocol negotiation handler
-    /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
+    ///   - childChannelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
+    ///   the protocol.
+    /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         unixDomainSocketPath: String,
         cleanupExistingSocketFile: Bool = false,
-        protocolNegotiationHandlerType: Handler.Type,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> NIOAsyncChannel<Handler.NegotiationResult, Never> {
         if cleanupExistingSocketFile {
             try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
         }
 
+        let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+
         return try await self.bind(
-            unixDomainSocketPath: unixDomainSocketPath,
-            protocolNegotiationHandlerType: protocolNegotiationHandlerType,
-            serverBackpressureStrategy: serverBackpressureStrategy
+            to: address,
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer
         )
     }
-
+    
     /// Use the existing bound socket file descriptor.
-    /// Waiting for protocol negotiation to finish before yielding the channel to the returned ``NIOAsyncChannel``.
     ///
     /// - Parameters:
     ///   - socket: The _Unix file descriptor_ representing the bound stream socket.
-    ///   - protocolNegotiationHandlerType: The protocol negotiation handler type that is awaited on. A handler of this type
-    ///   must be added to the pipeline in the child channel initializer.
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
-    /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results. It is expected that the protocol negotiation handler
-    /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
+    ///   - childChannelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
+    ///   the protocol.
+    /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
     public func withBoundSocket<Handler: NIOProtocolNegotiationHandler>(
         _ socket: NIOBSDSocket.Handle,
-        protocolNegotiationHandlerType: Handler.Type,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> NIOAsyncChannel<Handler.NegotiationResult, Never> {
-        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
-            if enableMPTCP {
-                throw ChannelError.operationUnsupported
+        return try await bind0(
+            makeServerChannel: { eventLoop, childEventLoopGroup, enableMPTCP in
+                if enableMPTCP {
+                    throw ChannelError.operationUnsupported
+                }
+                return try ServerSocketChannel(
+                    socket: socket,
+                    eventLoop: eventLoop,
+                    group: childEventLoopGroup
+                )
+            },
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer,
+            registration: { serverChannel in
+                let promise = serverChannel.eventLoop.makePromise(of: Void.self)
+                serverChannel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            },
+            postRegisterTransformation: { handler, eventLoop in
+                handler.protocolNegotiationResult.flatMap { result in
+                    result.resolve(on: eventLoop)
+                }
             }
-            return try ServerSocketChannel(socket: socket, eventLoop: eventLoop, group: childEventLoopGroup)
+        ).get()
+    }
+}
+
+// MARK: Async connect/bind methods with arbitrary payload
+
+extension ServerBootstrap {
+    /// Bind the `ServerSocketChannel` to the `host` and `port` parameters.
+    ///
+    /// - Parameters:
+    ///   - host: The host to bind on.
+    ///   - port: The port to bind on.
+    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        host: String,
+        port: Int,
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        let address = try SocketAddress.makeAddressResolvingHost(host, port: port)
+
+        return try await bind(
+            to: address,
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer
+        )
+    }
+
+    /// Bind the `ServerSocketChannel` to the `address` parameter.
+    ///
+    /// - Parameters:
+    ///   - address: The `SocketAddress` to bind on.
+    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        to address: SocketAddress,
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        return try await bind0(
+            makeServerChannel: { eventLoop, childEventLoopGroup, enableMPTCP in
+                try ServerSocketChannel(
+                    eventLoop: eventLoop,
+                    group: childEventLoopGroup,
+                    protocolFamily: address.protocol,
+                    enableMPTCP: enableMPTCP
+                )
+            },
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer,
+            registration: { serverChannel in
+                serverChannel.registerAndDoSynchronously { serverChannel in
+                    serverChannel.bind(to: address)
+                }
+            },
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        ).get()
+    }
+
+    /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
+    ///
+    /// - Parameters:
+    ///   - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
+    ///     unless `cleanupExistingSocketFile`is set to `true`.
+    ///   - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
+    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        unixDomainSocketPath: String,
+        cleanupExistingSocketFile: Bool = false,
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        if cleanupExistingSocketFile {
+            try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
         }
-        return try await self.bindAsyncChannelWithProtocolNegotiation0(
-            makeServerChannel: makeChannel,
-            protocolNegotiationHandlerType: protocolNegotiationHandlerType,
-            serverBackpressureStrategy: serverBackpressureStrategy
-        ) { (eventLoop, serverChannel) in
-            let promise = eventLoop.makePromise(of: Void.self)
-            serverChannel.registerAlreadyConfigured0(promise: promise)
-            return promise.futureResult
-        }
+
+        let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+
+        return try await self.bind(
+            to: address,
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer
+        )
+    }
+
+    /// Use the existing bound socket file descriptor.
+    ///
+    /// - Parameters:
+    ///   - socket: The _Unix file descriptor_ representing the bound stream socket.
+    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        _ socket: NIOBSDSocket.Handle,
+        cleanupExistingSocketFile: Bool = false,
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        return try await bind0(
+            makeServerChannel: { eventLoop, childEventLoopGroup, enableMPTCP in
+                if enableMPTCP {
+                    throw ChannelError.operationUnsupported
+                }
+                return try ServerSocketChannel(
+                    socket: socket,
+                    eventLoop: eventLoop,
+                    group: childEventLoopGroup
+                )
+            },
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer,
+            registration: { serverChannel in
+                let promise = serverChannel.eventLoop.makePromise(of: Void.self)
+                serverChannel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            },
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        ).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func bindAsyncChannelWithProtocolNegotiation0<Handler: NIOProtocolNegotiationHandler & ChannelHandler>(
-        protocolNegotiationHandlerType: Handler.Type,
+    private func bind0<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        makeServerChannel: @escaping (SelectableEventLoop, EventLoopGroup, Bool) throws -> ServerSocketChannel,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        _ makeSocketAddress: () throws -> SocketAddress
-    ) async throws -> NIOAsyncChannel<Handler.NegotiationResult, Never> {
-        let address = try makeSocketAddress()
-
-        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
-            return try ServerSocketChannel(eventLoop: eventLoop,
-                                           group: childEventLoopGroup,
-                                           protocolFamily: address.protocol,
-                                           enableMPTCP: enableMPTCP)
-        }
-
-        return try await self.bindAsyncChannelWithProtocolNegotiation0(
-            makeServerChannel: makeChannel,
-            protocolNegotiationHandlerType: protocolNegotiationHandlerType,
-            serverBackpressureStrategy: serverBackpressureStrategy
-        ) { (eventLoop, serverChannel) in
-            serverChannel.registerAndDoSynchronously { serverChannel in
-                serverChannel.bind(to: address)
-            }
-        }
-    }
-
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func bindAsyncChannelWithProtocolNegotiation0<Handler: NIOProtocolNegotiationHandler & ChannelHandler>(
-        makeServerChannel: MakeServerChannel,
-        protocolNegotiationHandlerType: Handler.Type,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        _ register: @escaping Register
-    ) async throws -> NIOAsyncChannel<Handler.NegotiationResult, Never>  {
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) -> EventLoopFuture<NIOAsyncChannel<PostRegistrationTransformationResult, Never>>  {
         let eventLoop = self.group.next()
         let childEventLoopGroup = self.childGroup
         let serverChannelOptions = self._serverChannelOptions
@@ -868,50 +934,53 @@ extension ServerBootstrap {
         let childChannelInit = self.childChannelInit
         let childChannelOptions = self._childChannelOptions
 
-        let serverChannel = try makeServerChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup, self.enableMPTCP)
+        let serverChannel: ServerSocketChannel
+        do {
+            serverChannel = try makeServerChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup, self.enableMPTCP)
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
 
-        return try await eventLoop.submit {
+        return eventLoop.submit {
             serverChannelOptions.applyAllChannelOptions(to: serverChannel).flatMap {
                 serverChannelInit(serverChannel)
-            }.flatMap {
+            }.flatMap { (_) -> EventLoopFuture<NIOAsyncChannel<PostRegistrationTransformationResult, Never>> in
                 do {
                     try serverChannel.pipeline.syncOperations.addHandler(
                         AcceptHandler(childChannelInitializer: childChannelInit, childChannelOptions: childChannelOptions),
                         name: "AcceptHandler"
                     )
-
-                    // In the case of protocol negotiation we cannot wrap the child channels into
-                    // `NIOAsyncChannel`s for the user since we don't know the type. We rather expect
-                    // the user to wrap the child channels themselves when the negotiation is done
-                    // and return the wrapped async channel as part of the negotiation result.
-                    let asyncChannel = try NIOAsyncChannel<Handler.NegotiationResult, Never>.wrapAsyncChannelForBootstrapBindWithProtocolNegotiation(
-                        synchronouslyWrapping: serverChannel,
-                        backpressureStrategy: serverBackpressureStrategy,
-                        transformationClosure: { (channel: Channel) in
-                            channel.pipeline.handler(type: protocolNegotiationHandlerType)
-                                .flatMap { handler -> EventLoopFuture<NIOProtocolNegotiationResult<Handler.NegotiationResult>> in
-                                    handler.protocolNegotiationResult
-                                }.flatMap { result in
-                                    result.resolve(on: eventLoop)
-                                }.flatMapErrorThrowing { error in
-                                    channel.pipeline.fireErrorCaught(error)
-                                    channel.close(promise: nil)
-                                    throw error
+                    let asyncChannel = try NIOAsyncChannel<PostRegistrationTransformationResult, Never>
+                        .wrapAsyncChannelWithTransformations(
+                            synchronouslyWrapping: serverChannel,
+                            backpressureStrategy: serverBackpressureStrategy,
+                            channelReadTransformation: { channel -> EventLoopFuture<(ChannelInitializerResult, any EventLoop)> in
+                                // The channelReadTransformation is run on the EL of the server channel
+                                // We have to make sure that we execute child channel initializer on the
+                                // EL of the child channel.
+                                channel.eventLoop.flatSubmit {
+                                    childChannelInitializer(channel).map { ($0, channel.eventLoop) }
                                 }
-                        }
-
-                    )
-                    return register(eventLoop, serverChannel).map { asyncChannel }
+                            },
+                            postFireChannelReadTransformation: { result, eventLoop in
+                                eventLoop.flatSubmit {
+                                    postRegisterTransformation(result, eventLoop)
+                                }
+                            }
+                        )
+                    return registration(serverChannel)
+                        .map { (_) -> NIOAsyncChannel<PostRegistrationTransformationResult, Never> in  asyncChannel
+                    }
                 } catch {
                     return eventLoop.makeFailedFuture(error)
                 }
-            }.flatMapError { error in
+            }.flatMapError { error -> EventLoopFuture<NIOAsyncChannel<PostRegistrationTransformationResult, Never>> in
                 serverChannel.close0(error: error, mode: .all, promise: nil)
                 return eventLoop.makeFailedFuture(error)
             }
         }.flatMap {
             $0
-        }.get()
+        }
     }
 }
 
@@ -3105,11 +3174,11 @@ extension NIOProtocolNegotiationResult {
         Self.resolve(on: eventLoop, result: self)
     }
 
-    static func resolve(on eventLoop: EventLoop, result: Self)  -> EventLoopFuture<NegotiationResult> {
+    static func resolve(on eventLoop: EventLoop, result: Self) -> EventLoopFuture<NegotiationResult> {
         switch result {
         case .finished(let negotiationResult):
             return eventLoop.makeSucceededFuture(negotiationResult)
-            
+
         case .deferredResult(let future):
             return future.flatMap { result in
                 return resolve(on: eventLoop, result: result)

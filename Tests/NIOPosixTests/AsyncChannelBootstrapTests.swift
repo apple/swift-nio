@@ -228,16 +228,14 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .childChannelOption(ChannelOptions.autoRead, value: true)
-                .childChannelInitializer { channel in
+                .bind(
+                    host: "127.0.0.1",
+                    port: 0
+                ) { channel in
                     channel.eventLoop.makeCompletedFuture {
                         try self.configureProtocolNegotiationHandlers(channel: channel)
                     }
                 }
-                .bind(
-                    host: "127.0.0.1",
-                    port: 0,
-                    protocolNegotiationHandlerType: NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>.self
-                )
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
@@ -276,7 +274,6 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     preconditionFailure()
                 }
 
-
                 let byteNegotiationResult = try await self.makeClientChannelWithProtocolNegotiation(
                     eventLoopGroup: eventLoopGroup,
                     port: channel.channel.localAddress!.port!,
@@ -306,16 +303,14 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .childChannelOption(ChannelOptions.autoRead, value: true)
-                .childChannelInitializer { channel in
+                .bind(
+                    host: "127.0.0.1",
+                    port: 0
+                ) { channel in
                     channel.eventLoop.makeCompletedFuture {
                         try self.configureNestedProtocolNegotiationHandlers(channel: channel)
                     }
                 }
-                .bind(
-                    host: "127.0.0.1",
-                    port: 0,
-                    protocolNegotiationHandlerType: NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>.self
-                )
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
@@ -438,16 +433,14 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
                 .childChannelOption(ChannelOptions.autoRead, value: true)
-                .childChannelInitializer { channel in
+                .bind(
+                    host: "127.0.0.1",
+                    port: 0
+                ) { channel in
                     channel.eventLoop.makeCompletedFuture {
                         try self.configureProtocolNegotiationHandlers(channel: channel)
                     }
                 }
-                .bind(
-                    host: "127.0.0.1",
-                    port: 0,
-                    protocolNegotiationHandlerType: NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>.self
-                )
 
             try await withThrowingTaskGroup(of: Void.self) { group in
                 let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
