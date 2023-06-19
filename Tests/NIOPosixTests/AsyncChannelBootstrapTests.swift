@@ -645,7 +645,6 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
     private func makeUDPServerChannel(eventLoopGroup: EventLoopGroup) async throws -> NIOAsyncChannel<String, String> {
         try await DatagramBootstrap(group: eventLoopGroup)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
@@ -668,7 +667,6 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         proposedALPN: TLSUserEventHandler.ALPN? = nil
     ) async throws -> NegotiationResult {
         try await DatagramBootstrap(group: eventLoopGroup)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .bind(
                 host: "127.0.0.1",
                 port: port
@@ -682,7 +680,6 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
     private func makeUDPClientChannel(eventLoopGroup: EventLoopGroup, port: Int) async throws -> NIOAsyncChannel<String, String> {
         try await DatagramBootstrap(group: eventLoopGroup)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
@@ -705,7 +702,6 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         proposedALPN: TLSUserEventHandler.ALPN
     ) async throws -> NegotiationResult {
         try await DatagramBootstrap(group: eventLoopGroup)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .connect(
                 host: "127.0.0.1",
                 port: port
