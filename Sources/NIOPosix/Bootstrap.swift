@@ -2172,7 +2172,7 @@ extension DatagramBootstrap {
         port: Int,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
-        return try await bind0(
+        return try await self.bind0(
             makeSocketAddress: {
                 try SocketAddress.makeAddressResolvingHost(host, port: port)
             },
@@ -2196,7 +2196,7 @@ extension DatagramBootstrap {
         to address: SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
-        return try await bind0(
+        return try await self.bind0(
             makeSocketAddress: {
                 address
             },
@@ -2227,7 +2227,7 @@ extension DatagramBootstrap {
             try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
         }
 
-        return try await bind0(
+        return try await self.bind0(
             makeSocketAddress: {
                 try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
             },
@@ -2487,7 +2487,7 @@ extension DatagramBootstrap {
         inboundType: Inbound.Type = Inbound.self,
         outboundType: Outbound.Type = Outbound.self
     ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
-        return try await bind(
+        return try await self.bind(
             host: host,
             port: port,
             channelInitializer: { channel in
@@ -2523,7 +2523,7 @@ extension DatagramBootstrap {
         inboundType: Inbound.Type = Inbound.self,
         outboundType: Outbound.Type = Outbound.self
     ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
-        return try await bind(
+        return try await self.bind(
             to: address,
             channelInitializer: { channel in
                 channel.eventLoop.makeCompletedFuture {
@@ -2561,7 +2561,7 @@ extension DatagramBootstrap {
         inboundType: Inbound.Type = Inbound.self,
         outboundType: Outbound.Type = Outbound.self
     ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
-        return try await bind(
+        return try await self.bind(
             unixDomainSocketPath: unixDomainSocketPath,
             cleanupExistingSocketFile: cleanupExistingSocketFile,
             channelInitializer: { channel in
@@ -2734,7 +2734,7 @@ extension DatagramBootstrap {
         port: Int,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
-        return try await bind0(
+        return try await self.bind0(
             makeSocketAddress: {
                 try SocketAddress.makeAddressResolvingHost(host, port: port)
             },
@@ -2760,7 +2760,7 @@ extension DatagramBootstrap {
         to address: SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
-        return try await bind0(
+        return try await self.bind0(
             makeSocketAddress: {
                 address
             },
@@ -2793,7 +2793,7 @@ extension DatagramBootstrap {
             try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
         }
 
-        return try await bind0(
+        return try await self.bind0(
             makeSocketAddress: {
                 try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
             },
