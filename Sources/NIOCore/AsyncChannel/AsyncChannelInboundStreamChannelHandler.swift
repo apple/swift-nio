@@ -73,8 +73,8 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
         /// A synchronous transformation is applied to incoming reads. This is used when sync wrapping a channel.
         case syncWrapping((InboundIn) -> ProducerElement)
         case transformation(
-            channelReadTransformation: (InboundIn) -> EventLoopFuture<ReadTransformationResult>,
-            postFireChannelReadTransformation: (ReadTransformationResult) -> EventLoopFuture<ProducerElement>
+            channelReadTransformation: @Sendable (InboundIn) -> EventLoopFuture<ReadTransformationResult>,
+            postFireChannelReadTransformation: @Sendable (ReadTransformationResult) -> EventLoopFuture<ProducerElement>
         )
     }
 
@@ -111,8 +111,8 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     static func makeHandlerWithTransformations(
         eventLoop: EventLoop,
         closeRatchet: CloseRatchet,
-        channelReadTransformation: @escaping (InboundIn) -> EventLoopFuture<ReadTransformationResult>,
-        postFireChannelReadTransformation: @escaping (ReadTransformationResult) -> EventLoopFuture<ProducerElement>
+        channelReadTransformation:@Sendable @escaping (InboundIn) -> EventLoopFuture<ReadTransformationResult>,
+        postFireChannelReadTransformation: @Sendable @escaping (ReadTransformationResult) -> EventLoopFuture<ProducerElement>
     ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == Channel {
         return .init(
             eventLoop: eventLoop,
@@ -152,15 +152,13 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
             let unsafeContext = NIOLoopBound(context, eventLoop: context.eventLoop)
             channelReadTransformation(unwrapped)
                 .hop(to: context.eventLoop)
-                .map { result -> ReadTransformationResult in
+                .flatMap { result -> EventLoopFuture<ProducerElement> in
                     // We have to fire through the original data now. Since our channelReadTransformation
                     // is the channel initializer. Once that's done we need to fire the channel as a read
                     // so that it hits channelRead0 in the base socket channel.
                     context.fireChannelRead(data)
-                    return result
-                }
-                .flatMap { result -> EventLoopFuture<ProducerElement> in
-                    postFireChannelReadTransformation(result)
+
+                    return postFireChannelReadTransformation(result)
                 }
                 .hop(to: context.eventLoop)
                 .whenComplete { result in

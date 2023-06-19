@@ -120,12 +120,12 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
 
     @inlinable
     @_spi(AsyncChannel)
-    public static func wrapAsyncChannelWithTransformations<ChannelReadResult>(
+    public static func wrapAsyncChannelWithTransformations<ChannelReadResult: Sendable>(
         synchronouslyWrapping channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false,
-        channelReadTransformation: @escaping (Channel) -> EventLoopFuture<ChannelReadResult>,
-        postFireChannelReadTransformation: @escaping (ChannelReadResult) -> EventLoopFuture<Inbound>
+        channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<ChannelReadResult>,
+        postFireChannelReadTransformation: @Sendable  @escaping (ChannelReadResult) -> EventLoopFuture<Inbound>
     ) throws -> NIOAsyncChannel<Inbound, Outbound> where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
         let (inboundStream, outboundWriter): (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) = try channel._syncAddAsyncHandlersWithTransformations(
@@ -175,8 +175,8 @@ extension Channel {
     public func _syncAddAsyncHandlersWithTransformations<ChannelReadResult, PostFireChannelReadResult>(
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         isOutboundHalfClosureEnabled: Bool,
-        channelReadTransformation: @escaping (Channel) -> EventLoopFuture<ChannelReadResult>,
-        postFireChannelReadTransformation: @escaping (ChannelReadResult) -> EventLoopFuture<PostFireChannelReadResult>
+        channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<ChannelReadResult>,
+        postFireChannelReadTransformation: @Sendable @escaping (ChannelReadResult) -> EventLoopFuture<PostFireChannelReadResult>
     ) throws -> (NIOAsyncChannelInboundStream<PostFireChannelReadResult>, NIOAsyncChannelOutboundWriter<Never>) {
         self.eventLoop.assertInEventLoop()
 

@@ -77,8 +77,8 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
         channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         closeRatchet: CloseRatchet,
-        channelReadTransformation: @escaping (Channel) -> EventLoopFuture<ChannelReadResult>,
-        postFireChannelReadTransformation: @escaping (ChannelReadResult) -> EventLoopFuture<Inbound>
+        channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<ChannelReadResult>,
+        postFireChannelReadTransformation: @Sendable @escaping (ChannelReadResult) -> EventLoopFuture<Inbound>
     ) throws -> NIOAsyncChannelInboundStream {
         let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, ChannelReadResult, Inbound>.makeHandlerWithTransformations(
             eventLoop: channel.eventLoop,
