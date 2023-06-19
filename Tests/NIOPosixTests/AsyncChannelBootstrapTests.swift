@@ -560,6 +560,10 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         port: port
                     )
                 }
+
+                // We need to sleep here since we can only connect the client after the server started.
+                try await Task.sleep(nanoseconds: 100000000)
+
                 group.addTask {
                     // We have to use a fixed port here since we only get the channel once protocol negotiation is done
                     try await self.makeUDPClientChannelWithProtocolNegotiation(
