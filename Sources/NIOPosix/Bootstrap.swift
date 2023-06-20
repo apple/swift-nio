@@ -954,7 +954,7 @@ extension ServerBootstrap {
                         .wrapAsyncChannelWithTransformations(
                             synchronouslyWrapping: serverChannel,
                             backpressureStrategy: serverBackpressureStrategy,
-                            channelReadTransformation: { channel -> EventLoopFuture<(ChannelInitializerResult, any EventLoop)> in
+                            channelReadTransformation: { channel -> EventLoopFuture<(ChannelInitializerResult, EventLoop)> in
                                 // The channelReadTransformation is run on the EL of the server channel
                                 // We have to make sure that we execute child channel initializer on the
                                 // EL of the child channel.
