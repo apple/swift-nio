@@ -37,7 +37,7 @@ if [[ -d "$tmpdir/syscallwrapper/Sources/syscallwrapper/" ]]; then
 fi
 
 cat > "$main_path" <<EOF
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import Darwin
 #else
 import Glibc

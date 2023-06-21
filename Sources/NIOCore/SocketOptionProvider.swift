@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
 import Darwin
 #elseif os(Linux) || os(Android)
 import Glibc
@@ -272,7 +272,7 @@ extension SocketOptionProvider {
         }
     #endif
 
-    #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+    #if canImport(Darwin)
         /// Gets the value of the socket option TCP_CONNECTION_INFO.
         ///
         /// This socket option cannot be set.

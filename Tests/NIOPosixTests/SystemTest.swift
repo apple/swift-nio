@@ -47,7 +47,7 @@ class SystemTest: XCTestCase {
         }
     }
 
-    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    #if canImport(Darwin)
     // Example twin data options captured on macOS
     private static let cmsghdrExample: [UInt8] = [0x10, 0x00, 0x00, 0x00, // Length 16 including header
                                                   0x00, 0x00, 0x00, 0x00, // IPPROTO_IP
