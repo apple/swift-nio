@@ -112,7 +112,7 @@ struct DatagramVectorReadManager {
                 }
 
                 // Next we set up the msghdr structure. This points into the other vectors.
-                let msgHdr = msghdr()
+                var msgHdr = msghdr()
                 msgHdr.msg_name = self.sockaddrVector.baseAddress! + i
                 msgHdr.msg_namelen = socklen_t(MemoryLayout<sockaddr_storage>.size)
                 msgHdr.msg_iov = self.ioVector.baseAddress! + i

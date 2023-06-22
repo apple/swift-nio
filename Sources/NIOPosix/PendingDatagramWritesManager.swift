@@ -135,7 +135,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
                 controlBytes.appendExplicitCongestionState(metadata: p.metadata, protocolFamily: protocolFamily)
                 let controlMessageBytePointer = controlBytes.validControlBytes
 
-                let msg = msghdr()
+                var msg = msghdr()
                 msg.msg_name = address
                 msg.msg_namelen = addressLen
                 msg.msg_iov = iovecs.baseAddress! + c
