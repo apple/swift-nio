@@ -497,7 +497,7 @@ extension ServerBootstrap {
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
         host: String,
@@ -528,7 +528,7 @@ extension ServerBootstrap {
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
         to address: SocketAddress,
@@ -558,7 +558,7 @@ extension ServerBootstrap {
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
         unixDomainSocketPath: String,
@@ -592,7 +592,7 @@ extension ServerBootstrap {
     ///   - isChildChannelOutboundHalfClosureEnabled: Indicates if half closure is enabled on the child channels. If half closure is enabled
     ///   then finishing the ``NIOAsyncChannelWriter`` will lead to half closure.
     /// - Returns: A ``NIOAsyncChannel`` of connection ``NIOAsyncChannel``s.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func withBoundSocket<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
         _ socket: NIOBSDSocket.Handle,
@@ -620,7 +620,7 @@ extension ServerBootstrap {
         }
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func bindAsyncChannel0<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         childBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
@@ -651,7 +651,7 @@ extension ServerBootstrap {
     private typealias MakeServerChannel = (_ eventLoop: SelectableEventLoop, _ childGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel
     private typealias Register = @Sendable (EventLoop, ServerSocketChannel) -> EventLoopFuture<Void>
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func bindAsyncChannel0<ChildChannelInbound: Sendable, ChildChannelOutbound: Sendable>(
         makeServerChannel: MakeServerChannel,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
@@ -724,7 +724,7 @@ extension ServerBootstrap {
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results. It is expected that the protocol negotiation handler
     /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         host: String,
@@ -750,7 +750,7 @@ extension ServerBootstrap {
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results. It is expected that the protocol negotiation handler
     /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         to address: SocketAddress,
@@ -775,7 +775,7 @@ extension ServerBootstrap {
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results. It is expected that the protocol negotiation handler
     /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         unixDomainSocketPath: String,
@@ -804,7 +804,7 @@ extension ServerBootstrap {
     ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
     /// - Returns: A ``NIOAsyncChannel`` of  the protocol negotiation results. It is expected that the protocol negotiation handler
     /// is going to wrap the child channels into ``NIOAsyncChannel`` which are returned as part of the negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func withBoundSocket<Handler: NIOProtocolNegotiationHandler>(
         _ socket: NIOBSDSocket.Handle,
@@ -828,7 +828,7 @@ extension ServerBootstrap {
         }
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func bindAsyncChannelWithProtocolNegotiation0<Handler: NIOProtocolNegotiationHandler & ChannelHandler>(
         protocolNegotiationHandlerType: Handler.Type,
         serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
@@ -854,7 +854,7 @@ extension ServerBootstrap {
         }
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func bindAsyncChannelWithProtocolNegotiation0<Handler: NIOProtocolNegotiationHandler & ChannelHandler>(
         makeServerChannel: MakeServerChannel,
         protocolNegotiationHandlerType: Handler.Type,
@@ -1350,7 +1350,7 @@ extension ClientBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the established connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Inbound: Sendable, Outbound: Sendable>(
         host: String,
@@ -1386,7 +1386,7 @@ extension ClientBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the established connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Inbound: Sendable, Outbound: Sendable>(
         to address: SocketAddress,
@@ -1420,7 +1420,7 @@ extension ClientBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the established connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Inbound: Sendable, Outbound: Sendable>(
         unixDomainSocketPath: String,
@@ -1454,7 +1454,7 @@ extension ClientBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the established connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Inbound: Sendable, Outbound: Sendable>(
         _ socket: NIOBSDSocket.Handle,
@@ -1489,7 +1489,7 @@ extension ClientBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Handler: NIOProtocolNegotiationHandler>(
         host: String,
@@ -1509,7 +1509,7 @@ extension ClientBootstrap {
             }
         )
     }
-    
+
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
     ///
     /// - Parameters:
@@ -1517,7 +1517,7 @@ extension ClientBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Handler: NIOProtocolNegotiationHandler>(
         to address: SocketAddress,
@@ -1539,7 +1539,7 @@ extension ClientBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Handler: NIOProtocolNegotiationHandler>(
         unixDomainSocketPath: String,
@@ -1559,7 +1559,7 @@ extension ClientBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func withConnectedSocket<Handler: NIOProtocolNegotiationHandler>(
         _ socket: NIOBSDSocket.Handle,
@@ -1578,7 +1578,7 @@ extension ClientBootstrap {
         )
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func initializeAndRegisterNewChannel<Handler: NIOProtocolNegotiationHandler>(
         eventLoop: EventLoop,
         protocolFamily: NIOBSDSocket.ProtocolFamily,
@@ -1598,7 +1598,7 @@ extension ClientBootstrap {
         )
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func initializeAndRegisterChannel<Handler: NIOProtocolNegotiationHandler>(
         channel: SocketChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>,
@@ -1630,7 +1630,7 @@ extension ClientBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         host: String,
@@ -1656,7 +1656,7 @@ extension ClientBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         to address: SocketAddress,
@@ -1681,7 +1681,7 @@ extension ClientBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         unixDomainSocketPath: String,
@@ -1701,7 +1701,7 @@ extension ClientBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func withConnectedSocket<Output: Sendable>(
         _ socket: NIOBSDSocket.Handle,
@@ -1718,7 +1718,7 @@ extension ClientBootstrap {
         )
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     func connect<ChannelInitializerResult, PostRegistrationTransformationResult>(
         host: String,
         port: Int,
@@ -1751,7 +1751,7 @@ extension ClientBootstrap {
         return try await connector.resolveAndConnect().map { $0.1 }.get()
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func withConnectedSocket<ChannelInitializerResult, PostRegistrationTransformationResult>(
         eventLoop: EventLoop,
         socket: NIOBSDSocket.Handle,
@@ -1772,7 +1772,7 @@ extension ClientBootstrap {
         ).get()
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func initializeAndRegisterNewChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
         eventLoop: EventLoop,
         protocolFamily: NIOBSDSocket.ProtocolFamily,
@@ -1796,7 +1796,7 @@ extension ClientBootstrap {
         ).map { (channel, $0) }
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func initializeAndRegisterChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
         channel: SocketChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
@@ -2134,7 +2134,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func withBoundSocket<Output: Sendable>(
         _ socket: NIOBSDSocket.Handle,
@@ -2165,7 +2165,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         host: String,
@@ -2190,7 +2190,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         to address: SocketAddress,
@@ -2216,7 +2216,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         unixDomainSocketPath: String,
@@ -2246,7 +2246,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         host: String,
@@ -2271,7 +2271,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         to address: SocketAddress,
@@ -2295,7 +2295,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         unixDomainSocketPath: String,
@@ -2312,7 +2312,7 @@ extension DatagramBootstrap {
         )
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func connect0<ChannelInitializerResult, PostRegistrationTransformationResult>(
         makeSocketAddress: () throws -> SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
@@ -2340,7 +2340,7 @@ extension DatagramBootstrap {
         ).get()
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func bind0<ChannelInitializerResult, PostRegistrationTransformationResult>(
         makeSocketAddress: () throws -> SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
@@ -2368,7 +2368,7 @@ extension DatagramBootstrap {
         ).get()
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     private func makeConfiguredChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
         makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
@@ -2430,7 +2430,7 @@ extension DatagramBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the bound connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func withBoundSocket<Inbound: Sendable, Outbound: Sendable>(
         _ socket: NIOBSDSocket.Handle,
@@ -2477,7 +2477,7 @@ extension DatagramBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the bound connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Inbound: Sendable, Outbound: Sendable>(
         host: String,
@@ -2514,7 +2514,7 @@ extension DatagramBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the bound connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Inbound: Sendable, Outbound: Sendable>(
         to address: SocketAddress,
@@ -2551,7 +2551,7 @@ extension DatagramBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the bound connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Inbound: Sendable, Outbound: Sendable>(
         unixDomainSocketPath: String,
@@ -2589,7 +2589,7 @@ extension DatagramBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the established connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Inbound: Sendable, Outbound: Sendable>(
         host: String,
@@ -2625,7 +2625,7 @@ extension DatagramBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the established connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Inbound: Sendable, Outbound: Sendable>(
         to address: SocketAddress,
@@ -2659,7 +2659,7 @@ extension DatagramBootstrap {
     ///   - inboundType: The channel's inbound type.
     ///   - outboundType: The channel's outbound type.
     /// - Returns: A `NIOAsyncChannel` for the established connection.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Inbound: Sendable, Outbound: Sendable>(
         unixDomainSocketPath: String,
@@ -2694,7 +2694,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func withBoundSocket<Handler: NIOProtocolNegotiationHandler>(
         _ socket: NIOBSDSocket.Handle,
@@ -2727,7 +2727,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         host: String,
@@ -2754,7 +2754,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         to address: SocketAddress,
@@ -2782,7 +2782,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func bind<Handler: NIOProtocolNegotiationHandler>(
         unixDomainSocketPath: String,
@@ -2814,7 +2814,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Handler: NIOProtocolNegotiationHandler>(
         host: String,
@@ -2841,7 +2841,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Handler: NIOProtocolNegotiationHandler>(
         to address: SocketAddress,
@@ -2867,7 +2867,7 @@ extension DatagramBootstrap {
     ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
     ///   the protocol.
     /// - Returns: The protocol negotiation result.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @_spi(AsyncChannel)
     public func connect<Handler: NIOProtocolNegotiationHandler>(
         unixDomainSocketPath: String,
@@ -3109,7 +3109,7 @@ extension NIOProtocolNegotiationResult {
         switch result {
         case .finished(let negotiationResult):
             return eventLoop.makeSucceededFuture(negotiationResult)
-            
+
         case .deferredResult(let future):
             return future.flatMap { result in
                 return resolve(on: eventLoop, result: result)

@@ -32,7 +32,7 @@
 /// protocol-specific logic (such as parsers and encoders) and those that implement business
 /// logic. Protocol-specific logic should be implemented as a ``ChannelHandler``, while business
 /// logic should use ``NIOAsyncChannel`` to consume and produce data to the network.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @_spi(AsyncChannel)
 public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     /// The underlying channel being wrapped by this ``NIOAsyncChannel``.
@@ -169,7 +169,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
 
 extension Channel {
     // TODO: We need to remove the public and spi here once we make the AsyncChannel methods public
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @inlinable
     @_spi(AsyncChannel)
     public func _syncAddAsyncHandlers<Inbound: Sendable, Outbound: Sendable>(
@@ -191,7 +191,7 @@ extension Channel {
         return (inboundStream, writer)
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @inlinable
     @_spi(AsyncChannel)
     public func _syncAddAsyncHandlersForBootstrapBind<Inbound: Sendable, Outbound: Sendable>(
@@ -215,7 +215,7 @@ extension Channel {
         return (inboundStream, writer)
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @inlinable
     @_spi(AsyncChannel)
     public func _syncAddAsyncHandlersForBootstrapProtocolNegotiation<Inbound: Sendable, Outbound: Sendable>(

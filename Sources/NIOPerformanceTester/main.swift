@@ -62,7 +62,7 @@ public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
     func measureOne(_ fn: () async throws -> Int) async rethrows -> Double {
         let start = DispatchTime.now().uptimeNanoseconds
@@ -80,7 +80,7 @@ public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
     return measurements
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public func measureAndPrint(desc: String, fn: () async throws -> Int) async rethrows -> Void {
     if limitSet.isEmpty || limitSet.contains(desc) {
         print("measuring\(warning): \(desc): ", terminator: "")
@@ -1083,7 +1083,7 @@ try measureAndPrint(
     )
 )
 
-if #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) {
+if #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) {
     try measureAndPrint(
         desc: "asyncwriter_single_writes_1M_times",
         benchmark: NIOAsyncWriterSingleWritesBenchmark(
@@ -1139,7 +1139,7 @@ try measureAndPrint(
     )
 )
 
-if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {
+if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *) {
     try measureAndPrint(
         desc: "tcp_100k_messages_throughput",
         benchmark: TCPThroughputBenchmark(messages: 100_000, messageSize: 500)

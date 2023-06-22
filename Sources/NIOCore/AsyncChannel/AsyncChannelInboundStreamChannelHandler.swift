@@ -14,7 +14,7 @@
 
 /// A ``ChannelHandler`` that is used to transform the inbound portion of a NIO
 /// ``Channel`` into an asynchronous sequence that supports back-pressure.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @usableFromInline
 internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Sendable, ProducerElement: Sendable>: ChannelDuplexHandler {
     @usableFromInline
@@ -297,7 +297,7 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncChannelInboundStreamChannelHandler {
     @inlinable
     func _didTerminate() {
@@ -334,7 +334,7 @@ extension NIOAsyncChannelInboundStreamChannelHandler {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @usableFromInline
 struct NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate: @unchecked Sendable, NIOAsyncSequenceProducerDelegate {
     @usableFromInline
@@ -368,6 +368,6 @@ struct NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate: @unchecked Se
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @available(*, unavailable)
 extension NIOAsyncChannelInboundStreamChannelHandler: Sendable {}

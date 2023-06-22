@@ -28,7 +28,7 @@ fileprivate struct NoOpDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable
 }
 
 // This is unchecked Sendable because the Sink is not Sendable but the Sink is thread safe
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 final class NIOAsyncWriterSingleWritesBenchmark: AsyncBenchmark, @unchecked Sendable {
     private let iterations: Int
     private let delegate: NoOpDelegate

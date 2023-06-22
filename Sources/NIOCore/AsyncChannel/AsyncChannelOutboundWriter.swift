@@ -17,7 +17,7 @@
 /// The writer acts as a bridge between the Concurrency and NIO world. It allows to write and flush messages into the
 /// underlying ``Channel``. Furthermore, it respects back-pressure of the channel by suspending the calls to write until
 /// the channel becomes writable again.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @_spi(AsyncChannel)
 public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @usableFromInline

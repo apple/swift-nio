@@ -16,7 +16,7 @@ import NIOPosix
 import NIOHTTP1
 import Dispatch
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
     let channel = try await ClientBootstrap(group: group).connect(host: host, port: port).get()
     try await channel.pipeline.addHTTPClientHandlers().get()
@@ -25,7 +25,7 @@ func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throw
     return try await AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull>(channel).start()
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 func main() async {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     do {
@@ -65,7 +65,7 @@ func main() async {
 
 let dg = DispatchGroup()
 dg.enter()
-if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {
+if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *) {
     Task {
         await main()
         dg.leave()

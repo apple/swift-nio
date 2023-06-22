@@ -22,7 +22,7 @@ import NIOConcurrencyHelpers
 /// - Important: The methods on the delegate are called while a lock inside of the ``NIOAsyncWriter`` is held. This is done to
 /// guarantee the ordering of the writes. However, this means you **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)``
 /// from within ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` or ``NIOAsyncWriterSinkDelegate/didTerminate(error:)``.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public protocol NIOAsyncWriterSinkDelegate: Sendable {
     /// The `Element` type of the delegate and the writer.
     associatedtype Element: Sendable
@@ -67,7 +67,7 @@ public protocol NIOAsyncWriterSinkDelegate: Sendable {
     func didTerminate(error: Error?)
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncWriterSinkDelegate {
     @inlinable
     public func didYield(_ element: Element) {
@@ -76,7 +76,7 @@ extension NIOAsyncWriterSinkDelegate {
 }
 
 /// Errors thrown by the ``NIOAsyncWriter``.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
     @usableFromInline
     internal enum _Code: String, Hashable, Sendable {
@@ -135,7 +135,7 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
 /// Moreover, having a wrapping type allows to optimize this to specialized calls if all generic types are known.
 ///
 /// - Note: This struct has reference semantics. Once all copies of a writer have been dropped ``NIOAsyncWriterSinkDelegate/didTerminate(error:)`` will be called.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public struct NIOAsyncWriter<
     Element,
     Delegate: NIOAsyncWriterSinkDelegate
@@ -301,7 +301,7 @@ public struct NIOAsyncWriter<
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncWriter {
     /// The underlying sink of the ``NIOAsyncWriter``. This type allows to set the writability of the ``NIOAsyncWriter``.
     ///
@@ -374,7 +374,7 @@ extension NIOAsyncWriter {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncWriter {
     /// This is the underlying storage of the writer. The goal of this is to synchronize the access to all state.
     @usableFromInline
@@ -641,7 +641,7 @@ extension NIOAsyncWriter {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncWriter {
     @usableFromInline
     /* private */ internal struct StateMachine {

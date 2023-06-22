@@ -67,7 +67,7 @@ fileprivate var temporaryDirectory: String {
 #if os(Linux)
         return "/tmp"
 #else
-        if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {
+        if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, xrOS 1.0, *) {
             return FileManager.default.temporaryDirectory.path
         } else {
             return "/tmp"

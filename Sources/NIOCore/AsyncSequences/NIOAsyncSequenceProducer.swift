@@ -27,7 +27,7 @@ import NIOConcurrencyHelpers
 ///
 /// - Important: The methods of this protocol are guaranteed to be called serially. Furthermore, the implementation of these
 /// methods **MUST NOT** do any locking or call out to any other Task/Thread.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public protocol NIOAsyncSequenceProducerBackPressureStrategy: Sendable {
     /// This method is called after new elements were yielded by the producer to the source.
     ///
@@ -53,7 +53,7 @@ public protocol NIOAsyncSequenceProducerBackPressureStrategy: Sendable {
 /// We recommend dispatching from the arbitrary thread that called ``NIOAsyncSequenceProducerDelegate/produceMore()`` and ``NIOAsyncSequenceProducerDelegate/didTerminate()``
 /// onto the thread that is calling ``NIOAsyncSequenceProducer/Source/yield(contentsOf:)``.
 /// This way you synchronize the receiving the result of a yield call and the callbacks of the delegate on the same thread.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public protocol NIOAsyncSequenceProducerDelegate: Sendable {
     /// This method is called once the back-pressure strategy of the ``NIOAsyncSequenceProducer`` determined
     /// that the producer needs to start producing more elements. Furthermore, it will also only be called if ``NIOAsyncSequenceProducer/Source/yield(_:)``
@@ -92,7 +92,7 @@ public protocol NIOAsyncSequenceProducerDelegate: Sendable {
 ///
 /// - Important: This sequence is a unicast sequence that only supports a single ``NIOAsyncSequenceProducer/AsyncIterator``.
 /// If you try to create more than one iterator it will result in a `fatalError`.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public struct NIOAsyncSequenceProducer<
     Element: Sendable,
     Strategy: NIOAsyncSequenceProducerBackPressureStrategy,
@@ -166,14 +166,14 @@ public struct NIOAsyncSequenceProducer<
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncSequenceProducer: AsyncSequence {
     public func makeAsyncIterator() -> AsyncIterator {
         AsyncIterator(throwingIterator: self._throwingSequence.makeAsyncIterator())
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncSequenceProducer {
     public struct AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline
@@ -203,7 +203,7 @@ extension NIOAsyncSequenceProducer {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncSequenceProducer {
     /// A struct to interface between the synchronous code of the producer and the asynchronous consumer.
     /// This type allows the producer to synchronously `yield` new elements to the ``NIOAsyncSequenceProducer``
@@ -325,7 +325,7 @@ extension NIOAsyncSequenceProducer {
 
 /// The ``NIOAsyncSequenceProducer/AsyncIterator`` MUST NOT be shared across `Task`s. With marking this as
 /// unavailable we are explicitly declaring this.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @available(*, unavailable)
 extension NIOAsyncSequenceProducer.AsyncIterator: Sendable {}
 

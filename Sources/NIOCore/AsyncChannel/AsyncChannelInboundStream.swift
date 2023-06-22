@@ -15,7 +15,7 @@
 /// The inbound message asynchronous sequence of a ``NIOAsyncChannel``.
 ///
 /// This is a unicast async sequence that allows a single iterator to be created.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @_spi(AsyncChannel)
 public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @usableFromInline
@@ -117,7 +117,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncChannelInboundStream: AsyncSequence {
     @_spi(AsyncChannel)
     public typealias Element = Inbound
@@ -146,6 +146,6 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
 
 /// The ``NIOAsyncChannelInboundStream/AsyncIterator`` MUST NOT be shared across `Task`s. With marking this as
 /// unavailable we are explicitly declaring this.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @available(*, unavailable)
 extension NIOAsyncChannelInboundStream.AsyncIterator: Sendable {}

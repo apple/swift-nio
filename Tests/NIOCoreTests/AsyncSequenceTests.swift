@@ -27,7 +27,7 @@ fileprivate struct TestCase {
 
 final class AsyncSequenceCollectTests: XCTestCase {
     func testAsyncSequenceCollect() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let testCases = [
                 TestCase([
@@ -95,9 +95,9 @@ final class AsyncSequenceCollectTests: XCTestCase {
             ]
             for testCase in testCases {
                 let expectedBytes = testCase.buffers.flatMap({ $0 })
-                
+
                 // happy case where maxBytes is exactly the same as number of buffers received
-                
+
                 // test for the generic version
                 let accumulatedBytes1 = try await testCase.buffers
                     .asAsyncSequence()
@@ -108,7 +108,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
                     file: testCase.file,
                     line: testCase.line
                 )
-                
+
                 // test for the `ByteBuffer` optimised version
                 let accumulatedBytes2 = try await testCase.buffers
                     .map(ByteBuffer.init(bytes:))
@@ -125,7 +125,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 guard expectedBytes.count >= 1 else {
                     continue
                 }
-                
+
                 // test for the generic version
                 await XCTAssertThrowsError(
                     try await testCase.buffers
@@ -140,7 +140,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
                         line: testCase.line
                     )
                 }
-                
+
                 // test for the `ByteBuffer` optimised version
                 await XCTAssertThrowsError(
                     try await testCase.buffers
@@ -161,7 +161,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
     }
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 struct AsyncSequenceFromSyncSequence<Wrapped: Sequence>: AsyncSequence {
     typealias Element = Wrapped.Element
     struct AsyncIterator: AsyncIteratorProtocol {
@@ -178,7 +178,7 @@ struct AsyncSequenceFromSyncSequence<Wrapped: Sequence>: AsyncSequence {
     }
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 extension Sequence {
     /// Turns `self` into an `AsyncSequence` by wending each element of `self` asynchronously.
     func asAsyncSequence() -> AsyncSequenceFromSyncSequence<Self> {

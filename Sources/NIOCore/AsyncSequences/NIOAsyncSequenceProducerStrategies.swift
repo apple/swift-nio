@@ -18,7 +18,7 @@ public enum NIOAsyncSequenceProducerBackPressureStrategies {
     /// This strategy does the following:
     /// - On yield it keeps on demanding more elements from the producer as long as the number of buffered elements hasn't reached the `highWatermark`.
     /// - On consume it starts to demand again from the producer once the number of buffered elements reach the `lowWatermark`.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     public struct HighLowWatermark: NIOAsyncSequenceProducerBackPressureStrategy {
         private let lowWatermark: Int
         private let highWatermark: Int

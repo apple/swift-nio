@@ -136,7 +136,7 @@ func measureAndPrint(desc: String, trackFDs: Bool, fn: () -> Int) -> Void {
     measurements.printRemainingAllocations(description: desc)
     measurements.printTotalAllocatedBytes(description: desc)
     measurements.printLeakedFDs(description: desc)
-    
+
     print("DEBUG: \(measurements)")
 }
 
@@ -146,7 +146,7 @@ public func measure(identifier: String, trackFDs: Bool = false, _ body: () -> In
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 func measureAll(trackFDs: Bool, _ fn: @escaping () async -> Int) -> [Measurement] {
     func measureOne(throwAway: Bool = false, trackFDs: Bool, _ fn: @escaping () async -> Int) -> Measurement? {
         func run(_ fn: @escaping () async -> Int) {
@@ -158,7 +158,7 @@ func measureAll(trackFDs: Bool, _ fn: @escaping () async -> Int) -> [Measurement
             }
             group.wait()
         }
-        
+
         if trackFDs {
             AtomicCounter.begin_tracking_fds()
         }
@@ -209,7 +209,7 @@ func measureAll(trackFDs: Bool, _ fn: @escaping () async -> Int) -> [Measurement
     return measurements
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 func measureAndPrint(desc: String, trackFDs: Bool, fn: @escaping () async -> Int) -> Void {
     let measurements = measureAll(trackFDs: trackFDs, fn)
     measurements.printTotalAllocations(description: desc)
@@ -218,7 +218,7 @@ func measureAndPrint(desc: String, trackFDs: Bool, fn: @escaping () async -> Int
     measurements.printLeakedFDs(description: desc)
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public func measure(identifier: String, trackFDs: Bool = false, _ body: @escaping () async -> Int) {
     measureAndPrint(desc: identifier, trackFDs: trackFDs, fn: body)
 }

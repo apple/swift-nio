@@ -55,7 +55,7 @@ public protocol NIOClientTCPBootstrapProtocol {
     ///     - handler: A closure that initializes the provided `Channel`.
     func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self
     #endif
-    
+
     #if swift(>=5.7)
     /// Sets the protocol handlers that will be added to the front of the `ChannelPipeline` right after the
     /// `channelInitializer` has been called.
@@ -81,7 +81,7 @@ public protocol NIOClientTCPBootstrapProtocol {
     ///     - option: The option to be applied.
     ///     - value: The value for the option.
     func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
-    
+
     /// Apply any understood convenience options to the bootstrap, removing them from the set of options if they are consumed.
     /// Method is optional to implement and should never be directly called by users.
     /// - parameters:
@@ -147,7 +147,7 @@ public protocol NIOClientTCPBootstrapProtocol {
 ///         }
 ///
 ///         #if canImport(Network)
-///         if #available(macOS 10.14, iOS 12, tvOS 12, watchOS 3, *) {
+///         if #available(macOS 10.14, iOS 12, tvOS 12, watchOS 3, xrOS 1.0, *) {
 ///             // We run on a new-enough Darwin so we can use Network.framework
 ///
 ///             let group = NIOTSEventLoopGroup()
@@ -198,7 +198,7 @@ public struct NIOClientTCPBootstrap {
         self.underlyingBootstrap = bootstrap
         self.tlsEnablerTypeErased = tlsEnabler
     }
-    
+
     internal init(_ original : NIOClientTCPBootstrap, updating underlying : NIOClientTCPBootstrapProtocol) {
         self.underlyingBootstrap = underlying
         self.tlsEnablerTypeErased = original.tlsEnablerTypeErased

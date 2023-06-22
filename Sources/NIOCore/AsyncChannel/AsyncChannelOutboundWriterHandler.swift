@@ -16,7 +16,7 @@ import DequeModule
 
 /// A ``ChannelHandler`` that is used to write the outbound portion of a NIO
 /// ``Channel`` from Swift Concurrency with back-pressure support.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @usableFromInline
 internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>: ChannelDuplexHandler {
     @usableFromInline typealias InboundIn = Any
@@ -126,7 +126,7 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOAsyncChannelOutboundWriterHandler {
     @usableFromInline
     struct Delegate: @unchecked Sendable, NIOAsyncWriterSinkDelegate {
@@ -163,6 +163,6 @@ extension NIOAsyncChannelOutboundWriterHandler {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @available(*, unavailable)
 extension NIOAsyncChannelOutboundWriterHandler: Sendable {}

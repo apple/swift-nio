@@ -15,7 +15,7 @@
 import NIOCore
 import DequeModule
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 fileprivate struct Delegate: NIOAsyncWriterSinkDelegate, Sendable {
     typealias Element = Int
 
@@ -25,7 +25,7 @@ fileprivate struct Delegate: NIOAsyncWriterSinkDelegate, Sendable {
 }
 
 func run(identifier: String) {
-    guard #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) else {
+    guard #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *) else {
         return
     }
     measure(identifier: identifier) {

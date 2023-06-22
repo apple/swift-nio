@@ -28,7 +28,7 @@ import NIOConcurrencyHelpers
 ///
 /// - Important: This sequence is a unicast sequence that only supports a single ``NIOThrowingAsyncSequenceProducer/AsyncIterator``.
 /// If you try to create more than one iterator it will result in a `fatalError`.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 public struct NIOThrowingAsyncSequenceProducer<
     Element: Sendable,
     Failure: Error,
@@ -114,7 +114,7 @@ public struct NIOThrowingAsyncSequenceProducer<
 
         return .init(source: source, sequence: sequence)
     }
-    
+
     /// Initializes a new ``NIOThrowingAsyncSequenceProducer`` and a ``NIOThrowingAsyncSequenceProducer/Source``.
     ///
     /// - Important: This method returns a struct containing a ``NIOThrowingAsyncSequenceProducer/Source`` and
@@ -173,14 +173,14 @@ public struct NIOThrowingAsyncSequenceProducer<
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOThrowingAsyncSequenceProducer: AsyncSequence {
     public func makeAsyncIterator() -> AsyncIterator {
         AsyncIterator(storage: self._internalClass._storage)
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOThrowingAsyncSequenceProducer {
     public struct AsyncIterator: AsyncIteratorProtocol {
         /// This class is needed to hook the deinit to observe once all references to an instance of the ``AsyncIterator`` are dropped.
@@ -221,7 +221,7 @@ extension NIOThrowingAsyncSequenceProducer {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOThrowingAsyncSequenceProducer {
     /// A struct to interface between the synchronous code of the producer and the asynchronous consumer.
     /// This type allows the producer to synchronously `yield` new elements to the ``NIOThrowingAsyncSequenceProducer``
@@ -342,7 +342,7 @@ extension NIOThrowingAsyncSequenceProducer {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOThrowingAsyncSequenceProducer {
     /// This is the underlying storage of the sequence. The goal of this is to synchronize the access to all state.
     @usableFromInline
@@ -573,7 +573,7 @@ extension NIOThrowingAsyncSequenceProducer {
                         } else {
                             continuation.resume(returning: nil)
                         }
-                        
+
                         let delegate = self._delegate
                         self._delegate = nil
 
@@ -590,7 +590,7 @@ extension NIOThrowingAsyncSequenceProducer {
     }
 }
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 extension NIOThrowingAsyncSequenceProducer {
     @usableFromInline
     /* private */ internal struct StateMachine {
@@ -966,7 +966,7 @@ extension NIOThrowingAsyncSequenceProducer {
             switch self._state {
             case .initial(_, let iteratorInitialized):
                 // This can happen if the `Task` that calls `next()` is already cancelled.
-                
+
                 // We have deprecated the generic Failure type in the public API and Failure should
                 // now be `Swift.Error`. However, if users have not migrated to the new API they could
                 // still use a custom generic Error type and this cast might fail.
@@ -984,7 +984,7 @@ extension NIOThrowingAsyncSequenceProducer {
                 } else {
                     self._state = .finished(iteratorInitialized: iteratorInitialized)
                 }
-                
+
                 return .none
 
             case .streaming(_, _, .some(let continuation), _, let iteratorInitialized):
@@ -1167,6 +1167,6 @@ extension NIOThrowingAsyncSequenceProducer {
 
 /// The ``NIOThrowingAsyncSequenceProducer/AsyncIterator`` MUST NOT be shared across `Task`s. With marking this as
 /// unavailable we are explicitly declaring this.
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 @available(*, unavailable)
 extension NIOThrowingAsyncSequenceProducer.AsyncIterator: Sendable {}

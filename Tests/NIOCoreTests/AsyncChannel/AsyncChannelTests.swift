@@ -19,7 +19,7 @@ import XCTest
 
 final class AsyncChannelTests: XCTestCase {
     func testAsyncChannelBasicFunctionality() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let wrapped = try await channel.testingEventLoop.executeInContext {
@@ -47,7 +47,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testAsyncChannelBasicWrites() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let wrapped = try await channel.testingEventLoop.executeInContext {
@@ -68,7 +68,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testDroppingTheWriterClosesTheWriteSideOfTheChannel() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let closeRecorder = CloseRecorder()
@@ -103,7 +103,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testDroppingTheWriterDoesntCloseTheWriteSideOfTheChannelIfHalfClosureIsDisabled() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let closeRecorder = CloseRecorder()
@@ -133,7 +133,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testDroppingTheWriterFirstLeadsToChannelClosureWhenReaderIsAlsoDropped() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let closeRecorder = CloseRecorder()
@@ -178,7 +178,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testDroppingEverythingClosesTheChannel() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let closeRecorder = CloseRecorder()
@@ -208,7 +208,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testReadsArePropagated() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let wrapped = try await channel.testingEventLoop.executeInContext {
@@ -227,7 +227,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testErrorsArePropagatedButAfterReads() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let wrapped = try await channel.testingEventLoop.executeInContext {
@@ -250,7 +250,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testChannelBecomingNonWritableDelaysWriters() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let wrapped = try await channel.testingEventLoop.executeInContext {
@@ -289,7 +289,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testBufferDropsReadsIfTheReaderIsGone() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             try await channel.pipeline.addHandler(CloseSuppressor()).get()
@@ -316,7 +316,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testManagingBackpressure() {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let readCounter = ReadCounter()
@@ -424,7 +424,7 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testCanWrapAChannelSynchronously() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { return }
         XCTAsyncTest(timeout: 5) {
             let channel = NIOAsyncTestingChannel()
             let wrapped = try await channel.testingEventLoop.executeInContext {

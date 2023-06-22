@@ -111,7 +111,7 @@ class NIOThreadPoolTest: XCTestCase {
     }
 
     func testAsyncShutdownWorks() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let threadPool = NIOThreadPool(numberOfThreads: 17)
             let eventLoop = NIOAsyncTestingEventLoop()

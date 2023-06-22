@@ -79,7 +79,7 @@ final class MockNIOBackPressuredStreamSourceDelegate: NIOAsyncSequenceProducerDe
     }
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 final class NIOAsyncSequenceProducerTests: XCTestCase {
     private var backPressureStrategy: MockNIOElementStreamBackPressureStrategy!
     private var delegate: MockNIOBackPressuredStreamSourceDelegate!

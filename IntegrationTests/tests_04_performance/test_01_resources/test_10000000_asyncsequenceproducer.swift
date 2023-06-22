@@ -14,10 +14,10 @@
 
 import NIOCore
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 fileprivate typealias SequenceProducer = NIOAsyncSequenceProducer<Int, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, Delegate>
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
 fileprivate final class Delegate: NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
     private let elements = Array(repeating: 1, count: 1000)
 
@@ -31,7 +31,7 @@ fileprivate final class Delegate: NIOAsyncSequenceProducerDelegate, @unchecked S
 }
 
 func run(identifier: String) {
-    guard #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) else {
+    guard #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *) else {
         return
     }
     measure(identifier: identifier) {

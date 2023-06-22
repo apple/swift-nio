@@ -19,7 +19,7 @@ import NIOCore
 
 class AsyncTestingChannelTests: XCTestCase {
     func testSingleHandlerInit() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             class Handler: ChannelInboundHandler {
                 typealias InboundIn = Never
@@ -31,7 +31,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testEmptyInit() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
 
         class Handler: ChannelInboundHandler {
             typealias InboundIn = Never
@@ -45,7 +45,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testMultipleHandlerInit() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             class Handler: ChannelInboundHandler, RemovableChannelHandler {
                 typealias InboundIn = Never
@@ -71,7 +71,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWaitForInboundWrite() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             let task = Task {
@@ -88,7 +88,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWaitForMultipleInboundWritesInParallel() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             let task = Task {
@@ -110,7 +110,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWaitForOutboundWrite() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             let task = Task {
@@ -127,7 +127,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWaitForMultipleOutboundWritesInParallel() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             let task = Task {
@@ -149,7 +149,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteOutboundByteBuffer() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             var buf = channel.allocator.buffer(capacity: 1024)
@@ -172,7 +172,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteOutboundByteBufferMultipleTimes() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             var buf = channel.allocator.buffer(capacity: 1024)
@@ -195,7 +195,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteInboundByteBuffer() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             var buf = channel.allocator.buffer(capacity: 1024)
@@ -210,7 +210,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteInboundByteBufferMultipleTimes() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             var buf = channel.allocator.buffer(capacity: 1024)
@@ -233,7 +233,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteInboundByteBufferReThrow() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             XCTAssertNoThrow(try channel.pipeline.addHandler(ExceptionThrowingInboundHandler()).wait())
@@ -245,7 +245,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteOutboundByteBufferReThrow() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             XCTAssertNoThrow(try channel.pipeline.addHandler(ExceptionThrowingOutboundHandler()).wait())
@@ -257,7 +257,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testReadOutboundWrongTypeThrows() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             try await XCTAsyncAssertTrue(await channel.writeOutbound("hello").isFull)
@@ -274,7 +274,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testReadInboundWrongTypeThrows() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             try await XCTAsyncAssertTrue(await channel.writeInbound("hello").isFull)
@@ -291,7 +291,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWrongTypesWithFastpathTypes() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
 
@@ -342,7 +342,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testCloseMultipleTimesThrows() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             try await XCTAsyncAssertTrue(await channel.finish().isClean)
@@ -358,7 +358,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testCloseOnInactiveIsOk() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             let inactiveHandler = CloseInChannelInactiveHandler()
@@ -371,7 +371,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testEmbeddedLifecycle() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let handler = ChannelLifecycleHandler()
             XCTAssertEqual(handler.currentState, .unregistered)
@@ -419,7 +419,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             let pipelineEventLoop = channel.pipeline.eventLoop
@@ -430,7 +430,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSendingAnythingOnEmbeddedChannel() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             let buffer = ByteBufferAllocator().buffer(capacity: 5)
@@ -451,7 +451,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             XCTAssertFalse(channel.isActive)
@@ -473,7 +473,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteWithoutFlushDoesNotWrite() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
 
@@ -489,7 +489,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSetLocalAddressAfterSuccessfulBind() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
 
         let channel = NIOAsyncTestingChannel()
         let bindPromise = channel.eventLoop.makePromise(of: Void.self)
@@ -503,7 +503,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSetRemoteAddressAfterSuccessfulConnect() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
 
         let channel = NIOAsyncTestingChannel()
         let connectPromise = channel.eventLoop.makePromise(of: Void.self)
@@ -517,7 +517,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testUnprocessedOutboundUserEventFailsOnEmbeddedChannel() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
 
         let channel = NIOAsyncTestingChannel()
         XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
@@ -531,7 +531,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testEmbeddedChannelWritabilityIsWritable() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
 
         let channel = NIOAsyncTestingChannel()
         let opaqueChannel: Channel = channel
@@ -544,7 +544,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testFinishWithRecursivelyScheduledTasks() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             let invocations = AtomicCounter()
@@ -564,7 +564,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSyncOptionsAreSupported() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         try channel.testingEventLoop.submit {
             let options = channel.syncOptions
@@ -576,7 +576,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testGetChannelOptionAutoReadIsSupported() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         try channel.testingEventLoop.submit {
             let options = channel.syncOptions
@@ -587,7 +587,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSetGetChannelOptionAllowRemoteHalfClosureIsSupported() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         try channel.testingEventLoop.submit {
             let options = channel.syncOptions
@@ -605,7 +605,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSecondFinishThrows() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *) else { throw XCTSkip() }
         XCTAsyncTest {
             let channel = NIOAsyncTestingChannel()
             _ = try await channel.finish()
@@ -614,20 +614,20 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 fileprivate func XCTAsyncAssertTrue(_ predicate: @autoclosure () async throws -> Bool, file: StaticString = #filePath, line: UInt = #line) async rethrows {
     let result = try await predicate()
     XCTAssertTrue(result, file: file, line: line)
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 fileprivate func XCTAsyncAssertEqual<Element: Equatable>(_ lhs: @autoclosure () async throws -> Element, _ rhs: @autoclosure () async throws -> Element, file: StaticString = #filePath, line: UInt = #line) async rethrows {
     let lhsResult = try await lhs()
     let rhsResult = try await rhs()
     XCTAssertEqual(lhsResult, rhsResult, file: file, line: line)
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 fileprivate func XCTAsyncAssertThrowsError<ResultType>(_ expression: @autoclosure () async throws -> ResultType, file: StaticString = #filePath, line: UInt = #line, _ callback: Optional<(Error) -> Void> = nil) async {
     do {
         let _ = try await expression()
@@ -637,13 +637,13 @@ fileprivate func XCTAsyncAssertThrowsError<ResultType>(_ expression: @autoclosur
     }
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 fileprivate func XCTAsyncAssertNil(_ expression: @autoclosure () async throws -> Any?, file: StaticString = #filePath, line: UInt = #line) async rethrows {
     let result = try await expression()
     XCTAssertNil(result, file: file, line: line)
 }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 fileprivate func XCTAsyncAssertNotNil(_ expression: @autoclosure () async throws -> Any?, file: StaticString = #filePath, line: UInt = #line) async rethrows {
     let result = try await expression()
     XCTAssertNotNil(result, file: file, line: line)

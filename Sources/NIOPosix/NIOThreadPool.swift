@@ -18,7 +18,7 @@ import NIOConcurrencyHelpers
 
 /// Errors that may be thrown when executing work on a `NIOThreadPool`
 public enum NIOThreadPoolError {
-    
+
     /// The `NIOThreadPool` was not active.
     public struct ThreadPoolInactive: Error { }
 }
@@ -48,7 +48,7 @@ public final class NIOThreadPool {
         /// The `WorkItem` was cancelled and will not be processed by the `NIOThreadPool`.
         case cancelled
     }
-    
+
     #if swift(>=5.7)
     /// The work that should be done by the `NIOThreadPool`.
     public typealias WorkItem = @Sendable (WorkItemState) -> Void
@@ -90,7 +90,7 @@ public final class NIOThreadPool {
         self._shutdownGracefully(queue: queue, callback)
     }
     #endif
-    
+
     private func _shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         let g = DispatchGroup()
         let threadsToJoin = self.lock.withLock { () -> [NIOThread] in
@@ -121,8 +121,8 @@ public final class NIOThreadPool {
             callback(nil)
         }
     }
-    
-    
+
+
 
     #if swift(>=5.7)
     /// Submit a `WorkItem` to process.
@@ -162,7 +162,7 @@ public final class NIOThreadPool {
         /* if item couldn't be added run it immediately indicating that it couldn't be run */
         item.map { $0(.cancelled) }
     }
-    
+
     /// Initialize a `NIOThreadPool` thread pool with `numberOfThreads` threads.
     ///
     /// - parameters:
@@ -255,7 +255,7 @@ public final class NIOThreadPool {
 extension NIOThreadPool: @unchecked Sendable {}
 
 extension NIOThreadPool {
-    
+
     #if swift(>=5.7)
     /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
     /// The closure will be run on the thread pool so can do blocking work.
@@ -280,7 +280,7 @@ extension NIOThreadPool {
         self._runIfActive(eventLoop: eventLoop, body)
     }
     #endif
-    
+
     private func _runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
@@ -311,7 +311,7 @@ extension NIOThreadPool {
     #endif
 
     /// Shuts down the thread pool gracefully.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, xrOS 1.0, *)
     @inlinable
     public func shutdownGracefully() async throws {
         return try await withCheckedThrowingContinuation { cont in

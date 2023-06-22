@@ -15,7 +15,7 @@
 import NIOCore
 import XCTest
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     private var backPressureStrategy: MockNIOElementStreamBackPressureStrategy!
     private var delegate: MockNIOBackPressuredStreamSourceDelegate!
@@ -463,7 +463,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             XCTAssertTrue(error is CancellationError)
         }
     }
-    
+
     @available(*, deprecated, message: "tests the deprecated custom generic failure type")
     func testTaskCancel_whenStreaming_andSuspended_withCustomErrorType() async throws {
         struct CustomError: Error {}
@@ -487,7 +487,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         task.cancel()
         let result = await task.result
         XCTAssertEqualWithoutAutoclosure(await delegate.events.prefix(1).collect(), [.didTerminate])
-        
+
         try withExtendedLifetime(new.source) {
             XCTAssertNil(try result.get())
         }
@@ -500,7 +500,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
             let element = try await iterator.next()
-            
+
             // Sleeping here to give the other Task a chance to cancel this one.
             try? await Task.sleep(nanoseconds: 1_000_000)
             return element
@@ -550,7 +550,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             XCTAssertTrue(error is CancellationError, "unexpected error \(error)")
         }
     }
-    
+
     @available(*, deprecated, message: "tests the deprecated custom generic failure type")
     func testTaskCancel_whenStreaming_andTaskIsAlreadyCancelled_withCustomErrorType() async throws {
         struct CustomError: Error {}
@@ -572,7 +572,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         task.cancel()
-        
+
         let result = await task.result
         try withExtendedLifetime(new.source) {
             XCTAssertNil(try result.get())

@@ -55,7 +55,7 @@ import NIOConcurrencyHelpers
 /// event loop. Simply calling `.wait()` from the test thread will never complete. This is because
 /// `wait` calls `loop.execute` under the hood, and that callback cannot execute without calling
 /// `loop.run()`.
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     // This type is `@unchecked Sendable` because of the use of `taskNumber`. This
     // variable is only used from within `queue`, but the compiler cannot see that.

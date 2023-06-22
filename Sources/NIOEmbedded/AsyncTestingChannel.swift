@@ -82,7 +82,7 @@ import NIOCore
 /// - note: ``NIOAsyncTestingChannel`` is currently only compatible with
 ///   ``NIOAsyncTestingEventLoop``s and cannot be used with `SelectableEventLoop`s from
 ///   for example `MultiThreadedEventLoopGroup`.
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 public final class NIOAsyncTestingChannel: Channel {
     /// ``LeftOverState`` represents any left-over inbound, outbound, and pending outbound events that hit the
     /// ``NIOAsyncTestingChannel`` and were not consumed when ``finish()`` was called on the ``NIOAsyncTestingChannel``.
@@ -644,8 +644,8 @@ public final class NIOAsyncTestingChannel: Channel {
 // of this object across threads because in the overwhelming majority of cases the data types
 // in a channel pipeline _are_ `Sendable`, and because these objects only carry NIOAnys in cases
 // where the `Channel` itself no longer holds a reference to these objects.
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 extension NIOAsyncTestingChannel.LeftOverState: @unchecked Sendable { }
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, xrOS 1.0, *)
 extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable { }
