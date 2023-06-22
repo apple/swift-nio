@@ -183,6 +183,11 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     promise?.fail(ChannelError.outputClosed)
                     return
                 }
+                if self.inputShutdown {
+                    // Escalate to full closure
+                    self.close0(error: error, mode: .all, promise: promise)
+                    return
+                }
                 try self.shutdownSocket(mode: mode)
                 // Fail all pending writes and so ensure all pending promises are notified
                 self.pendingWrites.failAll(error: error, close: false)
@@ -193,6 +198,11 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
             case .input:
                 if self.inputShutdown {
                     promise?.fail(ChannelError.inputClosed)
+                    return
+                }
+                if self.outputShutdown {
+                    // Escalate to full closure
+                    self.close0(error: error, mode: .all, promise: promise)
                     return
                 }
                 switch error {

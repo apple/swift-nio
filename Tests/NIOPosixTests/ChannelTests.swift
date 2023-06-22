@@ -1249,6 +1249,90 @@ public final class ChannelTests: XCTestCase {
         try channel.writeAndFlush(NIOAny(buffer)).wait()
     }
 
+    func testInputAndOutputClosedResultsInFullClosure() throws {
+        final class PromiseOnChildChannelInitHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            private let promise: EventLoopPromise<Channel>
+
+            init(promise: EventLoopPromise<Channel>) {
+                self.promise = promise
+            }
+
+            func channelActive(context: ChannelHandlerContext) {
+                self.promise.succeed(context.channel)
+                context.fireChannelActive()
+            }
+        }
+
+        final class ChannelInactiveHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            private let promise: EventLoopPromise<Void>
+
+            init(promise: EventLoopPromise<Void>) {
+                self.promise = promise
+            }
+
+            func channelInactive(context: ChannelHandlerContext) {
+                self.promise.succeed()
+                context.fireChannelActive()
+            }
+        }
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let childChannelInitPromise: EventLoopPromise<Channel> = group.next().makePromise()
+
+        let serverChannel: Channel = try ServerBootstrap(group: group)
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true) // Important!
+            .childChannelInitializer { channel in
+                channel.pipeline.addHandler(PromiseOnChildChannelInitHandler(promise: childChannelInitPromise))
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+
+        let clientChannelInactivePromise: EventLoopPromise<Void> = group.next().makePromise()
+        let clientChannel = try ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                channel.pipeline.addHandler(ChannelInactiveHandler(promise: clientChannelInactivePromise))
+            }
+            .connect(to: serverChannel.localAddress!)
+            .wait()
+
+        XCTAssertNoThrow(try clientChannel.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+
+        // Ok, the connection is definitely up.
+        // Now retrieve the client channel that our server opened for the connection to our client.
+        let connectionChildChannel = try childChannelInitPromise.futureResult.wait()
+
+        // First we close the output of the connection channel on the server.
+        // This results in the input of the clientChannel being closed.
+        XCTAssertNoThrow(try connectionChildChannel.close(mode: .output).wait())
+        // Now we close the output of the clientChannel.
+        // Given that the the input of the clientChannel is already closed,
+        // this should escalate to a full closure of the clientChannel.
+        XCTAssertNoThrow(try clientChannel.close(mode: .output).wait())
+
+        // Assert that full closure of client channel occured by verifying
+        // that channelInactive was invoked on the channel.
+        XCTAssertNoThrow(try clientChannelInactivePromise.futureResult.wait())
+
+        // Additional assertion: trying to close the clientChannel manually
+        // should fail as it is closed already.
+        XCTAssertThrowsError(try clientChannel.close().wait()) { error in
+            if let error = error as? ChannelError {
+                XCTAssertEqual(ChannelError.alreadyClosed, error)
+            } else {
+                XCTFail("unexpected error: \(error)")
+            }
+        }
+    }
+
     enum ShutDownEvent {
         case input
         case output
