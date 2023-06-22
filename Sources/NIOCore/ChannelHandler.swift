@@ -346,7 +346,7 @@ extension RemovableChannelHandler {
 
 /// The result of protocol negotiation.
 @_spi(AsyncChannel)
-public enum NIOProtocolNegotiationResult<NegotiationResult> {
+public enum NIOProtocolNegotiationResult<NegotiationResult: Sendable> {
     /// Indicates that the protocol negotiation finished.
     case finished(NegotiationResult)
     /// Indicates that protocol negotiation has been deferred to the next handler.
