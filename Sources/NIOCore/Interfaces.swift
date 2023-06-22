@@ -14,7 +14,7 @@
 #if os(Linux) || os(FreeBSD) || os(Android)
 import Glibc
 import CNIOLinux
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif canImport(Darwin)
 import Darwin
 #elseif os(Windows)
 import let WinSDK.AF_INET
@@ -41,7 +41,7 @@ private extension ifaddrs {
     var dstaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_dstaddr
-        #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        #elseif canImport(Darwin)
         return self.ifa_dstaddr
         #endif
     }
@@ -49,7 +49,7 @@ private extension ifaddrs {
     var broadaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_broadaddr
-        #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        #elseif canImport(Darwin)
         return self.ifa_dstaddr
         #endif
     }

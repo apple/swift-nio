@@ -753,7 +753,7 @@ public struct NonBlockingFileIO: Sendable {
     public func createDirectory(path: String, withIntermediateDirectories createIntermediates: Bool = false, mode: NIOPOSIXFileMode, eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
             if createIntermediates {
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                #if canImport(Darwin)
                 try Posix.mkpath_np(pathname: path, mode: mode)
                 #else
                 try self.createDirectory0(path, mode: mode)

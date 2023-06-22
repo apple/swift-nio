@@ -282,7 +282,7 @@ final class SocketOptionProviderTest: XCTestCase {
 
     func testTCPConnectionInfo() throws {
         // This test only runs on Darwin.
-        #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        #if canImport(Darwin)
         let channel = self.clientChannel! as! SocketOptionProvider
         let tcpConnectionInfo = try assertNoThrowWithValue(channel.getTCPConnectionInfo().wait())
 

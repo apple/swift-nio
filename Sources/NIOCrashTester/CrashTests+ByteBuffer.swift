@@ -15,7 +15,7 @@
 import NIOCore
 
 struct ByteBufferCrashTests {
-    #if !os(iOS) && !os(tvOS) && !os(watchOS)
+    #if !canImport(Darwin) || os(macOS)
     let testMovingReaderIndexPastWriterIndex = CrashTest(
         regex: #"Precondition failed: new readerIndex: 1, expected: range\(0, 0\)"#
     ) {

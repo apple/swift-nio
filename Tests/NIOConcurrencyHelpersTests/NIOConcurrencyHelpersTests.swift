@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import Darwin
 #else
 import Glibc
@@ -26,7 +26,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         return n*(n+1)/2
     }
     
-    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    #if canImport(Darwin)
     let noAsyncs: UInt64 = 50
     #else
     /// `swift-corelibs-libdispatch` implementation of concurrent queues only initially spawn up to `System.coreCount` threads.
