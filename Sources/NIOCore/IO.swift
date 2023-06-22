@@ -30,7 +30,7 @@ internal func MAKELANGID(_ p: WORD, _ s: WORD) -> DWORD {
 }
 #elseif os(Linux) || os(Android)
 import Glibc
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif canImport(Darwin)
 import Darwin
 #endif
 

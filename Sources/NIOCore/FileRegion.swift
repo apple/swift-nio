@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 #if os(Windows)
 import ucrt
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif canImport(Darwin)
 import Darwin
 #elseif os(Linux) || os(Android)
 import Glibc

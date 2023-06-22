@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !os(iOS) && !os(tvOS) && !os(watchOS)
+#if !canImport(Darwin) || os(macOS)
 import NIOCore
 import NIOPosix
 import class Foundation.Process

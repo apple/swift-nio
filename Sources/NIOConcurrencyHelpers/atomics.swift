@@ -14,7 +14,7 @@
 
 import CNIOAtomics
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import Darwin
 fileprivate func sys_sched_yield() {
     pthread_yield_np()
