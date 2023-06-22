@@ -245,7 +245,7 @@ typealias IOVector = iovec
                 }
 #else
                 var messageHeader = msghdr()
-                messageHeader.msg_name = sockaddrPtr
+                messageHeader.msg_name = .init(sockaddrPtr)
                 messageHeader.msg_namelen = storageLen
                 messageHeader.msg_iov = vecPtr
                 messageHeader.msg_iovlen = 1

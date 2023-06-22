@@ -136,7 +136,7 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
                 let controlMessageBytePointer = controlBytes.validControlBytes
 
                 var msg = msghdr()
-                msg.msg_name = address
+                msg.msg_name = .init(address)
                 msg.msg_namelen = addressLen
                 msg.msg_iov = iovecs.baseAddress! + c
                 msg.msg_iovlen = 1
