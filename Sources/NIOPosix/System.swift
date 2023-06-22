@@ -22,7 +22,11 @@ import NIOCore
 import CNIODarwin
 internal typealias MMsgHdr = CNIODarwin_mmsghdr
 #elseif os(Linux) || os(FreeBSD) || os(Android)
+#if canImport(Glibc)
 @_exported import Glibc
+#elseif canImport(Musl)
+@_exported import Musl
+#endif
 import CNIOLinux
 internal typealias MMsgHdr = CNIOLinux_mmsghdr
 internal typealias in6_pktinfo = CNIOLinux_in6_pktinfo
@@ -107,7 +111,7 @@ private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsigne
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 #endif
 
-#if os(Linux)
+#if canImport(Glibc)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = stat
 private let sysLstat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = lstat
@@ -384,11 +388,17 @@ internal enum Posix {
     static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
 #elseif os(Linux) || os(FreeBSD) || os(Android)
-
+    #if canImport(Glibc)
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
     static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
+    #elseif canImport(Musl)
+    static let UIO_MAXIOV: Int = Int(Musl.UIO_MAXIOV)
+    static let SHUT_RD: CInt = CInt(Musl.SHUT_RD)
+    static let SHUT_WR: CInt = CInt(Musl.SHUT_WR)
+    static let SHUT_RDWR: CInt = CInt(Musl.SHUT_RDWR)
+    #endif
 #else
     static var UIO_MAXIOV: Int {
         fatalError("unsupported OS")
@@ -659,7 +669,11 @@ internal enum Posix {
                     return ssize_t(result)
                 #elseif os(Linux) || os(FreeBSD) || os(Android)
                     var off: off_t = offset
+                    #if canImport(Glibc)
                     let result: ssize_t = Glibc.sendfile(descriptor, fd, &off, count)
+                    #elseif canImport(Musl)
+                    let result: ssize_t = Musl.sendfile(descriptor, fd, &off, count)
+                    #endif
                     if result >= 0 {
                         written = off_t(result)
                     } else {

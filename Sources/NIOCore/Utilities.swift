@@ -13,7 +13,11 @@
 //===----------------------------------------------------------------------===//
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 #elseif os(Windows)
 import let WinSDK.RelationProcessorCore
 

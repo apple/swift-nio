@@ -22,7 +22,11 @@
 #if canImport(Darwin)
 import Darwin.C
 #elseif os(Linux) || os(FreeBSD) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 #elseif os(Windows)
 import CNIOWindows
 #else

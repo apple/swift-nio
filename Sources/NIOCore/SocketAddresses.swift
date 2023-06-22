@@ -44,7 +44,11 @@ fileprivate typealias sa_family_t = WinSDK.ADDRESS_FAMILY
 #elseif canImport(Darwin)
 import Darwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import CNIOLinux
 #endif
 

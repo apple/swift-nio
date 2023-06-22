@@ -61,7 +61,11 @@ import func WinSDK.WSAGetLastError
 
 internal typealias socklen_t = ucrt.size_t
 #elseif os(Linux) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import CNIOLinux
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop

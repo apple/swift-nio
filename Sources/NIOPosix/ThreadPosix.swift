@@ -39,16 +39,23 @@ private func sysPthread_create(handle: UnsafeMutablePointer<pthread_t?>,
     #if canImport(Darwin)
     return pthread_create(handle, nil, destructor, args)
     #else
+    #if canImport(Musl)
+    var handleLinux: OpaquePointer? = nil
+    let result = pthread_create(&handleLinux,
+                                nil,
+                                destructor,
+                                args)
+    #else
     var handleLinux = pthread_t()
     let result = pthread_create(&handleLinux,
                                 nil,
                                 destructor,
                                 args)
+    #endif
     handle.pointee = handleLinux
     return result
     #endif
 }
-
 
 typealias ThreadOpsSystem = ThreadOpsPosix
 
