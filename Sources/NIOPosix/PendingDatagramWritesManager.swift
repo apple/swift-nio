@@ -136,13 +136,13 @@ private func doPendingDatagramWriteVectorOperation(pending: PendingDatagramWrite
                 let controlMessageBytePointer = controlBytes.validControlBytes
 
                 let msg = msghdr()
-                msg_name = address
-                msg_namelen = addressLen
-                msg_iov = iovecs.baseAddress! + c
-                msg_iovlen = 1
-                msg_control = controlMessageBytePointer.baseAddress
-                msg_controllen = .init(controlMessageBytePointer.count)
-                msg_flags = 0
+                msg.msg_name = address
+                msg.msg_namelen = addressLen
+                msg.msg_iov = iovecs.baseAddress! + c
+                msg.msg_iovlen = 1
+                msg.msg_control = controlMessageBytePointer.baseAddress
+                msg.msg_controllen = .init(controlMessageBytePointer.count)
+                msg.msg_flags = 0
                 msgs[c] = MMsgHdr(msg_hdr: msg, msg_len: 0)
             }
             c += 1
