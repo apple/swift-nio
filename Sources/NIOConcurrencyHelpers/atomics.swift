@@ -26,7 +26,12 @@ fileprivate func sys_sched_yield() {
   Sleep(0)
 }
 #else
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
+
 fileprivate func sys_sched_yield() {
     _ = sched_yield()
 }

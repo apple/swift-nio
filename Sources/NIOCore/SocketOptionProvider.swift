@@ -14,7 +14,11 @@
 #if canImport(Darwin)
 import Darwin
 #elseif os(Linux) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import CNIOLinux
 #elseif os(Windows)
 import WinSDK

@@ -12,7 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 #if os(Linux) || os(FreeBSD) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import CNIOLinux
 #elseif canImport(Darwin)
 import Darwin

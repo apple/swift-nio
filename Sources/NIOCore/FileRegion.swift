@@ -15,8 +15,10 @@
 import ucrt
 #elseif canImport(Darwin)
 import Darwin
-#elseif os(Linux) || os(Android)
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #endif
 
 

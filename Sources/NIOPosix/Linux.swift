@@ -82,6 +82,13 @@ internal enum Epoll {
     internal static let EPOLLRDHUP: CUnsignedInt = 8192 //numericCast(CNIOLinux.EPOLLRDHUP)
     internal static let EPOLLHUP: CUnsignedInt = 16 //numericCast(CNIOLinux.EPOLLHUP)
     internal static let EPOLLET: CUnsignedInt = 2147483648 //numericCast(CNIOLinux.EPOLLET)
+    #elseif canImport(Musl)
+    internal static let EPOLLIN: CUnsignedInt = numericCast(CNIOLinux.EPOLLIN)
+    internal static let EPOLLOUT: CUnsignedInt = numericCast(CNIOLinux.EPOLLOUT)
+    internal static let EPOLLERR: CUnsignedInt = numericCast(CNIOLinux.EPOLLERR)
+    internal static let EPOLLRDHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLRDHUP)
+    internal static let EPOLLHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLHUP)
+    internal static let EPOLLET: CUnsignedInt = numericCast(CNIOLinux.EPOLLET)
     #else
     internal static let EPOLLIN: CUnsignedInt = numericCast(CNIOLinux.EPOLLIN.rawValue)
     internal static let EPOLLOUT: CUnsignedInt = numericCast(CNIOLinux.EPOLLOUT.rawValue)
@@ -121,6 +128,9 @@ internal enum Linux {
 #if os(Android)
     static let SOCK_CLOEXEC = Glibc.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Glibc.SOCK_NONBLOCK
+#elseif canImport(Musl)
+    static let SOCK_CLOEXEC = Musl.SOCK_CLOEXEC
+    static let SOCK_NONBLOCK = Musl.SOCK_NONBLOCK
 #else
     static let SOCK_CLOEXEC = CInt(bitPattern: Glibc.SOCK_CLOEXEC.rawValue)
     static let SOCK_NONBLOCK = CInt(bitPattern: Glibc.SOCK_NONBLOCK.rawValue)

@@ -186,13 +186,14 @@ typealias IOVector = iovec
                                                                 capacity: controlBytes.count)),
                            dwFlags: 0)
 #else
-                var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
-                                           msg_namelen: destinationSize,
-                                           msg_iov: vecPtr,
-                                           msg_iovlen: 1,
-                                           msg_control: controlBytes.baseAddress,
-                                           msg_controllen: .init(controlBytes.count),
-                                           msg_flags: 0)
+                var messageHeader = msghdr()
+                messageHeader.msg_name = notConstCorrectDestinationPtr
+                messageHeader.msg_namelen = destinationSize
+                messageHeader.msg_iov = vecPtr
+                messageHeader.msg_iovlen = 1
+                messageHeader.msg_control = controlBytes.baseAddress
+                messageHeader.msg_controllen = .init(controlBytes.count)
+                messageHeader.msg_flags = 0
 #endif
                 return try NIOBSDSocket.sendmsg(socket: handle, msgHdr: &messageHeader, flags: 0)
             }
@@ -243,13 +244,14 @@ typealias IOVector = iovec
                     storageLen = messageHeader.namelen
                 }
 #else
-                var messageHeader = msghdr(msg_name: sockaddrPtr,
-                                           msg_namelen: storageLen,
-                                           msg_iov: vecPtr,
-                                           msg_iovlen: 1,
-                                           msg_control: controlBytes.controlBytesBuffer.baseAddress,
-                                           msg_controllen: .init(controlBytes.controlBytesBuffer.count),
-                                           msg_flags: 0)
+                var messageHeader = msghdr()
+                messageHeader.msg_name = .init(sockaddrPtr)
+                messageHeader.msg_namelen = storageLen
+                messageHeader.msg_iov = vecPtr
+                messageHeader.msg_iovlen = 1
+                messageHeader.msg_control = controlBytes.controlBytesBuffer.baseAddress
+                messageHeader.msg_controllen = .init(controlBytes.controlBytesBuffer.count)
+                messageHeader.msg_flags = 0
                 defer {
                     // We need to write back the length of the message.
                     storageLen = messageHeader.msg_namelen
