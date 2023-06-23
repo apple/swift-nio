@@ -21,6 +21,8 @@ import WinSDK
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#else
+#error("The concurrency lock module was unable to identify your C library.")
 #endif
 
 /// A threading lock based on `libpthread` instead of `libdispatch`.

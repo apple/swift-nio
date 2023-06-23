@@ -13,8 +13,10 @@
 //===----------------------------------------------------------------------===//
 #if canImport(Darwin)
 import Darwin
-#else
+#elseif canImport(Glibc)
 import Glibc
+#else
+#error("The Concurrency helpers test module was unable to identify your C library.")
 #endif
 import Dispatch
 import XCTest

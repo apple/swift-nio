@@ -36,6 +36,8 @@ import struct WinSDK.ULONG
 import typealias WinSDK.DWORD
 #elseif canImport(Darwin)
 import Darwin
+#else
+#error("The Core utilities module was unable to identify your C library.")
 #endif
 
 /// A utility function that runs the body code only in debug builds, without

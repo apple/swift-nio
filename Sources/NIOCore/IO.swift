@@ -32,6 +32,8 @@ internal func MAKELANGID(_ p: WORD, _ s: WORD) -> DWORD {
 import Glibc
 #elseif canImport(Darwin)
 import Darwin
+#else
+#error("The IO module was unable to identify your C library.")
 #endif
 
 /// An `Error` for an IO operation.
