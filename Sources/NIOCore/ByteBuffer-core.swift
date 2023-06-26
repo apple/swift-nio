@@ -20,6 +20,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#else
+#error("The Byte Buffer module was unable to identify your C library.")
 #endif
 
 @usableFromInline let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc

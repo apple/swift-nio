@@ -51,6 +51,7 @@ needs to be listed here.
 - Esteban Torres <me@estebantorr.es>
 - Eugen <eugenf78@gmail.com>
 - Fabian Fett <fabianfett@apple.com>
+- Finagolfin <butta@fastem.com>
 - Frank Kair <frankkair@gmail.com>
 - Franz Busch <f.busch@apple.com>
 - Gautier Delorme <gautier.delorme@gmail.com>
@@ -152,7 +153,6 @@ needs to be listed here.
 - Will Lisac <will@lisac.org>
 - Wilson Ding <hello@wilsonding.com>
 - akash-55 <61596874+akash-55@users.noreply.github.com>
-- buttaface <butta@fastem.com>
 - fadi-botros <botros_fadi@yahoo.com>
 - jemmons <jemmons@users.noreply.github.com>
 - pokryfka <pokryfka@gmail.com>

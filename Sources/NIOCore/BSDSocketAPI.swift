@@ -75,6 +75,8 @@ import Darwin
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
+#else
+#error("The BSD Socket module was unable to identify your C library.")
 #endif
 
 #if os(Android)
