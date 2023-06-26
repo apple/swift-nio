@@ -50,6 +50,8 @@ import Glibc
 import Musl
 #endif
 import CNIOLinux
+#else
+#error("The Socket Addresses module was unable to identify your C library.")
 #endif
 
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
