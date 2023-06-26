@@ -1283,12 +1283,15 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let childChannelInitPromise: EventLoopPromise<Channel> = group.next().makePromise()
-
+        let serverChildChannelInitPromise: EventLoopPromise<Channel> = group.next().makePromise()
+        let serverChildChannelInactivePromise: EventLoopPromise<Void> = group.next().makePromise()
         let serverChannel: Channel = try ServerBootstrap(group: group)
             .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true) // Important!
             .childChannelInitializer { channel in
-                channel.pipeline.addHandler(PromiseOnChildChannelInitHandler(promise: childChannelInitPromise))
+                channel.pipeline.addHandlers(
+                    PromiseOnChildChannelInitHandler(promise: serverChildChannelInitPromise),
+                    ChannelInactiveHandler(promise: serverChildChannelInactivePromise)
+                )
             }
             .bind(host: "127.0.0.1", port: 0)
             .wait()
@@ -1308,11 +1311,11 @@ public final class ChannelTests: XCTestCase {
 
         // Ok, the connection is definitely up.
         // Now retrieve the client channel that our server opened for the connection to our client.
-        let connectionChildChannel = try childChannelInitPromise.futureResult.wait()
+        let serverConnectionChildChannel = try serverChildChannelInitPromise.futureResult.wait()
 
         // First we close the output of the connection channel on the server.
         // This results in the input of the clientChannel being closed.
-        XCTAssertNoThrow(try connectionChildChannel.close(mode: .output).wait())
+        XCTAssertNoThrow(try serverConnectionChildChannel.close(mode: .output).wait())
         // Now we close the output of the clientChannel.
         // Given that the the input of the clientChannel is already closed,
         // this should escalate to a full closure of the clientChannel.
@@ -1321,6 +1324,10 @@ public final class ChannelTests: XCTestCase {
         // Assert that full closure of client channel occured by verifying
         // that channelInactive was invoked on the channel.
         XCTAssertNoThrow(try clientChannelInactivePromise.futureResult.wait())
+
+        // Assert that the server child channel becomes inactive now that the
+        // client channel has been closed completely.
+        XCTAssertNoThrow(try serverChildChannelInactivePromise.futureResult.wait())
 
         // Additional assertion: trying to close the clientChannel manually
         // should fail as it is closed already.
