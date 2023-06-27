@@ -65,7 +65,6 @@ needs to be listed here.
 - Gregor Milos (Grzegorz Miłoś) <gmilos@apple.com>
 - GuangGuang <lihansey163@163.com>
 - Guillaume Lessard <guillaume.lessard@apple.com>
-- Gwynne Raskind <gwynne@darkrainfall.org>
 - Gwynne Raskind <gwynne@vapor.codes>
 - Hailong <hailongzh@hotmail.com>
 - Heidi Puk Hermann <heidi.puk@gmail.com>
