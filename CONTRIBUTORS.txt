@@ -18,8 +18,6 @@ needs to be listed here.
 - Albert Aleksieiev <albert.aleksieiev@gmail.com>
 - Alex Blewitt <alblue@apple.com>
 - Alex Reilly <fabiobean2@gmail.com>
-- Andrew <email-removed>
-- Andrew Bennett <email-removed>
 - Andrew Edwards <andrewangeta@gmail.com>
 - Andrew Naylor <andrew_naylor@apple.com>
 - Andrew Trick <atrick@apple.com>
@@ -178,7 +176,6 @@ needs to be listed here.
 - ser <122270051+ser-0xff@users.noreply.github.com>
 - sun_ <sunlubo.sun@gmail.com>
 - taylorswift <kelvin13ma@gmail.com>
-- therealbnut <email-removed>
 - thomas-gill-0xff <115996764+thomas-gill-0xff@users.noreply.github.com>
 - toluRV <111301355+toluRV@users.noreply.github.com>
 - trungducc <gnurtduc@gmail.com>

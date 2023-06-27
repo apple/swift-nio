@@ -25,7 +25,7 @@ while IFS= read -r line; do
 	hashed="$(echo -n "$line" | shasum | head -c 40)"
 	found_hash=$(comm -12 <(echo "$hashed") <(echo "$filtered_hashes"))
 	if [ ! -z "$found_hash" ]; then
-		line=$(echo $line | sed 's/<[^>]*>/<email-removed>/g')
+		continue
 	fi
 	contributors="${contributors}- $line$NL"
 done <<< "$contributor_list"
