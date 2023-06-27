@@ -37,7 +37,7 @@ import CNIOWindows
 
 internal typealias MMsgHdr = CNIOWindows_mmsghdr
 #else
-let badOS = { fatalError("unsupported OS") }()
+#error("The POSIX system module was unable to identify your C library.")
 #endif
 
 #if os(Android)
@@ -111,7 +111,7 @@ private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsigne
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 #endif
 
-#if canImport(Glibc)
+#if os(Linux) && !canImport(Musl)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = stat
 private let sysLstat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = lstat

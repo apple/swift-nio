@@ -22,6 +22,8 @@ import Musl
 import CNIOLinux
 #elseif os(Windows)
 import WinSDK
+#else
+#error("The Socket Option provider module was unable to identify your C library.")
 #endif
 
 /// This protocol defines an object, most commonly a `Channel`, that supports

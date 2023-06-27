@@ -55,6 +55,7 @@ needs to be listed here.
 - Eugen <eugenf78@gmail.com>
 - Fabian Fett <fabianfett@apple.com>
 - Felix Schlegel <fefefe152@gmail.com>
+- Finagolfin <butta@fastem.com>
 - Florian Friedrich <ffried@me.com>
 - Frank Kair <frankkair@gmail.com>
 - Franz Busch <f.busch@apple.com>

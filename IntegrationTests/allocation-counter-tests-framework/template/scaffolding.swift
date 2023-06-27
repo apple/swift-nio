@@ -16,8 +16,10 @@ import Foundation
 import AtomicCounter
 #if canImport(Darwin)
 import Darwin
-#else
+#elseif canImport(Glibc)
 import Glibc
+#else
+#error("The integration test scaffolding was unable to identify your C library.")
 #endif
 
 func waitForThreadsToQuiesce(shouldReachZero: Bool) {

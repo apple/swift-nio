@@ -19,6 +19,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#else
+#error("The File Region module was unable to identify your C library.")
 #endif
 
 

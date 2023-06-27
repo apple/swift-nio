@@ -38,6 +38,8 @@ import struct WinSDK.sockaddr_storage
 import struct WinSDK.sockaddr_un
 
 import typealias WinSDK.UINT8
+#else
+#error("The Core interfaces module was unable to identify your C library.")
 #endif
 
 #if !os(Windows)
