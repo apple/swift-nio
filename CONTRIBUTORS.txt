@@ -18,7 +18,7 @@ needs to be listed here.
 - Albert Aleksieiev <albert.aleksieiev@gmail.com>
 - Alex Blewitt <alblue@apple.com>
 - Alex Reilly <fabiobean2@gmail.com>
-- Andrew Bennett <andrew@nio.bennnn.net>
+- Andrew Bennett <email-removed>
 - Andrew Edwards <andrewangeta@gmail.com>
 - Andrew Naylor <andrew_naylor@apple.com>
 - Andrew Trick <atrick@apple.com>
