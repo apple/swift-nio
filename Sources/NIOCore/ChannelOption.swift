@@ -191,7 +191,7 @@ extension ChannelOptions {
             public init() { }
         }
 
-        /// ``DatagramSegmentSize`` controls the 'UDP_SEGMENT' socket option (sometimes reffered to as 'GSO') which allows for
+        /// ``DatagramSegmentSize`` controls the `UDP_SEGMENT` socket option (sometimes reffered to as 'GSO') which allows for
         /// large writes to be sent via `sendmsg` and `sendmmsg` and segmented into separate datagrams by the kernel (or in some cases, the NIC).
         /// The size of segments the large write is split into is controlled by the value of this option (note that writes do not need to be a
         /// multiple of this option).
@@ -204,7 +204,7 @@ extension ChannelOptions {
             public init() { }
         }
 
-        /// ``DatagramReceiveOffload`` sets the 'UDP_GRO' socket option which allows for datagrams to be accumulated
+        /// ``DatagramReceiveOffload`` sets the `UDP_GRO` socket option which allows for datagrams to be accumulated
         /// by the kernel (or in some cases, the NIC) and reduces traversals in the kernel's networking layer.
         ///
         /// This option is currently only supported on Linux (5.10 and newer). Support can be checked

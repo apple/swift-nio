@@ -80,7 +80,7 @@ public struct NIOAny {
 
     /// Try unwrapping the wrapped message as `ByteBuffer`.
     ///
-    /// returns: The wrapped `ByteBuffer` or `nil` if the wrapped message is not a `ByteBuffer`.
+    /// - returns: The wrapped `ByteBuffer` or `nil` if the wrapped message is not a `ByteBuffer`.
     @inlinable
     func tryAsByteBuffer() -> ByteBuffer? {
         if case .ioData(.byteBuffer(let bb)) = self._storage {
@@ -92,7 +92,7 @@ public struct NIOAny {
 
     /// Force unwrapping the wrapped message as `ByteBuffer`.
     ///
-    /// returns: The wrapped `ByteBuffer` or crash if the wrapped message is not a `ByteBuffer`.
+    /// - returns: The wrapped `ByteBuffer` or crash if the wrapped message is not a `ByteBuffer`.
     @inlinable
     func forceAsByteBuffer() -> ByteBuffer {
         if let v = tryAsByteBuffer() {
@@ -104,7 +104,7 @@ public struct NIOAny {
 
     /// Try unwrapping the wrapped message as `IOData`.
     ///
-    /// returns: The wrapped `IOData` or `nil` if the wrapped message is not a `IOData`.
+    /// - returns: The wrapped `IOData` or `nil` if the wrapped message is not a `IOData`.
     @inlinable
     func tryAsIOData() -> IOData? {
         if case .ioData(let data) = self._storage {
@@ -116,7 +116,7 @@ public struct NIOAny {
 
     /// Force unwrapping the wrapped message as `IOData`.
     ///
-    /// returns: The wrapped `IOData` or crash if the wrapped message is not a `IOData`.
+    /// - returns: The wrapped `IOData` or crash if the wrapped message is not a `IOData`.
     @inlinable
     func forceAsIOData() -> IOData {
         if let v = tryAsIOData() {
@@ -128,7 +128,7 @@ public struct NIOAny {
 
     /// Try unwrapping the wrapped message as `FileRegion`.
     ///
-    /// returns: The wrapped `FileRegion` or `nil` if the wrapped message is not a `FileRegion`.
+    /// - returns: The wrapped `FileRegion` or `nil` if the wrapped message is not a `FileRegion`.
     @inlinable
     func tryAsFileRegion() -> FileRegion? {
         if case .ioData(.fileRegion(let f)) = self._storage {
@@ -140,7 +140,7 @@ public struct NIOAny {
 
     /// Force unwrapping the wrapped message as `FileRegion`.
     ///
-    /// returns: The wrapped `FileRegion` or crash if the wrapped message is not a `FileRegion`.
+    /// - returns: The wrapped `FileRegion` or crash if the wrapped message is not a `FileRegion`.
     @inlinable
     func forceAsFileRegion() -> FileRegion {
         if let v = tryAsFileRegion() {
@@ -152,7 +152,7 @@ public struct NIOAny {
 
     /// Try unwrapping the wrapped message as `AddressedEnvelope<ByteBuffer>`.
     ///
-    /// returns: The wrapped `AddressedEnvelope<ByteBuffer>` or `nil` if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
+    /// - returns: The wrapped `AddressedEnvelope<ByteBuffer>` or `nil` if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
     @inlinable
     func tryAsByteEnvelope() -> AddressedEnvelope<ByteBuffer>? {
         if case .bufferEnvelope(let e) = self._storage {
@@ -164,7 +164,7 @@ public struct NIOAny {
 
     /// Force unwrapping the wrapped message as `AddressedEnvelope<ByteBuffer>`.
     ///
-    /// returns: The wrapped `AddressedEnvelope<ByteBuffer>` or crash if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
+    /// - returns: The wrapped `AddressedEnvelope<ByteBuffer>` or crash if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
     @inlinable
     func forceAsByteEnvelope() -> AddressedEnvelope<ByteBuffer> {
         if let e = tryAsByteEnvelope() {
@@ -176,7 +176,7 @@ public struct NIOAny {
 
     /// Try unwrapping the wrapped message as `T`.
     ///
-    /// returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
+    /// - returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
     @inlinable
     func tryAsOther<T>(type: T.Type = T.self) -> T? {
         switch self._storage {
@@ -191,7 +191,7 @@ public struct NIOAny {
 
     /// Force unwrapping the wrapped message as `T`.
     ///
-    /// returns: The wrapped `T` or crash if the wrapped message is not a `T`.
+    /// - returns: The wrapped `T` or crash if the wrapped message is not a `T`.
     @inlinable
     func forceAsOther<T>(type: T.Type = T.self) -> T {
         if let v = tryAsOther(type: type) {
@@ -203,7 +203,7 @@ public struct NIOAny {
 
     /// Force unwrapping the wrapped message as `T`.
     ///
-    /// returns: The wrapped `T` or crash if the wrapped message is not a `T`.
+    /// - returns: The wrapped `T` or crash if the wrapped message is not a `T`.
     @inlinable
     func forceAs<T>(type: T.Type = T.self) -> T {
         switch T.self {
@@ -222,7 +222,7 @@ public struct NIOAny {
 
     /// Try unwrapping the wrapped message as `T`.
     ///
-    /// returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
+    /// - returns: The wrapped `T` or `nil` if the wrapped message is not a `T`.
     @inlinable
     func tryAs<T>(type: T.Type = T.self) -> T? {
         switch T.self {
@@ -241,7 +241,7 @@ public struct NIOAny {
 
     /// Unwrap the wrapped message.
     ///
-    /// returns: The wrapped message.
+    /// - returns: The wrapped message.
     @inlinable
     func asAny() -> Any {
         switch self._storage {
