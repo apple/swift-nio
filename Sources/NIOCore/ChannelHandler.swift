@@ -15,7 +15,7 @@
 /// Base protocol for handlers that handle I/O events or intercept an I/O operation.
 ///
 /// All methods are called from within the `EventLoop` that is assigned to the `Channel` itself.
-//
+///
 /// You should _never_ implement this protocol directly. Please implement one of its sub-protocols.
 public protocol ChannelHandler: AnyObject {
     /// Called when this `ChannelHandler` is added to the `ChannelPipeline`.
@@ -33,7 +33,7 @@ public protocol ChannelHandler: AnyObject {
 
 /// Untyped `ChannelHandler` which handles outbound I/O events or intercept an outbound I/O operation.
 ///
-/// Despite the fact that `write` is one of the methods on this `protocol`, you should avoid assuming that "outbound" events are to do with
+/// Despite the fact that `write` is one of the methods on this protocol, you should avoid assuming that "outbound" events are to do with
 /// writing to channel sources. Instead, "outbound" events are events that are passed *to* the channel source (e.g. a socket): that is, things you tell
 /// the channel source to do. That includes `write` ("write this data to the channel source"), but it also includes `read` ("please begin attempting to read from
 /// the channel source") and `bind` ("please bind the following address"), which have nothing to do with sending data.
@@ -104,7 +104,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func read(context: ChannelHandlerContext)
 
-    /// Called to request that the `Channel` close itself down`.
+    /// Called to request that the `Channel` close itself down.
     ///
     /// This should call `context.close` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
     /// complete the `EventLoopPromise` to let the caller know that the operation completed.
@@ -129,7 +129,7 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
 
 /// Untyped `ChannelHandler` which handles inbound I/O events.
 ///
-/// Despite the fact that `channelRead` is one of the methods on this `protocol`, you should avoid assuming that "inbound" events are to do with
+/// Despite the fact that `channelRead` is one of the methods on this protocol, you should avoid assuming that "inbound" events are to do with
 /// reading from channel sources. Instead, "inbound" events are events that originate *from* the channel source (e.g. the socket): that is, events that the
 /// channel source tells you about. This includes things like `channelRead` ("there is some data to read"), but it also includes things like
 /// `channelWritabilityChanged` ("this source is no longer marked writable").
@@ -161,7 +161,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelActive(context: ChannelHandlerContext)
 
-    /// Called when the `Channel` has become inactive and is no longer able to send and receive data`.
+    /// Called when the `Channel` has become inactive and is no longer able to send and receive data.
     ///
     /// This should call `context.fireChannelInactive` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
@@ -215,7 +215,7 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     func errorCaught(context: ChannelHandlerContext, error: Error)
 }
 
-//  Default implementations for the ChannelHandler protocol
+// Default implementations for the ChannelHandler protocol
 extension ChannelHandler {
 
     /// Do nothing by default.
@@ -312,7 +312,7 @@ extension _ChannelInboundHandler {
 /// A `RemovableChannelHandler` is a `ChannelHandler` that can be dynamically removed from a `ChannelPipeline` whilst
 /// the `Channel` is operating normally.
 /// A `RemovableChannelHandler` is required to remove itself from the `ChannelPipeline` (using
-/// `ChannelHandlerContext.removeHandler`) as soon as possible.
+/// `ChannelHandlerContext.leavePipeline`) as soon as possible.
 ///
 /// - note: When a `Channel` gets torn down, every `ChannelHandler` in the `Channel`'s `ChannelPipeline` will be
 ///         removed from the `ChannelPipeline`. Those removals however happen synchronously and are not going through
@@ -321,23 +321,23 @@ public protocol RemovableChannelHandler: ChannelHandler {
     /// Ask the receiving `RemovableChannelHandler` to remove itself from the `ChannelPipeline` as soon as possible.
     /// The receiving `RemovableChannelHandler` may elect to remove itself sometime after this method call, rather than
     /// immediately, but if it does so it must take the necessary precautions to handle events arriving between the
-    /// invocation of this method and the call to `ChannelHandlerContext.removeHandler` that triggers the actual
+    /// invocation of this method and the call to `ChannelHandlerContext.leavePipeline` that triggers the actual
     /// removal.
     ///
     /// - note: Like the other `ChannelHandler` methods, this method should not be invoked by the user directly. To
-    ///         remove a `RemovableChannelHandler` from the `ChannelPipeline`, use `ChannelPipeline.remove`.
+    ///         remove a `RemovableChannelHandler` from the `ChannelPipeline`, use `ChannelPipeline.removeHandler`.
     ///
     /// - parameters:
     ///    - context: The `ChannelHandlerContext` of the `RemovableChannelHandler` to be removed from the `ChannelPipeline`.
-    ///    - removalToken: The removal token to hand to `ChannelHandlerContext.removeHandler` to trigger the actual
+    ///    - removalToken: The removal token to hand to `ChannelHandlerContext.leavePipeline` to trigger the actual
     ///                    removal from the `ChannelPipeline`.
     func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken)
 }
 
 extension RemovableChannelHandler {
-    // Implements the default behaviour which is to synchronously remove the handler from the pipeline. Thanks to this,
-    // stateless `ChannelHandler`s can just use `RemovableChannelHandler` as a marker-protocol and declare themselves
-    // as removable without writing any extra code.
+    /// Implements the default behaviour which is to synchronously remove the handler from the pipeline. Thanks to this,
+    /// stateless `ChannelHandler`s can just use `RemovableChannelHandler` as a marker-protocol and declare themselves
+    /// as removable without writing any extra code.
     public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
         precondition(context.handler === self)
         context.leavePipeline(removalToken: removalToken)
