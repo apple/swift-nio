@@ -2968,7 +2968,7 @@ extension DatagramBootstrap: Sendable {}
 ///                       .channelInitializer { channel in
 ///                           channel.pipeline.addHandler(MyChannelHandler())
 ///                       }
-///                       .takingOwnershipOfInputOutputDescriptor(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO)
+///                       .takingOwnershipOfDescriptors(input: STDIN_FILENO, output: STDOUT_FILENO)
 ///
 public final class NIOPipeBootstrap {
     private let group: EventLoopGroup
