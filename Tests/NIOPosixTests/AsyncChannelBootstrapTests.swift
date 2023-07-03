@@ -598,7 +598,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         
         do {
             channel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .withPipes(
+                .takingOwnershipOfInputOutputDescriptor(
                     inputDescriptor: pipe1ReadFH,
                     outputDescriptor: pipe2WriteFH
                 )
@@ -633,7 +633,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             group.addTask {
                 do {
                     return try await NIOPipeBootstrap(group: eventLoopGroup)
-                        .withPipes(
+                        .takingOwnershipOfInputOutputDescriptor(
                             inputDescriptor: pipe1ReadFH,
                             outputDescriptor: pipe2WriteFH
                         ) { channel -> EventLoopFuture<NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>> in

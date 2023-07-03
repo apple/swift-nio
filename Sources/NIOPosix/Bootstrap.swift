@@ -2968,7 +2968,7 @@ extension DatagramBootstrap: Sendable {}
 ///                       .channelInitializer { channel in
 ///                           channel.pipeline.addHandler(MyChannelHandler())
 ///                       }
-///                       .withPipes(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO)
+///                       .takingOwnershipOfInputOutputDescriptor(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO)
 ///
 public final class NIOPipeBootstrap {
     private let group: EventLoopGroup
@@ -3084,19 +3084,19 @@ public final class NIOPipeBootstrap {
     ///
     /// This method is useful for specialilsed use-cases where you want to use `NIOPipeBootstrap` for say a serial line.
     ///
-    /// - note: If this method returns a succeeded future, SwiftNIO will close `fileDescriptor` when the `Channel`
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `fileDescriptor` when the `Channel`
     ///         becomes inactive. You _must not_ do any further operations with `fileDescriptor`, including `close`.
     ///         If this method returns a failed future, you still own the file descriptor and are responsible for
     ///         closing it.
     ///
-    /// - parameters:
-    ///     - fileDescriptor: The _Unix file descriptor_ for the input & output.
-    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-    public func withInputOutputDescriptor(_ fileDescriptor: CInt) -> EventLoopFuture<Channel> {
+    /// - Parameters:
+    ///   - fileDescriptor: The _Unix file descriptor_ for the input & output.
+    /// - Returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
+    public func takingOwnershipOfInputOutputDescriptor(_ fileDescriptor: CInt) -> EventLoopFuture<Channel> {
         let inputFD = fileDescriptor
         let outputFD = try! Posix.dup(descriptor: fileDescriptor)
 
-        return self.withPipes(inputDescriptor: inputFD, outputDescriptor: outputFD).flatMapErrorThrowing { error in
+        return self.takingOwnershipOfInputOutputDescriptor(inputDescriptor: inputFD, outputDescriptor: outputFD).flatMapErrorThrowing { error in
             try! Posix.close(descriptor: outputFD)
             throw error
         }
@@ -3108,17 +3108,17 @@ public final class NIOPipeBootstrap {
     /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
     /// `NIOPipeBootstrap.withInputOutputDescriptor` if it is not a socket.
     ///
-    /// - note: If this method returns a succeeded future, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
     ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
     ///         `outputDescriptor`, including `close`.
     ///         If this method returns a failed future, you still own the file descriptors and are responsible for
     ///         closing them.
     ///
-    /// - parameters:
-    ///     - inputDescriptor: The _Unix file descriptor_ for the input (ie. the read side).
-    ///     - outputDescriptor: The _Unix file descriptor_ for the output (ie. the write side).
-    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-    public func withPipes(inputDescriptor: CInt, outputDescriptor: CInt) -> EventLoopFuture<Channel> {
+    /// - Parameters:
+    ///   - inputDescriptor: The _Unix file descriptor_ for the input (ie. the read side).
+    ///   - outputDescriptor: The _Unix file descriptor_ for the output (ie. the write side).
+    /// - Returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
+    public func takingOwnershipOfInputOutputDescriptor(inputDescriptor: CInt, outputDescriptor: CInt) -> EventLoopFuture<Channel> {
         precondition(inputDescriptor >= 0 && outputDescriptor >= 0 && inputDescriptor != outputDescriptor,
                      "illegal file descriptor pair. The file descriptors \(inputDescriptor), \(outputDescriptor) " +
                      "must be distinct and both positive integers.")
@@ -3167,6 +3167,16 @@ public final class NIOPipeBootstrap {
             }
         }
     }
+
+    @available(*, deprecated, renamed: "takingOwnershipOfInputOutputDescriptor(_:)")
+    public func withInputOutputDescriptor(_ fileDescriptor: CInt) -> EventLoopFuture<Channel> {
+        self.takingOwnershipOfInputOutputDescriptor(fileDescriptor)
+    }
+
+    @available(*, deprecated, renamed: "takingOwnershipOfInputOutputDescriptor(inputDescriptor:outputDescriptor:)")
+    public func withPipes(inputDescriptor: CInt, outputDescriptor: CInt) -> EventLoopFuture<Channel> {
+        self.takingOwnershipOfInputOutputDescriptor(inputDescriptor: inputDescriptor, outputDescriptor: outputDescriptor)
+    }
 }
 
 // MARK: NIOAsyncChannel
@@ -3192,14 +3202,14 @@ extension NIOPipeBootstrap {
     /// - Returns: A `NIOAsyncChannel` for the bound connection.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func withInputOutputDescriptor<Inbound: Sendable, Outbound: Sendable>(
+    public func takingOwnershipOfInputOutputDescriptor<Inbound: Sendable, Outbound: Sendable>(
         _ fileDescriptor: CInt,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false,
         inboundType: Inbound.Type = Inbound.self,
         outboundType: Outbound.Type = Outbound.self
     ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
-        try await self.withInputOutputDescriptor(
+        try await self.takingOwnershipOfInputOutputDescriptor(
             fileDescriptor
         ) { channel in
             channel.eventLoop.makeCompletedFuture {
@@ -3237,7 +3247,7 @@ extension NIOPipeBootstrap {
     /// - Returns: A `NIOAsyncChannel` for the bound connection.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func withPipes<Inbound: Sendable, Outbound: Sendable>(
+    public func takingOwnershipOfInputOutputDescriptor<Inbound: Sendable, Outbound: Sendable>(
         inputDescriptor: CInt,
         outputDescriptor: CInt,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
@@ -3245,7 +3255,7 @@ extension NIOPipeBootstrap {
         inboundType: Inbound.Type = Inbound.self,
         outboundType: Outbound.Type = Outbound.self
     ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
-        try await self.withPipes(
+        try await self.takingOwnershipOfInputOutputDescriptor(
             inputDescriptor: inputDescriptor,
             outputDescriptor: outputDescriptor
         ) { channel in
@@ -3282,7 +3292,7 @@ extension NIOPipeBootstrap {
     /// - Returns: The protocol negotiation result.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func withInputOutputDescriptor<Handler: NIOProtocolNegotiationHandler>(
+    public func takingOwnershipOfInputOutputDescriptor<Handler: NIOProtocolNegotiationHandler>(
         _ fileDescriptor: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
@@ -3290,7 +3300,7 @@ extension NIOPipeBootstrap {
         let outputFD = try! Posix.dup(descriptor: fileDescriptor)
 
         do {
-            return try await self.withPipes(
+            return try await self.takingOwnershipOfInputOutputDescriptor(
                 inputDescriptor: inputFD,
                 outputDescriptor: outputFD,
                 channelInitializer: channelInitializer
@@ -3321,12 +3331,12 @@ extension NIOPipeBootstrap {
     /// - Returns: The protocol negotiation result.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func withPipes<Handler: NIOProtocolNegotiationHandler>(
+    public func takingOwnershipOfInputOutputDescriptor<Handler: NIOProtocolNegotiationHandler>(
         inputDescriptor: CInt,
         outputDescriptor: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
-        try await self.withPipes(
+        try await self.takingOwnershipOfInputOutputDescriptor(
             inputDescriptor: inputDescriptor,
             outputDescriptor: outputDescriptor,
             channelInitializer: channelInitializer,
@@ -3359,7 +3369,7 @@ extension NIOPipeBootstrap {
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func withInputOutputDescriptor<Output: Sendable>(
+    public func takingOwnershipOfInputOutputDescriptor<Output: Sendable>(
         _ fileDescriptor: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
@@ -3367,7 +3377,7 @@ extension NIOPipeBootstrap {
         let outputFD = try! Posix.dup(descriptor: fileDescriptor)
 
         do {
-            return try await self.withPipes(
+            return try await self.takingOwnershipOfInputOutputDescriptor(
                 inputDescriptor: inputFD,
                 outputDescriptor: outputFD,
                 channelInitializer: channelInitializer
@@ -3398,12 +3408,12 @@ extension NIOPipeBootstrap {
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func withPipes<Output: Sendable>(
+    public func takingOwnershipOfInputOutputDescriptor<Output: Sendable>(
         inputDescriptor: CInt,
         outputDescriptor: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
-        try await self.withPipes(
+        try await self.takingOwnershipOfInputOutputDescriptor(
             inputDescriptor: inputDescriptor,
             outputDescriptor: outputDescriptor,
             channelInitializer: channelInitializer,
@@ -3413,7 +3423,7 @@ extension NIOPipeBootstrap {
     
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel) // Should become private
-    public func withPipes<ChannelInitializerResult, PostRegistrationTransformationResult: Sendable>(
+    public func takingOwnershipOfInputOutputDescriptor<ChannelInitializerResult, PostRegistrationTransformationResult: Sendable>(
         inputDescriptor: CInt,
         outputDescriptor: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,

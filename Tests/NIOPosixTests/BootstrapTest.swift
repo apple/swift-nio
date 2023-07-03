@@ -381,7 +381,7 @@ class BootstrapTest: XCTestCase {
                     }
                     return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
             }
-            .withPipes(inputDescriptor: inFD, outputDescriptor: outFD)
+            .takingOwnershipOfInputOutputDescriptor(inputDescriptor: inFD, outputDescriptor: outFD)
             .wait())
             XCTAssertNotNil(channel)
             XCTAssertNoThrow(try channel?.close().wait())
@@ -401,7 +401,7 @@ class BootstrapTest: XCTestCase {
                 let readHandle = NIOFileHandle(descriptor: pipe.fileHandleForReading.fileDescriptor)
                 let writeHandle = NIOFileHandle(descriptor: pipe.fileHandleForWriting.fileDescriptor)
                 _ = NIOPipeBootstrap(group: self.group)
-                    .withPipes(inputDescriptor: try readHandle.takeDescriptorOwnership(), outputDescriptor: try writeHandle.takeDescriptorOwnership())
+                    .takingOwnershipOfInputOutputDescriptor(inputDescriptor: try readHandle.takeDescriptorOwnership(), outputDescriptor: try writeHandle.takeDescriptorOwnership())
                     .flatMap({ channel in
                         channel.close()
                     }).always({ _ in
