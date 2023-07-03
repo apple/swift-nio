@@ -3334,7 +3334,7 @@ extension NIOPipeBootstrap {
         output: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
     ) async throws -> Handler.NegotiationResult {
-        try await self.takingOwnershipOfDescriptors(
+        try await self._takingOwnershipOfDescriptors(
             input: input,
             output: output,
             channelInitializer: channelInitializer,
@@ -3410,7 +3410,7 @@ extension NIOPipeBootstrap {
         output: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
-        try await self.takingOwnershipOfDescriptors(
+        try await self._takingOwnershipOfDescriptors(
             input: input,
             output: output,
             channelInitializer: channelInitializer,
@@ -3420,7 +3420,7 @@ extension NIOPipeBootstrap {
     
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel) // Should become private
-    public func takingOwnershipOfDescriptors<ChannelInitializerResult, PostRegistrationTransformationResult: Sendable>(
+    public func _takingOwnershipOfDescriptors<ChannelInitializerResult, PostRegistrationTransformationResult: Sendable>(
         input: CInt,
         output: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
