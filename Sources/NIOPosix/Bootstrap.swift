@@ -3169,6 +3169,302 @@ public final class NIOPipeBootstrap {
     }
 }
 
+// MARK: NIOAsyncChannel
+
+extension NIOPipeBootstrap {
+    /// Create the `PipeChannel` with the provided file descriptor which is used for both input & output.
+    ///
+    /// This method is useful for specialilsed use-cases where you want to use `NIOPipeBootstrap` for say a serial line.
+    ///
+    /// - Note: If this method returns normally, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
+    ///         `outputDescriptor`, including `close`.
+    ///         If this method throws, you still own the file descriptors and are responsible for
+    ///         closing them.
+    ///
+    /// - Parameters:
+    ///   - fileDescriptor: The _Unix file descriptor_ for the input & output.
+    ///   - backpressureStrategy: The back pressure strategy used by the channel.
+    ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
+    ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
+    ///   - inboundType: The channel's inbound type.
+    ///   - outboundType: The channel's outbound type.
+    /// - Returns: A `NIOAsyncChannel` for the bound connection.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func withInputOutputDescriptor<Inbound: Sendable, Outbound: Sendable>(
+        _ fileDescriptor: CInt,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isOutboundHalfClosureEnabled: Bool = false,
+        inboundType: Inbound.Type = Inbound.self,
+        outboundType: Outbound.Type = Outbound.self
+    ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
+        try await self.withInputOutputDescriptor(
+            fileDescriptor
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    backpressureStrategy: backpressureStrategy,
+                    isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+                    inboundType: inboundType,
+                    outboundType: outboundType
+                )
+            }
+        }
+    }
+    
+    /// Create the `PipeChannel` with the provided input and output file descriptors.
+    ///
+    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
+    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
+    /// `NIOPipeBootstrap.withInputOutputDescriptor` if it is not a socket.
+    ///
+    /// - Note: If this method returns normally, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
+    ///         `outputDescriptor`, including `close`.
+    ///         If this method throws, you still own the file descriptors and are responsible for
+    ///         closing them.
+    ///
+    /// - Parameters:
+    ///   - inputDescriptor: The _Unix file descriptor_ for the input (ie. the read side).
+    ///   - outputDescriptor: The _Unix file descriptor_ for the output (ie. the write side).
+    ///   - backpressureStrategy: The back pressure strategy used by the channel.
+    ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
+    ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
+    ///   - inboundType: The channel's inbound type.
+    ///   - outboundType: The channel's outbound type.
+    /// - Returns: A `NIOAsyncChannel` for the bound connection.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func withPipes<Inbound: Sendable, Outbound: Sendable>(
+        inputDescriptor: CInt,
+        outputDescriptor: CInt,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isOutboundHalfClosureEnabled: Bool = false,
+        inboundType: Inbound.Type = Inbound.self,
+        outboundType: Outbound.Type = Outbound.self
+    ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
+        try await self.withPipes(
+            inputDescriptor: inputDescriptor,
+            outputDescriptor: outputDescriptor
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    backpressureStrategy: backpressureStrategy,
+                    isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+                    inboundType: inboundType,
+                    outboundType: outboundType
+                )
+            }
+        }
+    }
+}
+
+// MARK: Protocol negotiation
+
+extension NIOPipeBootstrap {
+    /// Create the `PipeChannel` with the provided file descriptor which is used for both input & output.
+    ///
+    /// This method is useful for specialilsed use-cases where you want to use `NIOPipeBootstrap` for say a serial line.
+    ///
+    /// - Note: If this method returns normally, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
+    ///         `outputDescriptor`, including `close`.
+    ///         If this method throws, you still own the file descriptors and are responsible for
+    ///         closing them.
+    ///
+    /// - Parameters:
+    ///   - fileDescriptor: The _Unix file descriptor_ for the input & output.
+    ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
+    ///   the protocol.
+    /// - Returns: The protocol negotiation result.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func withInputOutputDescriptor<Handler: NIOProtocolNegotiationHandler>(
+        _ fileDescriptor: CInt,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
+    ) async throws -> Handler.NegotiationResult {
+        let inputFD = fileDescriptor
+        let outputFD = try! Posix.dup(descriptor: fileDescriptor)
+
+        do {
+            return try await self.withPipes(
+                inputDescriptor: inputFD,
+                outputDescriptor: outputFD,
+                channelInitializer: channelInitializer
+            )
+        } catch {
+            try! Posix.close(descriptor: outputFD)
+            throw error
+        }
+    }
+    
+    /// Create the `PipeChannel` with the provided input and output file descriptors.
+    ///
+    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
+    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
+    /// `NIOPipeBootstrap.withInputOutputDescriptor` if it is not a socket.
+    ///
+    /// - Note: If this method returns normally, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
+    ///         `outputDescriptor`, including `close`.
+    ///         If this method throws, you still own the file descriptors and are responsible for
+    ///         closing them.
+    ///
+    /// - Parameters:
+    ///   - inputDescriptor: The _Unix file descriptor_ for the input (ie. the read side).
+    ///   - outputDescriptor: The _Unix file descriptor_ for the output (ie. the write side).
+    ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
+    ///   the protocol.
+    /// - Returns: The protocol negotiation result.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func withPipes<Handler: NIOProtocolNegotiationHandler>(
+        inputDescriptor: CInt,
+        outputDescriptor: CInt,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
+    ) async throws -> Handler.NegotiationResult {
+        try await self.withPipes(
+            inputDescriptor: inputDescriptor,
+            outputDescriptor: outputDescriptor,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { eventLoop, handler in
+                return handler.protocolNegotiationResult.flatMap { result in
+                    result.resolve(on: eventLoop)
+                }
+            }
+        )
+    }
+}
+
+// MARK: Arbitrary payload
+
+extension NIOPipeBootstrap {
+    /// Create the `PipeChannel` with the provided file descriptor which is used for both input & output.
+    ///
+    /// This method is useful for specialilsed use-cases where you want to use `NIOPipeBootstrap` for say a serial line.
+    ///
+    /// - Note: If this method returns normally, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
+    ///         `outputDescriptor`, including `close`.
+    ///         If this method throws, you still own the file descriptors and are responsible for
+    ///         closing them.
+    ///
+    /// - Parameters:
+    ///   - fileDescriptor: The _Unix file descriptor_ for the input & output.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func withInputOutputDescriptor<Output: Sendable>(
+        _ fileDescriptor: CInt,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        let inputFD = fileDescriptor
+        let outputFD = try! Posix.dup(descriptor: fileDescriptor)
+
+        do {
+            return try await self.withPipes(
+                inputDescriptor: inputFD,
+                outputDescriptor: outputFD,
+                channelInitializer: channelInitializer
+            )
+        } catch {
+            try! Posix.close(descriptor: outputFD)
+            throw error
+        }
+    }
+    
+    /// Create the `PipeChannel` with the provided input and output file descriptors.
+    ///
+    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
+    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
+    /// `NIOPipeBootstrap.withInputOutputDescriptor` if it is not a socket.
+    ///
+    /// - Note: If this method returns normally, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
+    ///         `outputDescriptor`, including `close`.
+    ///         If this method throws, you still own the file descriptors and are responsible for
+    ///         closing them.
+    ///
+    /// - Parameters:
+    ///   - inputDescriptor: The _Unix file descriptor_ for the input (ie. the read side).
+    ///   - outputDescriptor: The _Unix file descriptor_ for the output (ie. the write side).
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func withPipes<Output: Sendable>(
+        inputDescriptor: CInt,
+        outputDescriptor: CInt,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        try await self.withPipes(
+            inputDescriptor: inputDescriptor,
+            outputDescriptor: outputDescriptor,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { $0.makeSucceededFuture($1) }
+        )
+    }
+    
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel) // Should become private
+    public func withPipes<ChannelInitializerResult, PostRegistrationTransformationResult: Sendable>(
+        inputDescriptor: CInt,
+        outputDescriptor: CInt,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (EventLoop, ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        precondition(inputDescriptor >= 0 && outputDescriptor >= 0 && inputDescriptor != outputDescriptor,
+                     "illegal file descriptor pair. The file descriptors \(inputDescriptor), \(outputDescriptor) " +
+                     "must be distinct and both positive integers.")
+        let eventLoop = group.next()
+        try self.validateFileDescriptorIsNotAFile(inputDescriptor)
+        try self.validateFileDescriptorIsNotAFile(outputDescriptor)
+
+        let channelInitializer = { (channel: Channel) -> EventLoopFuture<ChannelInitializerResult> in
+            let initializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+            return initializer(channel).flatMap { channelInitializer(channel) }
+        }
+
+        let inputFileHandle = NIOFileHandle(descriptor: inputDescriptor)
+        let outputFileHandle = NIOFileHandle(descriptor: outputDescriptor)
+        let channel = try PipeChannel(
+            eventLoop: eventLoop as! SelectableEventLoop,
+            inputPipe: inputFileHandle,
+            outputPipe: outputFileHandle
+        )
+
+        @Sendable
+        func setupChannel() -> EventLoopFuture<PostRegistrationTransformationResult> {
+            eventLoop.assertInEventLoop()
+            return self._channelOptions.applyAllChannelOptions(to: channel).flatMap { _ -> EventLoopFuture<ChannelInitializerResult> in
+                channelInitializer(channel)
+            }.flatMap { result in
+                eventLoop.assertInEventLoop()
+                let promise = eventLoop.makePromise(of: Void.self)
+                channel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult.flatMap { postRegisterTransformation(eventLoop, result) }
+            }.flatMapError { error in
+                channel.close0(error: error, mode: .all, promise: nil)
+                return channel.eventLoop.makeFailedFuture(error)
+            }
+        }
+
+        if eventLoop.inEventLoop {
+            return try await setupChannel().get()
+        } else {
+            return try await eventLoop.flatSubmit {
+                setupChannel()
+            }.get()
+        }
+    }
+}
+
 extension NIOProtocolNegotiationResult {
     func resolve(on eventLoop: EventLoop) -> EventLoopFuture<NegotiationResult> {
         Self.resolve(on: eventLoop, result: self)
