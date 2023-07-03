@@ -598,9 +598,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         
         do {
             channel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .takingOwnershipOfInputOutputDescriptor(
-                    inputDescriptor: pipe1ReadFH,
-                    outputDescriptor: pipe2WriteFH
+                .takingOwnershipOfDescriptors(
+                    input: pipe1ReadFH,
+                    output: pipe2WriteFH
                 )
         } catch {
             [pipe1ReadFH, pipe1WriteFH, pipe2ReadFH, pipe2WriteFH].forEach { try? SystemCalls.close(descriptor: $0) }
@@ -633,9 +633,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             group.addTask {
                 do {
                     return try await NIOPipeBootstrap(group: eventLoopGroup)
-                        .takingOwnershipOfInputOutputDescriptor(
-                            inputDescriptor: pipe1ReadFH,
-                            outputDescriptor: pipe2WriteFH
+                        .takingOwnershipOfDescriptors(
+                            input: pipe1ReadFH,
+                            output: pipe2WriteFH
                         ) { channel -> EventLoopFuture<NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>> in
                             return channel.eventLoop.makeCompletedFuture {
                                 return try self.configureProtocolNegotiationHandlers(channel: channel)
