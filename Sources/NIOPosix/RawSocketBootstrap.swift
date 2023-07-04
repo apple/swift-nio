@@ -33,7 +33,6 @@
 /// ```
 ///
 /// The `Channel` will operate on `AddressedEnvelope<ByteBuffer>` as inbound and outbound messages.
-// TODO: Franz
 public final class NIORawSocketBootstrap {
 
     private let group: EventLoopGroup
@@ -304,6 +303,7 @@ extension NIORawSocketBootstrap {
             }
         )
     }
+
     /// Connect the `Channel` to `host`.
     /// All packets or errors matching the `ipProtocol` specified are passed to the resulting `Channel`.
     ///
