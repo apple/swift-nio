@@ -587,7 +587,54 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         }
     }
 
+    // MARK: RawSocket bootstrap
+
+    func testRawSocketBootstrap() async throws {
+        try XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI()
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
+
+        let serverChannel = try await self.makeRawSocketServerChannel(eventLoopGroup: eventLoopGroup)
+        let clientChannel = try await self.makeRawSocketClientChannel(eventLoopGroup: eventLoopGroup)
+
+        var serverInboundIterator = serverChannel.inboundStream.makeAsyncIterator()
+
+        try await clientChannel.outboundWriter.write(.init(remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0), data: .init(string: "Request")))
+        let message = try await serverInboundIterator.next()!
+        var data = message.data
+        let header = try XCTUnwrap(data.readIPv4HeaderFromOSRawSocket())
+        XCTAssertEqual(header.version, 4)
+        XCTAssertEqual(header.protocol, .reservedForTesting)
+        XCTAssertEqual(Int(header.platformIndependentTotalLengthForReceivedPacketFromRawSocket), IPv4Header.size + data.readableBytes)
+        XCTAssertTrue(header.isValidChecksum(header.platformIndependentChecksumForReceivedPacketFromRawSocket), "\(header)")
+        XCTAssertEqual(header.sourceIpAddress, .init(127, 0, 0, 1))
+        XCTAssertEqual(header.destinationIpAddress, .init(127, 0, 0, 1))
+        XCTAssertEqual(String(buffer: data), "Request")
+    }
+
     // MARK: - Test Helpers
+
+    private func makeRawSocketServerChannel(eventLoopGroup: EventLoopGroup) async throws -> NIOAsyncChannel<AddressedEnvelope<ByteBuffer>, AddressedEnvelope<ByteBuffer>> {
+        try await NIORawSocketBootstrap(group: eventLoopGroup)
+            .bind(
+                host: "127.0.0.1",
+                ipProtocol: .reservedForTesting,
+                inboundType: AddressedEnvelope<ByteBuffer>.self,
+                outboundType: AddressedEnvelope<ByteBuffer>.self
+            )
+    }
+
+    private func makeRawSocketClientChannel(eventLoopGroup: EventLoopGroup) async throws -> NIOAsyncChannel<AddressedEnvelope<ByteBuffer>, AddressedEnvelope<ByteBuffer>> {
+        try await NIORawSocketBootstrap(group: eventLoopGroup)
+            .connect(
+                host: "127.0.0.1",
+                ipProtocol: .reservedForTesting,
+                inboundType: AddressedEnvelope<ByteBuffer>.self,
+                outboundType: AddressedEnvelope<ByteBuffer>.self
+            )
+    }
 
     private func makeClientChannel(eventLoopGroup: EventLoopGroup, port: Int) async throws -> NIOAsyncChannel<String, String> {
         return try await ClientBootstrap(group: eventLoopGroup)

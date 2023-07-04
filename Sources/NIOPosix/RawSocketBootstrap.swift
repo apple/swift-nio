@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOCore
+@_spi(AsyncChannel) import NIOCore
 
 /// A `RawSocketBootstrap` is an easy way to interact with IP based protocols other then TCP and UDP.
 ///
@@ -33,6 +33,7 @@ import NIOCore
 /// ```
 ///
 /// The `Channel` will operate on `AddressedEnvelope<ByteBuffer>` as inbound and outbound messages.
+// TODO: Franz
 public final class NIORawSocketBootstrap {
 
     private let group: EventLoopGroup
@@ -178,6 +179,307 @@ public final class NIORawSocketBootstrap {
                 channel
             }.flatMapError { error in
                 eventLoop.makeFailedFuture(error)
+            }
+        }
+
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
+            return eventLoop.flatSubmit {
+                setupChannel()
+            }
+        }
+    }
+}
+
+// MARK: Async connect/bin methods with NIOAsyncChannel
+
+extension NIORawSocketBootstrap {
+    /// Bind the `Channel` to `host`.
+    /// All packets or errors matching the `ipProtocol` specified are passed to the resulting `Channel`.
+    ///
+    /// - Parameters:
+    ///   - host: The host to bind on.
+    ///   - ipProtocol: The IP protocol used in the IP protocol/nextHeader field.
+    ///   - backpressureStrategy: The back pressure strategy used by the channel.
+    ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
+    ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
+    ///   - inboundType: The channel's inbound type.
+    ///   - outboundType: The channel's outbound type.
+    /// - Returns: A `NIOAsyncChannel` for the bound connection.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Inbound: Sendable, Outbound: Sendable>(
+        host: String,
+        ipProtocol: NIOIPProtocol,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isOutboundHalfClosureEnabled: Bool = false,
+        inboundType: Inbound.Type = Inbound.self,
+        outboundType: Outbound.Type = Outbound.self
+    ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
+        try await self.bind0(
+            host: host,
+            ipProtocol: ipProtocol,
+            channelInitializer: { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try NIOAsyncChannel(
+                        synchronouslyWrapping: channel,
+                        backpressureStrategy: backpressureStrategy,
+                        isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+                        inboundType: inboundType,
+                        outboundType: outboundType
+                    )
+                }
+            },
+            postRegisterTransformation: { $1.makeSucceededFuture($0) }
+        )
+    }
+
+    /// Connect the `Channel` to `host`.
+    ///
+    /// - Parameters:
+    ///   - host: The host to connect to.
+    ///   - ipProtocol: The IP protocol used in the IP protocol/nextHeader field.
+    ///   - backpressureStrategy: The back pressure strategy used by the channel.
+    ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
+    ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
+    ///   - inboundType: The channel's inbound type.
+    ///   - outboundType: The channel's outbound type.
+    /// - Returns: A `NIOAsyncChannel` for the bound connection.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func connect<Inbound: Sendable, Outbound: Sendable>(
+        host: String,
+        ipProtocol: NIOIPProtocol,
+        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        isOutboundHalfClosureEnabled: Bool = false,
+        inboundType: Inbound.Type = Inbound.self,
+        outboundType: Outbound.Type = Outbound.self
+    ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
+        try await self.connect0(
+            host: host,
+            ipProtocol: ipProtocol,
+            channelInitializer: { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try NIOAsyncChannel(
+                        synchronouslyWrapping: channel,
+                        backpressureStrategy: backpressureStrategy,
+                        isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
+                        inboundType: inboundType,
+                        outboundType: outboundType
+                    )
+                }
+            },
+            postRegisterTransformation: { $1.makeSucceededFuture($0) }
+        )
+    }
+}
+// MARK: Async connect/bin methods with protocol negotiation
+
+extension NIORawSocketBootstrap {
+    /// Bind the `Channel` to `host`.
+    /// All packets or errors matching the `ipProtocol` specified are passed to the resulting `Channel`.
+    ///
+    /// - Parameters:
+    ///   - host: The host to bind on.
+    ///   - ipProtocol: The IP protocol used in the IP protocol/nextHeader field.
+    ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
+    ///   the protocol.
+    /// - Returns: The protocol negotiation result.   
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Handler: NIOProtocolNegotiationHandler>(
+        host: String,
+        ipProtocol: NIOIPProtocol,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
+    ) async throws -> Handler.NegotiationResult {
+        try await self.bind0(
+            host: host,
+            ipProtocol: ipProtocol,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { handler, eventLoop in
+                handler.protocolNegotiationResult.flatMap { result in
+                    result.resolve(on: eventLoop)
+                }
+            }
+        )
+    }
+    /// Connect the `Channel` to `host`.
+    /// All packets or errors matching the `ipProtocol` specified are passed to the resulting `Channel`.
+    ///
+    /// - Parameters:
+    ///   - host: The host to connect to.
+    ///   - ipProtocol: The IP protocol used in the IP protocol/nextHeader field.
+    ///   - channelInitializer: A closure to initialize the channel which must return the handler that is used for negotiating
+    ///   the protocol.
+    /// - Returns: The protocol negotiation result.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func connect<Handler: NIOProtocolNegotiationHandler>(
+        host: String,
+        ipProtocol: NIOIPProtocol,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Handler>
+    ) async throws -> Handler.NegotiationResult {
+        try await self.connect0(
+            host: host,
+            ipProtocol: ipProtocol,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { handler, eventLoop in
+                handler.protocolNegotiationResult.flatMap { result in
+                    result.resolve(on: eventLoop)
+                }
+            }
+        )
+    }
+}
+
+// MARK: Async connect/bin methods with arbitrary payload
+
+extension NIORawSocketBootstrap {
+    /// Bind the `Channel` to `host`.
+    /// All packets or errors matching the `ipProtocol` specified are passed to the resulting `Channel`.
+    ///
+    /// - Parameters:
+    ///   - host: The host to bind on.
+    ///   - ipProtocol: The IP protocol used in the IP protocol/nextHeader field.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `bind`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        host: String,
+        ipProtocol: NIOIPProtocol,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        try await self.bind0(
+            host: host,
+            ipProtocol: ipProtocol,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { $1.makeSucceededFuture($0) }
+        )
+    }
+    
+    /// Connect the `Channel` to `host`.
+    ///
+    /// - Parameters:
+    ///   - host: The host to connect to.
+    ///   - ipProtocol: The IP protocol used in the IP protocol/nextHeader field.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func connect<Output: Sendable>(
+        host: String,
+        ipProtocol: NIOIPProtocol,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        try await self.connect0(
+            host: host,
+            ipProtocol: ipProtocol,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { $1.makeSucceededFuture($0) }
+        )
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func connect0<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        host: String,
+        ipProtocol: NIOIPProtocol,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        let address = try SocketAddress.makeAddressResolvingHost(host, port: 0)
+
+        func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
+            return try DatagramChannel(
+                eventLoop: eventLoop,
+                protocolFamily: address.protocol,
+                protocolSubtype: .init(ipProtocol),
+                socketType: .raw
+            )
+        }
+
+        return try await self.makeConfiguredChannel(
+            makeChannel: makeChannel(_:),
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                channel.register().flatMap {
+                    channel.connect(to: address)
+                }
+            },
+            postRegisterTransformation: postRegisterTransformation
+        ).get()
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func bind0<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        host: String,
+        ipProtocol: NIOIPProtocol,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        let address = try SocketAddress.makeAddressResolvingHost(host, port: 0)
+
+        precondition(address.port == nil || address.port == 0, "port must be 0 or not set")
+        func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
+            return try DatagramChannel(
+                eventLoop: eventLoop,
+                protocolFamily: address.protocol,
+                protocolSubtype: .init(ipProtocol),
+                socketType: .raw
+            )
+        }
+
+        return try await self.makeConfiguredChannel(
+            makeChannel: makeChannel(_:),
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                channel.register().flatMap {
+                    channel.bind(to: address)
+                }
+            },
+            postRegisterTransformation: postRegisterTransformation
+        ).get()
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func makeConfiguredChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) -> EventLoopFuture<PostRegistrationTransformationResult> {
+        let eventLoop = self.group.next()
+        let channelInitializer = { (channel: Channel) -> EventLoopFuture<ChannelInitializerResult> in
+            let initializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+            return initializer(channel).flatMap { channelInitializer(channel) }
+        }
+        let channelOptions = self._channelOptions
+
+        let channel: DatagramChannel
+        do {
+            channel = try makeChannel(eventLoop as! SelectableEventLoop)
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
+
+        func setupChannel() -> EventLoopFuture<PostRegistrationTransformationResult> {
+            eventLoop.assertInEventLoop()
+            return channelOptions.applyAllChannelOptions(to: channel).flatMap {
+                channelInitializer(channel)
+            }.flatMap { (result: ChannelInitializerResult) in
+                eventLoop.assertInEventLoop()
+                return registration(channel).map {
+                    result
+                }
+            }.flatMap { (result: ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult> in
+                postRegisterTransformation(result, eventLoop)
+            }.flatMapError { error in
+                eventLoop.assertInEventLoop()
+                channel.close0(error: error, mode: .all, promise: nil)
+                return channel.eventLoop.makeFailedFuture(error)
             }
         }
 
