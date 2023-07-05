@@ -644,13 +644,13 @@ func withCrossConnectedPipeChannels<R>(forceSeparateEventLoops: Bool = false,
                     try pipe2Read.withUnsafeFileDescriptor { pipe2Read in
                         try pipe2Write.withUnsafeFileDescriptor { pipe2Write in
                             let channel1 = try NIOPipeBootstrap(group: channel1Group)
-                                .withPipes(inputDescriptor: pipe1Read, outputDescriptor: pipe2Write)
+                                .takingOwnershipOfDescriptors(input: pipe1Read, output: pipe2Write)
                                 .wait()
                             defer {
                                 XCTAssertNoThrow(try channel1.syncCloseAcceptingAlreadyClosed())
                             }
                             let channel2 = try NIOPipeBootstrap(group: channel2Group)
-                                .withPipes(inputDescriptor: pipe2Read, outputDescriptor: pipe1Write)
+                                .takingOwnershipOfDescriptors(input: pipe2Read, output: pipe1Write)
                                 .wait()
                             defer {
                                 XCTAssertNoThrow(try channel2.syncCloseAcceptingAlreadyClosed())

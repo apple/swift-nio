@@ -558,7 +558,7 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(let path):
         return try socketBootstrap.bind(unixDomainSocketPath: path).wait()
     case .stdio:
-        return try pipeBootstrap.withPipes(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO).wait()
+        return try pipeBootstrap.takingOwnershipOfDescriptors(input: STDIN_FILENO, output: STDOUT_FILENO).wait()
     }
 }()
 
