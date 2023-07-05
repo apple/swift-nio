@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
-@_spi(AsyncChannel) import NIOCore
+@_spi(AsyncChannel) @testable import NIOCore
 @_spi(AsyncChannel) @testable import NIOPosix
 import XCTest
 @_spi(AsyncChannel) import NIOTLS
@@ -586,8 +586,104 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
         }
     }
+    
+    // MARK: - Pipe Bootstrap
+    
+    func testPipeBootstrap() async throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let (pipe1ReadFH, pipe1WriteFH, pipe2ReadFH, pipe2WriteFH) = self.makePipeFileDescriptors()
+        let toChannel = FileHandle(fileDescriptor: pipe1WriteFH, closeOnDealloc: false)
+        let fromChannel = FileHandle(fileDescriptor: pipe2ReadFH, closeOnDealloc: false)
+        let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
+        
+        do {
+            channel = try await NIOPipeBootstrap(group: eventLoopGroup)
+                .takingOwnershipOfDescriptors(
+                    input: pipe1ReadFH,
+                    output: pipe2WriteFH
+                )
+        } catch {
+            [pipe1ReadFH, pipe1WriteFH, pipe2ReadFH, pipe2WriteFH].forEach { try? SystemCalls.close(descriptor: $0) }
+            throw error
+        }
+        
+        var inboundIterator = channel.inboundStream.makeAsyncIterator()
+        
+        do {
+            try toChannel.writeBytes(.init(string: "Request"))
+            try await XCTAsyncAssertEqual(try await inboundIterator.next(), ByteBuffer(string: "Request"))
+            
+            let response = ByteBuffer(string: "Response")
+            try await channel.outboundWriter.write(response)
+            XCTAssertEqual(try fromChannel.readBytes(ofExactLength: response.readableBytes), Array(buffer: response))
+        } catch {
+            // We only got to close the FDs that are not owned by the PipeChannel
+            [pipe1WriteFH, pipe2ReadFH].forEach { try? SystemCalls.close(descriptor: $0) }
+            throw error
+        }
+    }
+    
+    func testPipeBootstrap_withProtocolNegotiation() async throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let (pipe1ReadFH, pipe1WriteFH, pipe2ReadFH, pipe2WriteFH) = self.makePipeFileDescriptors()
+        let toChannel = FileHandle(fileDescriptor: pipe1WriteFH, closeOnDealloc: false)
+        let fromChannel = FileHandle(fileDescriptor: pipe2ReadFH, closeOnDealloc: false)
+        
+        try await withThrowingTaskGroup(of: NegotiationResult.self) { group in
+            group.addTask {
+                do {
+                    return try await NIOPipeBootstrap(group: eventLoopGroup)
+                        .takingOwnershipOfDescriptors(
+                            input: pipe1ReadFH,
+                            output: pipe2WriteFH
+                        ) { channel -> EventLoopFuture<NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>> in
+                            return channel.eventLoop.makeCompletedFuture {
+                                return try self.configureProtocolNegotiationHandlers(channel: channel)
+                            }
+                        }
+                } catch {
+                    [pipe1ReadFH, pipe1WriteFH, pipe2ReadFH, pipe2WriteFH].forEach { try? SystemCalls.close(descriptor: $0) }
+                    throw error
+                }
+            }
+            
+            
+            try toChannel.writeBytes(.init(string: "alpn:string\nHello\n"))
+            let negotiationResult = try await group.next()
+            switch negotiationResult {
+            case .string(let channel):
+                var inboundIterator = channel.inboundStream.makeAsyncIterator()
+                do {
+                    try await XCTAsyncAssertEqual(try await inboundIterator.next(), "Hello")
+                    
+                    let response = ByteBuffer(string: "Response")
+                    try await channel.outboundWriter.write("Response")
+                    XCTAssertEqual(try fromChannel.readBytes(ofExactLength: response.readableBytes), Array(buffer: response))
+                } catch {
+                    // We only got to close the FDs that are not owned by the PipeChannel
+                    [pipe1WriteFH, pipe2ReadFH].forEach { try? SystemCalls.close(descriptor: $0) }
+                    throw error
+                }
+                
+            case .byte, nil:
+                fatalError()
+            }
+        }
+    }
 
     // MARK: - Test Helpers
+    
+    private func makePipeFileDescriptors() -> (pipe1ReadFH: Int32, pipe1WriteFH: Int32, pipe2ReadFH: Int32, pipe2WriteFH: Int32) {
+        var pipe1FDs: [Int32] = [-1, -1]
+        pipe1FDs.withUnsafeMutableBufferPointer { ptr in
+            XCTAssertEqual(0, pipe(ptr.baseAddress!))
+        }
+        var pipe2FDs: [Int32] = [-1, -1]
+        pipe2FDs.withUnsafeMutableBufferPointer { ptr in
+            XCTAssertEqual(0, pipe(ptr.baseAddress!))
+        }
+        return (pipe1FDs[0], pipe1FDs[1], pipe2FDs[0], pipe2FDs[1])
+    }
 
     private func makeClientChannel(eventLoopGroup: EventLoopGroup, port: Int) async throws -> NIOAsyncChannel<String, String> {
         return try await ClientBootstrap(group: eventLoopGroup)
