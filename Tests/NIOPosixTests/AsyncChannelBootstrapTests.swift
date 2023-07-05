@@ -18,24 +18,56 @@ import NIOConcurrencyHelpers
 import XCTest
 @_spi(AsyncChannel) import NIOTLS
 
-private final class LineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncoder {
-    private let newLine = "\n".utf8.first!
+private final class IPHeaderRemoverHandler: ChannelInboundHandler {
+    typealias InboundIn = AddressedEnvelope<ByteBuffer>
+    typealias InboundOut = AddressedEnvelope<ByteBuffer>
 
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        var data = self.unwrapInboundIn(data)
+        assert(data.data.readIPv4Header() != nil)
+        context.fireChannelRead(self.wrapInboundOut(data))
+    }
+}
+
+private final class LineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncoder {
     typealias InboundIn = ByteBuffer
     typealias InboundOut = ByteBuffer
+
+    private let newLine = "\n".utf8.first!
+    private let inboundID: UInt8?
+    private let outboundID: UInt8?
+
+    init(inboundID: UInt8? = nil, outboundID: UInt8? = nil) {
+        self.inboundID = inboundID
+        self.outboundID = outboundID
+    }
 
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readable = buffer.withUnsafeReadableBytes { $0.firstIndex(of: self.newLine) }
         if let readable = readable {
-            context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: readable)!))
-            buffer.moveReaderIndex(forwardBy: 1)
-            return .continue
+            if let id = self.inboundID {
+                let data = buffer.readSlice(length: readable - 1)!
+                let inboundID = buffer.readInteger(as: UInt8.self)!
+                buffer.moveReaderIndex(forwardBy: 1)
+
+                if id == inboundID {
+                    context.fireChannelRead(self.wrapInboundOut(data))
+                }
+                return .continue
+            } else {
+                context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: readable)!))
+                buffer.moveReaderIndex(forwardBy: 1)
+                return .continue
+            }
         }
         return .needMoreData
     }
 
     func encode(data: ByteBuffer, out: inout ByteBuffer) throws {
         out.writeImmutableBuffer(data)
+        if let id = self.outboundID {
+            out.writeInteger(id)
+        }
         out.writeString("\n")
     }
 }
@@ -136,6 +168,10 @@ private final class AddressedEnvelopingHandler: ChannelDuplexHandler {
     typealias OutboundOut = Any
 
     var remoteAddress: SocketAddress?
+
+    init(remoteAddress: SocketAddress? = nil) {
+        self.remoteAddress = remoteAddress
+    }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let envelope = self.unwrapInboundIn(data)
@@ -671,6 +707,73 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         }
     }
 
+    // MARK: RawSocket bootstrap
+
+    func testRawSocketBootstrap() async throws {
+        try XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI()
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
+
+        let serverChannel = try await self.makeRawSocketServerChannel(eventLoopGroup: eventLoopGroup)
+        let clientChannel = try await self.makeRawSocketClientChannel(eventLoopGroup: eventLoopGroup)
+
+        var serverInboundIterator = serverChannel.inboundStream.makeAsyncIterator()
+        var clientInboundIterator = clientChannel.inboundStream.makeAsyncIterator()
+
+        try await clientChannel.outboundWriter.write("request")
+        try await XCTAsyncAssertEqual(try await serverInboundIterator.next(), "request")
+
+        try await serverChannel.outboundWriter.write("response")
+        try await XCTAsyncAssertEqual(try await clientInboundIterator.next(), "response")
+    }
+
+    func testRawSocketBootstrap_withProtocolNegotiation() async throws {
+        try XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI()
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
+
+        try await withThrowingTaskGroup(of: NegotiationResult.self) { group in
+            group.addTask {
+                // We have to use a fixed port here since we only get the channel once protocol negotiation is done
+                try await self.makeRawSocketServerChannelWithProtocolNegotiation(
+                    eventLoopGroup: eventLoopGroup
+                )
+            }
+
+            // We need to sleep here since we can only connect the client after the server started.
+            try await Task.sleep(nanoseconds: 100000000)
+
+            group.addTask {
+                try await self.makeRawSocketClientChannelWithProtocolNegotiation(
+                    eventLoopGroup: eventLoopGroup,
+                    proposedALPN: .string
+                )
+            }
+
+            let firstNegotiationResult = try await group.next()
+            let secondNegotiationResult = try await group.next()
+
+            switch (firstNegotiationResult, secondNegotiationResult) {
+            case (.string(let firstChannel), .string(let secondChannel)):
+                var firstInboundIterator = firstChannel.inboundStream.makeAsyncIterator()
+                var secondInboundIterator = secondChannel.inboundStream.makeAsyncIterator()
+
+                try await firstChannel.outboundWriter.write("request")
+                try await XCTAsyncAssertEqual(try await secondInboundIterator.next(), "request")
+
+                try await secondChannel.outboundWriter.write("response")
+                try await XCTAsyncAssertEqual(try await firstInboundIterator.next(), "response")
+
+            default:
+                preconditionFailure()
+            }
+        }
+    }
+
     // MARK: - Test Helpers
     
     private func makePipeFileDescriptors() -> (pipe1ReadFH: Int32, pipe1WriteFH: Int32, pipe2ReadFH: Int32, pipe2WriteFH: Int32) {
@@ -685,10 +788,78 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         return (pipe1FDs[0], pipe1FDs[1], pipe2FDs[0], pipe2FDs[1])
     }
 
+    private func makeRawSocketServerChannel(eventLoopGroup: EventLoopGroup) async throws -> NIOAsyncChannel<String, String> {
+        try await NIORawSocketBootstrap(group: eventLoopGroup)
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(IPHeaderRemoverHandler())
+                    try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler(remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0)))
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder(inboundID: 1)))
+                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder(outboundID: 2)))
+                    try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
+                }
+            }
+            .bind(
+                host: "127.0.0.1",
+                ipProtocol: .reservedForTesting
+            )
+    }
+
+    private func makeRawSocketClientChannel(eventLoopGroup: EventLoopGroup) async throws -> NIOAsyncChannel<String, String> {
+        try await NIORawSocketBootstrap(group: eventLoopGroup)
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(IPHeaderRemoverHandler())
+                    try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler(remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0)))
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder(inboundID: 2)))
+                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder(outboundID: 1)))
+                    try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
+                }
+            }
+            .connect(
+                host: "127.0.0.1",
+                ipProtocol: .reservedForTesting
+            )
+    }
+
+    private func makeRawSocketServerChannelWithProtocolNegotiation(
+        eventLoopGroup: EventLoopGroup
+    ) async throws -> NegotiationResult {
+        try await NIORawSocketBootstrap(group: eventLoopGroup)
+            .bind(
+                host: "127.0.0.1",
+                ipProtocol: .reservedForTesting
+            ) { channel -> EventLoopFuture<NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>> in
+                return channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(IPHeaderRemoverHandler())
+                    try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler(remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0)))
+                    return try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: nil, inboundID: 1, outboundID: 2)
+                }
+            }
+    }
+
+    private func makeRawSocketClientChannelWithProtocolNegotiation(
+        eventLoopGroup: EventLoopGroup,
+        proposedALPN: TLSUserEventHandler.ALPN
+    ) async throws -> NegotiationResult {
+        try await NIORawSocketBootstrap(group: eventLoopGroup)
+            .connect(
+                host: "127.0.0.1",
+                ipProtocol: .reservedForTesting
+            ) { channel -> EventLoopFuture<NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>> in
+                return channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(IPHeaderRemoverHandler())
+                    try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler(remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0)))
+                    return try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN, inboundID: 2, outboundID: 1)
+                }
+            }
+    }
+
     private func makeClientChannel(eventLoopGroup: EventLoopGroup, port: Int) async throws -> NIOAsyncChannel<String, String> {
         return try await ClientBootstrap(group: eventLoopGroup)
             .channelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
@@ -809,10 +980,12 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     @discardableResult
     private func configureProtocolNegotiationHandlers(
         channel: Channel,
-        proposedALPN: TLSUserEventHandler.ALPN? = nil
+        proposedALPN: TLSUserEventHandler.ALPN? = nil,
+        inboundID: UInt8? = nil,
+        outboundID: UInt8? = nil
     ) throws -> NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> {
-        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
-        try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
+        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder(inboundID: inboundID)))
+        try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder(outboundID: outboundID)))
         try channel.pipeline.syncOperations.addHandler(TLSUserEventHandler(proposedALPN: proposedALPN))
         return try self.addTypedApplicationProtocolNegotiationHandler(to: channel)
     }
