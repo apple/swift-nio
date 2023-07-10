@@ -206,237 +206,231 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
     // MARK: Server/Client Bootstrap
 
-    func testServerClientBootstrap_withAsyncChannel_andHostPort() throws {
-        XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-            defer {
-                try! eventLoopGroup.syncShutdownGracefully()
-            }
+    func testServerClientBootstrap_withAsyncChannel_andHostPort() async throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
 
-            let channel = try await ServerBootstrap(group: eventLoopGroup)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .childChannelOption(ChannelOptions.autoRead, value: true)
-                .childChannelInitializer { channel in
-                    channel.eventLoop.makeCompletedFuture {
-                        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
-                        try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
-                        try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
+        let channel = try await ServerBootstrap(group: eventLoopGroup)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: true)
+            .childChannelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
+                }
+            }
+            .bind(
+                host: "127.0.0.1",
+                port: 0,
+                childChannelInboundType: String.self,
+                childChannelOutboundType: String.self
+            )
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
+            var iterator = stream.makeAsyncIterator()
+
+            group.addTask {
+                try await withThrowingTaskGroup(of: Void.self) { _ in
+                    for try await childChannel in channel.inboundStream {
+                        for try await value in childChannel.inboundStream {
+                            continuation.yield(.string(value))
+                        }
                     }
                 }
-                .bind(
-                    host: "127.0.0.1",
-                    port: 0,
-                    childChannelInboundType: String.self,
-                    childChannelOutboundType: String.self
-                )
+            }
 
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
-                var iterator = stream.makeAsyncIterator()
+            let stringChannel = try await self.makeClientChannel(eventLoopGroup: eventLoopGroup, port: channel.channel.localAddress!.port!)
+            try await stringChannel.outboundWriter.write("hello")
 
-                group.addTask {
-                    try await withThrowingTaskGroup(of: Void.self) { _ in
-                        for try await childChannel in channel.inboundStream {
-                            for try await value in childChannel.inboundStream {
-                                continuation.yield(.string(value))
+            await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
+
+            group.cancelAll()
+        }
+    }
+
+    func testAsyncChannelProtocolNegotiation() async throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
+
+        let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: true)
+            .bind(
+                host: "127.0.0.1",
+                port: 0
+            ) { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try self.configureProtocolNegotiationHandlers(channel: channel)
+                }
+            }
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
+            var serverIterator = stream.makeAsyncIterator()
+
+            group.addTask {
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    for try await childChannel in channel.inboundStream {
+                        group.addTask {
+                            switch childChannel {
+                            case .string(let channel):
+                                for try await value in channel.inboundStream {
+                                    continuation.yield(.string(value))
+                                }
+                            case .byte(let channel):
+                                for try await value in channel.inboundStream {
+                                    continuation.yield(.byte(value))
+                                }
                             }
                         }
                     }
                 }
+            }
 
-                let stringChannel = try await self.makeClientChannel(eventLoopGroup: eventLoopGroup, port: channel.channel.localAddress!.port!)
+            let stringNegotiationResult = try await self.makeClientChannelWithProtocolNegotiation(
+                eventLoopGroup: eventLoopGroup,
+                port: channel.channel.localAddress!.port!,
+                proposedALPN: .string
+            )
+            switch stringNegotiationResult {
+            case .string(let stringChannel):
+                // This is the actual content
                 try await stringChannel.outboundWriter.write("hello")
-
-                await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
-
-                group.cancelAll()
+                await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
+            case .byte:
+                preconditionFailure()
             }
+
+            let byteNegotiationResult = try await self.makeClientChannelWithProtocolNegotiation(
+                eventLoopGroup: eventLoopGroup,
+                port: channel.channel.localAddress!.port!,
+                proposedALPN: .byte
+            )
+            switch byteNegotiationResult {
+            case .string:
+                preconditionFailure()
+            case .byte(let byteChannel):
+                // This is the actual content
+                try await byteChannel.outboundWriter.write(UInt8(8))
+                await XCTAsyncAssertEqual(await serverIterator.next(), .byte(8))
+            }
+
+            group.cancelAll()
         }
     }
 
-    func testAsyncChannelProtocolNegotiation() throws {
-        XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-            defer {
-                try! eventLoopGroup.syncShutdownGracefully()
+    func testAsyncChannelNestedProtocolNegotiation() async throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
+
+        let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .childChannelOption(ChannelOptions.autoRead, value: true)
+            .bind(
+                host: "127.0.0.1",
+                port: 0
+            ) { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try self.configureNestedProtocolNegotiationHandlers(channel: channel)
+                }
             }
 
-            let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .childChannelOption(ChannelOptions.autoRead, value: true)
-                .bind(
-                    host: "127.0.0.1",
-                    port: 0
-                ) { channel in
-                    channel.eventLoop.makeCompletedFuture {
-                        try self.configureProtocolNegotiationHandlers(channel: channel)
-                    }
-                }
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
+            var serverIterator = stream.makeAsyncIterator()
 
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
-                var serverIterator = stream.makeAsyncIterator()
-
-                group.addTask {
-                    try await withThrowingTaskGroup(of: Void.self) { group in
-                        for try await childChannel in channel.inboundStream {
-                            group.addTask {
-                                switch childChannel {
-                                case .string(let channel):
-                                    for try await value in channel.inboundStream {
-                                        continuation.yield(.string(value))
-                                    }
-                                case .byte(let channel):
-                                    for try await value in channel.inboundStream {
-                                        continuation.yield(.byte(value))
-                                    }
+            group.addTask {
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    for try await childChannel in channel.inboundStream {
+                        group.addTask {
+                            switch childChannel {
+                            case .string(let channel):
+                                for try await value in channel.inboundStream {
+                                    continuation.yield(.string(value))
+                                }
+                            case .byte(let channel):
+                                for try await value in channel.inboundStream {
+                                    continuation.yield(.byte(value))
                                 }
                             }
                         }
                     }
                 }
-
-                let stringNegotiationResult = try await self.makeClientChannelWithProtocolNegotiation(
-                    eventLoopGroup: eventLoopGroup,
-                    port: channel.channel.localAddress!.port!,
-                    proposedALPN: .string
-                )
-                switch stringNegotiationResult {
-                case .string(let stringChannel):
-                    // This is the actual content
-                    try await stringChannel.outboundWriter.write("hello")
-                    await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
-                case .byte:
-                    preconditionFailure()
-                }
-
-                let byteNegotiationResult = try await self.makeClientChannelWithProtocolNegotiation(
-                    eventLoopGroup: eventLoopGroup,
-                    port: channel.channel.localAddress!.port!,
-                    proposedALPN: .byte
-                )
-                switch byteNegotiationResult {
-                case .string:
-                    preconditionFailure()
-                case .byte(let byteChannel):
-                    // This is the actual content
-                    try await byteChannel.outboundWriter.write(UInt8(8))
-                    await XCTAsyncAssertEqual(await serverIterator.next(), .byte(8))
-                }
-
-                group.cancelAll()
             }
+
+            let stringStringNegotiationResult = try await self.makeClientChannelWithNestedProtocolNegotiation(
+                eventLoopGroup: eventLoopGroup,
+                port: channel.channel.localAddress!.port!,
+                proposedOuterALPN: .string,
+                proposedInnerALPN: .string
+            )
+            switch stringStringNegotiationResult {
+            case .string(let stringChannel):
+                // This is the actual content
+                try await stringChannel.outboundWriter.write("hello")
+                await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
+            case .byte:
+                preconditionFailure()
+            }
+
+            let byteStringNegotiationResult = try await self.makeClientChannelWithNestedProtocolNegotiation(
+                eventLoopGroup: eventLoopGroup,
+                port: channel.channel.localAddress!.port!,
+                proposedOuterALPN: .byte,
+                proposedInnerALPN: .string
+            )
+            switch byteStringNegotiationResult {
+            case .string(let stringChannel):
+                // This is the actual content
+                try await stringChannel.outboundWriter.write("hello")
+                await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
+            case .byte:
+                preconditionFailure()
+            }
+
+            let byteByteNegotiationResult = try await self.makeClientChannelWithNestedProtocolNegotiation(
+                eventLoopGroup: eventLoopGroup,
+                port: channel.channel.localAddress!.port!,
+                proposedOuterALPN: .byte,
+                proposedInnerALPN: .byte
+            )
+            switch byteByteNegotiationResult {
+            case .string:
+                preconditionFailure()
+            case .byte(let byteChannel):
+                // This is the actual content
+                try await byteChannel.outboundWriter.write(UInt8(8))
+                await XCTAsyncAssertEqual(await serverIterator.next(), .byte(8))
+            }
+
+            let stringByteNegotiationResult = try await self.makeClientChannelWithNestedProtocolNegotiation(
+                eventLoopGroup: eventLoopGroup,
+                port: channel.channel.localAddress!.port!,
+                proposedOuterALPN: .string,
+                proposedInnerALPN: .byte
+            )
+            switch stringByteNegotiationResult {
+            case .string:
+                preconditionFailure()
+            case .byte(let byteChannel):
+                // This is the actual content
+                try await byteChannel.outboundWriter.write(UInt8(8))
+                await XCTAsyncAssertEqual(await serverIterator.next(), .byte(8))
+            }
+
+            group.cancelAll()
         }
     }
 
-    func testAsyncChannelNestedProtocolNegotiation() throws {
-        XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-            defer {
-                try! eventLoopGroup.syncShutdownGracefully()
-            }
-
-            let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .childChannelOption(ChannelOptions.autoRead, value: true)
-                .bind(
-                    host: "127.0.0.1",
-                    port: 0
-                ) { channel in
-                    channel.eventLoop.makeCompletedFuture {
-                        try self.configureNestedProtocolNegotiationHandlers(channel: channel)
-                    }
-                }
-
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
-                var serverIterator = stream.makeAsyncIterator()
-
-                group.addTask {
-                    try await withThrowingTaskGroup(of: Void.self) { group in
-                        for try await childChannel in channel.inboundStream {
-                            group.addTask {
-                                switch childChannel {
-                                case .string(let channel):
-                                    for try await value in channel.inboundStream {
-                                        continuation.yield(.string(value))
-                                    }
-                                case .byte(let channel):
-                                    for try await value in channel.inboundStream {
-                                        continuation.yield(.byte(value))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                let stringStringNegotiationResult = try await self.makeClientChannelWithNestedProtocolNegotiation(
-                    eventLoopGroup: eventLoopGroup,
-                    port: channel.channel.localAddress!.port!,
-                    proposedOuterALPN: .string,
-                    proposedInnerALPN: .string
-                )
-                switch stringStringNegotiationResult {
-                case .string(let stringChannel):
-                    // This is the actual content
-                    try await stringChannel.outboundWriter.write("hello")
-                    await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
-                case .byte:
-                    preconditionFailure()
-                }
-
-                let byteStringNegotiationResult = try await self.makeClientChannelWithNestedProtocolNegotiation(
-                    eventLoopGroup: eventLoopGroup,
-                    port: channel.channel.localAddress!.port!,
-                    proposedOuterALPN: .byte,
-                    proposedInnerALPN: .string
-                )
-                switch byteStringNegotiationResult {
-                case .string(let stringChannel):
-                    // This is the actual content
-                    try await stringChannel.outboundWriter.write("hello")
-                    await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
-                case .byte:
-                    preconditionFailure()
-                }
-
-                let byteByteNegotiationResult = try await self.makeClientChannelWithNestedProtocolNegotiation(
-                    eventLoopGroup: eventLoopGroup,
-                    port: channel.channel.localAddress!.port!,
-                    proposedOuterALPN: .byte,
-                    proposedInnerALPN: .byte
-                )
-                switch byteByteNegotiationResult {
-                case .string:
-                    preconditionFailure()
-                case .byte(let byteChannel):
-                    // This is the actual content
-                    try await byteChannel.outboundWriter.write(UInt8(8))
-                    await XCTAsyncAssertEqual(await serverIterator.next(), .byte(8))
-                }
-
-                let stringByteNegotiationResult = try await self.makeClientChannelWithNestedProtocolNegotiation(
-                    eventLoopGroup: eventLoopGroup,
-                    port: channel.channel.localAddress!.port!,
-                    proposedOuterALPN: .string,
-                    proposedInnerALPN: .byte
-                )
-                switch stringByteNegotiationResult {
-                case .string:
-                    preconditionFailure()
-                case .byte(let byteChannel):
-                    // This is the actual content
-                    try await byteChannel.outboundWriter.write(UInt8(8))
-                    await XCTAsyncAssertEqual(await serverIterator.next(), .byte(8))
-                }
-
-                group.cancelAll()
-            }
-        }
-    }
-
-    func testAsyncChannelProtocolNegotiation_whenFails() throws {
+    func testAsyncChannelProtocolNegotiation_whenFails() async throws {
         final class CollectingHandler: ChannelInboundHandler {
             typealias InboundIn = Channel
 
@@ -454,171 +448,166 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 context.fireChannelRead(data)
             }
         }
-        XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-            defer {
-                try! eventLoopGroup.syncShutdownGracefully()
+
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
+        let channels = NIOLockedValueBox<[Channel]>([Channel]())
+
+        let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .serverChannelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(CollectingHandler(channels: channels))
+                }
             }
-            let channels = NIOLockedValueBox<[Channel]>([Channel]())
-
-            let channel: NIOAsyncChannel<NegotiationResult, Never> = try await ServerBootstrap(group: eventLoopGroup)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .serverChannelInitializer { channel in
-                    channel.eventLoop.makeCompletedFuture {
-                        try channel.pipeline.syncOperations.addHandler(CollectingHandler(channels: channels))
-                    }
+            .childChannelOption(ChannelOptions.autoRead, value: true)
+            .bind(
+                host: "127.0.0.1",
+                port: 0
+            ) { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try self.configureProtocolNegotiationHandlers(channel: channel)
                 }
-                .childChannelOption(ChannelOptions.autoRead, value: true)
-                .bind(
-                    host: "127.0.0.1",
-                    port: 0
-                ) { channel in
-                    channel.eventLoop.makeCompletedFuture {
-                        try self.configureProtocolNegotiationHandlers(channel: channel)
-                    }
-                }
+            }
 
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
-                var serverIterator = stream.makeAsyncIterator()
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
+            var serverIterator = stream.makeAsyncIterator()
 
-                group.addTask {
-                    try await withThrowingTaskGroup(of: Void.self) { group in
-                        for try await childChannel in channel.inboundStream {
-                            group.addTask {
-                                switch childChannel {
-                                case .string(let channel):
-                                    for try await value in channel.inboundStream {
-                                        continuation.yield(.string(value))
-                                    }
-                                case .byte(let channel):
-                                    for try await value in channel.inboundStream {
-                                        continuation.yield(.byte(value))
-                                    }
+            group.addTask {
+                try await withThrowingTaskGroup(of: Void.self) { group in
+                    for try await childChannel in channel.inboundStream {
+                        group.addTask {
+                            switch childChannel {
+                            case .string(let channel):
+                                for try await value in channel.inboundStream {
+                                    continuation.yield(.string(value))
+                                }
+                            case .byte(let channel):
+                                for try await value in channel.inboundStream {
+                                    continuation.yield(.byte(value))
                                 }
                             }
                         }
                     }
                 }
+            }
 
-                await XCTAssertThrowsError(
-                    try await self.makeClientChannelWithProtocolNegotiation(
-                        eventLoopGroup: eventLoopGroup,
-                        port: channel.channel.localAddress!.port!,
-                        proposedALPN: .unknown
-                    )
-                ) { error in
-                    XCTAssertTrue(error is ProtocolNegotiationError)
-                }
-
-                // Let's check that we can still open a new connection
-                let stringNegotiationResult = try await self.makeClientChannelWithProtocolNegotiation(
+            await XCTAssertThrowsError(
+                try await self.makeClientChannelWithProtocolNegotiation(
                     eventLoopGroup: eventLoopGroup,
                     port: channel.channel.localAddress!.port!,
-                    proposedALPN: .string
+                    proposedALPN: .unknown
                 )
-                switch stringNegotiationResult {
-                case .string(let stringChannel):
-                    // This is the actual content
-                    try await stringChannel.outboundWriter.write("hello")
-                    await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
-                case .byte:
-                    preconditionFailure()
-                }
-
-                let failedInboundChannel = channels.withLockedValue { channels -> Channel in
-                    XCTAssertEqual(channels.count, 2)
-                    return channels[0]
-                }
-
-                // We are waiting here to make sure the channel got closed
-                try await failedInboundChannel.closeFuture.get()
-
-                group.cancelAll()
+            ) { error in
+                XCTAssertTrue(error is ProtocolNegotiationError)
             }
+
+            // Let's check that we can still open a new connection
+            let stringNegotiationResult = try await self.makeClientChannelWithProtocolNegotiation(
+                eventLoopGroup: eventLoopGroup,
+                port: channel.channel.localAddress!.port!,
+                proposedALPN: .string
+            )
+            switch stringNegotiationResult {
+            case .string(let stringChannel):
+                // This is the actual content
+                try await stringChannel.outboundWriter.write("hello")
+                await XCTAsyncAssertEqual(await serverIterator.next(), .string("hello"))
+            case .byte:
+                preconditionFailure()
+            }
+
+            let failedInboundChannel = channels.withLockedValue { channels -> Channel in
+                XCTAssertEqual(channels.count, 2)
+                return channels[0]
+            }
+
+            // We are waiting here to make sure the channel got closed
+            try await failedInboundChannel.closeFuture.get()
+
+            group.cancelAll()
         }
     }
 
     // MARK: Datagram Bootstrap
 
-    func testDatagramBootstrap_withAsyncChannel_andHostPort() throws {
-        XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-            defer {
-                try! eventLoopGroup.syncShutdownGracefully()
-            }
-
-            let serverChannel = try await self.makeUDPServerChannel(eventLoopGroup: eventLoopGroup)
-            let clientChannel = try await self.makeUDPClientChannel(
-                eventLoopGroup: eventLoopGroup,
-                port: serverChannel.channel.localAddress!.port!
-            )
-            var serverInboundIterator = serverChannel.inboundStream.makeAsyncIterator()
-            var clientInboundIterator = clientChannel.inboundStream.makeAsyncIterator()
-
-            try await clientChannel.outboundWriter.write("request")
-            try await XCTAsyncAssertEqual(try await serverInboundIterator.next(), "request")
-
-            try await serverChannel.outboundWriter.write("response")
-            try await XCTAsyncAssertEqual(try await clientInboundIterator.next(), "response")
+    func testDatagramBootstrap_withAsyncChannel_andHostPort() async throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
         }
+
+        let serverChannel = try await self.makeUDPServerChannel(eventLoopGroup: eventLoopGroup)
+        let clientChannel = try await self.makeUDPClientChannel(
+            eventLoopGroup: eventLoopGroup,
+            port: serverChannel.channel.localAddress!.port!
+        )
+        var serverInboundIterator = serverChannel.inboundStream.makeAsyncIterator()
+        var clientInboundIterator = clientChannel.inboundStream.makeAsyncIterator()
+
+        try await clientChannel.outboundWriter.write("request")
+        try await XCTAsyncAssertEqual(try await serverInboundIterator.next(), "request")
+
+        try await serverChannel.outboundWriter.write("response")
+        try await XCTAsyncAssertEqual(try await clientInboundIterator.next(), "response")
     }
 
-    func testDatagramBootstrap_withProtocolNegotiation_andHostPort() throws {
-        XCTAsyncTest {
-            let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-            defer {
-                try! eventLoopGroup.syncShutdownGracefully()
+    func testDatagramBootstrap_withProtocolNegotiation_andHostPort() async throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
+
+        // We are creating a channel here to get a random port from the system
+        let channel = try await DatagramBootstrap(group: eventLoopGroup)
+            .bind(
+                to: .init(ipAddress: "127.0.0.1", port: 0),
+                channelInitializer:  { channel -> EventLoopFuture<Channel> in channel.eventLoop.makeSucceededFuture(channel) }
+            )
+
+        let port = channel.localAddress!.port!
+        try await channel.close()
+
+        try await withThrowingTaskGroup(of: NegotiationResult.self) { group in
+            group.addTask {
+                // We have to use a fixed port here since we only get the channel once protocol negotiation is done
+                try await self.makeUDPServerChannelWithProtocolNegotiation(
+                    eventLoopGroup: eventLoopGroup,
+                    port: port
+                )
             }
 
-            // We are creating a channel here to get a random port from the system
-            let channel = try await DatagramBootstrap(group: eventLoopGroup)
-                .bind(
-                    to: .init(ipAddress: "127.0.0.1", port: 0),
-                    channelInitializer:  { channel -> EventLoopFuture<Channel> in channel.eventLoop.makeSucceededFuture(channel) }
+            // We need to sleep here since we can only connect the client after the server started.
+            try await Task.sleep(nanoseconds: 100000000)
+
+            group.addTask {
+                // We have to use a fixed port here since we only get the channel once protocol negotiation is done
+                try await self.makeUDPClientChannelWithProtocolNegotiation(
+                    eventLoopGroup: eventLoopGroup,
+                    port: port,
+                    proposedALPN: .string
                 )
+            }
 
-            let port = channel.localAddress!.port!
-            try await channel.close()
+            let firstNegotiationResult = try await group.next()
+            let secondNegotiationResult = try await group.next()
 
-            try await withThrowingTaskGroup(of: NegotiationResult.self) { group in
-                group.addTask {
-                    // We have to use a fixed port here since we only get the channel once protocol negotiation is done
-                    try await self.makeUDPServerChannelWithProtocolNegotiation(
-                        eventLoopGroup: eventLoopGroup,
-                        port: port
-                    )
-                }
+            switch (firstNegotiationResult, secondNegotiationResult) {
+            case (.string(let firstChannel), .string(let secondChannel)):
+                var firstInboundIterator = firstChannel.inboundStream.makeAsyncIterator()
+                var secondInboundIterator = secondChannel.inboundStream.makeAsyncIterator()
 
-                // We need to sleep here since we can only connect the client after the server started.
-                try await Task.sleep(nanoseconds: 100000000)
+                try await firstChannel.outboundWriter.write("request")
+                try await XCTAsyncAssertEqual(try await secondInboundIterator.next(), "request")
 
-                group.addTask {
-                    // We have to use a fixed port here since we only get the channel once protocol negotiation is done
-                    try await self.makeUDPClientChannelWithProtocolNegotiation(
-                        eventLoopGroup: eventLoopGroup,
-                        port: port,
-                        proposedALPN: .string
-                    )
-                }
+                try await secondChannel.outboundWriter.write("response")
+                try await XCTAsyncAssertEqual(try await firstInboundIterator.next(), "response")
 
-                let firstNegotiationResult = try await group.next()
-                let secondNegotiationResult = try await group.next()
-
-                switch (firstNegotiationResult, secondNegotiationResult) {
-                case (.string(let firstChannel), .string(let secondChannel)):
-                    var firstInboundIterator = firstChannel.inboundStream.makeAsyncIterator()
-                    var secondInboundIterator = secondChannel.inboundStream.makeAsyncIterator()
-
-                    try await firstChannel.outboundWriter.write("request")
-                    try await XCTAsyncAssertEqual(try await secondInboundIterator.next(), "request")
-
-                    try await secondChannel.outboundWriter.write("response")
-                    try await XCTAsyncAssertEqual(try await firstInboundIterator.next(), "response")
-
-                default:
-                    preconditionFailure()
-                }
+            default:
+                preconditionFailure()
             }
         }
     }
