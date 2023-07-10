@@ -111,7 +111,7 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     static func makeHandlerWithTransformations(
         eventLoop: EventLoop,
         closeRatchet: CloseRatchet,
-        channelReadTransformation:@Sendable @escaping (InboundIn) -> EventLoopFuture<ReadTransformationResult>,
+        channelReadTransformation: @Sendable @escaping (InboundIn) -> EventLoopFuture<ReadTransformationResult>,
         postFireChannelReadTransformation: @Sendable @escaping (ReadTransformationResult) -> EventLoopFuture<ProducerElement>
     ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == Channel {
         return .init(

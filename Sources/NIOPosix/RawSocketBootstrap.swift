@@ -200,21 +200,14 @@ extension NIORawSocketBootstrap {
     /// - Parameters:
     ///   - host: The host to bind on.
     ///   - ipProtocol: The IP protocol used in the IP protocol/nextHeader field.
-    ///   - backpressureStrategy: The back pressure strategy used by the channel.
-    ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
-    ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
-    ///   - inboundType: The channel's inbound type.
-    ///   - outboundType: The channel's outbound type.
+    ///   - channelConfiguration: The channel's async channel configuration.
     /// - Returns: A `NIOAsyncChannel` for the bound connection.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
     public func bind<Inbound: Sendable, Outbound: Sendable>(
         host: String,
         ipProtocol: NIOIPProtocol,
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isOutboundHalfClosureEnabled: Bool = false,
-        inboundType: Inbound.Type = Inbound.self,
-        outboundType: Outbound.Type = Outbound.self
+        channelConfiguration: NIOAsyncChannel<Inbound, Outbound>.Configuration = .init()
     ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
         try await self.bind0(
             host: host,
@@ -223,10 +216,7 @@ extension NIORawSocketBootstrap {
                 channel.eventLoop.makeCompletedFuture {
                     try NIOAsyncChannel(
                         synchronouslyWrapping: channel,
-                        backpressureStrategy: backpressureStrategy,
-                        isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
-                        inboundType: inboundType,
-                        outboundType: outboundType
+                        configuration: channelConfiguration
                     )
                 }
             },
@@ -239,21 +229,14 @@ extension NIORawSocketBootstrap {
     /// - Parameters:
     ///   - host: The host to connect to.
     ///   - ipProtocol: The IP protocol used in the IP protocol/nextHeader field.
-    ///   - backpressureStrategy: The back pressure strategy used by the channel.
-    ///   - isOutboundHalfClosureEnabled: Indicates if half closure is enabled on the channel. If half closure is enabled
-    ///   then finishing the `NIOAsyncChannelWriter` will lead to half closure.
-    ///   - inboundType: The channel's inbound type.
-    ///   - outboundType: The channel's outbound type.
+    ///   - channelConfiguration: The channel's async channel configuration.
     /// - Returns: A `NIOAsyncChannel` for the bound connection.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
     public func connect<Inbound: Sendable, Outbound: Sendable>(
         host: String,
         ipProtocol: NIOIPProtocol,
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
-        isOutboundHalfClosureEnabled: Bool = false,
-        inboundType: Inbound.Type = Inbound.self,
-        outboundType: Outbound.Type = Outbound.self
+        channelConfiguration: NIOAsyncChannel<Inbound, Outbound>.Configuration = .init()
     ) async throws -> NIOAsyncChannel<Inbound, Outbound> {
         try await self.connect0(
             host: host,
@@ -262,10 +245,7 @@ extension NIORawSocketBootstrap {
                 channel.eventLoop.makeCompletedFuture {
                     try NIOAsyncChannel(
                         synchronouslyWrapping: channel,
-                        backpressureStrategy: backpressureStrategy,
-                        isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
-                        inboundType: inboundType,
-                        outboundType: outboundType
+                        configuration: channelConfiguration
                     )
                 }
             },
