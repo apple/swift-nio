@@ -22,7 +22,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: String.self, outboundType: Never.self)
+            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
         }
 
         var iterator = wrapped.inboundStream.makeAsyncIterator()
@@ -48,7 +48,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: Never.self, outboundType: String.self)
+            try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel)
         }
 
         try await wrapped.outboundWriter.write("hello")
@@ -75,9 +75,11 @@ final class AsyncChannelTests: XCTestCase {
             let wrapped = try await channel.testingEventLoop.executeInContext {
                 try NIOAsyncChannel(
                     synchronouslyWrapping: channel,
-                    isOutboundHalfClosureEnabled: true,
-                    inboundType: Never.self,
-                    outboundType: Never.self
+                    configuration: .init(
+                        isOutboundHalfClosureEnabled: true,
+                        inboundType: Never.self,
+                        outboundType: Never.self
+                    )
                 )
             }
             inboundReader = wrapped.inboundStream
@@ -86,6 +88,8 @@ final class AsyncChannelTests: XCTestCase {
                 XCTAssertEqual(0, closeRecorder.outboundCloses)
             }
         }
+
+        await channel.testingEventLoop.run()
 
         try await channel.testingEventLoop.executeInContext {
             XCTAssertEqual(1, closeRecorder.outboundCloses)
@@ -106,7 +110,14 @@ final class AsyncChannelTests: XCTestCase {
 
         do {
             let wrapped = try await channel.testingEventLoop.executeInContext {
-                try NIOAsyncChannel(synchronouslyWrapping: channel, isOutboundHalfClosureEnabled: false, inboundType: Never.self, outboundType: Never.self)
+                try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    configuration: .init(
+                        isOutboundHalfClosureEnabled: false,
+                        inboundType: Never.self,
+                        outboundType: Never.self
+                    )
+                )
             }
             inboundReader = wrapped.inboundStream
 
@@ -138,9 +149,11 @@ final class AsyncChannelTests: XCTestCase {
                 let wrapped = try await channel.testingEventLoop.executeInContext {
                     try NIOAsyncChannel(
                         synchronouslyWrapping: channel,
-                        isOutboundHalfClosureEnabled: true,
-                        inboundType: Never.self,
-                        outboundType: Never.self
+                        configuration: .init(
+                            isOutboundHalfClosureEnabled: true,
+                            inboundType: Never.self,
+                            outboundType: Never.self
+                        )
                     )
                 }
                 inboundReader = wrapped.inboundStream
@@ -149,6 +162,8 @@ final class AsyncChannelTests: XCTestCase {
                     XCTAssertEqual(0, closeRecorder.allCloses)
                 }
             }
+
+            await channel.testingEventLoop.run()
 
             // First we see half-closure.
             try await channel.testingEventLoop.executeInContext {
@@ -176,7 +191,14 @@ final class AsyncChannelTests: XCTestCase {
 
         do {
             let wrapped = try await channel.testingEventLoop.executeInContext {
-                try NIOAsyncChannel(synchronouslyWrapping: channel, isOutboundHalfClosureEnabled: false, inboundType: Never.self, outboundType: Never.self)
+                try NIOAsyncChannel(
+                    synchronouslyWrapping: channel,
+                    configuration: .init(
+                        isOutboundHalfClosureEnabled: false,
+                        inboundType: Never.self,
+                        outboundType: Never.self
+                    )
+                )
             }
 
             try await channel.testingEventLoop.executeInContext {
@@ -199,7 +221,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: String.self, outboundType: Never.self)
+            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
         }
 
         try await channel.writeInbound("hello")
@@ -216,7 +238,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: String.self, outboundType: Never.self)
+            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
         }
 
         try await channel.writeInbound("hello")
@@ -237,7 +259,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: Never.self, outboundType: String.self)
+            try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel)
         }
 
         try await channel.testingEventLoop.executeInContext {
@@ -277,7 +299,7 @@ final class AsyncChannelTests: XCTestCase {
         do {
             // Create the NIOAsyncChannel, then drop it. The handler will still be in the pipeline.
             _ = try await channel.testingEventLoop.executeInContext {
-                _ = try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: Sentinel.self, outboundType: Never.self)
+                _ = try NIOAsyncChannel<Sentinel, Never>(synchronouslyWrapping: channel)
             }
         }
 
@@ -301,7 +323,14 @@ final class AsyncChannelTests: XCTestCase {
         let readCounter = ReadCounter()
         try await channel.pipeline.addHandler(readCounter)
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel(synchronouslyWrapping: channel, backpressureStrategy: .init(lowWatermark: 2, highWatermark: 4), inboundType: Void.self, outboundType: Never.self)
+            try NIOAsyncChannel(
+                synchronouslyWrapping: channel,
+                configuration: .init(
+                    backpressureStrategy: .init(lowWatermark: 2, highWatermark: 4),
+                    inboundType: Void.self,
+                    outboundType: Never.self
+                )
+            )
         }
 
         // Attempt to read. This should succeed an arbitrary number of times.
@@ -405,7 +434,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel(synchronouslyWrapping: channel, inboundType: String.self, outboundType: String.self)
+            try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
         }
 
         var iterator = wrapped.inboundStream.makeAsyncIterator()
