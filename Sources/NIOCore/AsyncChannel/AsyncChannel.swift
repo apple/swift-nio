@@ -36,7 +36,7 @@
 @_spi(AsyncChannel)
 public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     @_spi(AsyncChannel)
-    public struct Configuration {
+    public struct Configuration: Sendable {
         /// The backpressure strategy of the ``NIOAsyncChannel/inboundStream``.
         public var backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
