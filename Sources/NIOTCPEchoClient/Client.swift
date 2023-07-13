@@ -36,18 +36,20 @@ struct Client {
         // saturating the average small to medium sized machine.
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
-        let server = Client(
+        let client = Client(
             host: "localhost",
             port: 8765,
             eventLoopGroup: eventLoopGroup
         )
-        try await server.run()
+        try await client.run()
 
         print("Done sending requests; exiting in 5 seconds")
+        // We are only sleeping here to keep the terminal output visible a bit longer in Xcode
+        // so that users can see that something happened. This should normally not be done!
         try await Task.sleep(for: .seconds(5))
     }
 
-    /// This method starts the server and handles incoming connections.
+    /// This method sends a bunch of requests.
     func run() async throws {
         try await withThrowingTaskGroup(of: Void.self) { group in
             for i in 0...20 {
@@ -62,26 +64,59 @@ struct Client {
 
     private func sendRequest(number: Int) async throws {
         let channel = try await ClientBootstrap(group: eventLoopGroup)
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    // We are using two simple handlers here to frame our messages with "\n"
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
+                }
+            }
             .connect(
                 host: self.host,
                 port: self.port,
                 channelConfiguration: .init(
-                    inboundType: ByteBuffer.self,
-                    outboundType: ByteBuffer.self
+                    inboundType: String.self,
+                    outboundType: String.self
                 )
             )
 
         print("Connection(\(number)): Writing request")
-        try await channel.outboundWriter.write(ByteBuffer(string: "Hello on connection \(number)"))
+        try await channel.outboundWriter.write("Hello on connection \(number)")
 
         for try await inboundData in channel.inboundStream {
-            print("Connection(\(number)): Received response (\(String(buffer: inboundData)))")
+            print("Connection(\(number)): Received response (\(inboundData))")
 
             // We only expect a single response so we can exit here
             break
         }
     }
-}#else
+}
+
+/// A simple newline based encoder and decoder.
+private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncoder {
+    typealias InboundIn = ByteBuffer
+    typealias InboundOut = String
+
+    private let newLine = "\n".utf8.first!
+
+    init() {}
+
+    func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        let readable = buffer.withUnsafeReadableBytes { $0.firstIndex(of: self.newLine) }
+        if let readable = readable {
+            context.fireChannelRead(self.wrapInboundOut(buffer.readString(length: readable)!))
+            buffer.moveReaderIndex(forwardBy: 1)
+            return .continue
+        }
+        return .needMoreData
+    }
+
+    func encode(data: String, out: inout ByteBuffer) throws {
+        out.writeString(data)
+        out.writeString("\n")
+    }
+}
+#else
 @main
 struct Client {
     static func main() {

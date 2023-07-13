@@ -48,18 +48,28 @@ struct Server {
     func run() async throws {
         let channel = try await ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .childChannelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    // We are using two simple handlers here to frame our messages with "\n"
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
+                }
+            }
             .bind(
                 host: self.host,
                 port: self.port,
                 childChannelConfiguration: .init(
-                    inboundType: ByteBuffer.self,
-                    outboundType: ByteBuffer.self
+                    inboundType: String.self,
+                    outboundType: String.self
                 )
             )
 
         // We are handling each incoming connection in a separate child task. It is important
-        // to use a discarding task group here which automatically discards finished child tasks
-        // otherwise this task group would end up leaking memory of all finished connection tasks.
+        // to use a discarding task group here which automatically discards finished child tasks.
+        // A normal task group retains all child tasks and their outputs in memory until they are
+        // consumed by iterating the group or by exiting the group. Since, we are never consuming
+        // the results of the group we need the group to automatically discard them; otherwise, this
+        // would result in a memory leak over time.
         try await withThrowingDiscardingTaskGroup { group in
             for try await connectionChannel in channel.inboundStream {
                 group.addTask {
@@ -72,18 +82,44 @@ struct Server {
     }
 
     /// This method handles a single connection by echoing back all inbound data.
-    private func handleConnection(channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>) async {
+    private func handleConnection(channel: NIOAsyncChannel<String, String>) async {
         // Note that this method is non-throwing and we are catching any error.
         // We do this since we don't want to tear down the whole server when a single connection
         // encounters an error.
         do {
             for try await inboundData in channel.inboundStream {
-                print("Received request (\(String(buffer: inboundData)))")
+                print("Received request (\(inboundData))")
                 try await channel.outboundWriter.write(inboundData)
             }
         } catch {
             print("Hit error: \(error)")
         }
+    }
+}
+
+
+/// A simple newline based encoder and decoder.
+private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncoder {
+    typealias InboundIn = ByteBuffer
+    typealias InboundOut = String
+
+    private let newLine = "\n".utf8.first!
+
+    init() {}
+
+    func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        let readable = buffer.withUnsafeReadableBytes { $0.firstIndex(of: self.newLine) }
+        if let readable = readable {
+            context.fireChannelRead(self.wrapInboundOut(buffer.readString(length: readable)!))
+            buffer.moveReaderIndex(forwardBy: 1)
+            return .continue
+        }
+        return .needMoreData
+    }
+
+    func encode(data: String, out: inout ByteBuffer) throws {
+        out.writeString(data)
+        out.writeString("\n")
     }
 }
 #else
