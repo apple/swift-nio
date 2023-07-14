@@ -309,14 +309,12 @@ public struct ByteBuffer {
         }
 
         func dumpBytes(slice: Slice, offset: Int, length: Int) -> String {
-            var desc = "["
+            var desc = ""
             let bytes = UnsafeRawBufferPointer(start: self.bytes, count: Int(self.capacity))
             for byte in bytes[Int(slice.lowerBound) + offset ..< Int(slice.lowerBound) + offset + length] {
-                let hexByte = String(byte, radix: 16)
-                desc += " \(hexByte.count == 1 ? "0" : "")\(hexByte)"
+                desc += "\(String(byte: byte, padding: 2)) "
             }
-            desc += " ]"
-            return desc
+            return String(desc.dropLast())
         }
     }
 
@@ -675,7 +673,7 @@ public struct ByteBuffer {
     }
 
     /// Yields a buffer pointer containing this `ByteBuffer`'s readable bytes. You may hold a pointer to those bytes
-    /// even after the closure returned iff you model the lifetime of those bytes correctly using the `Unmanaged`
+    /// even after the closure returned if you model the lifetime of those bytes correctly using the `Unmanaged`
     /// instance. If you don't require the pointer after the closure returns, use `withUnsafeReadableBytes`.
     ///
     /// If you escape the pointer from the closure, you _must_ call `storageManagement.retain()` to get ownership to
@@ -898,7 +896,7 @@ extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
     ///
     /// - returns: A description of this `ByteBuffer` useful for debugging.
     public var debugDescription: String {
-        return "\(self.description)\nreadable bytes (max 1k): \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes)))"
+        return "\(self.description)\nreadable bytes (max 1k): [ \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes))) ]"
     }
 }
 
@@ -1118,4 +1116,94 @@ extension ByteBuffer {
         // uncheckedBounds is safe because `length` is >= 0, so the lower bound will always be lower/equal to upper
         return Range<Int>(uncheckedBounds: (lower: indexFromReaderIndex, upper: upperBound))
     }
+}
+
+// MARK: HexDump helpers
+
+extension ByteBuffer {
+
+    /// Return a `String` of hexadecimal digits of bytes in the Buffer,
+    /// in a format that's compatible with `xxd -r -p`.
+    func hexDump() -> String {
+        return self._storage.dumpBytes(slice: self._storage.fullSlice,
+                                       offset: 0,
+                                       length: self.readableBytes)
+    }
+
+    /// Return a `String` of hexadecimal digits of bytes in the Buffer.,
+    /// in a format that's compatible with `xxd -r -p`, but clips the output to the max length of `maxBytes` bytes.
+    /// If the buffer contains more than the `maxBytes` bytes, this function will return the first `maxBytes/2`
+    /// and the last `maxBytes/2` of that, replacing the rest with `...`, i.e. `01 02 03 ... 09 11 12`.
+    func hexDump(maxBytes: Int) -> String {
+        let totalBytes = self.readableBytes
+
+        if totalBytes <= maxBytes {
+            // If the whole buffer is smaller than the max hexdump length requested, return the full dump.
+            return self.hexDump()
+        } else {
+            // Otherwise, return two concatenated hexdumps of first maxBytes/2 bytes, and last maxBytes/2 bytes.
+            let clipLength = maxBytes / 2
+            let startHex = self._storage.dumpBytes(slice: self._storage.fullSlice,
+                                                   offset: 0,
+                                                   length: clipLength)
+
+            let endHex = self._storage.dumpBytes(slice: self._storage.fullSlice,
+                                                 offset: totalBytes - clipLength,
+                                                 length: clipLength)
+
+            return startHex + " ... " + endHex
+        }
+    }
+
+    /// Returns a `String` of hexadecimal digits of bytes in the Buffer,
+    /// with formatting compatible with output of `hexdump -C`.
+    func hexDumpWithASCII() -> String {
+        var result = ""
+
+        // hexdump -C dumps into lines of upto 16 bytes each
+        // with a last line containing only the offset column.
+        for lineIdx in 0 ... self.readableBytes/16 {
+
+            // Offset column for all lines except the last one.
+            result += "\(String(byte: lineIdx * 16, padding: 8))  "
+
+            let remainingBytes = self.readableBytes - lineIdx * 16
+            let lineLength = min(16, remainingBytes)
+
+            // 16 bytes, with a gap at index 8
+            for i in 0..<lineLength {
+                if i == 8 {
+                    result += " "
+                }
+                let byte = self.getInteger(at: lineIdx * 16 + i, as: UInt8.self)!
+                result += "\(String(byte: byte, padding: 2)) "
+            }
+
+            // Pad the line if it has less than 16 hex digits
+            for _ in lineLength..<16 {
+                result += "   "
+            }
+
+            // ASCII column
+            result += " |\(self.getPrintableString(from: lineIdx * 16, to: lineIdx * 16 + lineLength))|\n"
+        }
+
+        // Add the last line with the last byte offset
+        result += String(byte: self.readableBytes, padding: 8)
+        return result
+    }
+
+
+    func getPrintableString(from start: Int, to end: Int) -> String {
+        var result = ""
+        for index in start ..< end {
+            if let character = self.getString(at: index, length: 1), character >= " " && character <= "~" {
+                result += character
+            } else {
+                result += "."
+            }
+        }
+        return result
+    }
+
 }

@@ -35,7 +35,18 @@ extension String {
         var buffer = buffer
         self = buffer.readString(length: buffer.readableBytes)!
     }
-    
+
+    /// Creates a `String` from a given Int with base (radix) of 16, with the provided padding size.
+    /// - parameter padding: The desired length of the resulting string.
+    @inlinable
+    public init<T>(byte: T, padding: Int) where T : BinaryInteger {
+        self.init(byte, radix: 16)
+        var hexString = String(byte, radix: 16)
+        while hexString.count < padding {
+            hexString = "0" + hexString
+        }
+        self = hexString
+    }
 }
 
 extension DispatchData {
