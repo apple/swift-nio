@@ -673,7 +673,7 @@ public struct ByteBuffer {
     }
 
     /// Yields a buffer pointer containing this `ByteBuffer`'s readable bytes. You may hold a pointer to those bytes
-    /// even after the closure returned if you model the lifetime of those bytes correctly using the `Unmanaged`
+    /// even after the closure returned iff you model the lifetime of those bytes correctly using the `Unmanaged`
     /// instance. If you don't require the pointer after the closure returns, use `withUnsafeReadableBytes`.
     ///
     /// If you escape the pointer from the closure, you _must_ call `storageManagement.retain()` to get ownership to
