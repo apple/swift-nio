@@ -1901,7 +1901,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
-    func testHexASCIIDump() {
+    func testHexDumpLong() {
         let buf = ByteBufferAllocator().buffer(string: "Goodbye, world! It was nice knowing you.\n")
         let expected = """
         00000000  47 6f 6f 64 62 79 65 2c  20 77 6f 72 6c 64 21 20  |Goodbye, world! |
@@ -1909,7 +1909,19 @@ class ByteBufferTest: XCTestCase {
         00000020  69 6e 67 20 79 6f 75 2e  0a                       |ing you..|
         00000029
         """
-        let actual = buf.hexDumpWithASCII()
+        let actual = buf.hexDumpLong()
+        XCTAssertEqual(expected, actual)
+    }
+
+    func testHexDumpLongOffset() {
+        let buf = ByteBufferAllocator().buffer(string: "Goodbye, world! It was nice knowing you.\n")
+        let expected = """
+        00000000  79 65 2c 20 77 6f 72 6c  64 21 20 49 74 20 77 61  |ye, world! It wa|
+        00000010  73 20 6e 69 63 65 20 6b  6e 6f 77 69 6e 67 20 79  |s nice knowing y|
+        00000020  6f 75 2e 0a                                       |ou..|
+        00000024
+        """
+        let actual = buf.hexDumpLong(offset: 5)
         XCTAssertEqual(expected, actual)
     }
 

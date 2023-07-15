@@ -1146,8 +1146,8 @@ extension ByteBuffer {
     ///         including empty bytes in the end of the allocated space. Defaults to true.
     ///     - limit: The maximum amount of bytes presented in the dump.
     func hexDumpShort(offset: Int = 0, readableOnly: Bool = true, limit: Int) -> String {
-        let lastDumpByte = readableOnly ? self.readableBytes : self.capacity
-        let length = lastDumpByte - offset
+        let lastIndex = readableOnly ? self.writerIndex : self.capacity
+        let length = lastIndex - offset
 
         // If the length of the resulting hex dump is smaller than the maximum allowed dump length,
         // return the full dump. Otherwise, dump the first and last pieces of the buffer, then concatenate them.
@@ -1160,7 +1160,7 @@ extension ByteBuffer {
                                                    length: offset + clipLength)
 
             let endHex = self._storage.dumpBytes(slice: self._storage.fullSlice,
-                                                 offset: lastDumpByte - clipLength,
+                                                 offset: lastIndex - clipLength,
                                                  length: clipLength)
 
             return startHex + " ... " + endHex
@@ -1169,53 +1169,48 @@ extension ByteBuffer {
 
     /// Returns a `String` of hexadecimal digits of bytes in the Buffer,
     /// with formatting compatible with output of `hexdump -C`.
-    func hexDumpWithASCII() -> String {
+    func hexDumpLong(offset: Int = 0, readableOnly: Bool = true) -> String {
         var result = ""
+        let lastIndex = (readableOnly ? self.writerIndex : self.capacity)
+        let length = lastIndex - offset
+
+        // Grab the pointer to the whole buffer storage. We'll use offset and length when we index into it.
+        let bytes = UnsafeRawBufferPointer(start: self._storage.bytes, count: Int(self.capacity))
 
         // hexdump -C dumps into lines of upto 16 bytes each
         // with a last line containing only the offset column.
-        for lineIdx in 0 ... self.readableBytes/16 {
+        for line in 0 ... length/16 {
+            // Line offset column
+            result += "\(String(byte: line * 16, padding: 8))  "
 
-            // Offset column for all lines except the last one.
-            result += "\(String(byte: lineIdx * 16, padding: 8))  "
+            // The amount of bytes remaining in this dump
+            let remainingBytes = length - line * 16
 
-            let remainingBytes = self.readableBytes - lineIdx * 16
+            // The amount of bytes in this dump line.
             let lineLength = min(16, remainingBytes)
 
-            // 16 bytes, with a gap at index 8
-            for i in 0..<lineLength {
-                if i == 8 {
-                    result += " "
-                }
-                let byte = self.getInteger(at: lineIdx * 16 + i, as: UInt8.self)!
-                result += "\(String(byte: byte, padding: 2)) "
-            }
+            // The index range in the buffer storage for this line.
+            let range = (offset + line*16)..<(offset + line*16 + lineLength)
 
-            // Pad the line if it has less than 16 hex digits
-            for _ in lineLength..<16 {
-                result += "   "
-            }
+            // Grab just the bytes for this particular line
+            let lineBytes = bytes[range]
+
+            // Make a hexdump of a single line of up to 16 bytes
+            // Pad it with empty space if there were not enough bytes in the buffer dump range
+            // And insert the separator space in the middle of the line
+            var lineDump = bytes[range].map { String(byte: $0, padding: 2) }.joined(separator: " ")
+            lineDump.append(String(repeating: " ", count: 49 - lineDump.count))
+            lineDump.insert(" ", at: lineDump.index(lineDump.startIndex, offsetBy: 24))
+            result += lineDump
 
             // ASCII column
-            result += " |\(self.getPrintableString(from: lineIdx * 16, to: lineIdx * 16 + lineLength))|\n"
+            result += "|" + String(decoding: lineBytes, as: Unicode.UTF8.self).map {
+                $0 >= " " && $0 < "~" ? $0 : "."
+            } + "|\n"
         }
 
         // Add the last line with the last byte offset
-        result += String(byte: self.readableBytes, padding: 8)
+        result += String(byte: length, padding: 8)
         return result
     }
-
-
-    func getPrintableString(from start: Int, to end: Int) -> String {
-        var result = ""
-        for index in start ..< end {
-            if let character = self.getString(at: index, length: 1), character >= " " && character <= "~" {
-                result += character
-            } else {
-                result += "."
-            }
-        }
-        return result
-    }
-
 }
