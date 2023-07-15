@@ -1925,6 +1925,21 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
+    func testHexDumpLongFullBuffer() {
+        let buf = ByteBufferAllocator().buffer(string: "Goodbye, world! It was nice knowing you.\n")
+        let expected = """
+        00000000  47 6f 6f 64 62 79 65 2c  20 77 6f 72 6c 64 21 20  |Goodbye, world! |
+        00000010  49 74 20 77 61 73 20 6e  69 63 65 20 6b 6e 6f 77  |It was nice know|
+        00000020  69 6e 67 20 79 6f 75 2e  0a 00 00 00 00 00 00 00  |ing you.........|
+        00000030  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+        00000040
+        """
+        let actual = buf.hexDumpLong(readableOnly: false)
+        XCTAssertEqual(expected, actual)
+    }
+
+
+
     func testReadableBytesView() throws {
         self.buf.clear()
         self.buf.writeString("hello world 012345678")
