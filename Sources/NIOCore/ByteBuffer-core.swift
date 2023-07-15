@@ -1129,7 +1129,7 @@ extension ByteBuffer {
     ///     - offset:  The offset from the beginning of the buffer, in bytes. Defaults to 0.
     ///     - readableOnly: Whether to only dump the `readableBytes` part (before the `writerIndex`), or to dump the full buffer, including empty bytes in the end of the allocated space. Defaults to true.
     func hexDumpShort(offset: Int = 0, readableOnly: Bool = true) -> String {
-        let length = (readableOnly ? self.readableBytes : self.capacity) - offset
+        let length = (readableOnly ? self.writerIndex : self.capacity) - offset
         return self._storage.dumpBytes(slice: self._storage.fullSlice,
                                        offset: offset,
                                        length: length)
