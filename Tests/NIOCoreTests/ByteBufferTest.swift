@@ -1855,10 +1855,23 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
-    func testXXDHexDump() {
+    func testHexDumpShort() {
         let buf = ByteBufferAllocator().buffer(string: "Hello")
 
-        XCTAssertEqual("48 65 6c 6c 6f", buf.hexDump())
+        XCTAssertEqual("48 65 6c 6c 6f", buf.hexDumpShort())
+    }
+
+    func testHexDumpShortToCapacity() {
+        let buf = ByteBufferAllocator().buffer(string: "Hello")
+        // When dumping with `readableOnly: false`, hexDump will dump all bytes until the
+        // end of buffer's allocated storage.
+        let zeroes = String(repeating: " 00", count: buf.capacity - buf.readableBytes)
+        XCTAssertEqual("48 65 6c 6c 6f" + zeroes, buf.hexDumpShort(readableOnly: false))
+    }
+
+    func testHexDumpShortWithOffset() {
+        let buf = ByteBufferAllocator().buffer(string: "Hello")
+        XCTAssertEqual("6c 6c 6f", buf.hexDumpShort(offset: 2))
     }
 
     func testXXDClippedHexDump() {
@@ -1866,10 +1879,12 @@ class ByteBufferTest: XCTestCase {
         for f in UInt8.min...UInt8.max {
             self.buf.writeInteger(f)
         }
-        let actual = self.buf.hexDump(maxBytes: 10)
+        let actual = self.buf.hexDumpShort(limit: 10)
         let expected = "00 01 02 03 04 ... fb fc fd fe ff"
         XCTAssertEqual(expected, actual)
     }
+
+
 
     func testHexASCIIDump() {
         let buf = ByteBufferAllocator().buffer(string: "Goodbye, world! It was nice knowing you.\n")
