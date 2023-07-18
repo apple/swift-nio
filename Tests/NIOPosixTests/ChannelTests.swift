@@ -2770,9 +2770,9 @@ public final class ChannelTests: XCTestCase {
         XCTAssertEqual(1, counter.errorCaughtCalls)
     }
 
-    func _testTCP_NODELAYis(
-        enabledByDefault: Bool,
-        for socketAddress: SocketAddress,
+    func _testTCP_NODELAYDefaultValue(
+        value: Bool,
+        _ socketAddress: SocketAddress,
         file: StaticString = #file,
         line: UInt = #line
     ) throws {
@@ -2808,31 +2808,31 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(
             XCTAssertEqual(
                 try getBoolSocketOption(channel: accepted, level: .tcp, name: .tcp_nodelay),
-                enabledByDefault,
+                value,
                 file: file, line: line),
             file: file, line: line
         )
         XCTAssertNoThrow(
             XCTAssertEqual(
                 try getBoolSocketOption(channel: client, level: .tcp, name: .tcp_nodelay),
-                enabledByDefault,
+                value,
                 file: file, line: line),
             file: file, line: line
         )
     }
 
     func testTCP_NODELAYisOnByDefaultForInetSockets() throws {
-        try _testTCP_NODELAYis(enabledByDefault: true, for: SocketAddress(ipAddress: "127.0.0.1", port: 0))
+        try _testTCP_NODELAYDefaultValue(value: true, SocketAddress(ipAddress: "127.0.0.1", port: 0))
     }
 
     func testTCP_NODELAYisOnByDefaultForInet6Sockets() throws {
         try XCTSkipUnless(System.supportsIPv6)
-        try _testTCP_NODELAYis(enabledByDefault: true, for: SocketAddress(ipAddress: "::1", port: 0))
+        try _testTCP_NODELAYDefaultValue(value: true, SocketAddress(ipAddress: "::1", port: 0))
     }
 
     func testTCP_NODELAYisOffByDefaultForUnixSockets() throws {
         try withTemporaryUnixDomainSocketPathName { udsPath in
-            try _testTCP_NODELAYis(enabledByDefault: false, for: SocketAddress(unixDomainSocketPath: udsPath))
+            try _testTCP_NODELAYDefaultValue(value: false, SocketAddress(unixDomainSocketPath: udsPath))
         }
     }
 
