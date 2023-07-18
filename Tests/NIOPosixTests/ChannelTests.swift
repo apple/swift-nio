@@ -2823,6 +2823,10 @@ public final class ChannelTests: XCTestCase {
 
     func testTCP_NODELAYisOnByDefaultForInetSockets() throws {
         try _testTCP_NODELAYis(enabledByDefault: true, for: SocketAddress(ipAddress: "127.0.0.1", port: 0))
+    }
+
+    func testTCP_NODELAYisOnByDefaultForInet6Sockets() throws {
+        try XCTSkipUnless(System.supportsIPv6)
         try _testTCP_NODELAYis(enabledByDefault: true, for: SocketAddress(ipAddress: "::1", port: 0))
     }
 
