@@ -203,9 +203,9 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual(memcmp(&thirdIPAddress, &thirdCopy, MemoryLayout<sockaddr_un>.size), 0)
 
         // Test unsupported socket address family.
-        var sysAddr = sockaddr_storage()
-        sysAddr.ss_family = sa_family_t(AF_SYSTEM)
-        XCTAssertThrowsError(try sysAddr.convert() as SocketAddress) { error in
+        var unspecAddr = sockaddr_storage()
+        unspecAddr.ss_family = sa_family_t(AF_UNSPEC)
+        XCTAssertThrowsError(try unspecAddr.convert() as SocketAddress) { error in
             guard case .unsupported = error as? SocketAddressError else {
                 XCTFail("Expected error \(SocketAddressError.unsupported), got error \(error).")
                 return
