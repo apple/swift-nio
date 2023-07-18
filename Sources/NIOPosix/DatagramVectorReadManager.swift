@@ -178,9 +178,7 @@ struct DatagramVectorReadManager {
 #else
             precondition(self.messageVector[i].msg_hdr.msg_namelen != 0, "Unexpected zero length peer name")
 #endif
-            let address: SocketAddress
-            do { address = try self.sockaddrVector[i].convert() }
-            catch { fatalError("Socket address conversion failed.") }
+            let address: SocketAddress = try! self.sockaddrVector[i].convert()
             
             // Extract congestion information if requested.
             let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
