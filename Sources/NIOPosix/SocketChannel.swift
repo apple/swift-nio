@@ -640,6 +640,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             switch result {
             case .processed(let bytesRead):
                 assert(self.isOpen)
+                let remoteAddress: SocketAddress = try rawAddress.convert()
+
                 self.recvBufferPool.record(actualReadBytes: bytesRead)
                 readPending = false
 
@@ -651,7 +653,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     metadata = nil
                 }
 
-                let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
+                let msg = AddressedEnvelope(remoteAddress: remoteAddress,
                                             data: buffer,
                                             metadata: metadata)
                 assert(self.isActive)
