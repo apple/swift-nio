@@ -382,6 +382,10 @@ func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_un {
     return addr.convert()
 }
 
+func __testOnly_convertSockAddr(_ addr: sockaddr_storage) throws -> SocketAddress {
+    return try addr.convert()
+}
+
 func __testOnly_withMutableSockAddr<ReturnType>(
     _ addr: inout sockaddr_storage, _ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> ReturnType
 ) rethrows -> ReturnType {

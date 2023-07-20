@@ -205,7 +205,7 @@ class SocketAddressTest: XCTestCase {
         // Test unsupported socket address family.
         var unspecAddr = sockaddr_storage()
         unspecAddr.ss_family = sa_family_t(AF_UNSPEC)
-        XCTAssertThrowsError(try unspecAddr.convert() as SocketAddress) { error in
+        XCTAssertThrowsError(try __testOnly_convertSockAddr(unspecAddr) as SocketAddress) { error in
             guard case .unsupported = error as? SocketAddressError else {
                 XCTFail("Expected error \(SocketAddressError.unsupported), got error \(error).")
                 return
