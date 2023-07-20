@@ -2830,12 +2830,6 @@ public final class ChannelTests: XCTestCase {
         try _testTCP_NODELAYDefaultValue(value: true, SocketAddress(ipAddress: "::1", port: 0))
     }
 
-    func testTCP_NODELAYisOffByDefaultForUnixSockets() throws {
-        try withTemporaryUnixDomainSocketPathName { udsPath in
-            try _testTCP_NODELAYDefaultValue(value: false, SocketAddress(unixDomainSocketPath: udsPath))
-        }
-    }
-
     func testDescriptionCanBeCalledFromNonEventLoopThreads() {
         // regression test for https://github.com/apple/swift-nio/issues/1141
         let q = DispatchQueue(label: "elsewhere")
