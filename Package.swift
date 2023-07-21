@@ -46,6 +46,7 @@ let package = Package(
             name: "NIOCore",
             dependencies: [
                 "NIOConcurrencyHelpers",
+                "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
                 swiftCollections,

@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <netinet/ip.h>
 #include <netinet/in.h>
+#include <sys/ioctl.h>
 
 int CNIODarwin_sendmmsg(int sockfd, CNIODarwin_mmsghdr *msgvec, unsigned int vlen, int flags) {
     // Some quick error checking. If vlen can't fit into int, we bail.
@@ -90,4 +91,9 @@ const int CNIODarwin_IPTOS_ECN_CE = IPTOS_ECN_CE;
 const int CNIODarwin_IPV6_RECVPKTINFO = IPV6_RECVPKTINFO;
 const int CNIODarwin_IPV6_PKTINFO = IPV6_PKTINFO;
 
+uint32_t CNIODarwin_get_local_vsock_cid(int socket) {
+    uint32_t cid = 0;
+    int result = ioctl(socket, IOCTL_VM_SOCKETS_GET_LOCAL_CID, &cid);
+    return cid;
+}
 #endif  // __APPLE__

@@ -326,6 +326,25 @@ public final class ServerBootstrap {
         return self.bind(unixDomainSocketPath: unixDomainSocketPath)
     }
 
+    #if canImport(Darwin) || os(Linux)
+    public func bind(to vsockAddress: VsockAddress) throws -> EventLoopFuture<Channel> {
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
+            if enableMPTCP {
+                throw ChannelError.operationUnsupported
+            }
+            let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
+            try socket.bind(to: vsockAddress)
+            try socket.listen(backlog: 128)
+            return try ServerSocketChannel(serverSocket: socket, eventLoop: eventLoop, group: childEventLoopGroup)
+        }
+        return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
+            let promise = eventLoop.makePromise(of: Void.self)
+            serverChannel.registerAlreadyConfigured0(promise: promise)
+            return promise.futureResult
+        }
+    }
+    #endif
+
     #if !os(Windows)
         /// Use the existing bound socket file descriptor.
         ///
@@ -1263,6 +1282,50 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
             return self.group.next().makeFailedFuture(error)
         }
     }
+
+    #if canImport(Darwin) || os(Linux)
+    public func connect(to vsockAddress: VsockAddress) throws -> EventLoopFuture<Channel> {
+        let eventLoop = group.next()
+        let channelInitializer = self.channelInitializer
+        let socket: Socket
+        let channel: SocketChannel
+        do {
+            socket = try Socket(protocolFamily: .vsock, type: .stream)
+            if try !socket.connect(to: vsockAddress) {
+                try socket.finishConnect()
+            }
+            channel = try SocketChannel(socket: socket, eventLoop: eventLoop as! SelectableEventLoop)
+            channel.closeFuture.whenComplete() { _ in
+                try? socket.close()
+            }
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
+
+        func setupChannel() -> EventLoopFuture<Channel> {
+            eventLoop.assertInEventLoop()
+            return self._channelOptions.applyAllChannelOptions(to: channel).flatMap {
+                channelInitializer(channel)
+            }.flatMap {
+                eventLoop.assertInEventLoop()
+                let promise = eventLoop.makePromise(of: Void.self)
+                channel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            }.map {
+                channel
+            }.flatMapError { error in
+                channel.close0(error: error, mode: .all, promise: nil)
+                return channel.eventLoop.makeFailedFuture(error)
+            }
+        }
+
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
+            return eventLoop.flatSubmit { setupChannel() }
+        }
+    }
+    #endif
 
     #if !os(Windows)
         /// Use the existing connected socket file descriptor.
