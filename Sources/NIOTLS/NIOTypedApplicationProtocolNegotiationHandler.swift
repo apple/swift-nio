@@ -139,6 +139,9 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
         case .removeHandler(let value):
             self.negotiatedPromise.succeed(value)
             context.pipeline.removeHandler(self, promise: nil)
+
+        case .none:
+            break
         }
     }
 

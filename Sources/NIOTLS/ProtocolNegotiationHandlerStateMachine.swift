@@ -89,9 +89,9 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
     }
 
     @inlinable
-    mutating func userFutureCompleted(with result: Result<NegotiationResult, Error>) -> UserFutureCompletedAction {
+    mutating func userFutureCompleted(with result: Result<NegotiationResult, Error>) -> UserFutureCompletedAction? {
         switch self.state {
-        case .initial, .finished:
+        case .initial:
             preconditionFailure("Invalid state \(self.state)")
 
         case .waitingForUser(let buffer):
@@ -118,6 +118,10 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
 
         case .unbuffering:
             preconditionFailure("Invalid state \(self.state)")
+
+        case .finished:
+            // It might be that the user closed the channel in his closure. We have to tolerate this.
+            return .none
         }
     }
 

@@ -142,6 +142,9 @@ public final class ApplicationProtocolNegotiationHandler: ChannelInboundHandler,
 
         case .removeHandler:
             context.pipeline.removeHandler(self, promise: nil)
+
+        case .none:
+            break
         }
     }
 
