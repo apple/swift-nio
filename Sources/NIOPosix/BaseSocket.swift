@@ -74,7 +74,7 @@ extension sockaddr_storage {
     }
 
     /// Converts the `socketaddr_storage` to a `SocketAddress`.
-    func convert() -> SocketAddress {
+    func convert() throws -> SocketAddress {
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(self.ss_family)) {
         case .inet:
             let sockAddr: sockaddr_in = self.convert()
@@ -85,7 +85,7 @@ extension sockaddr_storage {
         case .unix:
             return SocketAddress(self.convert() as sockaddr_un)
         default:
-            fatalError("unknown sockaddr family \(self.ss_family)")
+            throw SocketAddressError.unsupported
         }
     }
 }
@@ -154,7 +154,7 @@ class BaseSocket: BaseSocketProtocol {
                 try body($0, addressPtr, &size)
             }
         }
-        return addr.convert()
+        return try addr.convert()
     }
 
     /// Create a new socket and return the file descriptor of it.
@@ -385,6 +385,10 @@ func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_in6 {
 
 func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_un {
     return addr.convert()
+}
+
+func __testOnly_convertSockAddr(_ addr: sockaddr_storage) throws -> SocketAddress {
+    return try addr.convert()
 }
 
 func __testOnly_withMutableSockAddr<ReturnType>(
