@@ -24,7 +24,7 @@ class VsockAddressTest: XCTestCase {
     }
 
     func testSocketAddressEqualitySpecialValues() throws {
-        XCTAssertEqual(VsockAddress(cid: .any, port: 12345), .init(cid: UInt32(bitPattern: -1), port: 12345))
+        XCTAssertEqual(VsockAddress(cid: .any, port: 12345), .init(cid: .init(rawValue: UInt32(bitPattern: -1)), port: 12345))
         XCTAssertEqual(VsockAddress(cid: .hypervisor, port: 12345), .init(cid: 0, port: 12345))
         XCTAssertEqual(VsockAddress(cid: .host, port: 12345), .init(cid: 2, port: 12345))
     }
@@ -37,6 +37,13 @@ class VsockAddressTest: XCTestCase {
         XCTAssertNotEqual(VsockAddress(cid: 0, port: 0), .init(cid: 1, port: 0))
         XCTAssertNotEqual(VsockAddress(cid: 0, port: 0), .init(cid: 0, port: 1))
     }
-}
 
+    func testGetLocalCID() throws {
+        try XCTSkipUnless(System.supportsVsock)
+        let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
+        let localCID = try socket.getLocalContextID()
+        XCTAssertGreaterThan(localCID.rawValue, VsockAddress.ContextID.host.rawValue)
+        XCTAssertNotEqual(localCID, .any)
+    }
+}
 #endif

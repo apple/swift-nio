@@ -28,6 +28,7 @@ void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug(void) {}
 #include <unistd.h>
 #include <assert.h>
 #include <time.h>
+#include <sys/ioctl.h>
 
 _Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr),
                "sizes of CNIOLinux_mmsghdr and struct mmsghdr differ");
@@ -190,12 +191,13 @@ int CNIOLinux_system_info(struct utsname* uname_data) {
 /// - On Darwin, `IOCTL_VM_SOCKETS_GET_LOCAL_CID` is called with the socket to get the local CID.
 ///
 /// - On Linux, `IOCTL_VM_SOCKETS_GET_LOCAL_CID` is called with `/dev/vsock` and, while it is a
-/// supported way to get the local CID, the man page encourages the use of `VMADDR_CID_LOCAL` instead.
-///
-/// This Linux API exists solely for consistency with Darwin platforms and, as such, makes no use of
-/// the parameter and just returns `VMADDR_CID_LOCAL`.
-uint32_t CNIOLinux_get_local_vsock_cid(int __unused__) {
-    return VMADDR_CID_LOCAL;
+/// supported way to get the local CID, the man page encourages the use of `VMADDR_CID_LOCAL` for loopback.
+int CNIOLinux_get_local_vsock_cid(int devVsockFd, uint32_t *cid) {
+    int rc;
+    do {
+        rc = ioctl(devVsockFd, IOCTL_VM_SOCKETS_GET_LOCAL_CID, cid);
+    } while (rc == -EINTR);
+    return rc;
 }
 
 #endif

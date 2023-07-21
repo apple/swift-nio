@@ -91,9 +91,11 @@ const int CNIODarwin_IPTOS_ECN_CE = IPTOS_ECN_CE;
 const int CNIODarwin_IPV6_RECVPKTINFO = IPV6_RECVPKTINFO;
 const int CNIODarwin_IPV6_PKTINFO = IPV6_PKTINFO;
 
-uint32_t CNIODarwin_get_local_vsock_cid(int socket) {
-    uint32_t cid = 0;
-    int result = ioctl(socket, IOCTL_VM_SOCKETS_GET_LOCAL_CID, &cid);
-    return cid;
+int CNIODarwin_get_local_vsock_cid(int socket, uint32_t *cid) {
+    int rc;
+    do {
+        rc = ioctl(socket, IOCTL_VM_SOCKETS_GET_LOCAL_CID, cid);
+    } while (rc == -EINTR);
+    return rc;
 }
 #endif  // __APPLE__

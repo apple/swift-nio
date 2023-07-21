@@ -115,7 +115,7 @@ bool CNIOLinux_supports_udp_gro();
 
 int CNIOLinux_system_info(struct utsname* uname_data);
 
-uint32_t CNIOLinux_get_local_vsock_cid(int socket);
+int CNIOLinux_get_local_vsock_cid(int __unused__, uint32_t *cid);
 
 #endif
 #endif

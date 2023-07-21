@@ -39,5 +39,11 @@ extension BaseSocket {
             }
         }
     }
+
+    func getLocalContextID() throws -> VsockAddress.ContextID {
+        try self.withUnsafeHandle { fd in
+            try VsockAddress.ContextID.getLocalContextID(fd)
+        }
+    }
 }
 #endif  // canImport(Darwin) || os(Linux)

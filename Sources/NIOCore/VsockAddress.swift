@@ -16,7 +16,7 @@
 #if canImport(Darwin)
 import Darwin
 import CNIODarwin
-fileprivate let get_local_vsock_cid: @convention(c) (CInt) -> UInt32 = CNIODarwin_get_local_vsock_cid
+fileprivate let get_local_vsock_cid: @convention(c) (CInt, UnsafeMutablePointer<UInt32>?) -> CInt = CNIODarwin_get_local_vsock_cid
 #elseif os(Linux)
 #if canImport(Glibc)
 import Glibc
@@ -24,7 +24,7 @@ import Glibc
 import Musl
 #endif
 import CNIOLinux
-fileprivate let get_local_vsock_cid: @convention(c) (CInt) -> UInt32 = CNIOLinux_get_local_vsock_cid
+fileprivate let get_local_vsock_cid: @convention(c) (CInt, UnsafeMutablePointer<UInt32>?) -> CInt = CNIOLinux_get_local_vsock_cid
 #else
 #error("Unable to identify your C library.")
 #endif
@@ -77,16 +77,6 @@ public struct VsockAddress: Sendable {
     public init(cid: Int, port: Int) {
         self.init(cid: UInt32(bitPattern: Int32(truncatingIfNeeded: cid)), port: UInt32(bitPattern: Int32(truncatingIfNeeded: port)))
     }
-
-    /// Get the local context ID for a vsock socket.
-    ///
-    /// - parameters:
-    ///   - socket: The vsock socket to get the local context ID for.
-    ///
-    /// - NOTE: On Linux, you can use `VMADDR_CID_LOCAL` to retrieve the local context ID, which does not require a socket.
-    public static func localVsockContextID(_ socket: NIOBSDSocket.Handle) -> Int {
-        Int(get_local_vsock_cid(socket))
-    }
 }
 
 extension VsockAddress {
@@ -131,8 +121,18 @@ extension VsockAddress {
         /// Get the context ID of the local machine.
         ///
         /// On Linux, consider using ``local`` when binding instead of this function.
-        public static func getLocalContextID(_ socket: NIOBSDSocket.Handle) -> Self {
-            Self(rawValue: get_local_vsock_cid(socket))
+        public static func getLocalContextID(_ socketFD: NIOBSDSocket.Handle) throws -> Self {
+            var cid = ContextID.any.rawValue
+#if canImport(Darwin)
+            try syscall(blocking: false) { get_local_vsock_cid(socketFD, &cid) }
+#elseif os(Linux)
+            let devVsockFD = open("/dev/vsock", O_RDONLY)
+            precondition(devVsockFD >= 0, "couldn't open /dev/vsock (\(errno))")
+            defer { close(devVsockFD) }
+            let x = try syscall(blocking: false) { get_local_vsock_cid(devVsockFD, &cid) }
+#endif
+            precondition(cid != ContextID.any.rawValue)
+            return Self(rawValue: cid)
         }
     }
 

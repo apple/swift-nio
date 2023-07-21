@@ -51,7 +51,7 @@ void *CNIODarwin_CMSG_DATA_MUTABLE(struct cmsghdr *);
 size_t CNIODarwin_CMSG_LEN(size_t);
 size_t CNIODarwin_CMSG_SPACE(size_t);
 
-uint32_t CNIODarwin_get_local_vsock_cid(int socket);
+int CNIODarwin_get_local_vsock_cid(int socket, uint32_t *cid);
 
 #endif  // __APPLE__
 #endif  // C_NIO_DARWIN_H
