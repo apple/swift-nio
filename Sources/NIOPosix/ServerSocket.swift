@@ -39,10 +39,6 @@ import NIOCore
         switch protocolFamily {
         case .unix:
             cleanupOnClose = true
-        #if canImport(Darwin) || os(Linux)
-        case .vsock:
-            cleanupOnClose = true
-        #endif
         default:
             cleanupOnClose = false
         }
