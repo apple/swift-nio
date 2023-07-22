@@ -74,7 +74,7 @@ extension sockaddr_storage {
     }
 
     /// Converts the `socketaddr_storage` to a `SocketAddress`.
-    func convert() -> SocketAddress {
+    func convert() throws -> SocketAddress {
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(self.ss_family)) {
         case .inet:
             let sockAddr: sockaddr_in = self.convert()
@@ -85,7 +85,7 @@ extension sockaddr_storage {
         case .unix:
             return SocketAddress(self.convert() as sockaddr_un)
         default:
-            fatalError("unknown sockaddr family \(self.ss_family)")
+            throw SocketAddressError.unsupported
         }
     }
 }
@@ -154,7 +154,7 @@ class BaseSocket: BaseSocketProtocol {
                 try body($0, addressPtr, &size)
             }
         }
-        return addr.convert()
+        return try addr.convert()
     }
 
     /// Create a new socket and return the file descriptor of it.
@@ -271,10 +271,15 @@ class BaseSocket: BaseSocketProtocol {
     ///     - value: The value for the option.
     /// - throws: An `IOError` if the operation failed.
     func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
-        if level == .tcp && name == .tcp_nodelay && (try? self.localAddress().protocol) == Optional<NIOBSDSocket.ProtocolFamily>.some(.unix) {
-            // setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
+        if level == .tcp && name == .tcp_nodelay {
+            switch try? self.localAddress().protocol {
+            case .some(.inet), .some(.inet6): break
+            // Setting TCP_NODELAY on UNIX domain sockets will fail. Previously we had a bug where we would ignore
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
-            return
+            case .some(.unix): return
+            // We'll also ignore this option on socket protocol families that NIO doesn't explicitly support.
+            case .some(_), .none: return
+            }
         }
         return try withUnsafeBytes(of: value) { (valueBuffer: UnsafeRawBufferPointer) in
             try self.withUnsafeHandle {
@@ -380,6 +385,10 @@ func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_in6 {
 
 func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_un {
     return addr.convert()
+}
+
+func __testOnly_convertSockAddr(_ addr: sockaddr_storage) throws -> SocketAddress {
+    return try addr.convert()
 }
 
 func __testOnly_withMutableSockAddr<ReturnType>(

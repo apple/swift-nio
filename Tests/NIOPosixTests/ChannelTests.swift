@@ -2770,39 +2770,64 @@ public final class ChannelTests: XCTestCase {
         XCTAssertEqual(1, counter.errorCaughtCalls)
     }
 
-    func testTCP_NODELAYisOnByDefault() throws {
+    func _testTCP_NODELAYDefaultValue(
+        value: Bool,
+        _ socketAddress: SocketAddress,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws {
         let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
-            XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
+            XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully(), file: file, line: line)
         }
         let acceptedChannel = singleThreadedELG.next().makePromise(of: Channel.self)
-        let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
+        let server = try assertNoThrowWithValue(
+            ServerBootstrap(group: singleThreadedELG)
             .childChannelInitializer { channel in
                 acceptedChannel.succeed(channel)
                 return channel.eventLoop.makeSucceededFuture(())
             }
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+            .bind(to: socketAddress)
+            .wait(),
+            file: file, line: line
+        )
         defer {
-            XCTAssertNoThrow(try server.close().wait())
+            XCTAssertNoThrow(try server.close().wait(), file: file, line: line)
         }
-        XCTAssertNoThrow(XCTAssertTrue(try getBoolSocketOption(channel: server,
-                                                               level: .tcp,
-                                                               name: .tcp_nodelay)))
 
-        let client = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
+        let client = try assertNoThrowWithValue(
+            ClientBootstrap(group: singleThreadedELG)
             .connect(to: server.localAddress!)
-            .wait())
-        let accepted = try assertNoThrowWithValue(acceptedChannel.futureResult.wait())
+            .wait(),
+            file: file, line: line
+        )
+        let accepted = try assertNoThrowWithValue(acceptedChannel.futureResult.wait(), file: file, line: line)
         defer {
-            XCTAssertNoThrow(try client.close().wait())
+            XCTAssertNoThrow(try client.close().wait(), file: file, line: line)
         }
-        XCTAssertNoThrow(XCTAssertTrue(try getBoolSocketOption(channel: accepted,
-                                                               level: .tcp,
-                                                               name: .tcp_nodelay)))
-        XCTAssertNoThrow(XCTAssertTrue(try getBoolSocketOption(channel: client,
-                                                               level: .tcp,
-                                                               name: .tcp_nodelay)))
+        XCTAssertNoThrow(
+            XCTAssertEqual(
+                try getBoolSocketOption(channel: accepted, level: .tcp, name: .tcp_nodelay),
+                value,
+                file: file, line: line),
+            file: file, line: line
+        )
+        XCTAssertNoThrow(
+            XCTAssertEqual(
+                try getBoolSocketOption(channel: client, level: .tcp, name: .tcp_nodelay),
+                value,
+                file: file, line: line),
+            file: file, line: line
+        )
+    }
+
+    func testTCP_NODELAYisOnByDefaultForInetSockets() throws {
+        try _testTCP_NODELAYDefaultValue(value: true, SocketAddress(ipAddress: "127.0.0.1", port: 0))
+    }
+
+    func testTCP_NODELAYisOnByDefaultForInet6Sockets() throws {
+        try XCTSkipUnless(System.supportsIPv6)
+        try _testTCP_NODELAYDefaultValue(value: true, SocketAddress(ipAddress: "::1", port: 0))
     }
 
     func testDescriptionCanBeCalledFromNonEventLoopThreads() {
