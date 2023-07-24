@@ -48,7 +48,7 @@ extension BaseSocket {
 }
 
 extension VsockAddress.ContextID {
-    public static func getLocalContextID() throws -> Self {
+    static func getLocalContextID() throws -> Self {
         let socket = try Socket(protocolFamily: .vsock, type: .stream)
         defer { try? socket.close() }
         return try socket.withUnsafeHandle { handle in
