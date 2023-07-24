@@ -678,6 +678,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return autoRead as! Option.Value
         case _ as ChannelOptions.Types.MaxMessagesPerReadOption:
             return maxMessagesPerRead as! Option.Value
+        case _ as ChannelOptions.Types.LocalVsockContextID:
+            return try VsockAddress.ContextID.getLocalContextID() as! Option.Value
         default:
             fatalError("option \(option) not supported")
         }

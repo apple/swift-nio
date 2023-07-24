@@ -287,6 +287,12 @@ extension ChannelOptions {
             public typealias Value = Bool
             public init() {}
         }
+
+        /// This get-only option is used on channels backed by vsock sockets to get the local VSOCK context ID.
+        public struct LocalVsockContextID: ChannelOption, Sendable {
+            public typealias Value = VsockAddress.ContextID
+            public init() {}
+        }
     }
 }
 
@@ -354,6 +360,9 @@ public struct ChannelOptions {
 
     /// - seealso: `ReceivePacketInfo`
     public static let receivePacketInfo = Types.ReceivePacketInfo()
+
+    /// - seealso: `LocalVsockContextID`
+    public static let localVsockContextID = Types.LocalVsockContextID()
 }
 
 extension ChannelOptions {

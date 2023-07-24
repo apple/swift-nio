@@ -43,13 +43,22 @@ class VsockAddressTest: XCTestCase {
     func testGetLocalCID() throws {
         try XCTSkipUnless(System.supportsVsock)
 
+        // Check that it's a valid CID: higher than the reserved values, but not VMADDR_CID_ANY.
         let localCID = try VsockAddress.ContextID.getLocalContextID()
         XCTAssertNotEqual(localCID, .any)
         XCTAssertGreaterThan(localCID.rawValue, VsockAddress.ContextID.host.rawValue)
 
+        // Check the local CID from the socket API matches.
         let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
         defer { try? socket.close() }
-        XCTAssertEqual(try socket.getLocalContextID(), localCID)
+        XCTAssertEqual(try socket.getLocalVsockContextID(), localCID)
+
+        // Check the local CID from the channel option matches.
+        let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully()) }
+        let eventLoop = singleThreadedELG.next()
+        let channel = try ServerSocketChannel(serverSocket: socket, eventLoop: eventLoop as! SelectableEventLoop, group: singleThreadedELG)
+        XCTAssertEqual(try channel.getOption(ChannelOptions.localVsockContextID).wait(), localCID)
     }
 }
 #endif

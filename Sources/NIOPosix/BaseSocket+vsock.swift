@@ -40,7 +40,7 @@ extension BaseSocket {
         }
     }
 
-    func getLocalContextID() throws -> VsockAddress.ContextID {
+    func getLocalVsockContextID() throws -> VsockAddress.ContextID {
         try self.withUnsafeHandle { fd in
             try VsockAddress.ContextID.getLocalContextID(fd)
         }
