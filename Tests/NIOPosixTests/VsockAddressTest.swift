@@ -42,10 +42,14 @@ class VsockAddressTest: XCTestCase {
 
     func testGetLocalCID() throws {
         try XCTSkipUnless(System.supportsVsock)
-        let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
-        let localCID = try socket.getLocalContextID()
-        XCTAssertGreaterThan(localCID.rawValue, VsockAddress.ContextID.host.rawValue)
+
+        let localCID = try VsockAddress.ContextID.getLocalContextID()
         XCTAssertNotEqual(localCID, .any)
+        XCTAssertGreaterThan(localCID.rawValue, VsockAddress.ContextID.host.rawValue)
+
+        let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
+        defer { try? socket.close() }
+        XCTAssertEqual(try socket.getLocalContextID(), localCID)
     }
 }
 #endif

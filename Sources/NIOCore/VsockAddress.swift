@@ -93,8 +93,6 @@ public struct VsockAddress: Hashable, Equatable, Sendable {
 #endif
 
         /// Get the context ID of the local machine.
-        ///
-        /// On Linux, consider using ``local`` when binding instead of this function.
         public static func getLocalContextID(_ socketFD: NIOBSDSocket.Handle) throws -> Self {
             var cid = ContextID.any.rawValue
 #if canImport(Darwin)
@@ -103,7 +101,7 @@ public struct VsockAddress: Hashable, Equatable, Sendable {
             let devVsockFD = open("/dev/vsock", O_RDONLY)
             precondition(devVsockFD >= 0, "couldn't open /dev/vsock (\(errno))")
             defer { close(devVsockFD) }
-            let x = try syscall(blocking: false) { get_local_vsock_cid(devVsockFD, &cid) }
+            try syscall(blocking: false) { get_local_vsock_cid(devVsockFD, &cid) }
 #endif
             precondition(cid != ContextID.any.rawValue)
             return Self(rawValue: cid)
