@@ -36,7 +36,7 @@ fileprivate let get_local_vsock_cid: @convention(c) (CInt, UnsafeMutablePointer<
 /// The port number differentiates between multiple services running on a single machine.
 ///
 /// For well-known CID values and port numbers, see ``ContextID`` and ``Port`` respectively.
-public struct VsockAddress: Hashable, Equatable, Sendable {
+public struct VsockAddress: Hashable, Sendable {
     /// The context ID associated with the address.
     public var cid: ContextID
 
