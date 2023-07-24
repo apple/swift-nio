@@ -426,6 +426,40 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         fatalError("this must be overridden by sub class")
     }
 
+#if canImport(Darwin) || os(Linux)
+    /// Begin connection of the underlying socket.
+    ///
+    /// - parameters:
+    ///     - to: The `VsockAddress` to connect to.
+    /// - returns: `true` if the socket connected synchronously, `false` otherwise.
+    func connectSocket(to address: VsockAddress) throws -> Bool {
+        fatalError("this must be overridden by sub class")
+    }
+#endif
+
+    enum ConnectTarget {
+        case socketAddress(SocketAddress)
+#if canImport(Darwin) || os(Linux)
+        case vsockAddress(VsockAddress)
+#endif
+    }
+
+    /// Begin connection of the underlying socket.
+    ///
+    /// - parameters:
+    ///     - to: The target to connect to.
+    /// - returns: `true` if the socket connected synchronously, `false` otherwise.
+    final func connectSocket(to target: ConnectTarget) throws -> Bool {
+        switch target {
+        case .socketAddress(let address):
+            return try self.connectSocket(to: address)
+#if canImport(Darwin) || os(Linux)
+        case .vsockAddress(let address):
+            return try self.connectSocket(to: address)
+#endif
+        }
+    }
+
     /// Make any state changes needed to complete the connection process.
     func finishConnectSocket() throws {
         fatalError("this must be overridden by sub class")
@@ -928,8 +962,15 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
     }
 
-    public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.operationUnsupported)
+    public func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
+        switch event {
+#if canImport(Darwin) || os(Linux)
+        case let event as VsockChannelEvents.ConnectToAddress:
+            self.connect0(to: .vsockAddress(event.address), promise: promise)
+#endif
+        default:
+            promise?.fail(ChannelError.operationUnsupported)
+        }
     }
 
     // Methods invoked from the EventLoop itself
@@ -1174,7 +1215,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.addressesCached = AddressCache(local: nil, remote: nil)
     }
 
-    public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    internal final func connect0(to target: ConnectTarget, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
@@ -1193,7 +1234,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
 
         do {
-            if try !self.connectSocket(to: address) {
+            if try !self.connectSocket(to: target) {
                 // We aren't connected, we'll get the remote address later.
                 self.updateCachedAddressesFromSocket(updateLocal: true, updateRemote: false)
                 if promise != nil {
@@ -1216,6 +1257,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             self.pendingConnect = promise
             self.close0(error: error, mode: .all, promise: nil)
         }
+    }
+
+    public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.connect0(to: .socketAddress(address), promise: promise)
     }
 
     public func channelRead0(_ data: NIOAny) {

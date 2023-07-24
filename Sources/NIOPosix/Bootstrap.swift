@@ -333,18 +333,17 @@ public final class ServerBootstrap {
     ///   - vsockAddress: The VSOCK socket address to bind on.
     public func bind(to vsockAddress: VsockAddress) throws -> EventLoopFuture<Channel> {
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
-            if enableMPTCP {
-                throw ChannelError.operationUnsupported
-            }
-            let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
-            try socket.bind(to: vsockAddress)
-            try socket.listen(backlog: 128)
-            return try ServerSocketChannel(serverSocket: socket, eventLoop: eventLoop, group: childEventLoopGroup)
+            try ServerSocketChannel(eventLoop: eventLoop, group: childEventLoopGroup, protocolFamily: .vsock, enableMPTCP: enableMPTCP)
         }
         return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
-            let promise = eventLoop.makePromise(of: Void.self)
-            serverChannel.registerAlreadyConfigured0(promise: promise)
-            return promise.futureResult
+            serverChannel.register().flatMap {
+                let promise = eventLoop.makePromise(of: Void.self)
+                serverChannel.triggerUserOutboundEvent0(
+                    VsockChannelEvents.BindToAddress(vsockAddress),
+                    promise: promise
+                )
+                return promise.futureResult
+            }
         }
     }
     #endif
@@ -1288,45 +1287,28 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     }
 
     #if canImport(Darwin) || os(Linux)
-    public func connect(to vsockAddress: VsockAddress) throws -> EventLoopFuture<Channel> {
-        let eventLoop = group.next()
-        let channelInitializer = self.channelInitializer
-        let socket: Socket
-        let channel: SocketChannel
-        do {
-            socket = try Socket(protocolFamily: .vsock, type: .stream)
-            if try !socket.connect(to: vsockAddress) {
-                try socket.finishConnect()
-            }
-            channel = try SocketChannel(socket: socket, eventLoop: eventLoop as! SelectableEventLoop)
-            channel.closeFuture.whenComplete() { _ in
-                try? socket.close()
-            }
-        } catch {
-            return eventLoop.makeFailedFuture(error)
-        }
+    /// Specify the VSOCK address to connect to for the `Channel`.
+    ///
+    /// - parameters:
+    ///     - address: The VSOCK address to connect to.
+    /// - returns: An `EventLoopFuture<Channel>` for when the `Channel` is connected.
+    public func connect(to address: VsockAddress) -> EventLoopFuture<Channel> {
+        return self.initializeAndRegisterNewChannel(
+            eventLoop: self.group.next(),
+            protocolFamily: .vsock
+        ) { channel in
+            let connectPromise = channel.eventLoop.makePromise(of: Void.self)
+            channel.triggerUserOutboundEvent(VsockChannelEvents.ConnectToAddress( address), promise: connectPromise)
 
-        func setupChannel() -> EventLoopFuture<Channel> {
-            eventLoop.assertInEventLoop()
-            return self._channelOptions.applyAllChannelOptions(to: channel).flatMap {
-                channelInitializer(channel)
-            }.flatMap {
-                eventLoop.assertInEventLoop()
-                let promise = eventLoop.makePromise(of: Void.self)
-                channel.registerAlreadyConfigured0(promise: promise)
-                return promise.futureResult
-            }.map {
-                channel
-            }.flatMapError { error in
-                channel.close0(error: error, mode: .all, promise: nil)
-                return channel.eventLoop.makeFailedFuture(error)
+            let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
+                connectPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
+                channel.close(promise: nil)
             }
-        }
+            connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
+                cancelTask.cancel()
+            }
 
-        if eventLoop.inEventLoop {
-            return setupChannel()
-        } else {
-            return eventLoop.flatSubmit { setupChannel() }
+            return connectPromise.futureResult
         }
     }
     #endif

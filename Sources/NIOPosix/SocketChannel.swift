@@ -107,10 +107,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
                                registrationID: registrationID)
     }
 
-    override func connectSocket(to address: SocketAddress) throws -> Bool {
-        if try self.socket.connect(to: address) {
-            return true
-        }
+    private func scheduleConnectTimeout() {
         if let timeout = connectTimeout {
             connectTimeoutScheduled = eventLoop.scheduleTask(in: timeout) { () -> Void in
                 if self.pendingConnect != nil {
@@ -119,9 +116,25 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
                 }
             }
         }
+    }
 
+    override func connectSocket(to address: SocketAddress) throws -> Bool {
+        if try self.socket.connect(to: address) {
+            return true
+        }
+        self.scheduleConnectTimeout()
         return false
     }
+
+#if canImport(Darwin) || os(Linux)
+    override func connectSocket(to address: VsockAddress) throws -> Bool {
+        if try self.socket.connect(to: address) {
+            return true
+        }
+        self.scheduleConnectTimeout()
+        return false
+    }
+#endif
 
     override func finishConnectSocket() throws {
         if let scheduled = self.connectTimeoutScheduled {
@@ -225,7 +238,14 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         }
     }
 
-    override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    internal enum BindTarget {
+        case socketAddress(_: SocketAddress)
+#if canImport(Darwin) || os(Linux)
+        case vsockAddress(_: VsockAddress)
+#endif
+    }
+
+    internal func bind0(to target: BindTarget, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
@@ -246,10 +266,21 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             promise?.fail(error)
         }
         executeAndComplete(p) {
-            try socket.bind(to: address)
+            switch target {
+            case .socketAddress(let address):
+                try socket.bind(to: address)
+#if canImport(Darwin) || os(Linux)
+            case .vsockAddress(let address):
+                try socket.bind(to: address)
+#endif
+            }
             self.updateCachedAddressesFromSocket(updateRemote: false)
             try self.socket.listen(backlog: backlog)
         }
+    }
+
+    override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.bind0(to: .socketAddress(address), promise: promise)
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
@@ -361,6 +392,17 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.reregister(selectable: self.socket, interested: interested)
+    }
+
+    override func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
+        switch event {
+#if canImport(Darwin) || os(Linux)
+        case let event as VsockChannelEvents.BindToAddress:
+            self.bind0(to: .vsockAddress(event.address), promise: promise)
+#endif
+        default:
+            promise?.fail(ChannelError.operationUnsupported)
+        }
     }
 }
 
@@ -596,6 +638,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             preconditionFailure("Connect of datagram socket did not complete synchronously.")
         }
     }
+
+#if canImport(Darwin) || os(Linux)
+    override func connectSocket(to address: VsockAddress) throws -> Bool {
+        throw ChannelError.operationUnsupported
+    }
+#endif
 
     override func finishConnectSocket() throws {
         // This is not required for connected datagram channels connect is a synchronous operation.
