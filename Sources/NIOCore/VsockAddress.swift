@@ -36,50 +36,24 @@ fileprivate let get_local_vsock_cid: @convention(c) (CInt, UnsafeMutablePointer<
 /// The port number differentiates between multiple services running on a single machine.
 ///
 /// For well-known CID values and port numbers, see ``ContextID`` and ``Port`` respectively.
-public struct VsockAddress: Sendable {
-    private let _storage: Box<sockaddr_vm>
+public struct VsockAddress: Hashable, Equatable, Sendable {
+    /// The context ID associated with the address.
+    public var cid: ContextID
 
-    /// The libc socket address for a vsock socket.
-    var address: sockaddr_vm { return _storage.value }
-
-    /// Get the context ID associated with the address.
-    public var cid: Int {
-        Int(Int32(bitPattern: self.address.svm_cid))
-    }
-
-    /// Get the port associated with the address.
-    public var port: Int {
-        Int(Int32(bitPattern: self.address.svm_port))
-    }
-
-    /// Creates a new vsock address.
-    ///
-    /// - parameters:
-    ///     - address: the `sockaddr_vm` that holds the context ID and port.
-    public init(address: sockaddr_vm) {
-        self._storage = Box(address)
-    }
-
-    public init(cid: UInt32, port: UInt32) {
-        var addr = sockaddr_vm()
-        addr.svm_family = sa_family_t(NIOBSDSocket.AddressFamily.vsock.rawValue)
-        addr.svm_cid = cid
-        addr.svm_port = port
-        self.init(address: addr)
-    }
+    /// The port associated with the address.
+    public var port: Port
 
     /// Creates a new vsock address.
     ///
     /// - parameters:
     ///   - cid: the context ID.
     ///   - port: the target port.
-    /// - returns: the `SocketAddress` for the given context ID and port combination.
-    public init(cid: Int, port: Int) {
-        self.init(cid: UInt32(bitPattern: Int32(truncatingIfNeeded: cid)), port: UInt32(bitPattern: Int32(truncatingIfNeeded: port)))
+    /// - returns: the address for the given context ID and port combination.
+    public init(cid: ContextID, port: Port) {
+        self.cid = cid
+        self.port = port
     }
-}
 
-extension VsockAddress {
     /// A vsock Context Identifier (CID).
     ///
     /// The CID identifies the source or destination, which is either a virtual machine or the host.
@@ -153,15 +127,17 @@ extension VsockAddress {
         /// Used to bind to any port number.
         public static let any: Self = Self(rawValue: VMADDR_PORT_ANY)
     }
+}
 
-    /// Creates a new vsock address.
-    ///
-    /// - parameters:
-    ///   - cid: the context ID.
-    ///   - port: the target port.
-    /// - returns: the `SocketAddress` for the given context ID and port combination.
-    public init(cid: ContextID, port: Port) {
-        self.init(cid: cid.rawValue, port: port.rawValue)
+extension VsockAddress.ContextID: CustomStringConvertible {
+    public var description: String {
+        self == .any ? "-1" : self.rawValue.description
+    }
+}
+
+extension VsockAddress.Port: CustomStringConvertible {
+    public var description: String {
+        self == .any ? "-1" : self.rawValue.description
     }
 }
 
@@ -171,29 +147,16 @@ extension VsockAddress: CustomStringConvertible {
     }
 }
 
-/// Element-wise Equatable conformance using only the struct fields defined in the man page (excluding lengths).
-extension VsockAddress: Equatable {
-    public static func == (lhs: VsockAddress, rhs: VsockAddress) -> Bool {
-        (
-            lhs.address.svm_family == rhs.address.svm_family
-            && lhs.address.svm_reserved1 == rhs.address.svm_reserved1
-            && lhs.address.svm_port == rhs.address.svm_port
-            && lhs.address.svm_cid == rhs.address.svm_cid
-        )
-    }
-}
-
-/// Element-wise Hashable conformance using only the struct fields defined in the man page (excluding lengths).
-extension VsockAddress: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(self.address.svm_family)
-        hasher.combine(self.address.svm_reserved1)
-        hasher.combine(self.address.svm_port)
-        hasher.combine(self.address.svm_cid)
-    }
-}
-
 extension VsockAddress: SockAddrProtocol {
+    /// The libc socket address for a vsock socket.
+    var address: sockaddr_vm {
+        var addr = sockaddr_vm()
+        addr.svm_family = sa_family_t(NIOBSDSocket.AddressFamily.vsock.rawValue)
+        addr.svm_cid = self.cid.rawValue
+        addr.svm_port = self.port.rawValue
+        return addr
+    }
+
     public func withSockAddr<T>(_ body: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
         try self.address.withSockAddr({ try body($0, $1) })
     }

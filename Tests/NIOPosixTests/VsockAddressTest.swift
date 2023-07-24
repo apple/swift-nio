@@ -21,6 +21,8 @@ class VsockAddressTest: XCTestCase {
     func testDescriptionWorks() throws {
         XCTAssertEqual(VsockAddress(cid: .host, port: 12345).description, "[VSOCK]2:12345")
         XCTAssertEqual(VsockAddress(cid: .any, port: 12345).description, "[VSOCK]-1:12345")
+        XCTAssertEqual(VsockAddress(cid: .host, port: .any).description, "[VSOCK]2:-1")
+        XCTAssertEqual(VsockAddress(cid: .any, port: .any).description, "[VSOCK]-1:-1")
     }
 
     func testSocketAddressEqualitySpecialValues() throws {

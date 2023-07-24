@@ -75,14 +75,17 @@ let defaultPort: Int = 9999
 enum ConnectTo {
     case ip(host: String, port: Int)
     case unixDomainSocket(path: String)
-    case vsock(cid: Int, port: Int)
+    case vsock(_: VsockAddress)
 }
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (_, .some(let cid), .some(let port)):
     /* we got two arguments (Int, Int), let's interpret that as vsock cid and port */
-    connectTarget = .vsock(cid: cid, port: port)
+    connectTarget = .vsock(VsockAddress(
+        cid: .init(rawValue: UInt32(bitPattern: Int32(truncatingIfNeeded: cid))),
+        port: .init(rawValue: UInt32(bitPattern: Int32(truncatingIfNeeded: port)))
+    ))
 case (.some(let h), .none, .some(let p)):
     /* we got two arguments (String, Int), let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)
@@ -102,8 +105,8 @@ let channel = try { () -> Channel in
         return try bootstrap.connect(host: host, port: port).wait()
     case .unixDomainSocket(let path):
         return try bootstrap.connect(unixDomainSocketPath: path).wait()
-    case .vsock(let cid, let port):
-        return try bootstrap.connect(to: VsockAddress(cid: cid, port: port)).wait()
+    case .vsock(let vsockAddress):
+        return try bootstrap.connect(to: vsockAddress).wait()
     }
 }()
 
