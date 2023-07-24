@@ -89,7 +89,11 @@ public struct VsockAddress: Hashable, Equatable, Sendable {
         ///
         /// The local context ID obtained with ``getLocalContextID(_:)`` can be used for the same
         /// purpose, but it is preferable to use ``local``.
-        public static let local: Self = Self(rawValue: UInt32(VMADDR_CID_LOCAL))
+        ///
+        /// This is equal to `VMADDR_CID_LCOAL`.
+        ///
+        /// - Seealso: https://man7.org/linux/man-pages/man7/vsock.7.html
+        public static let local: Self = Self(rawValue: 1)
 #endif
 
         /// Get the context ID of the local machine.
