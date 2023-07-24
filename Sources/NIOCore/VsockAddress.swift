@@ -40,7 +40,7 @@ public struct VsockAddress: Sendable {
     private let _storage: Box<sockaddr_vm>
 
     /// The libc socket address for a vsock socket.
-    public var address: sockaddr_vm { return _storage.value }
+    var address: sockaddr_vm { return _storage.value }
 
     /// Get the context ID associated with the address.
     public var cid: Int {
