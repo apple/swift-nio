@@ -327,6 +327,10 @@ public final class ServerBootstrap {
     }
 
     #if canImport(Darwin) || os(Linux)
+    /// Bind the `ServerSocketChannel` to a VSOCK socket.
+    ///
+    /// - parameters:
+    ///   - vsockAddress: The VSOCK socket address to bind on.
     public func bind(to vsockAddress: VsockAddress) throws -> EventLoopFuture<Channel> {
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
             if enableMPTCP {
