@@ -35,7 +35,7 @@ fileprivate let get_local_vsock_cid: @convention(c) (CInt, UnsafeMutablePointer<
 /// The CID identifies the source or destination, which is either a virtual machine or the host.
 /// The port number differentiates between multiple services running on a single machine.
 ///
-/// For well-known CID values and port numbers, see ``ContextID`` and ``Port`` respectively.
+/// For well-known CID values and port numbers, see `VsockAddress.ContextID` and `VsockAddress.Port` respectively.
 public struct VsockAddress: Hashable, Sendable {
     /// The context ID associated with the address.
     public var cid: ContextID
