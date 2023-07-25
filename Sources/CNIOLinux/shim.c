@@ -183,21 +183,6 @@ int CNIOLinux_system_info(struct utsname* uname_data) {
     return uname(uname_data);
 }
 
-/// For consistency with Darwin API, on which this is the only way to get the local CID.
-///
-/// While Linux and Darwin both support `IOCTL_VM_SOCKETS_GET_LOCAL_CID`, they operate on different
-/// special files.
-///
-/// - On Darwin, `IOCTL_VM_SOCKETS_GET_LOCAL_CID` is called with the socket to get the local CID.
-///
-/// - On Linux, `IOCTL_VM_SOCKETS_GET_LOCAL_CID` is called with `/dev/vsock` and, while it is a
-/// supported way to get the local CID, the man page encourages the use of `VMADDR_CID_LOCAL` for loopback.
-int CNIOLinux_get_local_vsock_cid(int devVsockFd, uint32_t *cid) {
-    int rc;
-    do {
-        rc = ioctl(devVsockFd, IOCTL_VM_SOCKETS_GET_LOCAL_CID, cid);
-    } while (rc == -EINTR);
-    return rc;
-}
+const unsigned long CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID = IOCTL_VM_SOCKETS_GET_LOCAL_CID;
 
 #endif

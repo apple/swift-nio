@@ -14,9 +14,7 @@
 #if canImport(Darwin) || os(Linux)
 
 #if canImport(Darwin)
-import Darwin
 import CNIODarwin
-fileprivate let get_local_vsock_cid: @convention(c) (CInt, UnsafeMutablePointer<UInt32>?) -> CInt = CNIODarwin_get_local_vsock_cid
 #elseif os(Linux)
 #if canImport(Glibc)
 import Glibc
@@ -24,9 +22,6 @@ import Glibc
 import Musl
 #endif
 import CNIOLinux
-fileprivate let get_local_vsock_cid: @convention(c) (CInt, UnsafeMutablePointer<UInt32>?) -> CInt = CNIOLinux_get_local_vsock_cid
-#else
-#error("Unable to identify your C library.")
 #endif
 
 /// A vsock socket address.
@@ -97,16 +92,27 @@ public struct VsockAddress: Hashable, Sendable {
 #endif
 
         /// Get the context ID of the local machine.
+        ///
+        /// This function wraps the `IOCTL_VM_SOCKETS_GET_LOCAL_CID` `ioctl()` request.
+        ///
+        /// To provide a consistent API on Linux and Darwin, this API takes a socket parameter, which is unused on Linux:
+        ///
+        /// - On Darwin, the `ioctl()` request operates on a socket.
+        /// - On Linux, the `ioctl()` request operates on the `/dev/vsock` device.
+        ///
+        /// - NOTE: On Linux, ``local`` may be a better choice.
         public static func getLocalContextID(_ socketFD: NIOBSDSocket.Handle) throws -> Self {
-            var cid = ContextID.any.rawValue
 #if canImport(Darwin)
-            try syscall(blocking: false) { get_local_vsock_cid(socketFD, &cid) }
+            let request = CNIODarwin_IOCTL_VM_SOCKETS_GET_LOCAL_CID
+            let fd = socketFD
 #elseif os(Linux)
-            let devVsockFD = open("/dev/vsock", O_RDONLY)
-            precondition(devVsockFD >= 0, "couldn't open /dev/vsock (\(errno))")
-            defer { close(devVsockFD) }
-            try syscall(blocking: false) { get_local_vsock_cid(devVsockFD, &cid) }
+            let request = CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID
+            let fd = open("/dev/vsock", O_RDONLY)
+            precondition(fd >= 0, "couldn't open /dev/vsock (\(errno))")
+            defer { close(fd) }
 #endif
+            var cid = ContextID.any.rawValue
+            try SystemCalls.ioctl(fd: fd, request: request, ptr: &cid)
             precondition(cid != ContextID.any.rawValue)
             return Self(rawValue: cid)
         }
