@@ -36,7 +36,7 @@
 @_spi(AsyncChannel)
 public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     @_spi(AsyncChannel)
-    public struct Configuration {
+    public struct Configuration: Sendable {
         /// The backpressure strategy of the ``NIOAsyncChannel/inboundStream``.
         public var backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
@@ -145,19 +145,17 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
 
     @inlinable
     @_spi(AsyncChannel)
-    public static func wrapAsyncChannelWithTransformations<ChannelReadResult: Sendable>(
+    public static func wrapAsyncChannelWithTransformations(
         synchronouslyWrapping channel: Channel,
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false,
-        channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<ChannelReadResult>,
-        postFireChannelReadTransformation: @Sendable @escaping (ChannelReadResult) -> EventLoopFuture<Inbound>
+        channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<Inbound>
     ) throws -> NIOAsyncChannel<Inbound, Outbound> where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
         let (inboundStream, outboundWriter): (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) = try channel._syncAddAsyncHandlersWithTransformations(
             backpressureStrategy: backpressureStrategy,
             isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
-            channelReadTransformation: channelReadTransformation,
-            postFireChannelReadTransformation: postFireChannelReadTransformation
+            channelReadTransformation: channelReadTransformation
         )
 
         outboundWriter.finish()
@@ -197,21 +195,19 @@ extension Channel {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     @_spi(AsyncChannel)
-    public func _syncAddAsyncHandlersWithTransformations<ChannelReadResult, PostFireChannelReadResult>(
+    public func _syncAddAsyncHandlersWithTransformations<ChannelReadResult>(
         backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         isOutboundHalfClosureEnabled: Bool,
-        channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<ChannelReadResult>,
-        postFireChannelReadTransformation: @Sendable @escaping (ChannelReadResult) -> EventLoopFuture<PostFireChannelReadResult>
-    ) throws -> (NIOAsyncChannelInboundStream<PostFireChannelReadResult>, NIOAsyncChannelOutboundWriter<Never>) {
+        channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<ChannelReadResult>
+    ) throws -> (NIOAsyncChannelInboundStream<ChannelReadResult>, NIOAsyncChannelOutboundWriter<Never>) {
         self.eventLoop.assertInEventLoop()
 
         let closeRatchet = CloseRatchet(isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled)
-        let inboundStream = try NIOAsyncChannelInboundStream<PostFireChannelReadResult>.makeTransformationHandler(
+        let inboundStream = try NIOAsyncChannelInboundStream<ChannelReadResult>.makeTransformationHandler(
             channel: self,
             backpressureStrategy: backpressureStrategy,
             closeRatchet: closeRatchet,
-            channelReadTransformation: channelReadTransformation,
-            postFireChannelReadTransformation: postFireChannelReadTransformation
+            channelReadTransformation: channelReadTransformation
         )
         let writer = try NIOAsyncChannelOutboundWriter<Never>(
             channel: self,

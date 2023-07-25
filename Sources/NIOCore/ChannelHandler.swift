@@ -346,11 +346,53 @@ extension RemovableChannelHandler {
 
 /// The result of protocol negotiation.
 @_spi(AsyncChannel)
-public enum NIOProtocolNegotiationResult<NegotiationResult: Sendable> {
-    /// Indicates that the protocol negotiation finished.
-    case finished(NegotiationResult)
-    /// Indicates that protocol negotiation has been deferred to the next handler.
-    case deferredResult(EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>)
+public struct NIOProtocolNegotiationResult<NegotiationResult: Sendable> {
+    fileprivate enum Result {
+        /// Indicates that the protocol negotiation finished.
+        case finished(NegotiationResult)
+        /// Indicates that protocol negotiation has been deferred to the next handler.
+        case deferredResult(EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>)
+    }
+
+    private let result: Result
+
+    public init(result: NegotiationResult) {
+        self.result = .finished(result)
+    }
+
+    public init(deferredResult: EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>) {
+        self.result = .deferredResult(deferredResult)
+    }
+
+    /// Waits for the final protocol negotiation result and  returns the value.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    public func waitForFinalResult() async throws -> NegotiationResult {
+        switch self.result {
+        case .finished(let negotiationResult):
+            return negotiationResult
+        case .deferredResult(let eventLoopFuture):
+            return try await eventLoopFuture.flatMap { $0.result.resolve(on: eventLoopFuture.eventLoop) }.get()
+        }
+    }
+}
+
+@_spi(AsyncChannel)
+extension NIOProtocolNegotiationResult.Result {
+    fileprivate func resolve(on eventLoop: EventLoop) -> EventLoopFuture<NegotiationResult> {
+        Self.resolve(on: eventLoop, result: self)
+    }
+
+    fileprivate static func resolve(on eventLoop: EventLoop, result: Self) -> EventLoopFuture<NegotiationResult> {
+        switch result {
+        case .finished(let negotiationResult):
+            return eventLoop.makeSucceededFuture(negotiationResult)
+
+        case .deferredResult(let future):
+            return future.flatMap { result in
+                return resolve(on: eventLoop, result: result.result)
+            }
+        }
+    }
 }
 
 @_spi(AsyncChannel)
@@ -358,6 +400,12 @@ extension NIOProtocolNegotiationResult: Equatable where NegotiationResult: Equat
 
 @_spi(AsyncChannel)
 extension NIOProtocolNegotiationResult: Sendable where NegotiationResult: Sendable {}
+
+@_spi(AsyncChannel)
+extension NIOProtocolNegotiationResult.Result: Equatable where NegotiationResult: Equatable {}
+
+@_spi(AsyncChannel)
+extension NIOProtocolNegotiationResult.Result: Sendable where NegotiationResult: Sendable {}
 
 /// A ``ProtocolNegotiationHandler`` is a ``ChannelHandler`` that is responsible for negotiating networking protocols.
 ///
