@@ -54,6 +54,7 @@ needs to be listed here.
 - Eugen <eugenf78@gmail.com>
 - Fabian Fett <fabianfett@apple.com>
 - Felix Schlegel <fefefe152@gmail.com>
+- Felix Schlegel <schlegel@apple.com>
 - Finagolfin <butta@fastem.com>
 - Florian Friedrich <ffried@me.com>
 - Frank Kair <frankkair@gmail.com>
@@ -131,7 +132,6 @@ needs to be listed here.
 - Pushkar N Kulkarni <pushkar.nk@in.ibm.com>
 - Pushparaj Zala <pr92zala@gmail.com>
 - Richard Low <ral@apple.com>
-- Rick Newton-Rogers <104022490+rnro@users.noreply.github.com>
 - Rick Newton-Rogers <rnewtonrogers@apple.com>
 - Romain Pouclet <rpouclet@apple.com>
 - Rukshani Athapathu <arukshani@users.noreply.github.com>
