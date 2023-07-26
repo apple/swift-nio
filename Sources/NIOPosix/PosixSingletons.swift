@@ -35,9 +35,9 @@ extension MultiThreadedEventLoopGroup {
     /// A globally shared, singleton ``MultiThreadedEventLoopGroup``.
     ///
     /// SwiftNIO allows and encourages the precise management of all operating system resources such as threads and file descriptors.
-    /// Certain resources (such as the main ``EventLoopGroup``) however are usually globally shared across the program. This means
-    /// that many programs have to carry around an ``EventLoopGroup`` despite the fact they don't require the ability to fully return
-    /// all the operating resources which would imply shutting down the ``EventLoopGroup``. This type is the global handle for singleton
+    /// Certain resources (such as the main `EventLoopGroup`) however are usually globally shared across the program. This means
+    /// that many programs have to carry around an `EventLoopGroup` despite the fact they don't require the ability to fully return
+    /// all the operating resources which would imply shutting down the `EventLoopGroup`. This type is the global handle for singleton
     /// resources that applications (and some libraries) can use to obtain never-shut-down singleton resources.
     ///
     /// Programs and libraries that do not use these singletons will not incur extra resource usage, these resources are lazily initialized on
