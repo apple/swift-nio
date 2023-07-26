@@ -30,20 +30,20 @@ import Musl
 /// system resources. This type holds sizing (how many loops/threads) suggestions.
 ///
 /// Users who need very tight control about the exact threads and resources created may decide to set
-/// `NIOGlobalSingletons.globalSingletonsEnabledSuggestion = false`. All singleton-creating facilities should check
+/// `NIOSingletons.singletonsEnabledSuggestion = false`. All singleton-creating facilities should check
 /// this setting and if `false` restrain from creating any global singleton resources. Please note that disabling the
 /// global singletons will lead to a crash if _any_ code attempts to use any of the singletons.
-public enum NIOGlobalSingletons {
+public enum NIOSingletons {
 }
 
-extension NIOGlobalSingletons {
+extension NIOSingletons {
     /// A suggestion of how many ``EventLoop``s the global singleton ``EventLoopGroup``s are supposed to consist of.
     ///
     /// The thread count is ``System/coreCount`` unless the environment variable `NIO_SINGLETON_GROUP_LOOP_COUNT`
     /// is set or this value was set manually by the user.
     ///
     /// - note: This value must be set _before_ any singletons are used and must only be set once.
-    public static var suggestedGlobalSingletonGroupLoopCount: Int {
+    public static var groupLoopCountSuggestion: Int {
         set {
             Self.userSetSingletonThreadCount(rawStorage: globalRawSuggestedLoopCount, userValue: newValue)
         }
@@ -61,7 +61,7 @@ extension NIOGlobalSingletons {
     /// `NIO_SINGLETON_BLOCKING_POOL_THREAD_COUNT` is set or this value was set manually by the user.
     ///
     /// - note: This value must be set _before_ any singletons are used and must only be set once.
-    public static var suggestedBlockingPoolThreadCount: Int {
+    public static var blockingPoolThreadCountSuggestion: Int {
         set {
             Self.userSetSingletonThreadCount(rawStorage: globalRawSuggestedBlockingThreadCount, userValue: newValue)
         }
@@ -77,7 +77,7 @@ extension NIOGlobalSingletons {
     /// This value cannot be changed using an environment variable.
     ///
     /// - note: This value must be set _before_ any singletons are used and must only be set once.
-    public static var globalSingletonsEnabledSuggestion: Bool {
+    public static var singletonsEnabledSuggestion: Bool {
         get {
             let (exchanged, original) = globalRawSingletonsEnabled.compareExchange(expected: 0,
                                                                                    desired: 1,
@@ -96,9 +96,9 @@ extension NIOGlobalSingletons {
 
         set {
             let intRepresentation = newValue ? 1 : -1
-            let (exchanged, original) = globalRawSingletonsEnabled.compareExchange(expected: 0,
-                                                                                   desired: intRepresentation,
-                                                                                   ordering: .relaxed)
+            let (exchanged, _) = globalRawSingletonsEnabled.compareExchange(expected: 0,
+                                                                            desired: intRepresentation,
+                                                                            ordering: .relaxed)
             guard exchanged else {
                 fatalError("""
                            Bug in user code: Global singleton enabled suggestion has been changed after \
@@ -115,7 +115,7 @@ private let globalRawSuggestedLoopCount = ManagedAtomic(0)
 private let globalRawSuggestedBlockingThreadCount = ManagedAtomic(0)
 private let globalRawSingletonsEnabled = ManagedAtomic(0)
 
-extension NIOGlobalSingletons {
+extension NIOSingletons {
     private static func userSetSingletonThreadCount(rawStorage: ManagedAtomic<Int>, userValue: Int) {
         precondition(userValue > 0, "illegal value: needs to be strictly positive")
 

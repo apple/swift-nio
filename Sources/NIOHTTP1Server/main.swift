@@ -520,8 +520,8 @@ func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
     }
 }
 
-let fileIO = NonBlockingFileIO(threadPool: .globalSingleton)
-let socketBootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup.globalSingleton)
+let fileIO = NonBlockingFileIO(threadPool: .singleton)
+let socketBootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup.singleton)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(ChannelOptions.backlog, value: 256)
     .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -533,7 +533,7 @@ let socketBootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup.globalS
     .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
     .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
-let pipeBootstrap = NIOPipeBootstrap(group: MultiThreadedEventLoopGroup.globalSingleton)
+let pipeBootstrap = NIOPipeBootstrap(group: MultiThreadedEventLoopGroup.singleton)
     // Set the handlers that are applied to the accepted Channels
     .channelInitializer(childChannelInitializer(channel:))
 

@@ -17,15 +17,15 @@ import NIOCore
 import NIOPosix
 import Foundation
 
-final class NIOGlobalSingletonsTests: XCTestCase {
+final class NIOSingletonsTests: XCTestCase {
     func testSingletonMultiThreadedEventLoopWorks() async throws {
-        let works = try await MultiThreadedEventLoopGroup.globalSingleton.any().submit { "yes" }.get()
+        let works = try await MultiThreadedEventLoopGroup.singleton.any().submit { "yes" }.get()
         XCTAssertEqual(works, "yes")
     }
 
     func testSingletonBlockingPoolWorks() async throws {
-        let works = try await NIOThreadPool.globalSingleton.runIfActive(
-            eventLoop: MultiThreadedEventLoopGroup.globalSingleton.any()
+        let works = try await NIOThreadPool.singleton.runIfActive(
+            eventLoop: MultiThreadedEventLoopGroup.singleton.any()
         ) {
             "yes"
         }.get()
@@ -33,34 +33,34 @@ final class NIOGlobalSingletonsTests: XCTestCase {
     }
 
     func testCannotShutdownMultiGroup() {
-        XCTAssertThrowsError(try MultiThreadedEventLoopGroup.globalSingleton.syncShutdownGracefully()) { error in
+        XCTAssertThrowsError(try MultiThreadedEventLoopGroup.singleton.syncShutdownGracefully()) { error in
             XCTAssertEqual(.unsupportedOperation, error as? EventLoopError)
         }
     }
 
     func testCannotShutdownBlockingPool() {
-        XCTAssertThrowsError(try NIOThreadPool.globalSingleton.syncShutdownGracefully()) { error in
+        XCTAssertThrowsError(try NIOThreadPool.singleton.syncShutdownGracefully()) { error in
             XCTAssert(error is NIOThreadPoolError.UnsupportedOperation)
         }
     }
 
     func testMultiGroupThreadPrefix() {
-        XCTAssert(MultiThreadedEventLoopGroup.globalSingleton.description.contains("NIO-SGLTN-"),
-                  "\(MultiThreadedEventLoopGroup.globalSingleton.description)")
+        XCTAssert(MultiThreadedEventLoopGroup.singleton.description.contains("NIO-SGLTN-"),
+                  "\(MultiThreadedEventLoopGroup.singleton.description)")
 
         for _ in 0..<100 {
-            let someEL = MultiThreadedEventLoopGroup.globalSingleton.next()
+            let someEL = MultiThreadedEventLoopGroup.singleton.next()
             XCTAssert(someEL.description.contains("NIO-SGLTN-"), "\(someEL.description)")
         }
     }
 
     func testSingletonsAreEnabledAndCanBeReadMoreThanOnce() {
-        XCTAssertTrue(NIOGlobalSingletons.globalSingletonsEnabledSuggestion)
-        XCTAssertTrue(NIOGlobalSingletons.globalSingletonsEnabledSuggestion)
-        XCTAssertTrue(NIOGlobalSingletons.globalSingletonsEnabledSuggestion)
+        XCTAssertTrue(NIOSingletons.singletonsEnabledSuggestion)
+        XCTAssertTrue(NIOSingletons.singletonsEnabledSuggestion)
+        XCTAssertTrue(NIOSingletons.singletonsEnabledSuggestion)
     }
 
     func testCanCreateClientBootstrapWithoutSpecifyingTypeName() {
-        _ = ClientBootstrap(group: .globalSingletonMultiThreadedEventLoopGroup)
+        _ = ClientBootstrap(group: .singletonMultiThreadedEventLoopGroup)
     }
 }

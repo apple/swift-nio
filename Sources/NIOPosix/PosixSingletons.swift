@@ -14,18 +14,18 @@
 
 import NIOCore
 
-extension NIOGlobalSingletons {
+extension NIOSingletons {
     /// A globally shared, lazily initialized ``MultiThreadedEventLoopGroup``  that uses `epoll`/`kqueue` as the
     /// selector mechanism.
     ///
-    /// The number of threads is determined by ``NIOGlobalSingletons/suggestedGlobalSingletonGroupLoopCount``.
+    /// The number of threads is determined by ``NIOSingletons/groupLoopCountSuggestion``.
     public static var posixEventLoopGroup: MultiThreadedEventLoopGroup {
-        return globalSingletonMTELG
+        return singletonMTELG
     }
 
     /// A globally shared, lazily initialized ``NIOThreadPool`` that can be used for blocking I/O and other blocking operations.
     ///
-    /// The number of threads is determined by ``NIOGlobalSingletons/suggestedBlockingPoolThreadCount``.
+    /// The number of threads is determined by ``NIOSingletons/blockingPoolThreadCountSuggestion``.
     public static var posixBlockingThreadPool: NIOThreadPool {
         return globalPosixBlockingPool
     }
@@ -43,23 +43,23 @@ extension MultiThreadedEventLoopGroup {
     /// Programs and libraries that do not use these singletons will not incur extra resource usage, these resources are lazily initialized on
     /// first use.
     ///
-    /// The loop count of this group is determined by ``NIOGlobalSingletons/suggestedGlobalSingletonGroupLoopCount``.
+    /// The loop count of this group is determined by ``NIOSingletons/groupLoopCountSuggestion``.
     ///
     /// - note: Users who do not want any code to spawn global singleton resources may set
-    ///         ``NIOGlobalSingletons/globalSingletonsEnabledSuggestion`` to `false` which will lead to a forced crash
+    ///         ``NIOSingletons/singletonsEnabledSuggestion`` to `false` which will lead to a forced crash
     ///         if any code attempts to use the global singletons.
     ///
-    public static var globalSingleton: MultiThreadedEventLoopGroup {
-        return NIOGlobalSingletons.posixEventLoopGroup
+    public static var singleton: MultiThreadedEventLoopGroup {
+        return NIOSingletons.posixEventLoopGroup
     }
 }
 
 extension EventLoopGroup where Self == MultiThreadedEventLoopGroup {
     /// A globally shared, singleton ``MultiThreadedEventLoopGroup``.
     ///
-    /// This provides the same object as ``MultiThreadedEventLoopGroup/globalSingletonMultiThreadedEventLoopGroup``.
-    public static var globalSingletonMultiThreadedEventLoopGroup: Self {
-        return MultiThreadedEventLoopGroup.globalSingleton
+    /// This provides the same object as ``MultiThreadedEventLoopGroup/singleton``.
+    public static var singletonMultiThreadedEventLoopGroup: Self {
+        return MultiThreadedEventLoopGroup.singleton
     }
 }
 
@@ -75,24 +75,24 @@ extension NIOThreadPool {
     /// Programs and libraries that do not use these singletons will not incur extra resource usage, these resources are lazily initialized on
     /// first use.
     ///
-    /// The thread count of this pool is determined by ``NIOGlobalSingletons/suggestedBlockingPoolThreadCount``.
+    /// The thread count of this pool is determined by ``NIOSingletons/suggestedBlockingPoolThreadCount``.
     ///
     /// - note: Users who do not want any code to spawn global singleton resources may set
-    ///         ``NIOGlobalSingletons/globalSingletonsEnabledSuggestion`` to `false` which will lead to a forced crash
+    ///         ``NIOSingletons/singletonsEnabledSuggestion`` to `false` which will lead to a forced crash
     ///         if any code attempts to use the global singletons.
-    public static var globalSingleton: NIOThreadPool {
-        return NIOGlobalSingletons.posixBlockingThreadPool
+    public static var singleton: NIOThreadPool {
+        return NIOSingletons.posixBlockingThreadPool
     }
 }
 
-private let globalSingletonMTELG: MultiThreadedEventLoopGroup = {
-    guard NIOGlobalSingletons.globalSingletonsEnabledSuggestion else {
+private let singletonMTELG: MultiThreadedEventLoopGroup = {
+    guard NIOSingletons.singletonsEnabledSuggestion else {
         fatalError("""
                    Cannot create global singleton MultiThreadedEventLoopGroup because the global singletons have been \
-                   disabled by setting  `NIOGlobalSingletons.globalSingletonsEnabledSuggestion = false`
+                   disabled by setting  `NIOSingletons.singletonsEnabledSuggestion = false`
                    """)
     }
-    let threadCount = NIOGlobalSingletons.suggestedGlobalSingletonGroupLoopCount
+    let threadCount = NIOSingletons.groupLoopCountSuggestion
     let group = MultiThreadedEventLoopGroup._makePerpetualGroup(threadNamePrefix: "NIO-SGLTN-",
                                                                 numberOfThreads: threadCount)
     _ = Unmanaged.passUnretained(group).retain() // Never gonna give you up,
@@ -100,14 +100,14 @@ private let globalSingletonMTELG: MultiThreadedEventLoopGroup = {
 }()
 
 private let globalPosixBlockingPool: NIOThreadPool = {
-    guard NIOGlobalSingletons.globalSingletonsEnabledSuggestion else {
+    guard NIOSingletons.singletonsEnabledSuggestion else {
         fatalError("""
                    Cannot create global singleton NIOThreadPool because the global singletons have been \
-                   disabled by setting `NIOGlobalSingletons.globalSingletonsEnabledSuggestion = false`
+                   disabled by setting `NIOSingletons.singletonsEnabledSuggestion = false`
                    """)
     }
     let pool = NIOThreadPool._makePerpetualStartedPool(
-        numberOfThreads: NIOGlobalSingletons.suggestedBlockingPoolThreadCount,
+        numberOfThreads: NIOSingletons.blockingPoolThreadCountSuggestion,
         threadNamePrefix: "SGLTN-TP-#"
     )
     _ = Unmanaged.passUnretained(pool).retain() // never gonna let you down.
