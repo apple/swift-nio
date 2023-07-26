@@ -55,7 +55,7 @@ extension NIOSingletons {
     }
 
     /// A suggestion of how many threads the global singleton thread pools that can be used for synchronous, blocking
-    /// functions (such as ``NIOThreadPool``) are supposed to consist of
+    /// functions (such as `NIOThreadPool`) are supposed to consist of
     ///
     /// The thread count is ``System/coreCount`` unless the environment variable
     /// `NIO_SINGLETON_BLOCKING_POOL_THREAD_COUNT` is set or this value was set manually by the user.
