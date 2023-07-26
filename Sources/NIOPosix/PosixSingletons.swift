@@ -78,7 +78,7 @@ extension NIOThreadPool {
     /// The thread count of this pool is determined by `NIOSingletons/suggestedBlockingPoolThreadCount`.
     ///
     /// - note: Users who do not want any code to spawn global singleton resources may set
-    ///         ``NIOSingletons/singletonsEnabledSuggestion`` to `false` which will lead to a forced crash
+    ///         `NIOSingletons/singletonsEnabledSuggestion` to `false` which will lead to a forced crash
     ///         if any code attempts to use the global singletons.
     public static var singleton: NIOThreadPool {
         return NIOSingletons.posixBlockingThreadPool
