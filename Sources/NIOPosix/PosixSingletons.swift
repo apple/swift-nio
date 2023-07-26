@@ -18,14 +18,14 @@ extension NIOSingletons {
     /// A globally shared, lazily initialized ``MultiThreadedEventLoopGroup``  that uses `epoll`/`kqueue` as the
     /// selector mechanism.
     ///
-    /// The number of threads is determined by ``NIOSingletons/groupLoopCountSuggestion``.
+    /// The number of threads is determined by `NIOSingletons/groupLoopCountSuggestion`.
     public static var posixEventLoopGroup: MultiThreadedEventLoopGroup {
         return singletonMTELG
     }
 
     /// A globally shared, lazily initialized ``NIOThreadPool`` that can be used for blocking I/O and other blocking operations.
     ///
-    /// The number of threads is determined by ``NIOSingletons/blockingPoolThreadCountSuggestion``.
+    /// The number of threads is determined by `NIOSingletons/blockingPoolThreadCountSuggestion`.
     public static var posixBlockingThreadPool: NIOThreadPool {
         return globalPosixBlockingPool
     }
@@ -43,10 +43,10 @@ extension MultiThreadedEventLoopGroup {
     /// Programs and libraries that do not use these singletons will not incur extra resource usage, these resources are lazily initialized on
     /// first use.
     ///
-    /// The loop count of this group is determined by ``NIOSingletons/groupLoopCountSuggestion``.
+    /// The loop count of this group is determined by `NIOSingletons/groupLoopCountSuggestion`.
     ///
     /// - note: Users who do not want any code to spawn global singleton resources may set
-    ///         ``NIOSingletons/singletonsEnabledSuggestion`` to `false` which will lead to a forced crash
+    ///         `NIOSingletons/singletonsEnabledSuggestion` to `false` which will lead to a forced crash
     ///         if any code attempts to use the global singletons.
     ///
     public static var singleton: MultiThreadedEventLoopGroup {
@@ -75,7 +75,7 @@ extension NIOThreadPool {
     /// Programs and libraries that do not use these singletons will not incur extra resource usage, these resources are lazily initialized on
     /// first use.
     ///
-    /// The thread count of this pool is determined by ``NIOSingletons/suggestedBlockingPoolThreadCount``.
+    /// The thread count of this pool is determined by `NIOSingletons/suggestedBlockingPoolThreadCount`.
     ///
     /// - note: Users who do not want any code to spawn global singleton resources may set
     ///         ``NIOSingletons/singletonsEnabledSuggestion`` to `false` which will lead to a forced crash
