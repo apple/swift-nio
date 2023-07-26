@@ -49,10 +49,6 @@ private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsigne
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
 #endif
 
-#if canImport(Darwin) || os(Linux)
-private let sysIoctl: @convention(c) (CInt, CUnsignedLong, UnsafeMutableRawPointer) -> CInt = ioctl
-#endif
-
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
     switch code {
     case EFAULT, EBADF:
@@ -189,13 +185,4 @@ enum SystemCalls {
         }
     }
     #endif
-
-#if canImport(Darwin) || os(Linux)
-    @inline(never)
-    internal static func ioctl(fd: CInt, request: CUnsignedLong, ptr: UnsafeMutableRawPointer) throws {
-        _ = try syscall(blocking: false) {
-            sysIoctl(fd, request, ptr)
-        }
-    }
-#endif
 }
