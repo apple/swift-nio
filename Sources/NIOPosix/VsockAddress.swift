@@ -64,6 +64,10 @@ public struct VsockAddress: Hashable, Sendable {
             self.init(rawValue: value)
         }
 
+        public init(_ value: Int) {
+            self.init(rawValue: UInt32(Int32(truncatingIfNeeded: value)))
+        }
+
         /// Wildcard, matches any address.
         ///
         /// On all platforms, using this value with `bind(2)` means "any address".
@@ -143,6 +147,10 @@ public struct VsockAddress: Hashable, Sendable {
 
         public init(integerLiteral value: UInt32) {
             self.init(rawValue: value)
+        }
+
+        public init(_ value: Int) {
+            self.init(rawValue: UInt32(Int32(truncatingIfNeeded: value)))
         }
 
         /// Used to bind to any port number.

@@ -25,6 +25,24 @@ class VsockAddressTest: XCTestCase {
         XCTAssertEqual(VsockAddress(cid: .any, port: .any).description, "[VSOCK]-1:-1")
     }
 
+    func testInitializeFromIntegerLiteral() throws {
+        XCTAssertEqual(VsockAddress.ContextID(integerLiteral: 0), 0)
+        XCTAssertEqual(VsockAddress.Port(integerLiteral: 0), 0)
+        XCTAssertEqual(VsockAddress.ContextID(integerLiteral: 4294967295), 4294967295)
+        XCTAssertEqual(VsockAddress.Port(integerLiteral: 4294967295), 4294967295)
+    }
+
+    func testInitializeFromInt() throws {
+        XCTAssertEqual(VsockAddress.ContextID(0), 0)
+        XCTAssertEqual(VsockAddress.ContextID(4294967295), 4294967295)
+        XCTAssertEqual(VsockAddress.Port(0), 0)
+        XCTAssertEqual(VsockAddress.Port(4294967295), 4294967295)
+//        XCTAssertEqual(VsockAddress.ContextID(-1), 4294967295)  // compile-time error
+//        XCTAssertEqual(VsockAddress.ContextID(4294967296), 4294967296)  // compile-time error
+//        XCTAssertEqual(VsockAddress.Port(-1), 4294967295)  // compile-time error
+//        XCTAssertEqual(VsockAddress.Port(4294967296), 4294967296)  // compile-time error
+    }
+
     func testSocketAddressEqualitySpecialValues() throws {
         XCTAssertEqual(VsockAddress(cid: .any, port: 12345), .init(cid: .init(rawValue: UInt32(bitPattern: -1)), port: 12345))
         XCTAssertEqual(VsockAddress(cid: .hypervisor, port: 12345), .init(cid: 0, port: 12345))
