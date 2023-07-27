@@ -23,46 +23,39 @@ struct Server {
     /// The server's port.
     private let port: Int
     /// The server's event loop group.
-    private let eventLoopGroup: any EventLoopGroup
+    private let eventLoopGroup: MultiThreadedEventLoopGroup
 
     static func main() async throws {
-        // We are creating this event loop group at the top level and it will live until
-        // the process exits. This means we also don't have to shut it down.
-        //
-        // Note that we start this group with 1 thread. In general, most NIO programs
-        // should use 1 thread as a default unless they're planning to be a network
-        // proxy or something that is expecting to be dominated by packet parsing. Most
-        // servers aren't, and NIO is very fast, so 1 NIO thread is quite capable of
-        // saturating the average small to medium sized machine.
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-
         let server = Server(
             host: "localhost",
             port: 8765,
-            eventLoopGroup: eventLoopGroup
+            eventLoopGroup: .singleton
         )
         try await server.run()
     }
 
     /// This method starts the server and handles incoming connections.
     func run() async throws {
-        let channel = try await ServerBootstrap(group: eventLoopGroup)
+        let channel = try await ServerBootstrap(group: self.eventLoopGroup)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { channel in
+            .bind(
+                host: self.host,
+                port: self.port
+            ) { channel in
                 channel.eventLoop.makeCompletedFuture {
                     // We are using two simple handlers here to frame our messages with "\n"
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
+
+                    return try NIOAsyncChannel(
+                        synchronouslyWrapping: channel,
+                        configuration: .init(
+                            inboundType: String.self,
+                            outboundType: String.self
+                        )
+                    )
                 }
             }
-            .bind(
-                host: self.host,
-                port: self.port,
-                childChannelConfiguration: .init(
-                    inboundType: String.self,
-                    outboundType: String.self
-                )
-            )
 
         // We are handling each incoming connection in a separate child task. It is important
         // to use a discarding task group here which automatically discards finished child tasks.
@@ -103,7 +96,7 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
     typealias InboundIn = ByteBuffer
     typealias InboundOut = String
 
-    private let newLine = "\n".utf8.first!
+    private let newLine = UInt8(ascii: "\n")
 
     init() {}
 

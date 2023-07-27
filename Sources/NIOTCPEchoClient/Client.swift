@@ -23,30 +23,15 @@ struct Client {
     /// The port to connect to.
     private let port: Int
     /// The client's event loop group.
-    private let eventLoopGroup: any EventLoopGroup
+    private let eventLoopGroup: MultiThreadedEventLoopGroup
 
     static func main() async throws {
-        // We are creating this event loop group at the top level and it will live until
-        // the process exits. This means we also don't have to shut it down.
-        //
-        // Note that we start this group with 1 thread. In general, most NIO programs
-        // should use 1 thread as a default unless they're planning to be a network
-        // proxy or something that is expecting to be dominated by packet parsing. Most
-        // servers aren't, and NIO is very fast, so 1 NIO thread is quite capable of
-        // saturating the average small to medium sized machine.
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-
         let client = Client(
             host: "localhost",
             port: 8765,
-            eventLoopGroup: eventLoopGroup
+            eventLoopGroup: .singleton
         )
         try await client.run()
-
-        print("Done sending requests; exiting in 5 seconds")
-        // We are only sleeping here to keep the terminal output visible a bit longer in Xcode
-        // so that users can see that something happened. This should normally not be done!
-        try await Task.sleep(for: .seconds(5))
     }
 
     /// This method sends a bunch of requests.
@@ -63,22 +48,25 @@ struct Client {
     }
 
     private func sendRequest(number: Int) async throws {
-        let channel = try await ClientBootstrap(group: eventLoopGroup)
-            .channelInitializer { channel in
+        let channel = try await ClientBootstrap(group: self.eventLoopGroup)
+            .connect(
+                host: self.host,
+                port: self.port
+            ) { channel in
                 channel.eventLoop.makeCompletedFuture {
                     // We are using two simple handlers here to frame our messages with "\n"
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(NewlineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
+
+                    return try NIOAsyncChannel(
+                        synchronouslyWrapping: channel,
+                        configuration: .init(
+                            inboundType: String.self,
+                            outboundType: String.self
+                        )
+                    )
                 }
             }
-            .connect(
-                host: self.host,
-                port: self.port,
-                channelConfiguration: .init(
-                    inboundType: String.self,
-                    outboundType: String.self
-                )
-            )
 
         print("Connection(\(number)): Writing request")
         try await channel.outboundWriter.write("Hello on connection \(number)")
@@ -97,7 +85,7 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
     typealias InboundIn = ByteBuffer
     typealias InboundOut = String
 
-    private let newLine = "\n".utf8.first!
+    private let newLine = UInt8(ascii: "\n")
 
     init() {}
 
