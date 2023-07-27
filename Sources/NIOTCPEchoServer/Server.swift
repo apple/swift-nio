@@ -103,10 +103,10 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readableBytes = buffer.readableBytesView
 
-        if let firstLine = readableBytes.firstIndex(of: UInt8(ascii: "\n")).map({ readableBytes[readableBytes.startIndex ..< $0] }) {
+        if let firstLine = readableBytes.firstIndex(of: self.newLine).map({ readableBytes[..<$0] }) {
             buffer.moveReaderIndex(forwardBy: firstLine.count + 1)
             // Fire a read without a newline
-            context.fireChannelRead(self.wrapInboundOut(String(buffer: ByteBuffer(firstLine.dropLast()))))
+            context.fireChannelRead(self.wrapInboundOut(String(buffer: ByteBuffer(firstLine))))
             return .continue
         } else {
             return .needMoreData
@@ -115,7 +115,7 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
 
     func encode(data: String, out: inout ByteBuffer) throws {
         out.writeString(data)
-        out.writeString("\n")
+        out.writeInteger(self.newLine)
     }
 }
 #else
