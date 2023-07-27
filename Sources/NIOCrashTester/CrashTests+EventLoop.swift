@@ -105,5 +105,77 @@ struct EventLoopCrashTests {
             try! el.submit {}.wait()
         }
     }
+
+    let testUsingTheSingletonGroupWhenDisabled = CrashTest(
+        regex: #"Fatal error: Cannot create global singleton MultiThreadedEventLoopGroup because the global singletons"#
+    ) {
+        NIOSingletons.singletonsEnabledSuggestion = false
+        try? NIOSingletons.posixEventLoopGroup.next().submit {}.wait()
+    }
+
+    let testUsingTheSingletonBlockingPoolWhenDisabled = CrashTest(
+        regex: #"Fatal error: Cannot create global singleton NIOThreadPool because the global singletons have been"#
+    ) {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            try? group.syncShutdownGracefully()
+        }
+        NIOSingletons.singletonsEnabledSuggestion = false
+        try? NIOSingletons.posixBlockingThreadPool.runIfActive(eventLoop: group.next(), {}).wait()
+    }
+
+    let testDisablingSingletonsEnabledValueTwice = CrashTest(
+        regex: #"Fatal error: Bug in user code: Global singleton enabled suggestion has been changed after"#
+    ) {
+        NIOSingletons.singletonsEnabledSuggestion = false
+        NIOSingletons.singletonsEnabledSuggestion = false
+    }
+
+    let testEnablingSingletonsEnabledValueTwice = CrashTest(
+        regex: #"Fatal error: Bug in user code: Global singleton enabled suggestion has been changed after"#
+    ) {
+        NIOSingletons.singletonsEnabledSuggestion = true
+        NIOSingletons.singletonsEnabledSuggestion = true
+    }
+
+    let testEnablingThenDisablingSingletonsEnabledValue = CrashTest(
+        regex: #"Fatal error: Bug in user code: Global singleton enabled suggestion has been changed after"#
+    ) {
+        NIOSingletons.singletonsEnabledSuggestion = true
+        NIOSingletons.singletonsEnabledSuggestion = false
+    }
+
+    let testSettingTheSingletonEnabledValueAfterUse = CrashTest(
+        regex: #"Fatal error: Bug in user code: Global singleton enabled suggestion has been changed after"#
+    ) {
+        try? MultiThreadedEventLoopGroup.singleton.next().submit({}).wait()
+        NIOSingletons.singletonsEnabledSuggestion = true
+    }
+
+    let testSettingTheSuggestedSingletonGroupCountTwice = CrashTest(
+        regex: #"Fatal error: Bug in user code: Global singleton suggested loop/thread count has been changed after"#
+    ) {
+        NIOSingletons.groupLoopCountSuggestion = 17
+        NIOSingletons.groupLoopCountSuggestion = 17
+    }
+
+    let testSettingTheSuggestedSingletonGroupChangeAfterUse = CrashTest(
+        regex: #"Fatal error: Bug in user code: Global singleton suggested loop/thread count has been changed after"#
+    ) {
+        try? MultiThreadedEventLoopGroup.singleton.next().submit({}).wait()
+        NIOSingletons.groupLoopCountSuggestion = 17
+    }
+
+    let testSettingTheSuggestedSingletonGroupLoopCountToZero = CrashTest(
+        regex: #"Precondition failed: illegal value: needs to be strictly positive"#
+    ) {
+        NIOSingletons.groupLoopCountSuggestion = 0
+    }
+
+    let testSettingTheSuggestedSingletonGroupLoopCountToANegativeValue = CrashTest(
+        regex: #"Precondition failed: illegal value: needs to be strictly positive"#
+    ) {
+        NIOSingletons.groupLoopCountSuggestion = -1
+    }
 }
 #endif

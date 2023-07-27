@@ -315,23 +315,23 @@ extension ByteBuffer {
         let bytes = uuid.uuid
 
         // Pack the bytes into two 'UInt64's and set them.
-        let chunk1 = UInt64(bytes.0) << 56
-            | UInt64(bytes.1) << 48
-            | UInt64(bytes.2) << 40
-            | UInt64(bytes.3) << 32
-            | UInt64(bytes.4) << 24
-            | UInt64(bytes.5) << 16
-            | UInt64(bytes.6) << 8
-            | UInt64(bytes.7)
+        var chunk1 = UInt64(bytes.0) << 56
+        chunk1 |= UInt64(bytes.1) << 48
+        chunk1 |= UInt64(bytes.2) << 40
+        chunk1 |= UInt64(bytes.3) << 32
+        chunk1 |= UInt64(bytes.4) << 24
+        chunk1 |= UInt64(bytes.5) << 16
+        chunk1 |= UInt64(bytes.6) << 8
+        chunk1 |= UInt64(bytes.7)
 
-        let chunk2 = UInt64(bytes.8) << 56
-            | UInt64(bytes.9) << 48
-            | UInt64(bytes.10) << 40
-            | UInt64(bytes.11) << 32
-            | UInt64(bytes.12) << 24
-            | UInt64(bytes.13) << 16
-            | UInt64(bytes.14) << 8
-            | UInt64(bytes.15)
+        var chunk2 = UInt64(bytes.8) << 56
+        chunk2 |= UInt64(bytes.9) << 48
+        chunk2 |= UInt64(bytes.10) << 40
+        chunk2 |= UInt64(bytes.11) << 32
+        chunk2 |= UInt64(bytes.12) << 24
+        chunk2 |= UInt64(bytes.13) << 16
+        chunk2 |= UInt64(bytes.14) << 8
+        chunk2 |= UInt64(bytes.15)
 
         var written = self.setInteger(chunk1, at: index)
         written &+= self.setInteger(chunk2, at: index &+ written)

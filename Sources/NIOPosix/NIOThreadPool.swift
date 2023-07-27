@@ -21,6 +21,9 @@ public enum NIOThreadPoolError {
     
     /// The `NIOThreadPool` was not active.
     public struct ThreadPoolInactive: Error { }
+
+    /// The `NIOThreadPool` operation is unsupported (e.g. shutdown of a perpetual pool).
+    public struct UnsupportedOperation: Error { }
 }
 
 
@@ -69,6 +72,7 @@ public final class NIOThreadPool {
     private var threads: [NIOThread]? = nil // protected by `lock`
     private var state: State = .stopped
     private let numberOfThreads: Int
+    private let canBeStopped: Bool
 
     #if swift(>=5.7)
     /// Gracefully shutdown this `NIOThreadPool`. All tasks will be run before shutdown will take place.
@@ -92,6 +96,12 @@ public final class NIOThreadPool {
     #endif
     
     private func _shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        guard self.canBeStopped else {
+            queue.async {
+                callback(NIOThreadPoolError.UnsupportedOperation())
+            }
+            return
+        }
         let g = DispatchGroup()
         let threadsToJoin = self.lock.withLock { () -> [NIOThread] in
             switch self.state {
@@ -167,9 +177,24 @@ public final class NIOThreadPool {
     ///
     /// - parameters:
     ///   - numberOfThreads: The number of threads to use for the thread pool.
-    public init(numberOfThreads: Int) {
-        self.numberOfThreads = numberOfThreads
+    public convenience init(numberOfThreads: Int) {
+        self.init(numberOfThreads: numberOfThreads, canBeStopped: true)
     }
+
+    /// Create a ``NIOThreadPool`` that is already started, cannot be shut down and must not be `deinit`ed.
+    ///
+    /// This is only useful for global singletons.
+    public static func _makePerpetualStartedPool(numberOfThreads: Int, threadNamePrefix: String) -> NIOThreadPool {
+        let pool = self.init(numberOfThreads: numberOfThreads, canBeStopped: false)
+        pool._start(threadNamePrefix: threadNamePrefix)
+        return pool
+    }
+
+    private init(numberOfThreads: Int, canBeStopped: Bool) {
+        self.numberOfThreads = numberOfThreads
+        self.canBeStopped = canBeStopped
+    }
+
 
     private func process(identifier: Int) {
         var item: WorkItem? = nil
@@ -200,6 +225,10 @@ public final class NIOThreadPool {
 
     /// Start the `NIOThreadPool` if not already started.
     public func start() {
+        self._start(threadNamePrefix: "TP-#")
+    }
+
+    public func _start(threadNamePrefix: String) {
         let alreadyRunning: Bool = self.lock.withLock {
             switch self.state {
             case .running(_):
@@ -228,7 +257,7 @@ public final class NIOThreadPool {
         for id in 0..<self.numberOfThreads {
             group.enter()
             // We should keep thread names under 16 characters because Linux doesn't allow more.
-            NIOThread.spawnAndRun(name: "TP-#\(id)", detachThread: false) { thread in
+            NIOThread.spawnAndRun(name: "\(threadNamePrefix)\(id)", detachThread: false) { thread in
                 self.lock.withLock {
                     self.threads!.append(thread)
                 }
@@ -243,6 +272,8 @@ public final class NIOThreadPool {
     }
 
     deinit {
+        assert(self.canBeStopped,
+               "Perpetual NIOThreadPool has been deinited, you must make sure that perpetual pools don't deinit")
         switch self.state {
         case .stopped, .shuttingDown:
             ()

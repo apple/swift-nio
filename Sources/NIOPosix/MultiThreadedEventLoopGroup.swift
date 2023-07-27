@@ -71,7 +71,9 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private let index = ManagedAtomic<Int>(0)
     private var eventLoops: [SelectableEventLoop]
     private let shutdownLock: NIOLock = NIOLock()
+    private let threadNamePrefix: String
     private var runState: RunState = .running
+    private let canBeShutDown: Bool
 
     private static func runTheLoop(thread: NIOThread,
                                    parentGroup: MultiThreadedEventLoopGroup? /* nil iff thread take-over */,
@@ -138,14 +140,54 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - arguments:
     ///     - numberOfThreads: The number of `Threads` to use.
     public convenience init(numberOfThreads: Int) {
-        self.init(numberOfThreads: numberOfThreads, selectorFactory: NIOPosix.Selector<NIORegistration>.init)
+        self.init(numberOfThreads: numberOfThreads,
+                  canBeShutDown: true,
+                  selectorFactory: NIOPosix.Selector<NIORegistration>.init)
+    }
+
+    /// Create a ``MultiThreadedEventLoopGroup`` that cannot be shut down and must not be `deinit`ed.
+    ///
+    /// This is only useful for global singletons.
+    public static func _makePerpetualGroup(threadNamePrefix: String,
+                                           numberOfThreads: Int) -> MultiThreadedEventLoopGroup {
+        return self.init(numberOfThreads: numberOfThreads,
+                         canBeShutDown: false,
+                         threadNamePrefix: threadNamePrefix,
+                         selectorFactory: NIOPosix.Selector<NIORegistration>.init)
     }
 
     internal convenience init(numberOfThreads: Int,
                               selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>) {
         precondition(numberOfThreads > 0, "numberOfThreads must be positive")
         let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
-        self.init(threadInitializers: initializers, selectorFactory: selectorFactory)
+        self.init(threadInitializers: initializers, canBeShutDown: true, selectorFactory: selectorFactory)
+    }
+
+    internal convenience init(numberOfThreads: Int,
+                              canBeShutDown: Bool,
+                              threadNamePrefix: String,
+                              selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>) {
+        precondition(numberOfThreads > 0, "numberOfThreads must be positive")
+        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
+        self.init(threadInitializers: initializers,
+                  canBeShutDown: canBeShutDown,
+                  threadNamePrefix: threadNamePrefix,
+                  selectorFactory: selectorFactory)
+    }
+
+    internal convenience init(numberOfThreads: Int,
+                              canBeShutDown: Bool,
+                              selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>) {
+        precondition(numberOfThreads > 0, "numberOfThreads must be positive")
+        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
+        self.init(threadInitializers: initializers,
+                  canBeShutDown: canBeShutDown,
+                  selectorFactory: selectorFactory)
+    }
+
+    internal convenience init(threadInitializers: [ThreadInitializer],
+                              selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration> = NIOPosix.Selector<NIORegistration>.init) {
+        self.init(threadInitializers: threadInitializers, canBeShutDown: true, selectorFactory: selectorFactory)
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses the given `ThreadInitializer`s. One `NIOThread` per `ThreadInitializer` is created and used.
@@ -153,20 +195,28 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     /// - arguments:
     ///     - threadInitializers: The `ThreadInitializer`s to use.
     internal init(threadInitializers: [ThreadInitializer],
+                  canBeShutDown: Bool,
+                  threadNamePrefix: String = "NIO-ELT-",
                   selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration> = NIOPosix.Selector<NIORegistration>.init) {
+        self.threadNamePrefix = threadNamePrefix
         let myGroupID = nextEventLoopGroupID.loadThenWrappingIncrement(ordering: .relaxed)
         self.myGroupID = myGroupID
         var idx = 0
+        self.canBeShutDown = canBeShutDown
         self.eventLoops = [] // Just so we're fully initialised and can vend `self` to the `SelectableEventLoop`.
         self.eventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
-            let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "NIO-ELT-\(myGroupID)-#\(idx)",
+            let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(name: "\(threadNamePrefix)\(myGroupID)-#\(idx)",
                                                                          parentGroup: self,
                                                                          selectorFactory: selectorFactory,
                                                                          initializer: initializer)
             idx += 1
             return ev
         }
+    }
+
+    deinit {
+        assert(self.canBeShutDown, "Perpetual MTELG shut down, you must ensure that perpetual MTELGs don't deinit")
     }
 
     /// Returns the `EventLoop` for the calling thread.
@@ -244,6 +294,12 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     #endif
     
     private func _shutdownGracefully(queue: DispatchQueue, _ handler: @escaping ShutdownGracefullyCallback) {
+        guard self.canBeShutDown else {
+            queue.async {
+                handler(EventLoopError.unsupportedOperation)
+            }
+            return
+        }
         // This method cannot perform its final cleanup using EventLoopFutures, because it requires that all
         // our event loops still be alive, and they may not be. Instead, we use Dispatch to manage
         // our shutdown signaling, and then do our cleanup once the DispatchQueue is empty.
@@ -362,7 +418,7 @@ extension MultiThreadedEventLoopGroup: @unchecked Sendable {}
 
 extension MultiThreadedEventLoopGroup: CustomStringConvertible {
     public var description: String {
-        return "MultiThreadedEventLoopGroup { threadPattern = NIO-ELT-\(self.myGroupID)-#* }"
+        return "MultiThreadedEventLoopGroup { threadPattern = \(self.threadNamePrefix)\(self.myGroupID)-#* }"
     }
 }
 
