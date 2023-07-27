@@ -393,5 +393,9 @@ let package = Package(
             name: "NIOTests",
             dependencies: ["NIO"]
         ),
+        .testTarget(
+            name: "NIOSingletonsTests",
+            dependencies: ["NIOCore", "NIOPosix"]
+        ),
     ]
 )
