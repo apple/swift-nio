@@ -331,7 +331,7 @@ public final class ServerBootstrap {
     ///
     /// - parameters:
     ///   - vsockAddress: The VSOCK socket address to bind on.
-    public func bind(to vsockAddress: VsockAddress) throws -> EventLoopFuture<Channel> {
+    public func bind(to vsockAddress: VsockAddress) -> EventLoopFuture<Channel> {
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
             try ServerSocketChannel(eventLoop: eventLoop, group: childEventLoopGroup, protocolFamily: .vsock, enableMPTCP: enableMPTCP)
         }
