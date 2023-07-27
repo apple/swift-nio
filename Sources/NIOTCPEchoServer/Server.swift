@@ -49,7 +49,7 @@ struct Server {
 
                     return try NIOAsyncChannel(
                         synchronouslyWrapping: channel,
-                        configuration: .init(
+                        configuration: NIOAsyncChannel.Configuration(
                             inboundType: String.self,
                             outboundType: String.self
                         )
@@ -101,13 +101,16 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
     init() {}
 
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        let readable = buffer.withUnsafeReadableBytes { $0.firstIndex(of: self.newLine) }
-        if let readable = readable {
-            context.fireChannelRead(self.wrapInboundOut(buffer.readString(length: readable)!))
-            buffer.moveReaderIndex(forwardBy: 1)
+        let readableBytes = buffer.readableBytesView
+
+        if let firstLine = readableBytes.firstIndex(of: UInt8(ascii: "\n")).map({ readableBytes[readableBytes.startIndex ..< $0] }) {
+            buffer.moveReaderIndex(forwardBy: firstLine.count + 1)
+            // Fire a read without a newline
+            context.fireChannelRead(self.wrapInboundOut(String(buffer: ByteBuffer(firstLine.dropLast()))))
             return .continue
+        } else {
+            return .needMoreData
         }
-        return .needMoreData
     }
 
     func encode(data: String, out: inout ByteBuffer) throws {
