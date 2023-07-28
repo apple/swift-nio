@@ -75,7 +75,7 @@ enum Linux {
         return (quota - 1 + period) / period // always round up if fractional CPU quota requested
     }
 
-    /// Get the available core count according to cgroup2 restrctions.
+    /// Get the available core count according to cgroup2 restrictions.
     /// Round up the the next whole number.
     static func coreCountCgroup2Restriction(cpuMaxPath: String = Linux.cfsCpuMaxPath) -> Int? {
         guard let maxDetails = try? firstLineOfFile(path: cpuMaxPath),
