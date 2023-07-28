@@ -326,7 +326,6 @@ public final class ServerBootstrap {
         return self.bind(unixDomainSocketPath: unixDomainSocketPath)
     }
 
-    #if canImport(Darwin) || os(Linux)
     /// Bind the `ServerSocketChannel` to a VSOCK socket.
     ///
     /// - parameters:
@@ -346,7 +345,6 @@ public final class ServerBootstrap {
             }
         }
     }
-    #endif
 
     #if !os(Windows)
         /// Use the existing bound socket file descriptor.
@@ -1015,7 +1013,6 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         }
     }
 
-    #if canImport(Darwin) || os(Linux)
     /// Specify the VSOCK address to connect to for the `Channel`.
     ///
     /// - parameters:
@@ -1040,7 +1037,6 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
             return connectPromise.futureResult
         }
     }
-    #endif
 
     #if !os(Windows)
         /// Use the existing connected socket file descriptor.

@@ -11,7 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if canImport(Darwin) || os(Linux)
 import NIOCore
 
 /// A tag protocol that can be used to cover events used to boostrap VSOCK channels.
@@ -44,5 +43,3 @@ enum VsockChannelEvents {
         }
     }
 }
-
-#endif  // #if canImport(Darwin) || os(Linux)

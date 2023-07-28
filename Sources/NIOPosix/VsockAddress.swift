@@ -11,7 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if canImport(Darwin) || os(Linux)
 
 import NIOCore
 #if canImport(Darwin)
@@ -24,6 +23,9 @@ import Musl
 #endif
 import CNIOLinux
 #endif
+fileprivate let vsockUnimplemented = "VSOCK support is not implemented for this platform"
+
+// MARK: - Public API that's available on all platforms.
 
 /// A vsock socket address.
 ///
@@ -73,15 +75,20 @@ public struct VsockAddress: Hashable, Sendable {
         /// On all platforms, using this value with `bind(2)` means "any address".
         ///
         /// On Darwin platforms, the man page states this can be used with `connect(2)` to mean "this host".
-        public static let any: Self = Self(rawValue: VMADDR_CID_ANY)
+        ///
+        /// This is equal to `VMADDR_CID_ANY (-1U)`.
+        public static let any: Self = Self(rawValue: UInt32(bitPattern: -1))
 
         /// The address of the hypervisor.
-        public static let hypervisor: Self = Self(rawValue: UInt32(VMADDR_CID_HYPERVISOR))
+        ///
+        /// This is equal to `VMADDR_CID_HYPERVISOR (0)`.
+        public static let hypervisor: Self = Self(rawValue: 0)
 
         /// The address of the host.
-        public static let host: Self = Self(rawValue: UInt32(VMADDR_CID_HOST))
+        ///
+        /// This is equal to `VMADDR_CID_HOST (2)`.
+        public static let host: Self = Self(rawValue: 2)
 
-#if os(Linux)
         /// The address for local communication (loopback).
         ///
         /// This directs packets to the same host that generated them.  This is useful for testing
@@ -90,49 +97,14 @@ public struct VsockAddress: Hashable, Sendable {
         /// The local context ID obtained with `getLocalContextID(_:)` can be used for the same
         /// purpose, but it is preferable to use `local`.
         ///
-        /// This is equal to `VMADDR_CID_LCOAL`.
+        /// This is equal to `VMADDR_CID_LOCAL (1)` on platforms that define it.
         ///
-        /// - Seealso: https://man7.org/linux/man-pages/man7/vsock.7.html
+        /// - Warning: `VMADDR_CID_LOCAL (1)` is available from Linux 5.6. Its use is unsupported on
+        /// other platforms.
+        ///
+        /// - SeeAlso: https://man7.org/linux/man-pages/man7/vsock.7.html
         public static let local: Self = Self(rawValue: 1)
-#endif
 
-        /// Get the context ID of the local machine.
-        ///
-        /// - Parameters:
-        ///   - socketFD: the file descriptor for the open socket.
-        ///
-        /// This function wraps the `IOCTL_VM_SOCKETS_GET_LOCAL_CID` `ioctl()` request.
-        ///
-        /// To provide a consistent API on Linux and Darwin, this API takes a socket parameter, which is unused on Linux:
-        ///
-        /// - On Darwin, the `ioctl()` request operates on a socket.
-        /// - On Linux, the `ioctl()` request operates on the `/dev/vsock` device.
-        ///
-        /// - NOTE: On Linux, ``local`` may be a better choice.
-        static func getLocalContextID(_ socketFD: NIOBSDSocket.Handle) throws -> Self {
-#if canImport(Darwin)
-            let request = CNIODarwin_IOCTL_VM_SOCKETS_GET_LOCAL_CID
-            let fd = socketFD
-#elseif os(Linux)
-            let request = CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID
-            let fd = open("/dev/vsock", O_RDONLY)
-            precondition(fd >= 0, "couldn't open /dev/vsock (\(errno))")
-            defer { close(fd) }
-#endif
-            var cid = ContextID.any.rawValue
-            try Posix.ioctl(fd: fd, request: request, ptr: &cid)
-            precondition(cid != ContextID.any.rawValue)
-            return Self(rawValue: cid)
-        }
-
-        /// Get the context ID of the local machine.
-        static func getLocalContextID() throws -> Self {
-            let socket = try Socket(protocolFamily: .vsock, type: .stream)
-            defer { try? socket.close() }
-            return try socket.withUnsafeHandle { handle in
-                try Self.getLocalContextID(handle)
-            }
-        }
     }
 
     /// A vsock port number.
@@ -154,7 +126,9 @@ public struct VsockAddress: Hashable, Sendable {
         }
 
         /// Used to bind to any port number.
-        public static let any: Self = Self(rawValue: VMADDR_PORT_ANY)
+        ///
+        /// This is equal to `VMADDR_PORT_ANY (-1U)`.
+        public static let any: Self = Self(rawValue: UInt32(bitPattern: -1))
     }
 }
 
@@ -176,16 +150,94 @@ extension VsockAddress: CustomStringConvertible {
     }
 }
 
+extension ChannelOptions {
+    /// - seealso: `LocalVsockContextID`
+    public static let localVsockContextID = Types.LocalVsockContextID()
+}
+
+extension ChannelOptions.Types {
+    /// This get-only option is used on channels backed by vsock sockets to get the local VSOCK context ID.
+    public struct LocalVsockContextID: ChannelOption, Sendable {
+        public typealias Value = VsockAddress.ContextID
+        public init() {}
+    }
+}
+
+// MARK: - Public API that might throw runtime error if not implemented on the platform.
+
 extension NIOBSDSocket.AddressFamily {
     /// Address for vsock.
-    public static let vsock: NIOBSDSocket.AddressFamily =
-            NIOBSDSocket.AddressFamily(rawValue: AF_VSOCK)
+    public static var vsock: NIOBSDSocket.AddressFamily {
+#if canImport(Darwin) || os(Linux)
+        NIOBSDSocket.AddressFamily(rawValue: AF_VSOCK)
+#else
+        fatalError(vsockUnimplemented)
+#endif
+    }
 }
 
 extension NIOBSDSocket.ProtocolFamily {
-    /// Vsock protocol.
-    public static let vsock: NIOBSDSocket.ProtocolFamily =
-            NIOBSDSocket.ProtocolFamily(rawValue: PF_VSOCK)
+    /// Address for vsock.
+    public static var vsock: NIOBSDSocket.ProtocolFamily {
+#if canImport(Darwin) || os(Linux)
+        NIOBSDSocket.ProtocolFamily(rawValue: PF_VSOCK)
+#else
+        fatalError(vsockUnimplemented)
+#endif
+    }
+}
+
+extension VsockAddress {
+    public func withSockAddr<T>(_ body: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
+#if canImport(Darwin) || os(Linux)
+        return try self.address.withSockAddr({ try body($0, $1) })
+#else
+        fatalError(vsockUnimplemented)
+#endif
+    }
+}
+
+// MARK: - Internal functions that are only available on supported platforms.
+
+#if canImport(Darwin) || os(Linux)
+extension VsockAddress.ContextID {
+    /// Get the context ID of the local machine.
+    ///
+    /// - Parameters:
+    ///   - socketFD: the file descriptor for the open socket.
+    ///
+    /// This function wraps the `IOCTL_VM_SOCKETS_GET_LOCAL_CID` `ioctl()` request.
+    ///
+    /// To provide a consistent API on Linux and Darwin, this API takes a socket parameter, which is unused on Linux:
+    ///
+    /// - On Darwin, the `ioctl()` request operates on a socket.
+    /// - On Linux, the `ioctl()` request operates on the `/dev/vsock` device.
+    ///
+    /// - Note: On Linux, ``local`` may be a better choice.
+    static func getLocalContextID(_ socketFD: NIOBSDSocket.Handle) throws -> Self {
+#if canImport(Darwin)
+        let request = CNIODarwin_IOCTL_VM_SOCKETS_GET_LOCAL_CID
+        let fd = socketFD
+#elseif os(Linux)
+        let request = CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID
+        let fd = open("/dev/vsock", O_RDONLY)
+        precondition(fd >= 0, "couldn't open /dev/vsock (\(errno))")
+        defer { close(fd) }
+#endif
+        var cid = Self.any.rawValue
+        try Posix.ioctl(fd: fd, request: request, ptr: &cid)
+        precondition(cid != Self.any.rawValue)
+        return Self(rawValue: cid)
+    }
+
+    /// Get the context ID of the local machine.
+    static func getLocalContextID() throws -> Self {
+        let socket = try Socket(protocolFamily: .vsock, type: .stream)
+        defer { try? socket.close() }
+        return try socket.withUnsafeHandle { handle in
+            try Self.getLocalContextID(handle)
+        }
+    }
 }
 
 extension sockaddr_vm {
@@ -204,24 +256,6 @@ extension VsockAddress {
         addr.svm_cid = self.cid.rawValue
         addr.svm_port = self.port.rawValue
         return addr
-    }
-
-    public func withSockAddr<T>(_ body: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
-        try self.address.withSockAddr({ try body($0, $1) })
-    }
-}
-
-
-extension ChannelOptions {
-    /// - seealso: `LocalVsockContextID`
-    public static let localVsockContextID = Types.LocalVsockContextID()
-}
-
-extension ChannelOptions.Types {
-    /// This get-only option is used on channels backed by vsock sockets to get the local VSOCK context ID.
-    public struct LocalVsockContextID: ChannelOption, Sendable {
-        public typealias Value = VsockAddress.ContextID
-        public init() {}
     }
 }
 

@@ -426,7 +426,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         fatalError("this must be overridden by sub class")
     }
 
-#if canImport(Darwin) || os(Linux)
     /// Begin connection of the underlying socket.
     ///
     /// - parameters:
@@ -435,13 +434,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     func connectSocket(to address: VsockAddress) throws -> Bool {
         fatalError("this must be overridden by sub class")
     }
-#endif
 
     enum ConnectTarget {
         case socketAddress(SocketAddress)
-#if canImport(Darwin) || os(Linux)
         case vsockAddress(VsockAddress)
-#endif
     }
 
     /// Begin connection of the underlying socket.
@@ -453,10 +449,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         switch target {
         case .socketAddress(let address):
             return try self.connectSocket(to: address)
-#if canImport(Darwin) || os(Linux)
         case .vsockAddress(let address):
             return try self.connectSocket(to: address)
-#endif
         }
     }
 
@@ -966,10 +960,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     public func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
         switch event {
-#if canImport(Darwin) || os(Linux)
         case let event as VsockChannelEvents.ConnectToAddress:
             self.connect0(to: .vsockAddress(event.address), promise: promise)
-#endif
         default:
             promise?.fail(ChannelError.operationUnsupported)
         }

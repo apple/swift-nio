@@ -47,11 +47,9 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
         throw ChannelError.operationUnsupported
     }
 
-#if canImport(Darwin) || os(Linux)
     override func connectSocket(to address: VsockAddress) throws -> Bool {
         throw ChannelError.operationUnsupported
     }
-#endif
 
     override func finishConnectSocket() throws {
         throw ChannelError.inappropriateOperationForState

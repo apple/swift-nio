@@ -27,13 +27,15 @@ extension System {
         }
     }
 
-    #if canImport(Darwin) || os(Linux)
     static var supportsVsock: Bool {
+#if canImport(Darwin) || os(Linux)
         guard let socket = try? Socket(protocolFamily: .vsock, type: .stream) else { return false }
         XCTAssertNoThrow(try socket.close())
         return true
+#else
+        return false
+#endif
     }
-    #endif
 }
 
 func withPipe(_ body: (NIOCore.NIOFileHandle, NIOCore.NIOFileHandle) throws -> [NIOCore.NIOFileHandle]) throws {

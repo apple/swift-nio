@@ -211,7 +211,6 @@ class EchoServerClientTest : XCTestCase {
         }
     }
 
-    #if canImport(Darwin) || os(Linux)
     func testEchoVsock() throws {
         try XCTSkipUnless(System.supportsVsock, "No vsock transport available")
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -255,7 +254,6 @@ class EchoServerClientTest : XCTestCase {
 
         try countingHandler.assertReceived(buffer: buffer)
     }
-    #endif
 
     func testChannelActiveOnConnect() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)

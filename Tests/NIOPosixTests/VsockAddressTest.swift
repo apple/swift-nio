@@ -11,7 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if canImport(Darwin) || os(Linux)
 import XCTest
 @testable import NIOCore
 @testable import NIOPosix
@@ -79,4 +78,3 @@ class VsockAddressTest: XCTestCase {
         XCTAssertEqual(try channel.getOption(ChannelOptions.localVsockContextID).wait(), localCID)
     }
 }
-#endif

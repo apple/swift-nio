@@ -117,7 +117,6 @@ typealias IOVector = iovec
         }
     }
 
-    #if canImport(Darwin) || os(Linux)
     func connect(to address: VsockAddress) throws -> Bool {
         return try withUnsafeHandle { fd in
             return try address.withSockAddr { (ptr, size) in
@@ -126,7 +125,6 @@ typealias IOVector = iovec
             }
         }
     }
-    #endif
 
     /// Finish a previous non-blocking `connect` operation.
     ///
