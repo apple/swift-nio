@@ -141,6 +141,7 @@ enum UserToKernel {
     case write(CInt, ByteBuffer)
     case writev(CInt, [ByteBuffer])
     case bind(SocketAddress)
+    case getOption(NIOBSDSocket.OptionLevel, NIOBSDSocket.Option)
     case setOption(NIOBSDSocket.OptionLevel, NIOBSDSocket.Option, Any)
     case listen(CInt, CInt)
     case accept(CInt, Bool)
@@ -155,6 +156,7 @@ enum KernelToUser {
     case returnIOResultInt(IOResult<Int>)
     case returnSocket(Socket?)
     case error(Error)
+    case returnAny(Any)
 }
 
 struct UnexpectedKernelReturn: Error {
@@ -456,6 +458,16 @@ class HookedSocket: Socket, UserKernelInterface {
         let ret = try self.waitForKernelReturn()
         if case .returnVoid = ret {
             return
+        } else {
+            throw UnexpectedKernelReturn(ret)
+        }
+    }
+
+    override func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T {
+        try self.userToKernel.waitForEmptyAndSet(.getOption(level, name))
+        let ret = try self.waitForKernelReturn()
+        if case .returnAny(let any) = ret {
+            return any as! T
         } else {
             throw UnexpectedKernelReturn(ret)
         }
@@ -878,6 +890,22 @@ extension SALTest {
         try self.selector.assertSyscallAndReturn(.returnVoid, file: (file), line: line) { syscall in
             if case .close(let fd) = syscall {
                 XCTAssertEqual(expectedFD, fd, file: (file), line: line)
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+
+    func assertGetOption<OptionValue>(
+        expectedLevel: NIOBSDSocket.OptionLevel,
+        expectedOption: NIOBSDSocket.Option,
+        value: OptionValue,
+        file: StaticString = #filePath, line: UInt = #line
+    ) throws {
+        SAL.printIfDebug("\(#function)")
+        try self.selector.assertSyscallAndReturn(.returnAny(value), file: (file), line: line) { syscall in
+            if case .getOption(expectedLevel, expectedOption) = syscall {
                 return true
             } else {
                 return false
