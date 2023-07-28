@@ -36,10 +36,6 @@ class VsockAddressTest: XCTestCase {
         XCTAssertEqual(VsockAddress.ContextID(4294967295), 4294967295)
         XCTAssertEqual(VsockAddress.Port(0), 0)
         XCTAssertEqual(VsockAddress.Port(4294967295), 4294967295)
-//        XCTAssertEqual(VsockAddress.ContextID(-1), 4294967295)  // compile-time error
-//        XCTAssertEqual(VsockAddress.ContextID(4294967296), 4294967296)  // compile-time error
-//        XCTAssertEqual(VsockAddress.Port(-1), 4294967295)  // compile-time error
-//        XCTAssertEqual(VsockAddress.Port(4294967296), 4294967296)  // compile-time error
     }
 
     func testSocketAddressEqualitySpecialValues() throws {

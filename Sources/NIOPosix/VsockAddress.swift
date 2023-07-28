@@ -67,7 +67,7 @@ public struct VsockAddress: Hashable, Sendable {
         }
 
         public init(_ value: Int) {
-            self.init(rawValue: UInt32(Int32(truncatingIfNeeded: value)))
+            self.init(rawValue: UInt32(bitPattern: Int32(truncatingIfNeeded: value)))
         }
 
         /// Wildcard, matches any address.
@@ -122,7 +122,7 @@ public struct VsockAddress: Hashable, Sendable {
         }
 
         public init(_ value: Int) {
-            self.init(rawValue: UInt32(Int32(truncatingIfNeeded: value)))
+            self.init(rawValue: UInt32(bitPattern: Int32(truncatingIfNeeded: value)))
         }
 
         /// Used to bind to any port number.
@@ -220,9 +220,8 @@ extension VsockAddress.ContextID {
         let fd = socketFD
 #elseif os(Linux)
         let request = CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID
-        let fd = open("/dev/vsock", O_RDONLY)
-        precondition(fd >= 0, "couldn't open /dev/vsock (\(errno))")
-        defer { close(fd) }
+        let fd = try! Posix.open(file: "/dev/vsock", oFlag: O_RDONLY | O_CLOEXEC)
+        defer { try! Posix.close(descriptor: fd) }
 #endif
         var cid = Self.any.rawValue
         try Posix.ioctl(fd: fd, request: request, ptr: &cid)
@@ -233,7 +232,7 @@ extension VsockAddress.ContextID {
     /// Get the context ID of the local machine.
     static func getLocalContextID() throws -> Self {
         let socket = try Socket(protocolFamily: .vsock, type: .stream)
-        defer { try? socket.close() }
+        defer { try! socket.close() }
         return try socket.withUnsafeHandle { handle in
             try Self.getLocalContextID(handle)
         }

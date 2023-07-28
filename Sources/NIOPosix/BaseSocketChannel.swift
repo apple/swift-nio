@@ -1209,6 +1209,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.addressesCached = AddressCache(local: nil, remote: nil)
     }
 
+    public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.connect0(to: .socketAddress(address), promise: promise)
+    }
+
     internal final func connect0(to target: ConnectTarget, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
@@ -1251,10 +1255,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             self.pendingConnect = promise
             self.close0(error: error, mode: .all, promise: nil)
         }
-    }
-
-    public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        self.connect0(to: .socketAddress(address), promise: promise)
     }
 
     public func channelRead0(_ data: NIOAny) {

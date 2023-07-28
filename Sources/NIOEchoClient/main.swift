@@ -83,8 +83,8 @@ switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (_, .some(let cid), .some(let port)):
     /* we got two arguments (Int, Int), let's interpret that as vsock cid and port */
     connectTarget = .vsock(VsockAddress(
-        cid: .init(rawValue: UInt32(bitPattern: Int32(truncatingIfNeeded: cid))),
-        port: .init(rawValue: UInt32(bitPattern: Int32(truncatingIfNeeded: port)))
+        cid: VsockAddress.ContextID(cid),
+        port: VsockAddress.Port(port)
     ))
 case (.some(let h), .none, .some(let p)):
     /* we got two arguments (String, Int), let's interpret that as host and port */
