@@ -15,6 +15,17 @@
 import NIOCore
 import NIOPosix
 
+private final class CloseAfterTimeoutHandler: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+
+    func channelActive(context: ChannelHandlerContext) {
+        context.fireChannelActive()
+        context.eventLoop.scheduleTask(in: .milliseconds(1)) {
+            context.close(promise: nil)
+        }
+    }
+}
+
 func run(identifier: String) {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
@@ -27,6 +38,11 @@ func run(identifier: String) {
     
     let serverAddress = serverConnection.localAddress!
     let clientBootstrap = ClientBootstrap(group: group)
+        .channelInitializer { channel in
+            channel.eventLoop.makeCompletedFuture {
+                try channel.pipeline.syncOperations.addHandler(CloseAfterTimeoutHandler())
+            }
+        }
 
     measure(identifier: identifier, trackFDs: true) {
         let iterations = 1000
@@ -35,7 +51,7 @@ func run(identifier: String) {
             
             let _: Void? = try? conn.flatMap { channel in
                 (channel as! SocketOptionProvider).setSoLinger(linger(l_onoff: 1, l_linger: 0)).flatMap {
-                    channel.close()
+                    channel.closeFuture
                 }
             }.wait()
         }
