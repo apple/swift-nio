@@ -61,7 +61,7 @@ enum Linux {
     }
 
     /// Get the available core count according to cgroup1 restrictions.
-    /// Round up the the next whole number.
+    /// Round up to the next whole number.
     static func coreCountCgroup1Restriction(quota quotaPath: String = Linux.cfsQuotaPath,
                                             period periodPath: String = Linux.cfsPeriodPath) -> Int? {
         guard
