@@ -411,7 +411,7 @@ public final class ServerBootstrap {
         }
     }
 
-    class AcceptHandler: ChannelInboundHandler {
+    final class AcceptHandler: ChannelInboundHandler {
         public typealias InboundIn = SocketChannel
 
         private let childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
