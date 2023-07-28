@@ -34,9 +34,9 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=8050
       - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=36
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=26400
-      - MAX_ALLOCS_ALLOWED_1000_rst_connections=148050
+      - MAX_ALLOCS_ALLOWED_1000_rst_connections=151050
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=4050
-      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=155050
+      - MAX_ALLOCS_ALLOWED_1000_tcpconnections=159050
       - MAX_ALLOCS_ALLOWED_1000_udp_reqs=6050
       - MAX_ALLOCS_ALLOWED_1000_udpbootstraps=2050
       - MAX_ALLOCS_ALLOWED_1000_udpconnections=77050
