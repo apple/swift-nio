@@ -76,7 +76,7 @@ enum Linux {
     }
 
     /// Get the available core count according to cgroup2 restrictions.
-    /// Round up the the next whole number.
+    /// Round up to the next whole number.
     static func coreCountCgroup2Restriction(cpuMaxPath: String = Linux.cfsCpuMaxPath) -> Int? {
         guard let maxDetails = try? firstLineOfFile(path: cpuMaxPath),
               let spaceIndex = maxDetails.firstIndex(of: " "),
