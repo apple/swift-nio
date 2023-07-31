@@ -688,11 +688,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return
         }
 
-        guard self.lifecycleManager.isActive else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
-            return
-        }
-
         bufferPendingWrite(data: data, promise: promise)
     }
 
@@ -1300,6 +1295,20 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return
         }
         self.registerForReadEOF()
+
+        // Flush any pending writes. If after the flush we're still open, make sure
+        // our registration is appropriate.
+        switch self.flushNow() {
+        case .register:
+            if self.lifecycleManager.isOpen && !self.interestedEvent.contains(.write) {
+                self.registerForWritable()
+            }
+        case .unregister:
+            if self.lifecycleManager.isOpen && self.interestedEvent.contains(.write) {
+                self.unregisterForWritable()
+            }
+        }
+
         self.readIfNeeded0()
     }
 

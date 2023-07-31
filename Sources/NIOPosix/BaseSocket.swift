@@ -301,7 +301,7 @@ class BaseSocket: BaseSocketProtocol {
     ///     - level: The protocol level (see `man getsockopt`).
     ///     - name: The name of the option to set.
     /// - throws: An `IOError` if the operation failed.
-    final func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T {
+    func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T {
         return try self.withUnsafeHandle { fd in
             var length = socklen_t(MemoryLayout<T>.size)
             let storage = UnsafeMutableRawBufferPointer.allocate(byteCount: MemoryLayout<T>.stride,
