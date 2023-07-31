@@ -16,7 +16,7 @@ import NIOEmbedded
 import NIOPosix
 import XCTest
 
-#if swift(>=5.9)
+#if compiler(>=5.9)
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
 actor EventLoopBoundActor {
     nonisolated let unownedExecutor: UnownedSerialExecutor
@@ -39,7 +39,7 @@ actor EventLoopBoundActor {
 
 final class SerialExecutorTests: XCTestCase {
     private func _testBasicExecutorFitsOnEventLoop(loop1: EventLoop, loop2: EventLoop) async throws {
-        #if swift(<5.9)
+        #if compiler(<5.9)
         throw XCTSkip("Custom executors are only supported in 5.9")
         #else
         guard #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) else {

@@ -350,7 +350,7 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 }
 
 // MARK: SerialExecutor conformance
-#if swift(>=5.9)
+#if compiler(>=5.9)
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
 extension NIOAsyncTestingEventLoop: NIOSerialEventLoopExecutor { }
 #endif

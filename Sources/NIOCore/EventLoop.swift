@@ -373,7 +373,7 @@ public protocol EventLoop: EventLoopGroup {
     /// allows `EventLoop`s to cache a pre-succeeded `Void` future to prevent superfluous allocations.
     func makeSucceededVoidFuture() -> EventLoopFuture<Void>
 
-    #if swift(>=5.9)
+    #if compiler(>=5.9)
     /// Returns a `SerialExecutor` corresponding to this ``EventLoop``.
     ///
     /// This executor can be used to isolate an actor to a given ``EventLoop``. Implementers are encouraged to customise
@@ -441,7 +441,7 @@ extension EventLoop {
 }
 
 extension EventLoop {
-    #if swift(>=5.9)
+    #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public var executor: any SerialExecutor {
         NIODefaultSerialEventLoopExecutor(self)
