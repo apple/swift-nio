@@ -282,7 +282,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     for try await negotiationResult in channel.inboundStream {
                         group.addTask {
-                            switch try await negotiationResult.get().waitForFinalResult() {
+                            switch try await negotiationResult.getResult() {
                             case .string(let channel):
                                 for try await value in channel.inboundStream {
                                     continuation.yield(.string(value))
@@ -302,7 +302,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 port: channel.channel.localAddress!.port!,
                 proposedALPN: .string
             )
-            let stringNegotiationResult = try await stringNegotiationResultFuture.get().waitForFinalResult()
+            let stringNegotiationResult = try await stringNegotiationResultFuture.getResult()
             switch stringNegotiationResult {
             case .string(let stringChannel):
                 // This is the actual content
@@ -317,7 +317,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 port: channel.channel.localAddress!.port!,
                 proposedALPN: .byte
             )
-            let byteNegotiationResult = try await byteNegotiationResultFuture.get().waitForFinalResult()
+            let byteNegotiationResult = try await byteNegotiationResultFuture.getResult()
             switch byteNegotiationResult {
             case .string:
                 preconditionFailure()
@@ -356,7 +356,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     for try await negotiationResult in channel.inboundStream {
                         group.addTask {
-                            switch try await negotiationResult.get().waitForFinalResult() {
+                            switch try await negotiationResult.getResult() {
                             case .string(let channel):
                                 for try await value in channel.inboundStream {
                                     continuation.yield(.string(value))
@@ -377,7 +377,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 proposedOuterALPN: .string,
                 proposedInnerALPN: .string
             )
-            switch try await stringStringNegotiationResult.get().waitForFinalResult() {
+            switch try await stringStringNegotiationResult.getResult() {
             case .string(let stringChannel):
                 // This is the actual content
                 try await stringChannel.outboundWriter.write("hello")
@@ -392,7 +392,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 proposedOuterALPN: .byte,
                 proposedInnerALPN: .string
             )
-            switch try await byteStringNegotiationResult.get().waitForFinalResult() {
+            switch try await byteStringNegotiationResult.getResult() {
             case .string(let stringChannel):
                 // This is the actual content
                 try await stringChannel.outboundWriter.write("hello")
@@ -407,7 +407,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 proposedOuterALPN: .byte,
                 proposedInnerALPN: .byte
             )
-            switch try await byteByteNegotiationResult.get().waitForFinalResult() {
+            switch try await byteByteNegotiationResult.getResult() {
             case .string:
                 preconditionFailure()
             case .byte(let byteChannel):
@@ -422,7 +422,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 proposedOuterALPN: .string,
                 proposedInnerALPN: .byte
             )
-            switch try await stringByteNegotiationResult.get().waitForFinalResult() {
+            switch try await stringByteNegotiationResult.getResult() {
             case .string:
                 preconditionFailure()
             case .byte(let byteChannel):
@@ -485,7 +485,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 try await withThrowingTaskGroup(of: Void.self) { group in
                     for try await negotiationResult in channel.inboundStream {
                         group.addTask {
-                            switch try await negotiationResult.get().waitForFinalResult() {
+                            switch try await negotiationResult.getResult() {
                             case .string(let channel):
                                 for try await value in channel.inboundStream {
                                     continuation.yield(.string(value))
@@ -506,7 +506,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 proposedALPN: .unknown
             )
             await XCTAssertThrowsError(
-                try await failedProtocolNegotiation.get().waitForFinalResult()
+                try await failedProtocolNegotiation.getResult()
             )
 
             // Let's check that we can still open a new connection
@@ -515,7 +515,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 port: channel.channel.localAddress!.port!,
                 proposedALPN: .string
             )
-            switch try await stringNegotiationResult.get().waitForFinalResult() {
+            switch try await stringNegotiationResult.getResult() {
             case .string(let stringChannel):
                 // This is the actual content
                 try await stringChannel.outboundWriter.write("hello")
@@ -599,7 +599,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             let firstNegotiationResult = try await group.next()
             let secondNegotiationResult = try await group.next()
 
-            switch (try await firstNegotiationResult?.get().waitForFinalResult(), try await secondNegotiationResult?.get().waitForFinalResult()) {
+            switch (try await firstNegotiationResult?.getResult(), try await secondNegotiationResult?.getResult()) {
             case (.string(let firstChannel), .string(let secondChannel)):
                 var firstInboundIterator = firstChannel.inboundStream.makeAsyncIterator()
                 var secondInboundIterator = secondChannel.inboundStream.makeAsyncIterator()
@@ -682,7 +682,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
             try toChannel.writeBytes(.init(string: "alpn:string\nHello\n"))
             let negotiationResult = try await group.next()
-            switch try await negotiationResult?.get().waitForFinalResult() {
+            switch try await negotiationResult?.getResult() {
             case .string(let channel):
                 var inboundIterator = channel.inboundStream.makeAsyncIterator()
                 do {
@@ -753,7 +753,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             let firstNegotiationResult = try await group.next()
             let secondNegotiationResult = try await group.next()
 
-            switch (try await firstNegotiationResult?.get().waitForFinalResult(), try await secondNegotiationResult?.get().waitForFinalResult()) {
+            switch (try await firstNegotiationResult?.getResult(), try await secondNegotiationResult?.getResult()) {
             case (.string(let firstChannel), .string(let secondChannel)):
                 var firstInboundIterator = firstChannel.inboundStream.makeAsyncIterator()
                 var secondInboundIterator = secondChannel.inboundStream.makeAsyncIterator()
