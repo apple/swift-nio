@@ -130,7 +130,9 @@ func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> I
 
     clientChannel.write(NIOAny(HTTPClientRequestPart.head(RepeatedRequests.requestHead)), promise: nil)
     try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
-    return try repeatedRequestsHandler.wait()
+    let result = try repeatedRequestsHandler.wait()
+    try clientChannel.closeFuture.wait()
+    return result
 }
 
 func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {

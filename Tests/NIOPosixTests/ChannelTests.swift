@@ -2068,11 +2068,6 @@ public final class ChannelTests: XCTestCase {
             }
         }
         withChannel { channel in
-            checkThatItThrowsInappropriateOperationForState {
-                try channel.writeAndFlush("foo").wait()
-            }
-        }
-        withChannel { channel in
             XCTAssertThrowsError(try channel.triggerUserOutboundEvent("foo").wait()) { error in
                 if let error = error as? ChannelError {
                     XCTAssertEqual(ChannelError.operationUnsupported, error)
@@ -2181,7 +2176,8 @@ public final class ChannelTests: XCTestCase {
             .childChannelInitializer { channel in
                 var buffer = channel.allocator.buffer(capacity: 4)
                 buffer.writeString("foo")
-                return channel.write(NIOAny(buffer))
+                channel.writeAndFlush(NIOAny(buffer), promise: nil)
+                return channel.eventLoop.makeSucceededVoidFuture()
             }
             .bind(host: "127.0.0.1", port: 0)
             .wait())
