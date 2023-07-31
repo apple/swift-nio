@@ -233,6 +233,13 @@ public final class EmbeddedEventLoop: EventLoop {
     deinit {
         precondition(scheduledTasks.isEmpty, "Embedded event loop freed with unexecuted scheduled tasks!")
     }
+
+    #if compiler(>=5.9)
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    public var executor: any SerialExecutor {
+        fatalError("EmbeddedEventLoop is not thread safe and cannot be used as a SerialExecutor. Use NIOAsyncTestingEventLoop instead.")
+    }
+    #endif
 }
 
 @usableFromInline
