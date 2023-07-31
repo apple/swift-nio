@@ -172,6 +172,22 @@ let package = Package(
         // MARK: - Examples
 
         .executableTarget(
+            name: "NIOTCPEchoServer",
+            dependencies: [
+                "NIOPosix",
+                "NIOCore",
+            ],
+            exclude: ["README.md"]
+        ),
+        .executableTarget(
+            name: "NIOTCPEchoClient",
+            dependencies: [
+                "NIOPosix",
+                "NIOCore",
+            ],
+            exclude: ["README.md"]
+        ),
+        .executableTarget(
             name: "NIOEchoServer",
             dependencies: [
                 "NIOPosix",
