@@ -54,7 +54,5 @@ size_t CNIODarwin_CMSG_SPACE(size_t);
 
 extern const unsigned long CNIODarwin_IOCTL_VM_SOCKETS_GET_LOCAL_CID;
 
-int CNIODarwin_get_local_vsock_cid(int socket, uint32_t *cid);
-
 #endif  // __APPLE__
 #endif  // C_NIO_DARWIN_H

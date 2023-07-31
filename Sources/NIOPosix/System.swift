@@ -872,7 +872,8 @@ internal enum Posix {
     @inline(never)
     internal static func ioctl(fd: CInt, request: CUnsignedLong, ptr: UnsafeMutableRawPointer) throws {
         _ = try syscall(blocking: false) {
-            sysIoctl(fd, request, ptr)
+            /// `numericCast` to support musl which accepts `CInt` (cf. `CUnsignedLong`).
+            sysIoctl(fd, numericCast(request), ptr)
         }
     }
 #endif  // !os(Windows)
