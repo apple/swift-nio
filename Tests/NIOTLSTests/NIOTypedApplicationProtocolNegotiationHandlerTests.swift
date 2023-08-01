@@ -27,6 +27,20 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
     private let negotiatedEvent: TLSUserEvent = .handshakeCompleted(negotiatedProtocol: "h2")
     private let negotiatedResult: ALPNResult = .negotiated("h2")
 
+    func testPromiseIsCompleted() {
+        let channel = EmbeddedChannel()
+        let eventLoop = channel.embeddedEventLoop
+
+        var handler: NIOTypedApplicationProtocolNegotiationHandler? = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>(eventLoop: eventLoop) { result, channel in
+            return channel.eventLoop.makeSucceededFuture(.init(result: (.negotiated(result))))
+        }
+        let future = handler!.protocolNegotiationResult
+        handler = nil
+        XCTAssertThrowsError(try future.wait()) { error in
+            XCTAssertEqual(error as? ChannelError, .inappropriateOperationForState)
+        }
+    }
+
     func testChannelProvidedToCallback() throws {
         let emChannel = EmbeddedChannel()
         let loop = emChannel.eventLoop as! EmbeddedEventLoop
