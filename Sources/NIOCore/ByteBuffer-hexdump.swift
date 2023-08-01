@@ -16,15 +16,17 @@ extension ByteBuffer {
 
     /// Return a `String` of hexadecimal digits of bytes in the Buffer,
     /// in a format that's compatible with `xxd -r -p`.
-    ///
-    /// - parameters:
-    ///     - offset:  The offset from the beginning of the buffer, in bytes. Defaults to 0.
-    ///     - readableOnly: Whether to only dump the `readableBytes` part (before the `writerIndex`), or to dump the full buffer, including empty bytes in the end of the allocated space. Defaults to true.
-    func hexDumpShort(offset: Int = 0, readableOnly: Bool = true) -> String {
-        let length = (readableOnly ? self.writerIndex : self.capacity) - offset
-        return self._storage.dumpBytes(slice: self._storage.fullSlice,
-                                       offset: offset,
-                                       length: length)
+    /// `hexDumpShort()` always dumps all readable bytes, i.e. from `readerIndex` to `writerIndex`,
+    /// so you should set those indices to desired location to get the offset and length that you need to dump.
+    func hexDumpShort() -> String {
+        var hexString = ""
+        hexString.reserveCapacity(self.readableBytes*3)
+
+        for byte in self.readableBytesView {
+            hexString += "\(String(byte: byte, padding: 2)) "
+        }
+
+        return String(hexString.dropLast())
     }
 
     /// Return a `String` of hexadecimal digits of bytes in the Buffer.,
@@ -33,28 +35,15 @@ extension ByteBuffer {
     /// and the last `limit/2` of that, replacing the rest with `...`, i.e. `01 02 03 ... 09 11 12`.
     ///
     /// - parameters:
-    ///     - offset:  The offset from the beginning of the buffer, in bytes. Defaults to 0.
-    ///     - readableOnly: Whether to only dump the `readableBytes` part (before the `writerIndex`), or to dump the full buffer,
-    ///         including empty bytes in the end of the allocated space. Defaults to true.
     ///     - limit: The maximum amount of bytes presented in the dump.
-    func hexDumpShort(offset: Int = 0, readableOnly: Bool = true, limit: Int) -> String {
-        let lastIndex = readableOnly ? self.writerIndex : self.capacity
-        let length = lastIndex - offset
-
+    func hexDumpShort(limit: Int) -> String {
         // If the length of the resulting hex dump is smaller than the maximum allowed dump length,
         // return the full dump. Otherwise, dump the first and last pieces of the buffer, then concatenate them.
-        if length <= limit {
-            return self.hexDumpShort(offset: offset, readableOnly: readableOnly)
+        if readableBytes <= limit {
+            return self.hexDumpShort()
         } else {
-            let clipLength = limit / 2
-            let startHex = self._storage.dumpBytes(slice: self._storage.fullSlice,
-                                                   offset: offset,
-                                                   length: offset + clipLength)
-
-            let endHex = self._storage.dumpBytes(slice: self._storage.fullSlice,
-                                                 offset: lastIndex - clipLength,
-                                                 length: clipLength)
-
+            let startHex = self.getSlice(at: 0, length: limit/2)!.hexDumpShort()
+            let endHex  = self.getSlice(at: self.readableBytes - limit/2, length: limit/2)!.hexDumpShort()
             return startHex + " ... " + endHex
         }
     }

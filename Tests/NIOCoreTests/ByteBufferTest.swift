@@ -1861,34 +1861,11 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("48 65 6c 6c 6f", buf.hexDumpShort())
     }
 
-    func testHexDumpShortToCapacity() {
-        let buf = ByteBuffer(string: "Hello")
-        // When dumping with `readableOnly: false`, hexDump will dump all bytes until the
-        // end of buffer's allocated storage.
-        let zeroes = String(repeating: " 00", count: buf.capacity - buf.readableBytes)
-        XCTAssertEqual("48 65 6c 6c 6f" + zeroes, buf.hexDumpShort(readableOnly: false))
-    }
-
-    func testHexDumpShortWithOffset() {
-        let buf = ByteBuffer(string: "Hello")
-        XCTAssertEqual("6c 6c 6f", buf.hexDumpShort(offset: 2))
-    }
-
     func testHexDumpShortWithReaderIndexOffset() {
         var buf = ByteBuffer(string: "Hello")
         let firstTwo = buf.readBytes(length: 2)!
         XCTAssertEqual([72, 101], firstTwo)
-        XCTAssertEqual("48 65 6c 6c 6f", buf.hexDumpShort())
-    }
-
-    func testHexDumpShortWithReaderIndexOffsetAndReadableOnlyFalse() {
-        var buf = ByteBuffer(string: "Hello")
-
-        let firstTwo = buf.readBytes(length: 2)!
-        XCTAssertEqual([72, 101], firstTwo)
-
-        let zeroes = String(repeating: " 00", count: buf.capacity - buf.writerIndex)
-        XCTAssertEqual("48 65 6c 6c 6f" + zeroes, buf.hexDumpShort(readableOnly: false))
+        XCTAssertEqual("6c 6c 6f", buf.hexDumpShort())
     }
 
     func testHexDumpShortWithLimit() {
