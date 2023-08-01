@@ -62,12 +62,14 @@ extension ByteBuffer {
 
             result += "\(String(byte: lineOffset, padding: 8))  "
 
+            // Start with a xxd-format hexdump that we already have, then pad it
+            // and insert a space in the middle.
             var lineHex = slice.hexDumpShort()
             lineHex.append(String(repeating: " ", count: 49 - lineHex.count))
             lineHex.insert(" ", at: lineHex.index(lineHex.startIndex, offsetBy: 24))
             result += lineHex
 
-            // ASCII column
+            // ASCII column renders the line as ASCII characters, or "." if the character is not printable.
             result += "|" + String(decoding: slice.getBytes(at: 0, length: slice.readableBytes)!, as: Unicode.UTF8.self).map {
                 $0 >= " " && $0 < "~" ? $0 : "."
             } + "|\n"
@@ -79,4 +81,51 @@ extension ByteBuffer {
         result += String(byte: lineOffset, padding: 8)
         return result
     }
+
+//    func hexDumpLong(limit: Int) -> String {
+//        var result = ""
+//
+//        // Start with long-format dump of limit/2 bytes
+//        // then insert an empty line with "..." in the middle
+//        // Add a dump of the last limit/2 bytes
+//        // The last line should be the final lineOffset
+//
+//        
+//
+//        return result
+//    }
+
+    /// Describes a ByteBuffer hexDump format. Can be either xxd output compatible, or hexdump compatible.
+    /// You can provide a `maxLength` argument to both formats that will limit the maximum length of the buffer to dump before clipping the dump for readability.
+    public enum HexDumpFormat {
+        /// A hexdump format compatible with the xxd utility.
+        /// - parameters:
+        ///     - maxLength: The maximum amount of bytes to dump before clipping for readability.
+        case xxdCompatible(maxLength: Int? = nil)
+
+        /// A hexdump format compatible with hexdump utility.
+        /// - parameters:
+        ///     - maxLength: The maximum amount of bytes to dump before clipping for readability.
+        case hexDumpCompatible(maxLength: Int? = nil)
+    }
+
+
+    public func hexDump(format: HexDumpFormat) -> String {
+        switch(format) {
+        case .xxdCompatible(let maxLength):
+            if let maxLength {
+                return self.hexDumpShort(limit: maxLength)
+            } else {
+                return self.hexDumpShort()
+            }
+
+        case .hexDumpCompatible(let maxLength):
+            if let maxLength {
+                return self.hexDumpLong()
+            } else {
+                return self.hexDumpLong()
+            }
+        }
+    }
+
 }
