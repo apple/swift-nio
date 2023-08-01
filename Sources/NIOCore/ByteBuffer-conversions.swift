@@ -39,13 +39,11 @@ extension String {
     /// Creates a `String` from a given Int with base (radix) of 16, with the provided padding size.
     /// - parameter padding: The desired length of the resulting string.
     @inlinable
-    public init<T>(byte: T, padding: Int) where T : BinaryInteger {
+    internal init<T>(byte: T, padding: Int) where T : BinaryInteger {
+        // Initialize the string with just the byte converted to hexadecimal first
+        // Then, add the padding of the desired size minus the number of hex digits in the string.
         self.init(byte, radix: 16)
-        var hexString = String(byte, radix: 16)
-        while hexString.count < padding {
-            hexString = "0" + hexString
-        }
-        self = hexString
+        self = String(repeating: "0", count: padding - self.count) + self
     }
 }
 
