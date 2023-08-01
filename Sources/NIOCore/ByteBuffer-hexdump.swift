@@ -50,48 +50,33 @@ extension ByteBuffer {
 
     /// Returns a `String` of hexadecimal digits of bytes in the Buffer,
     /// with formatting compatible with output of `hexdump -C`.
-    func hexDumpLong(offset: Int = 0, readableOnly: Bool = true) -> String {
+    func hexDumpLong() -> String {
         var result = ""
-        let lastIndex = (readableOnly ? self.writerIndex : self.capacity)
-        let length = lastIndex - offset
 
-        // Grab the pointer to the whole buffer storage. We'll use offset and length when we index into it.
-        let bytes = UnsafeRawBufferPointer(start: self._storage.bytes, count: Int(self.capacity))
+        var buffer = self
+        var lineOffset = 0
 
-        // hexdump -C dumps into lines of upto 16 bytes each
-        // with a last line containing only the offset column.
-        for line in 0 ... length/16 {
-            // Line offset column
-            result += "\(String(byte: line * 16, padding: 8))  "
+        while buffer.readableBytes > 0 {
+            let slice = buffer.readSlice(length: min(16, buffer.readableBytes))!
+            let lineLength = slice.readableBytes
 
-            // The amount of bytes remaining in this dump
-            let remainingBytes = length - line * 16
+            result += "\(String(byte: lineOffset, padding: 8))  "
 
-            // The amount of bytes in this dump line.
-            let lineLength = min(16, remainingBytes)
-
-            // The index range in the buffer storage for this line.
-            let range = (offset + line*16)..<(offset + line*16 + lineLength)
-
-            // Grab just the bytes for this particular line
-            let lineBytes = bytes[range]
-
-            // Make a hexdump of a single line of up to 16 bytes
-            // Pad it with empty space if there were not enough bytes in the buffer dump range
-            // And insert the separator space in the middle of the line
-            var lineDump = bytes[range].map { String(byte: $0, padding: 2) }.joined(separator: " ")
-            lineDump.append(String(repeating: " ", count: 49 - lineDump.count))
-            lineDump.insert(" ", at: lineDump.index(lineDump.startIndex, offsetBy: 24))
-            result += lineDump
+            var lineHex = slice.hexDumpShort()
+            lineHex.append(String(repeating: " ", count: 49 - lineHex.count))
+            lineHex.insert(" ", at: lineHex.index(lineHex.startIndex, offsetBy: 24))
+            result += lineHex
 
             // ASCII column
-            result += "|" + String(decoding: lineBytes, as: Unicode.UTF8.self).map {
+            result += "|" + String(decoding: slice.getBytes(at: 0, length: slice.readableBytes)!, as: Unicode.UTF8.self).map {
                 $0 >= " " && $0 < "~" ? $0 : "."
             } + "|\n"
+
+            lineOffset += lineLength
         }
 
         // Add the last line with the last byte offset
-        result += String(byte: length, padding: 8)
+        result += String(byte: lineOffset, padding: 8)
         return result
     }
 }
