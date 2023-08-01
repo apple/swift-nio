@@ -1856,13 +1856,13 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testHexDumpShort() {
-        let buf = ByteBufferAllocator().buffer(string: "Hello")
+        let buf = ByteBuffer(string: "Hello")
 
         XCTAssertEqual("48 65 6c 6c 6f", buf.hexDumpShort())
     }
 
     func testHexDumpShortToCapacity() {
-        let buf = ByteBufferAllocator().buffer(string: "Hello")
+        let buf = ByteBuffer(string: "Hello")
         // When dumping with `readableOnly: false`, hexDump will dump all bytes until the
         // end of buffer's allocated storage.
         let zeroes = String(repeating: " 00", count: buf.capacity - buf.readableBytes)
@@ -1870,19 +1870,19 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testHexDumpShortWithOffset() {
-        let buf = ByteBufferAllocator().buffer(string: "Hello")
+        let buf = ByteBuffer(string: "Hello")
         XCTAssertEqual("6c 6c 6f", buf.hexDumpShort(offset: 2))
     }
 
     func testHexDumpShortWithReaderIndexOffset() {
-        var buf = ByteBufferAllocator().buffer(string: "Hello")
+        var buf = ByteBuffer(string: "Hello")
         let firstTwo = buf.readBytes(length: 2)!
         XCTAssertEqual([72, 101], firstTwo)
         XCTAssertEqual("48 65 6c 6c 6f", buf.hexDumpShort())
     }
 
     func testHexDumpShortWithReaderIndexOffsetAndReadableOnlyFalse() {
-        var buf = ByteBufferAllocator().buffer(string: "Hello")
+        var buf = ByteBuffer(string: "Hello")
 
         let firstTwo = buf.readBytes(length: 2)!
         XCTAssertEqual([72, 101], firstTwo)
@@ -1902,7 +1902,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testHexDumpLong() {
-        let buf = ByteBufferAllocator().buffer(string: "Goodbye, world! It was nice knowing you.\n")
+        let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let expected = """
         00000000  47 6f 6f 64 62 79 65 2c  20 77 6f 72 6c 64 21 20  |Goodbye, world! |
         00000010  49 74 20 77 61 73 20 6e  69 63 65 20 6b 6e 6f 77  |It was nice know|
@@ -1914,7 +1914,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testHexDumpLongOffset() {
-        let buf = ByteBufferAllocator().buffer(string: "Goodbye, world! It was nice knowing you.\n")
+        let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let expected = """
         00000000  79 65 2c 20 77 6f 72 6c  64 21 20 49 74 20 77 61  |ye, world! It wa|
         00000010  73 20 6e 69 63 65 20 6b  6e 6f 77 69 6e 67 20 79  |s nice knowing y|
@@ -1926,7 +1926,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testHexDumpLongFullBuffer() {
-        let buf = ByteBufferAllocator().buffer(string: "Goodbye, world! It was nice knowing you.\n")
+        let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let expected = """
         00000000  47 6f 6f 64 62 79 65 2c  20 77 6f 72 6c 64 21 20  |Goodbye, world! |
         00000010  49 74 20 77 61 73 20 6e  69 63 65 20 6b 6e 6f 77  |It was nice know|
