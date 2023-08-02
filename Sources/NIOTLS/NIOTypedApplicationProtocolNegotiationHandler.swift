@@ -80,6 +80,16 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
         }
     }
 
+    deinit {
+        switch self.stateMachine.deinitHandler() {
+        case .failPromise:
+            self.negotiatedPromise.fail(ChannelError.inappropriateOperationForState)
+
+        case .none:
+            break
+        }
+    }
+
     @_spi(AsyncChannel)
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch self.stateMachine.userInboundEventTriggered(event: event) {
