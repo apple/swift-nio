@@ -309,12 +309,14 @@ public struct ByteBuffer {
         }
 
         func dumpBytes(slice: Slice, offset: Int, length: Int) -> String {
-            var desc = ""
+            var desc = "["
             let bytes = UnsafeRawBufferPointer(start: self.bytes, count: Int(self.capacity))
             for byte in bytes[Int(slice.lowerBound) + offset ..< Int(slice.lowerBound) + offset + length] {
-                desc += "\(String(byte: byte, padding: 2)) "
+                let hexByte = String(byte, radix: 16)
+                desc += " \(hexByte.count == 1 ? "0" : "")\(hexByte)"
             }
-            return String(desc.dropLast())
+            desc += " ]"
+            return desc
         }
     }
 
@@ -896,7 +898,7 @@ extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
     ///
     /// - returns: A description of this `ByteBuffer` useful for debugging.
     public var debugDescription: String {
-        return "\(self.description)\nreadable bytes (max 1k): [ \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes))) ]"
+        return "\(self.description)\nreadable bytes (max 1k): \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes)))"
     }
 }
 
@@ -1117,4 +1119,3 @@ extension ByteBuffer {
         return Range<Int>(uncheckedBounds: (lower: indexFromReaderIndex, upper: upperBound))
     }
 }
-
