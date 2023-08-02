@@ -1911,7 +1911,7 @@ class ByteBufferTest: XCTestCase {
         00000020  69 6e 67 20 79 6f 75 2e  0a                       |ing you..|
         00000029
         """
-        let actual = buf.hexDump(format: .hexDumpCompatible())
+        let actual = buf.hexDump(format: .hexDumpCompatible)
         XCTAssertEqual(expected, actual)
     }
 

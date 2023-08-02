@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -20,10 +20,11 @@ extension ByteBuffer {
     /// so you should set those indices to desired location to get the offset and length that you need to dump.
     func hexDumpShort() -> String {
         var hexString = ""
-        hexString.reserveCapacity(self.readableBytes*3)
+        hexString.reserveCapacity(self.readableBytes * 3)
 
         for byte in self.readableBytesView {
-            hexString += "\(String(byte: byte, padding: 2)) "
+            hexString += String(byte: byte, padding: 2)
+            hexString += " "
         }
 
         return String(hexString.dropLast())
@@ -42,8 +43,13 @@ extension ByteBuffer {
         if readableBytes <= limit {
             return self.hexDumpShort()
         } else {
-            let startHex = self.getSlice(at: 0, length: limit/2)!.hexDumpShort()
-            let endHex  = self.getSlice(at: self.readableBytes - limit/2, length: limit/2)!.hexDumpShort()
+            var buffer = self
+            let front = buffer.readSlice(length: limit / 2)!
+            buffer.moveReaderIndex(forwardBy: buffer.readableBytes - limit / 2)
+            let back = buffer.readSlice(length: buffer.readableBytes)!
+
+            let startHex = front.hexDumpShort()
+            let endHex = back.hexDumpShort()
             return startHex + " ... " + endHex
         }
     }
@@ -70,9 +76,11 @@ extension ByteBuffer {
             result += lineHex
 
             // ASCII column renders the line as ASCII characters, or "." if the character is not printable.
-            result += "|" + String(decoding: slice.getBytes(at: 0, length: slice.readableBytes)!, as: Unicode.UTF8.self).map {
-                $0 >= " " && $0 < "~" ? $0 : "."
-            } + "|\n"
+            let printableBytes = slice.readableBytesView.map {
+                let printableRange = UInt8(ascii: " ") ..< UInt8(ascii: "~")
+                return printableRange.contains($0) ? $0 : UInt8(ascii: ".")
+            }
+            result += "|\(String(decoding: printableBytes, as: UTF8.self))|\n"
 
             lineOffset += lineLength
         }
@@ -82,36 +90,39 @@ extension ByteBuffer {
         return result
     }
 
-//    func hexDumpLong(limit: Int) -> String {
-//        var result = ""
-//
-//        // Start with long-format dump of limit/2 bytes
-//        // then insert an empty line with "..." in the middle
-//        // Add a dump of the last limit/2 bytes
-//        // The last line should be the final lineOffset
-//
-//        
-//
-//        return result
-//    }
+    /// Describes a ByteBuffer hexDump format.
+    /// Can be either xxd output compatible, or hexdump compatible.
+    public struct HexDumpFormat {
+        enum Value {
+            case xxdCompatible(maxLength: Int? = nil)
+            case hexDumpCompatible(maxLength: Int? = nil)
+        }
 
-    /// Describes a ByteBuffer hexDump format. Can be either xxd output compatible, or hexdump compatible.
-    /// You can provide a `maxLength` argument to both formats that will limit the maximum length of the buffer to dump before clipping the dump for readability.
-    public enum HexDumpFormat {
-        /// A hexdump format compatible with the xxd utility.
-        /// - parameters:
-        ///     - maxLength: The maximum amount of bytes to dump before clipping for readability.
-        case xxdCompatible(maxLength: Int? = nil)
+        var value: Value
+        init(_ value: Value) { self.value = value }
 
-        /// A hexdump format compatible with hexdump utility.
-        /// - parameters:
-        ///     - maxLength: The maximum amount of bytes to dump before clipping for readability.
-        case hexDumpCompatible(maxLength: Int? = nil)
+        /// A hex dump format compatible with `xxd` CLI utility.
+        public static let xxdCompatible = Self(.xxdCompatible(maxLength: nil))
+
+        /// A hex dump format compatible with `hexdump` command line utility.
+        public static let hexDumpCompatible = Self(.hexDumpCompatible(maxLength: nil))
+
+        /// A hex dump format compatible with `xxd`, clipped to `maxLength` bytes dumped.
+        /// This format will dump first maxLength / 2 bytes, and the last maxLength / 2 bytes, replacing the rest with " ... ".
+        public static func xxdCompatible(maxLength: Int) -> Self {
+            Self(.xxdCompatible(maxLength: maxLength))
+        }
+
+        /// A hex dump format compatible with `hexdump` command line tool.
+        /// This format will dump first maxLength / 2 bytes, and the last maxLength / 2 bytes, with a placeholder in between.
+        public static func hexDumpCompatible(maxLength: Int) -> Self {
+            Self(.hexDumpCompatible(maxLength: maxLength))
+        }
     }
 
 
     public func hexDump(format: HexDumpFormat) -> String {
-        switch(format) {
+        switch(format.value) {
         case .xxdCompatible(let maxLength):
             if let maxLength {
                 return self.hexDumpShort(limit: maxLength)

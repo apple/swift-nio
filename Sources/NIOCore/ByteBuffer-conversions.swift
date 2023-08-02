@@ -42,8 +42,8 @@ extension String {
     internal init<T>(byte: T, padding: Int) where T : BinaryInteger {
         // Initialize the string with just the byte converted to hexadecimal first
         // Then, add the padding of the desired size minus the number of hex digits in the string.
-        self.init(byte, radix: 16)
-        self = String(repeating: "0", count: padding - self.count) + self
+        let formatted = String(byte, radix: 16)
+        self = String(repeating: "0", count: padding - formatted.count) + formatted
     }
 }
 
