@@ -1857,8 +1857,12 @@ class ByteBufferTest: XCTestCase {
 
     func testHexDumpShort() {
         let buf = ByteBuffer(string: "Hello")
-
         XCTAssertEqual("48 65 6c 6c 6f", buf.hexDumpShort())
+    }
+
+    func testHexDumpShortEmptyBuffer() {
+        let buf = ByteBuffer(string: "")
+        XCTAssertEqual("", buf.hexDumpShort())
     }
 
     func testHexDumpShortWithReaderIndexOffset() {
@@ -1890,6 +1894,19 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
+
+    func testHexDumpLongWithLimit() {
+        let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
+        let expected = """
+        00000000  47 6f 6f 64 62 79 65 2c  20 77 6f 72 6c 64 21 20  |Goodbye,        |
+                                             ...                                      
+        00000021  6e 67 20 79 6f 75 2e 0a                           |ng you..|
+        00000029
+        """
+        let actual = buf.hexDumpLong(limit: 16)
+        XCTAssertEqual(expected, actual)
+    }
+
     func testHexDumpLongOffset() {
         var buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let firstFive = buf.readBytes(length: 5)
@@ -1911,6 +1928,13 @@ class ByteBufferTest: XCTestCase {
         00000020  69 6e 67 20 79 6f 75 2e  0a                       |ing you..|
         00000029
         """
+        let actual = buf.hexDump(format: .hexDumpCompatible)
+        XCTAssertEqual(expected, actual)
+    }
+
+    func testHexDumpLongEmptyBuffer() {
+        let buf = ByteBuffer()
+        let expected = "00000000"
         let actual = buf.hexDump(format: .hexDumpCompatible)
         XCTAssertEqual(expected, actual)
     }
