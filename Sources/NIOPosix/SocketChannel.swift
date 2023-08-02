@@ -96,6 +96,8 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         switch option {
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
             return connectTimeout as! Option.Value
+        case _ as ChannelOptions.Types.LocalVsockContextID:
+            return try self.socket.getLocalVsockContextID() as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -231,6 +233,8 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         switch option {
         case _ as ChannelOptions.Types.BacklogOption:
             return backlog as! Option.Value
+        case _ as ChannelOptions.Types.LocalVsockContextID:
+            return try self.socket.getLocalVsockContextID() as! Option.Value
         default:
             return try super.getOption0(option)
         }

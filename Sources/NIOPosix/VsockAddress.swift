@@ -228,15 +228,6 @@ extension VsockAddress.ContextID {
         precondition(cid != Self.any.rawValue)
         return Self(rawValue: cid)
     }
-
-    /// Get the context ID of the local machine.
-    static func getLocalContextID() throws -> Self {
-        let socket = try Socket(protocolFamily: .vsock, type: .stream)
-        defer { try! socket.close() }
-        return try socket.withUnsafeHandle { handle in
-            try Self.getLocalContextID(handle)
-        }
-    }
 }
 
 extension sockaddr_vm {

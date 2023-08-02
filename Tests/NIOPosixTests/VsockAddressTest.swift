@@ -56,14 +56,13 @@ class VsockAddressTest: XCTestCase {
     func testGetLocalCID() throws {
         try XCTSkipUnless(System.supportsVsock)
 
-        // Check that it's a valid CID: higher than the reserved values, but not VMADDR_CID_ANY.
-        let localCID = try VsockAddress.ContextID.getLocalContextID()
-        XCTAssertNotEqual(localCID, .any)
-        XCTAssertGreaterThan(localCID.rawValue, VsockAddress.ContextID.host.rawValue)
-
-        // Check the local CID from the socket API matches.
         let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
         defer { try? socket.close() }
+
+        // Check the local CID is valid: higher than reserved values, but not VMADDR_CID_ANY.
+        let localCID = try socket.withUnsafeHandle(VsockAddress.ContextID.getLocalContextID)
+        XCTAssertNotEqual(localCID, .any)
+        XCTAssertGreaterThan(localCID.rawValue, VsockAddress.ContextID.host.rawValue)
         XCTAssertEqual(try socket.getLocalVsockContextID(), localCID)
 
         // Check the local CID from the channel option matches.
