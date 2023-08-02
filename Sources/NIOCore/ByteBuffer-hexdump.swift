@@ -85,6 +85,10 @@ extension ByteBuffer {
     // Dump hexdump -C compatible format without the last line containing the byte length of the buffer
     func _hexDumpLines(offset: Int) -> String {
         var result = ""
+        // Each hex dump line represents 16 bytes, and takes up to 79 characters including the \n in the end.
+        // Plus the last line of the hex dump which is just 8 characters.
+        result.reserveCapacity(self.readableBytes / 16 * 79 + 8)
+
         var buffer = self
         // We're going to move the lineOffset index forward, so copy it into a variable
         var lineOffset = offset
@@ -128,12 +132,7 @@ extension ByteBuffer {
     /// Returns a `String` of hexadecimal digits of bytes in the Buffer,
     /// with formatting compatible with output of `hexdump -C`.
     func hexDumpLong() -> String {
-        var result = ""
-        // Each hex dump line represents 16 bytes, and takes up to 79 characters including the \n in the end.
-        // Plus the last line of the hex dump which is just 8 characters.
-        result.reserveCapacity(self.readableBytes / 16 * 79 + 8)
-
-        result += self._hexDumpLines(offset: 0)
+        var result = self._hexDumpLines(offset: 0)
         result += String(byte: self.readableBytes, padding: 8)
         return result
     }
@@ -151,7 +150,6 @@ extension ByteBuffer {
 
         let separator = "                                     ...                                      \n"
         var result = ""
-        // TODO: .reserveCapacity on the result string.
 
         var buffer = self
         let front = buffer.readSlice(length: limit / 2)!
