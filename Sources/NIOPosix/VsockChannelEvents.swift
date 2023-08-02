@@ -13,18 +13,15 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-/// A tag protocol that can be used to cover events used to boostrap VSOCK channels.
-protocol VsockChannelEvent: Hashable, Sendable {}
-
-enum VsockChannelEvents {
+public enum VsockChannelEvents {
     /// Fired as an outbound event when NIO would like to ask itself to bind the socket.
     ///
     /// This flow for connect is required because we cannot extend `enum SocketAddress` without
     /// breaking public API.
-    struct BindToAddress: VsockChannelEvent {
-        var address: VsockAddress
+    public struct BindToAddress: Hashable, Sendable {
+        public var address: VsockAddress
 
-        init(_ address: VsockAddress) {
+        public init(_ address: VsockAddress) {
             self.address = address
         }
     }
@@ -33,10 +30,10 @@ enum VsockChannelEvents {
     ///
     /// This flow for connect is required because we cannot extend `enum SocketAddress` without
     /// breaking public API.
-    struct ConnectToAddress: VsockChannelEvent {
-        var address: VsockAddress
+    public struct ConnectToAddress: Hashable, Sendable {
+        public var address: VsockAddress
 
-        init(_ address: VsockAddress) {
+        public init(_ address: VsockAddress) {
             self.address = address
         }
     }
