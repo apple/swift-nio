@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -33,7 +33,7 @@ class LinuxTest: XCTestCase {
         ].forEach { quota, period, count in
             try withTemporaryFile(content: quota) { (_, quotaPath) -> Void in
                 try withTemporaryFile(content: period) { (_, periodPath) -> Void in
-                    XCTAssertEqual(Linux.coreCount(quota: quotaPath, period: periodPath), count)
+                    XCTAssertEqual(Linux.coreCountCgroup1Restriction(quota: quotaPath, period: periodPath), count)
                 }
             }
         }
@@ -53,6 +53,20 @@ class LinuxTest: XCTestCase {
         ].forEach { cpuset, count in
             try withTemporaryFile(content: cpuset) { (_, path) -> Void in
                 XCTAssertEqual(Linux.coreCount(cpuset: path), count)
+            }
+        }
+        #endif
+    }
+
+    func testCoreCountCgoup2() throws {
+        #if os(Linux) || os(Android)
+        try [
+            ("max 100000", nil),
+            ("75000 100000", 1),
+            ("200000 100000", 2)
+        ].forEach { (content, count) in
+            try withTemporaryFile(content: content) { (_, path) in
+                XCTAssertEqual(Linux.coreCountCgroup2Restriction(cpuMaxPath: path), count)
             }
         }
         #endif

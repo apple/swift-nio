@@ -30,6 +30,27 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
     private var state = State.initial
 
     @usableFromInline
+    enum DeinitHandlerAction {
+        case failPromise
+    }
+
+    @inlinable
+    mutating func deinitHandler() -> DeinitHandlerAction? {
+        switch self.state {
+        case .initial:
+            return .failPromise
+
+        case .waitingForUser, .unbuffering:
+            // We are retaining the handler strongly while waiting and unbuffering
+            // so we should never hit the deinit.
+            fatalError("Unexpected state")
+
+        case .finished:
+            return .none
+        }
+    }
+
+    @usableFromInline
     enum UserInboundEventTriggeredAction {
         case fireUserInboundEventTriggered
         case invokeUserClosure(ALPNResult)
