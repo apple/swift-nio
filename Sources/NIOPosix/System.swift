@@ -153,6 +153,13 @@ private let sysKevent = kevent
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
 #endif
+#if !os(Windows)
+#if canImport(Musl)
+private let sysIoctl: @convention(c) (CInt, CInt, UnsafeMutableRawPointer) -> CInt = ioctl
+#else
+private let sysIoctl: @convention(c) (CInt, CUnsignedLong, UnsafeMutableRawPointer) -> CInt = ioctl
+#endif  // canImport(Musl)
+#endif  // !os(Windows)
 
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
     // On iOS, EBADF is a possible result when a file descriptor has been reaped in the background.
@@ -861,6 +868,15 @@ internal enum Posix {
         }
     }
 #endif
+#if !os(Windows)
+    @inline(never)
+    internal static func ioctl(fd: CInt, request: CUnsignedLong, ptr: UnsafeMutableRawPointer) throws {
+        _ = try syscall(blocking: false) {
+            /// `numericCast` to support musl which accepts `CInt` (cf. `CUnsignedLong`).
+            sysIoctl(fd, numericCast(request), ptr)
+        }
+    }
+#endif  // !os(Windows)
 }
 
 /// `NIOFcntlFailedError` indicates that NIO was unable to perform an

@@ -326,6 +326,26 @@ public final class ServerBootstrap {
         return self.bind(unixDomainSocketPath: unixDomainSocketPath)
     }
 
+    /// Bind the `ServerSocketChannel` to a VSOCK socket.
+    ///
+    /// - parameters:
+    ///   - vsockAddress: The VSOCK socket address to bind on.
+    public func bind(to vsockAddress: VsockAddress) -> EventLoopFuture<Channel> {
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
+            try ServerSocketChannel(eventLoop: eventLoop, group: childEventLoopGroup, protocolFamily: .vsock, enableMPTCP: enableMPTCP)
+        }
+        return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
+            serverChannel.register().flatMap {
+                let promise = eventLoop.makePromise(of: Void.self)
+                serverChannel.triggerUserOutboundEvent0(
+                    VsockChannelEvents.BindToAddress(vsockAddress),
+                    promise: promise
+                )
+                return promise.futureResult
+            }
+        }
+    }
+
     #if !os(Windows)
         /// Use the existing bound socket file descriptor.
         ///
@@ -990,6 +1010,31 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
             return self.connect(to: address)
         } catch {
             return self.group.next().makeFailedFuture(error)
+        }
+    }
+
+    /// Specify the VSOCK address to connect to for the `Channel`.
+    ///
+    /// - parameters:
+    ///     - address: The VSOCK address to connect to.
+    /// - returns: An `EventLoopFuture<Channel>` for when the `Channel` is connected.
+    public func connect(to address: VsockAddress) -> EventLoopFuture<Channel> {
+        return self.initializeAndRegisterNewChannel(
+            eventLoop: self.group.next(),
+            protocolFamily: .vsock
+        ) { channel in
+            let connectPromise = channel.eventLoop.makePromise(of: Void.self)
+            channel.triggerUserOutboundEvent(VsockChannelEvents.ConnectToAddress( address), promise: connectPromise)
+
+            let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
+                connectPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
+                channel.close(promise: nil)
+            }
+            connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
+                cancelTask.cancel()
+            }
+
+            return connectPromise.futureResult
         }
     }
 

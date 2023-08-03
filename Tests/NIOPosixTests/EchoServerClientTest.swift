@@ -211,6 +211,50 @@ class EchoServerClientTest : XCTestCase {
         }
     }
 
+    func testEchoVsock() throws {
+        try XCTSkipUnless(System.supportsVsock, "No vsock transport available")
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let numBytes = 16 * 1024
+        let port = VsockAddress.Port(1234)
+        let countingHandler = ByteCountingHandler(numBytes: numBytes, promise: group.next().makePromise())
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .childChannelInitializer { channel in
+                channel.pipeline.addHandler(countingHandler)
+            }
+            .bind(to: VsockAddress(cid: .any, port: port)))
+            .wait()
+
+        defer {
+            XCTAssertNoThrow(try serverChannel.close().wait())
+        }
+
+        #if canImport(Darwin)
+        let connectAddress = VsockAddress(cid: .any, port: port)
+        #elseif os(Linux)
+        let connectAddress = VsockAddress(cid: .local, port: port)
+        #endif
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group).connect(to: connectAddress).wait())
+
+        defer {
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        var buffer = clientChannel.allocator.buffer(capacity: numBytes)
+
+        for i in 0..<numBytes {
+            buffer.writeInteger(UInt8(i % 256))
+        }
+
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
+
+        try countingHandler.assertReceived(buffer: buffer)
+    }
+
     func testChannelActiveOnConnect() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
