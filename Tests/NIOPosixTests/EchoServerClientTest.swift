@@ -235,7 +235,7 @@ class EchoServerClientTest : XCTestCase {
 
         #if canImport(Darwin)
         let connectAddress = VsockAddress(cid: .any, port: port)
-        #elseif os(Linux)
+        #elseif os(Linux) || os(Android)
         let connectAddress = VsockAddress(cid: .local, port: port)
         #endif
         let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group).connect(to: connectAddress).wait())

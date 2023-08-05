@@ -28,7 +28,7 @@ extension System {
     }
 
     static var supportsVsock: Bool {
-#if canImport(Darwin) || os(Linux)
+#if canImport(Darwin) || os(Linux) || os(Android)
         guard let socket = try? Socket(protocolFamily: .vsock, type: .stream) else { return false }
         XCTAssertNoThrow(try socket.close())
         return true

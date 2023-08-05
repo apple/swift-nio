@@ -15,7 +15,7 @@
 import NIOCore
 #if canImport(Darwin)
 import CNIODarwin
-#elseif os(Linux)
+#elseif os(Linux) || os(Android)
 #if canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
@@ -168,7 +168,7 @@ extension ChannelOptions.Types {
 extension NIOBSDSocket.AddressFamily {
     /// Address for vsock.
     public static var vsock: NIOBSDSocket.AddressFamily {
-#if canImport(Darwin) || os(Linux)
+#if canImport(Darwin) || os(Linux) || os(Android)
         NIOBSDSocket.AddressFamily(rawValue: AF_VSOCK)
 #else
         fatalError(vsockUnimplemented)
@@ -179,7 +179,7 @@ extension NIOBSDSocket.AddressFamily {
 extension NIOBSDSocket.ProtocolFamily {
     /// Address for vsock.
     public static var vsock: NIOBSDSocket.ProtocolFamily {
-#if canImport(Darwin) || os(Linux)
+#if canImport(Darwin) || os(Linux) || os(Android)
         NIOBSDSocket.ProtocolFamily(rawValue: PF_VSOCK)
 #else
         fatalError(vsockUnimplemented)
@@ -189,7 +189,7 @@ extension NIOBSDSocket.ProtocolFamily {
 
 extension VsockAddress {
     public func withSockAddr<T>(_ body: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
-#if canImport(Darwin) || os(Linux)
+#if canImport(Darwin) || os(Linux) || os(Android)
         return try self.address.withSockAddr({ try body($0, $1) })
 #else
         fatalError(vsockUnimplemented)
@@ -199,7 +199,7 @@ extension VsockAddress {
 
 // MARK: - Internal functions that are only available on supported platforms.
 
-#if canImport(Darwin) || os(Linux)
+#if canImport(Darwin) || os(Linux) || os(Android)
 extension VsockAddress.ContextID {
     /// Get the context ID of the local machine.
     ///
@@ -218,7 +218,7 @@ extension VsockAddress.ContextID {
 #if canImport(Darwin)
         let request = CNIODarwin_IOCTL_VM_SOCKETS_GET_LOCAL_CID
         let fd = socketFD
-#elseif os(Linux)
+#elseif os(Linux) || os(Android)
         let request = CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID
         let fd = try! Posix.open(file: "/dev/vsock", oFlag: O_RDONLY | O_CLOEXEC)
         defer { try! Posix.close(descriptor: fd) }
@@ -277,4 +277,4 @@ extension BaseSocket {
     }
 }
 
-#endif  // canImport(Darwin) || os(Linux)
+#endif  // canImport(Darwin) || os(Linux) || os(Android)
