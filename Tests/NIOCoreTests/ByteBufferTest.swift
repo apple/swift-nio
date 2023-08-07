@@ -1855,34 +1855,34 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
-    func testHexDumpShort() {
+    func testHexDumpPlain() {
         let buf = ByteBuffer(string: "Hello")
-        XCTAssertEqual("48 65 6c 6c 6f", buf.hexDumpShort())
+        XCTAssertEqual("48 65 6c 6c 6f", buf.hexDump(format: .plain))
     }
 
-    func testHexDumpShortEmptyBuffer() {
+    func testHexDumpPlainEmptyBuffer() {
         let buf = ByteBuffer(string: "")
-        XCTAssertEqual("", buf.hexDumpShort())
+        XCTAssertEqual("", buf.hexDump(format: .plain))
     }
 
-    func testHexDumpShortWithReaderIndexOffset() {
+    func testHexDumpPlainWithReaderIndexOffset() {
         var buf = ByteBuffer(string: "Hello")
         let firstTwo = buf.readBytes(length: 2)!
         XCTAssertEqual([72, 101], firstTwo)
-        XCTAssertEqual("6c 6c 6f", buf.hexDumpShort())
+        XCTAssertEqual("6c 6c 6f", buf.hexDump(format: .plain))
     }
 
-    func testHexDumpShortWithLimit() {
+    func testHexDumpPlainWithMaxBytes() {
         self.buf.clear()
         for f in UInt8.min...UInt8.max {
             self.buf.writeInteger(f)
         }
-        let actual = self.buf.hexDumpShort(limit: 10)
+        let actual = self.buf.hexDump(format: .plain(maxBytes: 10))
         let expected = "00 01 02 03 04 ... fb fc fd fe ff"
         XCTAssertEqual(expected, actual)
     }
 
-    func testHexDumpLong() {
+    func testHexDumpDetailed() {
         let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let expected = """
         00000000  47 6f 6f 64 62 79 65 2c  20 77 6f 72 6c 64 21 20  |Goodbye, world! |
@@ -1890,24 +1890,24 @@ class ByteBufferTest: XCTestCase {
         00000020  69 6e 67 20 79 6f 75 2e  0a                       |ing you..|
         00000029
         """
-        let actual = buf.hexDumpLong()
+        let actual = buf.hexDump(format: .detailed)
         XCTAssertEqual(expected, actual)
     }
 
 
-    func testHexDumpLongWithLimit() {
+    func testHexDumpDetailedWithMaxBytes() {
         let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let expected = """
         00000000  47 6f 6f 64 62 79 65 2c  20 77 6f 72 6c 64 21 20  |Goodbye,        |
-                                             ...                                      
+        ........  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  ..................                                      
         00000021  6e 67 20 79 6f 75 2e 0a                           |ng you..|
         00000029
         """
-        let actual = buf.hexDumpLong(limit: 16)
+        let actual = buf.hexDump(format: .detailed(maxBytes: 16))
         XCTAssertEqual(expected, actual)
     }
 
-    func testHexDumpLongOffset() {
+    func testHexDumpDetailedWithOffset() {
         var buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let firstFive = buf.readBytes(length: 5)
         let expected = """
@@ -1916,26 +1916,14 @@ class ByteBufferTest: XCTestCase {
         00000020  6f 75 2e 0a                                       |ou..|
         00000024
         """
-        let actual = buf.hexDumpLong()
-        XCTAssertEqual(expected, actual)
-    }
-
-    func testHexDumpSwitcher() {
-        let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
-        let expected = """
-        00000000  47 6f 6f 64 62 79 65 2c  20 77 6f 72 6c 64 21 20  |Goodbye, world! |
-        00000010  49 74 20 77 61 73 20 6e  69 63 65 20 6b 6e 6f 77  |It was nice know|
-        00000020  69 6e 67 20 79 6f 75 2e  0a                       |ing you..|
-        00000029
-        """
-        let actual = buf.hexDump(format: .hexDumpCompatible)
+        let actual = buf.hexDump(format: .detailed)
         XCTAssertEqual(expected, actual)
     }
 
     func testHexDumpLongEmptyBuffer() {
         let buf = ByteBuffer()
-        let expected = "00000000"
-        let actual = buf.hexDump(format: .hexDumpCompatible)
+        let expected = ""
+        let actual = buf.hexDump(format: .detailed)
         XCTAssertEqual(expected, actual)
     }
 
