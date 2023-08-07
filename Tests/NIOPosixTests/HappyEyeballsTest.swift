@@ -1231,4 +1231,34 @@ public final class HappyEyeballsTest : XCTestCase {
             XCTAssertEqual(channel.state(), .closed)
         }
     }
+
+    func testResolverOnDifferentEventLoop() throws {
+        // Tests a regression where the happy eyeballs connector would update its state on the event
+        // loop of the future returned by the resolver (which may be different to its own). Prior
+        // to the fix this test would trigger TSAN warnings.
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let server = try ServerBootstrap(group: group)
+            .bind(host: "localhost", port: 0)
+            .wait()
+
+        defer {
+            XCTAssertNoThrow(try server.close().wait())
+        }
+
+        // Run the resolver and connection on different event loops.
+        let resolverLoop = group.next()
+        let connectionLoop = group.next()
+        XCTAssertNotIdentical(resolverLoop, connectionLoop)
+        let resolver = GetaddrinfoResolver(loop: resolverLoop, aiSocktype: .stream, aiProtocol: .tcp)
+        let client = try ClientBootstrap(group: connectionLoop)
+            .resolver(resolver)
+            .connect(host: "localhost", port: server.localAddress!.port!)
+            .wait()
+
+        XCTAssertNoThrow(try client.close().wait())
+    }
 }

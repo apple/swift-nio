@@ -1233,7 +1233,7 @@ extension EventLoopFuture {
     /// threads: it is primarily useful for testing, or for building interfaces between blocking
     /// and non-blocking code.
     ///
-    /// This is also forbidden in async contexts: prefer ``EventLoopFuture/get``.
+    /// This is also forbidden in async contexts: prefer ``EventLoopFuture/get()``.
     ///
     /// - returns: The value of the `EventLoopFuture` when it completes.
     /// - throws: The error value of the `EventLoopFuture` if it errors.
@@ -2187,6 +2187,88 @@ extension EventLoopFuture {
     }
 }
 
+// MARK: assertion
+
+extension EventLoopFuture {
+    /// Attaches a callback to the `EventLoopFuture` that asserts the original future's success.
+    ///
+    /// If the original future fails, it triggers an assertion failure, causing a runtime error during development.
+    /// The assertion failure will include the file and line of the calling site.
+    ///
+    /// - parameters:
+    ///     - file: The file this function was called in, for debugging purposes.
+    ///     - line: The line this function was called on, for debugging purposes.
+    @inlinable
+    public func assertSuccess(file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Value> {
+        return self.always { result in
+            switch result {
+            case .success:
+                ()
+            case .failure(let error):
+                assertionFailure("Expected success, but got failure: \(error)", file: file, line: line)
+            }
+        }
+    }
+    /// Attaches a callback to the `EventLoopFuture` that asserts the original future's failure.
+    ///
+    /// If the original future succeeds, it triggers an assertion failure, causing a runtime error during development.
+    /// The assertion failure will include the file and line of the calling site.
+    ///
+    /// - parameters:
+    ///     - file: The file this function was called in, for debugging purposes.
+    ///     - line: The line this function was called on, for debugging purposes.
+    @inlinable
+    public func assertFailure(file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Value> {
+        return self.always { result in
+            switch result {
+            case .success(let value):
+                assertionFailure("Expected failure, but got success: \(value)", file: file, line: line)
+            case .failure:
+                ()
+            }
+        }
+    }
+
+    /// Attaches a callback to the `EventLoopFuture` that preconditions the original future's success.
+    ///
+    /// If the original future fails, it triggers a precondition failure, causing a runtime error during development.
+    /// The precondition failure will include the file and line of the calling site.
+    ///
+    /// - parameters:
+    ///     - file: The file this function was called in, for debugging purposes.
+    ///     - line: The line this function was called on, for debugging purposes.
+    @inlinable
+    public func preconditionSuccess(file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Value> {
+        return self.always { result in
+            switch result {
+            case .success:
+                ()
+            case .failure(let error):
+                Swift.preconditionFailure("Expected success, but got failure: \(error)", file: file, line: line)
+            }
+        }
+    }
+
+    /// Attaches a callback to the `EventLoopFuture` that preconditions the original future's failure.
+    ///
+    /// If the original future succeeds, it triggers a precondition failure, causing a runtime error during development.
+    /// The precondition failure will include the file and line of the calling site.
+    ///
+    /// - parameters:
+    ///     - file: The file this function was called in, for debugging purposes.
+    ///     - line: The line this function was called on, for debugging purposes.
+    @inlinable
+    public func preconditionFailure(file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Value> {
+        return self.always { result in
+            switch result {
+            case .success(let value):
+                Swift.preconditionFailure("Expected failure, but got success: \(value)", file: file, line: line)
+            case .failure:
+                ()
+            }
+        }
+    }
+}
 
 /// An opaque identifier for a specific `EventLoopFuture`.
 ///

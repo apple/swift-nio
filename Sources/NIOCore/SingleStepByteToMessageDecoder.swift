@@ -281,6 +281,12 @@ extension NIOSingleStepByteToMessageProcessor: Sendable {}
 
 // MARK: NIOSingleStepByteToMessageProcessor Public API
 extension NIOSingleStepByteToMessageProcessor {
+    /// The number of bytes that are currently not processed by the ``process(buffer:_:)`` method. Having unprocessed
+    /// bytes may result from receiving only partial messages or from receiving multiple messages at once.
+    public var unprocessedBytes: Int {
+        self._buffer?.readableBytes ?? 0
+    }
+
     /// Feed data into the `NIOSingleStepByteToMessageProcessor`
     ///
     /// - parameters:

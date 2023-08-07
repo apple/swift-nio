@@ -41,6 +41,18 @@ void *valloc(size_t size) {
 int posix_memalign(void **memptr, size_t alignment, size_t size) {
     return replacement_posix_memalign(memptr, alignment, size);
 }
+int socket(int domain, int type, int protocol) {
+    return replacement_socket(domain, type, protocol);
+}
+int accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len) {
+    return replacement_accept(socket, address, address_len);
+}
+int accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
+    return replacement_accept4(sockfd, addr, addrlen, flags);
+}
+int close(int fildes) {
+    return replacement_close(fildes);
+}
 #endif
 
 void swift_main(void);

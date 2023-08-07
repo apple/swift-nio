@@ -142,6 +142,8 @@ enum UserToKernel {
     case writev(CInt, [ByteBuffer])
     case bind(SocketAddress)
     case setOption(NIOBSDSocket.OptionLevel, NIOBSDSocket.Option, Any)
+    case listen(CInt, CInt)
+    case accept(CInt, Bool)
 }
 
 enum KernelToUser {
@@ -151,7 +153,8 @@ enum KernelToUser {
     case returnVoid
     case returnSelectorEvent(SelectorEvent<NIORegistration>?)
     case returnIOResultInt(IOResult<Int>)
-    case error(IOError)
+    case returnSocket(Socket?)
+    case error(Error)
 }
 
 struct UnexpectedKernelReturn: Error {
@@ -249,6 +252,98 @@ internal class HookedSelector: NIOPosix.Selector<NIORegistration>, UserKernelInt
     override func wakeup() throws {
         SAL.printIfDebug("WAKEUP")
         try self.wakeups.waitForEmptyAndSet(())
+    }
+}
+
+class HookedServerSocket: ServerSocket, UserKernelInterface {
+    fileprivate let userToKernel: LockedBox<UserToKernel>
+    fileprivate let kernelToUser: LockedBox<KernelToUser>
+
+    init(userToKernel: LockedBox<UserToKernel>, kernelToUser: LockedBox<KernelToUser>, socket: NIOBSDSocket.Handle) throws {
+        self.userToKernel = userToKernel
+        self.kernelToUser = kernelToUser
+        try super.init(socket: socket)
+    }
+
+    override func ignoreSIGPIPE() throws {
+        try self.withUnsafeHandle { fd in
+            try self.userToKernel.waitForEmptyAndSet(.disableSIGPIPE(fd))
+            let ret = try self.waitForKernelReturn()
+            if case .returnVoid = ret {
+                return
+            } else {
+                throw UnexpectedKernelReturn(ret)
+            }
+        }
+    }
+
+    override func localAddress() throws -> SocketAddress {
+        try self.userToKernel.waitForEmptyAndSet(.localAddress)
+        let ret = try self.waitForKernelReturn()
+        if case .returnSocketAddress(let address) = ret {
+            return address
+        } else {
+            throw UnexpectedKernelReturn(ret)
+        }
+    }
+
+    override func remoteAddress() throws -> SocketAddress {
+        try self.userToKernel.waitForEmptyAndSet(.remoteAddress)
+        let ret = try self.waitForKernelReturn()
+        if case .returnSocketAddress(let address) = ret {
+            return address
+        } else {
+            throw UnexpectedKernelReturn(ret)
+        }
+    }
+
+    override func bind(to address: SocketAddress) throws {
+        try self.userToKernel.waitForEmptyAndSet(.bind(address))
+        let ret = try self.waitForKernelReturn()
+        if case .returnVoid = ret {
+            return
+        } else {
+            throw UnexpectedKernelReturn(ret)
+        }
+    }
+
+    override func listen(backlog: Int32 = 128) throws {
+        try self.withUnsafeHandle { fd in
+            try self.userToKernel.waitForEmptyAndSet(.listen(fd, backlog))
+            let ret = try self.waitForKernelReturn()
+            if case .returnVoid = ret {
+                return
+            } else {
+                throw UnexpectedKernelReturn(ret)
+            }
+        }
+    }
+
+    override func accept(setNonBlocking: Bool = false) throws -> Socket? {
+        try self.withUnsafeHandle { fd in
+            try self.userToKernel.waitForEmptyAndSet(.accept(fd, setNonBlocking))
+            let ret = try self.waitForKernelReturn()
+            switch ret {
+            case .returnSocket(let socket):
+                return socket
+            case .error(let error):
+                throw error
+            default:
+                throw UnexpectedKernelReturn(ret)
+            }
+        }
+    }
+
+    override func close() throws {
+        let fd = try self.takeDescriptorOwnership()
+
+        try self.userToKernel.waitForEmptyAndSet(.close(fd))
+        let ret = try self.waitForKernelReturn()
+        if case .returnVoid = ret {
+            return
+        } else {
+            throw UnexpectedKernelReturn(ret)
+        }
     }
 }
 
@@ -526,6 +621,25 @@ extension SALTest {
         return channel
     }
 
+    private func makeServerSocketChannel(eventLoop: SelectableEventLoop,
+                                         group: MultiThreadedEventLoopGroup,
+                                         file: StaticString = #filePath, line: UInt = #line) throws -> ServerSocketChannel {
+        let channel = try eventLoop.runSAL(syscallAssertions: {
+            try self.assertdisableSIGPIPE(expectedFD: .max, result: .success(()))
+            try self.assertLocalAddress(address: nil)
+            try self.assertRemoteAddress(address: nil)
+        }) {
+            try ServerSocketChannel(serverSocket: HookedServerSocket(userToKernel: self.userToKernelBox,
+                                                                     kernelToUser: self.kernelToUserBox,
+                                                                     socket: .max),
+                                    eventLoop: eventLoop,
+                                    group: group
+            )
+        }
+        try self.assertParkedRightNow()
+        return channel
+    }
+
     func makeSocketChannelInjectingFailures(disableSIGPIPEFailure: IOError?) throws -> SocketChannel {
         let channel = try self.loop.runSAL(syscallAssertions: {
             try self.assertdisableSIGPIPE(expectedFD: .max,
@@ -550,6 +664,10 @@ extension SALTest {
 
     func makeSocketChannel(file: StaticString = #filePath, line: UInt = #line) throws -> SocketChannel {
         return try self.makeSocketChannel(eventLoop: self.loop, file: (file), line: line)
+    }
+
+    func makeServerSocketChannel(file: StaticString = #filePath, line: UInt = #line) throws -> ServerSocketChannel {
+        return try self.makeServerSocketChannel(eventLoop: self.loop, group: self.group, file: (file), line: line)
     }
 
     func makeConnectedSocketChannel(localAddress: SocketAddress?,
@@ -590,6 +708,53 @@ extension SALTest {
         }
         XCTAssertNoThrow(try connectFuture.salWait())
         return channel
+    }
+
+    func makeBoundServerSocketChannel(localAddress: SocketAddress,
+                                      file: StaticString = #filePath,
+                                      line: UInt = #line) throws -> ServerSocketChannel {
+        let channel = try self.makeServerSocketChannel(eventLoop: self.loop, group: self.group)
+        let bindFuture = try channel.eventLoop.runSAL(syscallAssertions: {
+            try self.assertBind(expectedAddress: localAddress)
+            try self.assertLocalAddress(address: localAddress)
+            try self.assertListen(expectedFD: .max, expectedBacklog: 128)
+            try self.assertRegister { selectable, eventSet, registration in
+                if case (.serverSocketChannel(let channel), let registrationEventSet) =
+                    (registration.channel, registration.interested) {
+
+                    XCTAssertEqual(localAddress, channel.localAddress)
+                    XCTAssertEqual(nil, channel.remoteAddress)
+                    XCTAssertEqual(eventSet, registrationEventSet)
+                    XCTAssertEqual(.reset, eventSet)
+                    return true
+                } else {
+                    return false
+                }
+            }
+            try self.assertReregister { selectable, eventSet in
+                XCTAssertEqual([.reset, .readEOF], eventSet)
+                return true
+            }
+            // because autoRead is on by default
+            try self.assertReregister { selectable, eventSet in
+                XCTAssertEqual([.reset, .readEOF, .read], eventSet)
+                return true
+            }
+        }) {
+            channel.register().flatMap {
+                channel.bind(to: localAddress)
+            }
+        }
+        XCTAssertNoThrow(try bindFuture.salWait())
+        return channel
+    }
+
+    func makeSocket() throws -> HookedSocket {
+        return try self.loop.runSAL(syscallAssertions: {
+            try self.assertdisableSIGPIPE(expectedFD: .max, result: .success(()))
+        }) {
+            try HookedSocket(userToKernel: self.userToKernelBox, kernelToUser: self.kernelToUserBox, socket: .max)
+        }
     }
 
     func tearDownSAL() {
@@ -663,7 +828,7 @@ extension SALTest {
         SAL.printIfDebug("\(#function)")
         try self.selector.assertSyscallAndReturn(address.map {
                                                     .returnSocketAddress($0)
-            /*                                */ } ?? .error(.init(errnoCode: EOPNOTSUPP, reason: "nil passed")),
+            /*                                */ } ?? .error(IOError(errnoCode: EOPNOTSUPP, reason: "nil passed")),
                                                  file: (file), line: line) { syscall in
             if case .localAddress = syscall {
                 return true
@@ -676,7 +841,7 @@ extension SALTest {
     func assertRemoteAddress(address: SocketAddress?, file: StaticString = #filePath, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
         try self.selector.assertSyscallAndReturn(address.map { .returnSocketAddress($0) } ??
-            /*                                */ .error(.init(errnoCode: EOPNOTSUPP, reason: "nil passed")),
+            /*                                */ .error(IOError(errnoCode: EOPNOTSUPP, reason: "nil passed")),
                                                  file: (file), line: line) { syscall in
             if case .remoteAddress = syscall {
                 return true
@@ -796,6 +961,50 @@ extension SALTest {
                                                  file: (file), line: line) { syscall in
             if case .read(let amount) = syscall {
                 XCTAssertEqual(expectedBufferSpace, amount, file: (file), line: line)
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+
+    func assertListen(expectedFD: CInt, expectedBacklog: CInt, file: StaticString = #filePath, line: UInt = #line) throws {
+        SAL.printIfDebug("\(#function)")
+        try self.selector.assertSyscallAndReturn(.returnVoid,
+                                                 file: (file), line: line) { syscall in
+            if case .listen(let fd, let backlog) = syscall {
+                XCTAssertEqual(fd, expectedFD, file: (file), line: line)
+                XCTAssertEqual(backlog, expectedBacklog, file: (file), line: line)
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+
+    func assertAccept(expectedFD: CInt, expectedNonBlocking: Bool, return: Socket?,
+                      file: StaticString = #filePath, line: UInt = #line) throws {
+        SAL.printIfDebug("\(#function)")
+        try self.selector.assertSyscallAndReturn(.returnSocket(`return`),
+                                                 file: (file), line: line) { syscall in
+            if case .accept(let fd, let nonBlocking) = syscall {
+                XCTAssertEqual(fd, expectedFD, file: (file), line: line)
+                XCTAssertEqual(nonBlocking, expectedNonBlocking, file: (file), line: line)
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+
+    func assertAccept(expectedFD: CInt, expectedNonBlocking: Bool, throwing error: Error,
+                      file: StaticString = #filePath, line: UInt = #line) throws {
+        SAL.printIfDebug("\(#function)")
+        try self.selector.assertSyscallAndReturn(.error(error),
+                                                 file: (file), line: line) { syscall in
+            if case .accept(let fd, let nonBlocking) = syscall {
+                XCTAssertEqual(fd, expectedFD, file: (file), line: line)
+                XCTAssertEqual(nonBlocking, expectedNonBlocking, file: (file), line: line)
                 return true
             } else {
                 return false

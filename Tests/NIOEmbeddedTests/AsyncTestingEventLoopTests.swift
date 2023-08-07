@@ -15,11 +15,7 @@ import NIOCore
 @testable import NIOEmbedded
 import XCTest
 import NIOConcurrencyHelpers
-#if compiler(>=5.6)
-@preconcurrency import Atomics
-#else
 import Atomics
-#endif
 
 private class EmbeddedTestError: Error { }
 

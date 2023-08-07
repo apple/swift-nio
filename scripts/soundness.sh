@@ -21,18 +21,6 @@ function replace_acceptable_years() {
     sed -e 's/20[12][7890123]-20[12][890123]/YEARS/' -e 's/20[12][890123]/YEARS/'
 }
 
-printf "=> Checking linux tests... "
-FIRST_OUT="$(git status --porcelain)"
-ruby "$here/../scripts/generate_linux_tests.rb" > /dev/null
-SECOND_OUT="$(git status --porcelain)"
-if [[ "$FIRST_OUT" != "$SECOND_OUT" ]]; then
-  printf "\033[0;31mmissing changes!\033[0m\n"
-  git --no-pager diff
-  exit 1
-else
-  printf "\033[0;32mokay.\033[0m\n"
-fi
-
 printf "=> Checking for unacceptable language... "
 # This greps for unacceptable terminology. The square bracket[s] are so that
 # "git grep" doesn't find the lines that greps :).

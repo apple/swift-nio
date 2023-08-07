@@ -438,14 +438,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             throw err
         }
 
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-        let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
-#else
-        let controlMessageStorage = eventLoop.controlMessageStorage
-#endif
         self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
-                                                          msgBufferPool: eventLoop.msgBufferPool,
-                                                          controlMessageStorage: controlMessageStorage)
+                                                          msgBufferPool: eventLoop.msgBufferPool)
 
         try super.init(
             socket: socket,
@@ -459,14 +453,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         self.vectorReadManager = nil
         try socket.setNonBlocking()
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-        let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
-#else
-        let controlMessageStorage = eventLoop.controlMessageStorage
-#endif
+
         self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
-                                                          msgBufferPool: eventLoop.msgBufferPool,
-                                                          controlMessageStorage: controlMessageStorage)
+                                                          msgBufferPool: eventLoop.msgBufferPool)
         try super.init(
             socket: socket,
             parent: parent,
@@ -632,23 +621,21 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func readFromSocket() throws -> ReadResult {
         if self.vectorReadManager != nil {
             return try self.vectorReadFromSocket()
+        } else if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
+            let pooledMsgBuffer = self.selectableEventLoop.msgBufferPool.get()
+            defer { self.selectableEventLoop.msgBufferPool.put(pooledMsgBuffer) }
+            return try pooledMsgBuffer.withUnsafePointers { _, _, controlMessageStorage in
+                return try self.singleReadFromSocket(controlBytesBuffer: controlMessageStorage[0])
+            }
         } else {
-            return try self.singleReadFromSocket()
+            return try self.singleReadFromSocket(controlBytesBuffer: UnsafeMutableRawBufferPointer(start: nil, count: 0))
         }
     }
 
-    private func singleReadFromSocket() throws -> ReadResult {
+    private func singleReadFromSocket(controlBytesBuffer: UnsafeMutableRawBufferPointer) throws -> ReadResult {
         var rawAddress = sockaddr_storage()
         var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
         var readResult = ReadResult.none
-
-        // These control bytes must not escape the current call stack
-        let controlBytesBuffer: UnsafeMutableRawBufferPointer
-        if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
-            controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
-        } else {
-            controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-        }
 
         for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
@@ -849,16 +836,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
             scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
-                // normal write
-                // Control bytes must not escape current stack.
-                var controlBytes = UnsafeOutboundControlBytes(
-                    controlBytes: self.selectableEventLoop.controlMessageStorage[0])
-                controlBytes.appendExplicitCongestionState(metadata: metadata,
-                                                           protocolFamily: self.localAddress?.protocol)
-                return try self.socket.sendmsg(pointer: ptr,
-                                               destinationPtr: destinationPtr,
-                                               destinationSize: destinationSize,
-                                               controlBytes: controlBytes.validControlBytes)
+                let msgBuffer = self.selectableEventLoop.msgBufferPool.get()
+                defer { self.selectableEventLoop.msgBufferPool.put(msgBuffer) }
+                return try msgBuffer.withUnsafePointers { _, _, controlMessageStorage in
+                    var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[0])
+                    controlBytes.appendExplicitCongestionState(metadata: metadata,
+                                                            protocolFamily: self.localAddress?.protocol)
+                    return try self.socket.sendmsg(pointer: ptr,
+                                                   destinationPtr: destinationPtr,
+                                                   destinationSize: destinationSize,
+                                                   controlBytes: controlBytes.validControlBytes)
+                }
             },
             vectorWriteOperation: { msgs in
                 return try self.socket.sendmmsg(msgs: msgs)

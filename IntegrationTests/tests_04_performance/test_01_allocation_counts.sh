@@ -35,13 +35,16 @@ for test in "${all_tests[@]}"; do
         test_case=${test_case#test_*}
         total_allocations=$(grep "^test_$test_case.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
         not_freed_allocations=$(grep "^test_$test_case.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
+        leaked_fds=$(grep "^test_$test_case.leaked_fds:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
         max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test_case"
 
         info "$test_case: allocations not freed: $not_freed_allocations"
         info "$test_case: total number of mallocs: $total_allocations"
+        info "$test_case: leaked fds: $leaked_fds"
 
         assert_less_than "$not_freed_allocations" 5     # allow some slack
         assert_greater_than "$not_freed_allocations" -5 # allow some slack
+        assert_less_than "$leaked_fds" 1  # No slack allowed here though
         if [[ -z "${!max_allowed_env_name+x}" ]]; then
             if [[ -z "${!max_allowed_env_name+x}" ]]; then
                 warn "no reference number of allocations set (set to \$$max_allowed_env_name)"

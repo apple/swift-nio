@@ -47,7 +47,7 @@ import WinSDK
 ///
 /// - note: Like the `Channel` protocol, all methods in this protocol are
 ///     thread-safe.
-public protocol SocketOptionProvider: NIOPreconcurrencySendable {
+public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     /// The `EventLoop` which is used by this `SocketOptionProvider` for execution.
     var eventLoop: EventLoop { get }
 

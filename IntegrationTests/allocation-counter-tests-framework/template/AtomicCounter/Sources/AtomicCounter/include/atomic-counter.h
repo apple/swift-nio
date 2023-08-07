@@ -29,4 +29,14 @@ void add_malloc_bytes_counter(intptr_t v);
 void reset_malloc_bytes_counter(void);
 intptr_t read_malloc_bytes_counter(void);
 
+typedef struct {
+    size_t count;
+    int *leaked;
+} LeakedFDs;
+
+void begin_tracking_fds(void);
+void track_open_fd(int fd);
+void track_closed_fd(int fd);
+LeakedFDs stop_tracking_fds(void);
+
 #endif

@@ -102,7 +102,7 @@ public protocol ChannelCore: AnyObject {
 /// passed to or returned by the operations are used to retrieve the result of an operation after it has completed.
 ///
 /// A `Channel` owns its `ChannelPipeline` which handles all I/O events and requests associated with the `Channel`.
-public protocol Channel: AnyObject, ChannelOutboundInvoker, NIOPreconcurrencySendable {
+public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySendable {
     /// The `Channel`'s `ByteBuffer` allocator. This is _the only_ supported way of allocating `ByteBuffer`s to be used with this `Channel`.
     var allocator: ByteBufferAllocator { get }
 

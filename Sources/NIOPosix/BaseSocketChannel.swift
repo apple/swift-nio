@@ -1129,36 +1129,40 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             // peer closed / shutdown the connection.
             if let channelErr = err as? ChannelError, channelErr == ChannelError.eof {
                 readStreamState = .eof
-                // Directly call getOption0 as we are already on the EventLoop and so not need to create an extra future.
 
-                // getOption0 can only fail if the channel is not active anymore but we assert further up that it is. If
-                // that's not the case this is a precondition failure and we would like to know.
-                if self.lifecycleManager.isActive, try! self.getOption0(ChannelOptions.allowRemoteHalfClosure) {
-                    // If we want to allow half closure we will just mark the input side of the Channel
-                    // as closed.
-                    assert(self.lifecycleManager.isActive)
+                if self.lifecycleManager.isActive {
+                    // Directly call getOption0 as we are already on the EventLoop and so not need to create an extra future.
+                    //
+                    // getOption0 can only fail if the channel is not active anymore but we assert further up that it is. If
+                    // that's not the case this is a precondition failure and we would like to know.
+                    let allowRemoteHalfClosure = try! self.getOption0(ChannelOptions.allowRemoteHalfClosure)
+
+                    // For EOF, we always fire read complete.
                     self.pipeline.syncOperations.fireChannelReadComplete()
-                    if self.shouldCloseOnReadError(err) {
-                        self.close0(error: err, mode: .input, promise: nil)
+
+                    if allowRemoteHalfClosure {
+                        // If we want to allow half closure we will just mark the input side of the Channel
+                        // as closed.
+                        if self.shouldCloseOnReadError(err) {
+                            self.close0(error: err, mode: .input, promise: nil)
+                        }
+                        self.readPending = false
+                        return .eof
                     }
-                    self.readPending = false
-                    return .eof
                 }
             } else {
                 readStreamState = .error
                 self.pipeline.syncOperations.fireErrorCaught(err)
             }
 
-            // Call before triggering the close of the Channel.
-            if readStreamState != .error, self.lifecycleManager.isActive {
-                self.pipeline.syncOperations.fireChannelReadComplete()
-            }
-
             if self.shouldCloseOnReadError(err) {
                 self.close0(error: err, mode: .all, promise: nil)
+                return readStreamState
+            } else {
+                // This is non-fatal, so continue as normal.
+                // This constitutes "some" as we did get at least an error from the socket.
+                readResult = .some
             }
-
-            return readStreamState
         }
         // This assert needs to be disabled for io_uring, as the io_uring backend does not have the implicit synchronisation between
         // modifications to the poll mask and the actual returned events on the completion queue that kqueue and epoll has.

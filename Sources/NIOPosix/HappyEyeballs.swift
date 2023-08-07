@@ -433,8 +433,14 @@ internal class HappyEyeballsConnector {
         // The two queries SHOULD be made as soon after one another as possible,
         // with the AAAA query made first and immediately followed by the A
         // query.
-        whenAAAALookupComplete(future: resolver.initiateAAAAQuery(host: host, port: port))
-        whenALookupComplete(future: resolver.initiateAQuery(host: host, port: port))
+        //
+        // We hop back to `self.loop` because there's no guarantee the resolver runs
+        // on our event loop.
+        let aaaaLookup = self.resolver.initiateAAAAQuery(host: self.host, port: self.port).hop(to: self.loop)
+        self.whenAAAALookupComplete(future: aaaaLookup)
+
+        let aLookup = self.resolver.initiateAQuery(host: self.host, port: self.port).hop(to: self.loop)
+        self.whenALookupComplete(future: aLookup)
     }
 
     /// Called when the A query has completed before the AAAA query.

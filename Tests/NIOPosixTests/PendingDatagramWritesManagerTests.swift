@@ -49,16 +49,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
     private func withPendingDatagramWritesManager(_ body: (PendingDatagramWritesManager) throws -> Void) rethrows {
         let bufferPool = Pool<PooledBuffer>(maxSize: 16)
         let msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
-        var controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
-
-#if SWIFTNIO_USE_IO_URING && os(Linux)
-        // With Uring the PendingDatagramWritesManager become an owner of the 'controlMessageStorage'
-#else
-        defer {
-            controlMessageStorage.deallocate()
-        }
-#endif
-        let pwm = NIOPosix.PendingDatagramWritesManager(bufferPool: bufferPool, msgBufferPool: msgBufferPool, controlMessageStorage: controlMessageStorage)
+        let pwm = NIOPosix.PendingDatagramWritesManager(bufferPool: bufferPool, msgBufferPool: msgBufferPool)
 
         XCTAssertTrue(pwm.isEmpty)
         XCTAssertTrue(pwm.isOpen)
