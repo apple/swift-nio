@@ -49,10 +49,14 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
 
     @_spi(AsyncChannel)
     public var protocolNegotiationResult: EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>> {
-        self.negotiatedPromise.futureResult
+        return self.negotiatedPromise.futureResult
     }
 
-    private let negotiatedPromise: EventLoopPromise<NIOProtocolNegotiationResult<NegotiationResult>>
+    private var negotiatedPromise: EventLoopPromise<NIOProtocolNegotiationResult<NegotiationResult>> {
+        precondition(self._negotiatedPromise != nil, "Tried to access the protocol negotiation result before the handler was added to a pipeline")
+        return self._negotiatedPromise!
+    }
+    private var _negotiatedPromise: EventLoopPromise<NIOProtocolNegotiationResult<NegotiationResult>>?
 
     private let completionHandler: (ALPNResult, Channel) -> EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>
     private var stateMachine = ProtocolNegotiationHandlerStateMachine<NIOProtocolNegotiationResult<NegotiationResult>>()
@@ -63,9 +67,8 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
     /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
     ///   negotiation has completed.
     @_spi(AsyncChannel)
-    public init(eventLoop: EventLoop, alpnCompleteHandler: @escaping (ALPNResult, Channel) -> EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>) {
+    public init(alpnCompleteHandler: @escaping (ALPNResult, Channel) -> EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>) {
         self.completionHandler = alpnCompleteHandler
-        self.negotiatedPromise = eventLoop.makePromise(of: NIOProtocolNegotiationResult<NegotiationResult>.self)
     }
 
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
@@ -74,14 +77,18 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
     /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
     ///   negotiation has completed.
     @_spi(AsyncChannel)
-    public convenience init(eventLoop: EventLoop, alpnCompleteHandler: @escaping (ALPNResult) -> EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>) {
-        self.init(eventLoop: eventLoop) { result, _ in
+    public convenience init(alpnCompleteHandler: @escaping (ALPNResult) -> EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>) {
+        self.init { result, _ in
             alpnCompleteHandler(result)
         }
     }
 
-    deinit {
-        switch self.stateMachine.deinitHandler() {
+    public func handlerAdded(context: ChannelHandlerContext) {
+        self._negotiatedPromise = context.eventLoop.makePromise()
+    }
+
+    public func handlerRemoved(context: ChannelHandlerContext) {
+        switch self.stateMachine.handlerRemoved() {
         case .failPromise:
             self.negotiatedPromise.fail(ChannelError.inappropriateOperationForState)
 
