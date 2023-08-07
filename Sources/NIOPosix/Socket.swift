@@ -117,6 +117,15 @@ typealias IOVector = iovec
         }
     }
 
+    func connect(to address: VsockAddress) throws -> Bool {
+        return try withUnsafeHandle { fd in
+            return try address.withSockAddr { (ptr, size) in
+                return try NIOBSDSocket.connect(socket: fd, address: ptr,
+                                                address_len: socklen_t(size))
+            }
+        }
+    }
+
     /// Finish a previous non-blocking `connect` operation.
     ///
     /// - throws: An `IOError` if the operation failed.

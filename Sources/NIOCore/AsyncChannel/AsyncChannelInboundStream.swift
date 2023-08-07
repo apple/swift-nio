@@ -24,10 +24,10 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     /// A source used for driving a ``NIOAsyncChannelInboundStream`` during tests.
     public struct TestSource {
         @usableFromInline
-        internal let continuation: AsyncStream<Inbound>.Continuation
+        internal let continuation: AsyncThrowingStream<Inbound, Error>.Continuation
 
         @inlinable
-        init(continuation: AsyncStream<Inbound>.Continuation) {
+        init(continuation: AsyncThrowingStream<Inbound, Error>.Continuation) {
             self.continuation = continuation
         }
 
@@ -40,23 +40,25 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
         }
 
         /// Finished the inbound stream.
+        ///
+        /// - Parameter error: The error to throw, or nil, to finish normally.
         @inlinable
-        public func finish() {
-            self.continuation.finish()
+        public func finish(throwing error: Error? = nil) {
+            self.continuation.finish(throwing: error)
         }
     }
 
     #if swift(>=5.7)
     @usableFromInline
     enum _Backing: Sendable {
-        case asyncStream(AsyncStream<Inbound>)
+        case asyncStream(AsyncThrowingStream<Inbound, Error>)
         case producer(Producer)
     }
     #else
     // AsyncStream wasn't marked as `Sendable` in 5.6
     @usableFromInline
     enum _Backing: @unchecked Sendable {
-        case asyncStream(AsyncStream<Inbound>)
+        case asyncStream(AsyncThrowingStream<Inbound, Error>)
         case producer(Producer)
     }
     #endif
@@ -72,15 +74,15 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     /// - Returns: A tuple containing the input stream and a test source to drive it.
     @inlinable
     public static func makeTestingStream() -> (Self, TestSource) {
-        var continuation: AsyncStream<Inbound>.Continuation!
-        let stream = AsyncStream<Inbound> { continuation = $0 }
+        var continuation: AsyncThrowingStream<Inbound, Error>.Continuation!
+        let stream = AsyncThrowingStream<Inbound, Error> { continuation = $0 }
         let source = TestSource(continuation: continuation)
         let inputStream = Self(stream: stream)
         return (inputStream, source)
     }
 
     @inlinable
-    init(stream: AsyncStream<Inbound>) {
+    init(stream: AsyncThrowingStream<Inbound, Error>) {
         self._backing = .asyncStream(stream)
     }
 
@@ -163,7 +165,7 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
     public struct AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline
         enum _Backing {
-            case asyncStream(AsyncStream<Inbound>.Iterator)
+            case asyncStream(AsyncThrowingStream<Inbound, Error>.Iterator)
             case producer(Producer.AsyncIterator)
         }
 
@@ -183,8 +185,10 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
         public mutating func next() async throws -> Element? {
             switch self._backing {
             case .asyncStream(var iterator):
-                let value = await iterator.next()
-                self._backing = .asyncStream(iterator)
+                defer {
+                    self._backing = .asyncStream(iterator)
+                }
+                let value = try await iterator.next()
                 return value
 
             case .producer(let iterator):

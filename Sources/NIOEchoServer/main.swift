@@ -70,18 +70,25 @@ let defaultPort = 9999
 enum BindTo {
     case ip(host: String, port: Int)
     case unixDomainSocket(path: String)
+    case vsock(_: VsockAddress)
 }
 
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
-    /* we got two arguments, let's interpret that as host and port */
+case (_, .some(let cid), .some(let port)):
+    /* we got two arguments (Int, Int), let's interpret that as vsock cid and port */
+    bindTarget = .vsock(VsockAddress(
+        cid: VsockAddress.ContextID(cid),
+        port: VsockAddress.Port(port)
+    ))
+case (.some(let h), _, .some(let p)):
+    /* we got two arguments (String, Int), let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)
-case (.some(let portString), .none, _):
-    /* couldn't parse as number, expecting unix domain socket path */
-    bindTarget = .unixDomainSocket(path: portString)
-case (_, .some(let p), _):
-    /* only one argument --> port */
+case (.some(let pathString), .none, .none):
+    /* we got one argument (String), let's interpret that unix domain socket path */
+    bindTarget = .unixDomainSocket(path: pathString)
+case (_, .some(let p), .none):
+    /* we got one argument (Int), let's interpret that as port on default host */
     bindTarget = .ip(host: defaultHost, port: p)
 default:
     bindTarget = .ip(host: defaultHost, port: defaultPort)
@@ -93,10 +100,17 @@ let channel = try { () -> Channel in
         return try bootstrap.bind(host: host, port: port).wait()
     case .unixDomainSocket(let path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
+    case .vsock(let vsockAddress):
+        return try bootstrap.bind(to: vsockAddress).wait()
     }
 }()
 
-print("Server started and listening on \(channel.localAddress!)")
+switch bindTarget {
+case .ip, .unixDomainSocket:
+    print("Server started and listening on \(channel.localAddress!)")
+case .vsock(let vsockAddress):
+    print("Server started and listening on \(vsockAddress)")
+}
 
 // This will never unblock as we don't close the ServerChannel
 try channel.closeFuture.wait()

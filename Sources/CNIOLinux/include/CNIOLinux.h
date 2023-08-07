@@ -29,6 +29,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include "liburing_nio.h"
+#include <linux/vm_sockets.h>
 
 #if __has_include(<linux/mptcp.h>)
 #include <linux/mptcp.h>
@@ -113,6 +114,8 @@ bool CNIOLinux_supports_udp_segment();
 bool CNIOLinux_supports_udp_gro();
 
 int CNIOLinux_system_info(struct utsname* uname_data);
+
+extern const unsigned long CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID;
 
 #endif
 #endif
