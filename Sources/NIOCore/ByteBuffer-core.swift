@@ -888,17 +888,9 @@ extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
         }
         """
     }
-
-    /// A `String` describing this `ByteBuffer` with some portion of the readable bytes dumped too. Example:
-    ///
-    ///     ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, slice: 256..<768, storage: 0x0000000103001000 (1024 bytes)}
-    ///     readable bytes (max 1k): [ 00 01 02 03 ]
-    ///
-    /// The format of the description is not API.
-    ///
-    /// - returns: A description of this `ByteBuffer` useful for debugging.
+    
     public var debugDescription: String {
-        return "\(self.description)\nreadable bytes (max 1k): \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes)))"
+        String(describing: self)
     }
 }
 
