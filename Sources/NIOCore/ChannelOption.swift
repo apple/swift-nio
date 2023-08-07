@@ -191,6 +191,32 @@ extension ChannelOptions {
             public init() { }
         }
 
+        /// ``DatagramSegmentSize`` controls the 'UDP_SEGMENT' socket option (sometimes reffered to as 'GSO') which allows for
+        /// large writes to be sent via `sendmsg` and `sendmmsg` and segmented into separate datagrams by the kernel (or in some cases, the NIC).
+        /// The size of segments the large write is split into is controlled by the value of this option (note that writes do not need to be a
+        /// multiple of this option).
+        ///
+        /// This option is currently only supported on Linux (4.18 and newer). Support can be checked using ``System/supportsUDPSegmentationOffload``.
+        ///
+        /// Setting this option to zero disables segmentation offload.
+        public struct DatagramSegmentSize: ChannelOption, Sendable {
+            public typealias Value = CInt
+            public init() { }
+        }
+
+        /// ``DatagramReceiveOffload`` sets the 'UDP_GRO' socket option which allows for datagrams to be accumulated
+        /// by the kernel (or in some cases, the NIC) and reduces traversals in the kernel's networking layer.
+        ///
+        /// This option is currently only supported on Linux (5.10 and newer). Support can be checked
+        /// using ``System/supportsUDPReceiveOffload``.
+        ///
+        /// - Note: users should ensure they use an appropriate receive buffer allocator when enabling this option.
+        ///   The default allocator for datagram channels uses fixed sized buffers of 2048 bytes.
+        public struct DatagramReceiveOffload: ChannelOption, Sendable {
+            public typealias Value = Bool
+            public init() { }
+        }
+
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
         public struct ExplicitCongestionNotificationsOption: ChannelOption, Sendable {
             public typealias Value = Bool
@@ -276,7 +302,7 @@ public struct ChannelOptions {
     public static let socketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .socket, name: name)
     }
-    
+
     /// - seealso: `SocketOption`.
     public static let ipOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .ip, name: name)
@@ -316,6 +342,12 @@ public struct ChannelOptions {
 
     /// - seealso: `DatagramVectorReadMessageCountOption`
     public static let datagramVectorReadMessageCount = Types.DatagramVectorReadMessageCountOption()
+
+    /// - seealso: `DatagramSegmentSize`
+    public static let datagramSegmentSize = Types.DatagramSegmentSize()
+
+    /// - seealso: `DatagramReceiveOffload`
+    public static let datagramReceiveOffload = Types.DatagramReceiveOffload()
 
     /// - seealso: `ExplicitCongestionNotificationsOption`
     public static let explicitCongestionNotification = Types.ExplicitCongestionNotificationsOption()

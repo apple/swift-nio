@@ -70,14 +70,12 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         XCTAssertEqual(self.source.yield(contentsOf: [1, 2, 3]), .produceMore)
         XCTAssertEqual(self.source.yield(contentsOf: [4, 5, 6]), .stopProducing)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 0)
         XCTAssertEqualWithoutAutoclosure(try await iterator.next(), 1)
         XCTAssertEqualWithoutAutoclosure(try await iterator.next(), 2)
         XCTAssertEqualWithoutAutoclosure(try await iterator.next(), 3)
         XCTAssertEqualWithoutAutoclosure(try await iterator.next(), 4)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 0)
         XCTAssertEqualWithoutAutoclosure(try await iterator.next(), 5)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.produceMore])
         XCTAssertEqual(self.source.yield(contentsOf: [7, 8, 9, 10, 11]), .stopProducing)
     }
 
@@ -87,7 +85,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         self.backPressureStrategy.didYieldHandler = { _ in false }
         let result = self.source.yield(contentsOf: [1])
 
-        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didYield])
         XCTAssertEqual(result, .stopProducing)
     }
 
@@ -95,7 +93,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         self.backPressureStrategy.didYieldHandler = { _ in true }
         let result = self.source.yield(contentsOf: [1])
 
-        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didYield])
         XCTAssertEqual(result, .produceMore)
     }
 
@@ -111,7 +109,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             }
 
             try await Task.sleep(nanoseconds: 1_000_000)
-            XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
+            XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
 
             let result = self.source.yield(contentsOf: [1])
 
@@ -121,7 +119,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         XCTAssertEqual(element, 1)
-        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didYield])
     }
 
     func testYield_whenStreaming_andSuspended_andProduceMore() async throws {
@@ -136,7 +134,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             }
 
             try await Task.sleep(nanoseconds: 1_000_000)
-            XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
+            XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
 
             let result = self.source.yield(contentsOf: [1])
 
@@ -146,7 +144,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         XCTAssertEqual(element, 1)
-        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didYield])
     }
 
     func testYieldEmptySequence_whenStreaming_andSuspended_andStopProducing() async throws {
@@ -161,13 +159,11 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             }
 
             try await Task.sleep(nanoseconds: 1_000_000)
-            XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
+            XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
 
             let result = self.source.yield(contentsOf: [])
 
             XCTAssertEqual(result, .stopProducing)
-
-            XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 0)
 
             group.cancelAll()
         }
@@ -185,13 +181,11 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             }
 
             try await Task.sleep(nanoseconds: 1_000_000)
-            XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
+            XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
 
             let result = self.source.yield(contentsOf: [])
 
             XCTAssertEqual(result, .stopProducing)
-
-            XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 0)
 
             group.cancelAll()
         }
@@ -205,7 +199,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let result = self.source.yield(contentsOf: [1])
 
         XCTAssertEqual(result, .stopProducing)
-        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 2)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didYield])
     }
 
     func testYield_whenStreaming_andNotSuspended_andProduceMore() async throws {
@@ -216,7 +210,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let result = self.source.yield(contentsOf: [1])
 
         XCTAssertEqual(result, .produceMore)
-        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 2)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didYield])
     }
 
     func testYield_whenSourceFinished() async throws {
@@ -225,15 +219,12 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let result = self.source.yield(contentsOf: [1])
 
         XCTAssertEqual(result, .dropped)
-        XCTAssertEqual(self.backPressureStrategy.didYieldCallCount, 0)
     }
 
     // MARK: - Finish
 
     func testFinish_whenInitial() async {
         self.source.finish()
-
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
     }
 
     func testFinish_whenStreaming_andSuspended() async throws {
@@ -254,7 +245,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         XCTAssertEqual(element, nil)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testFinish_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
@@ -272,15 +263,13 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         XCTAssertNil(element)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testFinish_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
         _ = self.source.yield(contentsOf: [1])
 
         self.source.finish()
-
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
 
         let sequence = try XCTUnwrap(self.sequence)
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
@@ -293,21 +282,18 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         XCTAssertEqual(element, 1)
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testFinish_whenFinished() async throws {
         self.source.finish()
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
 
         _ = try await self.sequence.first { _ in true }
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
 
         self.source.finish()
-
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
     }
 
     // MARK: - Finish with Error
@@ -315,13 +301,11 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     func testFinishError_whenInitial() async {
         self.source.finish(ChannelError.alreadyClosed)
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
-
         await XCTAssertThrowsError(try await self.sequence.first { _ in true }) { error in
             XCTAssertEqual(error as? ChannelError, .alreadyClosed)
         }
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testFinishError_whenStreaming_andSuspended() async throws {
@@ -342,7 +326,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             XCTAssertEqual(error as? ChannelError, .alreadyClosed)
         }
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testFinishError_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
@@ -361,15 +345,13 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             XCTAssertEqual(error as? ChannelError, .alreadyClosed)
         }
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testFinishError_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
         _ = self.source.yield(contentsOf: [1])
 
         self.source.finish(ChannelError.alreadyClosed)
-
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
 
         var elements = [Int]()
 
@@ -382,33 +364,26 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         XCTAssertEqual(elements, [1])
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testFinishError_whenFinished() async throws {
         self.source.finish()
         let iterator = self.sequence.makeAsyncIterator()
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
-
         _ = try await iterator.next()
-
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
 
         self.source.finish(ChannelError.alreadyClosed)
 
         // This call should just return nil
         _ = try await iterator.next()
-
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
     }
 
     // MARK: - Source Deinited
 
     func testSourceDeinited_whenInitial() async {
         self.source = nil
-
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
     }
 
     func testSourceDeinited_whenStreaming_andSuspended() async throws {
@@ -429,7 +404,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         XCTAssertEqual(element, nil)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
@@ -447,15 +422,13 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
 
         XCTAssertNil(element)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
         _ = self.source.yield(contentsOf: [1])
 
         self.source = nil
-
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
 
         let sequence = try XCTUnwrap(self.sequence)
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
@@ -468,7 +441,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         XCTAssertEqual(element, 1)
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     // MARK: - Task cancel
@@ -483,10 +456,9 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
         task.cancel()
         let value = try await task.value
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
         XCTAssertNil(value)
     }
 
@@ -506,10 +478,9 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         _ = self.source.yield(contentsOf: [1])
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
         task.cancel()
         let value = try await task.value
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
         XCTAssertEqual(value, 1)
     }
 
@@ -523,12 +494,10 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
         self.source.finish()
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
         task.cancel()
         let value = try await task.value
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
         XCTAssertNil(value)
     }
 
@@ -562,8 +531,8 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
-        XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.produceMore])
     }
 
     func testNext_whenInitial_whenNoDemand() async throws {
@@ -577,13 +546,13 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
-        XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 0)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
     }
 
     func testNext_whenStreaming_whenEmptyBuffer_whenDemand() async throws {
         self.backPressureStrategy.didNextHandler = { _ in true }
         _ = self.source.yield(contentsOf: [])
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didYield])
 
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
@@ -594,13 +563,13 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
-        XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
     }
 
     func testNext_whenStreaming_whenEmptyBuffer_whenNoDemand() async throws {
         self.backPressureStrategy.didNextHandler = { _ in false }
         _ = self.source.yield(contentsOf: [])
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didYield])
 
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
@@ -611,30 +580,30 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         }
         try await Task.sleep(nanoseconds: 1_000_000)
 
-        XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 0)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
     }
 
     func testNext_whenStreaming_whenNotEmptyBuffer_whenNoDemand() async throws {
         self.backPressureStrategy.didNextHandler = { _ in false }
         _ = self.source.yield(contentsOf: [1])
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didYield])
 
         let element = try await self.sequence.first { _ in true }
 
         XCTAssertEqual(element, 1)
-        XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 0)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
     }
 
     func testNext_whenStreaming_whenNotEmptyBuffer_whenNewDemand() async throws {
         self.backPressureStrategy.didNextHandler = { _ in true }
         _ = self.source.yield(contentsOf: [1])
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didYield])
 
         let element = try await self.sequence.first { _ in true }
 
         XCTAssertEqual(element, 1)
-        XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.produceMore])
     }
 
     func testNext_whenStreaming_whenNotEmptyBuffer_whenNewAndOutstandingDemand() async throws {
@@ -642,13 +611,12 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         self.backPressureStrategy.didYieldHandler = { _ in true }
 
         _ = self.source.yield(contentsOf: [1])
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 0)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didYield])
 
         let element = try await self.sequence.first { _ in true }
 
         XCTAssertEqual(element, 1)
-        XCTAssertEqual(self.backPressureStrategy.didNextCallCount, 1)
-        XCTAssertEqual(self.delegate.produceMoreCallCount, 0)
+        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(1).collect(), [.didNext])
     }
 
     func testNext_whenSourceFinished() async throws {
@@ -669,18 +637,17 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     func testSequenceDeinitialized() async {
         self.sequence = nil
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testSequenceDeinitialized_whenIteratorReferenced() async {
         var iterator = self.sequence?.makeAsyncIterator()
 
         self.sequence = nil
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
 
         XCTAssertNotNil(iterator)
         iterator = nil
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     // MARK: - IteratorDeinitialized
@@ -690,32 +657,30 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         XCTAssertNotNil(iterator)
         iterator = nil
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
 
         self.sequence = nil
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
     }
 
-    func testIteratorDeinitialized_whenSequenceFinished() {
+    func testIteratorDeinitialized_whenSequenceFinished() async {
         self.source.finish()
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
 
         var iterator = self.sequence?.makeAsyncIterator()
 
         XCTAssertNotNil(iterator)
         iterator = nil
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
-    func testIteratorDeinitialized_whenStreaming() {
+    func testIteratorDeinitialized_whenStreaming() async {
         _ = self.source.yield(contentsOf: [1])
         var iterator = self.sequence?.makeAsyncIterator()
 
         XCTAssertNotNil(iterator)
         iterator = nil
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 }
 
@@ -727,6 +692,14 @@ fileprivate func XCTAssertEqualWithoutAutoclosure<T>(
     file: StaticString = #filePath,
     line: UInt = #line
 ) where T: Equatable {
-    let result = expression1 == expression2
-    XCTAssertTrue(result, message(), file: file, line: line)
+    XCTAssertEqual(expression1, expression2, message(), file: file, line: line)
+}
+
+extension AsyncSequence {
+    /// Collect all elements in the sequence into an array.
+    fileprivate func collect() async rethrows -> [Element] {
+        try await self.reduce(into: []) { accumulated, next in
+            accumulated.append(next)
+        }
+    }
 }

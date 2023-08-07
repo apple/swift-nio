@@ -48,27 +48,18 @@ private extension SocketAddress {
 class PendingDatagramWritesManagerTests: XCTestCase {
     private func withPendingDatagramWritesManager(_ body: (PendingDatagramWritesManager) throws -> Void) rethrows {
         let bufferPool = Pool<PooledBuffer>(maxSize: 16)
-
-        let count = (Socket.writevLimitIOVectors + 1)
-        let msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: count)
-        let addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: count)
+        let msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
         var controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
 
 #if SWIFTNIO_USE_IO_URING && os(Linux)
-        // With Uring the PendingDatagramWritesManager suppose 'msgs', 'iovecs', 'addresses', 'managed'
-        // and 'controlMessageStorage' are allocated by the caller and PendingDatagramWritesManager become an owner
+        // With Uring the PendingDatagramWritesManager become an owner of the 'controlMessageStorage'
 #else
         defer {
-            msgs.deallocate()
-            addresses.deallocate()
             controlMessageStorage.deallocate()
         }
 #endif
+        let pwm = NIOPosix.PendingDatagramWritesManager(bufferPool: bufferPool, msgBufferPool: msgBufferPool, controlMessageStorage: controlMessageStorage)
 
-        let pwm = NIOPosix.PendingDatagramWritesManager(bufferPool: bufferPool,
-                                                        msgs: msgs,
-                                                        addresses: addresses,
-                                                        controlMessageStorage: controlMessageStorage)
         XCTAssertTrue(pwm.isEmpty)
         XCTAssertTrue(pwm.isOpen)
         XCTAssertFalse(pwm.isFlushPending)

@@ -245,6 +245,15 @@ extension NIOBSDSocket.OptionLevel {
     /// Socket options that apply to all sockets.
     public static let socket: NIOBSDSocket.OptionLevel =
             NIOBSDSocket.OptionLevel(rawValue: SOL_SOCKET)
+
+    /// Socket options that apply only to UDP sockets.
+    #if os(Linux) || os(Android)
+    public static let udp: NIOBSDSocket.OptionLevel =
+            NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_UDP))
+    #else
+    public static let udp: NIOBSDSocket.OptionLevel =
+            NIOBSDSocket.OptionLevel(rawValue: IPPROTO_UDP)
+    #endif
 }
 
 // IPv4 Options
@@ -325,6 +334,19 @@ extension NIOBSDSocket.Option {
     /// Get information about the TCP connection.
     public static let tcp_connection_info: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: TCP_CONNECTION_INFO)
+}
+#endif
+
+#if os(Linux)
+extension NIOBSDSocket.Option {
+    // Note: UDP_SEGMENT and UDP_GRO are not available on all Linux platforms so values are
+    // hardcoded.
+
+    /// Use UDP segmentation offload (UDP_SEGMENT, or 'GSO'). Only available on Linux.
+    public static let udp_segment = NIOBSDSocket.Option(rawValue: 103)
+
+    /// Use UDP generic receive offload (GRO). Only available on Linux.
+    public static let udp_gro = NIOBSDSocket.Option(rawValue: 104)
 }
 #endif
 

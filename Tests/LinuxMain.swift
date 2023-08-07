@@ -111,6 +111,7 @@ class LinuxMainRunner {
              testCase(NIOHTTP1TestServerTest.allTests),
              testCase(NIOHTTPClientResponseAggregatorTest.allTests),
              testCase(NIOHTTPServerRequestAggregatorTest.allTests),
+             testCase(NIOLoopBoundTests.allTests),
              testCase(NIOSingleStepByteToMessageDecoderTest.allTests),
              testCase(NIOTests.allTests),
              testCase(NIOThreadPoolTest.allTests),

@@ -386,13 +386,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private var bufferPool: Pool<PooledBuffer>
     private var buffer: PooledBuffer?
 
-    /// Storage for mmsghdr structures. Only present on Linux because Darwin does not support
-    /// gathering datagram writes.
-    private var msgs: UnsafeMutableBufferPointer<MMsgHdr>
-
-    /// Storage for sockaddr structures. Only present on Linux because Darwin does not support gathering
-    /// writes.
-    private var addresses: UnsafeMutableBufferPointer<sockaddr_storage>
+    /// Storage for mmsghdr and sockaddr structures.
+    /// Only present on Linux because Darwin does not support gathering datagram writes.
+    private var msgBufferPool: Pool<PooledMsgBuffer>
+    private var msgBuffer: PooledMsgBuffer?
 
     private var controlMessageStorage: UnsafeControlMessageStorage
 
@@ -414,21 +411,15 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     ///     - msgs: A pre-allocated array of `MMsgHdr` elements
     ///     - addresses: A pre-allocated array of `sockaddr_storage` elements
     ///     - controlMessageStorage: Pre-allocated memory for storing cmsghdr data during a vector write operation.
-    init(bufferPool: Pool<PooledBuffer>,
-         msgs: UnsafeMutableBufferPointer<MMsgHdr>,
-         addresses: UnsafeMutableBufferPointer<sockaddr_storage>,
-         controlMessageStorage: UnsafeControlMessageStorage) {
+    init(bufferPool: Pool<PooledBuffer>, msgBufferPool: Pool<PooledMsgBuffer>, controlMessageStorage: UnsafeControlMessageStorage) {
         self.bufferPool = bufferPool
-        self.msgs = msgs
-        self.addresses = addresses
+        self.msgBufferPool = msgBufferPool
         self.controlMessageStorage = controlMessageStorage
     }
 
 #if SWIFTNIO_USE_IO_URING && os(Linux)
 
     deinit {
-        self.msgs.deallocate()
-        self.addresses.deallocate()
         self.controlMessageStorage.deallocate()
     }
 
@@ -518,49 +509,50 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         let pdw = self.state.nextWrite
         if let pdw = pdw {
             self.buffer = self.bufferPool.get()
+            self.msgBuffer = self.msgBufferPool.get()
             try self.buffer!.withUnsafePointers { iovecs, storageRefs in
-                try pdw.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-                    storageRefs[0] = storageRef.retain()
+                try self.msgBuffer!.withUnsafePointers { msgs, addresses in 
+                    try pdw.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                        storageRefs[0] = storageRef.retain()
 
-                    let address: UnsafeMutablePointer<sockaddr_storage>?
-                    let addressLen: socklen_t
-                    let protocolFamily: NIOBSDSocket.ProtocolFamily
-                    if let envelopeAddress = pdw.address {
-                        precondition(self.state.remoteAddress == nil, "Pending write with address on connected socket.")
-                        address = self.addresses.baseAddress
-                        addressLen = pdw.copySocketAddress(address!)
-                        protocolFamily = envelopeAddress.protocol
-                    }
-                    else {
-                        guard let connectedRemoteAddress = self.state.remoteAddress else {
-                            preconditionFailure("Pending write without address on unconnected socket.")
+                        let address: UnsafeMutablePointer<sockaddr_storage>?
+                        let addressLen: socklen_t
+                        let protocolFamily: NIOBSDSocket.ProtocolFamily
+                        if let envelopeAddress = pdw.address {
+                            precondition(self.state.remoteAddress == nil, "Pending write with address on connected socket.")
+                            address = addresses.baseAddress
+                            addressLen = pdw.copySocketAddress(address!)
+                            protocolFamily = envelopeAddress.protocol
                         }
-                        address = nil
-                        addressLen = 0
-                        protocolFamily = connectedRemoteAddress.protocol
+                        else {
+                            guard let connectedRemoteAddress = self.state.remoteAddress else {
+                                preconditionFailure("Pending write without address on unconnected socket.")
+                            }
+                            address = nil
+                            addressLen = 0
+                            protocolFamily = connectedRemoteAddress.protocol
+                        }
+
+                        iovecs[0] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
+
+                        var controlBytes = UnsafeOutboundControlBytes(controlBytes: self.controlMessageStorage[0])
+                        controlBytes.appendExplicitCongestionState(metadata: pdw.metadata, protocolFamily: protocolFamily)
+                        let controlMessageBytePointer = controlBytes.validControlBytes
+
+                        let msg = msghdr(msg_name: address,
+                                                 msg_namelen: addressLen,
+                                                 msg_iov: iovecs.baseAddress,
+                                                 msg_iovlen: 1,
+                                                 msg_control: controlMessageBytePointer.baseAddress,
+                                                 msg_controllen: .init(controlMessageBytePointer.count),
+                                                 msg_flags: 0)
+                        msgs[0] = MMsgHdr(msg_hdr: msg, msg_len: 0)
+
+                        // Uring has no analogue to sendmmsg(), so we can send only single message at once
+                        var ptr = UnsafeRawBufferPointer(msgs).baseAddress!
+                        ptr += MemoryLayout<MMsgHdr>.offset(of: \MMsgHdr.msg_hdr)!
+                        try asyncWriteOperation(ptr.bindMemory(to: msghdr.self, capacity: 1))
                     }
-
-                    iovecs[0] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
-
-                    var controlBytes = UnsafeOutboundControlBytes(controlBytes: self.controlMessageStorage[0])
-                    controlBytes.appendExplicitCongestionState(metadata: pdw.metadata, protocolFamily: protocolFamily)
-                    let controlMessageBytePointer = controlBytes.validControlBytes
-
-                    let msg = msghdr(msg_name: address,
-                                     msg_namelen: addressLen,
-                                     msg_iov: iovecs.baseAddress,
-                                     msg_iovlen: 1,
-                                     msg_control: controlMessageBytePointer.baseAddress,
-                                     msg_controllen: .init(controlMessageBytePointer.count),
-                                     msg_flags: 0)
-                    self.msgs[0] = MMsgHdr(msg_hdr: msg, msg_len: 0)
-
-                    // Uring has no analogue to sendmmsg(), so we can send only single message at once
-                    // Let's use msghdr initialized in self.msgs[0], and safer to add (possible) offset
-                    // which can be non zero if someone will change MMsgHdr struct.
-                    var ptr = UnsafeRawBufferPointer(self.msgs).baseAddress!
-                    ptr += MemoryLayout<MMsgHdr>.offset(of: \MMsgHdr.msg_hdr)!
-                    try asyncWriteOperation(ptr.bindMemory(to: msghdr.self, capacity: 1))
                 }
             }
         }
@@ -572,6 +564,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         }
         self.bufferPool.put(self.buffer!)
         self.buffer = nil
+
+        self.msgBufferPool.put(self.msgBuffer!)
+        self.msgBuffer = nil
 
         if (written >= 0) {
             let (writeFiller, result) = self.state.didScalarWrite(written: Int(written))
@@ -717,13 +712,19 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private func triggerVectorBufferWrite(vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>) throws -> OneWriteOperationResult {
         assert(self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
                "illegal state for vector datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)")
-        return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
-                                                                       bufferPool: self.bufferPool,
-                                                                       msgs: self.msgs,
-                                                                       addresses: self.addresses,
-                                                                       controlMessageStorage: self.controlMessageStorage,
-                                                                       { try vectorWriteOperation($0) }),
-                             messages: self.msgs)
+
+        let msgBuffer = self.msgBufferPool.get()
+        defer { self.msgBufferPool.put(msgBuffer) }
+
+        return try msgBuffer.withUnsafePointers { msgs, addresses in
+            return self.didWrite(try doPendingDatagramWriteVectorOperation(pending: self.state,
+                                                                           bufferPool: self.bufferPool,
+                                                                           msgs: msgs,
+                                                                           addresses: addresses,
+                                                                           controlMessageStorage: self.controlMessageStorage,
+                                                                           { try vectorWriteOperation($0) }),
+                                 messages: msgs)
+        }
     }
 
     private func fulfillPromise(_ promise: PendingDatagramWritesState.DatagramWritePromiseFiller?) {

@@ -276,15 +276,15 @@ class BaseSocket: BaseSocketProtocol {
             // most socket options settings so for the time being we'll just ignore this. Let's revisit for NIO 2.0.
             return
         }
-        return try self.withUnsafeHandle {
-            var val = value
-
-            try NIOBSDSocket.setsockopt(
-                socket: $0,
-                level: level,
-                option_name: name,
-                option_value: &val,
-                option_len: socklen_t(MemoryLayout.size(ofValue: val)))
+        return try withUnsafeBytes(of: value) { (valueBuffer: UnsafeRawBufferPointer) in
+            try self.withUnsafeHandle {
+                try NIOBSDSocket.setsockopt(
+                    socket: $0,
+                    level: level,
+                    option_name: name,
+                    option_value: valueBuffer.baseAddress!,
+                    option_len: socklen_t(valueBuffer.count))
+            }
         }
     }
 

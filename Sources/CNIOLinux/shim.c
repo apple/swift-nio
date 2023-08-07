@@ -150,4 +150,31 @@ size_t CNIOLinux_CMSG_SPACE(size_t payloadSizeBytes) {
 
 const int CNIOLinux_SO_TIMESTAMP = SO_TIMESTAMP;
 const int CNIOLinux_SO_RCVTIMEO = SO_RCVTIMEO;
+
+bool supports_udp_sockopt(int opt, int value) {
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd == -1) {
+        return false;
+    }
+    int rc = setsockopt(fd, IPPROTO_UDP, opt, &value, sizeof(value));
+    close(fd);
+    return rc == 0;
+}
+
+bool CNIOLinux_supports_udp_segment() {
+    #ifndef UDP_SEGMENT
+    return false;
+    #else
+    return supports_udp_sockopt(UDP_SEGMENT, 512);
+    #endif
+}
+
+bool CNIOLinux_supports_udp_gro() {
+    #ifndef UDP_GRO
+    return false;
+    #else
+    return supports_udp_sockopt(UDP_GRO, 1);
+    #endif
+}
+
 #endif

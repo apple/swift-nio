@@ -439,17 +439,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
 
 #if SWIFTNIO_USE_IO_URING && os(Linux)
-        let msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: 1)
-        let addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: 1)
         let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
 #else
-        let msgs = eventLoop.msgs
-        let addresses = eventLoop.addresses
         let controlMessageStorage = eventLoop.controlMessageStorage
 #endif
         self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
-                                                          msgs: msgs,
-                                                          addresses: addresses,
+                                                          msgBufferPool: eventLoop.msgBufferPool,
                                                           controlMessageStorage: controlMessageStorage)
 
         try super.init(
@@ -465,17 +460,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.vectorReadManager = nil
         try socket.setNonBlocking()
 #if SWIFTNIO_USE_IO_URING && os(Linux)
-        let msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: 1)
-        let addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: 1)
         let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
 #else
-        let msgs = eventLoop.msgs
-        let addresses = eventLoop.addresses
         let controlMessageStorage = eventLoop.controlMessageStorage
 #endif
         self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
-                                                          msgs: msgs,
-                                                          addresses: addresses,
+                                                          msgBufferPool: eventLoop.msgBufferPool,
                                                           controlMessageStorage: controlMessageStorage)
         try super.init(
             socket: socket,
@@ -541,7 +531,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // Receiving packet info is only supported for IP
                 throw ChannelError.operationUnsupported
             }
-            break
+        case _ as ChannelOptions.Types.DatagramSegmentSize:
+            guard System.supportsUDPSegmentationOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            let segmentSize = value as! ChannelOptions.Types.DatagramSegmentSize.Value
+            try self.socket.setUDPSegmentSize(segmentSize)
+        case _ as ChannelOptions.Types.DatagramReceiveOffload:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            let enable = value as! ChannelOptions.Types.DatagramReceiveOffload.Value
+            try self.socket.setUDPReceiveOffload(enable)
         default:
             try super.setOption0(option, value: value)
         }
@@ -585,6 +586,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // Receiving packet info is only supported for IP
                 throw ChannelError.operationUnsupported
             }
+        case _ as ChannelOptions.Types.DatagramSegmentSize:
+            guard System.supportsUDPSegmentationOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            return try self.socket.getUDPSegmentSize() as! Option.Value
+        case _ as ChannelOptions.Types.DatagramReceiveOffload:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            return try self.socket.getUDPReceiveOffload() as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -848,7 +859,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                destinationPtr: destinationPtr,
                                                destinationSize: destinationSize,
                                                controlBytes: controlBytes.validControlBytes)
-
             },
             vectorWriteOperation: { msgs in
                 return try self.socket.sendmmsg(msgs: msgs)

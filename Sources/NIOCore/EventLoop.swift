@@ -1234,10 +1234,21 @@ extension EventLoopGroup {
         self.shutdownGracefully(queue: .global(), callback)
     }
     #endif
-    
-    public func syncShutdownGracefully() throws {
-        self._preconditionSafeToSyncShutdown(file: #fileID, line: #line)
 
+
+    #if swift(>=5.7)
+    @available(*, noasync, message: "this can end up blocking the calling thread", renamed: "shutdownGracefully()")
+    public func syncShutdownGracefully() throws {
+        try self._syncShutdownGracefully()
+    }
+    #else
+    public func syncShutdownGracefully() throws {
+        try self._syncShutdownGracefully()
+    }
+    #endif
+
+    private func _syncShutdownGracefully() throws {
+        self._preconditionSafeToSyncShutdown(file: #fileID, line: #line)
         let errorStorageLock = NIOLock()
         var errorStorage: Error? = nil
         let continuation = DispatchWorkItem {}
