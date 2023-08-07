@@ -36,13 +36,14 @@ extension String {
         self = buffer.readString(length: buffer.readableBytes)!
     }
 
-    /// Creates a `String` from a given Int with base (radix) of 16, with the provided padding size.
-    /// - parameter padding: The desired length of the resulting string.
+    /// Creates a `String` from a given `Int` with a given base (`radix`), with the provided `padding` size.
+    ///
+    /// - parameters:
+    ///     - radix: radix base to use for conversion.
+    ///     - padding: the desired lenght of the resulting string.
     @inlinable
-    internal init<T>(byte: T, padding: Int) where T : BinaryInteger {
-        // Initialize the string with just the byte converted to hexadecimal first
-        // Then, add the padding of the desired size minus the number of hex digits in the string.
-        let formatted = String(byte, radix: 16)
+    internal init<T>(_ value: T, radix: Int, padding: Int) where T: BinaryInteger {
+        let formatted = String(value, radix: radix)
         self = String(repeating: "0", count: padding - formatted.count) + formatted
     }
 }

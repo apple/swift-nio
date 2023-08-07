@@ -54,7 +54,7 @@ extension ByteBuffer {
         hexString.reserveCapacity(self.readableBytes * 3)
 
         for byte in self.readableBytesView {
-            hexString += String(byte: byte, padding: 2)
+            hexString += String(byte, radix: 16, padding: 2)
             hexString += " "
         }
 
@@ -98,12 +98,12 @@ extension ByteBuffer {
         var lineOffset = offset
 
         while buffer.readableBytes > 0 {
-            var slice = buffer.readSlice(length: min(16, buffer.readableBytes))! // Safe to force-unwrap because we're in a loop that guarantees there's at least one byte to read.
+            let slice = buffer.readSlice(length: min(16, buffer.readableBytes))! // Safe to force-unwrap because we're in a loop that guarantees there's at least one byte to read.
             let lineLength = slice.readableBytes
 
             // Left column of the hex dump signifies the offset from the beginning of the dumped buffer
             // and is separated from the next column with two spaces.
-            result += String(byte: lineOffset, padding: 8)
+            result += String(lineOffset, radix: 16, padding: 8)
             result += "  "
 
             // Center column consists of:
@@ -144,7 +144,7 @@ extension ByteBuffer {
         }
 
         var result = self._hexDumpLines(offset: 0)
-        result += String(byte: self.readableBytes, padding: 8)
+        result += String(self.readableBytes, radix: 16, padding: 8)
         return result
     }
 
@@ -171,7 +171,7 @@ extension ByteBuffer {
         result += front._hexDumpLines(offset: 0)
         result += separator
         result += back._hexDumpLines(offset: self.readableBytes - maxBytes/2)
-        result += String(byte: self.readableBytes, padding: 8)
+        result += String(self.readableBytes, radix: 16, padding: 8)
         return result
     }
 
