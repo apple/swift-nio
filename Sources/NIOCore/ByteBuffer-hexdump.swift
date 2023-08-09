@@ -86,53 +86,57 @@ extension ByteBuffer {
         return startHex + " ... " + endHex
     }
 
-    // Dump hexdump -C compatible format without the last line containing the byte length of the buffer
-    private func _hexDumpLines(offset: Int) -> String {
+    /// Returns a String of detailed hex dump of this slice.
+    /// Intended to be used internally in ``hexDump(format:)``
+    /// - parameters:
+    ///     - lineOffset: an offset from the beginning of the outer buffer that is being dumped. It's used to print the line offset in hexdump -C format.
+    ///     - paddingBefore: the amount of space to pad before the first byte dumped on this line, used in center and right columns.
+    ///     - paddingAfter: the amount of sapce to pad after the last byte on this line, used in center and right columns.
+    private func _hexDumpLine(lineOffset: Int, paddingBefore: Int = 0, paddingAfter: Int = 0) -> String {
+        // Each line takes 78 visible characters + \n
         var result = ""
-        // Each hex dump line represents 16 bytes, and takes up to 79 characters including the \n in the end.
-        // Plus the last line of the hex dump which is just 8 characters.
-        result.reserveCapacity(self.readableBytes / 16 * 79 + 8)
+        result.reserveCapacity(79)
 
-        var buffer = self
-        // We're going to move the lineOffset index forward, so copy it into a variable
-        var lineOffset = offset
+        // Left column of the hex dump signifies the offset from the beginning of the dumped buffer
+        // and is separated from the next column with two spaces.
+        result += String(lineOffset, radix: 16, padding: 8)
+        result += "  "
 
-        while buffer.readableBytes > 0 {
-            let slice = buffer.readSlice(length: min(16, buffer.readableBytes))! // Safe to force-unwrap because we're in a loop that guarantees there's at least one byte to read.
-            let lineLength = slice.readableBytes
+        // Center column consists of:
+        // - xxd-compatible dump of the first 8 bytes
+        // - space
+        // - xxd-compatible dump of the rest 8 bytes
+        // If there are not enough bytes to dump, the column is padded with space.
 
-            // Left column of the hex dump signifies the offset from the beginning of the dumped buffer
-            // and is separated from the next column with two spaces.
-            result += String(lineOffset, radix: 16, padding: 8)
-            result += "  "
+        // Make another view into the slice to use readSlice.
+        // Read up to 8 bytes into the left slice, and dump them.
+        // Safe to force-unwrap because there's at least one byte in `slice`.
+        var plainSliceView = self
+        let left = plainSliceView.readSlice(length: min(8, self.readableBytes))!.hexDumpPlain()
+        // Read the remaining bytes, which is guaranteed to be up to 8, and dump them.
+        let right = plainSliceView.hexDumpPlain()
 
-            // Center column consists of:
-            // - xxd-compatible dump of the first 8 bytes
-            // - space
-            // - xxd-compatible dump of the rest 8 bytes
-            // If there are not enough bytes to dump, the column is padded with space.
+        // If there's any padding on the left, apply that first.
+        result += String(repeating: " ", count: paddingBefore * 3)
+        // If the padding is 8 or more bytes, pad with extra space to match hexdump -C format.
+        result += paddingBefore >= 8 ? " " : ""
 
-            // Make another view into the slice to use readSlice.
-            // Read up to 8 bytes into the left slice, and dump them. Safe to force-unwrap because there's at least one byte in `slice`.
-            var plainSliceView = slice
-            let left = plainSliceView.readSlice(length: min(8, slice.readableBytes))!.hexDumpPlain()
-            // Read the remaining bytes, which is guaranteed to be up to 8, and dump them.
-            let right = plainSliceView.hexDumpPlain()
+        result += left
+        result += String(repeating: " ", count: 25 - left.count)
+        result += right
+        result += String(repeating: " ", count: 60 - result.count)
 
-            result += left
-            result += String(repeating: " ", count: 25 - left.count)
-            result += right
-            result += String(repeating: " ", count: 25 - right.count)
-
-            // Right column renders the 16 bytes line as ASCII characters, or "." if the character is not printable.
-            let printableBytes = slice.readableBytesView.map {
-                let printableRange = UInt8(ascii: " ") ..< UInt8(ascii: "~")
-                return printableRange.contains($0) ? $0 : UInt8(ascii: ".")
-            }
-            result += "|\(String(decoding: printableBytes, as: UTF8.self))|\n"
-
-            lineOffset += lineLength
+        // Right column renders the 16 bytes line as ASCII characters, or "." if the character is not printable.
+        let printableBytes = self.readableBytesView.map {
+            let printableRange = UInt8(ascii: " ") ..< UInt8(ascii: "~")
+            return printableRange.contains($0) ? $0 : UInt8(ascii: ".")
         }
+
+        result += "|"
+        result += String(repeating: " ", count: paddingBefore)
+        result += String(decoding: printableBytes, as: UTF8.self)
+        result += String(repeating: " ", count: paddingAfter)
+        result += "|\n"
         return result
     }
 
@@ -143,7 +147,19 @@ extension ByteBuffer {
             return ""
         }
 
-        var result = self._hexDumpLines(offset: 0)
+        var result = ""
+        result.reserveCapacity(self.readableBytes / 16 * 79 + 8)
+
+        var buffer = self
+
+        var lineOffset = 0
+        while buffer.readableBytes > 0 {
+            // Safe to force-unwrap because we're in a loop that guarantees there's at least one byte to read.
+            let slice = buffer.readSlice(length: min(16, buffer.readableBytes))!
+            result += slice._hexDumpLine(lineOffset: lineOffset)
+            lineOffset += slice.readableBytes
+        }
+
         result += String(self.readableBytes, radix: 16, padding: 8)
         return result
     }
@@ -160,17 +176,50 @@ extension ByteBuffer {
         }
 
         let separator = "........  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  ..................\n"
+
+        // reserve capacity for the maxBytes dumped, plus the separator line, and buffer length line.
         var result = ""
+        result.reserveCapacity(maxBytes/16 * 79 + 79 + 8)
 
         var buffer = self
-        // Safe to force-unwrap because we know the buffer has more readable bytes than maxBytes.
-        let front = buffer.readSlice(length: maxBytes / 2)!
-        buffer.moveReaderIndex(to: buffer.writerIndex - maxBytes / 2)
-        let back = buffer.readSlice(length: buffer.readableBytes)!
 
-        result += front._hexDumpLines(offset: 0)
+        // Dump the front part of the buffer first, up to maxBytes/2 bytes.
+        // Safe to force-unwrap because we know the buffer has more readable bytes than maxBytes.
+        var front = buffer.readSlice(length: maxBytes / 2)!
+        var bufferOffset = 0
+        while front.readableBytes > 0 {
+            // Safe to force-unwrap because buffer is guaranteed to have at least one byte in it.
+            let slice = front.readSlice(length: min(16, front.readableBytes))!
+
+            // This will only be non-zero on the last line of this loop
+            let paddingAfter = 16 - slice.readableBytes
+            result += slice._hexDumpLine(lineOffset: bufferOffset, paddingAfter: paddingAfter)
+            bufferOffset += slice.readableBytes
+        }
+
         result += separator
-        result += back._hexDumpLines(offset: self.readableBytes - maxBytes/2)
+
+        // Dump the back maxBytes/2 bytes.
+        bufferOffset = buffer.writerIndex - maxBytes / 2
+        buffer.moveReaderIndex(to: bufferOffset)
+        var back = buffer.readSlice(length: buffer.readableBytes)!
+
+        while back.readableBytes > 0 {
+            // On the first line of the back part, we might want less than 16 bytes, with padding on the left.
+            let lineLength = min(16 - bufferOffset % 16, back.readableBytes)
+            // Line offset is the offset of the first byte of this line in a full buffer hex dump.
+            // It may not match `bufferOffset` in the first line of the `back` part.
+            let lineOffset = bufferOffset - bufferOffset % 16
+
+            // Safe to force-unwrap because `back` is guaranteed to have at least one byte.
+            let slice = back.readSlice(length: lineLength)!
+
+            // paddingBefore is going to be applied both in the center column and the right column of the line.
+            result += slice._hexDumpLine(lineOffset: lineOffset, paddingBefore: 16 - lineLength)
+            bufferOffset += lineLength
+        }
+
+        // Last line of the dump, just the index of the last byte in the buffer.
         result += String(self.readableBytes, radix: 16, padding: 8)
         return result
     }
@@ -203,3 +252,4 @@ extension ByteBuffer {
         }
     }
 }
+

@@ -1900,7 +1900,7 @@ class ByteBufferTest: XCTestCase {
         let expected = """
         00000000  47 6f 6f 64 62 79 65 2c                           |Goodbye,        |
         ........  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  ..................
-        00000021                           6e 67 20 79 6f 75 2e 0a  |        ng you..|
+        00000020                           6e 67 20 79 6f 75 2e 0a  |        ng you..|
         00000029
         """
         let actual = buf.hexDump(format: .detailed(maxBytes: 16))
@@ -1909,7 +1909,7 @@ class ByteBufferTest: XCTestCase {
 
     func testHexDumpDetailedWithOffset() {
         var buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
-        let firstFive = buf.readBytes(length: 5)
+        let _ = buf.readBytes(length: 5)
         let expected = """
         00000000  79 65 2c 20 77 6f 72 6c  64 21 20 49 74 20 77 61  |ye, world! It wa|
         00000010  73 20 6e 69 63 65 20 6b  6e 6f 77 69 6e 67 20 79  |s nice knowing y|

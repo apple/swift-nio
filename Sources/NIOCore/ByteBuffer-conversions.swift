@@ -36,7 +36,7 @@ extension String {
         self = buffer.readString(length: buffer.readableBytes)!
     }
 
-    /// Creates a `String` from a given `Int` with a given base (`radix`), with the provided `padding` size.
+    /// Creates a `String` from a given `Int` with a given base (`radix`), padded with zeroes to the provided `padding` size.
     ///
     /// - parameters:
     ///     - radix: radix base to use for conversion.
