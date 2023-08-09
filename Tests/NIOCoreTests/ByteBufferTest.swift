@@ -1907,6 +1907,24 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
+    func testHexDumpDetailedWithMultilineFrontAndBack() {
+        let buf = ByteBuffer(string: """
+        Goodbye, world! It was nice knowing you.
+        I will miss this pull request with all of it's 94+ comments.
+        """)
+
+        let expected = """
+        00000000  47 6f 6f 64 62 79 65 2c  20 77 6f 72 6c 64 21 20  |Goodbye, world! |
+        00000010  49 74                                             |It              |
+        ........  .. .. .. .. .. .. .. ..  .. .. .. .. .. .. .. ..  ..................
+        00000050           69 74 27 73 20  39 34 2b 20 63 6f 6d 6d  |   it's 94+ comm|
+        00000060  65 6e 74 73 2e                                    |ents.|
+        00000065
+        """
+        let actual = buf.hexDump(format: .detailed(maxBytes: 36))
+        XCTAssertEqual(expected, actual)
+    }
+
     func testHexDumpDetailedWithOffset() {
         var buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let _ = buf.readBytes(length: 5)
