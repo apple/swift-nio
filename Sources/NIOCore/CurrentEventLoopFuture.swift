@@ -8,18 +8,23 @@ public struct CurrentEventLoopFuture<Value> {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension CurrentEventLoopFuture: Sendable {}
-#endif
 
 extension EventLoopFuture {
     @inlinable public func iKnowIAmOnTheEventLoopOfThisFuture(
-        file: StaticString = #file,
+        file: StaticString = #filePath,
         line: UInt = #line
     ) -> CurrentEventLoopFuture<Value> {
         self.eventLoop.preconditionInEventLoop(file: file, line: line)
         return .init(self)
+    }
+}
+
+extension EventLoopFuture {
+    @inlinable
+    public func hop(to target: CurrentEventLoop) -> CurrentEventLoopFuture<Value> {
+        self.hop(to: target.wrapped).iKnowIAmOnTheEventLoopOfThisFuture()
     }
 }
 

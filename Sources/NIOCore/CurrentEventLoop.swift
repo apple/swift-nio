@@ -5,10 +5,8 @@ public struct CurrentEventLoop {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension CurrentEventLoop: Sendable {}
-#endif
 
 extension EventLoop {
     @inlinable public func iKnowIAmOnThisEventLoop(
@@ -21,6 +19,16 @@ extension EventLoop {
 }
 
 extension CurrentEventLoop {
+    @inlinable
+    public func execute(_ task: @escaping () -> Void) {
+        wrapped.execute(task)
+    }
+    
+    @inlinable
+    public func submit<T>(_ task: @escaping () throws -> T) -> CurrentEventLoopFuture<T> {
+        wrapped.submit(task).iKnowIAmOnTheEventLoopOfThisFuture()
+    }
+    
     @discardableResult
     @inlinable
     public func scheduleTask<T>(

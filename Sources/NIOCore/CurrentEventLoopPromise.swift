@@ -11,10 +11,8 @@ public struct CurrentEventLoopPromise<Value> {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension CurrentEventLoopPromise: Sendable {}
-#endif
 
 extension EventLoopPromise {
     @inlinable public func iKnowIAmOnTheEventLoopOfThisPromise(
