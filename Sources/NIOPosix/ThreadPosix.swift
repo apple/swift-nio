@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Linux) || os(Android) || os(FreeBSD) || os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+#if os(Linux) || os(Android) || os(FreeBSD) || canImport(Darwin)
 
 #if os(Linux) || os(Android)
 import CNIOLinux
@@ -20,7 +20,7 @@ import CNIOLinux
 private let sys_pthread_getname_np = CNIOLinux_pthread_getname_np
 private let sys_pthread_setname_np = CNIOLinux_pthread_setname_np
 private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
-#elseif os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+#elseif canImport(Darwin)
 private let sys_pthread_getname_np = pthread_getname_np
 // Emulate the same method signature as pthread_setname_np on Linux.
 private func sys_pthread_setname_np(_ p: pthread_t, _ pointer: UnsafePointer<Int8>) -> Int32 {
@@ -36,26 +36,33 @@ private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer) ->
 private func sysPthread_create(handle: UnsafeMutablePointer<pthread_t?>,
                                destructor: @escaping ThreadDestructor,
                                args: UnsafeMutableRawPointer?) -> CInt {
-    #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+    #if canImport(Darwin)
     return pthread_create(handle, nil, destructor, args)
+    #else
+    #if canImport(Musl)
+    var handleLinux: OpaquePointer? = nil
+    let result = pthread_create(&handleLinux,
+                                nil,
+                                destructor,
+                                args)
     #else
     var handleLinux = pthread_t()
     let result = pthread_create(&handleLinux,
                                 nil,
                                 destructor,
                                 args)
+    #endif
     handle.pointee = handleLinux
     return result
     #endif
 }
-
 
 typealias ThreadOpsSystem = ThreadOpsPosix
 
 enum ThreadOpsPosix: ThreadOps {
     typealias ThreadHandle = pthread_t
     typealias ThreadSpecificKey = pthread_key_t
-    #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+    #if canImport(Darwin)
     typealias ThreadSpecificKeyDestructor = @convention(c) (UnsafeMutableRawPointer) -> Void
     #else
     typealias ThreadSpecificKeyDestructor = @convention(c) (UnsafeMutableRawPointer?) -> Void

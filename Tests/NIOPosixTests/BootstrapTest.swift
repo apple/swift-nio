@@ -381,7 +381,7 @@ class BootstrapTest: XCTestCase {
                     }
                     return channel.pipeline.addHandler(MakeSureAutoReadIsOffInChannelInitializer())
             }
-            .withPipes(inputDescriptor: inFD, outputDescriptor: outFD)
+            .takingOwnershipOfDescriptors(input: inFD, output: outFD)
             .wait())
             XCTAssertNotNil(channel)
             XCTAssertNoThrow(try channel?.close().wait())
@@ -401,7 +401,7 @@ class BootstrapTest: XCTestCase {
                 let readHandle = NIOFileHandle(descriptor: pipe.fileHandleForReading.fileDescriptor)
                 let writeHandle = NIOFileHandle(descriptor: pipe.fileHandleForWriting.fileDescriptor)
                 _ = NIOPipeBootstrap(group: self.group)
-                    .withPipes(inputDescriptor: try readHandle.takeDescriptorOwnership(), outputDescriptor: try writeHandle.takeDescriptorOwnership())
+                    .takingOwnershipOfDescriptors(input: try readHandle.takeDescriptorOwnership(), output: try writeHandle.takeDescriptorOwnership())
                     .flatMap({ channel in
                         channel.close()
                     }).always({ _ in
@@ -644,10 +644,21 @@ class BootstrapTest: XCTestCase {
 
             var maybeChannel1: Channel? = nil
             // Try 2: Connect to "localhost", this will do Happy Eyeballs.
+            var localhost = "localhost"
+            // Some platforms don't define "localhost" for IPv6, so check that
+            // and use "ip6-localhost" instead.
+            if !isIPv4 {
+                let hostResolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: .tcp)
+                let hostv6 = try! hostResolver.initiateAAAAQuery(host: "localhost", port: 8088).wait()
+                if hostv6.isEmpty {
+                    localhost = "ip6-localhost"
+                }
+            }
+
             XCTAssertNoThrow(maybeChannel1 = try ClientBootstrap(group: self.group)
                                 .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                                 .bind(to: clientLocalAddressWholeInterface)
-                                .connect(host: "localhost", port: server1LocalAddress.port!)
+                                .connect(host: localhost, port: server1LocalAddress.port!)
                                 .wait())
             guard let myChannel1 = maybeChannel1, let myChannel1Address = myChannel1.localAddress else {
                 XCTFail("can't connect channel 1")

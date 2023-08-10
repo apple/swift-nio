@@ -717,7 +717,8 @@ public final class SocketChannelTest : XCTestCase {
         XCTAssertNoThrow(try serverChan.eventLoop.submit {
             serverChan.readable()
         }.wait())
-        XCTAssertEqual(["errorCaught"], eventCounter.allTriggeredEvents())
+        XCTAssertEqual(["channelReadComplete", "errorCaught"], eventCounter.allTriggeredEvents())
+        XCTAssertEqual(1, eventCounter.channelReadCompleteCalls)
         XCTAssertEqual(1, eventCounter.errorCaughtCalls)
 
         serverSock.shouldAcceptsFail.store(false, ordering: .relaxed)
@@ -729,7 +730,7 @@ public final class SocketChannelTest : XCTestCase {
                        eventCounter.allTriggeredEvents())
         XCTAssertEqual(1, eventCounter.errorCaughtCalls)
         XCTAssertEqual(1, eventCounter.channelReadCalls)
-        XCTAssertEqual(1, eventCounter.channelReadCompleteCalls)
+        XCTAssertEqual(2, eventCounter.channelReadCompleteCalls)
     }
 
     func testWeAreInterestedInReadEOFWhenChannelIsConnectedOnTheServerSide() throws {

@@ -92,6 +92,21 @@ private final class QuiesceEventRecorder: ChannelInboundHandler {
     }
 }
 
+// This handler drops close mode output. This is because EmbeddedChannel doesn't support it,
+// and tests here don't require that it does anything sensible.
+private final class CloseOutputSuppressor: ChannelOutboundHandler {
+    typealias OutboundIn = Any
+    typealias OutboundOut = Any
+
+    func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        if mode == .output {
+            promise?.succeed()
+        } else {
+            context.close(mode: mode, promise: promise)
+        }
+    }
+}
+
 
 class HTTPServerPipelineHandlerTest: XCTestCase {
     var channel: EmbeddedChannel! = nil
@@ -110,6 +125,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.writeRecorder = WriteRecorder()
         self.pipelineHandler = HTTPServerPipelineHandler()
         self.quiesceEventRecorder = QuiesceEventRecorder()
+        XCTAssertNoThrow(try channel.pipeline.addHandler(CloseOutputSuppressor()).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.readCounter).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(self.writeRecorder).wait())
@@ -1037,5 +1053,132 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
          // This should have triggered a read
          XCTAssertEqual(self.readCounter.readCount, 1)
+    }
+
+    func testServerCloseOutputForcesReadsBackOn() throws {
+        // Send in a request
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Reads are blocked.
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        // Now the server sends close output
+        XCTAssertNoThrow(try channel.close(mode: .output).wait())
+
+        // This unblocked the read and further reads can continue.
+        XCTAssertEqual(self.readCounter.readCount, 1)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 2)
+    }
+
+    func testCloseOutputAlwaysAllowsReads() throws {
+        // Send in a request
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Reads are blocked.
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        // Now the server sends close output
+        XCTAssertNoThrow(try channel.close(mode: .output).wait())
+
+        // This unblocked the read and further reads can continue.
+        XCTAssertEqual(self.readCounter.readCount, 1)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 2)
+
+        // New requests can come in, but are dropped.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Reads keep working.
+        XCTAssertEqual(self.readCounter.readCount, 2)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 3)
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+    }
+
+    func testCloseOutputFirstIsOkEvenIfItsABitWeird() throws {
+        // Server sends close output first
+        XCTAssertNoThrow(try channel.close(mode: .output).wait())
+
+        // Send in a request
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Reads are unblocked.
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 1)
+
+        // But the data is dropped.
+        XCTAssertEqual(self.readRecorder.reads, [])
+
+        // New requests can come in, and are dropped.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Reads keep working.
+        XCTAssertEqual(self.readCounter.readCount, 1)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 2)
+
+        XCTAssertEqual(self.readRecorder.reads, [])
+    }
+
+    func testPipelinedRequestsAreDroppedWhenWeSendCloseOutput() throws {
+        // Send in three requests
+        for _ in 0..<3 {
+            XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+            XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        }
+
+        // Reads are blocked and only one request was read.
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+
+        // Server sends close mode output. The buffered requests are dropped.
+        XCTAssertNoThrow(try channel.close(mode: .output).wait())
+
+        XCTAssertEqual(self.readRecorder.reads,
+                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                        .channelRead(HTTPServerRequestPart.end(nil))])
+    }
+
+    func testWritesAfterCloseOutputAreDropped() throws {
+        // Send in a request
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+
+        // Server sends a head.
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.head(self.responseHead)))
+
+        // Now the server sends close output
+        XCTAssertNoThrow(try channel.close(mode: .output).wait())
+
+        // Now, in error, the server sends .body and .end. Both pass unannounced.
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer()))))
+        XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.end(nil)))
     }
 }

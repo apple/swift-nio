@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOCore
+@_spi(AsyncChannel) import NIOCore
 
 #if os(Windows)
 import ucrt
@@ -311,8 +311,9 @@ public final class ServerBootstrap {
     /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
-    ///     - unixDomainSocketPath: The _Unix domain socket_ path to bind to. `unixDomainSocketPath` must not exist, it will be created by the system.
-    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `path`.
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
+    ///     unless `cleanupExistingSocketFile`is set to `true`.
+    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
     public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool) -> EventLoopFuture<Channel> {
         if cleanupExistingSocketFile {
             do {
@@ -323,6 +324,26 @@ public final class ServerBootstrap {
         }
 
         return self.bind(unixDomainSocketPath: unixDomainSocketPath)
+    }
+
+    /// Bind the `ServerSocketChannel` to a VSOCK socket.
+    ///
+    /// - parameters:
+    ///   - vsockAddress: The VSOCK socket address to bind on.
+    public func bind(to vsockAddress: VsockAddress) -> EventLoopFuture<Channel> {
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
+            try ServerSocketChannel(eventLoop: eventLoop, group: childEventLoopGroup, protocolFamily: .vsock, enableMPTCP: enableMPTCP)
+        }
+        return bind0(makeServerChannel: makeChannel) { (eventLoop, serverChannel) in
+            serverChannel.register().flatMap {
+                let promise = eventLoop.makePromise(of: Void.self)
+                serverChannel.triggerUserOutboundEvent0(
+                    VsockChannelEvents.BindToAddress(vsockAddress),
+                    promise: promise
+                )
+                return promise.futureResult
+            }
+        }
     }
 
     #if !os(Windows)
@@ -410,7 +431,7 @@ public final class ServerBootstrap {
         }
     }
 
-    private class AcceptHandler: ChannelInboundHandler {
+    final class AcceptHandler: ChannelInboundHandler {
         public typealias InboundIn = SocketChannel
 
         private let childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
@@ -482,10 +503,198 @@ public final class ServerBootstrap {
     }
 }
 
-#if swift(>=5.6)
+// MARK: Async bind methods
+
+extension ServerBootstrap {
+    /// Bind the `ServerSocketChannel` to the `host` and `port` parameters.
+    ///
+    /// - Parameters:
+    ///   - host: The host to bind on.
+    ///   - port: The port to bind on.
+    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        host: String,
+        port: Int,
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        let address = try SocketAddress.makeAddressResolvingHost(host, port: port)
+
+        return try await bind(
+            to: address,
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer
+        )
+    }
+
+    /// Bind the `ServerSocketChannel` to the `address` parameter.
+    ///
+    /// - Parameters:
+    ///   - address: The `SocketAddress` to bind on.
+    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        to address: SocketAddress,
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        return try await bind0(
+            makeServerChannel: { eventLoop, childEventLoopGroup, enableMPTCP in
+                try ServerSocketChannel(
+                    eventLoop: eventLoop,
+                    group: childEventLoopGroup,
+                    protocolFamily: address.protocol,
+                    enableMPTCP: enableMPTCP
+                )
+            },
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer,
+            registration: { serverChannel in
+                serverChannel.registerAndDoSynchronously { serverChannel in
+                    serverChannel.bind(to: address)
+                }
+            }
+        ).get()
+    }
+
+    /// Bind the `ServerSocketChannel` to a UNIX Domain Socket.
+    ///
+    /// - Parameters:
+    ///   - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
+    ///     unless `cleanupExistingSocketFile`is set to `true`.
+    ///   - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
+    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        unixDomainSocketPath: String,
+        cleanupExistingSocketFile: Bool = false,
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        if cleanupExistingSocketFile {
+            try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
+        }
+
+        let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+
+        return try await self.bind(
+            to: address,
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer
+        )
+    }
+
+    /// Use the existing bound socket file descriptor.
+    ///
+    /// - Parameters:
+    ///   - socket: The _Unix file descriptor_ representing the bound stream socket.
+    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        _ socket: NIOBSDSocket.Handle,
+        cleanupExistingSocketFile: Bool = false,
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        return try await bind0(
+            makeServerChannel: { eventLoop, childEventLoopGroup, enableMPTCP in
+                if enableMPTCP {
+                    throw ChannelError.operationUnsupported
+                }
+                return try ServerSocketChannel(
+                    socket: socket,
+                    eventLoop: eventLoop,
+                    group: childEventLoopGroup
+                )
+            },
+            serverBackpressureStrategy: serverBackpressureStrategy,
+            childChannelInitializer: childChannelInitializer,
+            registration: { serverChannel in
+                let promise = serverChannel.eventLoop.makePromise(of: Void.self)
+                serverChannel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            }
+        ).get()
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func bind0<ChannelInitializerResult>(
+        makeServerChannel: @escaping (SelectableEventLoop, EventLoopGroup, Bool) throws -> ServerSocketChannel,
+        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
+    ) -> EventLoopFuture<NIOAsyncChannel<ChannelInitializerResult, Never>>  {
+        let eventLoop = self.group.next()
+        let childEventLoopGroup = self.childGroup
+        let serverChannelOptions = self._serverChannelOptions
+        let serverChannelInit = self.serverChannelInit ?? { _ in eventLoop.makeSucceededFuture(()) }
+        let childChannelInit = self.childChannelInit
+        let childChannelOptions = self._childChannelOptions
+
+        let serverChannel: ServerSocketChannel
+        do {
+            serverChannel = try makeServerChannel(eventLoop as! SelectableEventLoop, childEventLoopGroup, self.enableMPTCP)
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
+
+        return eventLoop.submit {
+            serverChannelOptions.applyAllChannelOptions(to: serverChannel).flatMap {
+                serverChannelInit(serverChannel)
+            }.flatMap { (_) -> EventLoopFuture<NIOAsyncChannel<ChannelInitializerResult, Never>> in
+                do {
+                    try serverChannel.pipeline.syncOperations.addHandler(
+                        AcceptHandler(childChannelInitializer: childChannelInit, childChannelOptions: childChannelOptions),
+                        name: "AcceptHandler"
+                    )
+                    let asyncChannel = try NIOAsyncChannel<ChannelInitializerResult, Never>
+                        .wrapAsyncChannelWithTransformations(
+                            synchronouslyWrapping: serverChannel,
+                            backpressureStrategy: serverBackpressureStrategy,
+                            channelReadTransformation: { channel -> EventLoopFuture<ChannelInitializerResult> in
+                                // The channelReadTransformation is run on the EL of the server channel
+                                // We have to make sure that we execute child channel initializer on the
+                                // EL of the child channel.
+                                channel.eventLoop.flatSubmit {
+                                    childChannelInitializer(channel)
+                                }
+                            }
+                        )
+                    return registration(serverChannel)
+                        .map { (_) -> NIOAsyncChannel<ChannelInitializerResult, Never> in  asyncChannel
+                    }
+                } catch {
+                    return eventLoop.makeFailedFuture(error)
+                }
+            }.flatMapError { error -> EventLoopFuture<NIOAsyncChannel<ChannelInitializerResult, Never>> in
+                serverChannel.close0(error: error, mode: .all, promise: nil)
+                return eventLoop.makeFailedFuture(error)
+            }
+        }.flatMap {
+            $0
+        }
+    }
+}
+
 @available(*, unavailable)
 extension ServerBootstrap: Sendable {}
-#endif
 
 private extension Channel {
     func registerAndDoSynchronously(_ body: @escaping (Channel) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
@@ -804,6 +1013,31 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         }
     }
 
+    /// Specify the VSOCK address to connect to for the `Channel`.
+    ///
+    /// - parameters:
+    ///     - address: The VSOCK address to connect to.
+    /// - returns: An `EventLoopFuture<Channel>` for when the `Channel` is connected.
+    public func connect(to address: VsockAddress) -> EventLoopFuture<Channel> {
+        return self.initializeAndRegisterNewChannel(
+            eventLoop: self.group.next(),
+            protocolFamily: .vsock
+        ) { channel in
+            let connectPromise = channel.eventLoop.makePromise(of: Void.self)
+            channel.triggerUserOutboundEvent(VsockChannelEvents.ConnectToAddress( address), promise: connectPromise)
+
+            let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
+                connectPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
+                channel.close(promise: nil)
+            }
+            connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
+                cancelTask.cancel()
+            }
+
+            return connectPromise.futureResult
+        }
+    }
+
     #if !os(Windows)
         /// Use the existing connected socket file descriptor.
         ///
@@ -905,10 +1139,240 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     }
 }
 
-#if swift(>=5.6)
+// MARK: Async connect methods
+
+extension ClientBootstrap {
+    /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
+    ///
+    /// - Parameters:
+    ///   - host: The host to connect to.
+    ///   - port: The port to connect to.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func connect<Output: Sendable>(
+        host: String,
+        port: Int,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        let eventLoop = self.group.next()
+        return try await self.connect(
+            host: host,
+            port: port,
+            eventLoop: eventLoop,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        )
+    }
+
+    /// Specify the `address` to connect to for the TCP `Channel` that will be established.
+    ///
+    /// - Parameters:
+    ///   - address: The address to connect to.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func connect<Output: Sendable>(
+        to address: SocketAddress,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        let eventLoop = self.group.next()
+        return try await self.initializeAndRegisterNewChannel(
+            eventLoop: eventLoop,
+            protocolFamily: address.protocol,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }, { channel in
+                return self.connect(freshChannel: channel, address: address)
+            }).get().1
+    }
+
+    /// Specify the `unixDomainSocket` path to connect to for the UDS `Channel` that will be established.
+    ///
+    /// - Parameters:
+    ///   - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func connect<Output: Sendable>(
+        unixDomainSocketPath: String,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        let address = try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+        return try await self.connect(
+            to: address,
+            channelInitializer: channelInitializer
+        )
+    }
+
+    /// Use the existing connected socket file descriptor.
+    ///
+    /// - Parameters:
+    ///   - descriptor: The _Unix file descriptor_ representing the connected stream socket.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func withConnectedSocket<Output: Sendable>(
+        _ socket: NIOBSDSocket.Handle,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        let eventLoop = group.next()
+        return try await self.withConnectedSocket(
+            eventLoop: eventLoop,
+            socket: socket,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        )
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    func connect<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        host: String,
+        port: Int,
+        eventLoop: EventLoop,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        let resolver = self.resolver ?? GetaddrinfoResolver(
+            loop: eventLoop,
+            aiSocktype: .stream,
+            aiProtocol: .tcp
+        )
+
+        let connector = HappyEyeballsConnector<PostRegistrationTransformationResult>(
+            resolver: resolver,
+            loop: eventLoop,
+            host: host,
+            port: port,
+            connectTimeout: self.connectTimeout
+        ) { eventLoop, protocolFamily in
+            return self.initializeAndRegisterNewChannel(
+                eventLoop: eventLoop,
+                protocolFamily: protocolFamily,
+                channelInitializer: channelInitializer,
+                postRegisterTransformation: postRegisterTransformation
+            ) {
+                $0.eventLoop.makeSucceededFuture(())
+            }
+        }
+        return try await connector.resolveAndConnect().map { $0.1 }.get()
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func withConnectedSocket<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        eventLoop: EventLoop,
+        socket: NIOBSDSocket.Handle,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        let channel = try SocketChannel(eventLoop: eventLoop as! SelectableEventLoop, socket: socket)
+
+        return try await self.initializeAndRegisterChannel(
+            channel: channel,
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                let promise = eventLoop.makePromise(of: Void.self)
+                channel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            },
+            postRegisterTransformation: postRegisterTransformation
+        ).get()
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func initializeAndRegisterNewChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        eventLoop: EventLoop,
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>,
+        _ body: @escaping (Channel) -> EventLoopFuture<Void>
+    ) -> EventLoopFuture<(Channel, PostRegistrationTransformationResult)> {
+        let channel: SocketChannel
+        do {
+            channel = try self.makeSocketChannel(eventLoop: eventLoop, protocolFamily: protocolFamily)
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
+        return self.initializeAndRegisterChannel(
+            channel: channel,
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                channel.registerAndDoSynchronously(body)
+            },
+            postRegisterTransformation: postRegisterTransformation
+        ).map { (channel, $0) }
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func initializeAndRegisterChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        channel: SocketChannel,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) -> EventLoopFuture<PostRegistrationTransformationResult> {
+        let channelInitializer = { channel in
+            return self.channelInitializer(channel)
+                .flatMap { channelInitializer(channel) }
+        }
+        let channelOptions = self._channelOptions
+        let eventLoop = channel.eventLoop
+        let bindTarget = self.bindTarget
+
+        @inline(__always)
+        @Sendable
+        func setupChannel() -> EventLoopFuture<PostRegistrationTransformationResult> {
+            eventLoop.assertInEventLoop()
+            return channelOptions
+                .applyAllChannelOptions(to: channel)
+                .flatMap {
+                    if let bindTarget = bindTarget {
+                        return channel
+                            .bind(to: bindTarget)
+                            .flatMap {
+                                channelInitializer(channel)
+                            }
+                    } else {
+                        return channelInitializer(channel)
+                    }
+                }.flatMap { (result: ChannelInitializerResult) in
+                    eventLoop.assertInEventLoop()
+                    return registration(channel).map {
+                        result
+                    }
+                }.flatMap { (result: ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult> in
+                    postRegisterTransformation(result, eventLoop)
+                }.flatMapError { error in
+                    eventLoop.assertInEventLoop()
+                    channel.close0(error: error, mode: .all, promise: nil)
+                    return channel.eventLoop.makeFailedFuture(error)
+                }
+        }
+
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
+            return eventLoop.flatSubmit {
+                setupChannel()
+            }
+        }
+    }
+}
+
 @available(*, unavailable)
 extension ClientBootstrap: Sendable {}
-#endif
 
 /// A `DatagramBootstrap` is an easy way to bootstrap a `DatagramChannel` when creating datagram clients
 /// and servers.
@@ -1023,7 +1487,7 @@ public final class DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop, socket: socket)
         }
-        return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
+        return withNewChannel(makeChannel: makeChannel) { eventLoop, channel in
             let promise = eventLoop.makePromise(of: Void.self)
             channel.registerAlreadyConfigured0(promise: promise)
             return promise.futureResult
@@ -1062,8 +1526,9 @@ public final class DatagramBootstrap {
     /// Bind the `DatagramChannel` to a UNIX Domain Socket.
     ///
     /// - parameters:
-    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. `path` must not exist, it will be created by the system.
-    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `path`.
+    ///     - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
+    ///     unless `cleanupExistingSocketFile`is set to `true`.
+    ///     - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
     public func bind(unixDomainSocketPath: String, cleanupExistingSocketFile: Bool) -> EventLoopFuture<Channel> {
         if cleanupExistingSocketFile {
             do {
@@ -1088,7 +1553,7 @@ public final class DatagramBootstrap {
                                        protocolFamily: address.protocol,
                                        protocolSubtype: .default)
         }
-        return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
+        return withNewChannel(makeChannel: makeChannel) { _, channel in
             channel.register().flatMap {
                 channel.bind(to: address)
             }
@@ -1136,7 +1601,7 @@ public final class DatagramBootstrap {
                                        protocolFamily: address.protocol,
                                        protocolSubtype: .default)
         }
-        return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
+        return withNewChannel(makeChannel: makeChannel) { _, channel in
             channel.register().flatMap {
                 channel.connect(to: address)
             }
@@ -1179,11 +1644,301 @@ public final class DatagramBootstrap {
     }
 }
 
-#if swift(>=5.6)
+// MARK: Async connect/bind methods
+
+extension DatagramBootstrap {
+    /// Use the existing bound socket file descriptor.
+    ///
+    /// - Parameters:
+    ///   - socket: The _Unix file descriptor_ representing the bound stream socket.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func withBoundSocket<Output: Sendable>(
+        _ socket: NIOBSDSocket.Handle,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
+            return try DatagramChannel(eventLoop: eventLoop, socket: socket)
+        }
+        return try await self.makeConfiguredChannel(
+            makeChannel: makeChannel(_:),
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                let promise = channel.eventLoop.makePromise(of: Void.self)
+                channel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult
+            },
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        ).get()
+    }
+
+    /// Bind the `DatagramChannel` to `host` and `port`.
+    ///
+    /// - Parameters:
+    ///   - host: The host to bind on.
+    ///   - port: The port to bind on.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        host: String,
+        port: Int,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        return try await self.bind0(
+            makeSocketAddress: {
+                try SocketAddress.makeAddressResolvingHost(host, port: port)
+            },
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        )
+    }
+
+    /// Bind the `DatagramChannel` to the `address`.
+    ///
+    /// - Parameters:
+    ///   - address: The `SocketAddress` to bind on.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        to address: SocketAddress,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        return try await self.bind0(
+            makeSocketAddress: {
+                address
+            },
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        )
+    }
+
+    /// Bind the `DatagramChannel` to the `unixDomainSocketPath`.
+    ///
+    /// - Parameters:
+    ///   - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
+    ///     unless `cleanupExistingSocketFile`is set to `true`.
+    ///   - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func bind<Output: Sendable>(
+        unixDomainSocketPath: String,
+        cleanupExistingSocketFile: Bool = false,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        if cleanupExistingSocketFile {
+            try BaseSocket.cleanupSocket(unixDomainSocketPath: unixDomainSocketPath)
+        }
+
+        return try await self.bind0(
+            makeSocketAddress: {
+                try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+            },
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        )
+    }
+
+    /// Connect the `DatagramChannel` to `host` and `port`.
+    ///
+    /// - Parameters:
+    ///   - host: The host to connect to.
+    ///   - port: The port to connect to.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func connect<Output: Sendable>(
+        host: String,
+        port: Int,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        return try await self.connect0(
+            makeSocketAddress: {
+                try SocketAddress.makeAddressResolvingHost(host, port: port)
+            },
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        )
+    }
+
+    /// Connect the `DatagramChannel` to the `address`.
+    ///
+    /// - Parameters:
+    ///   - address: The `SocketAddress` to connect to.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func connect<Output: Sendable>(
+        to address: SocketAddress,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        return try await self.connect0(
+            makeSocketAddress: {
+                address
+            },
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        )
+    }
+
+    /// Connect the `DatagramChannel` to the `unixDomainSocketPath`.
+    ///
+    /// - Parameters:
+    ///   - unixDomainSocketPath: The path of the UNIX Domain Socket to connect to. `path` must not exist, it will be created by the system.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func connect<Output: Sendable>(
+        unixDomainSocketPath: String,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        return try await self.connect0(
+            makeSocketAddress: {
+                try SocketAddress(unixDomainSocketPath: unixDomainSocketPath)
+            },
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { output, eventLoop in
+                eventLoop.makeSucceededFuture(output)
+            }
+        )
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func connect0<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        makeSocketAddress: () throws -> SocketAddress,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        let address = try makeSocketAddress()
+
+        func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
+            return try DatagramChannel(
+                eventLoop: eventLoop,
+                protocolFamily: address.protocol,
+                protocolSubtype: .default
+            )
+        }
+
+        return try await self.makeConfiguredChannel(
+            makeChannel: makeChannel(_:),
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                channel.register().flatMap {
+                    channel.connect(to: address)
+                }
+            },
+            postRegisterTransformation: postRegisterTransformation
+        ).get()
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func bind0<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        makeSocketAddress: () throws -> SocketAddress,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        let address = try makeSocketAddress()
+
+        func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
+            return try DatagramChannel(
+                eventLoop: eventLoop,
+                protocolFamily: address.protocol,
+                protocolSubtype: .default
+            )
+        }
+
+        return try await self.makeConfiguredChannel(
+            makeChannel: makeChannel(_:),
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                channel.register().flatMap {
+                    channel.bind(to: address)
+                }
+            },
+            postRegisterTransformation: postRegisterTransformation
+        ).get()
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private func makeConfiguredChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
+        makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) -> EventLoopFuture<PostRegistrationTransformationResult> {
+        let eventLoop = self.group.next()
+        let channelInitializer = { (channel: Channel) -> EventLoopFuture<ChannelInitializerResult> in
+            let initializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+            return initializer(channel).flatMap { channelInitializer(channel) }
+        }
+        let channelOptions = self._channelOptions
+
+        let channel: DatagramChannel
+        do {
+            channel = try makeChannel(eventLoop as! SelectableEventLoop)
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
+
+        func setupChannel() -> EventLoopFuture<PostRegistrationTransformationResult> {
+            eventLoop.assertInEventLoop()
+            return channelOptions.applyAllChannelOptions(to: channel).flatMap {
+                channelInitializer(channel)
+            }.flatMap { (result: ChannelInitializerResult) in
+                eventLoop.assertInEventLoop()
+                return registration(channel).map {
+                    result
+                }
+            }.flatMap { (result: ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult> in
+                postRegisterTransformation(result, eventLoop)
+            }.flatMapError { error in
+                eventLoop.assertInEventLoop()
+                channel.close0(error: error, mode: .all, promise: nil)
+                return channel.eventLoop.makeFailedFuture(error)
+            }
+        }
+
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
+            return eventLoop.flatSubmit {
+                setupChannel()
+            }
+        }
+    }
+}
+
 @available(*, unavailable)
 extension DatagramBootstrap: Sendable {}
-#endif
-
 
 /// A `NIOPipeBootstrap` is an easy way to bootstrap a `PipeChannel` which uses two (uni-directional) UNIX pipes
 /// and makes a `Channel` out of them.
@@ -1194,7 +1949,7 @@ extension DatagramBootstrap: Sendable {}
 ///                       .channelInitializer { channel in
 ///                           channel.pipeline.addHandler(MyChannelHandler())
 ///                       }
-///                       .withPipes(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO)
+///                       .takingOwnershipOfDescriptors(input: STDIN_FILENO, output: STDOUT_FILENO)
 ///
 public final class NIOPipeBootstrap {
     private let group: EventLoopGroup
@@ -1310,19 +2065,19 @@ public final class NIOPipeBootstrap {
     ///
     /// This method is useful for specialilsed use-cases where you want to use `NIOPipeBootstrap` for say a serial line.
     ///
-    /// - note: If this method returns a succeeded future, SwiftNIO will close `fileDescriptor` when the `Channel`
-    ///         becomes inactive. You _must not_ do any further operations with `fileDescriptor`, including `close`.
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `inputOutput` when the `Channel`
+    ///         becomes inactive. You _must not_ do any further operations with `inputOutput`, including `close`.
     ///         If this method returns a failed future, you still own the file descriptor and are responsible for
     ///         closing it.
     ///
-    /// - parameters:
-    ///     - fileDescriptor: The _Unix file descriptor_ for the input & output.
-    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-    public func withInputOutputDescriptor(_ fileDescriptor: CInt) -> EventLoopFuture<Channel> {
-        let inputFD = fileDescriptor
-        let outputFD = try! Posix.dup(descriptor: fileDescriptor)
+    /// - Parameters:
+    ///   - inputOutput: The _Unix file descriptor_ for the input & output.
+    /// - Returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
+    public func takingOwnershipOfDescriptor(inputOutput: CInt) -> EventLoopFuture<Channel> {
+        let inputFD = inputOutput
+        let outputFD = try! Posix.dup(descriptor: inputOutput)
 
-        return self.withPipes(inputDescriptor: inputFD, outputDescriptor: outputFD).flatMapErrorThrowing { error in
+        return self.takingOwnershipOfDescriptors(input: inputFD, output: outputFD).flatMapErrorThrowing { error in
             try! Posix.close(descriptor: outputFD)
             throw error
         }
@@ -1332,26 +2087,26 @@ public final class NIOPipeBootstrap {
     ///
     /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
     /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
-    /// `NIOPipeBootstrap.withInputOutputDescriptor` if it is not a socket.
+    /// `NIOPipeBootstrap.takingOwnershipOfDescriptor` if it is not a socket.
     ///
-    /// - note: If this method returns a succeeded future, SwiftNIO will close `inputDescriptor` and `outputDescriptor`
-    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `inputDescriptor` or
-    ///         `outputDescriptor`, including `close`.
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `input` and `output`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `input` or
+    ///         `output`, including `close`.
     ///         If this method returns a failed future, you still own the file descriptors and are responsible for
     ///         closing them.
     ///
-    /// - parameters:
-    ///     - inputDescriptor: The _Unix file descriptor_ for the input (ie. the read side).
-    ///     - outputDescriptor: The _Unix file descriptor_ for the output (ie. the write side).
-    /// - returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-    public func withPipes(inputDescriptor: CInt, outputDescriptor: CInt) -> EventLoopFuture<Channel> {
-        precondition(inputDescriptor >= 0 && outputDescriptor >= 0 && inputDescriptor != outputDescriptor,
-                     "illegal file descriptor pair. The file descriptors \(inputDescriptor), \(outputDescriptor) " +
+    /// - Parameters:
+    ///   - input: The _Unix file descriptor_ for the input (ie. the read side).
+    ///   - output: The _Unix file descriptor_ for the output (ie. the write side).
+    /// - Returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
+    public func takingOwnershipOfDescriptors(input: CInt, output: CInt) -> EventLoopFuture<Channel> {
+        precondition(input >= 0 && output >= 0 && input != output,
+                     "illegal file descriptor pair. The file descriptors \(input), \(output) " +
                      "must be distinct and both positive integers.")
         let eventLoop = group.next()
         do {
-            try self.validateFileDescriptorIsNotAFile(inputDescriptor)
-            try self.validateFileDescriptorIsNotAFile(outputDescriptor)
+            try self.validateFileDescriptorIsNotAFile(input)
+            try self.validateFileDescriptorIsNotAFile(output)
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
@@ -1359,8 +2114,8 @@ public final class NIOPipeBootstrap {
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
         let channel: PipeChannel
         do {
-            let inputFH = NIOFileHandle(descriptor: inputDescriptor)
-            let outputFH = NIOFileHandle(descriptor: outputDescriptor)
+            let inputFH = NIOFileHandle(descriptor: input)
+            let outputFH = NIOFileHandle(descriptor: output)
             channel = try PipeChannel(eventLoop: eventLoop as! SelectableEventLoop,
                                       inputPipe: inputFH,
                                       outputPipe: outputFH)
@@ -1393,9 +2148,142 @@ public final class NIOPipeBootstrap {
             }
         }
     }
+
+    @available(*, deprecated, renamed: "takingOwnershipOfDescriptor(inputOutput:)")
+    public func withInputOutputDescriptor(_ fileDescriptor: CInt) -> EventLoopFuture<Channel> {
+        self.takingOwnershipOfDescriptor(inputOutput: fileDescriptor)
+    }
+
+    @available(*, deprecated, renamed: "takingOwnershipOfDescriptors(input:output:)")
+    public func withPipes(inputDescriptor: CInt, outputDescriptor: CInt) -> EventLoopFuture<Channel> {
+        self.takingOwnershipOfDescriptors(input: inputDescriptor, output: outputDescriptor)
+    }
 }
 
-#if swift(>=5.6)
+// MARK: Arbitrary payload
+
+extension NIOPipeBootstrap {
+    /// Create the `PipeChannel` with the provided file descriptor which is used for both input & output.
+    ///
+    /// This method is useful for specialilsed use-cases where you want to use `NIOPipeBootstrap` for say a serial line.
+    ///
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `inputOutput` when the `Channel`
+    ///         becomes inactive. You _must not_ do any further operations with `inputOutput`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptor and are responsible for
+    ///         closing it.
+    ///
+    /// - Parameters:
+    ///   - inputOutput: The _Unix file descriptor_ for the input & output.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func takingOwnershipOfDescriptor<Output: Sendable>(
+        inputOutput: CInt,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        let inputFD = inputOutput
+        let outputFD = try! Posix.dup(descriptor: inputOutput)
+
+        do {
+            return try await self.takingOwnershipOfDescriptors(
+                input: inputFD,
+                output: outputFD,
+                channelInitializer: channelInitializer
+            )
+        } catch {
+            try! Posix.close(descriptor: outputFD)
+            throw error
+        }
+    }
+    
+    /// Create the `PipeChannel` with the provided input and output file descriptors.
+    ///
+    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
+    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
+    /// `NIOPipeBootstrap.takingOwnershipOfDescriptor` if it is not a socket.
+    ///
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `input` and `output`
+    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `input` or
+    ///         `output`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptors and are responsible for
+    ///         closing them.
+    ///
+    /// - Parameters:
+    ///   - input: The _Unix file descriptor_ for the input (ie. the read side).
+    ///   - output: The _Unix file descriptor_ for the output (ie. the write side).
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func takingOwnershipOfDescriptors<Output: Sendable>(
+        input: CInt,
+        output: CInt,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        try await self._takingOwnershipOfDescriptors(
+            input: input,
+            output: output,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { $0.makeSucceededFuture($1) }
+        )
+    }
+    
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel) // Should become private
+    public func _takingOwnershipOfDescriptors<ChannelInitializerResult, PostRegistrationTransformationResult: Sendable>(
+        input: CInt,
+        output: CInt,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (EventLoop, ChannelInitializerResult) -> EventLoopFuture<PostRegistrationTransformationResult>
+    ) async throws -> PostRegistrationTransformationResult {
+        precondition(input >= 0 && output >= 0 && input != output,
+                     "illegal file descriptor pair. The file descriptors \(input), \(output) " +
+                     "must be distinct and both positive integers.")
+        let eventLoop = group.next()
+        try self.validateFileDescriptorIsNotAFile(input)
+        try self.validateFileDescriptorIsNotAFile(output)
+
+        let channelInitializer = { (channel: Channel) -> EventLoopFuture<ChannelInitializerResult> in
+            let initializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+            return initializer(channel).flatMap { channelInitializer(channel) }
+        }
+
+        let inputFileHandle = NIOFileHandle(descriptor: input)
+        let outputFileHandle = NIOFileHandle(descriptor: output)
+        let channel = try PipeChannel(
+            eventLoop: eventLoop as! SelectableEventLoop,
+            inputPipe: inputFileHandle,
+            outputPipe: outputFileHandle
+        )
+
+        @Sendable
+        func setupChannel() -> EventLoopFuture<PostRegistrationTransformationResult> {
+            eventLoop.assertInEventLoop()
+            return self._channelOptions.applyAllChannelOptions(to: channel).flatMap { _ -> EventLoopFuture<ChannelInitializerResult> in
+                channelInitializer(channel)
+            }.flatMap { result in
+                eventLoop.assertInEventLoop()
+                let promise = eventLoop.makePromise(of: Void.self)
+                channel.registerAlreadyConfigured0(promise: promise)
+                return promise.futureResult.flatMap { postRegisterTransformation(eventLoop, result) }
+            }.flatMapError { error in
+                channel.close0(error: error, mode: .all, promise: nil)
+                return channel.eventLoop.makeFailedFuture(error)
+            }
+        }
+
+        if eventLoop.inEventLoop {
+            return try await setupChannel().get()
+        } else {
+            return try await eventLoop.flatSubmit {
+                setupChannel()
+            }.get()
+        }
+    }
+}
+
 @available(*, unavailable)
 extension NIOPipeBootstrap: Sendable {}
-#endif

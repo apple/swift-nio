@@ -301,10 +301,8 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension NIOHTTPServerRequestAggregator: Sendable {}
-#endif
 
 /// A `ChannelInboundHandler` that handles HTTP chunked `HTTPClientResponsePart`
 /// messages by aggregating individual message chunks into a single
@@ -403,7 +401,5 @@ public final class NIOHTTPClientResponseAggregator: ChannelInboundHandler, Remov
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension NIOHTTPClientResponseAggregator: Sendable {}
-#endif

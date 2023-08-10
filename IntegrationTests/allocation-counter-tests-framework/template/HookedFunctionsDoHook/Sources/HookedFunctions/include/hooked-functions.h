@@ -16,6 +16,8 @@
 #define HOOKED_FREE
 
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #if __APPLE__
 #  include <malloc/malloc.h>
 #endif
@@ -27,6 +29,10 @@ void *replacement_realloc(void *ptr, size_t size);
 void *replacement_reallocf(void *ptr, size_t size);
 void *replacement_valloc(size_t size);
 int replacement_posix_memalign(void **memptr, size_t alignment, size_t size);
+int replacement_socket(int domain, int type, int protocol);
+int replacement_accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len);
+int replacement_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags);
+int replacement_close(int fildes);
 
 #if __APPLE__
 void *replacement_malloc_zone_malloc(malloc_zone_t *zone, size_t size);

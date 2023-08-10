@@ -141,7 +141,10 @@ private struct TargetIterator: IteratorProtocol {
 ///
 /// This class's private API is *not* thread-safe, and expects to be called from the
 /// event loop thread of the `loop` it is passed.
-internal class HappyEyeballsConnector {
+///
+/// The `ChannelBuilderResult` generic type can used to tunnel an arbitrary type
+/// from the `channelBuilderCallback` to the `resolve` methods return value.
+internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     /// An enum for keeping track of connection state.
     private enum ConnectionState {
         /// Initial state. No work outstanding.
@@ -223,7 +226,7 @@ internal class HappyEyeballsConnector {
     /// than intended.
     ///
     /// The channel builder callback takes an event loop and a protocol family as arguments.
-    private let channelBuilderCallback: (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel>
+    private let channelBuilderCallback: (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<(Channel, ChannelBuilderResult)>
 
     /// The amount of time to wait for an AAAA response to come in after a A response is
     /// received. By default this is 50ms.
@@ -250,7 +253,7 @@ internal class HappyEyeballsConnector {
     private var timeoutTask: Optional<Scheduled<Void>>
 
     /// The promise that will hold the final connected channel.
-    private let resolutionPromise: EventLoopPromise<Channel>
+    private let resolutionPromise: EventLoopPromise<(Channel, ChannelBuilderResult)>
 
     /// Our state machine state.
     private var state: ConnectionState
@@ -263,7 +266,7 @@ internal class HappyEyeballsConnector {
     ///
     /// This is kept to ensure that we can clean up after ourselves once a connection succeeds,
     /// and throw away all pending connection attempts that are no longer needed.
-    private var pendingConnections: [EventLoopFuture<Channel>] = []
+    private var pendingConnections: [EventLoopFuture<(Channel, ChannelBuilderResult)>] = []
 
     /// The number of DNS resolutions that have returned.
     ///
@@ -274,6 +277,7 @@ internal class HappyEyeballsConnector {
     /// An object that holds any errors we encountered.
     private var error: NIOConnectionError
 
+    @inlinable
     init(resolver: Resolver,
          loop: EventLoop,
          host: String,
@@ -281,7 +285,7 @@ internal class HappyEyeballsConnector {
          connectTimeout: TimeAmount,
          resolutionDelay: TimeAmount = .milliseconds(50),
          connectionDelay: TimeAmount = .milliseconds(250),
-         channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel>) {
+         channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<(Channel, ChannelBuilderResult)>) {
         self.resolver = resolver
         self.loop = loop
         self.host = host
@@ -303,16 +307,48 @@ internal class HappyEyeballsConnector {
         self.connectionDelay = connectionDelay
     }
 
+    @inlinable
+    convenience init(
+        resolver: Resolver,
+        loop: EventLoop,
+        host: String,
+        port: Int,
+        connectTimeout: TimeAmount,
+        resolutionDelay: TimeAmount = .milliseconds(50),
+        connectionDelay: TimeAmount = .milliseconds(250),
+        channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel>
+    ) where ChannelBuilderResult == Void {
+        self.init(
+            resolver: resolver,
+            loop: loop,
+            host: host,
+            port: port,
+            connectTimeout: connectTimeout,
+            resolutionDelay: resolutionDelay,
+            connectionDelay: connectionDelay) { loop, protocolFamily in
+                channelBuilderCallback(loop, protocolFamily).map { ($0, ()) }
+            }
+    }
+
     /// Initiate a DNS resolution attempt using Happy Eyeballs 2.
     ///
     /// returns: An `EventLoopFuture` that fires with a connected `Channel`.
-    public func resolveAndConnect() -> EventLoopFuture<Channel> {
+    @inlinable
+    func resolveAndConnect() -> EventLoopFuture<(Channel, ChannelBuilderResult)> {
         // We dispatch ourselves onto the event loop, rather than do all the rest of our processing from outside it.
         self.loop.execute {
             self.timeoutTask = self.loop.scheduleTask(in: self.connectTimeout) { self.processInput(.connectTimeoutElapsed) }
             self.processInput(.resolve)
         }
         return resolutionPromise.futureResult
+    }
+
+    /// Initiate a DNS resolution attempt using Happy Eyeballs 2.
+    ///
+    /// returns: An `EventLoopFuture` that fires with a connected `Channel`.
+    @inlinable
+    func resolveAndConnect() -> EventLoopFuture<Channel> where ChannelBuilderResult == Void {
+        self.resolveAndConnect().map { $0.0 }
     }
 
     /// Spin the state machine.
@@ -433,8 +469,14 @@ internal class HappyEyeballsConnector {
         // The two queries SHOULD be made as soon after one another as possible,
         // with the AAAA query made first and immediately followed by the A
         // query.
-        whenAAAALookupComplete(future: resolver.initiateAAAAQuery(host: host, port: port))
-        whenALookupComplete(future: resolver.initiateAQuery(host: host, port: port))
+        //
+        // We hop back to `self.loop` because there's no guarantee the resolver runs
+        // on our event loop.
+        let aaaaLookup = self.resolver.initiateAAAAQuery(host: self.host, port: self.port).hop(to: self.loop)
+        self.whenAAAALookupComplete(future: aaaaLookup)
+
+        let aLookup = self.resolver.initiateAQuery(host: self.host, port: self.port).hop(to: self.loop)
+        self.whenALookupComplete(future: aLookup)
     }
 
     /// Called when the A query has completed before the AAAA query.
@@ -534,11 +576,11 @@ internal class HappyEyeballsConnector {
         let channelFuture = channelBuilderCallback(self.loop, target.protocol)
         pendingConnections.append(channelFuture)
 
-        channelFuture.whenSuccess { channel in
+        channelFuture.whenSuccess { (channel, result) in
             // If we are in the complete state then we want to abandon this channel. Otherwise, begin
             // connecting.
             if case .complete = self.state {
-                self.pendingConnections.remove(element: channelFuture)
+                self.pendingConnections.removeAll { $0 === channelFuture }
                 channel.close(promise: nil)
             } else {
                 channel.connect(to: target).map {
@@ -546,13 +588,13 @@ internal class HappyEyeballsConnector {
                     // Otherwise, fire the channel connected event. Either way we don't want the channel future to
                     // be in our list of pending connections, so we don't either double close or close the connection
                     // we want to use.
-                    self.pendingConnections.remove(element: channelFuture)
+                    self.pendingConnections.removeAll { $0 === channelFuture }
 
                     if case .complete = self.state {
                         channel.close(promise: nil)
                     } else {
                         self.processInput(.connectSuccess)
-                        self.resolutionPromise.succeed(channel)
+                        self.resolutionPromise.succeed((channel, result))
                     }
                 }.whenFailure { err in
                     // The connection attempt failed. If we're in the complete state then there's nothing
@@ -561,7 +603,7 @@ internal class HappyEyeballsConnector {
                         assert(self.pendingConnections.firstIndex { $0 === channelFuture } == nil, "failed but was still in pending connections")
                     } else {
                         self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
-                        self.pendingConnections.remove(element: channelFuture)
+                        self.pendingConnections.removeAll { $0 === channelFuture }
                         self.processInput(.connectFailed)
                     }
                 }
@@ -569,7 +611,7 @@ internal class HappyEyeballsConnector {
         }
         channelFuture.whenFailure { error in
             self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: error))
-            self.pendingConnections.remove(element: channelFuture)
+            self.pendingConnections.removeAll { $0 === channelFuture }
             self.processInput(.connectFailed)
         }
     }
@@ -601,7 +643,7 @@ internal class HappyEyeballsConnector {
         let connections = self.pendingConnections
         self.pendingConnections = []
         for connection in connections {
-            connection.whenSuccess { channel in channel.close(promise: nil) }
+            connection.whenSuccess { (channel, _) in channel.close(promise: nil) }
         }
     }
 

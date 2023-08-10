@@ -13,10 +13,14 @@
 //===----------------------------------------------------------------------===//
 #if os(Windows)
 import ucrt
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif canImport(Darwin)
 import Darwin
-#elseif os(Linux) || os(Android)
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#else
+#error("The File Region module was unable to identify your C library.")
 #endif
 
 
@@ -82,10 +86,8 @@ public struct FileRegion {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension FileRegion: Sendable {}
-#endif
 
 extension FileRegion {
     /// Create a new `FileRegion` forming a complete file.

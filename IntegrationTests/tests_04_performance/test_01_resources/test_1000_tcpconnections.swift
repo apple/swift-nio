@@ -74,6 +74,7 @@ func run(identifier: String) {
             try! el.flatSubmit {
                 clientBootstrap.connect(to: serverAddress).flatMap { (clientChannel) -> EventLoopFuture<Void> in
                     writeWaitAndClose(clientChannel: clientChannel, buffer: buffer)
+                        .flatMap { clientChannel.closeFuture }
                 }
             }.wait()
         }

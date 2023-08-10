@@ -11,10 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import Darwin
-#else
+#elseif canImport(Glibc)
 import Glibc
+#else
+#error("The Concurrency helpers test module was unable to identify your C library.")
 #endif
 import Dispatch
 import XCTest
@@ -26,7 +28,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         return n*(n+1)/2
     }
     
-    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    #if canImport(Darwin)
     let noAsyncs: UInt64 = 50
     #else
     /// `swift-corelibs-libdispatch` implementation of concurrent queues only initially spawn up to `System.coreCount` threads.
@@ -1033,6 +1035,23 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         }
 
         XCTAssertEqual(50_000, lv.withLockedValue { $0.count })
+    }
+
+    func testNIOLockedValueBoxHandlesThingsWithTransitiveClassesProperly() {
+        struct State {
+            var counts: [Int] = []
+        }
+
+        let lv = NIOLockedValueBox<State>(State())
+        spawnAndJoinRacingThreads(count: 50) { _ in
+            for i in 0..<1000 {
+                lv.withLockedValue { state in
+                    state.counts.append(i)
+                }
+            }
+        }
+
+        XCTAssertEqual(50_000, lv.withLockedValue { $0.counts.count })
     }
 }
 

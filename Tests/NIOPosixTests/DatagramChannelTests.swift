@@ -16,6 +16,9 @@ import NIOConcurrencyHelpers
 import NIOCore
 @testable import NIOPosix
 import XCTest
+#if os(Linux)
+import CNIOLinux
+#endif
 
 extension Channel {
     func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
@@ -117,7 +120,7 @@ class DatagramChannelTests: XCTestCase {
             .bind(host: host, port: 0)
             .wait()
     }
-    
+
     private var supportsIPv6: Bool {
         do {
             let ipv6Loopback = try SocketAddress(ipAddress: "::1", port: 0)
@@ -651,27 +654,27 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(try assertNoThrowWithValue(self.secondChannel.readCompleteCount()), 10)
         #endif
     }
-    
+
     // Mostly to check the types don't go pop as internally converts between bool and int and back.
     func testSetGetEcnNotificationOption() {
         XCTAssertNoThrow(try {
             // IPv4
             try self.firstChannel.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
             XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
-            
+
             try self.secondChannel.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
             XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
-            
+
             // IPv6
             guard self.supportsIPv6 else {
                 // Skip on non-IPv6 systems
                 return
             }
-            
+
             let channel1 = try buildChannel(group: self.group, host: "::1")
             try channel1.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
             XCTAssertTrue(try channel1.getOption(ChannelOptions.explicitCongestionNotification).wait())
-            
+
             let channel2 = try buildChannel(group: self.group, host: "::1")
             try channel2.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
             XCTAssertFalse(try channel2.getOption(ChannelOptions.explicitCongestionNotification).wait())
@@ -689,7 +692,7 @@ class DatagramChannelTests: XCTestCase {
             } else {
                 receiveBootstrap = DatagramBootstrap(group: group)
             }
-                
+
             let receiveChannel = try receiveBootstrap
                 .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
                 .channelOption(ChannelOptions.receivePacketInfo, value: receivePacketInfo)
@@ -707,7 +710,7 @@ class DatagramChannelTests: XCTestCase {
             defer {
                 XCTAssertNoThrow(try sendChannel.close().wait())
             }
-            
+
             let ecnStates: [NIOExplicitCongestionNotificationState] = [.transportNotCapable,
                                                                        .congestionExperienced,
                                                                        .transportCapableFlag0,
@@ -750,33 +753,33 @@ class DatagramChannelTests: XCTestCase {
         }
         return NIOPacketInfo(destinationAddress: destinationAddress, interfaceIndex: ingressIfaceIndex)
     }
-    
+
     func testEcnSendReceiveIPV4() {
         testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: false, vectorSend: false)
     }
-    
+
     func testEcnSendReceiveIPV6() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: false, vectorSend: false)
     }
-    
+
     func testEcnSendReceiveIPV4VectorRead() {
         testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: false)
     }
-    
+
     func testEcnSendReceiveIPV6VectorRead() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: false)
     }
-    
+
     func testEcnSendReceiveIPV4VectorReadVectorWrite() {
         testEcnAndPacketInfoReceive(address: "127.0.0.1", vectorRead: true, vectorSend: true)
     }
-    
+
     func testEcnSendReceiveIPV6VectorReadVectorWrite() {
         guard System.supportsIPv6 else {
             return // need to skip IPv6 tests if we don't support it.
@@ -1136,4 +1139,410 @@ class DatagramChannelTests: XCTestCase {
             resultsIn: .success(())
         )
     }
+
+    func testGSOIsUnsupportedOnNonLinuxPlatforms() throws {
+        #if !os(Linux)
+        XCTAssertFalse(System.supportsUDPSegmentationOffload)
+        #endif
+    }
+
+    func testSetGSOOption() throws {
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: 1024)
+        if System.supportsUDPSegmentationOffload {
+            XCTAssertNoThrow(try didSet.wait())
+        } else {
+            XCTAssertThrowsError(try didSet.wait()) { error in
+                XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+            }
+        }
+    }
+
+    func testGetGSOOption() throws {
+        let getOption = self.firstChannel.getOption(ChannelOptions.datagramSegmentSize)
+        if System.supportsUDPSegmentationOffload {
+            XCTAssertEqual(try getOption.wait(), 0) // not-set
+        } else {
+            XCTAssertThrowsError(try getOption.wait()) { error in
+                XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+            }
+        }
+    }
+
+    func testLargeScalarWriteWithGSO() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        // We're going to enable GSO with a segment size of 1000, send one large buffer which
+        // contains ten 1000-byte segments. Each segment will contain the bytes corresponding to
+        // the index of the segment. We validate that the receiver receives 10 datagrams, each
+        // corresponding to one segment from the buffer.
+        let segmentSize: CInt = 1000
+        let segments = 10
+
+        // Enable GSO
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: segmentSize)
+        XCTAssertNoThrow(try didSet.wait())
+
+        // Form a handful of segments
+        let buffers = (0..<segments).map { i in
+            ByteBuffer(repeating: UInt8(i), count: Int(segmentSize))
+        }
+
+        // Coalesce the segments into a single buffer.
+        var buffer = self.firstChannel.allocator.buffer(capacity: segments * Int(segmentSize))
+        for segment in buffers {
+            buffer.writeImmutableBuffer(segment)
+        }
+
+        for byte in UInt8(0) ..< UInt8(10) {
+            buffer.writeRepeatingByte(byte, count: Int(segmentSize))
+        }
+
+        // Write the single large buffer.
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+
+        // The receiver will receive separate segments.
+        let receivedBuffers = try self.secondChannel.waitForDatagrams(count: segments)
+        let receivedBytes = receivedBuffers.map { $0.data.readableBytes }.reduce(0, +)
+        XCTAssertEqual(Int(segmentSize) * segments, receivedBytes)
+
+        var unusedIndexes = Set(buffers.indices)
+        for envelope in receivedBuffers {
+            if let index = buffers.firstIndex(of: envelope.data) {
+                XCTAssertNotNil(unusedIndexes.remove(index))
+            } else {
+                XCTFail("No matching buffer")
+            }
+        }
+    }
+
+    func testLargeVectorWriteWithGSO() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        // Similar to the test above, but with multiple writes.
+        let segmentSize: CInt = 1000
+        let segments = 10
+
+        // Enable GSO
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: segmentSize)
+        XCTAssertNoThrow(try didSet.wait())
+
+        // Form a handful of segments
+        let buffers = (0..<segments).map { i in
+            ByteBuffer(repeating: UInt8(i), count: Int(segmentSize))
+        }
+
+        // Coalesce the segments into a single buffer.
+        var buffer = self.firstChannel.allocator.buffer(capacity: segments * Int(segmentSize))
+        for segment in buffers {
+            buffer.writeImmutableBuffer(segment)
+        }
+
+        for byte in UInt8(0) ..< UInt8(10) {
+            buffer.writeRepeatingByte(byte, count: Int(segmentSize))
+        }
+
+        // Write the single large buffer.
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        let write1 = self.firstChannel.write(NIOAny(writeData))
+        let write2 = self.firstChannel.write(NIOAny(writeData))
+        self.firstChannel.flush()
+        XCTAssertNoThrow(try write1.wait())
+        XCTAssertNoThrow(try write2.wait())
+
+        // The receiver will receive separate segments.
+        let receivedBuffers = try self.secondChannel.waitForDatagrams(count: segments)
+        let receivedBytes = receivedBuffers.map { $0.data.readableBytes }.reduce(0, +)
+        XCTAssertEqual(Int(segmentSize) * segments, receivedBytes)
+
+        let keysWithValues = buffers.indices.map { index in (index, 2) }
+        var indexCounts = Dictionary(uniqueKeysWithValues: keysWithValues)
+        for envelope in receivedBuffers {
+            if let index = buffers.firstIndex(of: envelope.data) {
+                indexCounts[index, default: 0] -= 1
+                XCTAssertGreaterThanOrEqual(indexCounts[index]!, 0)
+            } else {
+                XCTFail("No matching buffer")
+            }
+        }
+    }
+
+    func testWriteBufferAtGSOSegmentCountLimit() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        var segments = 64
+        let segmentSize = 10
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
+        XCTAssertNoThrow(try didSet.wait())
+
+        func send(byteCount: Int) throws {
+            let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: byteCount)
+            let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+            try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait()
+        }
+
+        do {
+            try send(byteCount: segments * segmentSize)
+        } catch let e as IOError where e.errnoCode == EINVAL {
+            // Some older kernel versions report EINVAL with 64 segments. Tolerate that
+            // failure and try again with a lower limit.
+            self.firstChannel = try self.buildChannel(group: self.group)
+            let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
+            XCTAssertNoThrow(try didSet.wait())
+            segments = 61
+            try send(byteCount: segments * segmentSize)
+        }
+
+        let read = try self.secondChannel.waitForDatagrams(count: segments)
+        XCTAssertEqual(read.map { $0.data.readableBytes }.reduce(0, +), segments * segmentSize)
+    }
+
+    func testWriteBufferAboveGSOSegmentCountLimitShouldError() throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+
+        let segmentSize = 10
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
+        XCTAssertNoThrow(try didSet.wait())
+
+        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * 65)
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        // The kernel limits messages to a maximum of 64 segments; any more should result in an error.
+        XCTAssertThrowsError(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait()) {
+            XCTAssert($0 is IOError)
+        }
+    }
+
+    func testGROIsUnsupportedOnNonLinuxPlatforms() throws {
+        #if !os(Linux)
+        XCTAssertFalse(System.supportsUDPReceiveOffload)
+        #endif
+    }
+
+    func testSetGROOption() throws {
+        let didSet = self.firstChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true)
+        if System.supportsUDPReceiveOffload {
+            XCTAssertNoThrow(try didSet.wait())
+        } else {
+            XCTAssertThrowsError(try didSet.wait()) { error in
+                XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+            }
+        }
+    }
+
+    func testGetGROOption() throws {
+        let getOption = self.firstChannel.getOption(ChannelOptions.datagramReceiveOffload)
+        if System.supportsUDPReceiveOffload {
+            XCTAssertEqual(try getOption.wait(), false) // not-set
+
+            // Now set and check.
+            XCTAssertNoThrow(try self.firstChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+            XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.datagramReceiveOffload).wait())
+        } else {
+            XCTAssertThrowsError(try getOption.wait()) { error in
+                XCTAssertEqual(error as? ChannelError, .operationUnsupported)
+            }
+        }
+    }
+
+    func testReceiveLargeBufferWithGRO(segments: Int, segmentSize: Int, writes: Int, vectorReads: Int? = nil) throws {
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+        try XCTSkipUnless(System.supportsUDPReceiveOffload, "UDP_GRO is not supported on this platform")
+        try XCTSkipUnless(try self.hasGoodGROSupport())
+
+        /// Set GSO on the first channel.
+        XCTAssertNoThrow(try self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize)).wait())
+        /// Set GRO on the second channel.
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+        /// The third channel has neither set.
+
+        // Enable on second channel
+        if let vectorReads = vectorReads {
+            XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.datagramVectorReadMessageCount, value: vectorReads).wait())
+        }
+
+        /// Increase the size of the read buffer for the second and third channels.
+        let fixed = FixedSizeRecvByteBufferAllocator(capacity: 1 << 16)
+        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.recvAllocator, value: fixed).wait())
+        XCTAssertNoThrow(try self.thirdChannel.setOption(ChannelOptions.recvAllocator, value: fixed).wait())
+
+        // Write a large datagrams on the first channel. They should be split and then accumulated on the receive side.
+        // Form a large buffer to write from the first channel.
+        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * segments)
+
+        // Write to the channel with GRO enabled.
+        do {
+            let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+            let promises = (0 ..< writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
+            self.firstChannel.flush()
+            XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
+
+            // GRO is well supported; we expect `writes` datagrams.
+            let datagrams = try self.secondChannel.waitForDatagrams(count: writes)
+            for datagram in datagrams {
+                XCTAssertEqual(datagram.data.readableBytes, segments * segmentSize)
+            }
+        }
+
+        // Write to the channel whithout GRO.
+        do {
+            let writeData = AddressedEnvelope(remoteAddress: self.thirdChannel.localAddress!, data: buffer)
+            let promises = (0 ..< writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
+            self.firstChannel.flush()
+            XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
+
+            // GRO is not enabled so we expect a `writes * segments` datagrams.
+            let datagrams = try self.thirdChannel.waitForDatagrams(count: writes * segments)
+            for datagram in datagrams {
+                XCTAssertEqual(datagram.data.readableBytes, segmentSize)
+            }
+        }
+    }
+
+    func testChannelCanReceiveLargeBufferWithGROUsingScalarReads() throws {
+        try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 1)
+    }
+
+    func testChannelCanReceiveLargeBufferWithGROUsingVectorReads() throws {
+        try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 1, vectorReads: 4)
+    }
+
+    func testChannelCanReceiveMultipleLargeBuffersWithGROUsingScalarReads() throws {
+        try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 4)
+    }
+
+    func testChannelCanReceiveMultipleLargeBuffersWithGROUsingVectorReads() throws {
+        try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 4, vectorReads: 4)
+    }
+
+    private func hasGoodGROSupport() throws -> Bool {
+        // Source code for UDP_GRO was added in Linux 5.0. However, this support is somewhat limited
+        // and some sources indicate support was actually added in 5.10 (perhaps more widely
+        // supported). There is no way (or at least, no obvious way) to detect when support was
+        // properly fleshed out on a given kernel version.
+        //
+        // Anecdotally we have observed UDP_GRO works on 5.15 but not on 5.4. The effect of UDP_GRO
+        // not working is that datagrams aren't agregated... in other words, GRO not being enabled.
+        // This is fine because it's not always the case that datagrams can be aggregated so
+        // applications must be able to tolerate this.
+        //
+        // It does however make testing GRO somewhat challenging. We need to know when we can assert
+        // that datagrams will be aggregated. To do this we run a simple check on loopback (as we
+        // use this for all other UDP_GRO tests) and check whether datagrams are aggregated on the
+        // receive side. If they aren't then we we don't bother with further testing and instead
+        // validate that our kernel is older than 5.15.
+        try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
+        try XCTSkipUnless(System.supportsUDPReceiveOffload, "UDP_GRO is not supported on this platform")
+        let sender = try! self.buildChannel(group: self.group)
+        let receiver = try! self.buildChannel(group: self.group)
+        defer {
+            XCTAssertNoThrow(try sender.close().wait())
+            XCTAssertNoThrow(try receiver.close().wait())
+        }
+
+        let segments = 2
+        let segmentSize = 1000
+
+        XCTAssertNoThrow(try sender.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize)).wait())
+        XCTAssertNoThrow(try receiver.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+        let allocator = FixedSizeRecvByteBufferAllocator(capacity: 1 << 16)
+        XCTAssertNoThrow(try receiver.setOption(ChannelOptions.recvAllocator, value: allocator).wait())
+
+        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * segments)
+        let writeData = AddressedEnvelope(remoteAddress: receiver.localAddress!, data: buffer)
+        XCTAssertNoThrow(try sender.writeAndFlush(NIOAny(writeData)).wait())
+
+        let received = try receiver.waitForDatagrams(count: 1)
+        let hasGoodGROSupport = received.first!.data.readableBytes == buffer.readableBytes
+
+        if !hasGoodGROSupport {
+            // Not well supported: check we receive enough datagrams of the expected size.
+            let datagrams = try receiver.waitForDatagrams(count: segments)
+            for datagram in datagrams {
+                XCTAssertEqual(datagram.data.readableBytes, segmentSize)
+            }
+
+            #if os(Linux)
+            let info = System.systemInfo
+            // If our kernel is more recent than 5.15 and we don't have good GRO support then
+            // something has gone wrong (or our assumptions about kernel support are incorrect).
+            if let major = info.release.major, let minor = info.release.minor {
+                if major >= 6 || (major == 5 && minor >= 15) {
+                    XCTFail("Platform does not have good GRO support: \(info.release.release)")
+                }
+            } else {
+                XCTFail("Unable to determine Linux x.y release from '\(info.release.release)'")
+            }
+            #endif
+        }
+
+        return hasGoodGROSupport
+    }
+}
+
+extension System {
+    #if os(Linux)
+    internal static let systemInfo: SystemInfo = {
+        var info = utsname()
+        let rc = CNIOLinux_system_info(&info)
+        assert(rc == 0)
+        return SystemInfo(utsname: info)
+    }()
+
+    struct SystemInfo {
+        var machine: String
+        var nodeName: String
+        var sysName: String
+        var release: Release
+        var version: String
+
+        struct Release {
+            var release: String
+
+            var major: Int?
+            var minor: Int?
+
+            init(parsing release: String) {
+                self.release = release
+
+                let components = release.split(separator: ".", maxSplits: 1)
+
+                if components.count == 2 {
+                    self.major = Int(components[0])
+                    self.minor = components[1].split(separator: ".").first.map(String.init).flatMap(Int.init)
+                } else {
+                    self.major = nil
+                    self.minor = nil
+                }
+            }
+        }
+
+        init(utsname info: utsname) {
+            self.machine = withUnsafeBytes(of: info.machine) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                return pointer.map { String(cString: $0) } ?? ""
+            }
+
+            self.nodeName = withUnsafeBytes(of: info.nodename) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                return pointer.map { String(cString: $0) } ?? ""
+            }
+
+            self.sysName = withUnsafeBytes(of: info.sysname) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                return pointer.map { String(cString: $0) } ?? ""
+            }
+
+            self.version = withUnsafeBytes(of: info.version) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                return pointer.map { String(cString: $0) } ?? ""
+            }
+
+            self.release = withUnsafeBytes(of: info.release) { bytes in
+                let pointer = bytes.baseAddress?.assumingMemoryBound(to: CChar.self)
+                let release = pointer.map { String(cString: $0) } ?? ""
+                return Release(parsing: release)
+            }
+        }
+    }
+    #endif
 }

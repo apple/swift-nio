@@ -11,7 +11,7 @@ It's like [Netty](https://netty.io), but written for Swift.
 
 The SwiftNIO project is split across multiple repositories:
 
-Repository | NIO 2 (Swift 5.5.2+)
+Repository | NIO 2 (Swift 5.6+)
 --- | ---
 [https://github.com/apple/swift-nio][repo-nio] <br> SwiftNIO core | `from: "2.0.0"`
 [https://github.com/apple/swift-nio-ssl][repo-nio-ssl] <br> TLS (SSL) support | `from: "2.0.0"`
@@ -62,7 +62,7 @@ HTTP | ✅| ❌ | [swift-server/async-http-client](https://github.com/swift-serv
 gRPC | ✅| ✅ | [grpc/grpc-swift](https://github.com/grpc/grpc-swift) | `GRPC` | also offers a low-level API; SSWG community project
 APNS | ✅ | ❌ | [kylebrowning/APNSwift](https://github.com/kylebrowning/APNSwift) | `APNSwift` | SSWG community project
 PostgreSQL | ✅ | ❌ | [vapor/postgres-nio](https://github.com/vapor/postgres-nio) | `PostgresNIO` | SSWG community project
-Redis | ✅ | ❌ | [mordil/swift-redi-stack](https://gitlab.com/Mordil/swift-redi-stack) | `RediStack` | SSWG community project
+Redis | ✅ | ❌ | [swift-server/RediStack](https://github.com/swift-server/RediStack) | `RediStack` | SSWG community project
 
 ### Supported Versions
 
@@ -70,14 +70,15 @@ Redis | ✅ | ❌ | [mordil/swift-redi-stack](https://gitlab.com/Mordil/swift-re
 
 This is the current version of SwiftNIO and will be supported for the foreseeable future.
 
-The most recent versions of SwiftNIO support Swift 5.5.2 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
+The most recent versions of SwiftNIO support Swift 5.6 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
 
 SwiftNIO            | Minimum Swift Version
 --------------------|----------------------
 `2.0.0 ..< 2.30.0`  | 5.0
 `2.30.0 ..< 2.40.0` | 5.2
 `2.40.0 ..< 2.43.0` | 5.4
-`2.43.0 ...`        | 5.5.2
+`2.43.0 ..< 2.51.0` | 5.5.2
+`2.51.0 ...`        | 5.6
 
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.
@@ -331,7 +332,7 @@ have a few prerequisites installed on your system.
 
 ### Linux
 
-- Swift 5.5.2 or newer from [swift.org/download](https://swift.org/download/#releases). We always recommend to use the latest released version.
+- Swift 5.6 or newer from [swift.org/download](https://swift.org/download/#releases). We always recommend to use the latest released version.
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)

@@ -427,7 +427,5 @@ public final class SNIHandler: ByteToMessageDecoder {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension SNIHandler: Sendable {}
-#endif

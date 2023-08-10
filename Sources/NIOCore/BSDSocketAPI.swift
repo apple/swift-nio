@@ -61,16 +61,22 @@ import func WinSDK.WSAGetLastError
 
 internal typealias socklen_t = ucrt.size_t
 #elseif os(Linux) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import CNIOLinux
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
-#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#elseif canImport(Darwin)
 import Darwin
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
+#else
+#error("The BSD Socket module was unable to identify your C library.")
 #endif
 
 #if os(Android)
@@ -245,6 +251,15 @@ extension NIOBSDSocket.OptionLevel {
     /// Socket options that apply to all sockets.
     public static let socket: NIOBSDSocket.OptionLevel =
             NIOBSDSocket.OptionLevel(rawValue: SOL_SOCKET)
+
+    /// Socket options that apply only to UDP sockets.
+    #if os(Linux) || os(Android)
+    public static let udp: NIOBSDSocket.OptionLevel =
+            NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_UDP))
+    #else
+    public static let udp: NIOBSDSocket.OptionLevel =
+            NIOBSDSocket.OptionLevel(rawValue: IPPROTO_UDP)
+    #endif
 }
 
 // IPv4 Options
@@ -320,11 +335,24 @@ extension NIOBSDSocket.Option {
 }
 #endif
 
-#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
 extension NIOBSDSocket.Option {
     /// Get information about the TCP connection.
     public static let tcp_connection_info: NIOBSDSocket.Option =
             NIOBSDSocket.Option(rawValue: TCP_CONNECTION_INFO)
+}
+#endif
+
+#if os(Linux)
+extension NIOBSDSocket.Option {
+    // Note: UDP_SEGMENT and UDP_GRO are not available on all Linux platforms so values are
+    // hardcoded.
+
+    /// Use UDP segmentation offload (UDP_SEGMENT, or 'GSO'). Only available on Linux.
+    public static let udp_segment = NIOBSDSocket.Option(rawValue: 103)
+
+    /// Use UDP generic receive offload (GRO). Only available on Linux.
+    public static let udp_gro = NIOBSDSocket.Option(rawValue: 104)
 }
 #endif
 

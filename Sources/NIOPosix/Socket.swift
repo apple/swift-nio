@@ -117,6 +117,15 @@ typealias IOVector = iovec
         }
     }
 
+    func connect(to address: VsockAddress) throws -> Bool {
+        return try withUnsafeHandle { fd in
+            return try address.withSockAddr { (ptr, size) in
+                return try NIOBSDSocket.connect(socket: fd, address: ptr,
+                                                address_len: socklen_t(size))
+            }
+        }
+    }
+
     /// Finish a previous non-blocking `connect` operation.
     ///
     /// - throws: An `IOError` if the operation failed.
@@ -186,13 +195,14 @@ typealias IOVector = iovec
                                                                 capacity: controlBytes.count)),
                            dwFlags: 0)
 #else
-                var messageHeader = msghdr(msg_name: notConstCorrectDestinationPtr,
-                                           msg_namelen: destinationSize,
-                                           msg_iov: vecPtr,
-                                           msg_iovlen: 1,
-                                           msg_control: controlBytes.baseAddress,
-                                           msg_controllen: .init(controlBytes.count),
-                                           msg_flags: 0)
+                var messageHeader = msghdr()
+                messageHeader.msg_name = notConstCorrectDestinationPtr
+                messageHeader.msg_namelen = destinationSize
+                messageHeader.msg_iov = vecPtr
+                messageHeader.msg_iovlen = 1
+                messageHeader.msg_control = controlBytes.baseAddress
+                messageHeader.msg_controllen = .init(controlBytes.count)
+                messageHeader.msg_flags = 0
 #endif
                 return try NIOBSDSocket.sendmsg(socket: handle, msgHdr: &messageHeader, flags: 0)
             }
@@ -243,13 +253,14 @@ typealias IOVector = iovec
                     storageLen = messageHeader.namelen
                 }
 #else
-                var messageHeader = msghdr(msg_name: sockaddrPtr,
-                                           msg_namelen: storageLen,
-                                           msg_iov: vecPtr,
-                                           msg_iovlen: 1,
-                                           msg_control: controlBytes.controlBytesBuffer.baseAddress,
-                                           msg_controllen: .init(controlBytes.controlBytesBuffer.count),
-                                           msg_flags: 0)
+                var messageHeader = msghdr()
+                messageHeader.msg_name = .init(sockaddrPtr)
+                messageHeader.msg_namelen = storageLen
+                messageHeader.msg_iov = vecPtr
+                messageHeader.msg_iovlen = 1
+                messageHeader.msg_control = controlBytes.controlBytesBuffer.baseAddress
+                messageHeader.msg_controllen = .init(controlBytes.controlBytesBuffer.count)
+                messageHeader.msg_flags = 0
                 defer {
                     // We need to write back the length of the message.
                     storageLen = messageHeader.msg_namelen
@@ -322,6 +333,34 @@ typealias IOVector = iovec
     func shutdown(how: Shutdown) throws {
         return try withUnsafeHandle {
             try NIOBSDSocket.shutdown(socket: $0, how: how)
+        }
+    }
+
+    /// Sets the value for the 'UDP_SEGMENT' socket option.
+    func setUDPSegmentSize(_ segmentSize: CInt) throws {
+        try self.withUnsafeHandle {
+            try NIOBSDSocket.setUDPSegmentSize(segmentSize, socket: $0)
+        }
+    }
+
+    /// Returns the value of the 'UDP_SEGMENT' socket option.
+    func getUDPSegmentSize() throws -> CInt {
+        return try self.withUnsafeHandle {
+            try NIOBSDSocket.getUDPSegmentSize(socket: $0)
+        }
+    }
+
+    /// Sets the value for the 'UDP_GRO' socket option.
+    func setUDPReceiveOffload(_ enabled: Bool) throws {
+        try self.withUnsafeHandle {
+            try NIOBSDSocket.setUDPReceiveOffload(enabled, socket: $0)
+        }
+    }
+
+    /// Returns the value of the 'UDP_GRO' socket option.
+    func getUDPReceiveOffload() throws -> Bool {
+        return try self.withUnsafeHandle {
+            try NIOBSDSocket.getUDPReceiveOffload(socket: $0)
         }
     }
 }

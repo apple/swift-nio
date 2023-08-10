@@ -41,11 +41,17 @@ fileprivate typealias in_addr = WinSDK.IN_ADDR
 fileprivate typealias in6_addr = WinSDK.IN6_ADDR
 fileprivate typealias in_port_t = WinSDK.u_short
 fileprivate typealias sa_family_t = WinSDK.ADDRESS_FAMILY
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif canImport(Darwin)
 import Darwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import CNIOLinux
+#else
+#error("The Socket Addresses module was unable to identify your C library.")
 #endif
 
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.

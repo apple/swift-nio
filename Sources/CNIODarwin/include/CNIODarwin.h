@@ -16,6 +16,8 @@
 
 #ifdef __APPLE__
 #include <sys/socket.h>
+#include <sys/vsock.h>
+#include <sys/ioctl.h>
 #include <time.h>
 
 // Darwin platforms do not have a sendmmsg implementation available to them. This C module
@@ -49,6 +51,8 @@ const void *CNIODarwin_CMSG_DATA(const struct cmsghdr *);
 void *CNIODarwin_CMSG_DATA_MUTABLE(struct cmsghdr *);
 size_t CNIODarwin_CMSG_LEN(size_t);
 size_t CNIODarwin_CMSG_SPACE(size_t);
+
+extern const unsigned long CNIODarwin_IOCTL_VM_SOCKETS_GET_LOCAL_CID;
 
 #endif  // __APPLE__
 #endif  // C_NIO_DARWIN_H

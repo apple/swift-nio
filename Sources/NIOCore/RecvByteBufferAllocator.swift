@@ -13,9 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 /// Allocates `ByteBuffer`s to be used to read bytes from a `Channel` and records the number of the actual bytes that were used.
-public protocol RecvByteBufferAllocator: NIOPreconcurrencySendable {
+public protocol RecvByteBufferAllocator: _NIOPreconcurrencySendable {
     /// Allocates a new `ByteBuffer` that will be used to read bytes from a `Channel`.
     func buffer(allocator: ByteBufferAllocator) -> ByteBuffer
+
+    /// Returns the next size of buffer which should be returned by ``buffer(allocator:)``.
+    func nextBufferSize() -> Int?
 
     /// Records the actual number of bytes that were read by the last socket call.
     ///
@@ -25,7 +28,12 @@ public protocol RecvByteBufferAllocator: NIOPreconcurrencySendable {
     mutating func record(actualReadBytes: Int) -> Bool
 }
 
-
+extension RecvByteBufferAllocator {
+    // Default implementation to maintain API compatability.
+    public func nextBufferSize() -> Int? {
+        return nil
+    }
+}
 
 /// `RecvByteBufferAllocator` which will always return a `ByteBuffer` with the same fixed size no matter what was recorded.
 public struct FixedSizeRecvByteBufferAllocator: RecvByteBufferAllocator {
@@ -42,7 +50,13 @@ public struct FixedSizeRecvByteBufferAllocator: RecvByteBufferAllocator {
     }
 
     public func buffer(allocator: ByteBufferAllocator) -> ByteBuffer {
-        return allocator.buffer(capacity: capacity)
+        return allocator.buffer(capacity: self.capacity)
+    }
+}
+
+extension FixedSizeRecvByteBufferAllocator {
+    public func nextBufferSize() -> Int? {
+        return self.capacity
     }
 }
 
@@ -112,5 +126,11 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
         }
 
         return mayGrow
+    }
+}
+
+extension AdaptiveRecvByteBufferAllocator {
+    public func nextBufferSize() -> Int? {
+        return self.nextReceiveBufferSize
     }
 }

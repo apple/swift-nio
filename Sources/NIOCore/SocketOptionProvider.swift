@@ -11,13 +11,19 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
 import Darwin
 #elseif os(Linux) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import CNIOLinux
 #elseif os(Windows)
 import WinSDK
+#else
+#error("The Socket Option provider module was unable to identify your C library.")
 #endif
 
 /// This protocol defines an object, most commonly a `Channel`, that supports
@@ -47,7 +53,7 @@ import WinSDK
 ///
 /// - note: Like the `Channel` protocol, all methods in this protocol are
 ///     thread-safe.
-public protocol SocketOptionProvider: NIOPreconcurrencySendable {
+public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     /// The `EventLoop` which is used by this `SocketOptionProvider` for execution.
     var eventLoop: EventLoop { get }
 
@@ -272,7 +278,7 @@ extension SocketOptionProvider {
         }
     #endif
 
-    #if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+    #if canImport(Darwin)
         /// Gets the value of the socket option TCP_CONNECTION_INFO.
         ///
         /// This socket option cannot be set.

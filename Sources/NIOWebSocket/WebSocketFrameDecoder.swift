@@ -270,7 +270,5 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     }
 }
 
-#if swift(>=5.6)
 @available(*, unavailable)
 extension WebSocketFrameDecoder: Sendable {}
-#endif

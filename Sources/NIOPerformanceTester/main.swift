@@ -1083,7 +1083,7 @@ try measureAndPrint(
     )
 )
 
-if #available(macOS 10.15, *) {
+if #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) {
     try measureAndPrint(
         desc: "asyncwriter_single_writes_1M_times",
         benchmark: NIOAsyncWriterSingleWritesBenchmark(
@@ -1096,5 +1096,52 @@ if #available(macOS 10.15, *) {
         benchmark: NIOAsyncSequenceProducerBenchmark(
             iterations: 1_000_000
         )
+    )
+}
+
+try measureAndPrint(
+    desc: "udp_10k_writes",
+    benchmark: UDPBenchmark(
+        data: ByteBuffer(repeating: 42, count: 1000),
+        numberOfRequests: 10_000,
+        vectorReads: 1,
+        vectorWrites: 1
+    )
+)
+
+try measureAndPrint(
+    desc: "udp_10k_vector_writes",
+    benchmark: UDPBenchmark(
+        data: ByteBuffer(repeating: 42, count: 1000),
+        numberOfRequests: 10_000,
+        vectorReads: 1,
+        vectorWrites: 10
+    )
+)
+
+try measureAndPrint(
+    desc: "udp_10k_vector_reads",
+    benchmark: UDPBenchmark(
+        data: ByteBuffer(repeating: 42, count: 1000),
+        numberOfRequests: 10_000,
+        vectorReads: 10,
+        vectorWrites: 1
+    )
+)
+
+try measureAndPrint(
+    desc: "udp_10k_vector_reads_and_writes",
+    benchmark: UDPBenchmark(
+        data: ByteBuffer(repeating: 42, count: 1000),
+        numberOfRequests: 10_000,
+        vectorReads: 10,
+        vectorWrites: 10
+    )
+)
+
+if #available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *) {
+    try measureAndPrint(
+        desc: "tcp_100k_messages_throughput",
+        benchmark: TCPThroughputBenchmark(messages: 100_000, messageSize: 500)
     )
 }

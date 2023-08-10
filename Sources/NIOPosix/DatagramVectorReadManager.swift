@@ -112,13 +112,14 @@ struct DatagramVectorReadManager {
                 }
 
                 // Next we set up the msghdr structure. This points into the other vectors.
-                let msgHdr = msghdr(msg_name: self.sockaddrVector.baseAddress! + i ,
-                                    msg_namelen: socklen_t(MemoryLayout<sockaddr_storage>.size),
-                                    msg_iov: self.ioVector.baseAddress! + i,
-                                    msg_iovlen: 1,  // This is weird, but each message gets only one array. Duh.
-                                    msg_control: controlBytes.baseAddress,
-                                    msg_controllen: .init(controlBytes.count),
-                                    msg_flags: 0)
+                var msgHdr = msghdr()
+                msgHdr.msg_name = .init(self.sockaddrVector.baseAddress! + i)
+                msgHdr.msg_namelen = socklen_t(MemoryLayout<sockaddr_storage>.size)
+                msgHdr.msg_iov = self.ioVector.baseAddress! + i
+                msgHdr.msg_iovlen = 1  // This is weird, but each message gets only one array. Duh
+                msgHdr.msg_control = controlBytes.baseAddress
+                msgHdr.msg_controllen = .init(controlBytes.count)
+                msgHdr.msg_flags = 0
                 self.messageVector[i] = MMsgHdr(msg_hdr: msgHdr, msg_len: 0)
 
                 // Note that we don't set up the sockaddr vector: that's because it needs no initialization,
@@ -135,10 +136,10 @@ struct DatagramVectorReadManager {
             return .none
         case .processed(let messagesProcessed):
             buffer.moveWriterIndex(to: messageSize * messagesProcessed)
-            return self.buildMessages(messageCount: messagesProcessed,
-                                      sliceSize: messageSize,
-                                      buffer: &buffer,
-                                      parseControlMessages: parseControlMessages)
+            return try self.buildMessages(messageCount: messagesProcessed,
+                                          sliceSize: messageSize,
+                                          buffer: &buffer,
+                                          parseControlMessages: parseControlMessages)
         }
     }
 
@@ -153,7 +154,7 @@ struct DatagramVectorReadManager {
     private func buildMessages(messageCount: Int,
                                sliceSize: Int,
                                buffer: inout ByteBuffer,
-                               parseControlMessages: Bool) -> ReadResult {
+                               parseControlMessages: Bool) throws -> ReadResult {
         var sliceOffset = buffer.readerIndex
         var totalReadSize = 0
 
@@ -177,7 +178,7 @@ struct DatagramVectorReadManager {
 #else
             precondition(self.messageVector[i].msg_hdr.msg_namelen != 0, "Unexpected zero length peer name")
 #endif
-            let address: SocketAddress = self.sockaddrVector[i].convert()
+            let address: SocketAddress = try self.sockaddrVector[i].convert()
             
             // Extract congestion information if requested.
             let metadata: AddressedEnvelope<ByteBuffer>.Metadata?

@@ -96,6 +96,8 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         switch option {
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
             return connectTimeout as! Option.Value
+        case _ as ChannelOptions.Types.LocalVsockContextID:
+            return try self.socket.getLocalVsockContextID() as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -107,10 +109,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
                                registrationID: registrationID)
     }
 
-    override func connectSocket(to address: SocketAddress) throws -> Bool {
-        if try self.socket.connect(to: address) {
-            return true
-        }
+    private func scheduleConnectTimeout() {
         if let timeout = connectTimeout {
             connectTimeoutScheduled = eventLoop.scheduleTask(in: timeout) { () -> Void in
                 if self.pendingConnect != nil {
@@ -119,7 +118,21 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
                 }
             }
         }
+    }
 
+    override func connectSocket(to address: SocketAddress) throws -> Bool {
+        if try self.socket.connect(to: address) {
+            return true
+        }
+        self.scheduleConnectTimeout()
+        return false
+    }
+
+    override func connectSocket(to address: VsockAddress) throws -> Bool {
+        if try self.socket.connect(to: address) {
+            return true
+        }
+        self.scheduleConnectTimeout()
         return false
     }
 
@@ -220,12 +233,19 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         switch option {
         case _ as ChannelOptions.Types.BacklogOption:
             return backlog as! Option.Value
+        case _ as ChannelOptions.Types.LocalVsockContextID:
+            return try self.socket.getLocalVsockContextID() as! Option.Value
         default:
             return try super.getOption0(option)
         }
     }
 
-    override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    internal enum BindTarget {
+        case socketAddress(_: SocketAddress)
+        case vsockAddress(_: VsockAddress)
+    }
+
+    internal func bind0(to target: BindTarget, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
@@ -246,10 +266,19 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             promise?.fail(error)
         }
         executeAndComplete(p) {
-            try socket.bind(to: address)
+            switch target {
+            case .socketAddress(let address):
+                try socket.bind(to: address)
+            case .vsockAddress(let address):
+                try socket.bind(to: address)
+            }
             self.updateCachedAddressesFromSocket(updateRemote: false)
             try self.socket.listen(backlog: backlog)
         }
+    }
+
+    override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.bind0(to: .socketAddress(address), promise: promise)
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
@@ -362,6 +391,15 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.reregister(selectable: self.socket, interested: interested)
     }
+
+    override func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
+        switch event {
+        case let event as VsockChannelEvents.BindToAddress:
+            self.bind0(to: .vsockAddress(event.address), promise: promise)
+        default:
+            promise?.fail(ChannelError.operationUnsupported)
+        }
+    }
 }
 
 /// A channel used with datagram sockets.
@@ -423,11 +461,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             throw err
         }
 
-        self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
-                                                          iovecs: eventLoop.iovecs,
-                                                          addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs,
-                                                          controlMessageStorage: eventLoop.controlMessageStorage)
+        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
+                                                          msgBufferPool: eventLoop.msgBufferPool)
 
         try super.init(
             socket: socket,
@@ -441,11 +476,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         self.vectorReadManager = nil
         try socket.setNonBlocking()
-        self.pendingWrites = PendingDatagramWritesManager(msgs: eventLoop.msgs,
-                                                          iovecs: eventLoop.iovecs,
-                                                          addresses: eventLoop.addresses,
-                                                          storageRefs: eventLoop.storageRefs,
-                                                          controlMessageStorage: eventLoop.controlMessageStorage)
+        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
+                                                          msgBufferPool: eventLoop.msgBufferPool)
         try super.init(
             socket: socket,
             parent: parent,
@@ -510,7 +542,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // Receiving packet info is only supported for IP
                 throw ChannelError.operationUnsupported
             }
-            break
+        case _ as ChannelOptions.Types.DatagramSegmentSize:
+            guard System.supportsUDPSegmentationOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            let segmentSize = value as! ChannelOptions.Types.DatagramSegmentSize.Value
+            try self.socket.setUDPSegmentSize(segmentSize)
+        case _ as ChannelOptions.Types.DatagramReceiveOffload:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            let enable = value as! ChannelOptions.Types.DatagramReceiveOffload.Value
+            try self.socket.setUDPReceiveOffload(enable)
         default:
             try super.setOption0(option, value: value)
         }
@@ -554,6 +597,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // Receiving packet info is only supported for IP
                 throw ChannelError.operationUnsupported
             }
+        case _ as ChannelOptions.Types.DatagramSegmentSize:
+            guard System.supportsUDPSegmentationOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            return try self.socket.getUDPSegmentSize() as! Option.Value
+        case _ as ChannelOptions.Types.DatagramReceiveOffload:
+            guard System.supportsUDPReceiveOffload else {
+                throw ChannelError.operationUnsupported
+            }
+            return try self.socket.getUDPReceiveOffload() as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -582,6 +635,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
     }
 
+    override func connectSocket(to address: VsockAddress) throws -> Bool {
+        throw ChannelError.operationUnsupported
+    }
+
     override func finishConnectSocket() throws {
         // This is not required for connected datagram channels connect is a synchronous operation.
         throw ChannelError.operationUnsupported
@@ -590,43 +647,44 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func readFromSocket() throws -> ReadResult {
         if self.vectorReadManager != nil {
             return try self.vectorReadFromSocket()
+        } else if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
+            let pooledMsgBuffer = self.selectableEventLoop.msgBufferPool.get()
+            defer { self.selectableEventLoop.msgBufferPool.put(pooledMsgBuffer) }
+            return try pooledMsgBuffer.withUnsafePointers { _, _, controlMessageStorage in
+                return try self.singleReadFromSocket(controlBytesBuffer: controlMessageStorage[0])
+            }
         } else {
-            return try self.singleReadFromSocket()
+            return try self.singleReadFromSocket(controlBytesBuffer: UnsafeMutableRawBufferPointer(start: nil, count: 0))
         }
     }
 
-    private func singleReadFromSocket() throws -> ReadResult {
+    private func singleReadFromSocket(controlBytesBuffer: UnsafeMutableRawBufferPointer) throws -> ReadResult {
         var rawAddress = sockaddr_storage()
         var rawAddressLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
-        var buffer = self.recvAllocator.buffer(allocator: self.allocator)
         var readResult = ReadResult.none
 
-        // These control bytes must not escape the current call stack
-        let controlBytesBuffer: UnsafeMutableRawBufferPointer
-        if self.reportExplicitCongestionNotifications || self.receivePacketInfo {
-            controlBytesBuffer = self.selectableEventLoop.controlMessageStorage[0]
-        } else {
-            controlBytesBuffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
-        }
-
-        for i in 1...self.maxMessagesPerRead {
+        for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
                 throw ChannelError.eof
             }
-            buffer.clear()
 
             var controlBytes = UnsafeReceivedControlBytes(controlBytesBuffer: controlBytesBuffer)
 
-            let result = try buffer.withMutableWritePointer {
-                try self.socket.recvmsg(pointer: $0,
-                                        storage: &rawAddress,
-                                        storageLen: &rawAddressLength,
-                                        controlBytes: &controlBytes)
+            let (buffer, result) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer in
+                return try buffer.withMutableWritePointer { pointer in
+                    try self.socket.recvmsg(pointer: pointer,
+                                            storage: &rawAddress,
+                                            storageLen: &rawAddressLength,
+                                            controlBytes: &controlBytes)
+                }
             }
+
             switch result {
             case .processed(let bytesRead):
                 assert(self.isOpen)
-                let mayGrow = recvAllocator.record(actualReadBytes: bytesRead)
+                let remoteAddress: SocketAddress = try rawAddress.convert()
+
+                self.recvBufferPool.record(actualReadBytes: bytesRead)
                 readPending = false
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
@@ -637,14 +695,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     metadata = nil
                 }
 
-                let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
+                let msg = AddressedEnvelope(remoteAddress: remoteAddress,
                                             data: buffer,
                                             metadata: metadata)
                 assert(self.isActive)
                 self.pipeline.syncOperations.fireChannelRead(NIOAny(msg))
-                if mayGrow && i < maxMessagesPerRead {
-                    buffer = recvAllocator.buffer(allocator: allocator)
-                }
                 readResult = .some
             case .wouldBlock(let bytesRead):
                 assert(bytesRead == 0)
@@ -656,10 +711,9 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
     private func vectorReadFromSocket() throws -> ReadResult {
         #if os(Linux) || os(FreeBSD) || os(Android)
-        var buffer = self.recvAllocator.buffer(allocator: self.allocator)
         var readResult = ReadResult.none
 
-        readLoop: for i in 1...self.maxMessagesPerRead {
+        readLoop: for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
                 throw ChannelError.eof
             }
@@ -668,19 +722,21 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 // during channelRead. It's unlikely, but we tolerate it by aborting the read early.
                 break readLoop
             }
-            buffer.clear()
 
-            // This force-unwrap is safe, as we checked whether this is nil in the caller.
-            let result = try vectorReadManager.readFromSocket(
-                socket: self.socket,
-                buffer: &buffer,
-                parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo)
+            let (_, result) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer -> DatagramVectorReadManager.ReadResult in
+                // This force-unwrap is safe, as we checked whether this is nil in the caller.
+                try vectorReadManager.readFromSocket(
+                    socket: self.socket,
+                    buffer: &buffer,
+                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo)
+            }
+
             switch result {
             case .some(let results, let totalRead):
                 assert(self.isOpen)
                 assert(self.isActive)
 
-                let mayGrow = recvAllocator.record(actualReadBytes: totalRead)
+                self.recvBufferPool.record(actualReadBytes: totalRead)
                 readPending = false
 
                 var messageIterator = results.makeIterator()
@@ -688,9 +744,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     pipeline.fireChannelRead(NIOAny(message))
                 }
 
-                if mayGrow && i < maxMessagesPerRead {
-                    buffer = recvAllocator.buffer(allocator: allocator)
-                }
                 readResult = .some
             case .none:
                 break readLoop
@@ -791,17 +844,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
             scalarWriteOperation: { (ptr, destinationPtr, destinationSize, metadata) in
-                // normal write
-                // Control bytes must not escape current stack.
-                var controlBytes = UnsafeOutboundControlBytes(
-                    controlBytes: self.selectableEventLoop.controlMessageStorage[0])
-                controlBytes.appendExplicitCongestionState(metadata: metadata,
-                                                           protocolFamily: self.localAddress?.protocol)
-                return try self.socket.sendmsg(pointer: ptr,
-                                               destinationPtr: destinationPtr,
-                                               destinationSize: destinationSize,
-                                               controlBytes: controlBytes.validControlBytes)
-
+                let msgBuffer = self.selectableEventLoop.msgBufferPool.get()
+                defer { self.selectableEventLoop.msgBufferPool.put(msgBuffer) }
+                return try msgBuffer.withUnsafePointers { _, _, controlMessageStorage in
+                    var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[0])
+                    controlBytes.appendExplicitCongestionState(metadata: metadata,
+                                                            protocolFamily: self.localAddress?.protocol)
+                    return try self.socket.sendmsg(pointer: ptr,
+                                                   destinationPtr: destinationPtr,
+                                                   destinationSize: destinationSize,
+                                                   controlBytes: controlBytes.validControlBytes)
+                }
             },
             vectorWriteOperation: { msgs in
                 return try self.socket.sendmmsg(msgs: msgs)
@@ -809,7 +862,6 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         )
         return result
     }
-
 
     // MARK: Datagram Channel overrides not required by BaseSocketChannel
 

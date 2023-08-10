@@ -41,39 +41,6 @@
  */
 
 import XCTest
-
-extension XCTestCase {
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    /// Cross-platform XCTest support for async-await tests.
-    ///
-    /// Currently the Linux implementation of XCTest doesn't have async-await support.
-    /// Until it does, we make use of this shim which uses a detached `Task` along with
-    /// `XCTest.wait(for:timeout:)` to wrap the operation.
-    ///
-    /// - NOTE: Support for Linux is tracked by https://bugs.swift.org/browse/SR-14403.
-    /// - NOTE: Implementation currently in progress: https://github.com/apple/swift-corelibs-xctest/pull/326
-    func XCTAsyncTest(
-        expectationDescription: String = "Async operation",
-        timeout: TimeInterval = 30,
-        file: StaticString = #filePath,
-        line: UInt = #line,
-        function: StaticString = #function,
-        operation: @escaping @Sendable () async throws -> Void
-    ) {
-        let expectation = self.expectation(description: expectationDescription)
-        Task {
-            do {
-                try await operation()
-            } catch {
-                XCTFail("Error thrown while executing \(function): \(error)", file: file, line: line)
-                Thread.callStackSymbols.forEach { print($0) }
-            }
-            expectation.fulfill()
-        }
-        self.wait(for: [expectation], timeout: timeout)
-    }
-}
-
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal func XCTAssertThrowsError<T>(
     _ expression: @autoclosure () async throws -> T,
@@ -116,3 +83,22 @@ internal func XCTAssertNoThrowWithResult<Result>(
     return nil
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+internal func XCTAsyncAssertNotNil(
+    _ expression: @autoclosure () async throws -> Any?,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) async rethrows {
+    let result = try await expression()
+    XCTAssertNotNil(result, file: file, line: line)
+}
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+internal func XCTAsyncAssertNil(
+    _ expression: @autoclosure () async throws -> Any?,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) async rethrows {
+    let result = try await expression()
+    XCTAssertNil(result, file: file, line: line)
+}

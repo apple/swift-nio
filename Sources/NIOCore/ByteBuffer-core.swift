@@ -14,10 +14,14 @@
 
 #if os(Windows)
 import ucrt
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif canImport(Darwin)
 import Darwin
-#else
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#else
+#error("The Byte Buffer module was unable to identify your C library.")
 #endif
 
 @usableFromInline let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
@@ -863,7 +867,7 @@ public struct ByteBuffer {
     }
 }
 
-extension ByteBuffer: CustomStringConvertible {
+extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
     /// A `String` describing this `ByteBuffer`. Example:
     ///
     ///     ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, storageCapacity: 1024, slice: 256..<768, storage: 0x0000000103001000 (1024 bytes)}

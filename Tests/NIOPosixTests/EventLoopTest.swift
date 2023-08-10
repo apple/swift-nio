@@ -810,21 +810,105 @@ public final class EventLoopTest : XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        class Thing {}
+        class Thing: @unchecked Sendable {
+            private let deallocated: ConditionLock<Int>
 
-        weak var weakThing: Thing? = nil
+            init(_ deallocated: ConditionLock<Int>) {
+                self.deallocated = deallocated
+            }
 
-        func make() -> Scheduled<Never> {
-            let aThing = Thing()
-            weakThing = aThing
+            deinit {
+                self.deallocated.lock()
+                self.deallocated.unlock(withValue: 1)
+            }
+        }
+
+        func make(deallocated: ConditionLock<Int>) -> Scheduled<Never> {
+            let aThing = Thing(deallocated)
             return group.next().scheduleTask(in: .hours(1)) {
                 preconditionFailure("this should definitely not run: \(aThing)")
             }
         }
 
-        let scheduled = make()
+        let deallocated = ConditionLock(value: 0)
+        let scheduled = make(deallocated: deallocated)
         scheduled.cancel()
-        assert(weakThing == nil, within: .seconds(1))
+        if deallocated.lock(whenValue: 1, timeoutSeconds: 60) {
+            deallocated.unlock()
+        } else {
+            XCTFail("Timed out waiting for lock")
+        }
+        XCTAssertThrowsError(try scheduled.futureResult.wait()) { error in
+            XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
+        }
+    }
+
+    func testCancelledScheduledTasksDoNotHoldOnToRunClosureEvenIfTheyWereTheNextTaskToExecute() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        class Thing {
+            private let deallocated: ConditionLock<Int>
+
+            init(_ deallocated: ConditionLock<Int>) {
+                self.deallocated = deallocated
+            }
+
+            deinit {
+                self.deallocated.lock()
+                self.deallocated.unlock(withValue: 1)
+            }
+        }
+
+        func make(deallocated: ConditionLock<Int>) -> Scheduled<Never> {
+            let aThing = Thing(deallocated)
+            return group.next().scheduleTask(in: .hours(1)) {
+                preconditionFailure("this should definitely not run: \(aThing)")
+            }
+        }
+
+        // What the heck are we doing here?
+        //
+        // Our goal is to arrange for our scheduled task to become "nextReadyTask" in SelectableEventLoop, so that
+        // when we cancel it there is still a copy aliasing it. This reproduces a subtle correctness bug that
+        // existed in NIO 2.48.0 and earlier.
+        //
+        // This will happen if:
+        //
+        // 1. We schedule a task for the future
+        // 2. The event loop begins a tick.
+        // 3. The event loop finds our scheduled task in the future.
+        //
+        // We can make that happen by scheduling our task and then waiting for a tick to pass, which we can
+        // achieve using `submit`.
+        //
+        // However, if there are no _other_, _even later_ tasks, we'll free the reference. This is
+        // because the nextReadyTask is cleared if the list of scheduled tasks ends up empty, so we don't want that to happen.
+        //
+        // So the order of operations is:
+        //
+        // 1. Schedule the task for the future.
+        // 2. Schedule another, even later, task.
+        // 3. Wait for a tick to pass.
+        // 4. Cancel our scheduled.
+        //
+        // In the correct code, this should invoke deinit. In the buggy code, it does not.
+        //
+        // Unfortunately, this window is very hard to hit. Cancelling the scheduled task wakes the loop up, and if it is
+        // still awake by the time we run the cancellation handler it'll notice the change. So we have to tolerate
+        // a somewhat flaky test.
+        let deallocated = ConditionLock(value: 0)
+        let scheduled = make(deallocated: deallocated)
+        scheduled.futureResult.eventLoop.scheduleTask(in: .hours(2)) { }
+        try! scheduled.futureResult.eventLoop.submit { }.wait()
+        scheduled.cancel()
+        if deallocated.lock(whenValue: 1, timeoutSeconds: 60) {
+            deallocated.unlock()
+        } else {
+            XCTFail("Timed out waiting for lock")
+        }
         XCTAssertThrowsError(try scheduled.futureResult.wait()) { error in
             XCTAssertEqual(EventLoopError.cancelled, error as? EventLoopError)
         }
@@ -1479,8 +1563,8 @@ public final class EventLoopTest : XCTestCase {
         }.wait())
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     func testMultiThreadedEventLoopGroupSupportsStickyAnyImplementation() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 3)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1494,8 +1578,8 @@ public final class EventLoopTest : XCTestCase {
         }.wait())
     }
 
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     func testAsyncToFutureConversionSuccess() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1509,6 +1593,7 @@ public final class EventLoopTest : XCTestCase {
     }
 
     func testAsyncToFutureConversionFailure() {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())

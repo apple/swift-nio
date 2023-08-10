@@ -551,4 +551,22 @@ extension NIOBSDSocketControlMessage {
         return CNIOWindows_CMSG_SPACE(payloadSize)
     }
 }
+
+extension NIOBSDSocket {
+    static func setUDPSegmentSize(_ segmentSize: CInt, socket: NIOBSDSocket.Handle) throws {
+        throw ChannelError.operationUnsupported
+    }
+
+    static func getUDPSegmentSize(socket: NIOBSDSocket.Handle) throws -> CInt {
+        throw ChannelError.operationUnsupported
+    }
+
+    static func setUDPReceiveOffload(_ enabled: Bool, socket: NIOBSDSocket.Handle) throws {
+        throw ChannelError.operationUnsupported
+    }
+
+    static func getUDPReceiveOffload(socket: NIOBSDSocket.Handle) throws -> Bool {
+        throw ChannelError.operationUnsupported
+    }
+}
 #endif

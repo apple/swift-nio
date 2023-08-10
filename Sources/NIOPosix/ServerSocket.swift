@@ -106,7 +106,9 @@ import NIOCore
             guard let fd = result else {
                 return nil
             }
+
             let sock = try Socket(socket: fd)
+
             #if !os(Linux)
             if setNonBlocking {
                 do {

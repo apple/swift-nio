@@ -514,18 +514,14 @@ default:
     bindTarget = BindTo.ip(host: defaultHost, port: defaultPort)
 }
 
-let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-let threadPool = NIOThreadPool(numberOfThreads: 6)
-threadPool.start()
-
 @Sendable func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
     return channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
         channel.pipeline.addHandler(HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
     }
 }
 
-let fileIO = NonBlockingFileIO(threadPool: threadPool)
-let socketBootstrap = ServerBootstrap(group: group)
+let fileIO = NonBlockingFileIO(threadPool: .singleton)
+let socketBootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup.singleton)
     // Specify backlog and enable SO_REUSEADDR for the server itself
     .serverChannelOption(ChannelOptions.backlog, value: 256)
     .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
@@ -537,18 +533,12 @@ let socketBootstrap = ServerBootstrap(group: group)
     .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
     .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
     .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
-let pipeBootstrap = NIOPipeBootstrap(group: group)
+let pipeBootstrap = NIOPipeBootstrap(group: MultiThreadedEventLoopGroup.singleton)
     // Set the handlers that are applied to the accepted Channels
     .channelInitializer(childChannelInitializer(channel:))
 
     .channelOption(ChannelOptions.maxMessagesPerRead, value: 1)
     .channelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
-
-defer {
-    try! group.syncShutdownGracefully()
-    try! threadPool.syncShutdownGracefully()
-}
-
 print("htdocs = \(htdocs)")
 
 let channel = try { () -> Channel in
@@ -558,7 +548,7 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(let path):
         return try socketBootstrap.bind(unixDomainSocketPath: path).wait()
     case .stdio:
-        return try pipeBootstrap.withPipes(inputDescriptor: STDIN_FILENO, outputDescriptor: STDOUT_FILENO).wait()
+        return try pipeBootstrap.takingOwnershipOfDescriptors(input: STDIN_FILENO, output: STDOUT_FILENO).wait()
     }
 }()
 

@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import CNIODarwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
@@ -26,30 +26,46 @@ import CNIOWindows
 struct UnsafeControlMessageStorage: Collection {
     let bytesPerMessage: Int
     var buffer: UnsafeMutableRawBufferPointer
+    private let deallocateBuffer: Bool
 
     /// Initialise which includes allocating memory
     /// parameter:
     /// - bytesPerMessage: How many bytes have been allocated for each supported message.
     /// - buffer: The memory allocated to use for control messages.
-    private init(bytesPerMessage: Int, buffer: UnsafeMutableRawBufferPointer) {
+    /// - deallocateBuffer: buffer owning indicator
+    private init(bytesPerMessage: Int, buffer: UnsafeMutableRawBufferPointer, deallocateBuffer: Bool) {
         self.bytesPerMessage = bytesPerMessage
         self.buffer = buffer
+        self.deallocateBuffer = deallocateBuffer
     }
+
+    // Guess that 4 Int32 payload messages is enough for anyone.
+    static var bytesPerMessage: Int { NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout<Int32>.stride) * 4 }
 
     /// Allocate new memory - Caller must call `deallocate` when no longer required.
     /// parameter:
     ///   - msghdrCount: How many `msghdr` structures will be fed from this buffer - we assume 4 Int32 cmsgs for each.
     static func allocate(msghdrCount: Int) -> UnsafeControlMessageStorage {
-        // Guess that 4 Int32 payload messages is enough for anyone.
-        let bytesPerMessage = NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout<Int32>.stride) * 4
+        let bytesPerMessage = Self.bytesPerMessage
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: bytesPerMessage * msghdrCount,
-                                                             alignment: MemoryLayout<cmsghdr>.alignment)
-        return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, buffer: buffer)
+                                                            alignment: MemoryLayout<cmsghdr>.alignment)
+        return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, buffer: buffer, deallocateBuffer: true)
+    }
+
+    /// Create an instance not owning the buffer
+    /// parameter:
+    /// - bytesPerMessage: How many bytes have been allocated for each supported message.
+    /// - buffer: The memory allocated to use for control messages.
+    static func makeNotOwning(bytesPerMessage: Int, buffer: UnsafeMutableRawBufferPointer) -> UnsafeControlMessageStorage {
+        precondition(buffer.count >= bytesPerMessage)
+        return UnsafeControlMessageStorage(bytesPerMessage: bytesPerMessage, buffer: buffer, deallocateBuffer: false)
     }
 
     mutating func deallocate() {
-        self.buffer.deallocate()
-        self.buffer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer(bitPattern: 0x7eadbeef), count: 0)
+        if self.deallocateBuffer {
+            self.buffer.deallocate()
+            self.buffer = UnsafeMutableRawBufferPointer(start: UnsafeMutableRawPointer(bitPattern: 0x7eadbeef), count: 0)
+        }
     }
 
     /// Get the part of the buffer for use with a message.
@@ -65,7 +81,6 @@ struct UnsafeControlMessageStorage: Collection {
     func index(after: Int) -> Int {
         return after + 1
     }
-
 }
 
 /// Representation of a `cmsghdr` and associated data.
@@ -159,7 +174,7 @@ struct ControlMessageParser {
         }
     }
     
-    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    #if canImport(Darwin)
     private static let ipv4TosType = IP_RECVTOS
     #else
     private static let ipv4TosType = IP_TOS    // Linux

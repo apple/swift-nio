@@ -11,12 +11,16 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import Darwin.C
-#elseif os(Linux) || os(FreeBSD) || os(Android)
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif os(Windows)
 import ucrt
+#else
+#error("The Heap module was unable to identify your C library.")
 #endif
 
 @usableFromInline

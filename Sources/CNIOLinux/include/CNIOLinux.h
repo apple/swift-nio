@@ -21,11 +21,15 @@
 #include <sys/timerfd.h>
 #include <sys/sysinfo.h>
 #include <sys/socket.h>
+#include <sys/utsname.h>
 #include <sched.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <pthread.h>
 #include <netinet/ip.h>
+#include <netinet/udp.h>
 #include "liburing_nio.h"
+#include <linux/vm_sockets.h>
 
 #if __has_include(<linux/mptcp.h>)
 #include <linux/mptcp.h>
@@ -105,5 +109,13 @@ size_t CNIOLinux_CMSG_SPACE(size_t);
 // awkward time_T pain
 extern const int CNIOLinux_SO_TIMESTAMP;
 extern const int CNIOLinux_SO_RCVTIMEO;
+
+bool CNIOLinux_supports_udp_segment();
+bool CNIOLinux_supports_udp_gro();
+
+int CNIOLinux_system_info(struct utsname* uname_data);
+
+extern const unsigned long CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID;
+
 #endif
 #endif

@@ -21,7 +21,7 @@ import Atomics
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
-#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
     return try autoreleasepool {
         try execute()
     }
@@ -102,15 +102,8 @@ internal final class SelectableEventLoop: EventLoop {
     private var internalState: InternalState = .runningAndAcceptingNewRegistrations // protected by the EventLoop thread
     private var externalState: ExternalState = .open // protected by externalStateLock
 
-    let iovecs: UnsafeMutableBufferPointer<IOVector>
-    let storageRefs: UnsafeMutableBufferPointer<Unmanaged<AnyObject>>
-
-    // Used for gathering UDP writes.
-    let msgs: UnsafeMutableBufferPointer<MMsgHdr>
-    let addresses: UnsafeMutableBufferPointer<sockaddr_storage>
-    
-    // Used for UDP control messages.
-    private(set) var controlMessageStorage: UnsafeControlMessageStorage
+    let bufferPool: Pool<PooledBuffer>
+    let msgBufferPool: Pool<PooledMsgBuffer>
 
     // The `_parentGroup` will always be set unless this is a thread takeover or we shut down.
     @usableFromInline
@@ -187,11 +180,8 @@ Further information:
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
-        self.iovecs = UnsafeMutableBufferPointer<IOVector>.allocate(capacity: Socket.writevLimitIOVectors)
-        self.storageRefs = UnsafeMutableBufferPointer<Unmanaged<AnyObject>>.allocate(capacity: Socket.writevLimitIOVectors)
-        self.msgs = UnsafeMutableBufferPointer<MMsgHdr>.allocate(capacity: Socket.writevLimitIOVectors)
-        self.addresses = UnsafeMutableBufferPointer<sockaddr_storage>.allocate(capacity: Socket.writevLimitIOVectors)
-        self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: Socket.writevLimitIOVectors)
+        self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
+        self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
         // We will process 4096 tasks per while loop.
         self.tasksCopy.reserveCapacity(4096)
         self.canBeShutdownIndividually = canBeShutdownIndividually
@@ -208,11 +198,6 @@ Further information:
                "illegal internal state on deinit: \(self.internalState)")
         assert(self.externalState == .resourcesReclaimed,
                "illegal external state on shutdown: \(self.externalState)")
-        self.iovecs.deallocate()
-        self.storageRefs.deallocate()
-        self.msgs.deallocate()
-        self.addresses.deallocate()
-        self.controlMessageStorage.deallocate()
     }
 
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
@@ -406,14 +391,14 @@ Further information:
         }
     }
 
-    private func currentSelectorStrategy(nextReadyTask: ScheduledTask?) -> SelectorStrategy {
-        guard let sched = nextReadyTask else {
+    private func currentSelectorStrategy(nextReadyDeadline: NIODeadline?) -> SelectorStrategy {
+        guard let deadline = nextReadyDeadline else {
             // No tasks to handle so just block. If any tasks were added in the meantime wakeup(...) was called and so this
             // will directly unblock.
             return .block
         }
 
-        let nextReady = sched.readyIn(.now())
+        let nextReady = deadline.readyIn(.now())
         if nextReady <= .nanoseconds(0) {
             // Something is ready to be processed just do a non-blocking select of events.
             return .now
@@ -453,7 +438,7 @@ Further information:
             assert(self.internalState == .noLongerRunning, "illegal state: \(self.internalState)")
             self.internalState = .exitingThread
         }
-        var nextReadyTask: ScheduledTask? = nil
+        var nextReadyDeadline: NIODeadline? = nil
         self._tasksLock.withLock {
             if let firstTask = self._scheduledTasks.peek() {
                 // The reason this is necessary is a very interesting race:
@@ -461,7 +446,7 @@ Further information:
                 // `EventLoop` reference _before_ the EL thread has entered the `run` function.
                 // If that is the case, we need to schedule the first wakeup at the ready time for this task that was
                 // enqueued really early on, so let's do that :).
-                nextReadyTask = firstTask
+                nextReadyDeadline = firstTask.readyTime
             }
         }
         while self.internalState != .noLongerRunning && self.internalState != .exitingThread {
@@ -469,7 +454,7 @@ Further information:
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
             try withAutoReleasePool {
                 try self._selector.whenReady(
-                    strategy: currentSelectorStrategy(nextReadyTask: nextReadyTask),
+                    strategy: currentSelectorStrategy(nextReadyDeadline: nextReadyDeadline),
                     onLoopBegin: { self._tasksLock.withLock { () -> Void in self._pendingTaskPop = true } }
                 ) { ev in
                     switch ev.registration.channel {
@@ -502,17 +487,17 @@ Further information:
 
                         // Make a copy of the tasks so we can execute these while not holding the lock anymore
                         while tasksCopy.count < tasksCopy.capacity, let task = self._scheduledTasks.peek() {
-                            if task.readyIn(now) <= .nanoseconds(0) {
+                            if task.readyTime.readyIn(now) <= .nanoseconds(0) {
                                 self._scheduledTasks.pop()
                                 self.tasksCopy.append(task)
                             } else {
-                                nextReadyTask = task
+                                nextReadyDeadline = task.readyTime
                                 break
                             }
                         }
                     } else {
-                        // Reset nextReadyTask to nil which means we will do a blocking select.
-                        nextReadyTask = nil
+                        // Reset nextreadyDeadline to nil which means we will do a blocking select.
+                        nextReadyDeadline = nil
                     }
 
                     if self.tasksCopy.isEmpty {
@@ -676,3 +661,9 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
         }
     }
 }
+
+// MARK: SerialExecutor conformance
+#if compiler(>=5.9)
+@available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+extension SelectableEventLoop: NIOSerialEventLoopExecutor { }
+#endif

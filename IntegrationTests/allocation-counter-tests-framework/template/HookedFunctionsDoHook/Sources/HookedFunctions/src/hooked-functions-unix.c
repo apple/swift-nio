@@ -41,16 +41,28 @@ static _Atomic ptrdiff_t g_recursive_malloc_next_free_ptr = ATOMIC_VAR_INIT(0);
 static __thread bool g_in_malloc = false;
 static __thread bool g_in_realloc = false;
 static __thread bool g_in_free = false;
+static __thread bool g_in_socket = false;
+static __thread bool g_in_accept = false;
+static __thread bool g_in_accept4 = false;
+static __thread bool g_in_close = false;
 
 /* The types of the variables holding the libc function pointers. */
 typedef void *(*type_libc_malloc)(size_t);
 typedef void *(*type_libc_realloc)(void *, size_t);
 typedef void  (*type_libc_free)(void *);
+typedef int   (*type_libc_socket)(int, int, int);
+typedef int   (*type_libc_accept)(int, struct sockaddr*, socklen_t *);
+typedef int   (*type_libc_accept4)(int, struct sockaddr *, socklen_t *, int);
+typedef int   (*type_libc_close)(int);
 
 /* The (atomic) globals holding the pointer to the original libc implementation. */
 _Atomic type_libc_malloc g_libc_malloc;
 _Atomic type_libc_realloc g_libc_realloc;
 _Atomic type_libc_free g_libc_free;
+_Atomic type_libc_socket g_libc_socket;
+_Atomic type_libc_accept g_libc_accept;
+_Atomic type_libc_accept4 g_libc_accept4;
+_Atomic type_libc_close g_libc_close;
 
 // this is called if malloc is called whilst trying to resolve libc's realloc.
 // we just vend out pointers to a large block in the BSS (which we never free).
@@ -90,6 +102,30 @@ static void *recursive_realloc(void *ptr, size_t size) {
 // this is called if free is called whilst trying to resolve libc's free.
 static void recursive_free(void *ptr) {
     // not implemented yet...
+    abort();
+}
+
+// this is called if socket is called whilst trying to resolve libc's socket.
+static int recursive_socket(int domain, int type, int protocol) {
+    // not possible
+    abort();
+}
+
+// this is called if accept is called whilst trying to resolve libc's accept.
+static int recursive_accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len) {
+    // not possible
+    abort();
+}
+
+// this is called if accept4 is called whilst trying to resolve libc's accept4.
+static int recursive_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
+    // not possible
+    abort();
+}
+
+// this is called if close is called whilst trying to resolve libc's close.
+static int recursive_close(int fildes) {
+    // not possible
     abort();
 }
 
@@ -190,6 +226,55 @@ int replacement_posix_memalign(void **memptr, size_t alignment, size_t size) {
     } else {
         return 1;
     }
+}
+
+static int socket_thunk(int domain, int type, int protocol) {
+    JUMP_INTO_LIBC_FUN(socket, domain, type, protocol);
+}
+
+int replacement_socket(int domain, int type, int protocol) {
+    int fd = socket_thunk(domain, type, protocol);
+    if (fd < 0) {
+        return fd;
+    }
+
+    track_open_fd(fd);
+    return fd;
+}
+
+static int accept_thunk(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len) {
+    JUMP_INTO_LIBC_FUN(accept, socket, address, address_len);
+}
+
+int replacement_accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len) {
+    int fd = accept_thunk(socket, address, address_len);
+
+    if (fd < 0) {
+        return fd;
+    }
+
+    track_open_fd(fd);
+    return fd;
+}
+
+static int accept4_thunk(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
+    JUMP_INTO_LIBC_FUN(accept4, sockfd, addr, addrlen, flags);
+}
+
+int replacement_accept4(int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags) {
+    int fd = accept4_thunk(sockfd, addr, addrlen, flags);
+
+    if (fd < 0) {
+        return fd;
+    }
+
+    track_open_fd(fd);
+    return fd;
+}
+
+int replacement_close(int fildes) {
+    track_closed_fd(fildes);
+    JUMP_INTO_LIBC_FUN(close, fildes);
 }
 
 #endif

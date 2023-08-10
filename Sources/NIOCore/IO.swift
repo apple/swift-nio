@@ -30,8 +30,10 @@ internal func MAKELANGID(_ p: WORD, _ s: WORD) -> DWORD {
 }
 #elseif os(Linux) || os(Android)
 import Glibc
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif canImport(Darwin)
 import Darwin
+#else
+#error("The IO module was unable to identify your C library.")
 #endif
 
 /// An `Error` for an IO operation.

@@ -246,7 +246,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     // MARK: Variables, on EventLoop thread only
     var readPending = false
     var pendingConnect: Optional<EventLoopPromise<Void>>
-    var recvAllocator: RecvByteBufferAllocator
+    var recvBufferPool: PooledRecvBufferAllocator
     var maxMessagesPerRead: UInt = 4
     private var inFlushNow: Bool = false // Guard against re-entrance of flushNow() method.
     private var autoRead: Bool = true
@@ -426,6 +426,34 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         fatalError("this must be overridden by sub class")
     }
 
+    /// Begin connection of the underlying socket.
+    ///
+    /// - parameters:
+    ///     - to: The `VsockAddress` to connect to.
+    /// - returns: `true` if the socket connected synchronously, `false` otherwise.
+    func connectSocket(to address: VsockAddress) throws -> Bool {
+        fatalError("this must be overridden by sub class")
+    }
+
+    enum ConnectTarget {
+        case socketAddress(SocketAddress)
+        case vsockAddress(VsockAddress)
+    }
+
+    /// Begin connection of the underlying socket.
+    ///
+    /// - parameters:
+    ///     - to: The target to connect to.
+    /// - returns: `true` if the socket connected synchronously, `false` otherwise.
+    final func connectSocket(to target: ConnectTarget) throws -> Bool {
+        switch target {
+        case .socketAddress(let address):
+            return try self.connectSocket(to: address)
+        case .vsockAddress(let address):
+            return try self.connectSocket(to: address)
+        }
+    }
+
     /// Make any state changes needed to complete the connection process.
     func finishConnectSocket() throws {
         fatalError("this must be overridden by sub class")
@@ -466,7 +494,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.selectableEventLoop = eventLoop
         self.closePromise = eventLoop.makePromise()
         self.parent = parent
-        self.recvAllocator = recvAllocator
+        self.recvBufferPool = .init(capacity: Int(self.maxMessagesPerRead), recvAllocator: recvAllocator)
         // As the socket may already be connected we should ensure we start with the correct addresses cached.
         self._addressCache = .init(local: try? socket.localAddress(), remote: try? socket.remoteAddress())
         self.lifecycleManager = SocketChannelLifecycleManager(
@@ -591,7 +619,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         case _ as ChannelOptions.Types.AllocatorOption:
             bufferAllocator = value as! ByteBufferAllocator
         case _ as ChannelOptions.Types.RecvAllocatorOption:
-            recvAllocator = value as! RecvByteBufferAllocator
+            self.recvBufferPool.recvAllocator = value as! RecvByteBufferAllocator
         case _ as ChannelOptions.Types.AutoReadOption:
             let auto = value as! Bool
             let old = self.autoRead
@@ -607,7 +635,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 }
             }
         case _ as ChannelOptions.Types.MaxMessagesPerReadOption:
-            maxMessagesPerRead = value as! UInt
+            self.maxMessagesPerRead = value as! UInt
+            self.recvBufferPool.updateCapacity(to: Int(self.maxMessagesPerRead))
         default:
             fatalError("option \(option) not supported")
         }
@@ -638,7 +667,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         case _ as ChannelOptions.Types.AllocatorOption:
             return bufferAllocator as! Option.Value
         case _ as ChannelOptions.Types.RecvAllocatorOption:
-            return recvAllocator as! Option.Value
+            return self.recvBufferPool.recvAllocator as! Option.Value
         case _ as ChannelOptions.Types.AutoReadOption:
             return autoRead as! Option.Value
         case _ as ChannelOptions.Types.MaxMessagesPerReadOption:
@@ -684,11 +713,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         guard self.isOpen else {
             // Channel was already closed, fail the promise and not even queue it.
             promise?.fail(ChannelError.ioOnClosedChannel)
-            return
-        }
-
-        guard self.lifecycleManager.isActive else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
             return
         }
 
@@ -927,8 +951,13 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
     }
 
-    public final func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.operationUnsupported)
+    public func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
+        switch event {
+        case let event as VsockChannelEvents.ConnectToAddress:
+            self.connect0(to: .vsockAddress(event.address), promise: promise)
+        default:
+            promise?.fail(ChannelError.operationUnsupported)
+        }
     }
 
     // Methods invoked from the EventLoop itself
@@ -1090,36 +1119,40 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             // peer closed / shutdown the connection.
             if let channelErr = err as? ChannelError, channelErr == ChannelError.eof {
                 readStreamState = .eof
-                // Directly call getOption0 as we are already on the EventLoop and so not need to create an extra future.
 
-                // getOption0 can only fail if the channel is not active anymore but we assert further up that it is. If
-                // that's not the case this is a precondition failure and we would like to know.
-                if self.lifecycleManager.isActive, try! self.getOption0(ChannelOptions.allowRemoteHalfClosure) {
-                    // If we want to allow half closure we will just mark the input side of the Channel
-                    // as closed.
-                    assert(self.lifecycleManager.isActive)
+                if self.lifecycleManager.isActive {
+                    // Directly call getOption0 as we are already on the EventLoop and so not need to create an extra future.
+                    //
+                    // getOption0 can only fail if the channel is not active anymore but we assert further up that it is. If
+                    // that's not the case this is a precondition failure and we would like to know.
+                    let allowRemoteHalfClosure = try! self.getOption0(ChannelOptions.allowRemoteHalfClosure)
+
+                    // For EOF, we always fire read complete.
                     self.pipeline.syncOperations.fireChannelReadComplete()
-                    if self.shouldCloseOnReadError(err) {
-                        self.close0(error: err, mode: .input, promise: nil)
+
+                    if allowRemoteHalfClosure {
+                        // If we want to allow half closure we will just mark the input side of the Channel
+                        // as closed.
+                        if self.shouldCloseOnReadError(err) {
+                            self.close0(error: err, mode: .input, promise: nil)
+                        }
+                        self.readPending = false
+                        return .eof
                     }
-                    self.readPending = false
-                    return .eof
                 }
             } else {
                 readStreamState = .error
                 self.pipeline.syncOperations.fireErrorCaught(err)
             }
 
-            // Call before triggering the close of the Channel.
-            if readStreamState != .error, self.lifecycleManager.isActive {
-                self.pipeline.syncOperations.fireChannelReadComplete()
-            }
-
             if self.shouldCloseOnReadError(err) {
                 self.close0(error: err, mode: .all, promise: nil)
+                return readStreamState
+            } else {
+                // This is non-fatal, so continue as normal.
+                // This constitutes "some" as we did get at least an error from the socket.
+                readResult = .some
             }
-
-            return readStreamState
         }
         // This assert needs to be disabled for io_uring, as the io_uring backend does not have the implicit synchronisation between
         // modifications to the poll mask and the actual returned events on the completion queue that kqueue and epoll has.
@@ -1170,6 +1203,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     public final func connect0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.connect0(to: .socketAddress(address), promise: promise)
+    }
+
+    internal final func connect0(to target: ConnectTarget, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
@@ -1188,7 +1225,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
 
         do {
-            if try !self.connectSocket(to: address) {
+            if try !self.connectSocket(to: target) {
                 // We aren't connected, we'll get the remote address later.
                 self.updateCachedAddressesFromSocket(updateLocal: true, updateRemote: false)
                 if promise != nil {
@@ -1295,6 +1332,20 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return
         }
         self.registerForReadEOF()
+
+        // Flush any pending writes. If after the flush we're still open, make sure
+        // our registration is appropriate.
+        switch self.flushNow() {
+        case .register:
+            if self.lifecycleManager.isOpen && !self.interestedEvent.contains(.write) {
+                self.registerForWritable()
+            }
+        case .unregister:
+            if self.lifecycleManager.isOpen && self.interestedEvent.contains(.write) {
+                self.unregisterForWritable()
+            }
+        }
+
         self.readIfNeeded0()
     }
 

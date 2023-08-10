@@ -11,6 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !canImport(Darwin) || os(macOS)
 import NIOCore
 import NIOPosix
 import class Foundation.Process
@@ -220,3 +222,4 @@ func main() throws {
 }
 
 try main()
+#endif

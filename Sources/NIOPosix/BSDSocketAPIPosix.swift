@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-#if os(Linux) || os(Android) || os(FreeBSD) || os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+#if os(Linux) || os(Android) || os(FreeBSD) || canImport(Darwin)
 
 extension Shutdown {
     internal var cValue: CInt {
@@ -211,7 +211,7 @@ extension NIOBSDSocket {
     }
 }
 
-#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
 import CNIODarwin
 private let CMSG_FIRSTHDR = CNIODarwin_CMSG_FIRSTHDR
 private let CMSG_NXTHDR = CNIODarwin_CMSG_NXTHDR
@@ -267,4 +267,65 @@ extension NIOBSDSocketControlMessage {
     }
 }
 
+extension NIOBSDSocket {
+    static func setUDPSegmentSize(_ segmentSize: CInt, socket: NIOBSDSocket.Handle) throws {
+        #if os(Linux)
+        var segmentSize = segmentSize
+        try Self.setsockopt(socket: socket,
+                            level: .udp,
+                            option_name: .udp_segment,
+                            option_value: &segmentSize,
+                            option_len: socklen_t(MemoryLayout<CInt>.size))
+        #else
+        throw ChannelError.operationUnsupported
+        #endif
+    }
+
+    static func getUDPSegmentSize(socket: NIOBSDSocket.Handle) throws -> CInt {
+        #if os(Linux)
+        var segmentSize: CInt = 0
+        var optionLength = socklen_t(MemoryLayout<CInt>.size)
+        try withUnsafeMutablePointer(to: &segmentSize) { segmentSizeBytes in
+            try Self.getsockopt(socket: socket,
+                                level: .udp,
+                                option_name: .udp_segment,
+                                option_value: segmentSizeBytes,
+                                option_len: &optionLength)
+        }
+        return segmentSize
+        #else
+        throw ChannelError.operationUnsupported
+        #endif
+    }
+
+    static func setUDPReceiveOffload(_ enabled: Bool, socket: NIOBSDSocket.Handle) throws {
+        #if os(Linux)
+        var isEnabled: CInt = enabled ? 1 : 0
+        try Self.setsockopt(socket: socket,
+                            level: .udp,
+                            option_name: .udp_gro,
+                            option_value: &isEnabled,
+                            option_len: socklen_t(MemoryLayout<CInt>.size))
+        #else
+        throw ChannelError.operationUnsupported
+        #endif
+    }
+
+    static func getUDPReceiveOffload(socket: NIOBSDSocket.Handle) throws -> Bool {
+        #if os(Linux)
+        var enabled: CInt = 0
+        var optionLength = socklen_t(MemoryLayout<CInt>.size)
+        try withUnsafeMutablePointer(to: &enabled) { enabledBytes in
+            try Self.getsockopt(socket: socket,
+                                level: .udp,
+                                option_name: .udp_gro,
+                                option_value: enabledBytes,
+                                option_len: &optionLength)
+        }
+        return enabled != 0
+        #else
+        throw ChannelError.operationUnsupported
+        #endif
+    }
+}
 #endif

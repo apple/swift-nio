@@ -52,7 +52,7 @@ protocol SocketProtocol: BaseSocketProtocol {
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
                  controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int>
-    
+
     func sendmsg(pointer: UnsafeRawBufferPointer,
                  destinationPtr: UnsafePointer<sockaddr>?,
                  destinationSize: socklen_t,
@@ -93,11 +93,11 @@ extension BaseSocketProtocol {
         do {
             try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
         } catch let error as IOError {
+            try? Posix.close(descriptor: fd) // don't care about failure here
             if error.errnoCode == EINVAL {
                 // Darwin seems to sometimes do this despite the docs claiming it can't happen
                 throw NIOFcntlFailedError()
             }
-            try? Posix.close(descriptor: fd) // don't care about failure here
             throw error
         }
         #endif
