@@ -27,12 +27,25 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
     private let negotiatedEvent: TLSUserEvent = .handshakeCompleted(negotiatedProtocol: "h2")
     private let negotiatedResult: ALPNResult = .negotiated("h2")
 
+    func testPromiseIsCompleted() throws {
+        let channel = EmbeddedChannel()
+
+        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result, channel in
+            return channel.eventLoop.makeSucceededFuture(.init(result: (.negotiated(result))))
+        }
+        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.removeHandler(handler).wait()
+        XCTAssertThrowsError(try handler.protocolNegotiationResult.wait()) { error in
+            XCTAssertEqual(error as? ChannelError, .inappropriateOperationForState)
+        }
+    }
+
     func testChannelProvidedToCallback() throws {
         let emChannel = EmbeddedChannel()
         let loop = emChannel.eventLoop as! EmbeddedEventLoop
         var called = false
 
-        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>(eventLoop: loop) { result, channel in
+        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result, channel in
             called = true
             XCTAssertEqual(result, self.negotiatedResult)
             XCTAssertTrue(emChannel === channel)
@@ -50,7 +63,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
 
-        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>(eventLoop: loop) { result in
+        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             XCTFail("Negotiation fired")
             return loop.makeSucceededFuture(.init(result: (.failed)))
         }
@@ -71,7 +84,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
 
-        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>(eventLoop: loop) { result in
+        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             XCTFail("Should not be called")
             return loop.makeSucceededFuture(.init(result: (.failed)))
         }
@@ -90,7 +103,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let loop = channel.eventLoop as! EmbeddedEventLoop
         let continuePromise = loop.makePromise(of: NIOProtocolNegotiationResult<NegotiationResult>.self)
 
-        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>(eventLoop: loop) { result in
+        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             return continuePromise.futureResult
         }
 
@@ -121,7 +134,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let loop = channel.eventLoop as! EmbeddedEventLoop
         let continuePromise = loop.makePromise(of: NIOProtocolNegotiationResult<NegotiationResult>.self)
 
-        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>(eventLoop: loop) { result in
+        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             continuePromise.futureResult
         }
         let eventCounterHandler = EventCounterHandler()
@@ -148,7 +161,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let loop = channel.eventLoop as! EmbeddedEventLoop
         let continuePromise = loop.makePromise(of: NIOProtocolNegotiationResult<NegotiationResult>.self)
 
-        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>(eventLoop: loop) { result in
+        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             continuePromise.futureResult
         }
         let eventCounterHandler = EventCounterHandler()
@@ -179,7 +192,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let loop = channel.eventLoop as! EmbeddedEventLoop
         let continuePromise = loop.makePromise(of: NIOProtocolNegotiationResult<NegotiationResult>.self)
 
-        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>(eventLoop: loop) { result in
+        let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             continuePromise.futureResult
         }
         let eventCounterHandler = EventCounterHandler()

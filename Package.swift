@@ -46,6 +46,7 @@ let package = Package(
             name: "NIOCore",
             dependencies: [
                 "NIOConcurrencyHelpers",
+                "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
                 swiftCollections,
@@ -171,6 +172,22 @@ let package = Package(
 
         // MARK: - Examples
 
+        .executableTarget(
+            name: "NIOTCPEchoServer",
+            dependencies: [
+                "NIOPosix",
+                "NIOCore",
+            ],
+            exclude: ["README.md"]
+        ),
+        .executableTarget(
+            name: "NIOTCPEchoClient",
+            dependencies: [
+                "NIOPosix",
+                "NIOCore",
+            ],
+            exclude: ["README.md"]
+        ),
         .executableTarget(
             name: "NIOEchoServer",
             dependencies: [
@@ -392,6 +409,10 @@ let package = Package(
         .testTarget(
             name: "NIOTests",
             dependencies: ["NIO"]
+        ),
+        .testTarget(
+            name: "NIOSingletonsTests",
+            dependencies: ["NIOCore", "NIOPosix"]
         ),
     ]
 )

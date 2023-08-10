@@ -2293,13 +2293,13 @@ public struct _NIOEventLoopFutureIdentifier: Hashable, Sendable {
     }
 }
 
-// EventLoopPromise is a reference type, but by its very nature is Sendable.
-extension EventLoopPromise: Sendable { }
+// EventLoopPromise is a reference type, but by its very nature is Sendable (if its Value is).
+extension EventLoopPromise: Sendable where Value: Sendable { }
 
-// EventLoopFuture is a reference type, but it is Sendable. However, we enforce
+// EventLoopFuture is a reference type, but it is Sendable (if its Value is). However, we enforce
 // that by way of the guarantees of the EventLoop protocol, so the compiler cannot
 // check it.
-extension EventLoopFuture: @unchecked Sendable { }
+extension EventLoopFuture: @unchecked Sendable where Value: Sendable { }
 
 extension EventLoopPromise where Value == Void {
     // Deliver a successful result to the associated `EventLoopFuture<Void>` object.

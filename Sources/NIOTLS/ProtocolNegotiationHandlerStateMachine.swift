@@ -30,6 +30,22 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
     private var state = State.initial
 
     @usableFromInline
+    enum HandlerRemovedAction {
+        case failPromise
+    }
+
+    @inlinable
+    mutating func handlerRemoved() -> HandlerRemovedAction? {
+        switch self.state {
+        case .initial, .waitingForUser, .unbuffering:
+            return .failPromise
+
+        case .finished:
+            return .none
+        }
+    }
+
+    @usableFromInline
     enum UserInboundEventTriggeredAction {
         case fireUserInboundEventTriggered
         case invokeUserClosure(ALPNResult)

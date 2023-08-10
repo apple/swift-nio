@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2021-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -62,12 +62,15 @@ extension Box: Sendable where T: Sendable {}
 
 public enum System {
     /// A utility function that returns an estimate of the number of *logical* cores
-    /// on the system.
+    /// on the system available for use.
     ///
     /// This value can be used to help provide an estimate of how many threads to use with
     /// the `MultiThreadedEventLoopGroup`. The exact ratio between this number and the number
     /// of threads to use is a matter for the programmer, and can be determined based on the
     /// specific execution behaviour of the program.
+    ///
+    /// On Linux the value returned will take account of cgroup or cpuset restrictions.
+    /// The result will be rounded up to the nearest whole number where fractional CPUs have been assigned.
     ///
     /// - returns: The logical core count on the system.
     public static var coreCount: Int {
@@ -99,7 +102,9 @@ public enum System {
             .map { $0.ProcessorMask.nonzeroBitCount }
             .reduce(0, +)
 #elseif os(Linux) || os(Android)
-        if let quota = Linux.coreCount(quota: Linux.cfsQuotaPath, period: Linux.cfsPeriodPath) {
+        if let quota2 = Linux.coreCountCgroup2Restriction() {
+            return quota2
+        } else if let quota = Linux.coreCountCgroup1Restriction() {
             return quota
         } else if let cpusetCount = Linux.coreCount(cpuset: Linux.cpuSetPath) {
             return cpusetCount

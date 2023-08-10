@@ -55,7 +55,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
 }
 
 /// ``NIOLoopBoundBox`` is an always-`Sendable`, reference-typed container allowing you access to ``value`` if and
-/// only if you are accessing it on the right EventLoop``.
+/// only if you are accessing it on the right ``EventLoop``.
 ///
 /// ``NIOLoopBoundBox`` is useful to transport a value of a non-`Sendable` type that needs to go from one place in
 /// your code to another where you (but not the compiler) know is on one and the same ``EventLoop``. Usually this

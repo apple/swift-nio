@@ -354,25 +354,48 @@ public struct NIOProtocolNegotiationResult<NegotiationResult: Sendable> {
         case deferredResult(EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>)
     }
 
-    private let result: Result
+    private let _result: Result
 
-    public init(result: NegotiationResult) {
-        self.result = .finished(result)
-    }
-
-    public init(deferredResult: EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>) {
-        self.result = .deferredResult(deferredResult)
-    }
-
-    /// Waits for the final protocol negotiation result and  returns the value.
+    /// The final result of protocol negotiation.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func waitForFinalResult() async throws -> NegotiationResult {
-        switch self.result {
-        case .finished(let negotiationResult):
-            return negotiationResult
-        case .deferredResult(let eventLoopFuture):
-            return try await eventLoopFuture.flatMap { $0.result.resolve(on: eventLoopFuture.eventLoop) }.get()
+    var result: NegotiationResult {
+        get async throws {
+            switch self._result {
+            case .finished(let negotiationResult):
+                return negotiationResult
+            case .deferredResult(let eventLoopFuture):
+                return try await eventLoopFuture.flatMap { $0._result.resolve(on: eventLoopFuture.eventLoop) }.get()
+            }
         }
+    }
+
+    /// Intializes a new ``NIOProtocolNegotiationResult`` with a final result.
+    ///
+    /// - Parameter result: The final result of protocol negotiation.
+    public init(result: NegotiationResult) {
+        self._result = .finished(result)
+    }
+
+    /// Intializes a new ``NIOProtocolNegotiationResult`` with a deferred result.
+    ///
+    /// - Parameter deferredResult: The deferred result.
+    public init(deferredResult: EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>) {
+        self._result = .deferredResult(deferredResult)
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(*, deprecated, renamed: "getResult")
+    public func waitForFinalResult() async throws -> NegotiationResult {
+        try await self.result
+    }
+}
+
+extension EventLoopFuture {
+    /// Get the result/error from the protocol negotiation.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @_spi(AsyncChannel)
+    public func getResult<NegotiationResult: Sendable>() async throws -> NegotiationResult where Value == NIOProtocolNegotiationResult<NegotiationResult> {
+        try await self.get().result
     }
 }
 
@@ -389,7 +412,7 @@ extension NIOProtocolNegotiationResult.Result {
 
         case .deferredResult(let future):
             return future.flatMap { result in
-                return resolve(on: eventLoop, result: result.result)
+                return resolve(on: eventLoop, result: result._result)
             }
         }
     }
