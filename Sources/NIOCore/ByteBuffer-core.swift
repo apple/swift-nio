@@ -150,8 +150,8 @@ public struct ByteBufferAllocator: Sendable {
 ///  - `Foundation`'s `Data`
 ///  - `[UInt8]` and generally any `Collection` of `UInt8`
 ///
-/// **The best and easiest way to read and convert `ByteBuffer` into a `String`,  `Array<UInt8>`, or `Data` is by
-/// passing the buffer to an initializer**.
+/// The best and easiest way to read and convert ``ByteBuffer`` into a `String`,  `Array<UInt8>`, or `Data` is by
+/// passing the buffer to an initializer.
 ///
 /// Example:
 ///
@@ -197,10 +197,10 @@ public struct ByteBufferAllocator: Sendable {
 ///
 /// If needed, `ByteBuffer` will automatically resize its storage to accommodate your `set` request.
 ///
-/// > Note: If you need to access the contents of a `ByteBuffer` with `get*(at: index)` methods, make sure that the
-/// > `index` you're passing in is within the readable bytes range. If you try to access an index outside of
-/// > `readerIndex ..< writerIndex` range, `get*` methods will return `nil`. For most applications, initializing
-/// > the desired type with the contents of the buffer, or using one of the `read*` is a better approach.
+/// - Note: If you need to access the contents of a `ByteBuffer` with `get*(at: index)` methods, make sure that the
+/// `index` you're passing in is within the readable bytes range. If you try to access an index outside
+/// `readerIndex ..< writerIndex` range, `get*` methods will return `nil`. For most applications, initializing
+/// the desired type with the contents of the buffer, or using one of the `read*` is a better approach.
 ///
 /// ### Sequential Access
 /// `ByteBuffer` provides two properties which are indices into the `ByteBuffer` to support sequential access:
