@@ -110,18 +110,21 @@ extension ByteBuffer {
 
         // If there's any padding on the left, apply that first.
         result += String(repeating: " ", count: paddingBefore * 3)
-        // If the padding is 8 or more bytes, pad with extra space to match hexdump -C format.
-        if paddingBefore >= 8 {
+
+        // Add the left side of the central column
+        let bytesInLeftColumn = max(8 - paddingBefore, 0)
+        for byte in self.readableBytesView.prefix(bytesInLeftColumn) {
+            result += String(byte, radix: 16, padding: 2)
             result += " "
         }
 
-        // Iterate over the bytes in the line, and dump them one by one, insert a separator if needed.
-        for (byteIndex, byte) in self.readableBytesView.enumerated() {
+        // Add an extra space for the centre column.
+        result += " "
+
+        // Add the right side of the central column.
+        for byte in self.readableBytesView.dropFirst(bytesInLeftColumn) {
             result += String(byte, radix: 16, padding: 2)
             result += " "
-            if byteIndex + paddingBefore == 7 {
-                result += " "
-            }
         }
 
         // Pad the resulting center column line to 60 characters.
