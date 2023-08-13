@@ -156,11 +156,11 @@ public struct ByteBufferAllocator: Sendable {
 /// Example:
 ///
 ///     let buf = ...
-///     let myString = String(buffer:buf)
+///     let myString = String(buffer: buf)
 ///
-/// `ByteBuffer` provides APIs for reading it's contents either sequencially (`read*` methods) or randomly (`get*`
+/// `ByteBuffer` provides APIs for reading its contents either sequentially (`read*` methods) or randomly (`get*`
 /// methods). All `ByteBuffer` methods that don't contain the word 'unsafe' will only allow you to access the readable
-/// bytes of the butter, i.e. `readerIndex ..< writerIndex`.
+/// bytes of the buffer, i.e. `readerIndex ..< writerIndex`.
 ///
 /// If you need to loop over all the bytes in the buffer, you can use the `Collection` conformance with ``readableBytesView``:
 ///
@@ -171,8 +171,7 @@ public struct ByteBufferAllocator: Sendable {
 /// If you need to process the whole buffer front to back, it's recommended that you use sequential `read*` methods:
 ///
 ///     while buffer.readableBytes > 0 {
-///         let chunk = buffer.readBytes(length: min(chunkSize, buffer.readableBytes)
-///         if let chunk {
+///         if let chunk = buffer.readBytes(length: min(chunkSize, buffer.readableBytes) {
 ///             // work with the chunk of data
 ///         } else {
 ///             // fallback in case of buffer read error.
