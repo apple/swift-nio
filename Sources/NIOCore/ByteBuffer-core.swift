@@ -140,7 +140,7 @@ public struct ByteBufferAllocator: Sendable {
 /// ### Allocation
 /// Use `allocator.buffer(capacity: desiredCapacity)` to allocate a new `ByteBuffer`.
 ///
-/// ### Supported types
+/// ### Basic usage
 /// A variety of types can be read/written from/to a `ByteBuffer`. Using Swift's `extension` mechanism you can easily
 /// create `ByteBuffer` support for your own data types. Out of the box, `ByteBuffer` supports for example the following
 /// types (non-exhaustive list):
@@ -149,6 +149,34 @@ public struct ByteBufferAllocator: Sendable {
 ///  - Swift's various (unsigned) integer types
 ///  - `Foundation`'s `Data`
 ///  - `[UInt8]` and generally any `Collection` of `UInt8`
+///
+/// The best and easiest way to read and convert ``ByteBuffer`` into a `String`,  `Array<UInt8>`, or `Data` is by
+/// passing the buffer to an initializer.
+///
+/// Example:
+///
+///     let buf = ...
+///     let myString = String(buffer: buf)
+///
+/// `ByteBuffer` provides APIs for reading its contents either sequentially (`read*` methods) or randomly (`get*`
+/// methods). All `ByteBuffer` methods that don't contain the word 'unsafe' will only allow you to access the readable
+/// bytes of the buffer, i.e. `readerIndex ..< writerIndex`.
+///
+/// If you need to loop over all the bytes in the buffer, you can use the `Collection` conformance with ``readableBytesView``:
+///
+///     for byte in buffer.readableBytesView {
+///         print(byte)
+///     }
+///
+/// If you need to process the whole buffer front to back, it's recommended that you use sequential `read*` methods:
+///
+///     while buffer.readableBytes > 0 {
+///         if let chunk = buffer.readBytes(length: min(chunkSize, buffer.readableBytes) {
+///             // work with the chunk of data
+///         } else {
+///             // fallback in case of buffer read error.
+///         }
+///     }
 ///
 /// ### Random Access
 /// For every supported type `ByteBuffer` usually contains two methods for random access:
@@ -168,6 +196,11 @@ public struct ByteBufferAllocator: Sendable {
 ///     let seventeen: Int? = buf.getInteger(at: 11)
 ///
 /// If needed, `ByteBuffer` will automatically resize its storage to accommodate your `set` request.
+///
+/// - Note: If you need to access the contents of a `ByteBuffer` with `get*(at: index)` methods, make sure that the
+/// `index` you're passing in is within the readable bytes range. If you try to access an index outside
+/// `readerIndex ..< writerIndex` range, `get*` methods will return `nil`. For most applications, initializing
+/// the desired type with the contents of the buffer, or using one of the `read*` is a better approach.
 ///
 /// ### Sequential Access
 /// `ByteBuffer` provides two properties which are indices into the `ByteBuffer` to support sequential access:
@@ -213,9 +246,6 @@ public struct ByteBufferAllocator: Sendable {
 ///     buf.writeBytes(dataBytes) /* the data */
 ///     let bufDataBytesOnly = buf.getSlice(at: 4, length: dataBytes.count)
 ///     /* `bufDataByteOnly` and `buf` will share their storage */
-///
-/// ### Notes
-/// All `ByteBuffer` methods that don't contain the word 'unsafe' will only allow you to access the 'readable bytes'.
 ///
 public struct ByteBuffer {
     @usableFromInline typealias Slice = _ByteBufferSlice
