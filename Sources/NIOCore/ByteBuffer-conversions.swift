@@ -35,7 +35,17 @@ extension String {
         var buffer = buffer
         self = buffer.readString(length: buffer.readableBytes)!
     }
-    
+
+    /// Creates a `String` from a given `Int` with a given base (`radix`), padded with zeroes to the provided `padding` size.
+    ///
+    /// - parameters:
+    ///     - radix: radix base to use for conversion.
+    ///     - padding: the desired lenght of the resulting string.
+    @inlinable
+    internal init<Value>(_ value: Value, radix: Int, padding: Int) where Value: BinaryInteger {
+        let formatted = String(value, radix: radix)
+        self = String(repeating: "0", count: padding - formatted.count) + formatted
+    }
 }
 
 extension DispatchData {
