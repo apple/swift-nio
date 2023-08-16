@@ -391,8 +391,6 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private var msgBufferPool: Pool<PooledMsgBuffer>
     private var msgBuffer: PooledMsgBuffer?
 
-    private var controlMessageStorage: UnsafeControlMessageStorage
-
     private var state = PendingDatagramWritesState()
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
@@ -500,7 +498,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
             self.buffer = self.bufferPool.get()
             self.msgBuffer = self.msgBufferPool.get()
             try self.buffer!.withUnsafePointers { iovecs, storageRefs in
-                try self.msgBuffer!.withUnsafePointers { msgs, addresses in 
+                try self.msgBuffer!.withUnsafePointers { msgs, addresses, controlMessageStorage in
                     try pdw.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
                         storageRefs[0] = storageRef.retain()
 
@@ -524,7 +522,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
                         iovecs[0] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
 
-                        var controlBytes = UnsafeOutboundControlBytes(controlBytes: self.controlMessageStorage[0])
+                        var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[0])
                         controlBytes.appendExplicitCongestionState(metadata: pdw.metadata, protocolFamily: protocolFamily)
                         let controlMessageBytePointer = controlBytes.validControlBytes
 
@@ -547,7 +545,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         }
     }
 
-    func didAsyncWrite(written: Int32) -> (Bool, Bool) {
+    func didAsyncWrite(written: Int32) throws -> (Bool, Bool) {
         self.buffer!.withUnsafePointers { _, storageRefs in
             storageRefs[0].release()
         }
@@ -573,14 +571,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
             return (writabilityChange, flushAgain)
         }
         else {
-            do {
-                let errnoCode = -written
-                let result = try self.handleError(IOError(errnoCode: errnoCode, reason:"async write failed"))
-                return (false, (result == .writtenPartially))
-            }
-            catch {
-                return (false, false)
-            }
+            let errnoCode = -written
+            let result = try self.handleError(IOError(errnoCode: errnoCode, reason:"async write failed"))
+            return (false, (result == .writtenPartially))
         }
     }
 

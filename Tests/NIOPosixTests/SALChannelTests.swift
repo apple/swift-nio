@@ -343,6 +343,11 @@ final class SALChannelTest: XCTestCase, SALTest {
     }
 
     func testAcceptingInboundConnections() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         final class ConnectionRecorder: ChannelInboundHandler {
             typealias InboundIn = Any
             typealias InboundOut = Any
@@ -363,10 +368,10 @@ final class SALChannelTest: XCTestCase, SALTest {
 
         let readRecorder = ConnectionRecorder()
         XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            let readEvent = SelectorEvent(io: [.read],
-                                          registration: NIORegistration(channel: .serverSocketChannel(channel),
+            let readEvent = SelectorEvent(registration: NIORegistration(channel: .serverSocketChannel(channel),
                                                                         interested: [.read],
-                                                                        registrationID: .initialRegistrationID))
+                                                                        registrationID: .initialRegistrationID),
+                                          io: [.read])
             try self.assertWaitingForNotification(result: readEvent)
             try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
             try self.assertLocalAddress(address: localAddress)
@@ -405,9 +410,15 @@ final class SALChannelTest: XCTestCase, SALTest {
         })
 
         XCTAssertEqual(readRecorder.readCount.load(ordering: .sequentiallyConsistent), 1)
+#endif
     }
 
     func testAcceptingInboundConnectionsDoesntUnregisterForReadIfTheSecondAcceptErrors() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         final class ConnectionRecorder: ChannelInboundHandler {
             typealias InboundIn = Any
             typealias InboundOut = Any
@@ -428,10 +439,10 @@ final class SALChannelTest: XCTestCase, SALTest {
 
         let readRecorder = ConnectionRecorder()
         XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            let readEvent = SelectorEvent(io: [.read],
-                                          registration: NIORegistration(channel: .serverSocketChannel(channel),
+            let readEvent = SelectorEvent(registration: NIORegistration(channel: .serverSocketChannel(channel),
                                                                         interested: [.read],
-                                                                        registrationID: .initialRegistrationID))
+                                                                        registrationID: .initialRegistrationID),
+                                          io: [.read])
             try self.assertWaitingForNotification(result: readEvent)
             try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
             try self.assertLocalAddress(address: localAddress)
@@ -473,5 +484,6 @@ final class SALChannelTest: XCTestCase, SALTest {
         })
 
         XCTAssertEqual(readRecorder.readCount.load(ordering: .sequentiallyConsistent), 1)
+#endif
     }
 }

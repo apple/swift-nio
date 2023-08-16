@@ -824,12 +824,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     func didAsyncWrite(result: Int32) {
-        let (writabilityChange, flushAgain) = self.pendingWrites.didAsyncWrite(written: result)
-        if writabilityChange {
-            self.pipeline.syncOperations.fireChannelWritabilityChanged()
+        do {
+            let (writabilityChange, flushAgain) = try self.pendingWrites.didAsyncWrite(written: result)
+            if writabilityChange {
+                self.pipeline.syncOperations.fireChannelWritabilityChanged()
+            }
+            if flushAgain {
+                self.flushNowAsync()
+            }
         }
-        if flushAgain {
-            self.flushNowAsync()
+        catch {
+            self.close0(error: error, mode: .all, promise: nil)
         }
     }
 
