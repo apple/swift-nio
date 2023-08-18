@@ -45,11 +45,16 @@ final class PipePair: SocketProtocol {
         self.inputFD = SelectableFileHandle(inputFD)
         self.outputFD = SelectableFileHandle(outputFD)
         try self.ignoreSIGPIPE()
+        // FIXME: there are underdocumented, ill-convcieved ways to emulate this
+        // vaugely, but, it might just not be worth it and be better to always
+        // just use overlapped IO on Winodws.
+#if !os(Windows)
         for fileHandle in [inputFD, outputFD] {
             try fileHandle.withUnsafeFileDescriptor {
                 try NIOFileHandle.setNonBlocking(fileDescriptor: $0)
             }
         }
+#endif
     }
 
     func ignoreSIGPIPE() throws {
