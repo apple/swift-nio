@@ -152,7 +152,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
     /// change the default behaviour of the type to better handle a wide range of use-cases.
     public struct Configuration: Sendable, Hashable {
         /// Whether the ``HTTPRequestEncoder`` should automatically add `Content-Length` or
-        /// ``Transfer-Encoding`` headers when appropriate.
+        /// `Transfer-Encoding` headers when appropriate.
         ///
         /// Defaults to `true`.
         ///
@@ -225,7 +225,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
     /// change the default behaviour of the type to better handle a wide range of use-cases.
     public struct Configuration: Sendable, Hashable {
         /// Whether the ``HTTPResponseEncoder`` should automatically add `Content-Length` or
-        /// ``Transfer-Encoding`` headers when appropriate.
+        /// `Transfer-Encoding` headers when appropriate.
         ///
         /// Defaults to `true`.
         ///
