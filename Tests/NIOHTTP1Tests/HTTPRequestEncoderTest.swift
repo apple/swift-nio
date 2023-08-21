@@ -23,14 +23,26 @@ private extension ByteBuffer {
     }
 }
 
+extension HTTPRequestEncoder.Configuration {
+    fileprivate static let noFramingTransformation: HTTPRequestEncoder.Configuration = {
+        var config = HTTPRequestEncoder.Configuration()
+        config.automaticallySetFramingHeaders = false
+        return config
+    }()
+}
+
 class HTTPRequestEncoderTests: XCTestCase {
-    private func sendRequest(withMethod method: HTTPMethod, andHeaders headers: HTTPHeaders) throws -> ByteBuffer {
+    private func sendRequest(
+        withMethod method: HTTPMethod,
+        andHeaders headers: HTTPHeaders,
+        configuration: HTTPRequestEncoder.Configuration = .init()
+    ) throws -> ByteBuffer {
         let channel = EmbeddedChannel()
         defer {
             XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
-        try channel.pipeline.addHandler(HTTPRequestEncoder()).wait()
+        try channel.pipeline.addHandler(HTTPRequestEncoder(configuration: configuration)).wait()
         var request = HTTPRequestHead(version: .http1_1, method: method, uri: "/uri")
         request.headers = headers
         try channel.writeOutbound(HTTPClientRequestPart.head(request))
@@ -49,6 +61,11 @@ class HTTPRequestEncoderTests: XCTestCase {
     func testNoAutoHeadersForGET() throws {
         let writtenData = try sendRequest(withMethod: .GET, andHeaders: HTTPHeaders())
         writtenData.assertContainsOnly("GET /uri HTTP/1.1\r\n\r\n")
+    }
+
+    func testNoAutoHeadersForPOSTWhenDisabled() throws {
+        let writtenData = try sendRequest(withMethod: .POST, andHeaders: HTTPHeaders(), configuration: .noFramingTransformation)
+        writtenData.assertContainsOnly("POST /uri HTTP/1.1\r\n\r\n")
     }
 
     func testGETContentHeadersLeftAlone() throws {
@@ -79,10 +96,22 @@ class HTTPRequestEncoderTests: XCTestCase {
         writtenData.assertContainsOnly("TRACE /uri HTTP/1.1\r\n\r\n")
     }
 
+    func testAllowContentLengthHeadersWhenForced_forTRACE() throws {
+        let headers = HTTPHeaders([("content-length", "0")])
+        let writtenData = try sendRequest(withMethod: .TRACE, andHeaders: headers, configuration: .noFramingTransformation)
+        writtenData.assertContainsOnly("TRACE /uri HTTP/1.1\r\ncontent-length: 0\r\n\r\n")
+    }
+
     func testNoTransferEncodingHeadersForTRACE() throws {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
         let writtenData = try sendRequest(withMethod: .TRACE, andHeaders: headers)
         writtenData.assertContainsOnly("TRACE /uri HTTP/1.1\r\n\r\n")
+    }
+
+    func testAllowTransferEncodingHeadersWhenForced_forTRACE() throws {
+        let headers = HTTPHeaders([("transfer-encoding", "chunked")])
+        let writtenData = try sendRequest(withMethod: .TRACE, andHeaders: headers, configuration: .noFramingTransformation)
+        writtenData.assertContainsOnly("TRACE /uri HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
     }
 
     func testNoChunkedEncodingForHTTP10() throws {
@@ -263,6 +292,110 @@ class HTTPRequestEncoderTests: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
 
         XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+
+    func testFullPipelineCanDisableFramingHeaders_withFutures() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertEqual(true, try? channel.finish().isClean)
+        }
+
+        try channel.pipeline.addHTTPClientHandlers(encoderConfiguration: .noFramingTransformation).wait()
+        let request = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri")
+        try channel.writeOutbound(HTTPClientRequestPart.head(request))
+        guard let buffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        buffer.assertContainsOnly("POST /uri HTTP/1.1\r\n\r\n")
+    }
+
+    func testFullPipelineCanDisableFramingHeaders_syncOperations() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertEqual(true, try? channel.finish().isClean)
+        }
+
+        try channel.pipeline.syncOperations.addHTTPClientHandlers(encoderConfiguration: .noFramingTransformation)
+        let request = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri")
+        try channel.writeOutbound(HTTPClientRequestPart.head(request))
+        guard let buffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        buffer.assertContainsOnly("POST /uri HTTP/1.1\r\n\r\n")
+    }
+
+    func testFullPipelineCanDisableFramingHeaders_sendWithoutChunked() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertEqual(true, try? channel.finish().isClean)
+        }
+
+        try channel.pipeline.addHTTPClientHandlers(encoderConfiguration: .noFramingTransformation).wait()
+        let request = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri")
+        try channel.writeOutbound(HTTPClientRequestPart.head(request))
+        guard let headBuffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        headBuffer.assertContainsOnly("POST /uri HTTP/1.1\r\n\r\n")
+
+        let body = ByteBuffer(string: "hello world!")
+        try channel.writeOutbound(HTTPClientRequestPart.body(.byteBuffer(body)))
+        guard let bodyBuffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        XCTAssertEqual(bodyBuffer, body)
+
+        try channel.writeOutbound(HTTPClientRequestPart.end(nil))
+        guard let trailerBuffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        XCTAssertEqual(trailerBuffer.readableBytes, 0)
+    }
+
+    func testFullPipelineCanDisableFramingHeaders_sendWithChunked() throws {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertEqual(true, try? channel.finish().isClean)
+        }
+
+        try channel.pipeline.addHTTPClientHandlers(encoderConfiguration: .noFramingTransformation).wait()
+        let request = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri", headers: ["transfer-encoding": "chunked"])
+        try channel.writeOutbound(HTTPClientRequestPart.head(request))
+        guard let headBuffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        headBuffer.assertContainsOnly("POST /uri HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
+
+        let body = ByteBuffer(string: "hello world!")
+        try channel.writeOutbound(HTTPClientRequestPart.body(.byteBuffer(body)))
+        guard let prefixBuffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        guard let bodyBuffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        guard let suffixBuffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        XCTAssertEqual(prefixBuffer, ByteBuffer(string: "c\r\n"))
+        XCTAssertEqual(bodyBuffer, body)
+        XCTAssertEqual(suffixBuffer, ByteBuffer(string: "\r\n"))
+
+        try channel.writeOutbound(HTTPClientRequestPart.end(nil))
+        guard let trailerBuffer = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("Unable to read buffer")
+            return
+        }
+        XCTAssertEqual(trailerBuffer, ByteBuffer(string: "0\r\n\r\n"))
     }
 
     private func assertOutboundContainsOnly(_ channel: EmbeddedChannel, _ expected: String) {
