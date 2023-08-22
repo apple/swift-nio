@@ -132,7 +132,7 @@ private func correctlyFrameTransportHeaders(hasBody: HTTPMethod.HasBody, headers
 /// encoding, when needed.
 private func messageIsChunked(headers: HTTPHeaders, version: HTTPVersion) -> Bool {
     if version.major == 1 && version.minor >= 1 {
-        return headers["transfer-encoding"].first == "chunked" ? true : false
+        return headers.first(name: "transfer-encoding") == "chunked" ? true : false
     } else {
         return false
     }
@@ -257,7 +257,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
                         response.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
                      "illegal HTTP sent: \(response) contains both a content-length and transfer-encoding:chunked")
 
-            if configuration.automaticallySetFramingHeaders {
+            if self.configuration.automaticallySetFramingHeaders {
                 self.isChunked = correctlyFrameTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no,
                                                                 headers: &response.headers, version: response.version) == .chunked
             } else {
