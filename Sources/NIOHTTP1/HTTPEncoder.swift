@@ -128,6 +128,16 @@ private func correctlyFrameTransportHeaders(hasBody: HTTPMethod.HasBody, headers
     }
 }
 
+/// Validates the response/request headers to ensure that we correctly send the body with chunked transfer
+/// encoding, when needed.
+private func messageIsChunked(headers: HTTPHeaders, version: HTTPVersion) -> Bool {
+    if version.major == 1 && version.minor >= 1 {
+        return headers.first(name: "transfer-encoding") == "chunked" ? true : false
+    } else {
+        return false
+    }
+}
+
 /// A `ChannelOutboundHandler` that can serialize HTTP requests.
 ///
 /// This channel handler is used to translate messages from a series of
@@ -136,9 +146,37 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = IOData
 
+    /// Configuration for the ``HTTPRequestEncoder``.
+    ///
+    /// This object controls the behaviour of the ``HTTPRequestEncoder``. It enables users to
+    /// change the default behaviour of the type to better handle a wide range of use-cases.
+    public struct Configuration: Sendable, Hashable {
+        /// Whether the ``HTTPRequestEncoder`` should automatically add `Content-Length` or
+        /// `Transfer-Encoding` headers when appropriate.
+        ///
+        /// Defaults to `true`.
+        ///
+        /// Set to `false` if you are confident you are appropriately setting these framing
+        /// headers yourself, to skip NIO's transformation.
+        public var automaticallySetFramingHeaders: Bool
+
+        public init() {
+            self.automaticallySetFramingHeaders = true
+        }
+    }
+
     private var isChunked = false
 
-    public init () { }
+    private var configuration: Configuration
+
+    public convenience init() {
+        self.init(configuration: Configuration())
+    }
+
+    public init(configuration: Configuration) {
+        self.configuration = configuration
+    }
+
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.unwrapOutboundIn(data) {
@@ -146,8 +184,12 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
             assert(!(request.headers.contains(name: "content-length") &&
                         request.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
                      "illegal HTTP sent: \(request) contains both a content-length and transfer-encoding:chunked")
-            self.isChunked = correctlyFrameTransportHeaders(hasBody: request.method.hasRequestBody,
-                                                            headers: &request.headers, version: request.version) == .chunked
+            if self.configuration.automaticallySetFramingHeaders {
+                self.isChunked = correctlyFrameTransportHeaders(hasBody: request.method.hasRequestBody,
+                                                                headers: &request.headers, version: request.version) == .chunked
+            } else {
+                self.isChunked = messageIsChunked(headers: request.headers, version: request.version)
+            }
 
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(request: request)
@@ -177,9 +219,36 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
     public typealias OutboundIn = HTTPServerResponsePart
     public typealias OutboundOut = IOData
 
+    /// Configuration for the ``HTTPResponseEncoder``.
+    ///
+    /// This object controls the behaviour of the ``HTTPResponseEncoder``. It enables users to
+    /// change the default behaviour of the type to better handle a wide range of use-cases.
+    public struct Configuration: Sendable, Hashable {
+        /// Whether the ``HTTPResponseEncoder`` should automatically add `Content-Length` or
+        /// `Transfer-Encoding` headers when appropriate.
+        ///
+        /// Defaults to `true`.
+        ///
+        /// Set to `false` if you are confident you are appropriately setting these framing
+        /// headers yourself, to skip NIO's transformation.
+        public var automaticallySetFramingHeaders: Bool
+
+        public init() {
+            self.automaticallySetFramingHeaders = true
+        }
+    }
+
     private var isChunked = false
 
-    public init () { }
+    private var configuration: Configuration
+
+    public convenience init() {
+        self.init(configuration: Configuration())
+    }
+
+    public init(configuration: Configuration) {
+        self.configuration = configuration
+    }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         switch self.unwrapOutboundIn(data) {
@@ -187,8 +256,13 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
             assert(!(response.headers.contains(name: "content-length") &&
                         response.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
                      "illegal HTTP sent: \(response) contains both a content-length and transfer-encoding:chunked")
-            self.isChunked = correctlyFrameTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no,
-                                                            headers: &response.headers, version: response.version) == .chunked
+
+            if self.configuration.automaticallySetFramingHeaders {
+                self.isChunked = correctlyFrameTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no,
+                                                                headers: &response.headers, version: response.version) == .chunked
+            } else {
+                self.isChunked = messageIsChunked(headers: response.headers, version: response.version)
+            }
 
             writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(response: response)
