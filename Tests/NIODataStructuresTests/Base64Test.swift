@@ -28,6 +28,26 @@ class Base64Test: XCTestCase {
         XCTAssertEqual(encodedData, "AAAAAAAAAAAAAA==")
     }
 
+    func testBase64DecodeArrayOfNulls() throws {
+        let encoded = "AAAAAAAAAAAAAA=="
+        let decoded = try! encoded.base64Decoded()
+        let expected = Array(repeating: UInt8(0), count: 10)
+        XCTAssertEqual(decoded, expected)
+    }
+
+    func testBase64EncodeingHelloWorld() throws {
+        let string = "Hello, world!"
+        let encoded = String(base64Encoding: string.utf8)
+        let expected = "SGVsbG8sIHdvcmxkIQ=="
+        XCTAssertEqual(encoded, expected)
+    }
+
+    func testBase64DecodeHelloWorld() throws {
+        let encoded = "SGVsbG8sIHdvcmxkIQ=="
+        let decoded = try! encoded.base64Decoded()
+        XCTAssertEqual(decoded, "Hello, world!".utf8.map{ UInt8($0) })
+    }
+
     func testBase64EncodingAllTheBytesSequentially() throws {
         let data = Array(UInt8(0)...UInt8(255))
         let encodedData = String(base64Encoding: data)

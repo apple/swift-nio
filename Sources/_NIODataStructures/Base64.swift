@@ -22,6 +22,16 @@ public extension String {
     init<Buffer: Collection>(base64Encoding bytes: Buffer) where Buffer.Element == UInt8 {
         self = Base64.encode(bytes: bytes)
     }
+
+    @inlinable
+    func base64Decoded() throws -> [UInt8] {
+        return try! Base64.decode(string: self)
+    }
+}
+
+public enum Base64Error: Error {
+    case invalidLength
+    case invalidCharacter
 }
 
 @usableFromInline
@@ -55,6 +65,50 @@ internal struct Base64 {
         }
     }
 
+    @inlinable
+    static func decode(string: String) throws -> [UInt8] {
+        guard string.count % 4 == 0 else {
+            throw Base64Error.invalidLength
+        }
+
+        let bytes = string.utf8.map { $0 }
+        var decoded = [UInt8]()
+
+        // Go over the encoded string in groups of 4 characters,
+        // and build groups of 3 bytes from them.
+        for i in stride(from: 0, to: bytes.count, by: 4) {
+            guard let byte0Index = Base64.encodeBase64.firstIndex(of: bytes[i]),
+                  let byte1Index = Base64.encodeBase64.firstIndex(of: bytes[i+1]) else {
+                throw Base64Error.invalidCharacter
+            }
+
+            let byte0 = (UInt8(byte0Index) << 2 | UInt8(byte1Index) >> 4)
+            decoded.append(byte0)
+
+            // Check if the 3rd char is not a padding character, and decode the 2nd byte
+            if bytes[i+2] != Base64.encodePaddingCharacter {
+                guard let byte2Index = Base64.encodeBase64.firstIndex(of: bytes[i+2]) else {
+                    throw Base64Error.invalidCharacter
+                }
+
+                let second = (UInt8(byte1Index) << 4 | UInt8(byte2Index) >> 2)
+                decoded.append(second)
+            }
+
+            // Check if the 4th character is not a padding, and decode the 3rd byte
+            if bytes[i+3] != Base64.encodePaddingCharacter {
+                guard let byte3Index = Base64.encodeBase64.firstIndex(of: bytes[i+3]),
+                      let byte2Index = Base64.encodeBase64.firstIndex(of: bytes[i+2]) else {
+                    throw Base64Error.invalidCharacter
+                }
+                let third = (UInt8(byte2Index) << 6 | UInt8(byte3Index))
+                decoded.append(third)
+            }
+        }
+        return decoded
+    }
+
+
     // MARK: Internal
 
     // The base64 unicode table.
@@ -78,6 +132,7 @@ internal struct Base64 {
         UInt8(ascii: "8"), UInt8(ascii: "9"), UInt8(ascii: "+"), UInt8(ascii: "/"),
     ]
 
+    @usableFromInline
     static let encodePaddingCharacter: UInt8 = UInt8(ascii: "=")
 
     @usableFromInline
