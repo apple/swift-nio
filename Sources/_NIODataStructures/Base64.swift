@@ -25,7 +25,7 @@ public extension String {
 
     @inlinable
     func base64Decoded() throws -> [UInt8] {
-        return try! Base64.decode(string: self)
+        return try Base64.decode(string: self)
     }
 }
 
