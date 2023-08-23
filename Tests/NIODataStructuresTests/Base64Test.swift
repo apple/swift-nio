@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import NIOWebSocket
+@testable import _NIODataStructures
 
 class Base64Test: XCTestCase {
     func testEncodeEmptyData() throws {
