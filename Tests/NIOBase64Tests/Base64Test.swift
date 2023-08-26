@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@testable import _NIODataStructures
+@testable import _NIOBase64
 
 class Base64Test: XCTestCase {
     func testEncodeEmptyData() throws {

@@ -17,7 +17,7 @@ import XCTest
 @testable import NIOCore
 import NIOFoundationCompat
 
-import _NIODataStructures
+import _NIOBase64
 
 class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()

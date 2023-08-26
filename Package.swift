@@ -46,7 +46,7 @@ let package = Package(
             name: "NIOCore",
             dependencies: [
                 "NIOConcurrencyHelpers",
-                "_NIODataStructures",
+                "_NIOBase64",
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
@@ -56,6 +56,9 @@ let package = Package(
         ),
         .target(
             name: "_NIODataStructures"
+        ),
+        .target(
+            name: "_NIOBase64"
         ),
         .target(
             name: "NIOEmbedded",
@@ -361,6 +364,10 @@ let package = Package(
         .testTarget(
             name: "NIODataStructuresTests",
             dependencies: ["_NIODataStructures"]
+        ),
+        .testTarget(
+            name: "NIOBase64Tests",
+            dependencies: ["_NIOBase64"]
         ),
         .testTarget(
             name: "NIOHTTP1Tests",

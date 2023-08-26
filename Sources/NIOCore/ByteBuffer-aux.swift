@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
-import _NIODataStructures
+import _NIOBase64
 
 extension ByteBuffer {
 
