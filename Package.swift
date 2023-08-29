@@ -149,6 +149,7 @@ let package = Package(
                 "NIOCore",
                 "NIOHTTP1",
                 "CNIOSHA1",
+                "_NIOBase64"
             ]
         ),
         .target(
