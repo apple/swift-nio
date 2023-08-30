@@ -14,6 +14,7 @@
 
 import NIOCore
 import NIOHTTP1
+import _NIOBase64
 
 @available(*, deprecated, renamed: "NIOWebSocketClientUpgrader")
 public typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader

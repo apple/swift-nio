@@ -3,7 +3,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -46,6 +46,7 @@ let package = Package(
             name: "NIOCore",
             dependencies: [
                 "NIOConcurrencyHelpers",
+                "_NIOBase64",
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
@@ -55,6 +56,9 @@ let package = Package(
         ),
         .target(
             name: "_NIODataStructures"
+        ),
+        .target(
+            name: "_NIOBase64"
         ),
         .target(
             name: "NIOEmbedded",
@@ -145,6 +149,7 @@ let package = Package(
                 "NIOCore",
                 "NIOHTTP1",
                 "CNIOSHA1",
+                "_NIOBase64"
             ]
         ),
         .target(
@@ -360,6 +365,10 @@ let package = Package(
         .testTarget(
             name: "NIODataStructuresTests",
             dependencies: ["_NIODataStructures"]
+        ),
+        .testTarget(
+            name: "NIOBase64Tests",
+            dependencies: ["_NIOBase64"]
         ),
         .testTarget(
             name: "NIOHTTP1Tests",

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import _NIOBase64
 
 extension ByteBuffer {
 
@@ -672,6 +673,23 @@ extension ByteBuffer {
     @inlinable
     public init(dispatchData: DispatchData) {
         self = ByteBufferAllocator().buffer(dispatchData: dispatchData)
+    }
+}
+
+extension ByteBuffer: Codable {
+
+    /// Creates a ByteByffer by decoding from a Base64 encoded single value container.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let base64String = try container.decode(String.self)
+        self = try ByteBuffer(bytes: base64String.base64Decoded())
+    }
+
+    /// Encodes this buffer as a base64 string in a single value container.
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        let base64String = String(base64Encoding: self.readableBytesView)
+        try container.encode(base64String)
     }
 }
 
