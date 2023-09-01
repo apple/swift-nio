@@ -63,11 +63,24 @@ const llhttp_settings_t wasm_settings = {
   wasm_on_message_begin,
   wasm_on_url,
   wasm_on_status,
+  NULL,
+  NULL,
   wasm_on_header_field,
   wasm_on_header_value,
+  NULL,
+  NULL,
   wasm_on_headers_complete_wrap,
   wasm_on_body,
   wasm_on_message_complete,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
   NULL,
   NULL,
 };
@@ -273,6 +286,38 @@ void c_nio_llhttp_set_lenient_transfer_encoding(llhttp_t* parser, int enabled) {
   }
 }
 
+void c_nio_llhttp_set_lenient_version(llhttp_t* parser, int enabled) {
+  if (enabled) {
+    parser->lenient_flags |= LENIENT_VERSION;
+  } else {
+    parser->lenient_flags &= ~LENIENT_VERSION;
+  }
+}
+
+void c_nio_llhttp_set_lenient_data_after_close(llhttp_t* parser, int enabled) {
+  if (enabled) {
+    parser->lenient_flags |= LENIENT_DATA_AFTER_CLOSE;
+  } else {
+    parser->lenient_flags &= ~LENIENT_DATA_AFTER_CLOSE;
+  }
+}
+
+void c_nio_llhttp_set_lenient_optional_lf_after_cr(llhttp_t* parser, int enabled) {
+  if (enabled) {
+    parser->lenient_flags |= LENIENT_OPTIONAL_LF_AFTER_CR;
+  } else {
+    parser->lenient_flags &= ~LENIENT_OPTIONAL_LF_AFTER_CR;
+  }
+}
+
+void c_nio_llhttp_set_lenient_optional_crlf_after_chunk(llhttp_t* parser, int enabled) {
+  if (enabled) {
+    parser->lenient_flags |= LENIENT_OPTIONAL_CRLF_AFTER_CHUNK;
+  } else {
+    parser->lenient_flags &= ~LENIENT_OPTIONAL_CRLF_AFTER_CHUNK;
+  }
+}
+
 /* Callbacks */
 
 
@@ -307,6 +352,34 @@ int c_nio_llhttp__on_status(llhttp_t* s, const char* p, const char* endp) {
 int c_nio_llhttp__on_status_complete(llhttp_t* s, const char* p, const char* endp) {
   int err;
   CALLBACK_MAYBE(s, on_status_complete);
+  return err;
+}
+
+
+int c_nio_llhttp__on_method(llhttp_t* s, const char* p, const char* endp) {
+  int err;
+  SPAN_CALLBACK_MAYBE(s, on_method, p, endp - p);
+  return err;
+}
+
+
+int c_nio_llhttp__on_method_complete(llhttp_t* s, const char* p, const char* endp) {
+  int err;
+  CALLBACK_MAYBE(s, on_method_complete);
+  return err;
+}
+
+
+int c_nio_llhttp__on_version(llhttp_t* s, const char* p, const char* endp) {
+  int err;
+  SPAN_CALLBACK_MAYBE(s, on_version, p, endp - p);
+  return err;
+}
+
+
+int c_nio_llhttp__on_version_complete(llhttp_t* s, const char* p, const char* endp) {
+  int err;
+  CALLBACK_MAYBE(s, on_version_complete);
   return err;
 }
 
@@ -367,9 +440,44 @@ int c_nio_llhttp__on_chunk_header(llhttp_t* s, const char* p, const char* endp) 
 }
 
 
+int c_nio_llhttp__on_chunk_extension_name(llhttp_t* s, const char* p, const char* endp) {
+  int err;
+  SPAN_CALLBACK_MAYBE(s, on_chunk_extension_name, p, endp - p);
+  return err;
+}
+
+
+int c_nio_llhttp__on_chunk_extension_name_complete(llhttp_t* s, const char* p, const char* endp) {
+  int err;
+  CALLBACK_MAYBE(s, on_chunk_extension_name_complete);
+  return err;
+}
+
+
+int c_nio_llhttp__on_chunk_extension_value(llhttp_t* s, const char* p, const char* endp) {
+  int err;
+  SPAN_CALLBACK_MAYBE(s, on_chunk_extension_value, p, endp - p);
+  return err;
+}
+
+
+int c_nio_llhttp__on_chunk_extension_value_complete(llhttp_t* s, const char* p, const char* endp) {
+  int err;
+  CALLBACK_MAYBE(s, on_chunk_extension_value_complete);
+  return err;
+}
+
+
 int c_nio_llhttp__on_chunk_complete(llhttp_t* s, const char* p, const char* endp) {
   int err;
   CALLBACK_MAYBE(s, on_chunk_complete);
+  return err;
+}
+
+
+int c_nio_llhttp__on_reset(llhttp_t* s, const char* p, const char* endp) {
+  int err;
+  CALLBACK_MAYBE(s, on_reset);
   return err;
 }
 
