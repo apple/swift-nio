@@ -517,9 +517,9 @@ extension ByteBuffer {
     mutating func write(headers: HTTPHeaders) {
         for header in headers.headers {
             self.writeString(header.0)
-            self.writeStaticString(": ")
+            self.writeStaticString(headerSeparator)
             self.writeString(header.1)
-            self.writeStaticString("\r\n")
+            self.writeStaticString(crlf)
         }
         self.writeStaticString(crlf)
     }
