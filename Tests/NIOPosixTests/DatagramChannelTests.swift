@@ -990,13 +990,13 @@ class DatagramChannelTests: XCTestCase {
         let loop = self.group.next()
         let completePromise = loop.makePromise(of: ByteBuffer.self)
         do {
-            let channel = try assertNoThrowWithValue(DatagramBootstrap(group: group)
+            let channel = try DatagramBootstrap(group: group)
                 .protocolSubtype(.init(.icmp))
                 .channelInitializer { channel in
                     channel.pipeline.addHandler(EchoRequestHandler(completePromise: completePromise))
                 }
                 .bind(host: "127.0.0.1", port: 0)
-                .wait())
+                .wait()
             defer {
                 XCTAssertNoThrow(try channel.close().wait())
             }
