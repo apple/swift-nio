@@ -1032,7 +1032,9 @@ class DatagramChannelTests: XCTestCase {
             // Remaining payload should have been our string.
             XCTAssertEqual(String(buffer: response), "Hello from NIO")
         } catch let error as IOError {
-            if error.errnoCode == EPERM {
+            // Firstly, fail this promise in case it leaks.
+            completePromise.fail(error)
+            if error.errnoCode == EACCES {
                 // Acceptable
             }
             XCTFail("Unexpected IOError: \(error)")
