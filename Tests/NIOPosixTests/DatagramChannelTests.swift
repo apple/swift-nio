@@ -1036,6 +1036,7 @@ class DatagramChannelTests: XCTestCase {
             completePromise.fail(error)
             if error.errnoCode == EACCES {
                 // Acceptable
+                return
             }
             XCTFail("Unexpected IOError: \(error)")
         }
