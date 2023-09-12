@@ -1403,6 +1403,7 @@ public final class DatagramBootstrap {
     private var channelInitializer: Optional<ChannelInitializerCallback>
     @usableFromInline
     internal var _channelOptions: ChannelOptions.Storage
+    private var proto: NIOBSDSocket.ProtocolSubtype = .default
 
     /// Create a `DatagramBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -1465,6 +1466,11 @@ public final class DatagramBootstrap {
     @inlinable
     public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self {
         self._channelOptions.append(key: option, value: value)
+        return self
+    }
+
+    public func protocolSubtype(_ subtype: NIOBSDSocket.ProtocolSubtype) -> Self {
+        self.proto = subtype
         return self
     }
 
@@ -1542,6 +1548,7 @@ public final class DatagramBootstrap {
     }
 
     private func bind0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
+        let subtype = self.proto
         let address: SocketAddress
         do {
             address = try makeSocketAddress()
@@ -1551,7 +1558,7 @@ public final class DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop,
                                        protocolFamily: address.protocol,
-                                       protocolSubtype: .default)
+                                       protocolSubtype: subtype)
         }
         return withNewChannel(makeChannel: makeChannel) { _, channel in
             channel.register().flatMap {
@@ -1590,6 +1597,7 @@ public final class DatagramBootstrap {
     }
 
     private func connect0(_ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
+        let subtype = self.proto
         let address: SocketAddress
         do {
             address = try makeSocketAddress()
@@ -1599,7 +1607,7 @@ public final class DatagramBootstrap {
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(eventLoop: eventLoop,
                                        protocolFamily: address.protocol,
-                                       protocolSubtype: .default)
+                                       protocolSubtype: subtype)
         }
         return withNewChannel(makeChannel: makeChannel) { _, channel in
             channel.register().flatMap {
@@ -1839,12 +1847,13 @@ extension DatagramBootstrap {
         postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
     ) async throws -> PostRegistrationTransformationResult {
         let address = try makeSocketAddress()
+        let subtype = self.proto
 
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(
                 eventLoop: eventLoop,
                 protocolFamily: address.protocol,
-                protocolSubtype: .default
+                protocolSubtype: subtype
             )
         }
 
@@ -1867,12 +1876,13 @@ extension DatagramBootstrap {
         postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
     ) async throws -> PostRegistrationTransformationResult {
         let address = try makeSocketAddress()
+        let subtype = self.proto
 
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
             return try DatagramChannel(
                 eventLoop: eventLoop,
                 protocolFamily: address.protocol,
-                protocolSubtype: .default
+                protocolSubtype: subtype
             )
         }
 
