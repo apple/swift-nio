@@ -140,6 +140,7 @@ let package = Package(
                 "NIOCore",
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
+                swiftCollections
             ]
         ),
         .target(

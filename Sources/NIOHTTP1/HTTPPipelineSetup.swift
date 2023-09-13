@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
+@_spi(AsyncChannel) import NIOCore
 
 /// Configuration required to configure a HTTP client pipeline for upgrade.
 ///
@@ -298,6 +298,85 @@ extension ChannelPipeline {
             withOutboundHeaderValidation: headerValidation,
             withEncoderConfiguration: encoderConfiguration
         )
+    }
+
+    /// Configure a `ChannelPipeline` for use as an HTTP server.
+    ///
+    /// This function knows how to set up all first-party HTTP channel handlers appropriately
+    /// for server use. It supports the following features:
+    ///
+    /// 1. Providing assistance handling clients that pipeline HTTP requests, using the
+    ///     ``HTTPServerPipelineHandler``.
+    /// 2. Supporting HTTP upgrade, using the ``HTTPServerUpgradeHandler``.
+    /// 3. Providing assistance handling protocol errors.
+    /// 4. Validating outbound header fields to protect against response splitting attacks.
+    ///
+    /// This method will likely be extended in future with more support for other first-party
+    /// features.
+    ///
+    /// - Parameters:
+    ///   - isPipeliningEnabled: Whether to provide assistance handling HTTP clients that pipeline
+    ///   their requests. Defaults to `true`. If `false`, users will need to handle clients that pipeline themselves.
+    ///   - isErrorHandlingEnabled: Whether to provide assistance handling protocol errors (e.g. failure to parse the HTTP
+    ///   request) by sending 400 errors. Defaults to `true`.
+    ///   - isResponseHeaderValidationEnabled: Whether to validate outbound response headers to confirm that they are
+    ///   spec compliant. Defaults to `true`.
+    ///   - httpResponseEncoderConfiguration: The configuration for the ``HTTPResponseEncoder``.
+    ///   - httpServerUpgradeConfiguration: The configuration for the ``NIOTypedHTTPServerUpgradeHandler``.
+    /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured. The future contains an `EventLoopFuture`
+    /// that is fired once the pipeline has been upgraded or not and contains the `UpgradeResult`.
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @_spi(AsyncChannel)
+    public func configureTypedHTTPServerPipeline<UpgradeResult: Sendable>(
+        isPipeliningEnabled: Bool = true,
+        isErrorHandlingEnabled: Bool = true,
+        isResponseHeaderValidationEnabled: Bool = true,
+        httpResponseEncoderConfiguration: HTTPResponseEncoder.Configuration = .init(),
+        httpServerUpgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>
+    ) -> EventLoopFuture<EventLoopFuture<UpgradeResult>> {
+        self._configureTypedHTTPServerPipeline(
+            isPipeliningEnabled: isPipeliningEnabled,
+            isErrorHandlingEnabled: isErrorHandlingEnabled,
+            isResponseHeaderValidationEnabled: isResponseHeaderValidationEnabled,
+            httpResponseEncoderConfiguration: httpResponseEncoderConfiguration,
+            httpServerUpgradeConfiguration: httpServerUpgradeConfiguration
+        )
+    }
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @_spi(AsyncChannel)
+    public func _configureTypedHTTPServerPipeline<UpgradeResult: Sendable>(
+        isPipeliningEnabled: Bool = true,
+        isErrorHandlingEnabled: Bool = true,
+        isResponseHeaderValidationEnabled: Bool = true,
+        httpResponseEncoderConfiguration: HTTPResponseEncoder.Configuration = .init(),
+        httpServerUpgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>
+    ) -> EventLoopFuture<EventLoopFuture<UpgradeResult>> {
+        let future: EventLoopFuture<EventLoopFuture<UpgradeResult>>
+
+        if self.eventLoop.inEventLoop {
+            let result = Result<EventLoopFuture<UpgradeResult>, Error> {
+                try self.syncOperations.configureTypedHTTPServerPipeline(
+                    isPipeliningEnabled: isPipeliningEnabled,
+                    isErrorHandlingEnabled: isErrorHandlingEnabled,
+                    isResponseHeaderValidationEnabled: isResponseHeaderValidationEnabled,
+                    httpResponseEncoderConfiguration: httpResponseEncoderConfiguration,
+                    httpServerUpgradeConfiguration: httpServerUpgradeConfiguration
+                )
+            }
+            future = self.eventLoop.makeCompletedFuture(result)
+        } else {
+            future = self.eventLoop.submit {
+                try self.syncOperations.configureTypedHTTPServerPipeline(
+                    isPipeliningEnabled: isPipeliningEnabled,
+                    isErrorHandlingEnabled: isErrorHandlingEnabled,
+                    isResponseHeaderValidationEnabled: isResponseHeaderValidationEnabled,
+                    httpResponseEncoderConfiguration: httpResponseEncoderConfiguration,
+                    httpServerUpgradeConfiguration: httpServerUpgradeConfiguration
+                )
+            }
+        }
+
+        return future
     }
 
     private func _configureHTTPServerPipeline(
@@ -624,5 +703,77 @@ extension ChannelPipeline.SynchronousOperations {
         }
 
         try self.addHandlers(handlers, position: position)
+    }
+
+    /// Configure a `ChannelPipeline` for use as an HTTP server.
+    ///
+    /// This function knows how to set up all first-party HTTP channel handlers appropriately
+    /// for server use. It supports the following features:
+    ///
+    /// 1. Providing assistance handling clients that pipeline HTTP requests, using the
+    ///     `HTTPServerPipelineHandler`.
+    /// 2. Supporting HTTP upgrade, using the `HTTPServerUpgradeHandler`.
+    /// 3. Providing assistance handling protocol errors.
+    /// 4. Validating outbound header fields to protect against response splitting attacks.
+    ///
+    /// This method will likely be extended in future with more support for other first-party
+    /// features.
+    ///
+    /// - Important: This **must** be called on the Channel's event loop.
+    /// - Parameters:
+    ///   - isPipeliningEnabled: Whether to provide assistance handling HTTP clients that pipeline
+    ///   their requests. Defaults to `true`. If `false`, users will need to handle clients that pipeline themselves.
+    ///   - isErrorHandlingEnabled: Whether to provide assistance handling protocol errors (e.g. failure to parse the HTTP
+    ///   request) by sending 400 errors. Defaults to `true`.
+    ///   - isResponseHeaderValidationEnabled: Whether to validate outbound response headers to confirm that they are
+    ///   spec compliant. Defaults to `true`.
+    ///   - httpResponseEncoderConfiguration: The configuration for the ``HTTPResponseEncoder``.
+    ///   - httpServerUpgradeConfiguration: The configuration for the ``NIOTypedHTTPServerUpgradeHandler``.
+    /// - Returns: An `EventLoopFuture` that is fired once the pipeline has been upgraded or not and contains the `UpgradeResult`.
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+    @_spi(AsyncChannel)
+    public func configureTypedHTTPServerPipeline<UpgradeResult: Sendable>(
+        isPipeliningEnabled: Bool = true,
+        isErrorHandlingEnabled: Bool = true,
+        isResponseHeaderValidationEnabled: Bool = true,
+        httpResponseEncoderConfiguration: HTTPResponseEncoder.Configuration = .init(),
+        httpServerUpgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>
+    ) throws -> EventLoopFuture<UpgradeResult> {
+        self.eventLoop.assertInEventLoop()
+
+        let responseEncoder = HTTPResponseEncoder(configuration: httpResponseEncoderConfiguration)
+        let requestDecoder = ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes))
+
+        var extraHTTPHandlers: [RemovableChannelHandler] = [requestDecoder]
+
+        try self.addHandler(responseEncoder)
+        try self.addHandler(requestDecoder)
+
+        if isPipeliningEnabled {
+            let pipeliningHandler = HTTPServerPipelineHandler()
+            try self.addHandler(pipeliningHandler)
+            extraHTTPHandlers.append(pipeliningHandler)
+        }
+
+        if isResponseHeaderValidationEnabled {
+            let headerValidationHandler = NIOHTTPResponseHeadersValidator()
+            try self.addHandler(headerValidationHandler)
+            extraHTTPHandlers.append(headerValidationHandler)
+        }
+
+        if isErrorHandlingEnabled {
+            let errorHandler = HTTPServerProtocolErrorHandler()
+            try self.addHandler(errorHandler)
+            extraHTTPHandlers.append(errorHandler)
+        }
+
+        let upgrader = NIOTypedHTTPServerUpgradeHandler(
+            httpEncoder: responseEncoder,
+            extraHTTPHandlers: extraHTTPHandlers,
+            upgradeConfiguration: httpServerUpgradeConfiguration
+        )
+        try self.addHandler(upgrader)
+
+        return upgrader.upgradeResultFuture
     }
 }

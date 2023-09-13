@@ -146,7 +146,7 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
     private func pingTestFrameData(context: ChannelHandlerContext) {
         let buffer = context.channel.allocator.buffer(string: self.testFrameData)
         let frame = WebSocketFrame(fin: true, opcode: .ping, data: buffer)
-        context.write(self.wrapOutboundOut(frame), promise: nil)
+        context.writeAndFlush(self.wrapOutboundOut(frame), promise: nil)
     }
     
     private func pong(context: ChannelHandlerContext, frame: WebSocketFrame) {
