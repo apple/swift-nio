@@ -39,7 +39,11 @@
   type catmc_nio_atomic_ ## name ## _load(struct catmc_nio_atomic_ ## name * _Nonnull);                                               \
   void catmc_nio_atomic_ ## name ## _store(struct catmc_nio_atomic_ ## name * _Nonnull, type value);                                  \
 
+#ifdef __cplusplus
+DECLARE_ATOMIC_OPERATIONS(bool, _Bool)
+#else
 DECLARE_ATOMIC_OPERATIONS(_Bool, _Bool)
+#endif
 DECLARE_ATOMIC_OPERATIONS(char, char)
 DECLARE_ATOMIC_OPERATIONS(short, short)
 DECLARE_ATOMIC_OPERATIONS(int, int)
