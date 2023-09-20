@@ -429,15 +429,3 @@ extension NIOProtocolNegotiationResult.Result: Equatable where NegotiationResult
 
 @_spi(AsyncChannel)
 extension NIOProtocolNegotiationResult.Result: Sendable where NegotiationResult: Sendable {}
-
-/// A ``ProtocolNegotiationHandler`` is a ``ChannelHandler`` that is responsible for negotiating networking protocols.
-///
-/// Typically these handlers are at the tail of the pipeline and wait until the peer indicated what protocol should be used. Once, the protocol
-/// has been negotiated the handlers allow user code to configure the pipeline.
-@_spi(AsyncChannel)
-public protocol NIOProtocolNegotiationHandler: ChannelHandler {
-    associatedtype NegotiationResult
-
-    /// The future which gets succeeded with the protocol negotiation result.
-    var protocolNegotiationResult: EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>> { get }
-}

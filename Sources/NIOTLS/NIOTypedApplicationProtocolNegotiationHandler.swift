@@ -40,7 +40,7 @@
 /// promise. This allows us to construct pipelines that include protocol negotiation handlers and be able to bridge them into ``NIOAsyncChannel``
 /// based bootstraps.
 @_spi(AsyncChannel)
-public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>: ChannelInboundHandler, RemovableChannelHandler, NIOProtocolNegotiationHandler {
+public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>: ChannelInboundHandler, RemovableChannelHandler {
     @_spi(AsyncChannel)
     public typealias InboundIn = Any
 
