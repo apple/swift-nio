@@ -718,7 +718,7 @@ private extension Channel {
 /// Keep in mind that `ClientBoostrap` is not `Sendable` so you cannot share the same instance across
 /// multiple threads/`EventLoop`s. Creating a `ClientBootstrap` is cheap so instead of arranging
 /// synchronization to re-use a single `ClientBootstrap` instance across threads, it's advisable to
-/// just create fresh instances.
+/// create fresh instances.
 ///
 /// Example:
 ///
