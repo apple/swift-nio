@@ -20,10 +20,14 @@ import NIOConcurrencyHelpers
 public enum NIOThreadPoolError {
     
     /// The `NIOThreadPool` was not active.
-    public struct ThreadPoolInactive: Error { }
+    public struct ThreadPoolInactive: Error { 
+        public init() {}
+    }
 
     /// The `NIOThreadPool` operation is unsupported (e.g. shutdown of a perpetual pool).
-    public struct UnsupportedOperation: Error { }
+    public struct UnsupportedOperation: Error { 
+        public init() {}
+    }
 }
 
 

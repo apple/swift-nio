@@ -136,21 +136,33 @@ extension NIOBSDSocket.Option {
 }
 
 extension NIOBSDSocket {
-    struct ProtocolSubtype: RawRepresentable, Hashable {
-        typealias RawValue = CInt
-        var rawValue: RawValue
-        
-        init(rawValue: RawValue) {
+    /// Defines a protocol subtype.
+    ///
+    /// Protocol subtypes are the third argument passed to the `socket` system call.
+    /// They aren't necessarily protocols in their own right: for example, ``mptcp``
+    /// is not. They act to modify the socket type instead: thus, ``mptcp`` acts
+    /// to modify `SOCK_STREAM` to ask for ``mptcp`` support.
+    public struct ProtocolSubtype: RawRepresentable, Hashable {
+        public typealias RawValue = CInt
+
+        /// The underlying value of the protocol subtype.
+        public var rawValue: RawValue
+
+        /// Construct a protocol subtype from its underlying value.
+        public init(rawValue: RawValue) {
             self.rawValue = rawValue
         }
     }
 }
 
 extension NIOBSDSocket.ProtocolSubtype {
-    static let `default` = Self(rawValue: 0)
+    /// Refers to the "default" protocol subtype for a given socket type.
+    public static let `default` = Self(rawValue: 0)
+
     /// The protocol subtype for MPTCP.
+    ///
     /// - returns: nil if MPTCP is not supported.
-    static var mptcp: Self? {
+    public static var mptcp: Self? {
         #if os(Linux)
         // Defined by the linux kernel, this is IPPROTO_MPTCP.
         return .init(rawValue: 262)
@@ -161,7 +173,8 @@ extension NIOBSDSocket.ProtocolSubtype {
 }
 
 extension NIOBSDSocket.ProtocolSubtype {
-    init(_ protocol: NIOIPProtocol) {
+    /// Construct a protocol subtype from an IP protocol.
+    public init(_ protocol: NIOIPProtocol) {
         self.rawValue = CInt(`protocol`.rawValue)
     }
 }

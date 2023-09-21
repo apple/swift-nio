@@ -17,6 +17,8 @@ import XCTest
 @testable import NIOCore
 import NIOFoundationCompat
 
+import _NIOBase64
+
 class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
     private var buf: ByteBuffer! = nil
@@ -3452,4 +3454,43 @@ extension ByteBufferTest {
 
         XCTAssertEqual(0, self.buf.readableBytes)
     }
+
+    func testByteBufferEncode() throws {
+        let encoder = JSONEncoder()
+        let hello = "Hello, world!"
+        let buffer = ByteBuffer(string: hello)
+
+        let encoded = try encoder.encode(buffer)
+        let expected = "\"SGVsbG8sIHdvcmxkIQ==\""
+        XCTAssertEqual(String(data: encoded, encoding: .utf8)!, expected)
+    }
+
+    func testByteBufferDecode() throws {
+        let decoder = JSONDecoder()
+        var encodedData = Data()
+        encodedData.append(contentsOf: "\"SGVsbG8sIHdvcmxkIQ==\"".utf8)
+        let decoded = try decoder.decode(ByteBuffer.self, from: encodedData)
+
+        let expected = ByteBuffer(string: "Hello, world!").readableBytesView
+        XCTAssertEqual(decoded.readableBytesView, expected)
+    }
+
+    func testByteBufferDecodeWithInvalidLength() {
+        let decoder = JSONDecoder()
+        var encodedData = Data()
+        encodedData.append(contentsOf: "\"SGVsbG8sIHdvcmxkIQyy==\"".utf8)
+        XCTAssertThrowsError(try decoder.decode(ByteBuffer.self, from: encodedData)) { error in
+            XCTAssertEqual(error as? Base64Error, .invalidLength)
+        }
+    }
+
+    func testByteBufferDecodeWithInvalidCharacters() {
+        let decoder = JSONDecoder()
+        var encodedData = Data()
+        encodedData.append(contentsOf: "\"SGVsbG8sIHdvcmxkI_==\"".utf8)
+        XCTAssertThrowsError(try decoder.decode(ByteBuffer.self, from: encodedData)) { error in
+            XCTAssertEqual(error as? Base64Error, .invalidCharacter)
+        }
+    }
+
 }

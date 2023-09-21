@@ -314,6 +314,22 @@ extension IPv4Header {
     }
 }
 
+extension Sequence where Element == UInt8 {
+    func computeIPChecksum() -> UInt16 {
+        var sum = UInt16(0)
+
+        var iterator = self.makeIterator()
+
+        while let nextHigh = iterator.next() {
+            let nextLow = iterator.next() ?? 0
+            let next = (UInt16(nextHigh) << 8) | UInt16(nextLow)
+            sum = onesComplementAdd(lhs: sum, rhs: next)
+        }
+
+        return ~sum
+    }
+}
+
 private func onesComplementAdd<Integer: FixedWidthInteger>(lhs: Integer, rhs: Integer) -> Integer {
     var (sum, overflowed) = lhs.addingReportingOverflow(rhs)
     if overflowed {

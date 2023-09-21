@@ -930,6 +930,118 @@ class DatagramChannelTests: XCTestCase {
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
     }
 
+    func testDoingICMPWithoutRoot() throws {
+        // This test validates we can send ICMP messages on a datagram socket without having root privilege.
+        //
+        // This doesn't always work: ability to do this on Linux is gated behind a sysctl (net.ipv4.ping_group_range)
+        // which may exclude us. So we have to tolerate this throwing EPERM as well.
+
+        final class EchoRequestHandler: ChannelInboundHandler {
+            typealias InboundIn = AddressedEnvelope<ByteBuffer>
+            typealias OutboundOut = AddressedEnvelope<ByteBuffer>
+
+            let completePromise: EventLoopPromise<ByteBuffer>
+
+            init(completePromise: EventLoopPromise<ByteBuffer>) {
+                self.completePromise = completePromise
+            }
+
+            func channelActive(context: ChannelHandlerContext) {
+                var buffer = context.channel.allocator.buffer(capacity: 32)
+
+                // We're going to write an ICMP echo packet from scratch, like heroes.
+                // Echo request is type 8, code 0.
+                // The checksum is tricky: on Linux, the kernel doesn't care what we set, it'll
+                // calculate it. On macOS, however, we have to calculate it. For both platforms, then,
+                // we calculate it.
+                // Identifier is irrelevant.
+                // Sequence number does matter, but we'll set to 0.
+                let type = UInt8(8)
+                let code = UInt8(0)
+                let fakeChecksum = UInt16(0)
+                let identifier = UInt16(0)
+                let sequenceNumber = UInt16(0)
+                buffer.writeMultipleIntegers(type, code, fakeChecksum, identifier, sequenceNumber)
+
+                // Then we write a payload, which will be "hello from NIO".
+                buffer.writeString("Hello from NIO")
+
+                // Now calculate the checksum, and store it back at offset 2.
+                let checksum = buffer.readableBytesView.computeIPChecksum()
+                buffer.setInteger(checksum, at: 2)
+
+                // Now wrap it into an addressed envelope pointed at localhost.
+                let envelope = AddressedEnvelope(
+                    remoteAddress: try! SocketAddress(ipAddress: "127.0.0.1", port: 0),
+                    data: buffer
+                )
+
+                context.writeAndFlush(self.wrapOutboundOut(envelope)).cascadeFailure(to: self.completePromise)
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                let envelope = self.unwrapInboundIn(data)
+
+                // Complete with the payload.
+                self.completePromise.succeed(envelope.data)
+            }
+        }
+
+        let loop = self.group.next()
+        let completePromise = loop.makePromise(of: ByteBuffer.self)
+        do {
+            let channel = try DatagramBootstrap(group: group)
+                .protocolSubtype(.init(.icmp))
+                .channelInitializer { channel in
+                    channel.pipeline.addHandler(EchoRequestHandler(completePromise: completePromise))
+                }
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+            defer {
+                XCTAssertNoThrow(try channel.close().wait())
+            }
+
+            // Let's try to send an ICMP echo request and get a response.
+            var response = try completePromise.futureResult.wait()
+
+            #if canImport(Darwin)
+            // Again, a platform difference. On Darwin, this returns a complete IP packet. On Linux, it does not.
+            // We assume the Linux platform is the more general approach, but if this test fails on your platform
+            // it is _probably_ because it behaves differently. To make this general, we can skip the IPv4 header.
+            //
+            // To do that, we have to work out how long that header is. That's held in bottom 4 bits of the first
+            // byte, which is the IHL field. This is in "number of 32-bit words".
+            guard let firstByte = response.getInteger(at: response.readerIndex, as: UInt8.self),
+                  let _ = response.readSlice(length: Int(firstByte & 0x0F) * 4) else {
+                XCTFail("Insufficient bytes for IPv4 header")
+                return
+            }
+            #endif
+
+            // Now we've got the ICMP packet. Let's parse this.
+            guard let header = response.readMultipleIntegers(as: (UInt8, UInt8, UInt16, UInt16, UInt16).self) else {
+                XCTFail("Insufficient bytes for ICMP header")
+                return
+            }
+
+            // Echo response has type 0, code 0, unpredictable checksum and identifier, same sequence number we sent.
+            XCTAssertEqual(header.0 /* type */, 0)
+            XCTAssertEqual(header.1 /* code */, 0)
+            XCTAssertEqual(header.4 /* sequence number */, 0)
+
+            // Remaining payload should have been our string.
+            XCTAssertEqual(String(buffer: response), "Hello from NIO")
+        } catch let error as IOError {
+            // Firstly, fail this promise in case it leaks.
+            completePromise.fail(error)
+            if error.errnoCode == EACCES {
+                // Acceptable
+                return
+            }
+            XCTFail("Unexpected IOError: \(error)")
+        }
+    }
+
     func assertSending(
         data: ByteBuffer,
         from sourceChannel: Channel,
