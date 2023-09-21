@@ -19,14 +19,16 @@
 //
 // This file arguably shouldn't be here in NIOCore, but due to early design decisions we accidentally exposed a few types that
 // know about system calls into the core API (looking at you, FileHandle). As a result we need support for a small number of system calls.
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import Darwin.C
-#elseif os(Linux) || os(FreeBSD) || os(Android)
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif os(Windows)
 import CNIOWindows
 #else
-#error("bad os")
+#error("The system call helpers module was unable to identify your C library.")
 #endif
 
 #if os(Windows)

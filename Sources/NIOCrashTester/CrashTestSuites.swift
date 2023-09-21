@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if !os(iOS) && !os(tvOS) && !os(watchOS)
+#if !canImport(Darwin) || os(macOS)
 let crashTestSuites: [String: Any] = [
     "EventLoopCrashTests": EventLoopCrashTests(),
     "ByteBufferCrashTests": ByteBufferCrashTests(),

@@ -47,6 +47,10 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
         throw ChannelError.operationUnsupported
     }
 
+    override func connectSocket(to address: VsockAddress) throws -> Bool {
+        throw ChannelError.operationUnsupported
+    }
+
     override func finishConnectSocket() throws {
         throw ChannelError.inappropriateOperationForState
     }

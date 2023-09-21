@@ -17,12 +17,16 @@
 
 import NIOCore
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 @_exported import Darwin.C
 import CNIODarwin
 internal typealias MMsgHdr = CNIODarwin_mmsghdr
 #elseif os(Linux) || os(FreeBSD) || os(Android)
+#if canImport(Glibc)
 @_exported import Glibc
+#elseif canImport(Musl)
+@_exported import Musl
+#endif
 import CNIOLinux
 internal typealias MMsgHdr = CNIOLinux_mmsghdr
 internal typealias in6_pktinfo = CNIOLinux_in6_pktinfo
@@ -33,7 +37,7 @@ import CNIOWindows
 
 internal typealias MMsgHdr = CNIOWindows_mmsghdr
 #else
-let badOS = { fatalError("unsupported OS") }()
+#error("The POSIX system module was unable to identify your C library.")
 #endif
 
 #if os(Android)
@@ -107,7 +111,7 @@ private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsigne
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 #endif
 
-#if os(Linux)
+#if os(Linux) && !canImport(Musl)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = stat
 private let sysLstat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = lstat
@@ -120,7 +124,7 @@ private let sysReaddir: @convention(c) (OpaquePointer) -> UnsafeMutablePointer<d
 private let sysClosedir: @convention(c) (OpaquePointer) -> CInt = closedir
 private let sysRename: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = rename
 private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
-#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(Android)
+#elseif canImport(Darwin) || os(Android)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = stat
 private let sysLstat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = lstat
@@ -144,11 +148,18 @@ private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
 #if os(Linux) || os(Android)
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
-#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#elseif canImport(Darwin)
 private let sysKevent = kevent
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
 #endif
+#if !os(Windows)
+#if canImport(Musl)
+private let sysIoctl: @convention(c) (CInt, CInt, UnsafeMutableRawPointer) -> CInt = ioctl
+#else
+private let sysIoctl: @convention(c) (CInt, CUnsignedLong, UnsafeMutableRawPointer) -> CInt = ioctl
+#endif  // canImport(Musl)
+#endif  // !os(Windows)
 
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
     // On iOS, EBADF is a possible result when a file descriptor has been reaped in the background.
@@ -156,7 +167,7 @@ private func isUnacceptableErrno(_ code: Int32) -> Bool {
     // is valid but the accepted one is not. The right solution here is to perform a check for
     // SO_ISDEFUNCT when we see this happen, but we haven't yet invested the time to do that.
     // In the meantime, we just tolerate EBADF on iOS.
-    #if os(iOS) || os(watchOS) || os(tvOS)
+    #if canImport(Darwin) && !os(macOS)
     switch code {
     case EFAULT:
         return true
@@ -185,7 +196,7 @@ private func isUnacceptableErrnoOnClose(_ code: Int32) -> Bool {
 
 private func isUnacceptableErrnoForbiddingEINVAL(_ code: Int32) -> Bool {
     // We treat read() and pread() differently since we also want to catch EINVAL.
-    #if os(iOS) || os(watchOS) || os(tvOS)
+    #if canImport(Darwin) && !os(macOS)
     switch code {
     case EFAULT, EINVAL:
         return true
@@ -274,7 +285,7 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
     }
 }
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 @inline(__always)
 @discardableResult
 internal func syscall<T>(where function: String = #function,
@@ -378,17 +389,23 @@ internal func syscallForbiddingEINVAL<T: FixedWidthInteger>(where function: Stri
 }
 
 internal enum Posix {
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
     static let UIO_MAXIOV: Int = 1024
     static let SHUT_RD: CInt = CInt(Darwin.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
 #elseif os(Linux) || os(FreeBSD) || os(Android)
-
+    #if canImport(Glibc)
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
     static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
+    #elseif canImport(Musl)
+    static let UIO_MAXIOV: Int = Int(Musl.UIO_MAXIOV)
+    static let SHUT_RD: CInt = CInt(Musl.SHUT_RD)
+    static let SHUT_WR: CInt = CInt(Musl.SHUT_WR)
+    static let SHUT_RDWR: CInt = CInt(Musl.SHUT_RDWR)
+    #endif
 #else
     static var UIO_MAXIOV: Int {
         fatalError("unsupported OS")
@@ -404,7 +421,7 @@ internal enum Posix {
     }
 #endif
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
     static let IPTOS_ECN_NOTECT: CInt = CNIODarwin_IPTOS_ECN_NOTECT
     static let IPTOS_ECN_MASK: CInt = CNIODarwin_IPTOS_ECN_MASK
     static let IPTOS_ECN_ECT0: CInt = CNIODarwin_IPTOS_ECN_ECT0
@@ -428,7 +445,7 @@ internal enum Posix {
     static let IPTOS_ECN_CE: CInt = CInt(0x03)
 #endif
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
     static let IP_RECVPKTINFO: CInt = CNIODarwin.IP_RECVPKTINFO
     static let IP_PKTINFO: CInt = CNIODarwin.IP_PKTINFO
 
@@ -652,14 +669,18 @@ internal enum Posix {
         var written: off_t = 0
         do {
             _ = try syscall(blocking: false) { () -> ssize_t in
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                #if canImport(Darwin)
                     var w: off_t = off_t(count)
                     let result: CInt = Darwin.sendfile(fd, descriptor, offset, &w, nil, 0)
                     written = w
                     return ssize_t(result)
                 #elseif os(Linux) || os(FreeBSD) || os(Android)
                     var off: off_t = offset
+                    #if canImport(Glibc)
                     let result: ssize_t = Glibc.sendfile(descriptor, fd, &off, count)
+                    #elseif canImport(Musl)
+                    let result: ssize_t = Musl.sendfile(descriptor, fd, &off, count)
+                    #endif
                     if result >= 0 {
                         written = off_t(result)
                     } else {
@@ -772,7 +793,7 @@ internal enum Posix {
         }
     }
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
     @inline(never)
     public static func mkpath_np(pathname: String, mode: mode_t) throws {
         _ = try syscall(blocking: false) {
@@ -847,6 +868,15 @@ internal enum Posix {
         }
     }
 #endif
+#if !os(Windows)
+    @inline(never)
+    internal static func ioctl(fd: CInt, request: CUnsignedLong, ptr: UnsafeMutableRawPointer) throws {
+        _ = try syscall(blocking: false) {
+            /// `numericCast` to support musl which accepts `CInt` (cf. `CUnsignedLong`).
+            sysIoctl(fd, numericCast(request), ptr)
+        }
+    }
+#endif  // !os(Windows)
 }
 
 /// `NIOFcntlFailedError` indicates that NIO was unable to perform an
@@ -881,7 +911,7 @@ internal extension Posix {
 }
 #endif
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 internal enum KQueue {
 
     // TODO: Figure out how to specify a typealias to the kevent struct without run into trouble with the swift compiler

@@ -895,7 +895,7 @@ private func assertNoSelectorChanges(fd: CInt, selector: NIOPosix.Selector<NIORe
         let description: String
     }
 
-    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(FreeBSD)
+    #if canImport(Darwin) || os(FreeBSD)
     var ev: kevent = .init()
     var nothing: timespec = .init()
     let numberOfEvents = try KQueue.kevent(kq: fd, changelist: nil, nchanges: 0, eventlist: &ev, nevents: 1, timeout: &nothing)

@@ -12,10 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
     import Darwin
-#else
+#elseif canImport(Glibc)
     import Glibc
+#else
+    #error("The Happy Eyeballs test module was unable to identify your C library.")
 #endif
 import XCTest
 @testable import NIOCore
@@ -226,10 +228,12 @@ private func defaultChannelBuilder(loop: EventLoop, family: NIOBSDSocket.Protoco
     return loop.makeSucceededFuture(channel)
 }
 
-private func buildEyeballer(host: String,
-                            port: Int,
-                            connectTimeout: TimeAmount = .seconds(10),
-                            channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel> = defaultChannelBuilder) -> (eyeballer: HappyEyeballsConnector, resolver: DummyResolver, loop: EmbeddedEventLoop) {
+private func buildEyeballer(
+    host: String,
+    port: Int,
+    connectTimeout: TimeAmount = .seconds(10),
+    channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel> = defaultChannelBuilder
+) -> (eyeballer: HappyEyeballsConnector<Void>, resolver: DummyResolver, loop: EmbeddedEventLoop) {
     let loop = EmbeddedEventLoop()
     let resolver = DummyResolver(loop: loop)
     let eyeballer = HappyEyeballsConnector(resolver: resolver,

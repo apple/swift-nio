@@ -72,11 +72,9 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     enum Transformation {
         /// A synchronous transformation is applied to incoming reads. This is used when sync wrapping a channel.
         case syncWrapping((InboundIn) -> ProducerElement)
-        /// This is used in the ServerBootstrap since we require to wrap the child channel on it's event loop but yield it on the parent's loop.
-        case bind((InboundIn) -> EventLoopFuture<ProducerElement>)
-        /// In the case of protocol negotiation we are applying a future based transformation where we wait for the transformation
-        /// to finish before we yield it to the source.
-        case protocolNegotiation((InboundIn) -> EventLoopFuture<ProducerElement>)
+        case transformation(
+            channelReadTransformation: @Sendable (InboundIn) -> EventLoopFuture<ProducerElement>
+        )
     }
 
     /// The transformation applied to incoming reads.
@@ -96,7 +94,7 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
 
     /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used when the pipeline got synchronously wrapped.
     @inlinable
-    static func makeWrappingHandler(
+    static func makeHandler(
         eventLoop: EventLoop,
         closeRatchet: CloseRatchet
     ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == ProducerElement {
@@ -107,32 +105,19 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
         )
     }
 
-    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel.
+    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which has hooks for transformations.
     @inlinable
-    static func makeBindingHandler(
+    static func makeHandlerWithTransformations(
         eventLoop: EventLoop,
         closeRatchet: CloseRatchet,
-        transformationClosure: @escaping (Channel) -> EventLoopFuture<ProducerElement>
+        channelReadTransformation: @Sendable @escaping (InboundIn) -> EventLoopFuture<ProducerElement>
     ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == Channel {
         return .init(
             eventLoop: eventLoop,
             closeRatchet: closeRatchet,
-            transformation: .bind(transformationClosure)
-        )
-    }
-
-    /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used in the bootstrap for the ServerChannel when the child
-    /// channel does protocol negotiation.
-    @inlinable
-    static func makeProtocolNegotiationHandler(
-        eventLoop: EventLoop,
-        closeRatchet: CloseRatchet,
-        transformationClosure: @escaping (Channel) -> EventLoopFuture<ProducerElement>
-    ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == Channel {
-        return .init(
-            eventLoop: eventLoop,
-            closeRatchet: closeRatchet,
-            transformation: .protocolNegotiation(transformationClosure)
+            transformation: .transformation(
+                channelReadTransformation: channelReadTransformation
+            )
         )
     }
 
@@ -157,38 +142,24 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
             // We forward on reads here to enable better channel composition.
             context.fireChannelRead(data)
 
-        case .bind(let transformation):
+        case .transformation(let channelReadTransformation):
             // The unsafe transfers here are required because we need to use self in whenComplete
             // We are making sure to be on our event loop so we can safely use self in whenComplete
             let unsafeSelf = NIOLoopBound(self, eventLoop: context.eventLoop)
             let unsafeContext = NIOLoopBound(context, eventLoop: context.eventLoop)
-            transformation(unwrapped)
+            channelReadTransformation(unwrapped)
                 .hop(to: context.eventLoop)
-                .whenComplete { result in
-                    unsafeSelf.value._transformationCompleted(context: unsafeContext.value, result: result)
-
-                    // We forward the read only after the transformation has been completed. This is super important
-                    // since we are setting up the NIOAsyncChannel handlers in the transformation and
-                    // we must make sure to only generate reads once they are setup. Reads can only
-                    // happen after the child channels hit `channelRead0` that's why we are holding the read here.
+                .map { result -> ProducerElement in
+                    context.eventLoop.preconditionInEventLoop()
+                    // We have to fire through the original data now. Since our channelReadTransformation
+                    // is the channel initializer. Once that's done we need to fire the channel as a read
+                    // so that it hits channelRead0 in the base socket channel.
                     context.fireChannelRead(data)
+                    return result
                 }
-
-        case .protocolNegotiation(let protocolNegotiation):
-            // The unsafe transfers here are required because we need to use self in whenComplete
-            // We are making sure to be on our event loop so we can safely use self in whenComplete
-            let unsafeSelf = NIOLoopBound(self, eventLoop: context.eventLoop)
-            let unsafeContext = NIOLoopBound(context, eventLoop: context.eventLoop)
-            protocolNegotiation(unwrapped)
-                .hop(to: context.eventLoop)
                 .whenComplete { result in
                     unsafeSelf.value._transformationCompleted(context: unsafeContext.value, result: result)
                 }
-
-            // We forwarding the read here right away since protocol negotiation often needs reads to progress.
-            // In this case, we expect the user to synchronously wrap the child channel into a NIOAsyncChannel
-            // hence we don't have the timing issue as in the `.bind` case.
-            context.fireChannelRead(data)
         }
     }
 

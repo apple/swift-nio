@@ -110,19 +110,17 @@ class NIOThreadPoolTest: XCTestCase {
         }
     }
 
-    func testAsyncShutdownWorks() throws {
+    func testAsyncShutdownWorks() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
-        XCTAsyncTest {
-            let threadPool = NIOThreadPool(numberOfThreads: 17)
-            let eventLoop = NIOAsyncTestingEventLoop()
+        let threadPool = NIOThreadPool(numberOfThreads: 17)
+        let eventLoop = NIOAsyncTestingEventLoop()
 
-            threadPool.start()
-            try await threadPool.shutdownGracefully()
+        threadPool.start()
+        try await threadPool.shutdownGracefully()
 
-            let future = threadPool.runIfActive(eventLoop: eventLoop) {
-                XCTFail("This shouldn't run because the pool is shutdown.")
-            }
-            await XCTAssertThrowsError(try await future.get())
+        let future = threadPool.runIfActive(eventLoop: eventLoop) {
+            XCTFail("This shouldn't run because the pool is shutdown.")
         }
+        await XCTAssertThrowsError(try await future.get())
     }
 }

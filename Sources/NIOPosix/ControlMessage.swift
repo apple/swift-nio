@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import CNIODarwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
@@ -174,7 +174,7 @@ struct ControlMessageParser {
         }
     }
     
-    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    #if canImport(Darwin)
     private static let ipv4TosType = IP_RECVTOS
     #else
     private static let ipv4TosType = IP_TOS    // Linux

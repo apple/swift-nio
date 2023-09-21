@@ -23,8 +23,64 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @usableFromInline
     typealias _Writer = NIOAsyncChannelOutboundWriterHandler<OutboundOut>.Writer
 
+    /// An `AsyncSequence` backing a ``NIOAsyncChannelOutboundWriter`` for testing purposes.
+    public struct TestSink: AsyncSequence {
+        public typealias Element = OutboundOut
+
+        @usableFromInline
+        internal let stream: AsyncStream<OutboundOut>
+
+        @usableFromInline
+        internal let continuation: AsyncStream<OutboundOut>.Continuation
+
+        @inlinable
+        init(
+            stream: AsyncStream<OutboundOut>,
+            continuation: AsyncStream<OutboundOut>.Continuation
+        ) {
+            self.stream = stream
+            self.continuation = continuation
+        }
+
+        public func makeAsyncIterator() -> AsyncIterator {
+            AsyncIterator(iterator: self.stream.makeAsyncIterator())
+        }
+
+        public struct AsyncIterator: AsyncIteratorProtocol {
+            @usableFromInline
+            internal var iterator: AsyncStream<OutboundOut>.AsyncIterator
+
+            @inlinable
+            init(iterator: AsyncStream<OutboundOut>.AsyncIterator) {
+                self.iterator = iterator
+            }
+
+            public mutating func next() async -> Element? {
+                await self.iterator.next()
+            }
+        }
+    }
+
     @usableFromInline
-    let _outboundWriter: _Writer
+    enum Backing: Sendable {
+        case asyncStream(AsyncStream<OutboundOut>.Continuation)
+        case writer(_Writer)
+    }
+
+    @usableFromInline
+    internal let _backing: Backing
+
+    /// Creates a new ``NIOAsyncChannelOutboundWriter`` backed by a ``NIOAsyncChannelOutboundWriter/TestSink``.
+    /// This is mostly useful for testing purposes where one wants to observe the written data.
+    @inlinable
+    public static func makeTestingWriter() -> (Self, TestSink) {
+        var continuation: AsyncStream<OutboundOut>.Continuation!
+        let asyncStream = AsyncStream<OutboundOut> { continuation = $0 }
+        let writer = Self(continuation: continuation)
+        let sink = TestSink(stream: asyncStream, continuation: continuation)
+
+        return (writer, sink)
+    }
 
     @inlinable
     init(
@@ -44,12 +100,12 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
 
         try channel.pipeline.syncOperations.addHandler(handler)
 
-        self._outboundWriter = writer.writer
+        self._backing = .writer(writer.writer)
     }
 
     @inlinable
-    init(outboundWriter: NIOAsyncChannelOutboundWriterHandler<OutboundOut>.Writer) {
-        self._outboundWriter = outboundWriter
+    init(continuation: AsyncStream<OutboundOut>.Continuation) {
+        self._backing = .asyncStream(continuation)
     }
 
     /// Send a write into the ``ChannelPipeline`` and flush it right away.
@@ -58,7 +114,12 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @inlinable
     @_spi(AsyncChannel)
     public func write(_ data: OutboundOut) async throws {
-        try await self._outboundWriter.yield(data)
+        switch self._backing {
+        case .asyncStream(let continuation):
+            continuation.yield(data)
+        case .writer(let writer):
+            try await writer.yield(data)
+        }
     }
 
     /// Send a sequence of writes into the ``ChannelPipeline`` and flush them right away.
@@ -67,7 +128,14 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @inlinable
     @_spi(AsyncChannel)
     public func write<Writes: Sequence>(contentsOf sequence: Writes) async throws where Writes.Element == OutboundOut {
-        try await self._outboundWriter.yield(contentsOf: sequence)
+        switch self._backing {
+        case .asyncStream(let continuation):
+            for data in sequence {
+                continuation.yield(data)
+            }
+        case .writer(let writer):
+            try await writer.yield(contentsOf: sequence)
+        }
     }
 
     /// Send a sequence of writes into the ``ChannelPipeline`` and flush them right away.
@@ -77,7 +145,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @_spi(AsyncChannel)
     public func write<Writes: AsyncSequence>(contentsOf sequence: Writes) async throws where Writes.Element == OutboundOut {
         for try await data in sequence {
-            try await self._outboundWriter.yield(data)
+            try await self.write(data)
         }
     }
 
@@ -86,6 +154,20 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     /// This might trigger a half closure if the ``NIOAsyncChannel`` was configured to support it.
     @_spi(AsyncChannel)
     public func finish() {
-        self._outboundWriter.finish()
+        switch self._backing {
+        case .asyncStream(let continuation):
+            continuation.finish()
+        case .writer(let writer):
+            writer.finish()
+        }
     }
 }
+
+#if swift(>=5.7)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension NIOAsyncChannelOutboundWriter.TestSink: Sendable {}
+#else
+// AsyncStream wasn't marked as `Sendable` in 5.6
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension NIOAsyncChannelOutboundWriter.TestSink: @unchecked Sendable {}
+#endif

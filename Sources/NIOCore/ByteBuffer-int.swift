@@ -74,6 +74,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - integer: The integer to serialize.
     ///     - endianness: The endianness to use, defaults to big endian.
+    ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: The number of bytes written.
     @discardableResult
     @inlinable
@@ -91,6 +92,7 @@ extension ByteBuffer {
     ///     - integer: The integer to serialize.
     ///     - index: The index of the first byte to write.
     ///     - endianness: The endianness to use, defaults to big endian.
+    ///     - as: the desired `FixedWidthInteger` type (optional parameter)
     /// - returns: The number of bytes written.
     @discardableResult
     @inlinable

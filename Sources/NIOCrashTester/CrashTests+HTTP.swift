@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if !os(iOS) && !os(tvOS) && !os(watchOS)
+#if !canImport(Darwin) || os(macOS)
 import NIOEmbedded
 import NIOCore
 import NIOHTTP1

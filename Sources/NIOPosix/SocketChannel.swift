@@ -96,6 +96,8 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         switch option {
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
             return connectTimeout as! Option.Value
+        case _ as ChannelOptions.Types.LocalVsockContextID:
+            return try self.socket.getLocalVsockContextID() as! Option.Value
         default:
             return try super.getOption0(option)
         }
@@ -107,10 +109,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
                                registrationID: registrationID)
     }
 
-    override func connectSocket(to address: SocketAddress) throws -> Bool {
-        if try self.socket.connect(to: address) {
-            return true
-        }
+    private func scheduleConnectTimeout() {
         if let timeout = connectTimeout {
             connectTimeoutScheduled = eventLoop.scheduleTask(in: timeout) { () -> Void in
                 if self.pendingConnect != nil {
@@ -119,7 +118,21 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
                 }
             }
         }
+    }
 
+    override func connectSocket(to address: SocketAddress) throws -> Bool {
+        if try self.socket.connect(to: address) {
+            return true
+        }
+        self.scheduleConnectTimeout()
+        return false
+    }
+
+    override func connectSocket(to address: VsockAddress) throws -> Bool {
+        if try self.socket.connect(to: address) {
+            return true
+        }
+        self.scheduleConnectTimeout()
         return false
     }
 
@@ -231,12 +244,19 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         switch option {
         case _ as ChannelOptions.Types.BacklogOption:
             return backlog as! Option.Value
+        case _ as ChannelOptions.Types.LocalVsockContextID:
+            return try self.socket.getLocalVsockContextID() as! Option.Value
         default:
             return try super.getOption0(option)
         }
     }
 
-    override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+    internal enum BindTarget {
+        case socketAddress(_: SocketAddress)
+        case vsockAddress(_: VsockAddress)
+    }
+
+    internal func bind0(to target: BindTarget, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
@@ -257,10 +277,19 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             promise?.fail(error)
         }
         executeAndComplete(p) {
-            try socket.bind(to: address)
+            switch target {
+            case .socketAddress(let address):
+                try socket.bind(to: address)
+            case .vsockAddress(let address):
+                try socket.bind(to: address)
+            }
             self.updateCachedAddressesFromSocket(updateRemote: false)
             try self.socket.listen(backlog: backlog)
         }
+    }
+
+    override public func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.bind0(to: .socketAddress(address), promise: promise)
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
@@ -376,6 +405,15 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.reregister(selectable: self.socket, interested: interested)
+    }
+
+    override func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
+        switch event {
+        case let event as VsockChannelEvents.BindToAddress:
+            self.bind0(to: .vsockAddress(event.address), promise: promise)
+        default:
+            promise?.fail(ChannelError.operationUnsupported)
+        }
     }
 }
 
@@ -613,6 +651,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         }
     }
 
+    override func connectSocket(to address: VsockAddress) throws -> Bool {
+        throw ChannelError.operationUnsupported
+    }
+
     override func finishConnectSocket() throws {
         // This is not required for connected datagram channels connect is a synchronous operation.
         throw ChannelError.operationUnsupported
@@ -656,6 +698,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             switch result {
             case .processed(let bytesRead):
                 assert(self.isOpen)
+                let remoteAddress: SocketAddress = try rawAddress.convert()
+
                 self.recvBufferPool.record(actualReadBytes: bytesRead)
                 readPending = false
 
@@ -667,7 +711,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                     metadata = nil
                 }
 
-                let msg = AddressedEnvelope(remoteAddress: rawAddress.convert(),
+                let msg = AddressedEnvelope(remoteAddress: remoteAddress,
                                             data: buffer,
                                             metadata: metadata)
                 assert(self.isActive)

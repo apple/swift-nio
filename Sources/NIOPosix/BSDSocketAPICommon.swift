@@ -66,7 +66,7 @@ extension NIOBSDSocket.SocketType: Hashable {
 extension NIOBSDSocket.SocketType {
     /// Supports datagrams, which are connectionless, unreliable messages of a
     /// fixed (typically small) maximum length.
-    #if os(Linux)
+    #if os(Linux) && !canImport(Musl)
         internal static let datagram: NIOBSDSocket.SocketType =
                 NIOBSDSocket.SocketType(rawValue: CInt(SOCK_DGRAM.rawValue))
     #else
@@ -76,7 +76,7 @@ extension NIOBSDSocket.SocketType {
 
     /// Supports reliable, two-way, connection-based byte streams without
     /// duplication of data and without preservation of boundaries.
-    #if os(Linux)
+    #if os(Linux) && !canImport(Musl)
         internal static let stream: NIOBSDSocket.SocketType =
                 NIOBSDSocket.SocketType(rawValue: CInt(SOCK_STREAM.rawValue))
     #else

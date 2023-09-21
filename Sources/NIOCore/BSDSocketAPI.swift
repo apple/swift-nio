@@ -61,16 +61,22 @@ import func WinSDK.WSAGetLastError
 
 internal typealias socklen_t = ucrt.size_t
 #elseif os(Linux) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import CNIOLinux
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
-#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#elseif canImport(Darwin)
 import Darwin
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
+#else
+#error("The BSD Socket module was unable to identify your C library.")
 #endif
 
 #if os(Android)
@@ -329,7 +335,7 @@ extension NIOBSDSocket.Option {
 }
 #endif
 
-#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+#if canImport(Darwin)
 extension NIOBSDSocket.Option {
     /// Get information about the TCP connection.
     public static let tcp_connection_info: NIOBSDSocket.Option =

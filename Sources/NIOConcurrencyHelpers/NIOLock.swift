@@ -12,13 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import Darwin
 #elseif os(Windows)
 import ucrt
 import WinSDK
-#else
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#else
+#error("The concurrency NIOLock module was unable to identify your C library.")
 #endif
 
 #if os(Windows)

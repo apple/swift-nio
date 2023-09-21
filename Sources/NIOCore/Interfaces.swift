@@ -12,9 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 #if os(Linux) || os(FreeBSD) || os(Android)
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
 import CNIOLinux
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif canImport(Darwin)
 import Darwin
 #elseif os(Windows)
 import let WinSDK.AF_INET
@@ -34,6 +38,8 @@ import struct WinSDK.sockaddr_storage
 import struct WinSDK.sockaddr_un
 
 import typealias WinSDK.UINT8
+#else
+#error("The Core interfaces module was unable to identify your C library.")
 #endif
 
 #if !os(Windows)
@@ -41,7 +47,7 @@ private extension ifaddrs {
     var dstaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_dstaddr
-        #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        #elseif canImport(Darwin)
         return self.ifa_dstaddr
         #endif
     }
@@ -49,7 +55,7 @@ private extension ifaddrs {
     var broadaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
         return self.ifa_ifu.ifu_broadaddr
-        #elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+        #elseif canImport(Darwin)
         return self.ifa_dstaddr
         #endif
     }

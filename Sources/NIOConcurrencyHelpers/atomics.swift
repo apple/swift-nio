@@ -14,7 +14,7 @@
 
 import CNIOAtomics
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import Darwin
 fileprivate func sys_sched_yield() {
     pthread_yield_np()
@@ -26,7 +26,14 @@ fileprivate func sys_sched_yield() {
   Sleep(0)
 }
 #else
+#if canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
+#else
+#error("The concurrency atomics module was unable to identify your C library.")
+#endif
+
 fileprivate func sys_sched_yield() {
     _ = sched_yield()
 }

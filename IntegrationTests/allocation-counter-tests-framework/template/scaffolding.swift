@@ -14,10 +14,12 @@
 
 import Foundation
 import AtomicCounter
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
 import Darwin
-#else
+#elseif canImport(Glibc)
 import Glibc
+#else
+#error("The integration test scaffolding was unable to identify your C library.")
 #endif
 
 func waitForThreadsToQuiesce(shouldReachZero: Bool) {
@@ -88,7 +90,7 @@ func measureAll(trackFDs: Bool, _ fn: () -> Int) -> [Measurement] {
             AtomicCounter.begin_tracking_fds()
         }
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
         autoreleasepool {
             _ = fn()
         }
@@ -167,7 +169,7 @@ func measureAll(trackFDs: Bool, _ fn: @escaping () async -> Int) -> [Measurement
         AtomicCounter.reset_malloc_counter()
         AtomicCounter.reset_malloc_bytes_counter()
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if canImport(Darwin)
         autoreleasepool {
             run(fn)
         }

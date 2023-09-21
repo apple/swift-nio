@@ -26,6 +26,16 @@ extension System {
             return false
         }
     }
+
+    static var supportsVsock: Bool {
+#if canImport(Darwin) || os(Linux) || os(Android)
+        guard let socket = try? Socket(protocolFamily: .vsock, type: .stream) else { return false }
+        XCTAssertNoThrow(try socket.close())
+        return true
+#else
+        return false
+#endif
+    }
 }
 
 func withPipe(_ body: (NIOCore.NIOFileHandle, NIOCore.NIOFileHandle) throws -> [NIOCore.NIOFileHandle]) throws {
@@ -644,13 +654,13 @@ func withCrossConnectedPipeChannels<R>(forceSeparateEventLoops: Bool = false,
                     try pipe2Read.withUnsafeFileDescriptor { pipe2Read in
                         try pipe2Write.withUnsafeFileDescriptor { pipe2Write in
                             let channel1 = try NIOPipeBootstrap(group: channel1Group)
-                                .withPipes(inputDescriptor: pipe1Read, outputDescriptor: pipe2Write)
+                                .takingOwnershipOfDescriptors(input: pipe1Read, output: pipe2Write)
                                 .wait()
                             defer {
                                 XCTAssertNoThrow(try channel1.syncCloseAcceptingAlreadyClosed())
                             }
                             let channel2 = try NIOPipeBootstrap(group: channel2Group)
-                                .withPipes(inputDescriptor: pipe2Read, outputDescriptor: pipe1Write)
+                                .takingOwnershipOfDescriptors(input: pipe2Read, output: pipe1Write)
                                 .wait()
                             defer {
                                 XCTAssertNoThrow(try channel2.syncCloseAcceptingAlreadyClosed())

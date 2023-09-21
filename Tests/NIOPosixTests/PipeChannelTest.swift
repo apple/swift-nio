@@ -43,8 +43,8 @@ final class PipeChannelTest: XCTestCase {
                 try pipe1Read.withUnsafeFileDescriptor { channelIn in
                     try pipe2Write.withUnsafeFileDescriptor { channelOut in
                         let channel = NIOPipeBootstrap(group: self.group)
-                            .withPipes(inputDescriptor: channelIn,
-                                       outputDescriptor: channelOut)
+                            .takingOwnershipOfDescriptors(input: channelIn,
+                                       output: channelOut)
                         XCTAssertNoThrow(self.channel = try channel.wait())
                     }
                 }
@@ -114,13 +114,13 @@ final class PipeChannelTest: XCTestCase {
                     try pipeIn.withUnsafeFileDescriptor { pipeInDescriptor in
                         try pipeOut.withUnsafeFileDescriptor { pipeOutDescriptor in
                             XCTAssertThrowsError(try NIOPipeBootstrap(group: self.group)
-                                .withPipes(inputDescriptor: fileFHDescriptor,
-                                           outputDescriptor: pipeOutDescriptor).wait()) { error in
+                                .takingOwnershipOfDescriptors(input: fileFHDescriptor,
+                                           output: pipeOutDescriptor).wait()) { error in
                                     XCTAssertEqual(ChannelError.operationUnsupported, error as? ChannelError)
                             }
                             XCTAssertThrowsError(try NIOPipeBootstrap(group: self.group)
-                                .withPipes(inputDescriptor: pipeInDescriptor,
-                                           outputDescriptor: fileFHDescriptor).wait()) { error in
+                                .takingOwnershipOfDescriptors(input: pipeInDescriptor,
+                                           output: fileFHDescriptor).wait()) { error in
                                     XCTAssertEqual(ChannelError.operationUnsupported, error as? ChannelError)
                             }
                         }
@@ -161,7 +161,7 @@ final class PipeChannelTest: XCTestCase {
             .channelInitializer { channel in
                 channel.pipeline.addHandler(EchoHandler())
             }
-            .withInputOutputDescriptor(dup(socketPair[0]))
+            .takingOwnershipOfDescriptor(inputOutput: dup(socketPair[0]))
             .wait())
         defer {
             XCTAssertNoThrow(try maybeChannel?.close().wait())

@@ -114,7 +114,7 @@ public struct NIOThrowingAsyncSequenceProducer<
 
         return .init(source: source, sequence: sequence)
     }
-    
+
     /// Initializes a new ``NIOThrowingAsyncSequenceProducer`` and a ``NIOThrowingAsyncSequenceProducer/Source``.
     ///
     /// - Important: This method returns a struct containing a ``NIOThrowingAsyncSequenceProducer/Source`` and
@@ -229,7 +229,7 @@ extension NIOThrowingAsyncSequenceProducer {
     ///
     /// - Note: This struct has reference semantics. Once all copies of a source have been dropped ``NIOThrowingAsyncSequenceProducer/Source/finish()``.
     /// This will resume any suspended continuation.
-    public struct Source: Sendable {
+    public struct Source {
         /// This class is needed to hook the deinit to observe once all references to the ``NIOThrowingAsyncSequenceProducer/Source`` are dropped.
         ///
         /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
@@ -573,7 +573,7 @@ extension NIOThrowingAsyncSequenceProducer {
                         } else {
                             continuation.resume(returning: nil)
                         }
-                        
+
                         let delegate = self._delegate
                         self._delegate = nil
 
@@ -966,7 +966,7 @@ extension NIOThrowingAsyncSequenceProducer {
             switch self._state {
             case .initial(_, let iteratorInitialized):
                 // This can happen if the `Task` that calls `next()` is already cancelled.
-                
+
                 // We have deprecated the generic Failure type in the public API and Failure should
                 // now be `Swift.Error`. However, if users have not migrated to the new API they could
                 // still use a custom generic Error type and this cast might fail.
@@ -984,7 +984,7 @@ extension NIOThrowingAsyncSequenceProducer {
                 } else {
                     self._state = .finished(iteratorInitialized: iteratorInitialized)
                 }
-                
+
                 return .none
 
             case .streaming(_, _, .some(let continuation), _, let iteratorInitialized):
@@ -1170,3 +1170,6 @@ extension NIOThrowingAsyncSequenceProducer {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOThrowingAsyncSequenceProducer.AsyncIterator: Sendable {}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension NIOThrowingAsyncSequenceProducer.Source: Sendable {}
