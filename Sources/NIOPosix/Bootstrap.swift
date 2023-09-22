@@ -713,10 +713,10 @@ private extension Channel {
 /// A `ClientBootstrap` is an easy way to bootstrap a `SocketChannel` when creating network clients.
 ///
 /// You may re-use a `ClientBootstrap` once you set it up and call `connect` multiple times on it.
-/// This ensures all connections you create share the same ``EventLoop``.
+/// This ensures all connections you create share the same `EventLoop`.
 ///
-/// Keep in mind that `ClientBoostrap` is not ``Sendable``, so you cannot share the same
-/// instance across multiple ``EventLoop``s or multiple concurrency domains in general. 
+/// Keep in mind that `ClientBoostrap` is not `Sendable`, so you cannot share the same
+/// instance across multiple `EventLoop`s or multiple concurrency domains in general. 
 /// Creating a `ClientBootstrap` is cheap. So instead of arranging synchronization allowing
 /// concurrent code to re-use a single `ClientBootstrap` instance across many tasks, it is often 
 /// easier to create a dedicated instance for each task.
