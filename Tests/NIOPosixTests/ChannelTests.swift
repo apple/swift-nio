@@ -2117,6 +2117,11 @@ public final class ChannelTests: XCTestCase {
     }
 
     func testCloseSocketWhenReadErrorWasReceivedAndMakeSureNoReadCompleteArrives() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // Test overrides behaviour of the Socket object,
+        // but with URing all IO is done by URing, so test does not make sense.
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         class SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET: Socket {
             private var firstReadHappened = false
             init(protocolFamily: NIOBSDSocket.ProtocolFamily) throws {
@@ -2220,6 +2225,7 @@ public final class ChannelTests: XCTestCase {
         }.wait() as Void)
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
+#endif
     }
 
     func testSocketFailingAsyncCorrectlyTearsTheChannelDownAndDoesntCrash() throws {

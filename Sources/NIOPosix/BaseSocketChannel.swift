@@ -1367,6 +1367,12 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
         self.registerForReadEOF()
 
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        let isFlushPending = self.hasFlushedPendingWrites()
+        if !isFlushPending {
+            self.flushNowAsync()
+        }
+#else
         // Flush any pending writes. If after the flush we're still open, make sure
         // our registration is appropriate.
         switch self.flushNow() {
@@ -1379,6 +1385,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 self.unregisterForWritable()
             }
         }
+#endif
 
         self.readIfNeeded0()
     }

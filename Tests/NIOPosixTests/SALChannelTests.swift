@@ -487,7 +487,12 @@ final class SALChannelTest: XCTestCase, SALTest {
 #endif
     }
 
-    func testWriteBeforeChannelActiveClientStreamDelayedConnect() {
+    func testWriteBeforeChannelActiveClientStreamDelayedConnect() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         guard let channel = try? self.makeSocketChannel() else {
             XCTFail("couldn't make a channel")
             return
@@ -546,9 +551,15 @@ final class SALChannelTest: XCTestCase, SALTest {
                     $0.closeFuture
                 }
         }.salWait())
+#endif
     }
 
-    func testWriteBeforeChannelActiveClientStreamInstantConnect() {
+    func testWriteBeforeChannelActiveClientStreamInstantConnect() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         guard let channel = try? self.makeSocketChannel() else {
             XCTFail("couldn't make a channel")
             return
@@ -595,9 +606,15 @@ final class SALChannelTest: XCTestCase, SALTest {
                     $0.closeFuture
                 }
         }.salWait())
+#endif
     }
 
-    func testWriteBeforeChannelActiveClientStreamInstantConnect_shortWriteLeadsToWritable() {
+    func testWriteBeforeChannelActiveClientStreamInstantConnect_shortWriteLeadsToWritable() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         guard let channel = try? self.makeSocketChannel() else {
             XCTFail("couldn't make a channel")
             return
@@ -654,9 +671,15 @@ final class SALChannelTest: XCTestCase, SALTest {
                     $0.closeFuture
                 }
         }.salWait())
+#endif
     }
 
-    func testWriteBeforeChannelActiveClientStreamInstantConnect_shortWriteLeadsToWritable_instantClose() {
+    func testWriteBeforeChannelActiveClientStreamInstantConnect_shortWriteLeadsToWritable_instantClose() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         guard let channel = try? self.makeSocketChannel() else {
             XCTFail("couldn't make a channel")
             return
@@ -705,9 +728,15 @@ final class SALChannelTest: XCTestCase, SALTest {
                     $0.closeFuture
                 }
         }.salWait())
+#endif
     }
 
     func testWriteBeforeChannelActiveServerStream() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
         let remoteAddress = try! SocketAddress(ipAddress: "5.6.7.8", port: 10)
         let channel = try self.makeBoundServerSocketChannel(localAddress: localAddress)
@@ -771,9 +800,15 @@ final class SALChannelTest: XCTestCase, SALTest {
                     childChannelOptions: .init()
                 ))
         })
+#endif
     }
 
     func testWriteBeforeChannelActiveServerStream_shortWriteLeadsToWritable() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
         let remoteAddress = try! SocketAddress(ipAddress: "5.6.7.8", port: 10)
         let channel = try self.makeBoundServerSocketChannel(localAddress: localAddress)
@@ -847,9 +882,15 @@ final class SALChannelTest: XCTestCase, SALTest {
                     childChannelOptions: childChannelOptions
                 ))
         })
+#endif
     }
 
     func testWriteBeforeChannelActiveServerStream_shortWriteLeadsToWritable_instantClose() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        // SAL tests use socket channels which are not registered in the selector,
+        // so they can't work properly
+        throw XCTSkip("Skip test with URing", file: #filePath, line: #line)
+#else
         let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
         let remoteAddress = try! SocketAddress(ipAddress: "5.6.7.8", port: 10)
         let channel = try self.makeBoundServerSocketChannel(localAddress: localAddress)
@@ -913,5 +954,6 @@ final class SALChannelTest: XCTestCase, SALTest {
                     childChannelOptions: childChannelOptions
                 ))
         })
+#endif
     }
 }
