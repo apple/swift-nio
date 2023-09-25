@@ -80,7 +80,7 @@ final class TCPThroughputBenchmark: Benchmark {
 
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             self.messagesReceived += 1
-            if (self.benchmark.messages == self.messagesReceived) {
+            if self.benchmark.messages == self.messagesReceived {
                 self.benchmark.isDonePromise.succeed()
                 self.messagesReceived = 0
             }
@@ -116,9 +116,9 @@ final class TCPThroughputBenchmark: Benchmark {
             .wait()
 
         var message = self.serverChannel.allocator.buffer(capacity: self.messageSize)
-        message.writeInteger(UInt16(messageSize), as:UInt16.self)
+        message.writeInteger(UInt16(messageSize), as: UInt16.self)
         for idx in 0..<(self.messageSize - MemoryLayout<UInt16>.stride) {
-            message.writeInteger(UInt8(truncatingIfNeeded: idx), endianness:.little, as:UInt8.self)
+            message.writeInteger(UInt8(truncatingIfNeeded: idx), endianness: .little, as: UInt8.self)
         }
         self.message = message
 

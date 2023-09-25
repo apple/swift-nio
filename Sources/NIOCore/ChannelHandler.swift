@@ -394,7 +394,8 @@ extension EventLoopFuture {
     /// Get the result/error from the protocol negotiation.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel)
-    public func getResult<NegotiationResult: Sendable>() async throws -> NegotiationResult where Value == NIOProtocolNegotiationResult<NegotiationResult> {
+    public func getResult<NegotiationResult: Sendable>() async throws -> NegotiationResult
+    where Value == NIOProtocolNegotiationResult<NegotiationResult> {
         try await self.get().result
     }
 }

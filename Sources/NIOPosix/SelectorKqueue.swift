@@ -62,14 +62,16 @@ extension KQueueEventFilterSet {
     ///    - previousKQueueFilterSet: The previous filter set that is currently registered with kqueue.
     ///    - fileDescriptor: The file descriptor the `kevent`s should be generated to.
     ///    - body: The closure that will then apply the change set.
-    func calculateKQueueFilterSetChanges(previousKQueueFilterSet: KQueueEventFilterSet,
-                                         fileDescriptor: CInt,
-                                        registrationID: SelectorRegistrationID,
-                                         _ body: (UnsafeMutableBufferPointer<kevent>) throws -> Void) rethrows {
+    func calculateKQueueFilterSetChanges(
+        previousKQueueFilterSet: KQueueEventFilterSet,
+        fileDescriptor: CInt,
+        registrationID: SelectorRegistrationID,
+        _ body: (UnsafeMutableBufferPointer<kevent>) throws -> Void
+    ) rethrows {
         // we only use three filters (EVFILT_READ, EVFILT_WRITE and EVFILT_EXCEPT) so the number of changes would be 3.
         var kevents = KeventTriple()
 
-        let differences = previousKQueueFilterSet.symmetricDifference(self) // contains all the events that need a change (either need to be added or removed)
+        let differences = previousKQueueFilterSet.symmetricDifference(self)  // contains all the events that need a change (either need to be added or removed)
 
         func calculateKQueueChange(event: KQueueEventFilterSet) -> UInt16? {
             guard differences.contains(event) else {
@@ -78,9 +80,16 @@ extension KQueueEventFilterSet {
             return UInt16(self.contains(event) ? EV_ADD : EV_DELETE)
         }
 
-        for (event, filter) in [(KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT)] {
+        for (event, filter) in [
+            (KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT),
+        ] {
             if let flags = calculateKQueueChange(event: event) {
-                kevents.appendEvent(fileDescriptor: fileDescriptor, filter: filter, flags: flags, registrationID: registrationID)
+                kevents.appendEvent(
+                    fileDescriptor: fileDescriptor,
+                    filter: filter,
+                    flags: flags,
+                    registrationID: registrationID
+                )
             }
         }
 
@@ -133,12 +142,14 @@ extension Selector: _SelectorBackendProtocol {
             return
         }
         do {
-            try KQueue.kevent(kq: self.selectorFD,
-                              changelist: keventBuffer.baseAddress!,
-                              nchanges: CInt(keventBuffer.count),
-                              eventlist: nil,
-                              nevents: 0,
-                              timeout: nil)
+            try KQueue.kevent(
+                kq: self.selectorFD,
+                changelist: keventBuffer.baseAddress!,
+                nchanges: CInt(keventBuffer.count),
+                eventlist: nil,
+                nevents: 0,
+                timeout: nil
+            )
         } catch let err as IOError {
             if err.errnoCode == EINTR {
                 // See https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2
@@ -149,7 +160,12 @@ extension Selector: _SelectorBackendProtocol {
         }
     }
 
-    private func kqueueUpdateEventNotifications<S: Selectable>(selectable: S, interested: SelectorEventSet, oldInterested: SelectorEventSet?, registrationID: SelectorRegistrationID) throws {
+    private func kqueueUpdateEventNotifications<S: Selectable>(
+        selectable: S,
+        interested: SelectorEventSet,
+        oldInterested: SelectorEventSet?,
+        registrationID: SelectorRegistrationID
+    ) throws {
         assert(self.myThread == NIOThread.current)
         let oldKQueueFilters = KQueueEventFilterSet(selectorEventSet: oldInterested ?? ._none)
         let newKQueueFilters = KQueueEventFilterSet(selectorEventSet: interested)
@@ -157,15 +173,17 @@ extension Selector: _SelectorBackendProtocol {
         assert(oldInterested?.contains(.reset) ?? true)
 
         try selectable.withUnsafeHandle {
-            try newKQueueFilters.calculateKQueueFilterSetChanges(previousKQueueFilterSet: oldKQueueFilters,
-                                                                 fileDescriptor: $0,
-                                                                 registrationID: registrationID,
-                                                                 kqueueApplyEventChangeSet)
+            try newKQueueFilters.calculateKQueueFilterSetChanges(
+                previousKQueueFilterSet: oldKQueueFilters,
+                fileDescriptor: $0,
+                registrationID: registrationID,
+                kqueueApplyEventChangeSet
+            )
         }
     }
-    
+
     func initialiseState0() throws {
-        
+
         self.selectorFD = try KQueue.kqueue()
         self.lifecycleState = .open
 
@@ -180,20 +198,51 @@ extension Selector: _SelectorBackendProtocol {
             try kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
         }
     }
-    
+
     func deinitAssertions0() {
     }
-    
-    func register0<S: Selectable>(selectable: S, fileDescriptor: CInt, interested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-        try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil, registrationID: registrationID)
+
+    func register0<S: Selectable>(
+        selectable: S,
+        fileDescriptor: CInt,
+        interested: SelectorEventSet,
+        registrationID: SelectorRegistrationID
+    ) throws {
+        try kqueueUpdateEventNotifications(
+            selectable: selectable,
+            interested: interested,
+            oldInterested: nil,
+            registrationID: registrationID
+        )
     }
 
-    func reregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-        try kqueueUpdateEventNotifications(selectable: selectable, interested: newInterested, oldInterested: oldInterested, registrationID: registrationID)
+    func reregister0<S: Selectable>(
+        selectable: S,
+        fileDescriptor: CInt,
+        oldInterested: SelectorEventSet,
+        newInterested: SelectorEventSet,
+        registrationID: SelectorRegistrationID
+    ) throws {
+        try kqueueUpdateEventNotifications(
+            selectable: selectable,
+            interested: newInterested,
+            oldInterested: oldInterested,
+            registrationID: registrationID
+        )
     }
-    
-    func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-        try kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: oldInterested, registrationID: registrationID)
+
+    func deregister0<S: Selectable>(
+        selectable: S,
+        fileDescriptor: CInt,
+        oldInterested: SelectorEventSet,
+        registrationID: SelectorRegistrationID
+    ) throws {
+        try kqueueUpdateEventNotifications(
+            selectable: selectable,
+            interested: .reset,
+            oldInterested: oldInterested,
+            registrationID: registrationID
+        )
     }
 
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
@@ -201,7 +250,11 @@ extension Selector: _SelectorBackendProtocol {
     /// - parameters:
     ///     - strategy: The `SelectorStrategy` to apply
     ///     - body: The function to execute for each `SelectorEvent` that was produced.
-    func whenReady0(strategy: SelectorStrategy, onLoopBegin loopStart: () -> Void, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void {
+    func whenReady0(
+        strategy: SelectorStrategy,
+        onLoopBegin loopStart: () -> Void,
+        _ body: (SelectorEvent<R>) throws -> Void
+    ) throws {
         assert(self.myThread == NIOThread.current)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
@@ -209,7 +262,16 @@ extension Selector: _SelectorBackendProtocol {
 
         let timespec = Selector.toKQueueTimeSpec(strategy: strategy)
         let ready = try timespec.withUnsafeOptionalPointer { ts in
-            Int(try KQueue.kevent(kq: self.selectorFD, changelist: nil, nchanges: 0, eventlist: events, nevents: Int32(eventsCapacity), timeout: ts))
+            Int(
+                try KQueue.kevent(
+                    kq: self.selectorFD,
+                    changelist: nil,
+                    nchanges: 0,
+                    eventlist: events,
+                    nevents: Int32(eventsCapacity),
+                    timeout: ts
+                )
+            )
         }
 
         loopStart()
@@ -219,7 +281,10 @@ extension Selector: _SelectorBackendProtocol {
             let filter = Int32(ev.filter)
             let eventRegistrationID = SelectorRegistrationID(kqueueUData: ev.udata)
             guard Int32(ev.flags) & EV_ERROR == 0 else {
-                throw IOError(errnoCode: Int32(ev.data), reason: "kevent returned with EV_ERROR set: \(String(describing: ev))")
+                throw IOError(
+                    errnoCode: Int32(ev.data),
+                    reason: "kevent returned with EV_ERROR set: \(String(describing: ev))"
+                )
             }
             guard filter != EVFILT_USER, let registration = registrations[Int(ev.ident)] else {
                 continue
@@ -231,7 +296,7 @@ extension Selector: _SelectorBackendProtocol {
             switch filter {
             case EVFILT_READ:
                 selectorEvent.formUnion(.read)
-                fallthrough // falling through here as `EVFILT_READ` also delivers `EV_EOF` (meaning `.readEOF`)
+                fallthrough  // falling through here as `EVFILT_READ` also delivers `EV_EOF` (meaning `.readEOF`)
             case EVFILT_EXCEPT:
                 if Int32(ev.flags) & EV_EOF != 0 && registration.interested.contains(.readEOF) {
                     // we only add `.readEOF` if it happened and the user asked for it
@@ -247,7 +312,10 @@ extension Selector: _SelectorBackendProtocol {
                 selectorEvent.formUnion(.reset)
             }
             // we can only verify the events for i == 0 as for i > 0 the user might have changed the registrations since then.
-            assert(i != 0 || selectorEvent.isSubset(of: registration.interested), "selectorEvent: \(selectorEvent), registration: \(registration)")
+            assert(
+                i != 0 || selectorEvent.isSubset(of: registration.interested),
+                "selectorEvent: \(selectorEvent), registration: \(registration)"
+            )
 
             // in any case we only want what the user is currently registered for & what we got
             selectorEvent = selectorEvent.intersection(registration.interested)
@@ -264,7 +332,7 @@ extension Selector: _SelectorBackendProtocol {
     /// Close the `Selector`.
     ///
     /// After closing the `Selector` it's no longer possible to use it.
-     func close0() throws {
+    func close0() throws {
 
         self.externalSelectorFDLock.withLock {
             // We try! all of the closes because close can only fail in the following ways:
@@ -275,8 +343,7 @@ extension Selector: _SelectorBackendProtocol {
             // about.
             // We limit close to only be for positive FD:s though, as subclasses (e.g. uring)
             // may already have closed some of these FD:s in their close function.
-    
-            
+
             try! Posix.close(descriptor: self.selectorFD)
             self.selectorFD = -1
         }
@@ -286,26 +353,27 @@ extension Selector: _SelectorBackendProtocol {
     func wakeup0() throws {
         assert(NIOThread.current != self.myThread)
         try self.externalSelectorFDLock.withLock {
-                guard self.selectorFD >= 0 else {
-                    throw EventLoopError.shutdown
-                }
-                var event = kevent()
-                event.ident = 0
-                event.filter = Int16(EVFILT_USER)
-                event.fflags = UInt32(NOTE_TRIGGER | NOTE_FFNOP)
-                event.data = 0
-                event.udata = nil
-                event.flags = 0
-                try withUnsafeMutablePointer(to: &event) { ptr in
-                    try self.kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
-                }
+            guard self.selectorFD >= 0 else {
+                throw EventLoopError.shutdown
+            }
+            var event = kevent()
+            event.ident = 0
+            event.filter = Int16(EVFILT_USER)
+            event.fflags = UInt32(NOTE_TRIGGER | NOTE_FFNOP)
+            event.data = 0
+            event.udata = nil
+            event.flags = 0
+            try withUnsafeMutablePointer(to: &event) { ptr in
+                try self.kqueueApplyEventChangeSet(keventBuffer: UnsafeMutableBufferPointer(start: ptr, count: 1))
+            }
         }
     }
 }
 
 extension kevent {
     /// Update a kevent for a given filter, file descriptor, and set of flags.
-    mutating func setEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16, registrationID: SelectorRegistrationID) {
+    mutating func setEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16, registrationID: SelectorRegistrationID)
+    {
         self.ident = UInt(fd)
         self.filter = Int16(filter)
         self.flags = flags
@@ -331,7 +399,7 @@ extension kevent {
 /// set changes. We want to be able to store these kevent objects on the stack, which we historically did with
 /// unsafe pointers. This object replaces that unsafe code with safe code, and attempts to achieve the same
 /// performance constraints.
-fileprivate struct KeventTriple {
+private struct KeventTriple {
     // We need to store this in a tuple to achieve C-style memory layout.
     private var kevents = (kevent(), kevent(), kevent())
 
@@ -364,14 +432,24 @@ fileprivate struct KeventTriple {
         }
     }
 
-    mutating func appendEvent(fileDescriptor fd: CInt, filter: CInt, flags: UInt16, registrationID: SelectorRegistrationID) {
+    mutating func appendEvent(
+        fileDescriptor fd: CInt,
+        filter: CInt,
+        flags: UInt16,
+        registrationID: SelectorRegistrationID
+    ) {
         defer {
             // Unchecked math is safe here: we access through the subscript, which will trap on out-of-bounds value, so we'd trap
             // well before we overflow.
             self.initialized &+= 1
         }
 
-        self[self.initialized].setEvent(fileDescriptor: fd, filter: filter, flags: flags, registrationID: registrationID)
+        self[self.initialized].setEvent(
+            fileDescriptor: fd,
+            filter: filter,
+            flags: flags,
+            registrationID: registrationID
+        )
     }
 
     mutating func withUnsafeBufferPointer(_ body: (UnsafeMutableBufferPointer<kevent>) throws -> Void) rethrows {

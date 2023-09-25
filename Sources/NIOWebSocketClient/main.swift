@@ -36,7 +36,7 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
     public init(target: ConnectTo) {
         self.target = target
     }
-    
+
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress!)")
 
@@ -47,26 +47,28 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
         }
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
-        
-        let requestHead = HTTPRequestHead(version: .http1_1,
-                                          method: .GET,
-                                          uri: "/",
-                                          headers: headers)
-        
+
+        let requestHead = HTTPRequestHead(
+            version: .http1_1,
+            method: .GET,
+            uri: "/",
+            headers: headers
+        )
+
         context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
-        
+
         let body = HTTPClientRequestPart.body(.byteBuffer(ByteBuffer()))
         context.write(self.wrapOutboundOut(body), promise: nil)
-        
+
         context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
     }
-    
+
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        
+
         let clientResponse = self.unwrapInboundIn(data)
-        
+
         print("Upgrade failed")
-        
+
         switch clientResponse {
         case .head(let responseHead):
             print("Received status: \(responseHead.status)")
@@ -78,14 +80,14 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
             context.close(promise: nil)
         }
     }
-    
+
     public func handlerRemoved(context: ChannelHandlerContext) {
         print("HTTP handler removed.")
     }
-    
+
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
-        
+
         // As we are not really interested getting notified on success or failure
         // we just pass nil as promise to reduce allocations.
         context.close(promise: nil)
@@ -99,9 +101,9 @@ private final class HTTPInitialRequestHandler: ChannelInboundHandler, RemovableC
 private final class WebSocketPingPongHandler: ChannelInboundHandler {
     typealias InboundIn = WebSocketFrame
     typealias OutboundOut = WebSocketFrame
-    
+
     let testFrameData: String = "Hello World"
-    
+
     // This is being hit, channel active won't be called as it is already added.
     public func handlerAdded(context: ChannelHandlerContext) {
         print("WebSocket handler added.")
@@ -114,7 +116,7 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let frame = self.unwrapInboundIn(data)
-        
+
         switch frame.opcode {
         case .pong:
             self.pong(context: context, frame: frame)
@@ -132,7 +134,7 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
             self.closeOnError(context: context)
         }
     }
-    
+
     public func channelReadComplete(context: ChannelHandlerContext) {
         context.flush()
     }
@@ -142,20 +144,20 @@ private final class WebSocketPingPongHandler: ChannelInboundHandler {
         print("Received Close instruction from server")
         context.close(promise: nil)
     }
-    
+
     private func pingTestFrameData(context: ChannelHandlerContext) {
         let buffer = context.channel.allocator.buffer(string: self.testFrameData)
         let frame = WebSocketFrame(fin: true, opcode: .ping, data: buffer)
         context.write(self.wrapOutboundOut(frame), promise: nil)
     }
-    
+
     private func pong(context: ChannelHandlerContext, frame: WebSocketFrame) {
         var frameData = frame.data
         if let frameDataString = frameData.readString(length: self.testFrameData.count) {
             print("Websocket: Received: \(frameDataString)")
         }
     }
-    
+
     private func closeOnError(context: ChannelHandlerContext) {
         // We have hit an error, we want to close. We do that by sending a close frame and then
         // shutting down the write side of the connection. The server will respond with a close of its own.
@@ -178,7 +180,7 @@ let defaultPort: Int = 8888
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
+case (.some(let h), _, .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)
 case (.some(let portString), .none, _):
@@ -199,21 +201,24 @@ let bootstrap = ClientBootstrap(group: group)
 
         let httpHandler = HTTPInitialRequestHandler(target: connectTarget)
 
-        let websocketUpgrader = NIOWebSocketClientUpgrader(requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
-                                                           upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-            channel.pipeline.addHandler(WebSocketPingPongHandler())
-        })
+        let websocketUpgrader = NIOWebSocketClientUpgrader(
+            requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
+            upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
+                channel.pipeline.addHandler(WebSocketPingPongHandler())
+            }
+        )
 
         let config: NIOHTTPClientUpgradeConfiguration = (
-            upgraders: [ websocketUpgrader ],
+            upgraders: [websocketUpgrader],
             completionHandler: { _ in
                 channel.pipeline.removeHandler(httpHandler, promise: nil)
-        })
+            }
+        )
 
         return channel.pipeline.addHTTPClientHandlers(withClientUpgrade: config).flatMap {
             channel.pipeline.addHandler(httpHandler)
         }
-}
+    }
 defer {
     try! group.syncShutdownGracefully()
 }

@@ -161,9 +161,11 @@ extension ChannelOutboundInvoker {
 
 extension ChannelPipeline {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func addHandler(_ handler: ChannelHandler,
-                           name: String? = nil,
-                           position: ChannelPipeline.Position = .last) async throws {
+    public func addHandler(
+        _ handler: ChannelHandler,
+        name: String? = nil,
+        position: ChannelPipeline.Position = .last
+    ) async throws {
         try await self.addHandler(handler, name: name, position: position).get()
     }
 
@@ -183,40 +185,59 @@ extension ChannelPipeline {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
+    @available(
+        *,
+        deprecated,
+        message:
+            "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop"
+    )
     public func context(handler: ChannelHandler) async throws -> ChannelHandlerContext {
         return try await self.context(handler: handler).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
+    @available(
+        *,
+        deprecated,
+        message:
+            "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop"
+    )
     public func context(name: String) async throws -> ChannelHandlerContext {
         return try await self.context(name: name).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
+    @available(
+        *,
+        deprecated,
+        message:
+            "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop"
+    )
     @inlinable
     public func context<Handler: ChannelHandler>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
         return try await self.context(handlerType: handlerType).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func addHandlers(_ handlers: [ChannelHandler],
-                            position: ChannelPipeline.Position = .last) async throws {
+    public func addHandlers(
+        _ handlers: [ChannelHandler],
+        position: ChannelPipeline.Position = .last
+    ) async throws {
         try await self.addHandlers(handlers, position: position).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func addHandlers(_ handlers: ChannelHandler...,
-                            position: ChannelPipeline.Position = .last) async throws {
+    public func addHandlers(
+        _ handlers: ChannelHandler...,
+        position: ChannelPipeline.Position = .last
+    ) async throws {
         try await self.addHandlers(handlers, position: position)
     }
 }
 
 public struct NIOTooManyBytesError: Error, Hashable {
-     public init() {}
- }
+    public init() {}
+}
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension AsyncSequence where Element: RandomAccessCollection, Element.Element == UInt8 {
@@ -241,7 +262,7 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
             accumulationBuffer.writeBytes(fragment)
         }
     }
-    
+
     /// Accumulates an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single ``ByteBuffer``.
     /// - Parameters:
     ///   - maxBytes: The maximum number of bytes this method is allowed to accumulate
@@ -284,7 +305,7 @@ extension AsyncSequence where Element == ByteBuffer {
             accumulationBuffer.writeImmutableBuffer(fragment)
         }
     }
-    
+
     /// Accumulates an `AsyncSequence` of ``ByteBuffer``s into a single ``ByteBuffer``.
     /// - Parameters:
     ///   - maxBytes: The maximum number of bytes this method is allowed to accumulate
@@ -304,7 +325,7 @@ extension AsyncSequence where Element == ByteBuffer {
         guard head.readableBytes <= maxBytes else {
             throw NIOTooManyBytesError()
         }
-        
+
         let tail = AsyncSequenceFromIterator(iterator)
         // it is guaranteed that
         // `maxBytes >= 0 && head.readableBytes >= 0 && head.readableBytes <= maxBytes`
@@ -319,13 +340,13 @@ extension AsyncSequence where Element == ByteBuffer {
 @usableFromInline
 struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSequence {
     @usableFromInline typealias Element = AsyncIterator.Element
-    
+
     @usableFromInline var iterator: AsyncIterator
-    
+
     @inlinable init(_ iterator: AsyncIterator) {
         self.iterator = iterator
     }
-    
+
     @inlinable func makeAsyncIterator() -> AsyncIterator {
         self.iterator
     }
@@ -334,7 +355,9 @@ struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSeq
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension EventLoop {
     @inlinable
-    public func makeFutureWithTask<Return>(_ body: @Sendable @escaping () async throws -> Return) -> EventLoopFuture<Return> {
+    public func makeFutureWithTask<Return>(
+        _ body: @Sendable @escaping () async throws -> Return
+    ) -> EventLoopFuture<Return> {
         let promise = self.makePromise(of: Return.self)
         promise.completeWithTask(body)
         return promise.futureResult

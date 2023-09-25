@@ -17,11 +17,15 @@ enum _IntegerBitPacking {}
 
 extension _IntegerBitPacking {
     @inlinable
-    static func packUU<Left: FixedWidthInteger & UnsignedInteger,
-                       Right: FixedWidthInteger & UnsignedInteger,
-                       Result: FixedWidthInteger & UnsignedInteger>(_ left: Left,
-                                                                    _ right: Right,
-                                                                    type: Result.Type = Result.self) -> Result {
+    static func packUU<
+        Left: FixedWidthInteger & UnsignedInteger,
+        Right: FixedWidthInteger & UnsignedInteger,
+        Result: FixedWidthInteger & UnsignedInteger
+    >(
+        _ left: Left,
+        _ right: Right,
+        type: Result.Type = Result.self
+    ) -> Result {
         assert(MemoryLayout<Left>.size + MemoryLayout<Right>.size <= MemoryLayout<Result>.size)
 
         let resultLeft = Result(left)
@@ -32,11 +36,15 @@ extension _IntegerBitPacking {
     }
 
     @inlinable
-    static func unpackUU<Input: FixedWidthInteger & UnsignedInteger,
-                         Left: FixedWidthInteger & UnsignedInteger,
-                         Right: FixedWidthInteger & UnsignedInteger>(_ input: Input,
-                                                                     leftType: Left.Type = Left.self,
-                                                                     rightType: Right.Type = Right.self) -> (Left, Right) {
+    static func unpackUU<
+        Input: FixedWidthInteger & UnsignedInteger,
+        Left: FixedWidthInteger & UnsignedInteger,
+        Right: FixedWidthInteger & UnsignedInteger
+    >(
+        _ input: Input,
+        leftType: Left.Type = Left.self,
+        rightType: Right.Type = Right.self
+    ) -> (Left, Right) {
         assert(MemoryLayout<Left>.size + MemoryLayout<Right>.size <= MemoryLayout<Input>.size)
 
         let leftMask = Input(Left.max)

@@ -30,17 +30,23 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext,
-                            buffer: inout ByteBuffer,
-                            seenEOF: Bool) throws -> DecodingState {
+            func decodeLast(
+                context: ChannelHandlerContext,
+                buffer: inout ByteBuffer,
+                seenEOF: Bool
+            ) throws -> DecodingState {
                 while try self.decode(context: context, buffer: &buffer) == .continue {}
                 return .needMoreData
             }
         }
 
-        XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(stringInputOutputPairs: [("x", ["x"])],
-                                                                            decoderFactory: AlwaysProduceY.init)) {
-                                                                                error in
+        XCTAssertThrowsError(
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                stringInputOutputPairs: [("x", ["x"])],
+                decoderFactory: AlwaysProduceY.init
+            )
+        ) {
+            error in
             switch error {
             case let error as VerificationError:
                 XCTAssertEqual(1, error.inputs.count)
@@ -66,17 +72,23 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext,
-                            buffer: inout ByteBuffer,
-                            seenEOF: Bool) throws -> DecodingState {
+            func decodeLast(
+                context: ChannelHandlerContext,
+                buffer: inout ByteBuffer,
+                seenEOF: Bool
+            ) throws -> DecodingState {
                 while try self.decode(context: context, buffer: &buffer) == .continue {}
                 return .needMoreData
             }
         }
 
-        XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(stringInputOutputPairs: [("x", ["x"])],
-                                                                            decoderFactory: NeverProduce.init)) {
-                                                                                error in
+        XCTAssertThrowsError(
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                stringInputOutputPairs: [("x", ["x"])],
+                decoderFactory: NeverProduce.init
+            )
+        ) {
+            error in
             switch error {
             case let error as VerificationError:
                 XCTAssertEqual(1, error.inputs.count)
@@ -88,7 +100,7 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                 }
             default:
                 XCTFail("unexpected error: \(error)")
-                                                                                }
+            }
         }
     }
 
@@ -101,17 +113,23 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext,
-                            buffer: inout ByteBuffer,
-                            seenEOF: Bool) throws -> DecodingState {
+            func decodeLast(
+                context: ChannelHandlerContext,
+                buffer: inout ByteBuffer,
+                seenEOF: Bool
+            ) throws -> DecodingState {
                 while try self.decode(context: context, buffer: &buffer) == .continue {}
                 return .needMoreData
             }
         }
 
-        XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(stringInputOutputPairs: [("xxxxxx", ["Y"])],
-                                                                            decoderFactory: ProduceTooEarly.init)) {
-                                                                                error in
+        XCTAssertThrowsError(
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                stringInputOutputPairs: [("xxxxxx", ["Y"])],
+                decoderFactory: ProduceTooEarly.init
+            )
+        ) {
+            error in
             switch error {
             case let error as VerificationError:
                 switch error.errorCode {
@@ -122,7 +140,7 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                 }
             default:
                 XCTFail("unexpected error: \(error)")
-                                                                                }
+            }
         }
     }
 
@@ -134,9 +152,11 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
                 return .needMoreData
             }
 
-            func decodeLast(context: ChannelHandlerContext,
-                            buffer: inout ByteBuffer,
-                            seenEOF: Bool) throws -> DecodingState {
+            func decodeLast(
+                context: ChannelHandlerContext,
+                buffer: inout ByteBuffer,
+                seenEOF: Bool
+            ) throws -> DecodingState {
                 while try self.decode(context: context, buffer: &buffer) == .continue {}
                 if buffer.readableBytes > 0 {
                     context.fireChannelRead(self.wrapInboundOut("leftover"))
@@ -145,15 +165,21 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             }
         }
 
-        XCTAssertThrowsError(try ByteToMessageDecoderVerifier.verifyDecoder(stringInputOutputPairs: [("xxxxxx", [])],
-                                                                            decoderFactory: NeverDoAnything.init)) {
-                                                                                error in
+        XCTAssertThrowsError(
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                stringInputOutputPairs: [("xxxxxx", [])],
+                decoderFactory: NeverDoAnything.init
+            )
+        ) {
+            error in
             switch error {
             case let error as VerificationError:
                 switch error.errorCode {
-                case .leftOversOnDeconstructingChannel(inbound: let inbound,
-                                                       outbound: let outbound,
-                                                       pendingOutbound: let pending):
+                case .leftOversOnDeconstructingChannel(
+                    inbound: let inbound,
+                    outbound: let outbound,
+                    pendingOutbound: let pending
+                ):
                     XCTAssertEqual(0, outbound.count)
                     XCTAssertEqual(["leftover"], inbound.map { $0.tryAs(type: String.self) })
                     XCTAssertEqual(0, pending.count)

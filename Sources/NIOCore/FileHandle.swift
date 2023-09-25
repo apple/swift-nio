@@ -51,7 +51,10 @@ public final class NIOFileHandle: FileDescriptor {
     }
 
     deinit {
-        assert(!self.isOpen, "leaked open NIOFileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
+        assert(
+            !self.isOpen,
+            "leaked open NIOFileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means."
+        )
     }
 
     /// Duplicates this `NIOFileHandle`. This means that a new `NIOFileHandle` object with a new underlying file descriptor
@@ -132,11 +135,11 @@ extension NIOFileHandle {
 
         public static let `default` = Flags(posixMode: 0, posixFlags: 0)
 
-#if os(Windows)
+        #if os(Windows)
         public static let defaultPermissions = _S_IREAD | _S_IWRITE
-#else
+        #else
         public static let defaultPermissions = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
-#endif
+        #endif
 
         /// Allows file creation when opening file for writing. File owner is set to the effective user ID of the process.
         ///
@@ -164,11 +167,11 @@ extension NIOFileHandle {
     ///     - mode: Access mode. Default mode is `.read`.
     ///     - flags: Additional POSIX flags.
     public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
-#if os(Windows)
+        #if os(Windows)
         let fl = mode.posixFlags | flags.posixFlags | _O_NOINHERIT
-#else
+        #else
         let fl = mode.posixFlags | flags.posixFlags | O_CLOEXEC
-#endif
+        #endif
         let fd = try SystemCalls.open(file: path, oFlag: fl, mode: flags.posixMode)
         self.init(descriptor: fd)
     }

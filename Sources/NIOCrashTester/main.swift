@@ -33,11 +33,10 @@ struct CrashTest {
 extension Process {
     var binaryPath: String? {
         get {
-            if #available(macOS 10.13, /* Linux */ *) {
-                return self.executableURL?.path
-            } else {
+            guard #available(macOS 10.13, /* Linux */ *) else {
                 return self.launchPath
             }
+            return self.executableURL?.path
         }
         set {
             if #available(macOS 10.13, /* Linux */ *) {
@@ -96,9 +95,11 @@ func main() throws {
             .1
     }
 
-    func interpretOutput(_ result: Result<ProgramOutput, Error>,
-                         regex: String,
-                         runResult: RunResult) throws -> InterpretedRunResult {
+    func interpretOutput(
+        _ result: Result<ProgramOutput, Error>,
+        regex: String,
+        runResult: RunResult
+    ) throws -> InterpretedRunResult {
         struct NoOutputFound: Error {}
         #if arch(i386) || arch(x86_64)
         let expectedSignal = SIGILL
@@ -107,16 +108,15 @@ func main() throws {
         #else
         #error("unknown CPU architecture for which we don't know the expected signal for a crash")
         #endif
-        guard case .signal(Int(expectedSignal)) = runResult  else {
+        guard case .signal(Int(expectedSignal)) = runResult else {
             return .unexpectedRunResult(runResult)
         }
 
         let output = try result.get()
-        if  output.range(of: regex, options: .regularExpression) != nil {
-            return .crashedAsExpected
-        } else {
+        guard output.range(of: regex, options: .regularExpression) != nil else {
             return .regexDidNotMatch(regex: regex, output: output)
         }
+        return .crashedAsExpected
     }
 
     func usage() {
@@ -163,11 +163,12 @@ func main() throws {
         let result: Result<ProgramOutput, Error> = Result {
             try grepper.result.wait()
         }
-        return try interpretOutput(result,
-                                   regex: crashTest.crashRegex,
-                                   runResult: process.terminationReason == .exit ?
-                                    .exit(Int(process.terminationStatus)) :
-                                    .signal(Int(process.terminationStatus)))
+        return try interpretOutput(
+            result,
+            regex: crashTest.crashRegex,
+            runResult: process.terminationReason == .exit
+                ? .exit(Int(process.terminationStatus)) : .signal(Int(process.terminationStatus))
+        )
     }
 
     var failedTests = 0
@@ -175,8 +176,13 @@ func main() throws {
         print("running crash test \(suite).\(test)", terminator: " ")
         switch try runCrashTest(test, suite: suite, binary: CommandLine.arguments.first!) {
         case .regexDidNotMatch(regex: let regex, output: let output):
-            print("FAILED: regex did not match output", "regex: \(regex)", "output: \(output)",
-                  separator: "\n", terminator: "")
+            print(
+                "FAILED: regex did not match output",
+                "regex: \(regex)",
+                "output: \(output)",
+                separator: "\n",
+                terminator: ""
+            )
             failedTests += 1
         case .unexpectedRunResult(let runResult):
             print("FAILED: unexpected run result: \(runResult)")
@@ -207,8 +213,9 @@ func main() throws {
         }
     case .some("_exec"):
         if let testSuiteName = CommandLine.arguments.dropFirst(2).first,
-           let testName = CommandLine.arguments.dropFirst(3).first,
-           let crashTest = findCrashTest(testName, suite: testSuiteName) {
+            let testName = CommandLine.arguments.dropFirst(3).first,
+            let crashTest = findCrashTest(testName, suite: testSuiteName)
+        {
             crashTest.runTest()
         } else {
             fatalError("can't find/create test for \(Array(CommandLine.arguments.dropFirst(2)))")

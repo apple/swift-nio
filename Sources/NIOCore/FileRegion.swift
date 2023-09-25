@@ -23,7 +23,6 @@ import Musl
 #error("The File Region module was unable to identify your C library.")
 #endif
 
-
 /// A `FileRegion` represent a readable portion usually created to be sent over the network.
 ///
 /// Usually a `FileRegion` will allow the underlying transport to use `sendfile` to transfer its content and so allows transferring
@@ -106,7 +105,7 @@ extension FileRegion {
 }
 
 extension FileRegion: Equatable {
-    public static func ==(lhs: FileRegion, rhs: FileRegion) -> Bool {
+    public static func == (lhs: FileRegion, rhs: FileRegion) -> Bool {
         return lhs.fileHandle === rhs.fileHandle && lhs.readerIndex == rhs.readerIndex && lhs.endIndex == rhs.endIndex
     }
 }

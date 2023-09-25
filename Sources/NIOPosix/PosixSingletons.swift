@@ -87,31 +87,35 @@ extension NIOThreadPool {
 
 private let singletonMTELG: MultiThreadedEventLoopGroup = {
     guard NIOSingletons.singletonsEnabledSuggestion else {
-        fatalError("""
-                   Cannot create global singleton MultiThreadedEventLoopGroup because the global singletons have been \
-                   disabled by setting  `NIOSingletons.singletonsEnabledSuggestion = false`
-                   """)
+        fatalError(
+            """
+            Cannot create global singleton MultiThreadedEventLoopGroup because the global singletons have been \
+            disabled by setting  `NIOSingletons.singletonsEnabledSuggestion = false`
+            """
+        )
     }
     let threadCount = NIOSingletons.groupLoopCountSuggestion
-    let group = MultiThreadedEventLoopGroup._makePerpetualGroup(threadNamePrefix: "NIO-SGLTN-",
-                                                                numberOfThreads: threadCount)
-    _ = Unmanaged.passUnretained(group).retain() // Never gonna give you up,
+    let group = MultiThreadedEventLoopGroup._makePerpetualGroup(
+        threadNamePrefix: "NIO-SGLTN-",
+        numberOfThreads: threadCount
+    )
+    _ = Unmanaged.passUnretained(group).retain()  // Never gonna give you up,
     return group
 }()
 
 private let globalPosixBlockingPool: NIOThreadPool = {
     guard NIOSingletons.singletonsEnabledSuggestion else {
-        fatalError("""
-                   Cannot create global singleton NIOThreadPool because the global singletons have been \
-                   disabled by setting `NIOSingletons.singletonsEnabledSuggestion = false`
-                   """)
+        fatalError(
+            """
+            Cannot create global singleton NIOThreadPool because the global singletons have been \
+            disabled by setting `NIOSingletons.singletonsEnabledSuggestion = false`
+            """
+        )
     }
     let pool = NIOThreadPool._makePerpetualStartedPool(
         numberOfThreads: NIOSingletons.blockingPoolThreadCountSuggestion,
         threadNamePrefix: "SGLTN-TP-#"
     )
-    _ = Unmanaged.passUnretained(pool).retain() // never gonna let you down.
+    _ = Unmanaged.passUnretained(pool).retain()  // never gonna let you down.
     return pool
 }()
-
-

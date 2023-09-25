@@ -45,7 +45,7 @@ extension WebSocketFrameDecoderBenchmark: Benchmark {
     func run() throws -> Int {
         for _ in 0..<self.runCount {
             try self.channel.writeInbound(self.data)
-            let _: WebSocketFrame? =  try self.channel.readInbound()
+            let _: WebSocketFrame? = try self.channel.readInbound()
         }
         return 1
     }

@@ -17,7 +17,7 @@ import CNIOLinux
 #endif
 
 enum LowLevelThreadOperations {
-    
+
 }
 
 protocol ThreadOps {
@@ -84,8 +84,11 @@ final class NIOThread {
     ///     - name: The name of the `NIOThread` or `nil` if no specific name should be set.
     ///     - body: The function to execute within the spawned `NIOThread`.
     ///     - detach: Whether to detach the thread. If the thread is not detached it must be `join`ed.
-    static func spawnAndRun(name: String? = nil, detachThread: Bool = true,
-                            body: @escaping (NIOThread) -> Void) {
+    static func spawnAndRun(
+        name: String? = nil,
+        detachThread: Bool = true,
+        body: @escaping (NIOThread) -> Void
+    ) {
         var handle: ThreadOpsSystem.ThreadHandle? = nil
 
         // Store everything we want to pass into the c function in a Box so we
@@ -171,7 +174,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).
     public init() {
         self.key = Key(destructor: {
-          Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
+            Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
         })
     }
 
@@ -185,10 +188,13 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         self.currentValue = value
     }
 
-    
     #if swift(>=5.7)
     /// The value for the current thread.
-    @available(*, noasync, message: "threads can change between suspension points and therefore the thread specific value too")
+    @available(
+        *,
+        noasync,
+        message: "threads can change between suspension points and therefore the thread specific value too"
+    )
     public var currentValue: Value? {
         get {
             self.get()
@@ -208,17 +214,18 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         }
     }
     #endif
-    
+
     /// Get the current value for the calling thread.
     func get() -> Value? {
         guard let raw = self.key.get() else { return nil }
         // parenthesize the return value to silence the cast warning
-        return (Unmanaged<BoxedType>
-                 .fromOpaque(raw)
-                 .takeUnretainedValue()
-                 .value.1 as! Value)
+        return
+            (Unmanaged<BoxedType>
+            .fromOpaque(raw)
+            .takeUnretainedValue()
+            .value.1 as! Value)
     }
-    
+
     /// Set the current value for the calling threads. The `currentValue` for all other threads remains unchanged.
     func set(_ newValue: Value?) {
         if let raw = self.key.get() {
@@ -231,7 +238,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
 extension ThreadSpecificVariable: @unchecked Sendable where Value: Sendable {}
 
 extension NIOThread: Equatable {
-    static func ==(lhs: NIOThread, rhs: NIOThread) -> Bool {
+    static func == (lhs: NIOThread, rhs: NIOThread) -> Bool {
         return lhs.withUnsafeThreadHandle { lhs in
             rhs.withUnsafeThreadHandle { rhs in
                 ThreadOpsSystem.compareThreads(lhs, rhs)

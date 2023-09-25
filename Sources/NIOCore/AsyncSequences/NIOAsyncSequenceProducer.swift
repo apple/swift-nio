@@ -122,12 +122,13 @@ public struct NIOAsyncSequenceProducer<
     }
 
     @usableFromInline
-    /* private */ internal let _throwingSequence: NIOThrowingAsyncSequenceProducer<
-        Element,
-        Never,
-        Strategy,
-        Delegate
-    >
+    /* private */ internal let _throwingSequence:
+        NIOThrowingAsyncSequenceProducer<
+            Element,
+            Never,
+            Strategy,
+            Delegate
+        >
 
     /// Initializes a new ``NIOAsyncSequenceProducer`` and a ``NIOAsyncSequenceProducer/Source``.
     ///
@@ -177,12 +178,13 @@ extension NIOAsyncSequenceProducer: AsyncSequence {
 extension NIOAsyncSequenceProducer {
     public struct AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline
-        /* private */ internal let _throwingIterator: NIOThrowingAsyncSequenceProducer<
-            Element,
-            Never,
-            Strategy,
-            Delegate
-        >.AsyncIterator
+        /* private */ internal let _throwingIterator:
+            NIOThrowingAsyncSequenceProducer<
+                Element,
+                Never,
+                Strategy,
+                Delegate
+            >.AsyncIterator
 
         fileprivate init(
             throwingIterator: NIOThrowingAsyncSequenceProducer<

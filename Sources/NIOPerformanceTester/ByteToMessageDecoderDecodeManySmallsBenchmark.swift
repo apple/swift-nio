@@ -44,11 +44,10 @@ final class ByteToMessageDecoderDecodeManySmallsBenchmark: Benchmark {
         typealias InboundOut = Never
 
         func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-            if buffer.readSlice(length: 16) == nil {
-                return .needMoreData
-            } else {
+            guard buffer.readSlice(length: 16) == nil else {
                 return .continue
             }
+            return .needMoreData
         }
     }
 }

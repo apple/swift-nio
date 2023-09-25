@@ -25,7 +25,7 @@ public struct PriorityQueue<Element: Comparable> {
     public mutating func remove(_ key: Element) {
         self._heap.remove(value: key)
     }
-    
+
     @inlinable
     public mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows {
         try self._heap.removeFirst(where: shouldBeRemoved)
@@ -60,7 +60,7 @@ public struct PriorityQueue<Element: Comparable> {
 
 extension PriorityQueue: Equatable {
     @inlinable
-    public static func ==(lhs: PriorityQueue, rhs: PriorityQueue) -> Bool {
+    public static func == (lhs: PriorityQueue, rhs: PriorityQueue) -> Bool {
         return lhs.count == rhs.count && lhs.elementsEqual(rhs)
     }
 }

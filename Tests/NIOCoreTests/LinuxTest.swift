@@ -29,7 +29,7 @@ class LinuxTest: XCTestCase {
             ("100000", "-1", nil),
             ("", "100000", nil),
             ("100000", "", nil),
-            ("100000", "0", nil)
+            ("100000", "0", nil),
         ].forEach { quota, period, count in
             try withTemporaryFile(content: quota) { (_, quotaPath) -> Void in
                 try withTemporaryFile(content: period) { (_, periodPath) -> Void in
@@ -49,7 +49,7 @@ class LinuxTest: XCTestCase {
             ("0-3,7", 5),
             ("0-3,7\n", 5),
             ("0,2-4,6,7,9-11", 9),
-            ("", nil)
+            ("", nil),
         ].forEach { cpuset, count in
             try withTemporaryFile(content: cpuset) { (_, path) -> Void in
                 XCTAssertEqual(Linux.coreCount(cpuset: path), count)
@@ -63,7 +63,7 @@ class LinuxTest: XCTestCase {
         try [
             ("max 100000", nil),
             ("75000 100000", 1),
-            ("200000 100000", 2)
+            ("200000 100000", 2),
         ].forEach { (content, count) in
             try withTemporaryFile(content: content) { (_, path) in
                 XCTAssertEqual(Linux.coreCountCgroup2Restriction(cpuMaxPath: path), count)

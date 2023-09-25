@@ -20,11 +20,11 @@ public protocol ChannelOption: Equatable, _NIOPreconcurrencySendable {
 
 public typealias SocketOptionName = Int32
 #if os(Linux) || os(Android)
-    public typealias SocketOptionLevel = Int
-    public typealias SocketOptionValue = Int
+public typealias SocketOptionLevel = Int
+public typealias SocketOptionValue = Int
 #else
-    public typealias SocketOptionLevel = CInt
-    public typealias SocketOptionValue = CInt
+public typealias SocketOptionLevel = CInt
+public typealias SocketOptionValue = CInt
 #endif
 
 @available(*, deprecated, renamed: "ChannelOptions.Types.SocketOption")
@@ -93,15 +93,15 @@ extension ChannelOptions {
             }
 
             #if !os(Windows)
-                /// Create a new `SocketOption`.
-                ///
-                /// - parameters:
-                ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
-                ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
-                public init(level: SocketOptionLevel, name: SocketOptionName) {
-                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
-                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
-                }
+            /// Create a new `SocketOption`.
+            ///
+            /// - parameters:
+            ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+            ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
+            public init(level: SocketOptionLevel, name: SocketOptionName) {
+                self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
+                self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
+            }
             #endif
 
             /// Create a new `SocketOption`.
@@ -188,7 +188,7 @@ extension ChannelOptions {
         public struct DatagramVectorReadMessageCountOption: ChannelOption, Sendable {
             public typealias Value = Int
 
-            public init() { }
+            public init() {}
         }
 
         /// ``DatagramSegmentSize`` controls the `UDP_SEGMENT` socket option (sometimes reffered to as 'GSO') which allows for
@@ -201,7 +201,7 @@ extension ChannelOptions {
         /// Setting this option to zero disables segmentation offload.
         public struct DatagramSegmentSize: ChannelOption, Sendable {
             public typealias Value = CInt
-            public init() { }
+            public init() {}
         }
 
         /// ``DatagramReceiveOffload`` sets the `UDP_GRO` socket option which allows for datagrams to be accumulated
@@ -214,7 +214,7 @@ extension ChannelOptions {
         ///   The default allocator for datagram channels uses fixed sized buffers of 2048 bytes.
         public struct DatagramReceiveOffload: ChannelOption, Sendable {
             public typealias Value = Bool
-            public init() { }
+            public init() {}
         }
 
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
@@ -293,9 +293,9 @@ extension ChannelOptions {
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions {
     #if !os(Windows)
-        public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
-            .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
-        }
+    public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
+        .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
+    }
     #endif
 
     /// - seealso: `SocketOption`.
@@ -383,12 +383,11 @@ extension ChannelOptions {
             var hasSet = false
             self._storage = self._storage.map { currentKeyAndValue in
                 let (currentKey, _) = currentKeyAndValue
-                if let currentKey = currentKey as? Option, currentKey == newKey {
-                    hasSet = true
-                    return (currentKey, (newValue, applier))
-                } else {
+                guard let currentKey = currentKey as? Option, currentKey == newKey else {
                     return currentKeyAndValue
                 }
+                hasSet = true
+                return (currentKey, (newValue, applier))
             }
             if !hasSet {
                 self._storage.append((newKey, (newValue, applier)))

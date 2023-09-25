@@ -26,7 +26,7 @@ import ucrt
 @usableFromInline
 internal struct Heap<Element: Comparable> {
     @usableFromInline
-    internal private(set) var storage: Array<Element>
+    internal private(set) var storage: [Element]
 
     @inlinable
     internal init() {
@@ -42,19 +42,19 @@ internal struct Heap<Element: Comparable> {
     // named `PARENT` in CLRS
     @inlinable
     internal func parentIndex(_ i: Int) -> Int {
-        return (i-1) / 2
+        return (i - 1) / 2
     }
 
     // named `LEFT` in CLRS
     @inlinable
     internal func leftIndex(_ i: Int) -> Int {
-        return 2*i + 1
+        return 2 * i + 1
     }
 
     // named `RIGHT` in CLRS
     @inlinable
     internal func rightIndex(_ i: Int) -> Int {
-        return 2*i + 2
+        return 2 * i + 2
     }
 
     // named `MAX-HEAPIFY` in CLRS
@@ -114,14 +114,13 @@ internal struct Heap<Element: Comparable> {
     @discardableResult
     @inlinable
     internal mutating func remove(value: Element) -> Bool {
-        if let idx = self.storage.firstIndex(of: value) {
-            self._remove(index: idx)
-            return true
-        } else {
+        guard let idx = self.storage.firstIndex(of: value) else {
             return false
         }
+        self._remove(index: idx)
+        return true
     }
-    
+
     @inlinable
     internal mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows {
         guard self.storage.count > 0 else {
@@ -131,7 +130,7 @@ internal struct Heap<Element: Comparable> {
         guard let index = try self.storage.firstIndex(where: shouldBeRemoved) else {
             return
         }
-        
+
         self._remove(index: index)
     }
 
@@ -163,7 +162,7 @@ extension Heap: CustomDebugStringConvertible {
             return "<empty heap>"
         }
         let descriptions = self.storage.map { String(describing: $0) }
-        let maxLen: Int = descriptions.map { $0.count }.max()! // storage checked non-empty above
+        let maxLen: Int = descriptions.map { $0.count }.max()!  // storage checked non-empty above
         let paddedDescs = descriptions.map { (desc: String) -> String in
             var desc = desc
             while desc.count < maxLen {

@@ -116,8 +116,9 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
             } else {
                 self.decreaseNow = true
             }
-        } else if actualReadBytes >= self.nextReceiveBufferSize && upperBound <= self.maximum &&
-                  self.nextReceiveBufferSize != upperBound {
+        } else if actualReadBytes >= self.nextReceiveBufferSize && upperBound <= self.maximum
+            && self.nextReceiveBufferSize != upperBound
+        {
             self.nextReceiveBufferSize = upperBound
             self.decreaseNow = false
             mayGrow = true

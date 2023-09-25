@@ -292,7 +292,7 @@ extension EventCounterHandler: ChannelDuplexHandler {
         self._channelReadCalls.wrappingIncrement(ordering: .relaxed)
         context.fireChannelRead(data)
     }
-    
+
     /// @see: `_ChannelInboundHandler.channelReadComplete`
     public func channelReadComplete(context: ChannelHandlerContext) {
         self._channelReadCompleteCalls.wrappingIncrement(ordering: .relaxed)
@@ -310,7 +310,7 @@ extension EventCounterHandler: ChannelDuplexHandler {
         self._userInboundEventTriggeredCalls.wrappingIncrement(ordering: .relaxed)
         context.fireUserInboundEventTriggered(event)
     }
-    
+
     /// @see: `_ChannelInboundHandler.errorCaught`
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         self._errorCaughtCalls.wrappingIncrement(ordering: .relaxed)

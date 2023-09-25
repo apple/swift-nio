@@ -53,4 +53,4 @@ internal extension Swift.Duration {
         return combinedNanos.partialValue
     }
 }
-#endif // (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))
+#endif  // (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))

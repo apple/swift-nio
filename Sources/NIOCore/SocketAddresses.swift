@@ -37,10 +37,10 @@ import struct WinSDK.sockaddr_un
 
 import typealias WinSDK.u_short
 
-fileprivate typealias in_addr = WinSDK.IN_ADDR
-fileprivate typealias in6_addr = WinSDK.IN6_ADDR
-fileprivate typealias in_port_t = WinSDK.u_short
-fileprivate typealias sa_family_t = WinSDK.ADDRESS_FAMILY
+private typealias in_addr = WinSDK.IN_ADDR
+private typealias in6_addr = WinSDK.IN6_ADDR
+private typealias in_port_t = WinSDK.u_short
+private typealias sa_family_t = WinSDK.ADDRESS_FAMILY
 #elseif canImport(Darwin)
 import Darwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
@@ -70,7 +70,7 @@ extension SocketAddressError {
     /// Unable to parse a given IP ByteBuffer
     public struct FailedToParseIPByteBuffer: Error, Hashable {
         public var address: ByteBuffer
-        
+
         public init(address: ByteBuffer) {
             self.address = address
         }
@@ -165,7 +165,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     @available(*, deprecated, renamed: "SocketAddress.protocol")
     public var protocolFamily: Int32 {
-      return Int32(self.protocol.rawValue)
+        return Int32(self.protocol.rawValue)
     }
 
     /// Returns the protocol family as defined in `man 2 socket` of this `SocketAddress`.
@@ -228,7 +228,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             }
         }
     }
-    
+
     /// Get the pathname of a UNIX domain socket as a string
     public var pathname: String? {
         switch self {
@@ -364,14 +364,14 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
                 addr.sin6_scope_id = 0
                 return .v6(.init(address: addr, host: ""))
             } catch {
-              // If `inet_pton` fails as an IPv6 address (and has failed as an
-              // IPv4 address above), we will throw an error below.
+                // If `inet_pton` fails as an IPv6 address (and has failed as an
+                // IPv4 address above), we will throw an error below.
             }
 
             throw SocketAddressError.failedToParseIPString(ipAddress)
         }
     }
-    
+
     /// Create a new `SocketAddress` for an IP address in ByteBuffer form.
     ///
     /// - parameters:
@@ -381,7 +381,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     /// - throws: may throw `SocketAddressError.failedToParseIPByteBuffer` if the IP address cannot be parsed.
     public init(packedIPAddress: ByteBuffer, port: Int) throws {
         let packed = packedIPAddress.readableBytesView
-        
+
         switch packedIPAddress.readableBytes {
         case 4:
             var ipv4Addr = sockaddr_in()
@@ -411,7 +411,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     internal init(ipv4MaskForPrefix prefix: Int) {
         precondition((0...32).contains(prefix))
 
-        let packedAddress = (UInt32(0xFFFFFFFF) << (32 - prefix)).bigEndian
+        let packedAddress = (UInt32(0xFFFF_FFFF) << (32 - prefix)).bigEndian
         var ipv4Addr = sockaddr_in()
         ipv4Addr.sin_family = sa_family_t(AF_INET)
         ipv4Addr.sin_port = 0
@@ -433,9 +433,9 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         // This defends against the possibility of a greater-than-/64 subnet, which would produce a negative shift
         // operand which is absolutely not what we want.
         let highShift = min(prefix, 64)
-        let packedAddressHigh = (UInt64(0xFFFFFFFFFFFFFFFF) << (64 - highShift)).bigEndian
+        let packedAddressHigh = (UInt64(0xFFFF_FFFF_FFFF_FFFF) << (64 - highShift)).bigEndian
 
-        let packedAddressLow = (UInt64(0xFFFFFFFFFFFFFFFF) << (128 - prefix)).bigEndian
+        let packedAddressLow = (UInt64(0xFFFF_FFFF_FFFF_FFFF) << (128 - prefix)).bigEndian
         let packedAddress = (packedAddressHigh, packedAddressLow)
 
         var ipv6Addr = sockaddr_in6()
@@ -455,7 +455,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     /// - returns: the `SocketAddress` for the host / port pair.
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
-#if os(Windows)
+        #if os(Windows)
         return try host.withCString(encodedAs: UTF16.self) { wszHost in
             return try String(port).withCString(encodedAs: UTF16.self) { wszPort in
                 var pResult: UnsafeMutablePointer<ADDRINFOW>?
@@ -482,7 +482,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
                 throw SocketAddressError.unsupported
             }
         }
-#else
+        #else
         var info: UnsafeMutablePointer<addrinfo>?
 
         /* FIXME: this is blocking! */
@@ -496,45 +496,46 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             }
         }
 
-        if let info = info, let addrPointer = info.pointee.ai_addr {
-            let addressBytes = UnsafeRawPointer(addrPointer)
-            switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
-            case .inet:
-                return .v4(.init(address: addressBytes.load(as: sockaddr_in.self), host: host))
-            case .inet6:
-                return .v6(.init(address: addressBytes.load(as: sockaddr_in6.self), host: host))
-            default:
-                throw SocketAddressError.unsupported
-            }
-        } else {
+        guard let info = info, let addrPointer = info.pointee.ai_addr else {
             /* this is odd, getaddrinfo returned NULL */
             throw SocketAddressError.unsupported
         }
-#endif
+        let addressBytes = UnsafeRawPointer(addrPointer)
+        switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
+        case .inet:
+            return .v4(.init(address: addressBytes.load(as: sockaddr_in.self), host: host))
+        case .inet6:
+            return .v6(.init(address: addressBytes.load(as: sockaddr_in6.self), host: host))
+        default:
+            throw SocketAddressError.unsupported
+        }
+        #endif
     }
 }
 
 /// We define an extension on `SocketAddress` that gives it an elementwise equatable conformance, using
 /// only the elements defined on the structure in their man pages (excluding lengths).
 extension SocketAddress: Equatable {
-    public static func ==(lhs: SocketAddress, rhs: SocketAddress) -> Bool {
+    public static func == (lhs: SocketAddress, rhs: SocketAddress) -> Bool {
         switch (lhs, rhs) {
         case (.v4(let addr1), .v4(let addr2)):
-#if os(Windows)
-            return addr1.address.sin_family == addr2.address.sin_family &&
-                   addr1.address.sin_port == addr2.address.sin_port &&
-                   addr1.address.sin_addr.S_un.S_addr == addr2.address.sin_addr.S_un.S_addr
-#else
-            return addr1.address.sin_family == addr2.address.sin_family &&
-                   addr1.address.sin_port == addr2.address.sin_port &&
-                   addr1.address.sin_addr.s_addr == addr2.address.sin_addr.s_addr
-#endif
+            #if os(Windows)
+            return addr1.address.sin_family == addr2.address.sin_family
+                && addr1.address.sin_port == addr2.address.sin_port
+                && addr1.address.sin_addr.S_un.S_addr == addr2.address.sin_addr.S_un.S_addr
+            #else
+            return addr1.address.sin_family == addr2.address.sin_family
+                && addr1.address.sin_port == addr2.address.sin_port
+                && addr1.address.sin_addr.s_addr == addr2.address.sin_addr.s_addr
+            #endif
         case (.v6(let addr1), .v6(let addr2)):
-            guard addr1.address.sin6_family == addr2.address.sin6_family &&
-                  addr1.address.sin6_port == addr2.address.sin6_port &&
-                  addr1.address.sin6_flowinfo == addr2.address.sin6_flowinfo &&
-                  addr1.address.sin6_scope_id == addr2.address.sin6_scope_id else {
-                    return false
+            guard
+                addr1.address.sin6_family == addr2.address.sin6_family
+                    && addr1.address.sin6_port == addr2.address.sin6_port
+                    && addr1.address.sin6_flowinfo == addr2.address.sin6_flowinfo
+                    && addr1.address.sin6_scope_id == addr2.address.sin6_scope_id
+            else {
+                return false
             }
 
             var s6addr1 = addr1.address.sin6_addr
@@ -546,7 +547,6 @@ extension SocketAddress: Equatable {
             }
 
             let bufferSize = MemoryLayout.size(ofValue: addr1.address.sun_path)
-
 
             // Swift implicitly binds the memory for homogeneous tuples to both the tuple type and the element type.
             // This allows us to use assumingMemoryBound(to:) for managing the types. However, we add a static assertion here to validate
@@ -594,11 +594,11 @@ extension SocketAddress: Hashable {
             hasher.combine(1)
             hasher.combine(v4Addr.address.sin_family)
             hasher.combine(v4Addr.address.sin_port)
-#if os(Windows)
+            #if os(Windows)
             hasher.combine(v4Addr.address.sin_addr.S_un.S_addr)
-#else
+            #else
             hasher.combine(v4Addr.address.sin_addr.s_addr)
-#endif
+            #endif
         case .v6(let v6Addr):
             hasher.combine(2)
             hasher.combine(v6Addr.address.sin6_family)
@@ -612,7 +612,6 @@ extension SocketAddress: Hashable {
     }
 }
 
-
 extension SocketAddress {
     /// Whether this `SocketAddress` corresponds to a multicast address.
     public var isMulticast: Bool {
@@ -624,15 +623,15 @@ extension SocketAddress {
             // For IPv4 a multicast address is in the range 224.0.0.0/4.
             // The easy way to check if this is the case is to just mask off
             // the address.
-#if os(Windows)
+            #if os(Windows)
             let v4WireAddress = v4Addr.address.sin_addr.S_un.S_addr
             let mask = UInt32(0xF000_0000).bigEndian
             let subnet = UInt32(0xE000_0000).bigEndian
-#else
+            #else
             let v4WireAddress = v4Addr.address.sin_addr.s_addr
             let mask = in_addr_t(0xF000_0000 as UInt32).bigEndian
             let subnet = in_addr_t(0xE000_0000 as UInt32).bigEndian
-#endif
+            #endif
             return v4WireAddress & mask == subnet
         case .v6(let v6Addr):
             // For IPv6 a multicast address is in the range ff00::/8.
@@ -649,13 +648,22 @@ protocol SockAddrProtocol {
 }
 
 /// Returns a description for the given address.
-internal func descriptionForAddress(family: NIOBSDSocket.AddressFamily, bytes: UnsafeRawPointer, length byteCount: Int) throws -> String {
+internal func descriptionForAddress(
+    family: NIOBSDSocket.AddressFamily,
+    bytes: UnsafeRawPointer,
+    length byteCount: Int
+) throws -> String {
     var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
-    return try addressBytes.withUnsafeMutableBufferPointer { (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
-        try NIOBSDSocket.inet_ntop(addressFamily: family, addressBytes: bytes,
-                                   addressDescription: addressBytesPtr.baseAddress!,
-                                   addressDescriptionLength: socklen_t(byteCount))
-        return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) { addressBytesPtr -> String in
+    return try addressBytes.withUnsafeMutableBufferPointer {
+        (addressBytesPtr: inout UnsafeMutableBufferPointer<Int8>) -> String in
+        try NIOBSDSocket.inet_ntop(
+            addressFamily: family,
+            addressBytes: bytes,
+            addressDescription: addressBytesPtr.baseAddress!,
+            addressDescriptionLength: socklen_t(byteCount)
+        )
+        return addressBytesPtr.baseAddress!.withMemoryRebound(to: UInt8.self, capacity: byteCount) {
+            addressBytesPtr -> String in
             String(cString: addressBytesPtr)
         }
     }
@@ -722,13 +730,15 @@ func __testOnly_addressDescription(_ addr: sockaddr_in6) -> String {
 }
 
 func __testOnly_withSockAddr<ReturnType>(
-    _ addr: sockaddr_in, _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
+    _ addr: sockaddr_in,
+    _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
 ) rethrows -> ReturnType {
     return try addr.withSockAddr(body)
 }
 
 func __testOnly_withSockAddr<ReturnType>(
-    _ addr: sockaddr_in6, _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
+    _ addr: sockaddr_in6,
+    _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType
 ) rethrows -> ReturnType {
     return try addr.withSockAddr(body)
 }

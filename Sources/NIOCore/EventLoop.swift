@@ -16,7 +16,7 @@ import NIOConcurrencyHelpers
 import Dispatch
 #if os(Linux)
 import CNIOLinux
-#endif // os(Linux)
+#endif  // os(Linux)
 
 /// Returned once a task was scheduled on the `EventLoop` for later execution.
 ///
@@ -30,7 +30,7 @@ public struct Scheduled<T> {
     #endif
     /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
     /* private but usableFromInline */ @usableFromInline let _cancellationTask: CancelationCallback
-    
+
     #if swift(>=5.7)
     @inlinable
     @preconcurrency
@@ -269,7 +269,7 @@ public protocol EventLoop: EventLoopGroup {
     ///
     /// If it is necessary for correctness to confirm that you're on an event loop, prefer ``preconditionInEventLoop(file:line:)-7ukrq``.
     var inEventLoop: Bool { get }
-    
+
     #if swift(>=5.7)
     /// Submit a given task to be executed by the `EventLoop`
     @preconcurrency
@@ -278,7 +278,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Submit a given task to be executed by the `EventLoop`
     func execute(_ task: @escaping () -> Void)
     #endif
-    
+
     #if swift(>=5.7)
     /// Submit a given task to be executed by the `EventLoop`. Once the execution is complete the returned `EventLoopFuture` is notified.
     ///
@@ -295,7 +295,7 @@ public protocol EventLoop: EventLoopGroup {
     /// - returns: `EventLoopFuture` that is notified once the task was executed.
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
     #endif
-    
+
     #if swift(>=5.7)
 
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
@@ -435,7 +435,8 @@ extension EventLoop {
     }
 
     /// Default implementation of `_promiseCompleted`: does nothing.
-    public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
+    public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
+    {
         return nil
     }
 }
@@ -551,7 +552,7 @@ extension TimeAmount: AdditiveArithmetic {
     }
 
     @inlinable
-    public static func +=(lhs: inout TimeAmount, rhs: TimeAmount) {
+    public static func += (lhs: inout TimeAmount, rhs: TimeAmount) {
         lhs = lhs + rhs
     }
 
@@ -561,7 +562,7 @@ extension TimeAmount: AdditiveArithmetic {
     }
 
     @inlinable
-    public static func -=(lhs: inout TimeAmount, rhs: TimeAmount) {
+    public static func -= (lhs: inout TimeAmount, rhs: TimeAmount) {
         lhs = lhs - rhs
     }
 
@@ -618,7 +619,6 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
         self._uptimeNanoseconds = nanoseconds
     }
 
-
     /// Getting the time is a very common operation so it warrants optimization.
     ///
     /// Prior to this function, NIO relied on `DispatchTime.now()`, on all platforms. In addition to
@@ -631,16 +631,16 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
     /// - TODO: Investigate optimizing the call to `DispatchTime.now()` away on other platforms too.
     @inlinable
     static func timeNow() -> UInt64 {
-#if os(Linux)
+        #if os(Linux)
         var ts = timespec()
         clock_gettime(CLOCK_MONOTONIC, &ts)
         /// We use unsafe arithmetic here because `UInt64.max` nanoseconds is more than 580 years,
         /// and the odds that this code will still be running 530 years from now is very, very low,
         /// so as a practical matter this will never overflow.
         return UInt64(ts.tv_sec) &* 1_000_000_000 &+ UInt64(ts.tv_nsec)
-#else // os(Linux)
+        #else  // os(Linux)
         return DispatchTime.now().uptimeNanoseconds
-#endif // os(Linux)
+        #endif  // os(Linux)
     }
 
     @inlinable
@@ -697,7 +697,7 @@ extension NIODeadline {
         let overflow: Bool
         (partial, overflow) = Int64(lhs.uptimeNanoseconds).addingReportingOverflow(rhs.nanoseconds)
         if overflow {
-            assert(rhs.nanoseconds > 0) // this certainly must have overflowed towards +infinity
+            assert(rhs.nanoseconds > 0)  // this certainly must have overflowed towards +infinity
             return NIODeadline.distantFuture
         }
         guard partial >= 0 else {
@@ -755,7 +755,7 @@ extension EventLoop {
     }
     @usableFromInline typealias SubmitCallback<T> = () throws -> T
     #endif
-    
+
     @inlinable
     func _submit<T>(_ task: @escaping SubmitCallback<T>) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = makePromise(file: #fileID, line: #line)
@@ -801,12 +801,12 @@ extension EventLoop {
     }
     @usableFromInline typealias FlatSubmitCallback<T> = () -> EventLoopFuture<T>
     #endif
-    
+
     @inlinable
     func _flatSubmit<T>(_ task: @escaping FlatSubmitCallback<T>) -> EventLoopFuture<T> {
         self.submit(task).flatMap { $0 }
     }
-    
+
     #if swift(>=5.7)
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
     ///
@@ -849,7 +849,7 @@ extension EventLoop {
     }
     @usableFromInline typealias FlatScheduleTaskDeadlineCallback<T> = () throws -> EventLoopFuture<T>
     #endif
-    
+
     @discardableResult
     @inlinable
     func _flatScheduleTask<T>(
@@ -907,7 +907,7 @@ extension EventLoop {
     }
     @usableFromInline typealias FlatScheduleTaskDelayCallback<T> = () throws -> EventLoopFuture<T>
     #endif
-    
+
     @inlinable
     func _flatScheduleTask<T>(
         in delay: TimeAmount,
@@ -924,7 +924,11 @@ extension EventLoop {
 
     /// Creates and returns a new `EventLoopPromise` that will be notified using this `EventLoop` as execution `NIOThread`.
     @inlinable
-    public func makePromise<T>(of type: T.Type = T.self, file: StaticString = #fileID, line: UInt = #line) -> EventLoopPromise<T> {
+    public func makePromise<T>(
+        of type: T.Type = T.self,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) -> EventLoopPromise<T> {
         return EventLoopPromise<T>(eventLoop: self, file: file, line: line)
     }
 
@@ -945,12 +949,11 @@ extension EventLoop {
     /// - returns: a succeeded `EventLoopFuture`.
     @inlinable
     public func makeSucceededFuture<Success>(_ value: Success) -> EventLoopFuture<Success> {
-        if Success.self == Void.self {
-            // The as! will always succeed because we previously checked that Success.self == Void.self.
-            return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
-        } else {
+        guard Success.self == Void.self else {
             return EventLoopFuture<Success>(eventLoop: self, value: value)
         }
+        // The as! will always succeed because we previously checked that Success.self == Void.self.
+        return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
     }
 
     /// Creates and returns a new `EventLoopFuture` that is marked as succeeded or failed with the value held by `result`.
@@ -997,7 +1000,7 @@ extension EventLoop {
     public func close() throws {
         // Do nothing
     }
-    
+
     #if swift(>=5.7)
 
     /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each
@@ -1041,7 +1044,7 @@ extension EventLoop {
     }
     typealias ScheduleRepeatedTaskCallback = (RepeatedTask) throws -> Void
     #endif
-    
+
     func _scheduleRepeatedTask(
         initialDelay: TimeAmount,
         delay: TimeAmount,
@@ -1058,7 +1061,7 @@ extension EventLoop {
         }
         return self.scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, notifying: promise, futureTask)
     }
-    
+
     #if swift(>=5.7)
     /// Schedule a repeated asynchronous task to be executed by the `EventLoop` with a fixed delay between the end and
     /// start of each task.
@@ -1115,7 +1118,7 @@ extension EventLoop {
     }
     typealias ScheduleRepeatedAsyncTaskCallback = (RepeatedTask) -> EventLoopFuture<Void>
     #endif
-    
+
     func _scheduleRepeatedAsyncTask(
         initialDelay: TimeAmount,
         delay: TimeAmount,
@@ -1126,7 +1129,6 @@ extension EventLoop {
         repeated.begin(in: initialDelay)
         return repeated
     }
-    
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///
@@ -1209,7 +1211,7 @@ public protocol EventLoopGroup: AnyObject, _NIOPreconcurrencySendable {
     /// The rule of thumb is: If you are trying to do _load balancing_, use `next()`. If you just want to create a new
     /// future or kick off some operation, use `any()`.
     func any() -> EventLoop
-    
+
     #if swift(>=5.7)
     /// Shuts down the eventloop gracefully. This function is clearly an outlier in that it uses a completion
     /// callback instead of an EventLoopFuture. The reason for that is that NIO's EventLoopFutures will call back on an event loop.
@@ -1223,7 +1225,7 @@ public protocol EventLoopGroup: AnyObject, _NIOPreconcurrencySendable {
     /// instead.
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void)
     #endif
-    
+
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
     ///
     /// - returns: `EventLoopIterator`
@@ -1254,7 +1256,6 @@ extension EventLoopGroup {
         self.shutdownGracefully(queue: .global(), callback)
     }
     #endif
-
 
     #if swift(>=5.7)
     @available(*, noasync, message: "this can end up blocking the calling thread", renamed: "shutdownGracefully()")

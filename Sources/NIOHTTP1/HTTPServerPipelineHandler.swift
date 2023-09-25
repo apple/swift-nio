@@ -19,7 +19,12 @@ import NIOCore
 /// This is currently the only way to do this in Swift: see
 /// https://forums.swift.org/t/support-debug-only-code/11037 for a discussion.
 internal func debugOnly(_ body: () -> Void) {
-    assert({ body(); return true }())
+    assert(
+        {
+            body()
+            return true
+        }()
+    )
 }
 
 /// A `ChannelHandler` that handles HTTP pipelining by buffering inbound data until a
@@ -97,7 +102,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             case .idle:
                 self = .requestAndResponseEndPending
             case .requestAndResponseEndPending, .responseEndPending, .requestEndPending,
-                    .sentCloseOutputRequestEndPending, .sentCloseOutput:
+                .sentCloseOutputRequestEndPending, .sentCloseOutput:
                 preconditionFailure("received request head in state \(self)")
             }
         }
@@ -226,9 +231,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     }
 
     private func deliverOneMessage(context: ChannelHandlerContext, data: NIOAny) {
-        assert(self.lifecycleState != .quiescingLastRequestEndReceived &&
-               self.lifecycleState != .quiescingCompleted,
-               "deliverOneMessage called in lifecycle illegal state \(self.lifecycleState)")
+        assert(
+            self.lifecycleState != .quiescingLastRequestEndReceived && self.lifecycleState != .quiescingCompleted,
+            "deliverOneMessage called in lifecycle illegal state \(self.lifecycleState)"
+        )
         let msg = self.unwrapInboundIn(data)
 
         debugOnly {
@@ -280,8 +286,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case is ChannelShouldQuiesceEvent:
-            assert(self.lifecycleState == .acceptingEvents,
-                   "unexpected lifecycle state when receiving ChannelShouldQuiesceEvent: \(self.lifecycleState)")
+            assert(
+                self.lifecycleState == .acceptingEvents,
+                "unexpected lifecycle state when receiving ChannelShouldQuiesceEvent: \(self.lifecycleState)"
+            )
             switch self.state {
             case .responseEndPending:
                 // we're not in the middle of a request, let's just shut the door
@@ -324,8 +332,10 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        assert(self.state != .requestEndPending,
-               "Received second response while waiting for first one to complete")
+        assert(
+            self.state != .requestEndPending,
+            "Received second response while waiting for first one to complete"
+        )
         debugOnly {
             let res = self.unwrapOutboundIn(data)
             switch res {
@@ -422,7 +432,6 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 context.fireErrorCaught(error)
             }
         }
-
 
         switch self.lifecycleState {
         case .quiescingLastRequestEndReceived, .quiescingWaitingForRequestEnd:

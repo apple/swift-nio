@@ -21,13 +21,13 @@ import Atomics
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
-#if canImport(Darwin)
+    #if canImport(Darwin)
     return try autoreleasepool {
         try execute()
     }
-#else
+    #else
     return try execute()
-#endif
+    #endif
 }
 
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
@@ -82,7 +82,7 @@ internal final class SelectableEventLoop: EventLoop {
     // for every appended closure. https://bugs.swift.org/browse/SR-15872
     private var tasksCopy = ContiguousArray<ScheduledTask>()
     @usableFromInline
-    internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
+    internal var _succeededVoidFuture: EventLoopFuture<Void>? = nil {
         didSet {
             self.assertInEventLoop()
         }
@@ -95,12 +95,14 @@ internal final class SelectableEventLoop: EventLoop {
     private var externalStateLock: NIOLock {
         // The assert is here to check that we never try to read the external state on the EventLoop unless we're
         // shutting down.
-        assert(!self.inEventLoop || self.internalState != .runningAndAcceptingNewRegistrations,
-               "lifecycle lock taken whilst up and running and in EventLoop")
+        assert(
+            !self.inEventLoop || self.internalState != .runningAndAcceptingNewRegistrations,
+            "lifecycle lock taken whilst up and running and in EventLoop"
+        )
         return self._externalStateLock
     }
-    private var internalState: InternalState = .runningAndAcceptingNewRegistrations // protected by the EventLoop thread
-    private var externalState: ExternalState = .open // protected by externalStateLock
+    private var internalState: InternalState = .runningAndAcceptingNewRegistrations  // protected by the EventLoop thread
+    private var externalState: ExternalState = .open  // protected by externalStateLock
 
     let bufferPool: Pool<PooledBuffer>
     let msgBufferPool: Pool<PooledMsgBuffer>
@@ -123,7 +125,9 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     @usableFromInline
-    internal func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
+    internal func _promiseCompleted(
+        futureIdentifier: _NIOEventLoopFutureIdentifier
+    ) -> (file: StaticString, line: UInt)? {
         precondition(_isDebugAssertConfiguration())
         return self.promiseCreationStoreLock.withLock {
             self._promiseCreationStore.removeValue(forKey: futureIdentifier)
@@ -132,16 +136,17 @@ internal final class SelectableEventLoop: EventLoop {
 
     @usableFromInline
     internal func _preconditionSafeToWait(file: StaticString, line: UInt) {
-        let explainer: () -> String = { """
-BUG DETECTED: wait() must not be called when on an EventLoop.
-Calling wait() on any EventLoop can lead to
-- deadlocks
-- stalling processing of other connections (Channels) that are handled on the EventLoop that wait was called on
+        let explainer: () -> String = {
+            """
+            BUG DETECTED: wait() must not be called when on an EventLoop.
+            Calling wait() on any EventLoop can lead to
+            - deadlocks
+            - stalling processing of other connections (Channels) that are handled on the EventLoop that wait was called on
 
-Further information:
-- current eventLoop: \(MultiThreadedEventLoopGroup.currentEventLoop.debugDescription)
-- event loop associated to future: \(self)
-"""
+            Further information:
+            - current eventLoop: \(MultiThreadedEventLoopGroup.currentEventLoop.debugDescription)
+            - event loop associated to future: \(self)
+            """
         }
         precondition(!self.inEventLoop, explainer(), file: file, line: line)
         precondition(MultiThreadedEventLoopGroup.currentEventLoop == nil, explainer(), file: file, line: line)
@@ -173,10 +178,12 @@ Further information:
         }
     }
 
-    internal init(thread: NIOThread,
-                  parentGroup: MultiThreadedEventLoopGroup?, /* nil iff thread take-over */
-                  selector: NIOPosix.Selector<NIORegistration>,
-                  canBeShutdownIndividually: Bool) {
+    internal init(
+        thread: NIOThread,
+        parentGroup: MultiThreadedEventLoopGroup?, /* nil iff thread take-over */
+        selector: NIOPosix.Selector<NIORegistration>,
+        canBeShutdownIndividually: Bool
+    ) {
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
@@ -194,10 +201,14 @@ Further information:
     }
 
     deinit {
-        assert(self.internalState == .exitingThread,
-               "illegal internal state on deinit: \(self.internalState)")
-        assert(self.externalState == .resourcesReclaimed,
-               "illegal external state on shutdown: \(self.externalState)")
+        assert(
+            self.internalState == .exitingThread,
+            "illegal internal state on deinit: \(self.internalState)"
+        )
+        assert(
+            self.externalState == .resourcesReclaimed,
+            "illegal external state on shutdown: \(self.externalState)"
+        )
     }
 
     /// Is this `SelectableEventLoop` still open (ie. not shutting down or shut down)
@@ -253,27 +264,35 @@ Further information:
     @inlinable
     internal func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise()
-        let task = ScheduledTask(id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed), {
-            do {
-                promise.succeed(try task())
-            } catch let err {
-                promise.fail(err)
-            }
-        }, { error in
-            promise.fail(error)
-        }, deadline)
+        let task = ScheduledTask(
+            id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed),
+            {
+                do {
+                    promise.succeed(try task())
+                } catch let err {
+                    promise.fail(err)
+                }
+            },
+            { error in
+                promise.fail(error)
+            },
+            deadline
+        )
 
         let taskId = task.id
-        let scheduled = Scheduled(promise: promise, cancellationTask: {
-            self._tasksLock.withLock { () -> Void in
-                self._scheduledTasks.removeFirst(where: { $0.id == taskId })
+        let scheduled = Scheduled(
+            promise: promise,
+            cancellationTask: {
+                self._tasksLock.withLock { () -> Void in
+                    self._scheduledTasks.removeFirst(where: { $0.id == taskId })
+                }
+                // We don't need to wake up the selector here, the scheduled task will never be picked up. Waking up the
+                // selector would mean that we may be able to recalculate the shutdown to a later date. The cost of not
+                // doing the recalculation is one potentially unnecessary wakeup which is exactly what we're
+                // saving here. So in the worst case, we didn't do a performance optimisation, in the best case, we saved
+                // one wakeup.
             }
-            // We don't need to wake up the selector here, the scheduled task will never be picked up. Waking up the
-            // selector would mean that we may be able to recalculate the shutdown to a later date. The cost of not
-            // doing the recalculation is one potentially unnecessary wakeup which is exactly what we're
-            // saving here. So in the worst case, we didn't do a performance optimisation, in the best case, we saved
-            // one wakeup.
-        })
+        )
 
         do {
             try self._schedule0(task)
@@ -294,17 +313,26 @@ Further information:
     @inlinable
     internal func execute(_ task: @escaping () -> Void) {
         // nothing we can do if we fail enqueuing here.
-        try? self._schedule0(ScheduledTask(id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed), task, { error in
-            // do nothing
-        }, .now()))
+        try? self._schedule0(
+            ScheduledTask(
+                id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed),
+                task,
+                { error in
+                    // do nothing
+                },
+                .now()
+            )
+        )
     }
 
     /// Add the `ScheduledTask` to be executed.
     @usableFromInline
     internal func _schedule0(_ task: ScheduledTask) throws {
         if self.inEventLoop {
-            precondition(self._validInternalStateToScheduleTasks,
-                         "BUG IN NIO (please report): EventLoop is shutdown, yet we're on the EventLoop.")
+            precondition(
+                self._validInternalStateToScheduleTasks,
+                "BUG IN NIO (please report): EventLoop is shutdown, yet we're on the EventLoop."
+            )
 
             self._tasksLock.withLock { () -> Void in
                 self._scheduledTasks.push(task)
@@ -328,14 +356,13 @@ Further information:
                 return self._tasksLock.withLock {
                     self._scheduledTasks.push(task)
 
-                    if self._pendingTaskPop == false {
-                        // Our job to wake the selector.
-                        self._pendingTaskPop = true
-                        return true
-                    } else {
+                    guard self._pendingTaskPop == false else {
                         // There is already an event-loop-tick scheduled, we don't need to wake the selector.
                         return false
                     }
+                    // Our job to wake the selector.
+                    self._pendingTaskPop = true
+                    return true
                 }
             }
 
@@ -399,12 +426,11 @@ Further information:
         }
 
         let nextReady = deadline.readyIn(.now())
-        if nextReady <= .nanoseconds(0) {
-            // Something is ready to be processed just do a non-blocking select of events.
-            return .now
-        } else {
+        guard nextReady <= .nanoseconds(0) else {
             return .blockUntilTimeout(nextReady)
         }
+        // Something is ready to be processed just do a non-blocking select of events.
+        return .now
     }
 
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
@@ -413,7 +439,7 @@ Further information:
         defer {
             var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
             var iterations = 0
-            repeat { // We may need to do multiple rounds of this because failing tasks may lead to more work.
+            repeat {  // We may need to do multiple rounds of this because failing tasks may lead to more work.
                 scheduledTasksCopy.removeAll(keepingCapacity: true)
 
                 self._tasksLock.withLock { () -> Void in
@@ -487,13 +513,12 @@ Further information:
 
                         // Make a copy of the tasks so we can execute these while not holding the lock anymore
                         while tasksCopy.count < tasksCopy.capacity, let task = self._scheduledTasks.peek() {
-                            if task.readyTime.readyIn(now) <= .nanoseconds(0) {
-                                self._scheduledTasks.pop()
-                                self.tasksCopy.append(task)
-                            } else {
+                            guard task.readyTime.readyIn(now) <= .nanoseconds(0) else {
                                 nextReadyDeadline = task.readyTime
                                 break
                             }
+                            self._scheduledTasks.pop()
+                            self.tasksCopy.append(task)
                         }
                     } else {
                         // Reset nextreadyDeadline to nil which means we will do a blocking select.
@@ -533,7 +558,7 @@ Further information:
     internal func initiateClose(queue: DispatchQueue, completionHandler: @escaping (Result<Void, Error>) -> Void) {
         func doClose() {
             self.assertInEventLoop()
-            self._parentGroup = nil // break the cycle
+            self._parentGroup = nil  // break the cycle
             // There should only ever be one call into this function so we need to be up and running, ...
             assert(self.internalState == .runningAndAcceptingNewRegistrations)
             self.internalState = .runningButNotAcceptingNewRegistrations
@@ -547,7 +572,7 @@ Further information:
                 self.assertInEventLoop()
                 assert(self.internalState == .runningButNotAcceptingNewRegistrations)
                 self.internalState = .noLongerRunning
-                self.execute {} // force a new event loop tick, so the event loop definitely stops looping very soon.
+                self.execute {}  // force a new event loop tick, so the event loop definitely stops looping very soon.
                 self.externalStateLock.withLock {
                     assert(self.externalState == .closing)
                     self.externalState = .closed
@@ -563,12 +588,11 @@ Further information:
             }
         } else {
             let goAhead = self.externalStateLock.withLock { () -> Bool in
-                if self.externalState == .open {
-                    self.externalState = .closing
-                    return true
-                } else {
+                guard self.externalState == .open else {
                     return false
                 }
+                self.externalState = .closing
+                return true
             }
             guard goAhead else {
                 queue.async {
@@ -612,7 +636,7 @@ Further information:
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         if self.canBeShutdownIndividually {
             self.initiateClose(queue: queue) { result in
-                self.syncFinaliseClose(joinThread: false) // This thread was taken over by somebody else
+                self.syncFinaliseClose(joinThread: false)  // This thread was taken over by somebody else
                 switch result {
                 case .success:
                     callback(nil)
@@ -657,7 +681,8 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
     @usableFromInline
     var debugDescription: String {
         return self._tasksLock.withLock {
-            return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
+            return
+                "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
         }
     }
 }
@@ -665,5 +690,5 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
 // MARK: SerialExecutor conformance
 #if compiler(>=5.9)
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
-extension SelectableEventLoop: NIOSerialEventLoopExecutor { }
+extension SelectableEventLoop: NIOSerialEventLoopExecutor {}
 #endif

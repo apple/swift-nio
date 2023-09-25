@@ -26,7 +26,7 @@ import typealias WinSDK.WCHAR
 import typealias WinSDK.WORD
 
 internal func MAKELANGID(_ p: WORD, _ s: WORD) -> DWORD {
-  return DWORD((s << 10) | p)
+    return DWORD((s << 10) | p)
 }
 #elseif os(Linux) || os(Android)
 import Glibc
@@ -47,15 +47,19 @@ public struct IOError: Swift.Error {
     /// The actual reason (in an human-readable form) for this `IOError`.
     private var failureDescription: String
 
-    @available(*, deprecated, message: "NIO no longer uses FailureDescription, use IOError.description for a human-readable error description")
+    @available(
+        *,
+        deprecated,
+        message: "NIO no longer uses FailureDescription, use IOError.description for a human-readable error description"
+    )
     public var reason: FailureDescription {
         return .reason(self.failureDescription)
     }
 
     private enum Error {
         #if os(Windows)
-            case windows(DWORD)
-            case winsock(CInt)
+        case windows(DWORD)
+        case winsock(CInt)
         #endif
         case errno(CInt)
     }
@@ -68,13 +72,13 @@ public struct IOError: Swift.Error {
         case .errno(let code):
             return code
         #if os(Windows)
-            default:
-                fatalError("IOError domain is not `errno`")
+        default:
+            fatalError("IOError domain is not `errno`")
         #endif
         }
     }
 
-#if os(Windows)
+    #if os(Windows)
     public init(windows code: DWORD, reason: String) {
         self.error = .windows(code)
         self.failureDescription = reason
@@ -84,7 +88,7 @@ public struct IOError: Swift.Error {
         self.error = .winsock(code)
         self.failureDescription = reason
     }
-#endif
+    #endif
 
     /// Creates a new `IOError``
     ///
@@ -115,18 +119,18 @@ public struct IOError: Swift.Error {
 ///     - reason: what failed
 /// - returns: the constructed reason.
 private func reasonForError(errnoCode: CInt, reason: String) -> String {
-    if let errorDescC = strerror(errnoCode) {
-        return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"
-    } else {
+    guard let errorDescC = strerror(errnoCode) else {
         return "\(reason): Broken strerror, unknown error: \(errnoCode)"
     }
+    return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"
 }
 
 #if os(Windows)
 private func reasonForWinError(_ code: DWORD) -> String {
-    let dwFlags: DWORD = DWORD(FORMAT_MESSAGE_ALLOCATE_BUFFER)
-                       | DWORD(FORMAT_MESSAGE_FROM_SYSTEM)
-                       | DWORD(FORMAT_MESSAGE_IGNORE_INSERTS)
+    let dwFlags: DWORD =
+        DWORD(FORMAT_MESSAGE_ALLOCATE_BUFFER)
+        | DWORD(FORMAT_MESSAGE_FROM_SYSTEM)
+        | DWORD(FORMAT_MESSAGE_IGNORE_INSERTS)
 
     var buffer: UnsafeMutablePointer<WCHAR>?
     // We use `FORMAT_MESSAGE_ALLOCATE_BUFFER` in flags which means that the
@@ -134,9 +138,15 @@ private func reasonForWinError(_ code: DWORD) -> String {
     // expects a `LPWSTR` and expects the user to type-pun in this case.
     let dwResult: DWORD = withUnsafeMutablePointer(to: &buffer) {
         $0.withMemoryRebound(to: WCHAR.self, capacity: 2) {
-            FormatMessageW(dwFlags, nil, code,
-                           MAKELANGID(WORD(LANG_NEUTRAL), WORD(SUBLANG_DEFAULT)),
-                           $0, 0, nil)
+            FormatMessageW(
+                dwFlags,
+                nil,
+                code,
+                MAKELANGID(WORD(LANG_NEUTRAL), WORD(SUBLANG_DEFAULT)),
+                $0,
+                0,
+                nil
+            )
         }
     }
     guard dwResult > 0, let message = buffer else {
@@ -153,7 +163,7 @@ extension IOError: CustomStringConvertible {
     }
 
     public var localizedDescription: String {
-#if os(Windows)
+        #if os(Windows)
         switch self.error {
         case .errno(let errno):
             return reasonForError(errnoCode: errno, reason: self.failureDescription)
@@ -162,9 +172,9 @@ extension IOError: CustomStringConvertible {
         case .winsock(let code):
             return reasonForWinError(DWORD(code))
         }
-#else
+        #else
         return reasonForError(errnoCode: self.errnoCode, reason: self.failureDescription)
-#endif
+        #endif
     }
 }
 
@@ -189,4 +199,3 @@ internal extension CoreIOResult where T: FixedWidthInteger {
         }
     }
 }
-

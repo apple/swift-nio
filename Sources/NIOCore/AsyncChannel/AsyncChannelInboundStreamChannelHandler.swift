@@ -16,7 +16,9 @@
 /// ``Channel`` into an asynchronous sequence that supports back-pressure.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
-internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Sendable, ProducerElement: Sendable>: ChannelDuplexHandler {
+internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Sendable, ProducerElement: Sendable>:
+    ChannelDuplexHandler
+{
     @usableFromInline
     enum _ProducingState {
         // Not .stopProducing
@@ -307,7 +309,8 @@ extension NIOAsyncChannelInboundStreamChannelHandler {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
-struct NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate: @unchecked Sendable, NIOAsyncSequenceProducerDelegate {
+struct NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate: @unchecked Sendable, NIOAsyncSequenceProducerDelegate
+{
     @usableFromInline
     let eventLoop: EventLoop
 

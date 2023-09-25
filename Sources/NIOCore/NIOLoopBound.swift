@@ -96,7 +96,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     public static func makeEmptyBox<NonOptionalValue>(
         valueType: NonOptionalValue.Type = NonOptionalValue.self,
         eventLoop: EventLoop
-    ) -> NIOLoopBoundBox<Value> where Optional<NonOptionalValue> == Value {
+    ) -> NIOLoopBoundBox<Value> where NonOptionalValue? == Value {
         // Here, we -- possibly surprisingly -- do not precondition being on the EventLoop. This is okay for a few
         // reasons:
         // - We write the `Optional.none` value which we know is _not_ a value of the potentially non-Sendable type
@@ -122,4 +122,3 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         }
     }
 }
-

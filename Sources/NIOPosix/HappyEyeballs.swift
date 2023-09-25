@@ -226,7 +226,8 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     /// than intended.
     ///
     /// The channel builder callback takes an event loop and a protocol family as arguments.
-    private let channelBuilderCallback: (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<(Channel, ChannelBuilderResult)>
+    private let channelBuilderCallback:
+        (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<(Channel, ChannelBuilderResult)>
 
     /// The amount of time to wait for an AAAA response to come in after a A response is
     /// received. By default this is 50ms.
@@ -278,14 +279,18 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     private var error: NIOConnectionError
 
     @inlinable
-    init(resolver: Resolver,
-         loop: EventLoop,
-         host: String,
-         port: Int,
-         connectTimeout: TimeAmount,
-         resolutionDelay: TimeAmount = .milliseconds(50),
-         connectionDelay: TimeAmount = .milliseconds(250),
-         channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<(Channel, ChannelBuilderResult)>) {
+    init(
+        resolver: Resolver,
+        loop: EventLoop,
+        host: String,
+        port: Int,
+        connectTimeout: TimeAmount,
+        resolutionDelay: TimeAmount = .milliseconds(50),
+        connectionDelay: TimeAmount = .milliseconds(250),
+        channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<
+            (Channel, ChannelBuilderResult)
+        >
+    ) {
         self.resolver = resolver
         self.loop = loop
         self.host = host
@@ -300,10 +305,16 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         self.resolutionPromise = self.loop.makePromise()
         self.error = NIOConnectionError(host: host, port: port)
 
-        precondition(resolutionDelay.nanoseconds > 0, "Resolution delay must be greater than zero, got \(resolutionDelay).")
+        precondition(
+            resolutionDelay.nanoseconds > 0,
+            "Resolution delay must be greater than zero, got \(resolutionDelay)."
+        )
         self.resolutionDelay = resolutionDelay
 
-        precondition(connectionDelay >= .milliseconds(100) && connectionDelay <= .milliseconds(2000), "Connection delay must be between 100 and 2000 ms, got \(connectionDelay)")
+        precondition(
+            connectionDelay >= .milliseconds(100) && connectionDelay <= .milliseconds(2000),
+            "Connection delay must be between 100 and 2000 ms, got \(connectionDelay)"
+        )
         self.connectionDelay = connectionDelay
     }
 
@@ -325,9 +336,10 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
             port: port,
             connectTimeout: connectTimeout,
             resolutionDelay: resolutionDelay,
-            connectionDelay: connectionDelay) { loop, protocolFamily in
-                channelBuilderCallback(loop, protocolFamily).map { ($0, ()) }
-            }
+            connectionDelay: connectionDelay
+        ) { loop, protocolFamily in
+            channelBuilderCallback(loop, protocolFamily).map { ($0, ()) }
+        }
     }
 
     /// Initiate a DNS resolution attempt using Happy Eyeballs 2.
@@ -337,7 +349,9 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     func resolveAndConnect() -> EventLoopFuture<(Channel, ChannelBuilderResult)> {
         // We dispatch ourselves onto the event loop, rather than do all the rest of our processing from outside it.
         self.loop.execute {
-            self.timeoutTask = self.loop.scheduleTask(in: self.connectTimeout) { self.processInput(.connectTimeoutElapsed) }
+            self.timeoutTask = self.loop.scheduleTask(in: self.connectTimeout) {
+                self.processInput(.connectTimeoutElapsed)
+            }
             self.processInput(.resolve)
         }
         return resolutionPromise.futureResult
@@ -451,12 +465,12 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         // ignore these, as our transition into the complete state should have already sent
         // cleanup messages to all of these things.
         case (.complete, .resolverACompleted),
-             (.complete, .resolverAAAACompleted),
-             (.complete, .connectSuccess),
-             (.complete, .connectFailed),
-             (.complete, .connectDelayElapsed),
-             (.complete, .connectTimeoutElapsed),
-             (.complete, .resolutionDelayElapsed):
+            (.complete, .resolverAAAACompleted),
+            (.complete, .connectSuccess),
+            (.complete, .connectFailed),
+            (.complete, .connectDelayElapsed),
+            (.complete, .connectTimeoutElapsed),
+            (.complete, .resolutionDelayElapsed):
             break
         default:
             fatalError("Invalid FSM transition attempt: state \(state), input \(input)")
@@ -600,7 +614,10 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
                     // The connection attempt failed. If we're in the complete state then there's nothing
                     // to do. Otherwise, notify the state machine of the failure.
                     if case .complete = self.state {
-                        assert(self.pendingConnections.firstIndex { $0 === channelFuture } == nil, "failed but was still in pending connections")
+                        assert(
+                            self.pendingConnections.firstIndex { $0 === channelFuture } == nil,
+                            "failed but was still in pending connections"
+                        )
                     } else {
                         self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
                         self.pendingConnections.removeAll { $0 === channelFuture }

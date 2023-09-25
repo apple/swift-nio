@@ -20,8 +20,8 @@ private struct SocketChannelLifecycleManager {
     // MARK: Types
     private enum State {
         case fresh
-        case preRegistered // register() has been run but the selector doesn't know about it yet
-        case fullyRegistered // fully registered, ie. the selector knows about it
+        case preRegistered  // register() has been run but the selector doesn't know about it yet
+        case fullyRegistered  // fully registered, ie. the selector knows about it
         case activated
         case closed
     }
@@ -77,28 +77,28 @@ private struct SocketChannelLifecycleManager {
         return self.currentState == .closed
     }
 
-    @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
     internal mutating func beginRegistration() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         return self.moveState(event: .beginRegistration)
     }
 
-    @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
     internal mutating func finishRegistration() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         return self.moveState(event: .finishRegistration)
     }
 
-    @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
     internal mutating func close() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         return self.moveState(event: .close)
     }
 
-    @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
     internal mutating func activate() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         return self.moveState(event: .activate)
     }
 
     // MARK: private API
-    @inline(__always) // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
     private mutating func moveState(event: Event) -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         self.eventLoop.assertInEventLoop()
 
@@ -156,16 +156,16 @@ private struct SocketChannelLifecycleManager {
             }
 
         // bad transitions
-        case (.fresh, .activate),                  // should go through .registered first
-             (.preRegistered, .activate),       // need to first be fully registered
-             (.preRegistered, .beginRegistration), // already registered
-             (.fullyRegistered, .beginRegistration),  // already registered
-             (.activated, .activate),              // already activated
-             (.activated, .beginRegistration),        // already fully registered (and activated)
-             (.activated, .finishRegistration),         // already fully registered (and activated)
-             (.fullyRegistered, .finishRegistration),   // already fully registered
-             (.fresh, .finishRegistration),             // need to register lazily first
-             (.closed, _):                         // already closed
+        case (.fresh, .activate),  // should go through .registered first
+            (.preRegistered, .activate),  // need to first be fully registered
+            (.preRegistered, .beginRegistration),  // already registered
+            (.fullyRegistered, .beginRegistration),  // already registered
+            (.activated, .activate),  // already activated
+            (.activated, .beginRegistration),  // already fully registered (and activated)
+            (.activated, .finishRegistration),  // already fully registered (and activated)
+            (.fullyRegistered, .finishRegistration),  // already fully registered
+            (.fresh, .finishRegistration),  // need to register lazily first
+            (.closed, _):  // already closed
             self.badTransition(event: event)
         }
     }
@@ -223,8 +223,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     struct AddressCache {
         // deliberately lets because they must always be updated together (so forcing `init` is useful).
-        let local: Optional<SocketAddress>
-        let remote: Optional<SocketAddress>
+        let local: SocketAddress?
+        let remote: SocketAddress?
 
         init(local: SocketAddress?, remote: SocketAddress?) {
             self.local = local
@@ -248,30 +248,29 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     var pendingConnect: Optional<EventLoopPromise<Void>>
     var recvBufferPool: PooledRecvBufferAllocator
     var maxMessagesPerRead: UInt = 4
-    private var inFlushNow: Bool = false // Guard against re-entrance of flushNow() method.
+    private var inFlushNow: Bool = false  // Guard against re-entrance of flushNow() method.
     private var autoRead: Bool = true
 
     // MARK: Variables that are really constants
-    private var _pipeline: ChannelPipeline! = nil // this is really a constant (set in .init) but needs `self` to be constructed and therefore a `var`. Do not change as this needs to accessed from arbitrary threads
+    private var _pipeline: ChannelPipeline! = nil  // this is really a constant (set in .init) but needs `self` to be constructed and therefore a `var`. Do not change as this needs to accessed from arbitrary threads
 
     // MARK: Special variables, please read comments.
     // For reads guarded by _either_ `self._offEventLoopLock` or the EL thread
     // Writes are guarded by _offEventLoopLock _and_ the EL thread.
     // PLEASE don't use these directly and use the non-underscored computed properties instead.
-    private var _addressCache = AddressCache(local: nil, remote: nil) // please use `self.addressesCached` instead
+    private var _addressCache = AddressCache(local: nil, remote: nil)  // please use `self.addressesCached` instead
     private var _bufferAllocatorCache: ByteBufferAllocator  // please use `self.bufferAllocatorCached` instead.
 
     // MARK: - Computed properties
     // This is called from arbitrary threads.
     internal var addressesCached: AddressCache {
         get {
-            if self.eventLoop.inEventLoop {
-                return self._addressCache
-            } else {
+            guard self.eventLoop.inEventLoop else {
                 return self._offEventLoopLock.withLock {
                     return self._addressCache
                 }
             }
+            return self._addressCache
         }
         set {
             self.eventLoop.preconditionInEventLoop()
@@ -284,13 +283,12 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     // This is called from arbitrary threads.
     private var bufferAllocatorCached: ByteBufferAllocator {
         get {
-            if self.eventLoop.inEventLoop {
-                return self._bufferAllocatorCache
-            } else {
+            guard self.eventLoop.inEventLoop else {
                 return self._offEventLoopLock.withLock {
                     return self._bufferAllocatorCache
                 }
             }
+            return self._bufferAllocatorCache
         }
         set {
             self.eventLoop.preconditionInEventLoop()
@@ -508,8 +506,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     deinit {
-        assert(self.lifecycleManager.canBeDestroyed,
-               "leak of open Channel, state: \(String(describing: self.lifecycleManager))")
+        assert(
+            self.lifecycleManager.canBeDestroyed,
+            "leak of open Channel, state: \(String(describing: self.lifecycleManager))"
+        )
     }
 
     public final func localAddress0() throws -> SocketAddress {
@@ -590,20 +590,21 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             return .unregister
         }
 
-        assert((newWriteRegistrationState == .register && self.hasFlushedPendingWrites()) ||
-               (newWriteRegistrationState == .unregister && !self.hasFlushedPendingWrites()),
-               "illegal flushNow decision: \(newWriteRegistrationState) and \(self.hasFlushedPendingWrites())")
+        assert(
+            (newWriteRegistrationState == .register && self.hasFlushedPendingWrites())
+                || (newWriteRegistrationState == .unregister && !self.hasFlushedPendingWrites()),
+            "illegal flushNow decision: \(newWriteRegistrationState) and \(self.hasFlushedPendingWrites())"
+        )
         return newWriteRegistrationState
     }
 
     public final func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        if eventLoop.inEventLoop {
-            let promise = eventLoop.makePromise(of: Void.self)
-            executeAndComplete(promise) { try self.setOption0(option, value: value) }
-            return promise.futureResult
-        } else {
+        guard eventLoop.inEventLoop else {
             return eventLoop.submit { try self.setOption0(option, value: value) }
         }
+        let promise = eventLoop.makePromise(of: Void.self)
+        executeAndComplete(promise) { try self.setOption0(option, value: value) }
+        return promise.futureResult
     }
 
     func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
@@ -643,14 +644,13 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
-        if eventLoop.inEventLoop {
-            do {
-                return self.eventLoop.makeSucceededFuture(try self.getOption0(option))
-            } catch {
-                return self.eventLoop.makeFailedFuture(error)
-            }
-        } else {
+        guard eventLoop.inEventLoop else {
             return self.eventLoop.submit { try self.getOption0(option) }
+        }
+        do {
+            return self.eventLoop.makeSucceededFuture(try self.getOption0(option))
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
         }
     }
 
@@ -901,7 +901,6 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
     }
 
-
     public final func register0(promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
 
@@ -973,7 +972,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             self.finishWritable()
         case .register:
             assert(!self.isOpen || self.interestedEvent.contains(.write))
-            () // nothing to do because given that we just received `writable`, we're still registered for writable.
+            ()  // nothing to do because given that we just received `writable`, we're still registered for writable.
         }
     }
 
@@ -1022,8 +1021,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
         // we can't be not active but still registered here; this would mean that we got a notification about a
         // channel before we're ready to receive them.
-        assert(self.lifecycleManager.isRegisteredFully,
-               "illegal state: \(self): active: \(self.lifecycleManager.isActive), registered: \(self.lifecycleManager.isRegisteredFully)")
+        assert(
+            self.lifecycleManager.isRegisteredFully,
+            "illegal state: \(self): active: \(self.lifecycleManager.isActive), registered: \(self.lifecycleManager.isRegisteredFully)"
+        )
 
         self.readEOF0()
 
@@ -1081,7 +1082,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                     #if os(Linux)
                     let message: String = "connection reset (no error set)"
                     #else
-                    let message: String = "BUG IN SwiftNIO (possibly #572), please report! Connection reset (no error set)."
+                    let message: String =
+                        "BUG IN SwiftNIO (possibly #572), please report! Connection reset (no error set)."
                     #endif
                     error = IOError(errnoCode: ECONNRESET, reason: message)
                 }
@@ -1094,8 +1096,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     public final func readable() {
-        assert(!self.lifecycleManager.hasSeenEOFNotification,
-               "got a read notification after having already seen .readEOF")
+        assert(
+            !self.lifecycleManager.hasSeenEOFNotification,
+            "got a read notification after having already seen .readEOF"
+        )
         self.readable0()
     }
 
@@ -1364,10 +1368,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
 extension BaseSocketChannel {
     public struct SynchronousOptions: NIOSynchronousChannelOptions {
-        @usableFromInline // should be private
+        @usableFromInline  // should be private
         internal let _channel: BaseSocketChannel<SocketType>
 
-        @inlinable // should be fileprivate
+        @inlinable  // should be fileprivate
         internal init(_channel channel: BaseSocketChannel<SocketType>) {
             self._channel = channel
         }

@@ -16,7 +16,6 @@
 
 import WinSDK
 
-
 typealias ThreadOpsSystem = ThreadOpsWindows
 enum ThreadOpsWindows: ThreadOps {
     typealias ThreadHandle = HANDLE
@@ -32,7 +31,11 @@ enum ThreadOpsWindows: ThreadOps {
         return string
     }
 
-    static func run(handle: inout ThreadOpsSystem.ThreadHandle?, args: Box<NIOThread.ThreadBoxValue>, detachThread: Bool) {
+    static func run(
+        handle: inout ThreadOpsSystem.ThreadHandle?,
+        args: Box<NIOThread.ThreadBoxValue>,
+        detachThread: Bool
+    ) {
         let argv0 = Unmanaged.passRetained(args).toOpaque()
 
         // FIXME(compnerd) this should use the `stdcall` calling convention

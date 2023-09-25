@@ -58,9 +58,12 @@ private func isUnacceptableErrno(_ code: Int32) -> Bool {
     }
 }
 
-private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
+private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+    precondition(
+        !isUnacceptableErrno(err),
+        "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))"
+    )
 }
 
 /*
@@ -70,19 +73,22 @@ private func preconditionIsNotUnacceptableErrno(err: CInt, where function: Strin
  */
 @inline(__always)
 @discardableResult
-internal func syscall<T: FixedWidthInteger>(blocking: Bool,
-                                            where function: String = #function,
-                                            _ body: () throws -> T)
-        throws -> CoreIOResult<T> {
+internal func syscall<T: FixedWidthInteger>(
+    blocking: Bool,
+    where function: String = #function,
+    _ body: () throws -> T
+)
+    throws -> CoreIOResult<T>
+{
     while true {
         let res = try body()
         if res == -1 {
-#if os(Windows)
+            #if os(Windows)
             var err: CInt = 0
             ucrt._get_errno(&err)
-#else
+            #else
             let err = errno
-#endif
+            #endif
             switch (err, blocking) {
             case (EINTR, _):
                 continue
@@ -110,12 +116,12 @@ enum SystemCalls {
     internal static func close(descriptor: CInt) throws {
         let res = sysClose(descriptor)
         if res == -1 {
-#if os(Windows)
+            #if os(Windows)
             var err: CInt = 0
             ucrt._get_errno(&err)
-#else
+            #else
             let err = errno
-#endif
+            #endif
 
             // There is really nothing "sane" we can do when EINTR was reported on close.
             // So just ignore it and "assume" everything is fine == we closed the file descriptor.
@@ -131,19 +137,22 @@ enum SystemCalls {
     }
 
     @inline(never)
-    internal static func open(file: UnsafePointer<CChar>, oFlag: CInt,
-                              mode: NIOPOSIXFileMode) throws -> CInt {
-#if os(Windows)
+    internal static func open(
+        file: UnsafePointer<CChar>,
+        oFlag: CInt,
+        mode: NIOPOSIXFileMode
+    ) throws -> CInt {
+        #if os(Windows)
         return try syscall(blocking: false) {
             var fh: CInt = -1
             let _ = ucrt._sopen_s(&fh, file, oFlag, _SH_DENYNO, mode)
             return fh
         }.result
-#else
+        #else
         return try syscall(blocking: false) {
             sysOpenWithMode(file, oFlag, mode)
         }.result
-#endif
+        #endif
     }
 
     @discardableResult
@@ -154,21 +163,29 @@ enum SystemCalls {
         }.result
     }
 
-#if os(Windows)
+    #if os(Windows)
     @inline(never)
-    internal static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: CUnsignedInt) throws -> CoreIOResult<CInt> {
+    internal static func read(
+        descriptor: CInt,
+        pointer: UnsafeMutableRawPointer,
+        size: CUnsignedInt
+    ) throws -> CoreIOResult<CInt> {
         return try syscall(blocking: true) {
             sysRead(descriptor, pointer, size)
         }
     }
-#else
+    #else
     @inline(never)
-    internal static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> CoreIOResult<ssize_t> {
+    internal static func read(
+        descriptor: CInt,
+        pointer: UnsafeMutableRawPointer,
+        size: size_t
+    ) throws -> CoreIOResult<ssize_t> {
         return try syscall(blocking: true) {
             sysRead(descriptor, pointer, size)
         }
     }
-#endif
+    #endif
 
     @inline(never)
     internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {

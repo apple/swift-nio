@@ -123,7 +123,6 @@ internal enum AggregatorState {
         }
     }
 
-
     mutating func messageEndReceived() throws {
         switch self {
         case .receiving:
@@ -190,7 +189,7 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
     private var maxContentLength: Int
     private var closeOnExpectationFailed: Bool
     private var state: AggregatorState
-    
+
     public init(maxContentLength: Int, closeOnExpectationFailed: Bool = false) {
         precondition(maxContentLength >= 0, "maxContentLength must not be negative")
         self.maxContentLength = maxContentLength
@@ -240,7 +239,11 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
         }
     }
 
-    private func beginAggregation(context: ChannelHandlerContext, request: HTTPRequestHead, message: InboundIn) -> HTTPResponseHead? {
+    private func beginAggregation(
+        context: ChannelHandlerContext,
+        request: HTTPRequestHead,
+        message: InboundIn
+    ) -> HTTPResponseHead? {
         self.fullMessageHead = request
         if let contentLength = request.contentLength, contentLength > self.maxContentLength {
             return self.handleOversizeMessage(message: message)
@@ -248,13 +251,16 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
         return nil
     }
 
-    private func aggregate(context: ChannelHandlerContext, content: inout ByteBuffer, message: InboundIn) -> HTTPResponseHead? {
-        if (content.readableBytes > self.maxContentLength - self.buffer.readableBytes) {
-            return self.handleOversizeMessage(message: message)
-        } else {
+    private func aggregate(
+        context: ChannelHandlerContext,
+        content: inout ByteBuffer,
+        message: InboundIn
+    ) -> HTTPResponseHead? {
+        guard content.readableBytes > self.maxContentLength - self.buffer.readableBytes else {
             self.buffer.writeBuffer(&content)
             return nil
         }
+        return self.handleOversizeMessage(message: message)
     }
 
     private func endAggregation(context: ChannelHandlerContext, trailingHeaders: HTTPHeaders?) {
@@ -266,8 +272,10 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
                 aggregated.headers.add(contentsOf: headers)
             }
 
-            let fullMessage = NIOHTTPServerRequestFull(head: aggregated,
-                                                    body: self.buffer.readableBytes > 0 ? self.buffer : nil)
+            let fullMessage = NIOHTTPServerRequestFull(
+                head: aggregated,
+                body: self.buffer.readableBytes > 0 ? self.buffer : nil
+            )
             self.fullMessageHead = nil
             self.buffer.clear()
             context.fireChannelRead(NIOAny(fullMessage))
@@ -278,7 +286,8 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
         var payloadTooLargeHead = HTTPResponseHead(
             version: self.fullMessageHead?.version ?? .http1_1,
             status: .payloadTooLarge,
-            headers: HTTPHeaders([("content-length", "0")]))
+            headers: HTTPHeaders([("content-length", "0")])
+        )
 
         switch message {
         case .head(let request):
@@ -369,7 +378,7 @@ public final class NIOHTTPClientResponseAggregator: ChannelInboundHandler, Remov
     }
 
     private func aggregate(context: ChannelHandlerContext, content: inout ByteBuffer) throws {
-        if (content.readableBytes > self.maxContentLength - self.buffer.readableBytes) {
+        if content.readableBytes > self.maxContentLength - self.buffer.readableBytes {
             self.state.handlingOversizeMessage()
             context.fireUserInboundEventTriggered(NIOHTTPObjectAggregatorEvent.httpFrameTooLong)
             context.fireErrorCaught(NIOHTTPObjectAggregatorError.frameTooLong)
@@ -389,7 +398,8 @@ public final class NIOHTTPClientResponseAggregator: ChannelInboundHandler, Remov
 
             let fullMessage = NIOHTTPClientResponseFull(
                 head: aggregated,
-                body: self.buffer.readableBytes > 0 ? self.buffer : nil)
+                body: self.buffer.readableBytes > 0 ? self.buffer : nil
+            )
             self.fullMessageHead = nil
             self.buffer.clear()
             context.fireChannelRead(NIOAny(fullMessage))

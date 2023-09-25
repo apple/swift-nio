@@ -42,10 +42,12 @@ public struct WebSocketMaskingKey: Sendable {
             return nil
         }
 
-        self._key = (buffer[buffer.startIndex],
-                     buffer[buffer.index(buffer.startIndex, offsetBy: 1)],
-                     buffer[buffer.index(buffer.startIndex, offsetBy: 2)],
-                     buffer[buffer.index(buffer.startIndex, offsetBy: 3)])
+        self._key = (
+            buffer[buffer.startIndex],
+            buffer[buffer.index(buffer.startIndex, offsetBy: 1)],
+            buffer[buffer.index(buffer.startIndex, offsetBy: 2)],
+            buffer[buffer.index(buffer.startIndex, offsetBy: 3)]
+        )
     }
 
     /// Creates a websocket masking key from the network-encoded
@@ -56,10 +58,12 @@ public struct WebSocketMaskingKey: Sendable {
     ///         masking key.
     @usableFromInline
     internal init(networkRepresentation integer: UInt32) {
-        self._key = (UInt8((integer & 0xFF000000) >> 24),
-                     UInt8((integer & 0x00FF0000) >> 16),
-                     UInt8((integer & 0x0000FF00) >> 8),
-                     UInt8(integer & 0x000000FF))
+        self._key = (
+            UInt8((integer & 0xFF00_0000) >> 24),
+            UInt8((integer & 0x00FF_0000) >> 16),
+            UInt8((integer & 0x0000_FF00) >> 8),
+            UInt8(integer & 0x0000_00FF)
+        )
     }
 }
 
@@ -68,7 +72,7 @@ extension WebSocketMaskingKey: ExpressibleByArrayLiteral {
 
     public init(arrayLiteral elements: UInt8...) {
         precondition(elements.count == 4, "WebSocketMaskingKeys must be exactly 4 bytes long")
-        self.init(elements)! // length precondition above
+        self.init(elements)!  // length precondition above
     }
 }
 
@@ -83,7 +87,7 @@ extension WebSocketMaskingKey {
     ) -> WebSocketMaskingKey where Generator: RandomNumberGenerator {
         return WebSocketMaskingKey(networkRepresentation: .random(in: UInt32.min...UInt32.max, using: &generator))
     }
-    
+
     /// Returns a random masking key, using the `SystemRandomNumberGenerator` as a source for randomness.
     /// - Returns: A random masking key
     @inlinable
@@ -94,7 +98,7 @@ extension WebSocketMaskingKey {
 }
 
 extension WebSocketMaskingKey: Equatable {
-    public static func ==(lhs: WebSocketMaskingKey, rhs: WebSocketMaskingKey) -> Bool {
+    public static func == (lhs: WebSocketMaskingKey, rhs: WebSocketMaskingKey) -> Bool {
         return lhs._key == rhs._key
     }
 }
@@ -303,9 +307,16 @@ public struct WebSocketFrame {
     ///     - maskKey: The masking key for the frame, if any. Defaults to `nil`.
     ///     - data: The application data for the frame.
     ///     - extensionData: The extension data for the frame.
-    public init(fin: Bool = false, rsv1: Bool = false, rsv2: Bool = false, rsv3: Bool = false,
-                opcode: WebSocketOpcode = .continuation, maskKey: WebSocketMaskingKey? = nil,
-                data: ByteBuffer, extensionData: ByteBuffer? = nil) {
+    public init(
+        fin: Bool = false,
+        rsv1: Bool = false,
+        rsv2: Bool = false,
+        rsv3: Bool = false,
+        opcode: WebSocketOpcode = .continuation,
+        maskKey: WebSocketMaskingKey? = nil,
+        data: ByteBuffer,
+        extensionData: ByteBuffer? = nil
+    ) {
         self._storage = .init(data: data, extensionData: extensionData)
         self.fin = fin
         self.rsv1 = rsv1
@@ -348,7 +359,7 @@ extension WebSocketFrame {
 extension WebSocketFrame._Storage: Sendable {}
 
 extension WebSocketFrame._Storage: Equatable {
-    static func ==(lhs: WebSocketFrame._Storage, rhs: WebSocketFrame._Storage) -> Bool {
+    static func == (lhs: WebSocketFrame._Storage, rhs: WebSocketFrame._Storage) -> Bool {
         return lhs.data == rhs.data && lhs.extensionData == rhs.extensionData
     }
 }

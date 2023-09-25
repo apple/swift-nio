@@ -36,9 +36,13 @@ private final class BlockingQueue<Element> {
 
     internal func popFirst(deadline: NIODeadline) throws -> Element {
         let secondsUntilDeath = deadline - NIODeadline.now()
-        guard self.condition.lock(whenValue: true,
-                                  timeoutSeconds: .init(secondsUntilDeath.nanoseconds / 1_000_000_000)) else {
-                                    throw TimeoutError()
+        guard
+            self.condition.lock(
+                whenValue: true,
+                timeoutSeconds: .init(secondsUntilDeath.nanoseconds / 1_000_000_000)
+            )
+        else {
+            throw TimeoutError()
         }
         let first = self.buffer.removeFirst()
         self.condition.unlock(withValue: !self.buffer.isEmpty)
@@ -47,7 +51,6 @@ private final class BlockingQueue<Element> {
 }
 
 extension BlockingQueue: @unchecked Sendable where Element: Sendable {}
-
 
 private final class WebServerHandler: ChannelDuplexHandler {
     typealias InboundIn = HTTPServerRequestPart
@@ -240,13 +243,13 @@ public final class NIOHTTP1TestServer {
                     channel.close(promise: nil)
                 }
                 return channel.eventLoop.makeSucceededFuture(())
-        }
-        .bind(host: "127.0.0.1", port: 0)
-        .map { channel in
-            self.handleChannels()
-            return channel
-        }
-        .wait()
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .map { channel in
+                self.handleChannels()
+                return channel
+            }
+            .wait()
     }
 }
 
@@ -292,11 +295,10 @@ extension NIOHTTP1TestServer {
     public func writeOutbound(_ data: HTTPServerResponsePart) throws {
         self.eventLoop.assertNotInEventLoop()
         try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
-            if let channel = self.currentClientChannel {
-                return channel.writeAndFlush(data)
-            } else {
+            guard let channel = self.currentClientChannel else {
                 return self.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
             }
+            return channel.writeAndFlush(data)
         }.wait()
     }
 
@@ -347,8 +349,10 @@ extension NIOHTTP1TestServer {
     ///   - deadline: The deadline by which a part must have been received.
     ///   - verify: A closure which can be used to verify the contents of the `HTTPRequestHead`.
     /// - Throws: If the part was not a `.head` or nothing was read before the deadline.
-    public func receiveHeadAndVerify(deadline: NIODeadline = .now() + .seconds(10),
-                                     _ verify: (HTTPRequestHead) throws -> () = { _ in }) throws {
+    public func receiveHeadAndVerify(
+        deadline: NIODeadline = .now() + .seconds(10),
+        _ verify: (HTTPRequestHead) throws -> Void = { _ in }
+    ) throws {
         try verify(self.receiveHead(deadline: deadline))
     }
 
@@ -376,11 +380,12 @@ extension NIOHTTP1TestServer {
     ///   - deadline: The deadline by which a part must have been received.
     ///   - verify: A closure which can be used to verify the contents of the `ByteBuffer`.
     /// - Throws: If the part was not a `.body` or nothing was read before the deadline.
-    public func receiveBodyAndVerify(deadline: NIODeadline = .now() + .seconds(10),
-                                     _ verify: (ByteBuffer) throws -> () = { _ in }) throws {
+    public func receiveBodyAndVerify(
+        deadline: NIODeadline = .now() + .seconds(10),
+        _ verify: (ByteBuffer) throws -> Void = { _ in }
+    ) throws {
         try verify(self.receiveBody(deadline: deadline))
     }
-
 
     /// Waits for a message part to be received and checks that it was a `.end` before returning
     /// the `HTTPHeaders?` it contained.
@@ -406,8 +411,10 @@ extension NIOHTTP1TestServer {
     ///   - deadline: The deadline by which a part must have been received.
     ///   - verify: A closure which can be used to verify the contents of the `HTTPHeaders?`.
     /// - Throws: If the part was not a `.end` or nothing was read before the deadline.
-    public func receiveEndAndVerify(deadline: NIODeadline = .now() + .seconds(10),
-                                    _ verify: (HTTPHeaders?) throws -> () = { _ in }) throws {
+    public func receiveEndAndVerify(
+        deadline: NIODeadline = .now() + .seconds(10),
+        _ verify: (HTTPHeaders?) throws -> Void = { _ in }
+    ) throws {
         try verify(self.receiveEnd())
     }
 }

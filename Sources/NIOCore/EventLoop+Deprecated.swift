@@ -15,13 +15,21 @@
 extension EventLoop {
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func makeFailedFuture<T>(_ error: Error, file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<T> {
+    public func makeFailedFuture<T>(
+        _ error: Error,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) -> EventLoopFuture<T> {
         return self.makeFailedFuture(error)
     }
 
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func makeSucceededFuture<Success>(_ value: Success, file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Success> {
+    public func makeSucceededFuture<Success>(
+        _ value: Success,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) -> EventLoopFuture<Success> {
         return self.makeSucceededFuture(value)
     }
 }

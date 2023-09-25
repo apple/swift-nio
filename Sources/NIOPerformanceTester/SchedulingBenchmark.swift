@@ -41,7 +41,7 @@ final class SchedulingBenchmark: Benchmark {
         }.wait()
     }
 
-    func tearDown() { }
+    func tearDown() {}
 
     func run() -> Int {
         let counter = try! self.loop.submit { () -> Int in

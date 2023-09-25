@@ -18,18 +18,17 @@ import NIOConcurrencyHelpers
 
 /// Errors that may be thrown when executing work on a `NIOThreadPool`
 public enum NIOThreadPoolError {
-    
+
     /// The `NIOThreadPool` was not active.
-    public struct ThreadPoolInactive: Error { 
+    public struct ThreadPoolInactive: Error {
         public init() {}
     }
 
     /// The `NIOThreadPool` operation is unsupported (e.g. shutdown of a perpetual pool).
-    public struct UnsupportedOperation: Error { 
+    public struct UnsupportedOperation: Error {
         public init() {}
     }
 }
-
 
 /// A thread pool that should be used if some (kernel thread) blocking work
 /// needs to be performed for which no non-blocking API exists.
@@ -55,7 +54,7 @@ public final class NIOThreadPool {
         /// The `WorkItem` was cancelled and will not be processed by the `NIOThreadPool`.
         case cancelled
     }
-    
+
     #if swift(>=5.7)
     /// The work that should be done by the `NIOThreadPool`.
     public typealias WorkItem = @Sendable (WorkItemState) -> Void
@@ -73,7 +72,7 @@ public final class NIOThreadPool {
     }
     private let semaphore = DispatchSemaphore(value: 0)
     private let lock = NIOLock()
-    private var threads: [NIOThread]? = nil // protected by `lock`
+    private var threads: [NIOThread]? = nil  // protected by `lock`
     private var state: State = .stopped
     private let numberOfThreads: Int
     private let canBeStopped: Bool
@@ -98,7 +97,7 @@ public final class NIOThreadPool {
         self._shutdownGracefully(queue: queue, callback)
     }
     #endif
-    
+
     private func _shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         guard self.canBeStopped else {
             queue.async {
@@ -135,8 +134,6 @@ public final class NIOThreadPool {
             callback(nil)
         }
     }
-    
-    
 
     #if swift(>=5.7)
     /// Submit a `WorkItem` to process.
@@ -176,7 +173,7 @@ public final class NIOThreadPool {
         /* if item couldn't be added run it immediately indicating that it couldn't be run */
         item.map { $0(.cancelled) }
     }
-    
+
     /// Initialize a `NIOThreadPool` thread pool with `numberOfThreads` threads.
     ///
     /// - parameters:
@@ -199,12 +196,11 @@ public final class NIOThreadPool {
         self.canBeStopped = canBeStopped
     }
 
-
     private func process(identifier: Int) {
         var item: WorkItem? = nil
         repeat {
             /* wait until work has become available */
-            item = nil	// ensure previous work item is not retained for duration of semaphore wait
+            item = nil  // ensure previous work item is not retained for duration of semaphore wait
             self.semaphore.wait()
 
             item = self.lock.withLock { () -> (WorkItem)? in
@@ -276,8 +272,10 @@ public final class NIOThreadPool {
     }
 
     deinit {
-        assert(self.canBeStopped,
-               "Perpetual NIOThreadPool has been deinited, you must make sure that perpetual pools don't deinit")
+        assert(
+            self.canBeStopped,
+            "Perpetual NIOThreadPool has been deinited, you must make sure that perpetual pools don't deinit"
+        )
         switch self.state {
         case .stopped, .shuttingDown:
             ()
@@ -290,7 +288,7 @@ public final class NIOThreadPool {
 extension NIOThreadPool: @unchecked Sendable {}
 
 extension NIOThreadPool {
-    
+
     #if swift(>=5.7)
     /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
     /// The closure will be run on the thread pool so can do blocking work.
@@ -315,7 +313,7 @@ extension NIOThreadPool {
         self._runIfActive(eventLoop: eventLoop, body)
     }
     #endif
-    
+
     private func _runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in

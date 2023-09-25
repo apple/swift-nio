@@ -41,12 +41,16 @@ final class NIOLoopBoundTests: XCTestCase {
         let loop = group.any()
 
         let sendableBox = NIOLoopBoundBox.makeEmptyBox(valueType: NotSendable.self, eventLoop: loop)
-        XCTAssertNoThrow(try loop.submit {
-            sendableBox.value = NotSendable()
-        }.wait())
-        XCTAssertNoThrow(try loop.submit {
-            XCTAssertNotNil(sendableBox.value)
-        }.wait())
+        XCTAssertNoThrow(
+            try loop.submit {
+                sendableBox.value = NotSendable()
+            }.wait()
+        )
+        XCTAssertNoThrow(
+            try loop.submit {
+                XCTAssertNotNil(sendableBox.value)
+            }.wait()
+        )
     }
 
     // MARK: - Helpers

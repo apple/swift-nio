@@ -28,13 +28,13 @@ extension System {
     }
 
     static var supportsVsock: Bool {
-#if canImport(Darwin) || os(Linux) || os(Android)
+        #if canImport(Darwin) || os(Linux) || os(Android)
         guard let socket = try? Socket(protocolFamily: .vsock, type: .stream) else { return false }
         XCTAssertNoThrow(try socket.close())
         return true
-#else
+        #else
         return false
-#endif
+        #endif
     }
 }
 
@@ -72,8 +72,10 @@ func withTemporaryDirectory<T>(_ body: (String) throws -> T) rethrows -> T {
 ///
 /// If the temporary directory is too long to store a UNIX domain socket path, it will `chdir` into the temporary
 /// directory and return a short-enough path. The iOS simulator is known to have too long paths.
-func withTemporaryUnixDomainSocketPathName<T>(directory: String = temporaryDirectory,
-                                              _ body: (String) throws -> T) throws -> T {
+func withTemporaryUnixDomainSocketPathName<T>(
+    directory: String = temporaryDirectory,
+    _ body: (String) throws -> T
+) throws -> T {
     // this is racy but we're trying to create the shortest possible path so we can't add a directory...
     let (fd, path) = openTemporaryFile()
     try! Posix.close(descriptor: fd)
@@ -88,10 +90,14 @@ func withTemporaryUnixDomainSocketPathName<T>(directory: String = temporaryDirec
         shortEnoughPath = path
         restoreSavedCWD = false
     } catch SocketAddressError.unixDomainSocketPathTooLong {
-        FileManager.default.changeCurrentDirectoryPath(URL(fileURLWithPath: path).deletingLastPathComponent().absoluteString)
+        FileManager.default.changeCurrentDirectoryPath(
+            URL(fileURLWithPath: path).deletingLastPathComponent().absoluteString
+        )
         shortEnoughPath = URL(fileURLWithPath: path).lastPathComponent
         restoreSavedCWD = true
-        print("WARNING: Path '\(path)' could not be used as UNIX domain socket path, using chdir & '\(shortEnoughPath)'")
+        print(
+            "WARNING: Path '\(path)' could not be used as UNIX domain socket path, using chdir & '\(shortEnoughPath)'"
+        )
     }
     defer {
         if FileManager.default.fileExists(atPath: path) {
@@ -133,21 +139,20 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle
 }
 var temporaryDirectory: String {
     get {
-#if targetEnvironment(simulator)
+        #if targetEnvironment(simulator)
         // Simulator temp directories are so long (and contain the user name) that they're not usable
         // for UNIX Domain Socket paths (which are limited to 103 bytes).
         return "/tmp"
-#else
-#if os(Linux)
+        #else
+        #if os(Linux)
         return "/tmp"
-#else
-        if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {
-            return FileManager.default.temporaryDirectory.path
-        } else {
+        #else
+        guard #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) else {
             return "/tmp"
         }
-#endif // os
-#endif // targetEnvironment
+        return FileManager.default.temporaryDirectory.path
+        #endif  // os
+        #endif  // targetEnvironment
     }
 }
 
@@ -157,7 +162,8 @@ func createTemporaryDirectory() -> String {
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     templateBytes.withUnsafeMutableBufferPointer { ptr in
-        ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytesCount) { (ptr: UnsafeMutablePointer<Int8>) in
+        ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytesCount) {
+            (ptr: UnsafeMutablePointer<Int8>) in
             let ret = mkdtemp(ptr)
             XCTAssertNotNil(ret)
         }
@@ -171,7 +177,8 @@ func openTemporaryFile() -> (CInt, String) {
     var templateBytes = template.utf8 + [0]
     let templateBytesCount = templateBytes.count
     let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in
-        ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytesCount) { (ptr: UnsafeMutablePointer<Int8>) in
+        ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytesCount) {
+            (ptr: UnsafeMutablePointer<Int8>) in
             return mkstemp(ptr)
         }
     }
@@ -191,7 +198,7 @@ extension Channel {
     }
 }
 
-final class ByteCountingHandler : ChannelInboundHandler, RemovableChannelHandler {
+final class ByteCountingHandler: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = ByteBuffer
 
     private let numBytes: Int
@@ -243,7 +250,11 @@ final class NonAcceptingServerSocket: ServerSocket {
     }
 }
 
-func assertSetGetOptionOnOpenAndClosed<Option: ChannelOption>(channel: Channel, option: Option, value: Option.Value) throws {
+func assertSetGetOptionOnOpenAndClosed<Option: ChannelOption>(
+    channel: Channel,
+    option: Option,
+    value: Option.Value
+) throws {
     _ = try channel.setOption(option, value: value).wait()
     _ = try channel.getOption(option).wait()
     try channel.close().wait()
@@ -264,20 +275,29 @@ func assertSetGetOptionOnOpenAndClosed<Option: ChannelOption>(channel: Channel, 
     }
 }
 
-func assertNoThrowWithValue<T>(_ body: @autoclosure () throws -> T, defaultValue: T? = nil, message: String? = nil, file: StaticString = #filePath, line: UInt = #line) throws -> T {
+func assertNoThrowWithValue<T>(
+    _ body: @autoclosure () throws -> T,
+    defaultValue: T? = nil,
+    message: String? = nil,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) throws -> T {
     do {
         return try body()
     } catch {
         XCTFail("\(message.map { $0 + ": " } ?? "")unexpected error \(error) thrown", file: (file), line: line)
-        if let defaultValue = defaultValue {
-            return defaultValue
-        } else {
+        guard let defaultValue = defaultValue else {
             throw error
         }
+        return defaultValue
     }
 }
 
-func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyReceivedResult: SocketAddress) throws -> String {
+func resolverDebugInformation(
+    eventLoop: EventLoop,
+    host: String,
+    previouslyReceivedResult: SocketAddress
+) throws -> String {
     func printSocketAddress(_ socketAddress: SocketAddress) -> String {
         switch socketAddress {
         case .unixDomainSocket(_):
@@ -289,35 +309,53 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
         }
     }
     let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: .stream, aiProtocol: .tcp)
-    let ipv6Results = try assertNoThrowWithValue(res.initiateAAAAQuery(host: host, port: 0).wait()).map(printSocketAddress)
+    let ipv6Results = try assertNoThrowWithValue(res.initiateAAAAQuery(host: host, port: 0).wait()).map(
+        printSocketAddress
+    )
     let ipv4Results = try assertNoThrowWithValue(res.initiateAQuery(host: host, port: 0).wait()).map(printSocketAddress)
 
     return """
-    when trying to resolve '\(host)' we've got the following results:
-    - previous try: \(printSocketAddress(previouslyReceivedResult))
-    - all results:
-    IPv4: \(ipv4Results)
-    IPv6: \(ipv6Results)
-    """
+        when trying to resolve '\(host)' we've got the following results:
+        - previous try: \(printSocketAddress(previouslyReceivedResult))
+        - all results:
+        IPv4: \(ipv4Results)
+        IPv6: \(ipv6Results)
+        """
 }
 
-func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #filePath, line: UInt = #line) {
+func assert(
+    _ condition: @autoclosure () -> Bool,
+    within time: TimeAmount,
+    testInterval: TimeAmount? = nil,
+    _ message: String = "condition not satisfied in time",
+    file: StaticString = #filePath,
+    line: UInt = #line
+) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
     repeat {
         if condition() { return }
         usleep(UInt32(testInterval.nanoseconds / 1000))
-    } while (NIODeadline.now() < endTime)
+    } while NIODeadline.now() < endTime
 
     if !condition() {
         XCTFail(message, file: (file), line: line)
     }
 }
 
-func getBoolSocketOption(channel: Channel, level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option,
-                         file: StaticString = #filePath, line: UInt = #line) throws -> Bool {
-    return try assertNoThrowWithValue(channel.getOption(ChannelOptions.Types.SocketOption(level: level, name: name)), file: (file), line: line).wait() != 0
+func getBoolSocketOption(
+    channel: Channel,
+    level: NIOBSDSocket.OptionLevel,
+    name: NIOBSDSocket.Option,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) throws -> Bool {
+    return try assertNoThrowWithValue(
+        channel.getOption(ChannelOptions.Types.SocketOption(level: level, name: name)),
+        file: (file),
+        line: line
+    ).wait() != 0
 }
 
 func assertSuccess<Value>(_ result: Result<Value, Error>, file: StaticString = #filePath, line: UInt = #line) {
@@ -355,23 +393,25 @@ final class FulfillOnFirstEventHandler: ChannelDuplexHandler {
     private let closePromise: EventLoopPromise<Void>?
     private let triggerUserOutboundEventPromise: EventLoopPromise<Void>?
 
-    init(channelRegisteredPromise: EventLoopPromise<Void>? = nil,
-         channelUnregisteredPromise: EventLoopPromise<Void>? = nil,
-         channelActivePromise: EventLoopPromise<Void>? = nil,
-         channelInactivePromise: EventLoopPromise<Void>? = nil,
-         channelReadPromise: EventLoopPromise<Void>? = nil,
-         channelReadCompletePromise: EventLoopPromise<Void>? = nil,
-         channelWritabilityChangedPromise: EventLoopPromise<Void>? = nil,
-         userInboundEventTriggeredPromise: EventLoopPromise<Void>? = nil,
-         errorCaughtPromise: EventLoopPromise<Void>? = nil,
-         registerPromise: EventLoopPromise<Void>? = nil,
-         bindPromise: EventLoopPromise<Void>? = nil,
-         connectPromise: EventLoopPromise<Void>? = nil,
-         writePromise: EventLoopPromise<Void>? = nil,
-         flushPromise: EventLoopPromise<Void>? = nil,
-         readPromise: EventLoopPromise<Void>? = nil,
-         closePromise: EventLoopPromise<Void>? = nil,
-         triggerUserOutboundEventPromise: EventLoopPromise<Void>? = nil) {
+    init(
+        channelRegisteredPromise: EventLoopPromise<Void>? = nil,
+        channelUnregisteredPromise: EventLoopPromise<Void>? = nil,
+        channelActivePromise: EventLoopPromise<Void>? = nil,
+        channelInactivePromise: EventLoopPromise<Void>? = nil,
+        channelReadPromise: EventLoopPromise<Void>? = nil,
+        channelReadCompletePromise: EventLoopPromise<Void>? = nil,
+        channelWritabilityChangedPromise: EventLoopPromise<Void>? = nil,
+        userInboundEventTriggeredPromise: EventLoopPromise<Void>? = nil,
+        errorCaughtPromise: EventLoopPromise<Void>? = nil,
+        registerPromise: EventLoopPromise<Void>? = nil,
+        bindPromise: EventLoopPromise<Void>? = nil,
+        connectPromise: EventLoopPromise<Void>? = nil,
+        writePromise: EventLoopPromise<Void>? = nil,
+        flushPromise: EventLoopPromise<Void>? = nil,
+        readPromise: EventLoopPromise<Void>? = nil,
+        closePromise: EventLoopPromise<Void>? = nil,
+        triggerUserOutboundEventPromise: EventLoopPromise<Void>? = nil
+    ) {
         self.channelRegisteredPromise = channelRegisteredPromise
         self.channelUnregisteredPromise = channelUnregisteredPromise
         self.channelActivePromise = channelActivePromise
@@ -497,9 +537,11 @@ final class FulfillOnFirstEventHandler: ChannelDuplexHandler {
     }
 }
 
-func forEachActiveChannelType<T>(file: StaticString = #filePath,
-                                 line: UInt = #line,
-                                 _ body: @escaping (Channel) throws -> T) throws -> [T] {
+func forEachActiveChannelType<T>(
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ body: @escaping (Channel) throws -> T
+) throws -> [T] {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
         XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -508,7 +550,8 @@ func forEachActiveChannelType<T>(file: StaticString = #filePath,
 
     let lock = NIOLock()
     var ret: [T] = []
-    _ = try forEachCrossConnectedStreamChannelPair(file: (file), line: line) { (chan1: Channel, chan2: Channel) throws -> Void in
+    _ = try forEachCrossConnectedStreamChannelPair(file: (file), line: line) {
+        (chan1: Channel, chan2: Channel) throws -> Void in
         var innerRet: [T] = [try body(chan1)]
         if let parent = chan1.parent {
             innerRet.append(try body(parent))
@@ -523,8 +566,8 @@ func forEachActiveChannelType<T>(file: StaticString = #filePath,
         .channelInitializer { channel in
             XCTAssert(channel.eventLoop.inEventLoop)
             return channelEL.makeSucceededFuture(())
-    }
-    .bind(host: "127.0.0.1", port: 0)
+        }
+        .bind(host: "127.0.0.1", port: 0)
     defer {
         XCTAssertNoThrow(try udpChannel.wait().syncCloseAcceptingAlreadyClosed())
     }
@@ -535,11 +578,13 @@ func forEachActiveChannelType<T>(file: StaticString = #filePath,
     }
 }
 
-func withTCPServerChannel<R>(bindTarget: SocketAddress? = nil,
-                             group: EventLoopGroup,
-                             file: StaticString = #filePath,
-                             line: UInt = #line,
-                             _ body: (Channel) throws -> R) throws -> R {
+func withTCPServerChannel<R>(
+    bindTarget: SocketAddress? = nil,
+    group: EventLoopGroup,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ body: (Channel) throws -> R
+) throws -> R {
     let server = try ServerBootstrap(group: group)
         .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
         .bind(to: bindTarget ?? .init(ipAddress: "127.0.0.1", port: 0))
@@ -554,11 +599,13 @@ func withTCPServerChannel<R>(bindTarget: SocketAddress? = nil,
     }
 }
 
-func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
-                                           forceSeparateEventLoops: Bool = false,
-                                           file: StaticString = #filePath,
-                                           line: UInt = #line,
-                                           _ body: (Channel, Channel) throws -> R) throws -> R {
+func withCrossConnectedSockAddrChannels<R>(
+    bindTarget: SocketAddress,
+    forceSeparateEventLoops: Bool = false,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ body: (Channel, Channel) throws -> R
+) throws -> R {
     let serverGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
         XCTAssertNoThrow(try serverGroup.syncShutdownGracefully())
@@ -577,27 +624,33 @@ func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
     let clientChannelEL = clientGroup.next()
 
     let tcpAcceptedChannel = serverChannelEL.makePromise(of: Channel.self)
-    let tcpServerChannel = try assertNoThrowWithValue(ServerBootstrap(group: serverChannelEL)
-        .childChannelInitializer { channel in
-            let accepted = channel.eventLoop.makePromise(of: Void.self)
-            accepted.futureResult.map {
-                channel
-            }.cascade(to: tcpAcceptedChannel)
-            return channel.pipeline.addHandler(FulfillOnFirstEventHandler(channelActivePromise: accepted))
-        }
-        .bind(to: bindTarget)
-        .wait(), file: (file), line: line)
+    let tcpServerChannel = try assertNoThrowWithValue(
+        ServerBootstrap(group: serverChannelEL)
+            .childChannelInitializer { channel in
+                let accepted = channel.eventLoop.makePromise(of: Void.self)
+                accepted.futureResult.map {
+                    channel
+                }.cascade(to: tcpAcceptedChannel)
+                return channel.pipeline.addHandler(FulfillOnFirstEventHandler(channelActivePromise: accepted))
+            }
+            .bind(to: bindTarget)
+            .wait(),
+        file: (file),
+        line: line
+    )
     defer {
         XCTAssertNoThrow(try tcpServerChannel.syncCloseAcceptingAlreadyClosed())
     }
 
-    let tcpClientChannel = try assertNoThrowWithValue(ClientBootstrap(group: clientChannelEL)
-        .channelInitializer { channel in
-            XCTAssert(channel.eventLoop.inEventLoop)
-            return channel.eventLoop.makeSucceededFuture(())
-        }
-        .connect(to: tcpServerChannel.localAddress!)
-        .wait())
+    let tcpClientChannel = try assertNoThrowWithValue(
+        ClientBootstrap(group: clientChannelEL)
+            .channelInitializer { channel in
+                XCTAssert(channel.eventLoop.inEventLoop)
+                return channel.eventLoop.makeSucceededFuture(())
+            }
+            .connect(to: tcpServerChannel.localAddress!)
+            .wait()
+    )
     defer {
         XCTAssertNoThrow(try tcpClientChannel.syncCloseAcceptingAlreadyClosed())
     }
@@ -605,31 +658,41 @@ func withCrossConnectedSockAddrChannels<R>(bindTarget: SocketAddress,
     return try body(try tcpAcceptedChannel.futureResult.wait(), tcpClientChannel)
 }
 
-func withCrossConnectedTCPChannels<R>(forceSeparateEventLoops: Bool = false,
-                                      file: StaticString = #filePath,
-                                      line: UInt = #line,
-                                      _ body: (Channel, Channel) throws -> R) throws -> R {
-    return try withCrossConnectedSockAddrChannels(bindTarget: .init(ipAddress: "127.0.0.1", port: 0),
-                                                  forceSeparateEventLoops: forceSeparateEventLoops,
-                                                  body)
+func withCrossConnectedTCPChannels<R>(
+    forceSeparateEventLoops: Bool = false,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ body: (Channel, Channel) throws -> R
+) throws -> R {
+    return try withCrossConnectedSockAddrChannels(
+        bindTarget: .init(ipAddress: "127.0.0.1", port: 0),
+        forceSeparateEventLoops: forceSeparateEventLoops,
+        body
+    )
 }
 
-func withCrossConnectedUnixDomainSocketChannels<R>(forceSeparateEventLoops: Bool = false,
-                                                   file: StaticString = #filePath,
-                                                   line: UInt = #line,
-                                                   _ body: (Channel, Channel) throws -> R) throws -> R {
+func withCrossConnectedUnixDomainSocketChannels<R>(
+    forceSeparateEventLoops: Bool = false,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ body: (Channel, Channel) throws -> R
+) throws -> R {
     return try withTemporaryDirectory { tempDir in
         let bindTarget = try SocketAddress(unixDomainSocketPath: tempDir + "/s")
-        return try withCrossConnectedSockAddrChannels(bindTarget: bindTarget,
-                                                      forceSeparateEventLoops: forceSeparateEventLoops,
-                                                      body)
+        return try withCrossConnectedSockAddrChannels(
+            bindTarget: bindTarget,
+            forceSeparateEventLoops: forceSeparateEventLoops,
+            body
+        )
     }
 }
 
-func withCrossConnectedPipeChannels<R>(forceSeparateEventLoops: Bool = false,
-                                       file: StaticString = #filePath,
-                                       line: UInt = #line,
-                                       _ body: (Channel, Channel) throws -> R) throws -> R {
+func withCrossConnectedPipeChannels<R>(
+    forceSeparateEventLoops: Bool = false,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ body: (Channel, Channel) throws -> R
+) throws -> R {
     let channel1Group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     defer {
         XCTAssertNoThrow(try channel1Group.syncShutdownGracefully(), file: (file), line: line)
@@ -647,44 +710,50 @@ func withCrossConnectedPipeChannels<R>(forceSeparateEventLoops: Bool = false,
 
     var result: R? = nil
 
-    XCTAssertNoThrow(try withPipe { pipe1Read, pipe1Write -> [NIOFileHandle] in
-        try withPipe { pipe2Read, pipe2Write -> [NIOFileHandle] in
-            try pipe1Read.withUnsafeFileDescriptor { pipe1Read in
-                try pipe1Write.withUnsafeFileDescriptor { pipe1Write in
-                    try pipe2Read.withUnsafeFileDescriptor { pipe2Read in
-                        try pipe2Write.withUnsafeFileDescriptor { pipe2Write in
-                            let channel1 = try NIOPipeBootstrap(group: channel1Group)
-                                .takingOwnershipOfDescriptors(input: pipe1Read, output: pipe2Write)
-                                .wait()
-                            defer {
-                                XCTAssertNoThrow(try channel1.syncCloseAcceptingAlreadyClosed())
+    XCTAssertNoThrow(
+        try withPipe { pipe1Read, pipe1Write -> [NIOFileHandle] in
+            try withPipe { pipe2Read, pipe2Write -> [NIOFileHandle] in
+                try pipe1Read.withUnsafeFileDescriptor { pipe1Read in
+                    try pipe1Write.withUnsafeFileDescriptor { pipe1Write in
+                        try pipe2Read.withUnsafeFileDescriptor { pipe2Read in
+                            try pipe2Write.withUnsafeFileDescriptor { pipe2Write in
+                                let channel1 = try NIOPipeBootstrap(group: channel1Group)
+                                    .takingOwnershipOfDescriptors(input: pipe1Read, output: pipe2Write)
+                                    .wait()
+                                defer {
+                                    XCTAssertNoThrow(try channel1.syncCloseAcceptingAlreadyClosed())
+                                }
+                                let channel2 = try NIOPipeBootstrap(group: channel2Group)
+                                    .takingOwnershipOfDescriptors(input: pipe2Read, output: pipe1Write)
+                                    .wait()
+                                defer {
+                                    XCTAssertNoThrow(try channel2.syncCloseAcceptingAlreadyClosed())
+                                }
+                                result = try body(channel1, channel2)
                             }
-                            let channel2 = try NIOPipeBootstrap(group: channel2Group)
-                                .takingOwnershipOfDescriptors(input: pipe2Read, output: pipe1Write)
-                                .wait()
-                            defer {
-                                XCTAssertNoThrow(try channel2.syncCloseAcceptingAlreadyClosed())
-                            }
-                            result = try body(channel1, channel2)
                         }
                     }
                 }
+                XCTAssertNoThrow(try pipe1Read.takeDescriptorOwnership(), file: (file), line: line)
+                XCTAssertNoThrow(try pipe1Write.takeDescriptorOwnership(), file: (file), line: line)
+                XCTAssertNoThrow(try pipe2Read.takeDescriptorOwnership(), file: (file), line: line)
+                XCTAssertNoThrow(try pipe2Write.takeDescriptorOwnership(), file: (file), line: line)
+                return []
             }
-            XCTAssertNoThrow(try pipe1Read.takeDescriptorOwnership(), file: (file), line: line)
-            XCTAssertNoThrow(try pipe1Write.takeDescriptorOwnership(), file: (file), line: line)
-            XCTAssertNoThrow(try pipe2Read.takeDescriptorOwnership(), file: (file), line: line)
-            XCTAssertNoThrow(try pipe2Write.takeDescriptorOwnership(), file: (file), line: line)
-            return []
-        }
-        return [] // the channels are closing the pipes
-    }, file: (file), line: line)
+            return []  // the channels are closing the pipes
+        },
+        file: (file),
+        line: line
+    )
     return result!
 }
 
-func forEachCrossConnectedStreamChannelPair<R>(forceSeparateEventLoops: Bool = false,
-                                               file: StaticString = #filePath,
-                                               line: UInt = #line,
-                                               _ body: (Channel, Channel) throws -> R) throws -> [R] {
+func forEachCrossConnectedStreamChannelPair<R>(
+    forceSeparateEventLoops: Bool = false,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ body: (Channel, Channel) throws -> R
+) throws -> [R] {
     let r1 = try withCrossConnectedTCPChannels(forceSeparateEventLoops: forceSeparateEventLoops, body)
     let r2 = try withCrossConnectedPipeChannels(forceSeparateEventLoops: forceSeparateEventLoops, body)
     let r3 = try withCrossConnectedUnixDomainSocketChannels(forceSeparateEventLoops: forceSeparateEventLoops, body)
@@ -693,29 +762,28 @@ func forEachCrossConnectedStreamChannelPair<R>(forceSeparateEventLoops: Bool = f
 
 extension EventLoopFuture {
     var isFulfilled: Bool {
-        if self.eventLoop.inEventLoop {
-            // Easy, we're on the EventLoop. Let's just use our knowledge that we run completed future callbacks
-            // immediately.
-            var fulfilled = false
-            self.whenComplete { _ in
-                fulfilled = true
-            }
-            return fulfilled
-        } else {
+        guard self.eventLoop.inEventLoop else {
             let lock = NIOLock()
             let group = DispatchGroup()
-            var fulfilled = false // protected by lock
+            var fulfilled = false  // protected by lock
 
             group.enter()
             self.eventLoop.execute {
-                let isFulfilled = self.isFulfilled // This will now enter the above branch.
+                let isFulfilled = self.isFulfilled  // This will now enter the above branch.
                 lock.withLock {
                     fulfilled = isFulfilled
                 }
                 group.leave()
             }
-            group.wait() // this is very nasty but this is for tests only, so...
+            group.wait()  // this is very nasty but this is for tests only, so...
             return lock.withLock { fulfilled }
         }
+        // Easy, we're on the EventLoop. Let's just use our knowledge that we run completed future callbacks
+        // immediately.
+        var fulfilled = false
+        self.whenComplete { _ in
+            fulfilled = true
+        }
+        return fulfilled
     }
 }

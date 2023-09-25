@@ -19,7 +19,10 @@ import XCTest
 internal final class PooledRecvBufferAllocatorTests: XCTestCase {
     func testPoolFillsToCapacity() {
         let allocator = ByteBufferAllocator()
-        var pool = PooledRecvBufferAllocator(capacity: 3, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024))
+        var pool = PooledRecvBufferAllocator(
+            capacity: 3,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024)
+        )
         XCTAssertEqual(pool.count, 0)
         XCTAssertEqual(pool.capacity, 3)
 
@@ -38,7 +41,7 @@ internal final class PooledRecvBufferAllocatorTests: XCTestCase {
 
         // Keep the buffers alive.
         withExtendedLifetime(buffers) {
-            for _ in 1 ... pool.capacity {
+            for _ in 1...pool.capacity {
                 let (buffer, _) = pool.buffer(allocator: allocator) {
                     XCTAssertEqual($0.readableBytes, 0)
                     XCTAssertEqual($0.writableBytes, 1024)
@@ -51,7 +54,10 @@ internal final class PooledRecvBufferAllocatorTests: XCTestCase {
 
     func testBuffersAreRecycled() {
         let allocator = ByteBufferAllocator()
-        var pool = PooledRecvBufferAllocator(capacity: 5, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024))
+        var pool = PooledRecvBufferAllocator(
+            capacity: 5,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024)
+        )
 
         let (_, storageID) = pool.buffer(allocator: allocator) { buffer in
             return buffer.storagePointerIntegerValue()
@@ -59,7 +65,7 @@ internal final class PooledRecvBufferAllocatorTests: XCTestCase {
 
         XCTAssertEqual(pool.count, 1)
 
-        for _ in 0 ..< 100 {
+        for _ in 0..<100 {
             _ = pool.buffer(allocator: allocator) { buffer in
                 XCTAssertEqual(buffer.storagePointerIntegerValue(), storageID)
             }
@@ -69,9 +75,12 @@ internal final class PooledRecvBufferAllocatorTests: XCTestCase {
 
     func testFirstAvailableBufferUsed() {
         let allocator = ByteBufferAllocator()
-        var pool = PooledRecvBufferAllocator(capacity: 3, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024))
+        var pool = PooledRecvBufferAllocator(
+            capacity: 3,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024)
+        )
 
-        var buffers: [ByteBuffer] = (0 ..< pool.capacity).map { _ in
+        var buffers: [ByteBuffer] = (0..<pool.capacity).map { _ in
             let (buffer, _) = pool.buffer(allocator: allocator) { _ in }
             return buffer
         }
@@ -89,7 +98,10 @@ internal final class PooledRecvBufferAllocatorTests: XCTestCase {
 
     func testBuffersAreClearedBetweenCalls() {
         let allocator = ByteBufferAllocator()
-        var pool = PooledRecvBufferAllocator(capacity: 3, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024))
+        var pool = PooledRecvBufferAllocator(
+            capacity: 3,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024)
+        )
 
         // The pool recycles buffers which are unique. Store each buffer to ensure that's not the
         // case.
@@ -122,10 +134,13 @@ internal final class PooledRecvBufferAllocatorTests: XCTestCase {
 
     func testPoolCapacityIncrease() {
         let allocator = ByteBufferAllocator()
-        var pool = PooledRecvBufferAllocator(capacity: 3, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024))
+        var pool = PooledRecvBufferAllocator(
+            capacity: 3,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024)
+        )
 
         // Fill the pool.
-        let buffers: [ByteBuffer] = (0 ..< pool.capacity).map { _ in
+        let buffers: [ByteBuffer] = (0..<pool.capacity).map { _ in
             let (buffer, _) = pool.buffer(allocator: allocator) { _ in }
             return buffer
         }
@@ -138,7 +153,7 @@ internal final class PooledRecvBufferAllocatorTests: XCTestCase {
         XCTAssertEqual(pool.count, 3)
 
         // Fill the pool.
-        let moreBuffers: [ByteBuffer] = (pool.count ..< pool.capacity).map { _ in
+        let moreBuffers: [ByteBuffer] = (pool.count..<pool.capacity).map { _ in
             let (buffer, _) = pool.buffer(allocator: allocator) { _ in }
             return buffer
         }
@@ -155,11 +170,14 @@ internal final class PooledRecvBufferAllocatorTests: XCTestCase {
 
     func testPoolCapacityDecrease() {
         let allocator = ByteBufferAllocator()
-        var pool = PooledRecvBufferAllocator(capacity: 5, recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024))
+        var pool = PooledRecvBufferAllocator(
+            capacity: 5,
+            recvAllocator: FixedSizeRecvByteBufferAllocator(capacity: 1024)
+        )
 
         // Fill the pool.
         var buffers: [ByteBuffer] = []
-        for _ in (0 ..< pool.capacity) {
+        for _ in (0..<pool.capacity) {
             let (buffer, _) = pool.buffer(allocator: allocator) { _ in }
             buffers.append(buffer)
         }

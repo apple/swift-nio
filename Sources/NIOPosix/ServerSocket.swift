@@ -19,7 +19,11 @@ import NIOCore
     typealias SocketType = ServerSocket
     private let cleanupOnClose: Bool
 
-    public final class func bootstrap(protocolFamily: NIOBSDSocket.ProtocolFamily, host: String, port: Int) throws -> ServerSocket {
+    public final class func bootstrap(
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        host: String,
+        port: Int
+    ) throws -> ServerSocket {
         let socket = try ServerSocket(protocolFamily: protocolFamily)
         try socket.bind(to: SocketAddress.makeAddressResolvingHost(host, port: port))
         try socket.listen()
@@ -34,8 +38,17 @@ import NIOCore
     ///         argument to the socket syscall. Defaults to 0.
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if creation of the socket failed.
-    init(protocolFamily: NIOBSDSocket.ProtocolFamily, protocolSubtype: NIOBSDSocket.ProtocolSubtype = .default, setNonBlocking: Bool = false) throws {
-        let sock = try BaseSocket.makeSocket(protocolFamily: protocolFamily, type: .stream, protocolSubtype: protocolSubtype, setNonBlocking: setNonBlocking)
+    init(
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        protocolSubtype: NIOBSDSocket.ProtocolSubtype = .default,
+        setNonBlocking: Bool = false
+    ) throws {
+        let sock = try BaseSocket.makeSocket(
+            protocolFamily: protocolFamily,
+            type: .stream,
+            protocolSubtype: protocolSubtype,
+            setNonBlocking: setNonBlocking
+        )
         switch protocolFamily {
         case .unix:
             cleanupOnClose = true
@@ -52,10 +65,10 @@ import NIOCore
     ///     - setNonBlocking: Set non-blocking mode on the socket.
     /// - throws: An `IOError` if socket is invalid.
     #if !os(Windows)
-        @available(*, deprecated, renamed: "init(socket:setNonBlocking:)")
-        convenience init(descriptor: CInt, setNonBlocking: Bool = false) throws {
-          try self.init(socket: descriptor, setNonBlocking: setNonBlocking)
-        }
+    @available(*, deprecated, renamed: "init(socket:setNonBlocking:)")
+    convenience init(descriptor: CInt, setNonBlocking: Bool = false) throws {
+        try self.init(socket: descriptor, setNonBlocking: setNonBlocking)
+    }
     #endif
 
     /// Create a new instance.

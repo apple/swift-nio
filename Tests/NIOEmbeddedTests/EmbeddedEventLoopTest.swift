@@ -17,7 +17,7 @@ import NIOCore
 import XCTest
 import NIOConcurrencyHelpers
 
-private class EmbeddedTestError: Error { }
+private class EmbeddedTestError: Error {}
 
 public final class EmbeddedEventLoopTest: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() throws {
@@ -358,13 +358,13 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         let timeAtStart = eventLoop._now
         var tasksRun = 0
 
-        eventLoop.scheduleTask(in: .nanoseconds(3141592)) {
-            XCTAssertEqual(eventLoop._now, timeAtStart + .nanoseconds(3141592))
+        eventLoop.scheduleTask(in: .nanoseconds(3_141_592)) {
+            XCTAssertEqual(eventLoop._now, timeAtStart + .nanoseconds(3_141_592))
             tasksRun += 1
         }
 
-        eventLoop.scheduleTask(in: .seconds(3141592)) {
-            XCTAssertEqual(eventLoop._now, timeAtStart + .seconds(3141592))
+        eventLoop.scheduleTask(in: .seconds(3_141_592)) {
+            XCTAssertEqual(eventLoop._now, timeAtStart + .seconds(3_141_592))
             tasksRun += 1
         }
 

@@ -21,16 +21,16 @@ public typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader
 
 /// A `HTTPClientProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
-/// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request. 
+/// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request.
 /// This upgrader also assumes that the `HTTPClientUpgradeHandler` will appropriately mutate the
 /// pipeline to remove the HTTP `ChannelHandler`s.
 public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
-    
+
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
     /// None of the websocket headers are actually defined as 'required'.
     public let requiredUpgradeHeaders: [String] = []
-    
+
     private let requestKey: String
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
@@ -64,7 +64,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     /// Allow or deny the upgrade based on the upgrade HTTP response
     /// headers containing the correct accept key.
     public func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
-        
+
         let acceptValueHeader = upgradeResponse.headers["Sec-WebSocket-Accept"]
 
         guard acceptValueHeader.count == 1 else {
@@ -87,13 +87,13 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
         var upgradeFuture = context.pipeline.addHandler(WebSocketFrameEncoder()).flatMap {
             context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
         }
-        
+
         if self.automaticErrorHandling {
             upgradeFuture = upgradeFuture.flatMap {
                 context.pipeline.addHandler(WebSocketProtocolErrorHandler())
             }
         }
-        
+
         return upgradeFuture.flatMap {
             self.upgradePipelineHandler(context.channel, upgradeResponse)
         }
@@ -110,7 +110,7 @@ extension NIOWebSocketClientUpgrader {
     @inlinable
     public static func randomRequestKey<Generator>(
         using generator: inout Generator
-    ) -> String where Generator: RandomNumberGenerator{
+    ) -> String where Generator: RandomNumberGenerator {
         var buffer = ByteBuffer()
         buffer.reserveCapacity(minimumWritableBytes: 16)
         /// we may want to use `randomBytes(count:)` once the proposal is accepted: https://forums.swift.org/t/pitch-requesting-larger-amounts-of-randomness-from-systemrandomnumbergenerator/27226

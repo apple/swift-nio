@@ -15,13 +15,11 @@
 import NIOCore
 import Foundation
 
-
 /// Errors that may be thrown by ByteBuffer methods that call into Foundation.
 public enum ByteBufferFoundationError: Error {
     /// Attempting to encode the given string failed.
     case failedToEncodeString
 }
-
 
 /*
  * This is NIO's `NIOFoundationCompat` module which at the moment only adds `ByteBuffer` utility methods
@@ -66,7 +64,6 @@ extension ByteBuffer {
         return self.readData(length: length, byteTransferStrategy: .automatic)
     }
 
-
     /// Read `length` bytes off this `ByteBuffer`, move the reader index forward by `length` bytes and return the result
     /// as `Data`.
     ///
@@ -76,7 +73,9 @@ extension ByteBuffer {
     ///                             of the options.
     /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     public mutating func readData(length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
-        guard let result = self.getData(at: self.readerIndex, length: length, byteTransferStrategy: byteTransferStrategy) else {
+        guard
+            let result = self.getData(at: self.readerIndex, length: length, byteTransferStrategy: byteTransferStrategy)
+        else {
             return nil
         }
         self.moveReaderIndex(forwardBy: length)
@@ -119,19 +118,22 @@ extension ByteBuffer {
         case .noCopy:
             doCopy = false
         case .automatic:
-            doCopy = length <= 256*1024
+            doCopy = length <= 256 * 1024
         }
 
         return self.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-            if doCopy {
-                return Data(bytes: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
-                            count: Int(length))
-            } else {
+            guard doCopy else {
                 _ = storageRef.retain()
-                return Data(bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
-                            count: Int(length),
-                            deallocator: .custom { _, _ in storageRef.release() })
+                return Data(
+                    bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
+                    count: Int(length),
+                    deallocator: .custom { _, _ in storageRef.release() }
+                )
             }
+            return Data(
+                bytes: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
+                count: Int(length)
+            )
         }
     }
 
@@ -277,7 +279,8 @@ extension ByteBuffer {
     ///            are not readable or there were not enough bytes.
     public func getUUIDBytes(at index: Int) -> UUID? {
         guard let chunk1 = self.getInteger(at: index, as: UInt64.self),
-              let chunk2 = self.getInteger(at: index + 8, as: UInt64.self) else {
+            let chunk2 = self.getInteger(at: index + 8, as: UInt64.self)
+        else {
             return nil
         }
 

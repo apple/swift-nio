@@ -90,17 +90,21 @@ final class PipePair: SocketProtocol {
         }
     }
 
-    func recvmsg(pointer: UnsafeMutableRawBufferPointer,
-                 storage: inout sockaddr_storage,
-                 storageLen: inout socklen_t,
-                 controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int> {
+    func recvmsg(
+        pointer: UnsafeMutableRawBufferPointer,
+        storage: inout sockaddr_storage,
+        storageLen: inout socklen_t,
+        controlBytes: inout UnsafeReceivedControlBytes
+    ) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
     }
-    
-    func sendmsg(pointer: UnsafeRawBufferPointer,
-                 destinationPtr: UnsafePointer<sockaddr>?,
-                 destinationSize: socklen_t,
-                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
+
+    func sendmsg(
+        pointer: UnsafeRawBufferPointer,
+        destinationPtr: UnsafePointer<sockaddr>?,
+        destinationSize: socklen_t,
+        controlBytes: UnsafeMutableRawBufferPointer
+    ) throws -> IOResult<Int> {
         throw ChannelError.operationUnsupported
     }
 

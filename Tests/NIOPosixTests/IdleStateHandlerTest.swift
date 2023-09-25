@@ -17,7 +17,7 @@ import XCTest
 import NIOEmbedded
 import NIOPosix
 
-class IdleStateHandlerTest : XCTestCase {
+class IdleStateHandlerTest: XCTestCase {
 
     func testIdleRead() throws {
         try testIdle(IdleStateHandler(readTimeout: .seconds(1)), false, { $0 == IdleStateHandler.IdleStateEvent.read })
@@ -35,7 +35,11 @@ class IdleStateHandlerTest : XCTestCase {
         try testIdle(IdleStateHandler(allTimeout: .seconds(1)), false, { $0 == IdleStateHandler.IdleStateEvent.all })
     }
 
-    private func testIdle(_ handler: IdleStateHandler, _ writeToChannel: Bool, _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool) throws {
+    private func testIdle(
+        _ handler: IdleStateHandler,
+        _ writeToChannel: Bool,
+        _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool
+    ) throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -76,21 +80,25 @@ class IdleStateHandlerTest : XCTestCase {
             }
         }
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { channel in
-                channel.pipeline.addHandler(handler).flatMap { f in
-                    channel.pipeline.addHandler(TestWriteHandler(writeToChannel, assertEventFn))
-                }
-            }.bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { channel in
+                    channel.pipeline.addHandler(handler).flatMap { f in
+                        channel.pipeline.addHandler(TestWriteHandler(writeToChannel, assertEventFn))
+                    }
+                }.bind(host: "127.0.0.1", port: 0).wait()
+        )
 
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!)
-            .wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!)
+                .wait()
+        )
         if !writeToChannel {
             var buffer = clientChannel.allocator.buffer(capacity: 4)
             buffer.writeStaticString("test")
@@ -98,11 +106,11 @@ class IdleStateHandlerTest : XCTestCase {
         }
         XCTAssertNoThrow(try clientChannel.closeFuture.wait())
     }
-    
+
     func testPropagateInboundEvents() {
         class EventHandler: ChannelInboundHandler {
             typealias InboundIn = Any
-            
+
             var active = false
             var inactive = false
             var read = false
@@ -116,39 +124,39 @@ class IdleStateHandlerTest : XCTestCase {
             func channelActive(context: ChannelHandlerContext) {
                 self.active = true
             }
-            
+
             func channelInactive(context: ChannelHandlerContext) {
                 self.inactive = true
             }
-            
+
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 self.read = true
             }
-            
+
             func channelReadComplete(context: ChannelHandlerContext) {
                 self.readComplete = true
             }
-            
+
             func channelWritabilityChanged(context: ChannelHandlerContext) {
                 self.writabilityChanged = true
             }
-  
+
             func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
                 self.eventTriggered = true
             }
-            
+
             func errorCaught(context: ChannelHandlerContext, error: Error) {
                 self.errorCaught = true
             }
-            
+
             func channelRegistered(context: ChannelHandlerContext) {
                 self.registered = true
             }
-            
+
             func channelUnregistered(context: ChannelHandlerContext) {
                 self.unregistered = true
             }
-            
+
             func assertAllEventsReceived() {
                 XCTAssertTrue(self.active)
                 XCTAssertTrue(self.inactive)
@@ -165,7 +173,7 @@ class IdleStateHandlerTest : XCTestCase {
         let channel = EmbeddedChannel()
         XCTAssertNoThrow(try channel.pipeline.addHandler(IdleStateHandler()).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(eventHandler).wait())
-        
+
         channel.pipeline.fireChannelRegistered()
         channel.pipeline.fireChannelActive()
         channel.pipeline.fireChannelRead(NIOAny(""))
@@ -176,7 +184,7 @@ class IdleStateHandlerTest : XCTestCase {
         channel.pipeline.fireChannelWritabilityChanged()
         channel.pipeline.fireChannelInactive()
         channel.pipeline.fireChannelUnregistered()
-        
+
         XCTAssertTrue(try channel.finish().isClean)
         eventHandler.assertAllEventsReceived()
     }

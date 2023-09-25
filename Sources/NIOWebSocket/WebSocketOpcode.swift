@@ -52,9 +52,9 @@ public struct WebSocketOpcode: Sendable {
     }
 }
 
-extension WebSocketOpcode: Equatable { }
+extension WebSocketOpcode: Equatable {}
 
-extension WebSocketOpcode: Hashable { }
+extension WebSocketOpcode: Hashable {}
 
 extension WebSocketOpcode: CaseIterable {
     public static var allCases = (0..<0x10).map { WebSocketOpcode(rawValue: $0) }

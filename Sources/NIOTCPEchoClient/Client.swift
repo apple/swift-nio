@@ -94,14 +94,13 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readableBytes = buffer.readableBytesView
 
-        if let firstLine = readableBytes.firstIndex(of: self.newLine).map({ readableBytes[..<$0] }) {
-            buffer.moveReaderIndex(forwardBy: firstLine.count + 1)
-            // Fire a read without a newline
-            context.fireChannelRead(self.wrapInboundOut(String(buffer: ByteBuffer(firstLine))))
-            return .continue
-        } else {
+        guard let firstLine = readableBytes.firstIndex(of: self.newLine).map({ readableBytes[..<$0] }) else {
             return .needMoreData
         }
+        buffer.moveReaderIndex(forwardBy: firstLine.count + 1)
+        // Fire a read without a newline
+        context.fireChannelRead(self.wrapInboundOut(String(buffer: ByteBuffer(firstLine))))
+        return .continue
     }
 
     func encode(data: String, out: inout ByteBuffer) throws {

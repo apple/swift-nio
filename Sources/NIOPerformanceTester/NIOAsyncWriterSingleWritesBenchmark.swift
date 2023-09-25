@@ -16,7 +16,7 @@ import NIOCore
 import DequeModule
 import Atomics
 
-fileprivate struct NoOpDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
+private struct NoOpDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
     typealias Element = Int
     let counter = ManagedAtomic(0)
 

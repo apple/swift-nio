@@ -22,7 +22,7 @@ internal struct OutputGrepper {
 
     internal static func make(group: EventLoopGroup) -> OutputGrepper {
         let processToChannel = Pipe()
-        let deadPipe = Pipe() // just so we have an output...
+        let deadPipe = Pipe()  // just so we have an output...
 
         let eventLoop = group.next()
         let outputPromise = eventLoop.makePromise(of: ProgramOutput.self)
@@ -31,19 +31,25 @@ internal struct OutputGrepper {
         let channelFuture = NIOPipeBootstrap(group: group)
             .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .channelInitializer { channel in
-                channel.pipeline.addHandlers([ByteToMessageHandler(NewlineFramer()),
-                                              GrepHandler(promise: outputPromise)])
+                channel.pipeline.addHandlers([
+                    ByteToMessageHandler(NewlineFramer()),
+                    GrepHandler(promise: outputPromise),
+                ])
             }
-            .takingOwnershipOfDescriptors(input: dup(processToChannel.fileHandleForReading.fileDescriptor),
-                       output: dup(deadPipe.fileHandleForWriting.fileDescriptor))
+            .takingOwnershipOfDescriptors(
+                input: dup(processToChannel.fileHandleForReading.fileDescriptor),
+                output: dup(deadPipe.fileHandleForWriting.fileDescriptor)
+            )
         let processOutputPipe = NIOFileHandle(descriptor: dup(processToChannel.fileHandleForWriting.fileDescriptor))
         processToChannel.fileHandleForReading.closeFile()
         processToChannel.fileHandleForWriting.closeFile()
         deadPipe.fileHandleForReading.closeFile()
         deadPipe.fileHandleForWriting.closeFile()
         channelFuture.cascadeFailure(to: outputPromise)
-        return OutputGrepper(result: outputPromise.futureResult,
-                             processOutputPipe: processOutputPipe)
+        return OutputGrepper(
+            result: outputPromise.futureResult,
+            processOutputPipe: processOutputPipe
+        )
     }
 }
 
@@ -65,9 +71,9 @@ private final class GrepHandler: ChannelInboundHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let line = self.unwrapInboundIn(data)
-        if line.lowercased().contains("fatal error") ||
-            line.lowercased().contains("precondition failed") ||
-            line.lowercased().contains("assertion failed") {
+        if line.lowercased().contains("fatal error") || line.lowercased().contains("precondition failed")
+            || line.lowercased().contains("assertion failed")
+        {
             self.promise.succeed(line)
             context.close(promise: nil)
         }
@@ -89,12 +95,11 @@ private struct NewlineFramer: ByteToMessageDecoder {
     typealias InboundOut = String
 
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        if let firstNewline = buffer.readableBytesView.firstIndex(of: UInt8(ascii: "\n")) {
-            let length = firstNewline - buffer.readerIndex + 1
-            context.fireChannelRead(self.wrapInboundOut(String(buffer.readString(length: length)!.dropLast())))
-            return .continue
-        } else {
+        guard let firstNewline = buffer.readableBytesView.firstIndex(of: UInt8(ascii: "\n")) else {
             return .needMoreData
         }
+        let length = firstNewline - buffer.readerIndex + 1
+        context.fireChannelRead(self.wrapInboundOut(String(buffer.readString(length: length)!.dropLast())))
+        return .continue
     }
 }

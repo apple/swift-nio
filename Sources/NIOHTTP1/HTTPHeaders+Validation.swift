@@ -43,11 +43,10 @@ extension String {
         let fastResult = self.utf8.withContiguousStorageIfAvailable { ptr in
             ptr.allSatisfy { $0.isValidHeaderFieldValueByte }
         }
-        if let fastResult = fastResult {
-            return fastResult
-        } else {
+        guard let fastResult = fastResult else {
             return self.utf8._isValidHeaderFieldValue_slowPath
         }
+        return fastResult
     }
 
     /// Validates a given header field name against the definition in RFC 9110.
@@ -67,15 +66,14 @@ extension String {
     /// ```
     ///
     /// We implement this check directly.
-    fileprivate var isValidHeaderFieldName: Bool  {
+    fileprivate var isValidHeaderFieldName: Bool {
         let fastResult = self.utf8.withContiguousStorageIfAvailable { ptr in
             ptr.allSatisfy { $0.isValidHeaderFieldNameByte }
         }
-        if let fastResult = fastResult {
-            return fastResult
-        } else {
+        guard let fastResult = fastResult else {
             return self.utf8._isValidHeaderFieldName_slowPath
         }
+        return fastResult
     }
 }
 
@@ -124,7 +122,7 @@ extension UInt8 {
     @inline(__always)
     fileprivate var isValidHeaderFieldNameByte: Bool {
         switch self {
-        case UInt8(ascii: "0")...UInt8(ascii: "9"), // DIGIT
+        case UInt8(ascii: "0")...UInt8(ascii: "9"),  // DIGIT
             UInt8(ascii: "a")...UInt8(ascii: "z"),
             UInt8(ascii: "A")...UInt8(ascii: "Z"),  // ALPHA
             UInt8(ascii: "!"), UInt8(ascii: "#"),

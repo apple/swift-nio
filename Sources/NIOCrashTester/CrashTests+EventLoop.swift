@@ -15,7 +15,7 @@
 import NIOCore
 import NIOPosix
 
-fileprivate let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+private let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
 
 struct EventLoopCrashTests {
     let testMultiThreadedELGCrashesOnZeroThreads = CrashTest(

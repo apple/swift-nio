@@ -41,19 +41,20 @@ extension EventLoopFuture {
     /// - returns: A future that will receive the eventual value.
     @inlinable
     @preconcurrency
-    public func flatMapWithEventLoop<NewValue>(_ callback: @escaping @Sendable (Value, EventLoop) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
+    public func flatMapWithEventLoop<NewValue>(
+        _ callback: @escaping @Sendable (Value, EventLoop) -> EventLoopFuture<NewValue>
+    ) -> EventLoopFuture<NewValue> {
         let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete { [eventLoop = self.eventLoop] in
             switch self._value! {
             case .success(let t):
                 let futureU = callback(t, eventLoop)
-                if futureU.eventLoop.inEventLoop {
-                    return futureU._addCallback {
-                        next._setValue(value: futureU._value!)
-                    }
-                } else {
+                guard futureU.eventLoop.inEventLoop else {
                     futureU.cascade(to: next)
                     return CallbackList()
+                }
+                return futureU._addCallback {
+                    next._setValue(value: futureU._value!)
                 }
             case .failure(let error):
                 return next._setValue(value: .failure(error))
@@ -61,7 +62,7 @@ extension EventLoopFuture {
         }
         return next.futureResult
     }
-    
+
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// may recover from the error by returning an `EventLoopFuture<NewValue>`. The callback is intended to potentially
     /// recover from the error by returning a new `EventLoopFuture` that will eventually contain the recovered
@@ -75,7 +76,9 @@ extension EventLoopFuture {
     /// - returns: A future that will receive the recovered value.
     @inlinable
     @preconcurrency
-    public func flatMapErrorWithEventLoop(_ callback: @escaping @Sendable (Error, EventLoop) -> EventLoopFuture<Value>) -> EventLoopFuture<Value> {
+    public func flatMapErrorWithEventLoop(
+        _ callback: @escaping @Sendable (Error, EventLoop) -> EventLoopFuture<Value>
+    ) -> EventLoopFuture<Value> {
         let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete { [eventLoop = self.eventLoop] in
             switch self._value! {
@@ -83,13 +86,12 @@ extension EventLoopFuture {
                 return next._setValue(value: .success(t))
             case .failure(let e):
                 let t = callback(e, eventLoop)
-                if t.eventLoop.inEventLoop {
-                    return t._addCallback {
-                        next._setValue(value: t._value!)
-                    }
-                } else {
+                guard t.eventLoop.inEventLoop else {
                     t.cascade(to: next)
                     return CallbackList()
+                }
+                return t._addCallback {
+                    next._setValue(value: t._value!)
                 }
             }
         }
@@ -119,7 +121,8 @@ extension EventLoopFuture {
         with combiningFunction: @escaping @Sendable (Value, OtherValue, EventLoop) -> EventLoopFuture<Value>
     ) -> EventLoopFuture<Value> {
         func fold0(eventLoop: EventLoop) -> EventLoopFuture<Value> {
-            let body = futures.reduce(self) { (f1: EventLoopFuture<Value>, f2: EventLoopFuture<OtherValue>) -> EventLoopFuture<Value> in
+            let body = futures.reduce(self) {
+                (f1: EventLoopFuture<Value>, f2: EventLoopFuture<OtherValue>) -> EventLoopFuture<Value> in
                 let newFuture = f1.and(f2).flatMap { (args: (Value, OtherValue)) -> EventLoopFuture<Value> in
                     let (f1Value, f2Value) = args
                     self.eventLoop.assertInEventLoop()
@@ -131,14 +134,13 @@ extension EventLoopFuture {
             return body
         }
 
-        if self.eventLoop.inEventLoop {
-            return fold0(eventLoop: self.eventLoop)
-        } else {
+        guard self.eventLoop.inEventLoop else {
             let promise = self.eventLoop.makePromise(of: Value.self)
             self.eventLoop.execute { [eventLoop = self.eventLoop] in
                 fold0(eventLoop: eventLoop).cascade(to: promise)
             }
             return promise.futureResult
         }
+        return fold0(eventLoop: self.eventLoop)
     }
 }

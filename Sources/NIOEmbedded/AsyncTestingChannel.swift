@@ -100,11 +100,10 @@ public final class NIOAsyncTestingChannel: Channel {
         /// `true` if the ``NIOAsyncTestingChannel`` was `clean` on ``NIOAsyncTestingChannel/finish()``, ie. there is no unconsumed inbound, outbound, or
         /// pending outbound data left on the `Channel`.
         public var isClean: Bool {
-            if case .clean = self {
-                return true
-            } else {
+            guard case .clean = self else {
                 return false
             }
+            return true
         }
 
         /// `true` if the ``NIOAsyncTestingChannel`` if there was unconsumed inbound, outbound, or pending outbound data left
@@ -131,11 +130,10 @@ public final class NIOAsyncTestingChannel: Channel {
 
         /// Returns `true` is the buffer was empty.
         public var isEmpty: Bool {
-            if case .empty = self {
-                return true
-            } else {
+            guard case .empty = self else {
                 return false
             }
+            return true
         }
 
         /// Returns `true` if the buffer was non-empty.
@@ -282,7 +280,8 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - parameters:
     ///     - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register.
     ///     - loop: The ``NIOAsyncTestingEventLoop`` to use.
-    public convenience init(handler: ChannelHandler, loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) async {
+    public convenience init(handler: ChannelHandler, loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) async
+    {
         await self.init(handlers: [handler], loop: loop)
     }
 
@@ -293,7 +292,10 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - parameters:
     ///     - handlers: The `ChannelHandler`s to add to the `ChannelPipeline` before register.
     ///     - loop: The ``NIOAsyncTestingEventLoop`` to use.
-    public convenience init(handlers: [ChannelHandler], loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) async {
+    public convenience init(
+        handlers: [ChannelHandler],
+        loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()
+    ) async {
         self.init(loop: loop)
 
         try! await self._pipeline.addHandlers(handlers)
@@ -331,13 +333,14 @@ public final class NIOAsyncTestingChannel: Channel {
         // This can never actually throw.
         return try! await self.testingEventLoop.executeInContext {
             let c = self.channelcore!
-            if c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty {
-                return .clean
-            } else {
-                return .leftOvers(inbound: c.inboundBuffer,
-                                  outbound: c.outboundBuffer,
-                                  pendingOutbound: c.pendingOutboundBuffer.map { $0.0 })
+            guard c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty else {
+                return .leftOvers(
+                    inbound: c.inboundBuffer,
+                    outbound: c.outboundBuffer,
+                    pendingOutbound: c.pendingOutboundBuffer.map { $0.0 }
+                )
             }
+            return .clean
         }
     }
 
@@ -395,9 +398,11 @@ public final class NIOAsyncTestingChannel: Channel {
                         return
                     }
                     self.channelcore.outboundBufferConsumer.append { element in
-                        continuation.resume(with: Result {
-                            try self._cast(element)
-                        })
+                        continuation.resume(
+                            with: Result {
+                                try self._cast(element)
+                            }
+                        )
                     }
                 } catch {
                     continuation.resume(throwing: error)
@@ -443,9 +448,11 @@ public final class NIOAsyncTestingChannel: Channel {
                         return
                     }
                     self.channelcore.inboundBufferConsumer.append { element in
-                        continuation.resume(with: Result {
-                            try self._cast(element)
-                        })
+                        continuation.resume(
+                            with: Result {
+                                try self._cast(element)
+                            }
+                        )
                     }
                 } catch {
                     continuation.resume(throwing: error)
@@ -510,7 +517,6 @@ public final class NIOAsyncTestingChannel: Channel {
         }
     }
 
-
     @inlinable
     func _readFromBuffer<T>(buffer: inout CircularBuffer<NIOAny>) throws -> T? {
         self.testingEventLoop.preconditionInEventLoop()
@@ -524,7 +530,10 @@ public final class NIOAsyncTestingChannel: Channel {
     @inlinable
     func _cast<T>(_ element: NIOAny, to: T.Type = T.self) throws -> T {
         guard let t = self._channelCore.tryUnwrapData(element, as: T.self) else {
-            throw WrongTypeError(expected: T.self, actual: type(of: self._channelCore.tryUnwrapData(element, as: Any.self)!))
+            throw WrongTypeError(
+                expected: T.self,
+                actual: type(of: self._channelCore.tryUnwrapData(element, as: Any.self)!)
+            )
         }
         return t
     }
@@ -532,12 +541,11 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.setOption`
     @inlinable
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        if self.eventLoop.inEventLoop {
-            self.setOptionSync(option, value: value)
-            return self.eventLoop.makeSucceededVoidFuture()
-        } else {
+        guard self.eventLoop.inEventLoop else {
             return self.eventLoop.submit { self.setOptionSync(option, value: value) }
         }
+        self.setOptionSync(option, value: value)
+        return self.eventLoop.makeSucceededVoidFuture()
     }
 
     @inlinable
@@ -552,12 +560,11 @@ public final class NIOAsyncTestingChannel: Channel {
 
     /// - see: `Channel.getOption`
     @inlinable
-    public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value>  {
-        if self.eventLoop.inEventLoop {
-            return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
-        } else {
+    public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
+        guard self.eventLoop.inEventLoop else {
             return self.eventLoop.submit { self.getOptionSync(option) }
         }
+        return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
     }
 
     @inlinable
@@ -645,7 +652,7 @@ public final class NIOAsyncTestingChannel: Channel {
 // in a channel pipeline _are_ `Sendable`, and because these objects only carry NIOAnys in cases
 // where the `Channel` itself no longer holds a reference to these objects.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension NIOAsyncTestingChannel.LeftOverState: @unchecked Sendable { }
+extension NIOAsyncTestingChannel.LeftOverState: @unchecked Sendable {}
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable { }
+extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable {}

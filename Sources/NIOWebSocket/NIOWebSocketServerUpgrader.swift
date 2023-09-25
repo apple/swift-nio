@@ -64,7 +64,7 @@ fileprivate extension HTTPHeaders {
 public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unchecked Sendable {
     // This type *is* Sendable but we can't express that properly until Swift 5.7. In the meantime
     // the conformance is `@unchecked`.
-    
+
     #if swift(>=5.7)
     // FIXME: remove @unchecked when 5.7 is the minimum supported version.
     private typealias ShouldUpgrade = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
@@ -109,8 +109,12 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
         shouldUpgrade: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
         upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
     ) {
-        self.init(maxFrameSize: 1 << 14, automaticErrorHandling: automaticErrorHandling,
-                  shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
+        self.init(
+            maxFrameSize: 1 << 14,
+            automaticErrorHandling: automaticErrorHandling,
+            shouldUpgrade: shouldUpgrade,
+            upgradePipelineHandler: upgradePipelineHandler
+        )
     }
     #else
     /// Create a new `NIOWebSocketServerUpgrader`.
@@ -134,8 +138,12 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
         shouldUpgrade: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
         upgradePipelineHandler: @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
     ) {
-        self.init(maxFrameSize: 1 << 14, automaticErrorHandling: automaticErrorHandling,
-                  shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
+        self.init(
+            maxFrameSize: 1 << 14,
+            automaticErrorHandling: automaticErrorHandling,
+            shouldUpgrade: shouldUpgrade,
+            upgradePipelineHandler: upgradePipelineHandler
+        )
     }
     #endif
 
@@ -209,7 +217,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
         )
     }
     #endif
-    
+
     private init(
         _maxFrameSize maxFrameSize: Int,
         automaticErrorHandling: Bool,
@@ -223,7 +231,11 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
         self.automaticErrorHandling = automaticErrorHandling
     }
 
-    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
+    public func buildUpgradeResponse(
+        channel: Channel,
+        upgradeRequest: HTTPRequestHead,
+        initialResponseHeaders: HTTPHeaders
+    ) -> EventLoopFuture<HTTPHeaders> {
         let key: String
         let version: String
 

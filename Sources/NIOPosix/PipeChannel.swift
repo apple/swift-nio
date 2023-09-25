@@ -21,26 +21,35 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
         case output
     }
 
-    init(eventLoop: SelectableEventLoop,
-         inputPipe: NIOFileHandle,
-         outputPipe: NIOFileHandle) throws {
+    init(
+        eventLoop: SelectableEventLoop,
+        inputPipe: NIOFileHandle,
+        outputPipe: NIOFileHandle
+    ) throws {
         self.pipePair = try PipePair(inputFD: inputPipe, outputFD: outputPipe)
-        try super.init(socket: self.pipePair,
-                       parent: nil,
-                       eventLoop: eventLoop,
-                       recvAllocator: AdaptiveRecvByteBufferAllocator())
+        try super.init(
+            socket: self.pipePair,
+            parent: nil,
+            eventLoop: eventLoop,
+            recvAllocator: AdaptiveRecvByteBufferAllocator()
+        )
     }
 
     func registrationForInput(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .pipeChannel(self, .input),
-                               interested: interested,
-                               registrationID: registrationID)
+        return NIORegistration(
+            channel: .pipeChannel(self, .input),
+            interested: interested,
+            registrationID: registrationID
+        )
     }
 
-    func registrationForOutput(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .pipeChannel(self, .output),
-                               interested: interested,
-                               registrationID: registrationID)
+    func registrationForOutput(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration
+    {
+        return NIORegistration(
+            channel: .pipeChannel(self, .output),
+            interested: interested,
+            registrationID: registrationID
+        )
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
@@ -56,12 +65,16 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.pipePair.inputFD,
-                              interested: interested.intersection([.read, .reset]),
-                              makeRegistration: self.registrationForInput)
-        try selector.register(selectable: self.pipePair.outputFD,
-                              interested: interested.intersection([.write, .reset]),
-                              makeRegistration: self.registrationForOutput)
+        try selector.register(
+            selectable: self.pipePair.inputFD,
+            interested: interested.intersection([.read, .reset]),
+            makeRegistration: self.registrationForInput
+        )
+        try selector.register(
+            selectable: self.pipePair.outputFD,
+            interested: interested.intersection([.write, .reset]),
+            makeRegistration: self.registrationForOutput
+        )
 
     }
 
@@ -76,12 +89,16 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
 
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         if self.pipePair.inputFD.isOpen {
-            try selector.reregister(selectable: self.pipePair.inputFD,
-                                    interested: interested.intersection([.read, .reset]))
+            try selector.reregister(
+                selectable: self.pipePair.inputFD,
+                interested: interested.intersection([.read, .reset])
+            )
         }
         if self.pipePair.outputFD.isOpen {
-            try selector.reregister(selectable: self.pipePair.outputFD,
-                                    interested: interested.intersection([.write, .reset]))
+            try selector.reregister(
+                selectable: self.pipePair.outputFD,
+                interested: interested.intersection([.write, .reset])
+            )
         }
     }
 
@@ -117,6 +134,7 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
 
 extension PipeChannel: CustomStringConvertible {
     var description: String {
-        return "PipeChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+        return
+            "PipeChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
     }
 }

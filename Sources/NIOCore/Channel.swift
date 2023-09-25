@@ -210,7 +210,6 @@ extension Channel {
     }
 }
 
-
 /// Provides special extension to make writing data to the `Channel` easier by removing the need to wrap data in `NIOAny` manually.
 extension Channel {
 
@@ -234,7 +233,6 @@ extension Channel {
     public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
         return self.writeAndFlush(NIOAny(any))
     }
-
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
@@ -373,7 +371,7 @@ public enum ChannelError: Error {
     case unremovableHandler
 }
 
-extension ChannelError: Equatable { }
+extension ChannelError: Equatable {}
 
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}

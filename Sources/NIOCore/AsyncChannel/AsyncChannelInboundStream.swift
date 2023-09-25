@@ -19,7 +19,10 @@
 @_spi(AsyncChannel)
 public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @usableFromInline
-    typealias Producer = NIOThrowingAsyncSequenceProducer<Inbound, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate>
+    typealias Producer = NIOThrowingAsyncSequenceProducer<
+        Inbound, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark,
+        NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate
+    >
 
     /// A source used for driving a ``NIOAsyncChannelInboundStream`` during tests.
     public struct TestSource {

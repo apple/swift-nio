@@ -17,7 +17,7 @@ import XCTest
 import NIOConcurrencyHelpers
 import Atomics
 
-private class EmbeddedTestError: Error { }
+private class EmbeddedTestError: Error {}
 
 final class NIOAsyncTestingEventLoopTests: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() async throws {
@@ -471,13 +471,13 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         let tasksRun = ManagedAtomic(0)
         let startTime = eventLoop.now
 
-        eventLoop.scheduleTask(in: .nanoseconds(3141592)) {
-            XCTAssertEqual(eventLoop.now, startTime + .nanoseconds(3141592))
+        eventLoop.scheduleTask(in: .nanoseconds(3_141_592)) {
+            XCTAssertEqual(eventLoop.now, startTime + .nanoseconds(3_141_592))
             tasksRun.wrappingIncrement(ordering: .relaxed)
         }
 
-        eventLoop.scheduleTask(in: .seconds(3141592)) {
-            XCTAssertEqual(eventLoop.now, startTime + .seconds(3141592))
+        eventLoop.scheduleTask(in: .seconds(3_141_592)) {
+            XCTAssertEqual(eventLoop.now, startTime + .seconds(3_141_592))
             tasksRun.wrappingIncrement(ordering: .relaxed)
         }
 

@@ -29,7 +29,7 @@ class TimeAmountTests: XCTestCase {
         let amounts: Set<TimeAmount> = [.seconds(1), .milliseconds(4), .seconds(1)]
         XCTAssertEqual(amounts, [.seconds(1), .milliseconds(4)])
     }
-    
+
     func testTimeAmountDoesAddTime() {
         var lhs = TimeAmount.nanoseconds(0)
         let rhs = TimeAmount.nanoseconds(5)

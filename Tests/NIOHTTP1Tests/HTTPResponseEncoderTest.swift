@@ -77,7 +77,11 @@ class HTTPResponseEncoderTests: XCTestCase {
     }
 
     func testNoAutoHeadersWhenDisabled() throws {
-        let writtenData = sendResponse(withStatus: .ok, andHeaders: HTTPHeaders(), configuration: .noFramingTransformation)
+        let writtenData = sendResponse(
+            withStatus: .ok,
+            andHeaders: HTTPHeaders(),
+            configuration: .noFramingTransformation
+        )
         writtenData.assertContainsOnly("HTTP/1.1 200 OK\r\n\r\n")
     }
 
@@ -89,7 +93,11 @@ class HTTPResponseEncoderTests: XCTestCase {
 
     func testAllowContentLengthHeadersWhenForced_for101() throws {
         let headers = HTTPHeaders([("content-length", "0")])
-        let writtenData = sendResponse(withStatus: .switchingProtocols, andHeaders: headers, configuration: .noFramingTransformation)
+        let writtenData = sendResponse(
+            withStatus: .switchingProtocols,
+            andHeaders: headers,
+            configuration: .noFramingTransformation
+        )
         writtenData.assertContainsOnly("HTTP/1.1 101 Switching Protocols\r\ncontent-length: 0\r\n\r\n")
     }
 
@@ -101,8 +109,14 @@ class HTTPResponseEncoderTests: XCTestCase {
 
     func testAllowContentLengthHeadersWhenForced_forCustom1XX() throws {
         let headers = HTTPHeaders([("Link", "</styles.css>; rel=preload; as=style"), ("content-length", "0")])
-        let writtenData = sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers, configuration: .noFramingTransformation)
-        writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\ncontent-length: 0\r\n\r\n")
+        let writtenData = sendResponse(
+            withStatus: .custom(code: 103, reasonPhrase: "Early Hints"),
+            andHeaders: headers,
+            configuration: .noFramingTransformation
+        )
+        writtenData.assertContainsOnly(
+            "HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\ncontent-length: 0\r\n\r\n"
+        )
     }
 
     func testNoContentLengthHeadersFor204() throws {
@@ -113,7 +127,11 @@ class HTTPResponseEncoderTests: XCTestCase {
 
     func testAllowContentLengthHeadersWhenForced_For204() throws {
         let headers = HTTPHeaders([("content-length", "0")])
-        let writtenData = sendResponse(withStatus: .noContent, andHeaders: headers, configuration: .noFramingTransformation)
+        let writtenData = sendResponse(
+            withStatus: .noContent,
+            andHeaders: headers,
+            configuration: .noFramingTransformation
+        )
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n")
     }
 
@@ -125,7 +143,11 @@ class HTTPResponseEncoderTests: XCTestCase {
 
     func testAllowTransferEncodingHeadersWhenForced_for101() throws {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
-        let writtenData = sendResponse(withStatus: .switchingProtocols, andHeaders: headers, configuration: .noFramingTransformation)
+        let writtenData = sendResponse(
+            withStatus: .switchingProtocols,
+            andHeaders: headers,
+            configuration: .noFramingTransformation
+        )
         writtenData.assertContainsOnly("HTTP/1.1 101 Switching Protocols\r\ntransfer-encoding: chunked\r\n\r\n")
     }
 
@@ -137,8 +159,14 @@ class HTTPResponseEncoderTests: XCTestCase {
 
     func testAllowTransferEncodingHeadersWhenForced_forCustom1XX() throws {
         let headers = HTTPHeaders([("Link", "</styles.css>; rel=preload; as=style"), ("transfer-encoding", "chunked")])
-        let writtenData = sendResponse(withStatus: .custom(code: 103, reasonPhrase: "Early Hints"), andHeaders: headers, configuration: .noFramingTransformation)
-        writtenData.assertContainsOnly("HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\ntransfer-encoding: chunked\r\n\r\n")
+        let writtenData = sendResponse(
+            withStatus: .custom(code: 103, reasonPhrase: "Early Hints"),
+            andHeaders: headers,
+            configuration: .noFramingTransformation
+        )
+        writtenData.assertContainsOnly(
+            "HTTP/1.1 103 Early Hints\r\nLink: </styles.css>; rel=preload; as=style\r\ntransfer-encoding: chunked\r\n\r\n"
+        )
     }
 
     func testNoTransferEncodingHeadersFor204() throws {
@@ -149,7 +177,11 @@ class HTTPResponseEncoderTests: XCTestCase {
 
     func testAllowTransferEncodingHeadersWhenForced_for204() throws {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
-        let writtenData = sendResponse(withStatus: .noContent, andHeaders: headers, configuration: .noFramingTransformation)
+        let writtenData = sendResponse(
+            withStatus: .noContent,
+            andHeaders: headers,
+            configuration: .noFramingTransformation
+        )
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\ntransfer-encoding: chunked\r\n\r\n")
     }
 
@@ -178,7 +210,9 @@ class HTTPResponseEncoderTests: XCTestCase {
             XCTAssertNoThrow(try channel.finish())
         }
 
-        XCTAssertNoThrow(try channel.pipeline.configureHTTPServerPipeline(withEncoderConfiguration: .noFramingTransformation).wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.configureHTTPServerPipeline(withEncoderConfiguration: .noFramingTransformation).wait()
+        )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
 
@@ -199,7 +233,11 @@ class HTTPResponseEncoderTests: XCTestCase {
             XCTAssertNoThrow(try channel.finish())
         }
 
-        XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(withEncoderConfiguration: .noFramingTransformation))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
+                withEncoderConfiguration: .noFramingTransformation
+            )
+        )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
 
@@ -220,7 +258,11 @@ class HTTPResponseEncoderTests: XCTestCase {
             XCTAssertNoThrow(try channel.finish())
         }
 
-        XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(withEncoderConfiguration: .noFramingTransformation))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
+                withEncoderConfiguration: .noFramingTransformation
+            )
+        )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
 
@@ -256,7 +298,11 @@ class HTTPResponseEncoderTests: XCTestCase {
             XCTAssertNoThrow(try channel.finish())
         }
 
-        XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(withEncoderConfiguration: .noFramingTransformation))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline(
+                withEncoderConfiguration: .noFramingTransformation
+            )
+        )
         let request = ByteBuffer(string: "GET / HTTP/1.1\r\n\r\n")
         XCTAssertNoThrow(try channel.writeInbound(request))
 

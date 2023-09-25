@@ -58,11 +58,15 @@ extension UDPBenchmark: Benchmark {
             // zero is the same as not applying the option.
             .channelOption(ChannelOptions.datagramVectorReadMessageCount, value: self.vectorReads)
             .channelInitializer { channel in
-                let handler = EchoHandlerClient(eventLoop: channel.eventLoop,
-                                                config: .init(remoteAddress: remoteAddress,
-                                                              request: self.data,
-                                                              requests: self.numberOfRequests,
-                                                              writesPerFlush: self.vectorWrites))
+                let handler = EchoHandlerClient(
+                    eventLoop: channel.eventLoop,
+                    config: .init(
+                        remoteAddress: remoteAddress,
+                        request: self.data,
+                        requests: self.numberOfRequests,
+                        writesPerFlush: self.vectorWrites
+                    )
+                )
                 return channel.pipeline.addHandler(handler)
             }
             .bind(to: address)
@@ -81,7 +85,6 @@ extension UDPBenchmark: Benchmark {
         return self.vectorReads &+ self.vectorWrites
     }
 }
-
 
 extension UDPBenchmark {
     final class EchoHandler: ChannelInboundHandler {
@@ -164,13 +167,12 @@ extension UDPBenchmark {
                 switch self.state {
                 case .running(var running):
                     running.responsesToRecieve &-= 1
-                    if running.responsesToRecieve == 0, running.requestsToSend == 0 {
-                        self.state = .stopped
-                        return .finished(running.promise)
-                    } else {
+                    guard running.responsesToRecieve == 0, running.requestsToSend == 0 else {
                         self.state = .running(running)
                         return .write
                     }
+                    self.state = .stopped
+                    return .finished(running.promise)
 
                 case .stopped:
                     fatalError("Received too many messages")
@@ -241,7 +243,7 @@ extension UDPBenchmark {
             self.state.run(requests: self.config.requests, writesPerFlush: self.config.writesPerFlush, promise: promise)
             let context = self.context!
 
-            for _ in 0 ..< self.config.writesPerFlush {
+            for _ in 0..<self.config.writesPerFlush {
                 self.maybeSend(context: context)
             }
         }
@@ -251,7 +253,10 @@ extension UDPBenchmark {
             case .doNothing:
                 ()
             case let .write(flush):
-                let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: self.config.remoteAddress, data: self.config.request)
+                let envolope = AddressedEnvelope<ByteBuffer>(
+                    remoteAddress: self.config.remoteAddress,
+                    data: self.config.request
+                )
                 context.write(self.wrapOutboundOut(envolope), promise: nil)
                 if flush {
                     context.flush()

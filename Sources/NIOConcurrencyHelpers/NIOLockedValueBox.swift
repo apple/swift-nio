@@ -22,7 +22,7 @@
 /// acquire/release the lock in the correct place. ``NIOLockedValueBox`` makes
 /// that much easier.
 public struct NIOLockedValueBox<Value> {
-    
+
     @usableFromInline
     internal let _storage: LockStorage<Value>
 

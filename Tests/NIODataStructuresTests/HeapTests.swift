@@ -76,7 +76,7 @@ class HeapTests: XCTestCase {
             XCTAssertEqual(Array(minHeap.sorted()), Array(minHeap))
         }
 
-        for _ in 0..<N/2 {
+        for _ in 0..<N / 2 {
             let value = minHeap.removeRoot()!
             XCTAssertGreaterThanOrEqual(value, minHeapLast)
             minHeapLast = value
@@ -93,7 +93,7 @@ class HeapTests: XCTestCase {
             XCTAssertTrue(minHeap.checkHeapProperty(), minHeap.debugDescription)
         }
 
-        for _ in 0..<N/2+N {
+        for _ in 0..<N / 2 + N {
             let value = minHeap.removeRoot()!
             XCTAssertGreaterThanOrEqual(value, minHeapLast)
             minHeapLast = value
@@ -119,9 +119,7 @@ extension Heap {
         func checkHeapProperty(index: Int) -> Bool {
             let li = self.leftIndex(index)
             let ri = self.rightIndex(index)
-            if index >= self.storage.count {
-                return true
-            } else {
+            guard index >= self.storage.count else {
                 let me = self.storage[index]
                 var lCond = true
                 var rCond = true
@@ -135,6 +133,7 @@ extension Heap {
                 }
                 return lCond && rCond && checkHeapProperty(index: li) && checkHeapProperty(index: ri)
             }
+            return true
         }
         return checkHeapProperty(index: 0)
     }

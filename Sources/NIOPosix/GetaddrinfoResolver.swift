@@ -47,7 +47,6 @@ import struct WinSDK.SOCKADDR_IN6
 // A thread-specific variable where we store the offload queue if we're on an `SelectableEventLoop`.
 let offloadQueueTSV = ThreadSpecificVariable<DispatchQueue>()
 
-
 internal class GetaddrinfoResolver: Resolver {
     private let v4Future: EventLoopPromise<[SocketAddress]>
     private let v6Future: EventLoopPromise<[SocketAddress]>
@@ -60,8 +59,11 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - loop: The `EventLoop` whose thread this resolver will block.
     ///     - aiSocktype: The sock type to use as hint when calling getaddrinfo.
     ///     - aiProtocol: the protocol to use as hint when calling getaddrinfo.
-    init(loop: EventLoop, aiSocktype: NIOBSDSocket.SocketType,
-         aiProtocol: NIOBSDSocket.OptionLevel) {
+    init(
+        loop: EventLoop,
+        aiSocktype: NIOBSDSocket.SocketType,
+        aiProtocol: NIOBSDSocket.OptionLevel
+    ) {
         self.v4Future = loop.makePromise()
         self.v6Future = loop.makePromise()
         self.aiSocktype = aiSocktype
@@ -102,14 +104,13 @@ internal class GetaddrinfoResolver: Resolver {
         if let offloadQueue = offloadQueueTSV.currentValue {
             return offloadQueue
         } else {
-            if MultiThreadedEventLoopGroup.currentEventLoop != nil {
-                // Okay, we're on an SelectableEL thread. Let's stuff our queue into the thread local.
-                let offloadQueue = DispatchQueue(label: "io.swiftnio.GetaddrinfoResolver.offloadQueue")
-                offloadQueueTSV.currentValue = offloadQueue
-                return offloadQueue
-            } else {
+            guard MultiThreadedEventLoopGroup.currentEventLoop != nil else {
                 return DispatchQueue.global()
             }
+            // Okay, we're on an SelectableEL thread. Let's stuff our queue into the thread local.
+            let offloadQueue = DispatchQueue(label: "io.swiftnio.GetaddrinfoResolver.offloadQueue")
+            offloadQueueTSV.currentValue = offloadQueue
+            return offloadQueue
         }
     }
 
@@ -120,7 +121,7 @@ internal class GetaddrinfoResolver: Resolver {
     /// clean up their state.
     ///
     /// In the getaddrinfo case this is a no-op, as the resolver blocks.
-    func cancelQueries() { }
+    func cancelQueries() {}
 
     /// Perform the DNS queries and record the result.
     ///
@@ -128,7 +129,7 @@ internal class GetaddrinfoResolver: Resolver {
     ///     - host: The hostname to do the DNS queries on.
     ///     - port: The port we'll be connecting to.
     private func resolveBlocking(host: String, port: Int) {
-#if os(Windows)
+        #if os(Windows)
         host.withCString(encodedAs: UTF16.self) { wszHost in
             String(port).withCString(encodedAs: UTF16.self) { wszPort in
                 var pResult: UnsafeMutablePointer<ADDRINFOW>?
@@ -151,7 +152,7 @@ internal class GetaddrinfoResolver: Resolver {
                 }
             }
         }
-#else
+        #else
         var info: UnsafeMutablePointer<addrinfo>?
 
         var hint = addrinfo()
@@ -169,7 +170,7 @@ internal class GetaddrinfoResolver: Resolver {
             /* this is odd, getaddrinfo returned NULL */
             self.fail(SocketAddressError.unsupported)
         }
-#endif
+        #endif
     }
 
     /// Parses the DNS results from the `addrinfo` linked list.
@@ -177,11 +178,11 @@ internal class GetaddrinfoResolver: Resolver {
     /// - parameters:
     ///     - info: The pointer to the first of the `addrinfo` structures in the list.
     ///     - host: The hostname we resolved.
-#if os(Windows)
+    #if os(Windows)
     internal typealias CAddrInfo = ADDRINFOW
-#else
+    #else
     internal typealias CAddrInfo = addrinfo
-#endif
+    #endif
 
     private func parseAndPublishResults(_ info: UnsafeMutablePointer<CAddrInfo>, host: String) {
         var v4Results: [SocketAddress] = []

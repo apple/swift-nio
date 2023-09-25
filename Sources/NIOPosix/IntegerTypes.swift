@@ -48,10 +48,9 @@ extension Int {
     }
 }
 
-
 extension _UInt24: Equatable {
     @inlinable
-    public static func ==(lhs: _UInt24, rhs: _UInt24) -> Bool {
+    public static func == (lhs: _UInt24, rhs: _UInt24) -> Bool {
         return lhs._backing == rhs._backing
     }
 }
@@ -75,7 +74,7 @@ struct _UInt56 {
 
     static let bitWidth: Int = 56
 
-    private static let initializeUInt64 : UInt64 = (1 << 56) - 1
+    private static let initializeUInt64: UInt64 = (1 << 56) - 1
     static let max: _UInt56 = .init(initializeUInt64)
     static let min: _UInt56 = .init(0)
 }
@@ -88,9 +87,11 @@ extension _UInt56 {
 
 extension UInt64 {
     init(_ value: _UInt56) {
-        self = IntegerBitPacking.packUInt32UInt16UInt8(value._backing.0,
-                                                       value._backing.1,
-                                                       value._backing.2)
+        self = IntegerBitPacking.packUInt32UInt16UInt8(
+            value._backing.0,
+            value._backing.1,
+            value._backing.2
+        )
     }
 }
 
@@ -102,7 +103,7 @@ extension Int {
 
 extension _UInt56: Equatable {
     @inlinable
-    public static func ==(lhs: _UInt56, rhs: _UInt56) -> Bool {
+    public static func == (lhs: _UInt56, rhs: _UInt56) -> Bool {
         return lhs._backing == rhs._backing
     }
 }

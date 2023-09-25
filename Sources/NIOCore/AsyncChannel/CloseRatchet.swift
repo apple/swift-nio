@@ -46,11 +46,10 @@ final class CloseRatchet {
             case .notClosed(let isOutboundHalfClosureEnabled):
                 self = .writeClosed
 
-                if isOutboundHalfClosureEnabled {
-                    return .closeOutput
-                } else {
+                guard isOutboundHalfClosureEnabled else {
                     return .nothing
                 }
+                return .closeOutput
             case .readClosed:
                 self = .bothClosed
                 return .close

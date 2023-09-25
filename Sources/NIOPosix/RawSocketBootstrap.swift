@@ -51,8 +51,10 @@ public final class NIORawSocketBootstrap {
     ///     - group: The `EventLoopGroup` to use.
     public convenience init(group: EventLoopGroup) {
         guard NIOOnSocketsBootstraps.isCompatible(group: group) else {
-            preconditionFailure("RawSocketBootstrap is only compatible with MultiThreadedEventLoopGroup and " +
-                                "SelectableEventLoop. You tried constructing one with \(group) which is incompatible.")
+            preconditionFailure(
+                "RawSocketBootstrap is only compatible with MultiThreadedEventLoopGroup and "
+                    + "SelectableEventLoop. You tried constructing one with \(group) which is incompatible."
+            )
         }
         self.init(validatingGroup: group)!
     }
@@ -69,7 +71,7 @@ public final class NIORawSocketBootstrap {
         self.group = group
         self.channelInitializer = nil
     }
-    
+
     /// Initialize the bound `Channel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
@@ -103,7 +105,10 @@ public final class NIORawSocketBootstrap {
         }
     }
 
-    private func bind0(ipProtocol: NIOIPProtocol, _ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
+    private func bind0(
+        ipProtocol: NIOIPProtocol,
+        _ makeSocketAddress: () throws -> SocketAddress
+    ) -> EventLoopFuture<Channel> {
         let address: SocketAddress
         do {
             address = try makeSocketAddress()
@@ -112,10 +117,12 @@ public final class NIORawSocketBootstrap {
         }
         precondition(address.port == nil || address.port == 0, "port must be 0 or not set")
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
-            return try DatagramChannel(eventLoop: eventLoop,
-                                       protocolFamily: address.protocol,
-                                       protocolSubtype: .init(ipProtocol),
-                                       socketType: .raw)
+            return try DatagramChannel(
+                eventLoop: eventLoop,
+                protocolFamily: address.protocol,
+                protocolSubtype: .init(ipProtocol),
+                socketType: .raw
+            )
         }
         return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             channel.register().flatMap {
@@ -135,7 +142,10 @@ public final class NIORawSocketBootstrap {
         }
     }
 
-    private func connect0(ipProtocol: NIOIPProtocol, _ makeSocketAddress: () throws -> SocketAddress) -> EventLoopFuture<Channel> {
+    private func connect0(
+        ipProtocol: NIOIPProtocol,
+        _ makeSocketAddress: () throws -> SocketAddress
+    ) -> EventLoopFuture<Channel> {
         let address: SocketAddress
         do {
             address = try makeSocketAddress()
@@ -143,10 +153,12 @@ public final class NIORawSocketBootstrap {
             return group.next().makeFailedFuture(error)
         }
         func makeChannel(_ eventLoop: SelectableEventLoop) throws -> DatagramChannel {
-            return try DatagramChannel(eventLoop: eventLoop,
-                                       protocolFamily: address.protocol,
-                                       protocolSubtype: .init(ipProtocol),
-                                       socketType: .raw)
+            return try DatagramChannel(
+                eventLoop: eventLoop,
+                protocolFamily: address.protocol,
+                protocolSubtype: .init(ipProtocol),
+                socketType: .raw
+            )
         }
         return withNewChannel(makeChannel: makeChannel) { (eventLoop, channel) in
             channel.register().flatMap {
@@ -155,7 +167,10 @@ public final class NIORawSocketBootstrap {
         }
     }
 
-    private func withNewChannel(makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel, _ bringup: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>) -> EventLoopFuture<Channel> {
+    private func withNewChannel(
+        makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
+        _ bringup: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>
+    ) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
         let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
         let channelOptions = self._channelOptions
@@ -181,13 +196,12 @@ public final class NIORawSocketBootstrap {
             }
         }
 
-        if eventLoop.inEventLoop {
-            return setupChannel()
-        } else {
+        guard eventLoop.inEventLoop else {
             return eventLoop.flatSubmit {
                 setupChannel()
             }
         }
+        return setupChannel()
     }
 }
 
@@ -217,7 +231,7 @@ extension NIORawSocketBootstrap {
             postRegisterTransformation: { $1.makeSucceededFuture($0) }
         )
     }
-    
+
     /// Connect the `Channel` to `host`.
     ///
     /// - Parameters:
@@ -246,7 +260,9 @@ extension NIORawSocketBootstrap {
         host: String,
         ipProtocol: NIOIPProtocol,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+            PostRegistrationTransformationResult
+        >
     ) async throws -> PostRegistrationTransformationResult {
         let address = try SocketAddress.makeAddressResolvingHost(host, port: 0)
 
@@ -276,7 +292,9 @@ extension NIORawSocketBootstrap {
         host: String,
         ipProtocol: NIOIPProtocol,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+            PostRegistrationTransformationResult
+        >
     ) async throws -> PostRegistrationTransformationResult {
         let address = try SocketAddress.makeAddressResolvingHost(host, port: 0)
 
@@ -307,7 +325,9 @@ extension NIORawSocketBootstrap {
         makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
-        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+            PostRegistrationTransformationResult
+        >
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let eventLoop = self.group.next()
         let channelInitializer = { (channel: Channel) -> EventLoopFuture<ChannelInitializerResult> in
@@ -341,13 +361,12 @@ extension NIORawSocketBootstrap {
             }
         }
 
-        if eventLoop.inEventLoop {
-            return setupChannel()
-        } else {
+        guard eventLoop.inEventLoop else {
             return eventLoop.flatSubmit {
                 setupChannel()
             }
         }
+        return setupChannel()
     }
 }
 

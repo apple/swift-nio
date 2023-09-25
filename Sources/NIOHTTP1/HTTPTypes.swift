@@ -112,11 +112,12 @@ public struct HTTPRequestHead: Equatable {
         self.init(version: version, method: method, uri: uri, headers: HTTPHeaders())
     }
 
-    public static func ==(lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
-        return lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version && lhs.headers == rhs.headers
+    public static func == (lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
+        return lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version
+            && lhs.headers == rhs.headers
     }
 
-    private mutating func copyStorageIfNotUniquelyReferenced () {
+    private mutating func copyStorageIfNotUniquelyReferenced() {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.copy()
         }
@@ -221,11 +222,11 @@ public struct HTTPResponseHead: Equatable {
         self._storage = _Storage(status: status, version: version)
     }
 
-    public static func ==(lhs: HTTPResponseHead, rhs: HTTPResponseHead) -> Bool {
+    public static func == (lhs: HTTPResponseHead, rhs: HTTPResponseHead) -> Bool {
         return lhs.status == rhs.status && lhs.version == rhs.version && lhs.headers == rhs.headers
     }
 
-    private mutating func copyStorageIfNotUniquelyReferenced () {
+    private mutating func copyStorageIfNotUniquelyReferenced() {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.copy()
         }
@@ -560,11 +561,11 @@ extension UTF8.CodeUnit {
     var isASCIIWhitespace: Bool {
         switch self {
         case UInt8(ascii: " "),
-             UInt8(ascii: "\t"):
-          return true
+            UInt8(ascii: "\t"):
+            return true
 
         default:
-          return false
+            return false
         }
     }
 }
@@ -578,8 +579,8 @@ extension String {
 extension Substring {
     fileprivate func trimWhitespace() -> Substring {
         guard let firstNonWhitespace = self.utf8.firstIndex(where: { !$0.isASCIIWhitespace }) else {
-          // The whole substring is ASCII whitespace.
-          return Substring()
+            // The whole substring is ASCII whitespace.
+            return Substring()
         }
 
         // There must be at least one non-ascii whitespace character, so banging here is safe.
@@ -589,7 +590,7 @@ extension Substring {
 }
 
 extension HTTPHeaders: Equatable {
-    public static func ==(lhs: HTTPHeaders, rhs: HTTPHeaders) -> Bool {
+    public static func == (lhs: HTTPHeaders, rhs: HTTPHeaders) -> Bool {
         guard lhs.headers.count == rhs.headers.count else {
             return false
         }
@@ -741,7 +742,7 @@ extension HTTPParserError: CustomDebugStringConvertible {
         case .invalidHost:
             return "invalid host"
         case .invalidPort:
-            return  "invalid port"
+            return "invalid port"
         case .invalidPath:
             return "invalid path"
         case .invalidQueryString:
@@ -1156,10 +1157,10 @@ public enum HTTPResponseStatus: Sendable {
     public var mayHaveResponseBody: Bool {
         switch self {
         case .`continue`,
-             .switchingProtocols,
-             .processing,
-             .noContent,
-             .custom where (code < 200) && (code >= 100):
+            .switchingProtocols,
+            .processing,
+            .noContent,
+            .custom where (code < 200) && (code >= 100):
             return false
         default:
             return true
@@ -1305,7 +1306,8 @@ extension HTTPResponseStatus: Hashable {}
 
 extension HTTPRequestHead: CustomStringConvertible {
     public var description: String {
-        return "HTTPRequestHead { method: \(self.method), uri: \"\(self.uri)\", version: \(self.version), headers: \(self.headers) }"
+        return
+            "HTTPRequestHead { method: \(self.method), uri: \"\(self.uri)\", version: \(self.version), headers: \(self.headers) }"
     }
 }
 
@@ -1330,151 +1332,151 @@ extension HTTPVersion: CustomStringConvertible {
 extension HTTPMethod: RawRepresentable {
     public var rawValue: String {
         switch self {
-            case .GET:
-                return "GET"
-            case .PUT:
-                return "PUT"
-            case .ACL:
-                return "ACL"
-            case .HEAD:
-                return "HEAD"
-            case .POST:
-                return "POST"
-            case .COPY:
-                return "COPY"
-            case .LOCK:
-                return "LOCK"
-            case .MOVE:
-                return "MOVE"
-            case .BIND:
-                return "BIND"
-            case .LINK:
-                return "LINK"
-            case .PATCH:
-                return "PATCH"
-            case .TRACE:
-                return "TRACE"
-            case .MKCOL:
-                return "MKCOL"
-            case .MERGE:
-                return "MERGE"
-            case .PURGE:
-                return "PURGE"
-            case .NOTIFY:
-                return "NOTIFY"
-            case .SEARCH:
-                return "SEARCH"
-            case .UNLOCK:
-                return "UNLOCK"
-            case .REBIND:
-                return "REBIND"
-            case .UNBIND:
-                return "UNBIND"
-            case .REPORT:
-                return "REPORT"
-            case .DELETE:
-                return "DELETE"
-            case .UNLINK:
-                return "UNLINK"
-            case .CONNECT:
-                return "CONNECT"
-            case .MSEARCH:
-                return "MSEARCH"
-            case .OPTIONS:
-                return "OPTIONS"
-            case .PROPFIND:
-                return "PROPFIND"
-            case .CHECKOUT:
-                return "CHECKOUT"
-            case .PROPPATCH:
-                return "PROPPATCH"
-            case .SUBSCRIBE:
-                return "SUBSCRIBE"
-            case .MKCALENDAR:
-                return "MKCALENDAR"
-            case .MKACTIVITY:
-                return "MKACTIVITY"
-            case .UNSUBSCRIBE:
-                return "UNSUBSCRIBE"
-            case .SOURCE:
-                return "SOURCE"
-            case let .RAW(value):
-                return value
+        case .GET:
+            return "GET"
+        case .PUT:
+            return "PUT"
+        case .ACL:
+            return "ACL"
+        case .HEAD:
+            return "HEAD"
+        case .POST:
+            return "POST"
+        case .COPY:
+            return "COPY"
+        case .LOCK:
+            return "LOCK"
+        case .MOVE:
+            return "MOVE"
+        case .BIND:
+            return "BIND"
+        case .LINK:
+            return "LINK"
+        case .PATCH:
+            return "PATCH"
+        case .TRACE:
+            return "TRACE"
+        case .MKCOL:
+            return "MKCOL"
+        case .MERGE:
+            return "MERGE"
+        case .PURGE:
+            return "PURGE"
+        case .NOTIFY:
+            return "NOTIFY"
+        case .SEARCH:
+            return "SEARCH"
+        case .UNLOCK:
+            return "UNLOCK"
+        case .REBIND:
+            return "REBIND"
+        case .UNBIND:
+            return "UNBIND"
+        case .REPORT:
+            return "REPORT"
+        case .DELETE:
+            return "DELETE"
+        case .UNLINK:
+            return "UNLINK"
+        case .CONNECT:
+            return "CONNECT"
+        case .MSEARCH:
+            return "MSEARCH"
+        case .OPTIONS:
+            return "OPTIONS"
+        case .PROPFIND:
+            return "PROPFIND"
+        case .CHECKOUT:
+            return "CHECKOUT"
+        case .PROPPATCH:
+            return "PROPPATCH"
+        case .SUBSCRIBE:
+            return "SUBSCRIBE"
+        case .MKCALENDAR:
+            return "MKCALENDAR"
+        case .MKACTIVITY:
+            return "MKACTIVITY"
+        case .UNSUBSCRIBE:
+            return "UNSUBSCRIBE"
+        case .SOURCE:
+            return "SOURCE"
+        case let .RAW(value):
+            return value
         }
     }
 
     public init(rawValue: String) {
         switch rawValue {
-            case "GET":
-                self = .GET
-            case "PUT":
-                self = .PUT
-            case "ACL":
-                self = .ACL
-            case "HEAD":
-                self = .HEAD
-            case "POST":
-                self = .POST
-            case "COPY":
-                self = .COPY
-            case "LOCK":
-                self = .LOCK
-            case "MOVE":
-                self = .MOVE
-            case "BIND":
-                self = .BIND
-            case "LINK":
-                self = .LINK
-            case "PATCH":
-                self = .PATCH
-            case "TRACE":
-                self = .TRACE
-            case "MKCOL":
-                self = .MKCOL
-            case "MERGE":
-                self = .MERGE
-            case "PURGE":
-                self = .PURGE
-            case "NOTIFY":
-                self = .NOTIFY
-            case "SEARCH":
-                self = .SEARCH
-            case "UNLOCK":
-                self = .UNLOCK
-            case "REBIND":
-                self = .REBIND
-            case "UNBIND":
-                self = .UNBIND
-            case "REPORT":
-                self = .REPORT
-            case "DELETE":
-                self = .DELETE
-            case "UNLINK":
-                self = .UNLINK
-            case "CONNECT":
-                self = .CONNECT
-            case "MSEARCH":
-                self = .MSEARCH
-            case "OPTIONS":
-                self = .OPTIONS
-            case "PROPFIND":
-                self = .PROPFIND
-            case "CHECKOUT":
-                self = .CHECKOUT
-            case "PROPPATCH":
-                self = .PROPPATCH
-            case "SUBSCRIBE":
-                self = .SUBSCRIBE
-            case "MKCALENDAR":
-                self = .MKCALENDAR
-            case "MKACTIVITY":
-                self = .MKACTIVITY
-            case "UNSUBSCRIBE":
-                self = .UNSUBSCRIBE
-            case "SOURCE":
-                self = .SOURCE
-            default:
-                self = .RAW(value: rawValue)
+        case "GET":
+            self = .GET
+        case "PUT":
+            self = .PUT
+        case "ACL":
+            self = .ACL
+        case "HEAD":
+            self = .HEAD
+        case "POST":
+            self = .POST
+        case "COPY":
+            self = .COPY
+        case "LOCK":
+            self = .LOCK
+        case "MOVE":
+            self = .MOVE
+        case "BIND":
+            self = .BIND
+        case "LINK":
+            self = .LINK
+        case "PATCH":
+            self = .PATCH
+        case "TRACE":
+            self = .TRACE
+        case "MKCOL":
+            self = .MKCOL
+        case "MERGE":
+            self = .MERGE
+        case "PURGE":
+            self = .PURGE
+        case "NOTIFY":
+            self = .NOTIFY
+        case "SEARCH":
+            self = .SEARCH
+        case "UNLOCK":
+            self = .UNLOCK
+        case "REBIND":
+            self = .REBIND
+        case "UNBIND":
+            self = .UNBIND
+        case "REPORT":
+            self = .REPORT
+        case "DELETE":
+            self = .DELETE
+        case "UNLINK":
+            self = .UNLINK
+        case "CONNECT":
+            self = .CONNECT
+        case "MSEARCH":
+            self = .MSEARCH
+        case "OPTIONS":
+            self = .OPTIONS
+        case "PROPFIND":
+            self = .PROPFIND
+        case "CHECKOUT":
+            self = .CHECKOUT
+        case "PROPPATCH":
+            self = .PROPPATCH
+        case "SUBSCRIBE":
+            self = .SUBSCRIBE
+        case "MKCALENDAR":
+            self = .MKCALENDAR
+        case "MKACTIVITY":
+            self = .MKACTIVITY
+        case "UNSUBSCRIBE":
+            self = .UNSUBSCRIBE
+        case "SOURCE":
+            self = .SOURCE
+        default:
+            self = .RAW(value: rawValue)
         }
     }
 }

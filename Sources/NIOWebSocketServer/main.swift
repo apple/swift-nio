@@ -17,28 +17,28 @@ import NIOHTTP1
 import NIOWebSocket
 
 let websocketResponse = """
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Swift NIO WebSocket Test Page</title>
-    <script>
-        var wsconnection = new WebSocket("ws://localhost:8888/websocket");
-        wsconnection.onmessage = function (msg) {
-            var element = document.createElement("p");
-            element.innerHTML = msg.data;
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Swift NIO WebSocket Test Page</title>
+        <script>
+            var wsconnection = new WebSocket("ws://localhost:8888/websocket");
+            wsconnection.onmessage = function (msg) {
+                var element = document.createElement("p");
+                element.innerHTML = msg.data;
 
-            var textDiv = document.getElementById("websocket-stream");
-            textDiv.insertBefore(element, null);
-        };
-    </script>
-  </head>
-  <body>
-    <h1>WebSocket Stream</h1>
-    <div id="websocket-stream"></div>
-  </body>
-</html>
-"""
+                var textDiv = document.getElementById("websocket-stream");
+                textDiv.insertBefore(element, null);
+            };
+        </script>
+      </head>
+      <body>
+        <h1>WebSocket Stream</h1>
+        <div id="websocket-stream"></div>
+      </body>
+    </html>
+    """
 
 private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = HTTPServerRequestPart
@@ -73,9 +73,11 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
         headers.add(name: "Content-Type", value: "text/html")
         headers.add(name: "Content-Length", value: String(self.responseBody.readableBytes))
         headers.add(name: "Connection", value: "close")
-        let responseHead = HTTPResponseHead(version: .init(major: 1, minor: 1),
-                                    status: .ok,
-                                    headers: headers)
+        let responseHead = HTTPResponseHead(
+            version: .init(major: 1, minor: 1),
+            status: .ok,
+            headers: headers
+        )
         context.write(self.wrapOutboundOut(.head(responseHead)), promise: nil)
         context.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody))), promise: nil)
         context.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
@@ -88,9 +90,11 @@ private final class HTTPHandler: ChannelInboundHandler, RemovableChannelHandler 
         var headers = HTTPHeaders()
         headers.add(name: "Connection", value: "close")
         headers.add(name: "Content-Length", value: "0")
-        let head = HTTPResponseHead(version: .http1_1,
-                                    status: .methodNotAllowed,
-                                    headers: headers)
+        let head = HTTPResponseHead(
+            version: .http1_1,
+            status: .methodNotAllowed,
+            headers: headers
+        )
         context.write(self.wrapOutboundOut(.head(head)), promise: nil)
         context.write(self.wrapOutboundOut(.end(nil))).whenComplete { (_: Result<Void, Error>) in
             context.close(promise: nil)
@@ -200,10 +204,13 @@ private final class WebSocketTimeHandler: ChannelInboundHandler {
 
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
-let upgrader = NIOWebSocketServerUpgrader(shouldUpgrade: { (channel: Channel, head: HTTPRequestHead) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
-                                 upgradePipelineHandler: { (channel: Channel, _: HTTPRequestHead) in
-                                    channel.pipeline.addHandler(WebSocketTimeHandler())
-                                 })
+let upgrader = NIOWebSocketServerUpgrader(
+    shouldUpgrade: { (channel: Channel, head: HTTPRequestHead) in channel.eventLoop.makeSucceededFuture(HTTPHeaders())
+    },
+    upgradePipelineHandler: { (channel: Channel, _: HTTPRequestHead) in
+        channel.pipeline.addHandler(WebSocketTimeHandler())
+    }
+)
 
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
@@ -214,11 +221,11 @@ let bootstrap = ServerBootstrap(group: group)
     .childChannelInitializer { channel in
         let httpHandler = HTTPHandler()
         let config: NIOHTTPServerUpgradeConfiguration = (
-                        upgraders: [ upgrader ],
-                        completionHandler: { _ in
-                            channel.pipeline.removeHandler(httpHandler, promise: nil)
-                        }
-                    )
+            upgraders: [upgrader],
+            completionHandler: { _ in
+                channel.pipeline.removeHandler(httpHandler, promise: nil)
+            }
+        )
         return channel.pipeline.configureHTTPServerPipeline(withServerUpgrade: config).flatMap {
             channel.pipeline.addHandler(httpHandler)
         }
@@ -246,7 +253,7 @@ enum BindTo {
 
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
+case (.some(let h), _, .some(let p)):
     /* we got two arguments, let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)
 
@@ -272,7 +279,9 @@ let channel = try { () -> Channel in
 }()
 
 guard let localAddress = channel.localAddress else {
-    fatalError("Address was unable to bind. Please check that the socket was not closed or that the address family was understood.")
+    fatalError(
+        "Address was unable to bind. Please check that the socket was not closed or that the address family was understood."
+    )
 }
 print("Server started and listening on \(localAddress)")
 
