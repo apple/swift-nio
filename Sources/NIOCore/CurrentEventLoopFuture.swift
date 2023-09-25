@@ -103,4 +103,34 @@ extension CurrentEventLoopFuture {
     }
 }
 
+extension CurrentEventLoopFuture {
+    @inlinable public func flatMap<NewValue>(
+        _ callback: @escaping (Value) -> CurrentEventLoopFuture<NewValue>
+    ) -> CurrentEventLoopFuture<NewValue> {
+        self.flatMap({ callback($0).wrapped })
+    }
+}
+
+import Dispatch
+
+extension DispatchQueue {
+    @inlinable
+    public func asyncWithFuture<NewValue>(
+        eventLoop: CurrentEventLoop,
+        _ callbackMayBlock: @escaping () throws -> NewValue
+    ) -> CurrentEventLoopFuture<NewValue> {
+        let promise = eventLoop.makePromise(of: NewValue.self)
+
+        self.async {
+            do {
+                let result = try callbackMayBlock()
+                promise.succeed(result)
+            } catch {
+                promise.fail(error)
+            }
+        }
+        return promise.futureResult
+    }
+}
+
 // static methods missing: fold, reduce, andAllSucceed, whenAllSucceed, andAllComplete
