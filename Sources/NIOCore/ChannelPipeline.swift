@@ -946,9 +946,7 @@ public final class ChannelPipeline: ChannelInvoker {
     }
 }
 
-#if swift(>=5.7)
 extension ChannelPipeline: @unchecked Sendable {}
-#endif
 
 extension ChannelPipeline {
     /// Adds the provided channel handlers to the pipeline in the order given, taking account
@@ -1274,10 +1272,8 @@ extension ChannelPipeline {
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension ChannelPipeline.SynchronousOperations: Sendable {}
-#endif
 
 extension ChannelPipeline {
     /// A `Position` within the `ChannelPipeline` used to insert handlers into the `ChannelPipeline`.
@@ -1296,10 +1292,8 @@ extension ChannelPipeline {
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension ChannelPipeline.Position: Sendable {}
-#endif
 
 /// Special `ChannelHandler` that forwards all events to the `Channel.Unsafe` implementation.
 /* private but tests */ final class HeadChannelHandler: _ChannelOutboundHandler {
@@ -1853,10 +1847,8 @@ public final class ChannelHandlerContext: ChannelInvoker {
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension ChannelHandlerContext: Sendable {}
-#endif
 
 extension ChannelHandlerContext {
     /// A `RemovalToken` is handed to a `RemovableChannelHandler` when its `removeHandler` function is invoked. A

@@ -163,11 +163,5 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     }
 }
 
-#if swift(>=5.7)
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncChannelOutboundWriter.TestSink: Sendable {}
-#else
-// AsyncStream wasn't marked as `Sendable` in 5.6
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension NIOAsyncChannelOutboundWriter.TestSink: @unchecked Sendable {}
-#endif

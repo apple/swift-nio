@@ -53,12 +53,8 @@ typealias ThreadInitializer = (NIOThread) -> Void
 ///            test. A good place to start a `MultiThreadedEventLoopGroup` is the `setUp` method of your `XCTestCase`
 ///            subclass, a good place to shut it down is the `tearDown` method.
 public final class MultiThreadedEventLoopGroup: EventLoopGroup {
-    #if swift(>=5.7)
     private typealias ShutdownGracefullyCallback = @Sendable (Error?) -> Void
-    #else
-    private typealias ShutdownGracefullyCallback = (Error?) -> Void
-    #endif
-    
+
     private enum RunState {
         case running
         case closing([(DispatchQueue, ShutdownGracefullyCallback)])
@@ -262,7 +258,6 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         }
     }
 
-    #if swift(>=5.7)
     /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
     /// shut down and release their resources.
     ///
@@ -277,22 +272,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     public func shutdownGracefully(queue: DispatchQueue, _ handler: @escaping @Sendable (Error?) -> Void) {
         self._shutdownGracefully(queue: queue, handler)
     }
-    #else
-    /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
-    /// shut down and release their resources.
-    ///
-    /// Even though calling `shutdownGracefully` more than once should be avoided, it is safe to do so and execution
-    /// of the `handler` is guaranteed.
-    ///
-    /// - parameters:
-    ///    - queue: The `DispatchQueue` to run `handler` on when the shutdown operation completes.
-    ///    - handler: The handler which is called after the shutdown operation completes. The parameter will be `nil`
-    ///               on success and contain the `Error` otherwise.
-    public func shutdownGracefully(queue: DispatchQueue, _ handler: @escaping (Error?) -> Void) {
-        self._shutdownGracefully(queue: queue, handler)
-    }
-    #endif
-    
+
     private func _shutdownGracefully(queue: DispatchQueue, _ handler: @escaping ShutdownGracefullyCallback) {
         guard self.canBeShutDown else {
             queue.async {
