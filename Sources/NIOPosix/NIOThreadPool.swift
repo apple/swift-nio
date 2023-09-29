@@ -58,7 +58,7 @@ public final class NIOThreadPool {
 
     /// The work that should be done by the `NIOThreadPool`.
     public typealias WorkItem = @Sendable (WorkItemState) -> Void
-        private enum State {
+    private enum State {
         /// The `NIOThreadPool` is already stopped.
         case stopped
         /// The `NIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.

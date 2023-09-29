@@ -697,7 +697,7 @@ private extension Channel {
 public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     private let group: EventLoopGroup
     private var protocolHandlers: Optional<@Sendable () -> [ChannelHandler]>
-        private var _channelInitializer: ChannelInitializerCallback
+    private var _channelInitializer: ChannelInitializerCallback
     private var channelInitializer: ChannelInitializerCallback {
         if let protocolHandlers = self.protocolHandlers {
             let channelInitializer = _channelInitializer

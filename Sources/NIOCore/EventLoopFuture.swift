@@ -26,7 +26,7 @@ import Dispatch
 internal struct CallbackList {
     @usableFromInline
     internal typealias Element = @Sendable () -> CallbackList
-        @usableFromInline
+    @usableFromInline
     internal var firstCallback: Optional<Element>
     @usableFromInline
     internal var furtherCallbacks: Optional<[Element]>
@@ -614,7 +614,7 @@ extension EventLoopFuture {
     func _map<NewValue>(_ callback: @escaping MapCallback<NewValue>) -> EventLoopFuture<NewValue> {
         if NewValue.self == Value.self && NewValue.self == Void.self {
             self.whenSuccess(callback as! @Sendable (Value) -> Void)
-                        return self as! EventLoopFuture<NewValue>
+            return self as! EventLoopFuture<NewValue>
         } else {
             let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
             self._whenComplete {
@@ -737,7 +737,7 @@ extension EventLoopFuture {
     }
 
     @usableFromInline typealias AddCallbackCallback = @Sendable () -> CallbackList
-        /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
+    /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
     @inlinable
     internal func _addCallback(_ callback: @escaping AddCallbackCallback) -> CallbackList {
         self.eventLoop.assertInEventLoop()
@@ -833,7 +833,7 @@ extension EventLoopFuture {
         self._publicWhenComplete(callback)
     }
     @usableFromInline typealias WhenCompleteCallback = @Sendable (Result<Value, Error>) -> Void
-        @inlinable
+    @inlinable
     func _publicWhenComplete(_ callback: @escaping WhenCompleteCallback) {
         self._whenComplete {
             callback(self._value!)
@@ -1282,7 +1282,7 @@ extension EventLoopFuture {
     }
 
     @usableFromInline typealias ReduceSuccessCallback<InputValue> = @Sendable (Int, InputValue) -> Void
-        /// Loops through the futures array and attaches callbacks to execute `onValue` on the provided `EventLoop` when
+    /// Loops through the futures array and attaches callbacks to execute `onValue` on the provided `EventLoop` when
     /// they succeed. The `onValue` will receive the index of the future that fulfilled the provided `Result`.
     ///
     /// Once all the futures have succeed, the provided promise will succeed.

@@ -68,7 +68,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
     // FIXME: remove @unchecked when 5.7 is the minimum supported version.
     private typealias ShouldUpgrade = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
     private typealias UpgradePipelineHandler = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
-        /// RFC 6455 specs this as the required entry in the Upgrade header.
+    /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
 
     /// We deliberately do not actually set any required headers here, because the websocket

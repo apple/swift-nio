@@ -24,7 +24,7 @@ import CNIOLinux
 /// will be notified once the execution is complete.
 public struct Scheduled<T> {
     @usableFromInline typealias CancelationCallback = @Sendable () -> Void
-        /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
+    /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
     /* private but usableFromInline */ @usableFromInline let _cancellationTask: CancelationCallback
     
     @inlinable
@@ -58,7 +58,7 @@ extension Scheduled: Sendable where T: Sendable {}
 /// A `RepeatedTask` allows the user to `cancel()` the repeated scheduling of further tasks.
 public final class RepeatedTask {
     typealias RepeatedTaskCallback = @Sendable (RepeatedTask) -> EventLoopFuture<Void>
-        private let delay: TimeAmount
+    private let delay: TimeAmount
     private let eventLoop: EventLoop
     private let cancellationPromise: EventLoopPromise<Void>?
     private var scheduled: Optional<Scheduled<EventLoopFuture<Void>>>
