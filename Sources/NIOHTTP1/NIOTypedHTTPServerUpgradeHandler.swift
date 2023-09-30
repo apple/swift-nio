@@ -18,7 +18,7 @@
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 @_spi(AsyncChannel)
 public protocol NIOTypedHTTPServerProtocolUpgrader<UpgradeResult> {
-    associatedtype UpgradeResult
+    associatedtype UpgradeResult: Sendable
 
     /// The protocol this upgrader knows how to support.
     var supportedProtocol: String { get }
