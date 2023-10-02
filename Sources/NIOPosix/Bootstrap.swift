@@ -469,7 +469,7 @@ extension ServerBootstrap {
     /// - Parameters:
     ///   - host: The host to bind on.
     ///   - port: The port to bind on.
-    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
@@ -478,14 +478,14 @@ extension ServerBootstrap {
     public func bind<Output: Sendable>(
         host: String,
         port: Int,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> NIOAsyncChannel<Output, Never> {
         let address = try SocketAddress.makeAddressResolvingHost(host, port: port)
 
         return try await bind(
             to: address,
-            serverBackpressureStrategy: serverBackpressureStrategy,
+            serverBackPressureStrategy: serverBackPressureStrategy,
             childChannelInitializer: childChannelInitializer
         )
     }
@@ -494,7 +494,7 @@ extension ServerBootstrap {
     ///
     /// - Parameters:
     ///   - address: The `SocketAddress` to bind on.
-    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
@@ -502,7 +502,7 @@ extension ServerBootstrap {
     @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         to address: SocketAddress,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> NIOAsyncChannel<Output, Never> {
         return try await bind0(
@@ -514,7 +514,7 @@ extension ServerBootstrap {
                     enableMPTCP: enableMPTCP
                 )
             },
-            serverBackpressureStrategy: serverBackpressureStrategy,
+            serverBackPressureStrategy: serverBackPressureStrategy,
             childChannelInitializer: childChannelInitializer,
             registration: { serverChannel in
                 serverChannel.registerAndDoSynchronously { serverChannel in
@@ -530,7 +530,7 @@ extension ServerBootstrap {
     ///   - unixDomainSocketPath: The path of the UNIX Domain Socket to bind on. The`unixDomainSocketPath` must not exist,
     ///     unless `cleanupExistingSocketFile`is set to `true`.
     ///   - cleanupExistingSocketFile: Whether to cleanup an existing socket file at `unixDomainSocketPath`.
-    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
@@ -539,7 +539,7 @@ extension ServerBootstrap {
     public func bind<Output: Sendable>(
         unixDomainSocketPath: String,
         cleanupExistingSocketFile: Bool = false,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> NIOAsyncChannel<Output, Never> {
         if cleanupExistingSocketFile {
@@ -550,7 +550,7 @@ extension ServerBootstrap {
 
         return try await self.bind(
             to: address,
-            serverBackpressureStrategy: serverBackpressureStrategy,
+            serverBackPressureStrategy: serverBackPressureStrategy,
             childChannelInitializer: childChannelInitializer
         )
     }
@@ -559,7 +559,7 @@ extension ServerBootstrap {
     ///
     /// - Parameters:
     ///   - socket: The _Unix file descriptor_ representing the bound stream socket.
-    ///   - serverBackpressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
     ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
     ///   method.
     /// - Returns: The result of the channel initializer.
@@ -568,7 +568,7 @@ extension ServerBootstrap {
     public func bind<Output: Sendable>(
         _ socket: NIOBSDSocket.Handle,
         cleanupExistingSocketFile: Bool = false,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> NIOAsyncChannel<Output, Never> {
         return try await bind0(
@@ -582,7 +582,7 @@ extension ServerBootstrap {
                     group: childEventLoopGroup
                 )
             },
-            serverBackpressureStrategy: serverBackpressureStrategy,
+            serverBackPressureStrategy: serverBackPressureStrategy,
             childChannelInitializer: childChannelInitializer,
             registration: { serverChannel in
                 let promise = serverChannel.eventLoop.makePromise(of: Void.self)
@@ -595,7 +595,7 @@ extension ServerBootstrap {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     private func bind0<ChannelInitializerResult>(
         makeServerChannel: @escaping (SelectableEventLoop, EventLoopGroup, Bool) throws -> ServerSocketChannel,
-        serverBackpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
     ) -> EventLoopFuture<NIOAsyncChannel<ChannelInitializerResult, Never>>  {
@@ -625,7 +625,7 @@ extension ServerBootstrap {
                     let asyncChannel = try NIOAsyncChannel<ChannelInitializerResult, Never>
                         .wrapAsyncChannelWithTransformations(
                             synchronouslyWrapping: serverChannel,
-                            backpressureStrategy: serverBackpressureStrategy,
+                            backPressureStrategy: serverBackPressureStrategy,
                             channelReadTransformation: { channel -> EventLoopFuture<ChannelInitializerResult> in
                                 // The channelReadTransformation is run on the EL of the server channel
                                 // We have to make sure that we execute child channel initializer on the
