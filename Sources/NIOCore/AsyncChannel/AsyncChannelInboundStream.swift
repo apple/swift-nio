@@ -48,20 +48,11 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
         }
     }
 
-    #if swift(>=5.7)
     @usableFromInline
     enum _Backing: Sendable {
         case asyncStream(AsyncThrowingStream<Inbound, Error>)
         case producer(Producer)
     }
-    #else
-    // AsyncStream wasn't marked as `Sendable` in 5.6
-    @usableFromInline
-    enum _Backing: @unchecked Sendable {
-        case asyncStream(AsyncThrowingStream<Inbound, Error>)
-        case producer(Producer)
-    }
-    #endif
 
     /// The underlying async sequence.
     @usableFromInline

@@ -105,10 +105,8 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension AcceptBackoffHandler: Sendable {}
-#endif
 
 /**
  ChannelHandler implementation which enforces back-pressure by stopping to read from the remote peer when it cannot write back fast enough.
@@ -157,10 +155,8 @@ public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHa
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension BackPressureHandler: Sendable {}
-#endif
 
 /// Triggers an IdleStateEvent when a Channel has not performed read, write, or both operation for a while.
 public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandler {
@@ -347,7 +343,5 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension IdleStateHandler: Sendable {}
-#endif

@@ -25,13 +25,8 @@ import struct WinSDK.DWORD
 import struct WinSDK.HANDLE
 #endif
 
-#if swift(>=5.7)
 /// The type of all `channelInitializer` callbacks.
 internal typealias ChannelInitializerCallback = @Sendable (Channel) -> EventLoopFuture<Void>
-#else
-/// The type of all `channelInitializer` callbacks.
-internal typealias ChannelInitializerCallback = (Channel) -> EventLoopFuture<Void>
-#endif
 
 /// Common functionality for all NIO on sockets bootstraps.
 internal enum NIOOnSocketsBootstraps {
@@ -151,7 +146,6 @@ public final class ServerBootstrap {
         self.enableMPTCP = false
     }
 
-    #if swift(>=5.7)
     /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
@@ -166,23 +160,7 @@ public final class ServerBootstrap {
         self.serverChannelInit = initializer
         return self
     }
-    #else
-    /// Initialize the `ServerSocketChannel` with `initializer`. The most common task in initializer is to add
-    /// `ChannelHandler`s to the `ChannelPipeline`.
-    ///
-    /// The `ServerSocketChannel` uses the accepted `Channel`s as inbound messages.
-    ///
-    /// - note: To set the initializer for the accepted `SocketChannel`s, look at `ServerBootstrap.childChannelInitializer`.
-    ///
-    /// - parameters:
-    ///     - initializer: A closure that initializes the provided `Channel`.
-    public func serverChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
-        self.serverChannelInit = initializer
-        return self
-    }
-    #endif
 
-    #if swift(>=5.7)
     /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`. Note that if the `initializer` fails then the error will be
     /// fired in the *parent* channel.
@@ -202,26 +180,6 @@ public final class ServerBootstrap {
         self.childChannelInit = initializer
         return self
     }
-    #else
-    /// Initialize the accepted `SocketChannel`s with `initializer`. The most common task in initializer is to add
-    /// `ChannelHandler`s to the `ChannelPipeline`. Note that if the `initializer` fails then the error will be
-    /// fired in the *parent* channel.
-    ///
-    /// - warning: The `initializer` will be invoked once for every accepted connection. Therefore it's usually the
-    ///            right choice to instantiate stateful `ChannelHandler`s within the closure to make sure they are not
-    ///            accidentally shared across `Channel`s. There are expert use-cases where stateful handler need to be
-    ///            shared across `Channel`s in which case the user is responsible to synchronise the state access
-    ///            appropriately.
-    ///
-    /// The accepted `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
-    ///
-    /// - parameters:
-    ///     - initializer: A closure that initializes the provided `Channel`.
-    public func childChannelInitializer(_ initializer: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
-        self.childChannelInit = initializer
-        return self
-    }
-    #endif
 
     /// Specifies a `ChannelOption` to be applied to the `ServerSocketChannel`.
     ///
@@ -738,11 +696,7 @@ private extension Channel {
 /// The connected `SocketChannel` will operate on `ByteBuffer` as inbound and on `IOData` as outbound messages.
 public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     private let group: EventLoopGroup
-    #if swift(>=5.7)
     private var protocolHandlers: Optional<@Sendable () -> [ChannelHandler]>
-    #else
-    private var protocolHandlers: Optional<() -> [ChannelHandler]>
-    #endif
     private var _channelInitializer: ChannelInitializerCallback
     private var channelInitializer: ChannelInitializerCallback {
         if let protocolHandlers = self.protocolHandlers {
@@ -798,7 +752,6 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         self.enableMPTCP = false
     }
 
-    #if swift(>=5.7)
     /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
@@ -821,31 +774,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         self._channelInitializer = handler
         return self
     }
-    #else
-    /// Initialize the connected `SocketChannel` with `initializer`. The most common task in initializer is to add
-    /// `ChannelHandler`s to the `ChannelPipeline`.
-    ///
-    /// The connected `Channel` will operate on `ByteBuffer` as inbound and `IOData` as outbound messages.
-    ///
-    /// - warning: The `handler` closure may be invoked _multiple times_ so it's usually the right choice to instantiate
-    ///            `ChannelHandler`s within `handler`. The reason `handler` may be invoked multiple times is that to
-    ///            successfully set up a connection multiple connections might be setup in the process. Assuming a
-    ///            hostname that resolves to both IPv4 and IPv6 addresses, NIO will follow
-    ///            [_Happy Eyeballs_](https://en.wikipedia.org/wiki/Happy_Eyeballs) and race both an IPv4 and an IPv6
-    ///            connection. It is possible that both connections get fully established before the IPv4 connection
-    ///            will be closed again because the IPv6 connection 'won the race'. Therefore the `channelInitializer`
-    ///            might be called multiple times and it's important not to share stateful `ChannelHandler`s in more
-    ///            than one `Channel`.
-    ///
-    /// - parameters:
-    ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
-        self._channelInitializer = handler
-        return self
-    }
-    #endif
 
-    #if swift(>=5.7)
     /// Sets the protocol handlers that will be added to the front of the `ChannelPipeline` right after the
     /// `channelInitializer` has been called.
     ///
@@ -858,19 +787,6 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         self.protocolHandlers = handlers
         return self
     }
-    #else
-    /// Sets the protocol handlers that will be added to the front of the `ChannelPipeline` right after the
-    /// `channelInitializer` has been called.
-    ///
-    /// Per bootstrap, you can only set the `protocolHandlers` once. Typically, `protocolHandlers` are used for the TLS
-    /// implementation. Most notably, `NIOClientTCPBootstrap`, NIO's "universal bootstrap" abstraction, uses
-    /// `protocolHandlers` to add the required `ChannelHandler`s for many TLS implementations.
-    public func protocolHandlers(_ handlers: @escaping () -> [ChannelHandler]) -> Self {
-        precondition(self.protocolHandlers == nil, "protocol handlers can only be set once")
-        self.protocolHandlers = handlers
-        return self
-    }
-    #endif
 
     /// Specifies a `ChannelOption` to be applied to the `SocketChannel`.
     ///
@@ -1435,7 +1351,6 @@ public final class DatagramBootstrap {
         self.channelInitializer = nil
     }
 
-    #if swift(>=5.7)
     /// Initialize the bound `DatagramChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
@@ -1446,17 +1361,6 @@ public final class DatagramBootstrap {
         self.channelInitializer = handler
         return self
     }
-    #else
-    /// Initialize the bound `DatagramChannel` with `initializer`. The most common task in initializer is to add
-    /// `ChannelHandler`s to the `ChannelPipeline`.
-    ///
-    /// - parameters:
-    ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
-        self.channelInitializer = handler
-        return self
-    }
-    #endif
 
     /// Specifies a `ChannelOption` to be applied to the `DatagramChannel`.
     ///
@@ -1998,7 +1902,6 @@ public final class NIOPipeBootstrap {
         self.channelInitializer = nil
     }
 
-    #if swift(>=5.7)
     /// Initialize the connected `PipeChannel` with `initializer`. The most common task in initializer is to add
     /// `ChannelHandler`s to the `ChannelPipeline`.
     ///
@@ -2012,20 +1915,6 @@ public final class NIOPipeBootstrap {
         self.channelInitializer = handler
         return self
     }
-    #else
-    /// Initialize the connected `PipeChannel` with `initializer`. The most common task in initializer is to add
-    /// `ChannelHandler`s to the `ChannelPipeline`.
-    ///
-    /// The connected `Channel` will operate on `ByteBuffer` as inbound and outbound messages. Please note that
-    /// `IOData.fileRegion` is _not_ supported for `PipeChannel`s because `sendfile` only works on sockets.
-    ///
-    /// - parameters:
-    ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> Self {
-        self.channelInitializer = handler
-        return self
-    }
-    #endif
 
     /// Specifies a `ChannelOption` to be applied to the `PipeChannel`.
     ///
@@ -2207,7 +2096,7 @@ extension NIOPipeBootstrap {
             throw error
         }
     }
-    
+
     /// Create the `PipeChannel` with the provided input and output file descriptors.
     ///
     /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
@@ -2240,7 +2129,7 @@ extension NIOPipeBootstrap {
             postRegisterTransformation: { $0.makeSucceededFuture($1) }
         )
     }
-    
+
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @_spi(AsyncChannel) // Should become private
     public func _takingOwnershipOfDescriptors<ChannelInitializerResult, PostRegistrationTransformationResult: Sendable>(

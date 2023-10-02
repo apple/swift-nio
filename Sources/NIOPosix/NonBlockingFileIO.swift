@@ -52,8 +52,7 @@ public struct NonBlockingFileIO: Sendable {
     public init(threadPool: NIOThreadPool) {
         self.threadPool = threadPool
     }
-    
-    #if swift(>=5.7)
+
     /// Read a `FileRegion` in chunks of `chunkSize` bytes on `NonBlockingFileIO`'s private thread
     /// pool which is separate from any `EventLoop` thread.
     ///
@@ -89,44 +88,7 @@ public struct NonBlockingFileIO: Sendable {
                                 eventLoop: eventLoop,
                                 chunkHandler: chunkHandler)
     }
-    #else
-    /// Read a `FileRegion` in chunks of `chunkSize` bytes on `NonBlockingFileIO`'s private thread
-    /// pool which is separate from any `EventLoop` thread.
-    ///
-    /// `chunkHandler` will be called on `eventLoop` for every chunk that was read. Assuming `fileRegion.readableBytes` is greater than
-    /// zero and there are enough bytes available `chunkHandler` will be called `1 + |_ fileRegion.readableBytes / chunkSize _|`
-    /// times, delivering `chunkSize` bytes each time. If less than `fileRegion.readableBytes` bytes can be read from the file,
-    /// `chunkHandler` will be called less often with the last invocation possibly being of less than `chunkSize` bytes.
-    ///
-    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
-    ///
-    /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
-    /// same `FileRegion` in multiple threads.
-    ///
-    /// - parameters:
-    ///   - fileRegion: The file region to read.
-    ///   - chunkSize: The size of the individual chunks to deliver.
-    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the chunks.
-    ///   - eventLoop: The `EventLoop` to call `chunkHandler` on.
-    ///   - chunkHandler: Called for every chunk read. The next chunk will be read upon successful completion of the returned `EventLoopFuture`. If the returned `EventLoopFuture` fails, the overall operation is aborted.
-    /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `fileHandle` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `fileHandle` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
-    public func readChunked(fileRegion: FileRegion,
-                            chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
-                            allocator: ByteBufferAllocator,
-                            eventLoop: EventLoop,
-                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
-        let readableBytes = fileRegion.readableBytes
-        return self.readChunked(fileHandle: fileRegion.fileHandle,
-                                fromOffset: Int64(fileRegion.readerIndex),
-                                byteCount: readableBytes,
-                                chunkSize: chunkSize,
-                                allocator: allocator,
-                                eventLoop: eventLoop,
-                                chunkHandler: chunkHandler)
-    }
-    #endif
 
-    #if swift(>=5.7)
     /// Read `byteCount` bytes in chunks of `chunkSize` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread
     /// pool which is separate from any `EventLoop` thread.
     ///
@@ -165,47 +127,7 @@ public struct NonBlockingFileIO: Sendable {
                                 eventLoop: eventLoop,
                                 chunkHandler: chunkHandler)
     }
-    #else
-    /// Read `byteCount` bytes in chunks of `chunkSize` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread
-    /// pool which is separate from any `EventLoop` thread.
-    ///
-    /// `chunkHandler` will be called on `eventLoop` for every chunk that was read. Assuming `byteCount` is greater than
-    /// zero and there are enough bytes available `chunkHandler` will be called `1 + |_ byteCount / chunkSize _|`
-    /// times, delivering `chunkSize` bytes each time. If less than `byteCount` bytes can be read from `descriptor`,
-    /// `chunkHandler` will be called less often with the last invocation possibly being of less than `chunkSize` bytes.
-    ///
-    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
-    ///
-    /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses
-    ///         `FileRegion` object instead of raw `NIOFileHandle`s. In case you do want to use raw `NIOFileHandle`s,
-    ///         please consider using `readChunked(fileHandle:fromOffset:chunkSize:allocator:eventLoop:chunkHandler:)`
-    ///         because it doesn't use the file descriptor's seek pointer (which may be shared with other file
-    ///         descriptors and even across processes.)
-    ///
-    /// - parameters:
-    ///   - fileHandle: The `NIOFileHandle` to read from.
-    ///   - byteCount: The number of bytes to read from `fileHandle`.
-    ///   - chunkSize: The size of the individual chunks to deliver.
-    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the chunks.
-    ///   - eventLoop: The `EventLoop` to call `chunkHandler` on.
-    ///   - chunkHandler: Called for every chunk read. The next chunk will be read upon successful completion of the returned `EventLoopFuture`. If the returned `EventLoopFuture` fails, the overall operation is aborted.
-    /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `fileHandle` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `fileHandle` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
-    public func readChunked(fileHandle: NIOFileHandle,
-                            byteCount: Int,
-                            chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
-                            allocator: ByteBufferAllocator,
-                            eventLoop: EventLoop, chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
-        return self.readChunked0(fileHandle: fileHandle,
-                                fromOffset: nil,
-                                byteCount: byteCount,
-                                chunkSize: chunkSize,
-                                allocator: allocator,
-                                eventLoop: eventLoop,
-                                chunkHandler: chunkHandler)
-    }
-    #endif
 
-    #if swift(>=5.7)
     /// Read `byteCount` bytes from offset `fileOffset` in chunks of `chunkSize` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread
     /// pool which is separate from any `EventLoop` thread.
     ///
@@ -246,53 +168,8 @@ public struct NonBlockingFileIO: Sendable {
                                  eventLoop: eventLoop,
                                  chunkHandler: chunkHandler)
     }
-    #else
-    /// Read `byteCount` bytes from offset `fileOffset` in chunks of `chunkSize` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread
-    /// pool which is separate from any `EventLoop` thread.
-    ///
-    /// `chunkHandler` will be called on `eventLoop` for every chunk that was read. Assuming `byteCount` is greater than
-    /// zero and there are enough bytes available `chunkHandler` will be called `1 + |_ byteCount / chunkSize _|`
-    /// times, delivering `chunkSize` bytes each time. If less than `byteCount` bytes can be read from `descriptor`,
-    /// `chunkHandler` will be called less often with the last invocation possibly being of less than `chunkSize` bytes.
-    ///
-    /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
-    ///
-    /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
-    /// same `NIOFileHandle` in multiple threads.
-    ///
-    /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses
-    ///         `FileRegion` object instead of raw `NIOFileHandle`s.
-    ///
-    /// - parameters:
-    ///   - fileHandle: The `NIOFileHandle` to read from.
-    ///   - byteCount: The number of bytes to read from `fileHandle`.
-    ///   - chunkSize: The size of the individual chunks to deliver.
-    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the chunks.
-    ///   - eventLoop: The `EventLoop` to call `chunkHandler` on.
-    ///   - chunkHandler: Called for every chunk read. The next chunk will be read upon successful completion of the returned `EventLoopFuture`. If the returned `EventLoopFuture` fails, the overall operation is aborted.
-    /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `fileHandle` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `fileHandle` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
-    public func readChunked(fileHandle: NIOFileHandle,
-                            fromOffset fileOffset: Int64,
-                            byteCount: Int,
-                            chunkSize: Int = NonBlockingFileIO.defaultChunkSize,
-                            allocator: ByteBufferAllocator,
-                            eventLoop: EventLoop,
-                            chunkHandler: @escaping (ByteBuffer) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
-        return self.readChunked0(fileHandle: fileHandle,
-                                 fromOffset: fileOffset,
-                                 byteCount: byteCount,
-                                 chunkSize: chunkSize,
-                                 allocator: allocator,
-                                 eventLoop: eventLoop,
-                                 chunkHandler: chunkHandler)
-    }
-    #endif
-    
-    #if swift(>=5.7)
+
     private typealias ReadChunkHandler = @Sendable (ByteBuffer) -> EventLoopFuture<Void>
-    #else
-    private typealias ReadChunkHandler = (ByteBuffer) -> EventLoopFuture<Void>
-    #endif
 
     private func readChunked0(fileHandle: NIOFileHandle,
                               fromOffset: Int64?,
@@ -303,7 +180,7 @@ public struct NonBlockingFileIO: Sendable {
         precondition(chunkSize > 0, "chunkSize must be > 0 (is \(chunkSize))")
         let remainingReads = 1 + (byteCount / chunkSize)
         let lastReadSize = byteCount % chunkSize
-      
+
         let promise = eventLoop.makePromise(of: Void.self)
 
         func _read(remainingReads: Int, bytesReadSoFar: Int64) {

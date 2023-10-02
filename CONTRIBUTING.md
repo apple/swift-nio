@@ -72,7 +72,7 @@ For this reason, whenever you add new tests **you have to run a script** that ge
 
 ### Make sure your patch works for all supported versions of swift
 
-The CI will do this for you.  You can use the docker-compose files included if you wish to check locally.  Currently all versions of swift >= 5.6 are supported.  For example usage of docker compose see the main [README](./README.md#an-alternative-using-docker-compose)
+The CI will do this for you.  You can use the docker-compose files included if you wish to check locally.  Currently all versions of swift >= 5.7 are supported.  For example usage of docker compose see the main [README](./README.md#an-alternative-using-docker-compose)
 
 ### Make sure your code is performant
 

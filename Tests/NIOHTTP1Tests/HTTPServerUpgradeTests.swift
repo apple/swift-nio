@@ -83,11 +83,7 @@ extension EmbeddedChannel {
     }
 }
 
-#if swift(>=5.7)
 private typealias UpgradeCompletionHandler = @Sendable (ChannelHandlerContext) -> Void
-#else
-private typealias UpgradeCompletionHandler = (ChannelHandlerContext) -> Void
-#endif
 
 private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
                                               pipelining: Bool,

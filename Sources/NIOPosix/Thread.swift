@@ -17,7 +17,7 @@ import CNIOLinux
 #endif
 
 enum LowLevelThreadOperations {
-    
+
 }
 
 protocol ThreadOps {
@@ -185,8 +185,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         self.currentValue = value
     }
 
-    
-    #if swift(>=5.7)
+
     /// The value for the current thread.
     @available(*, noasync, message: "threads can change between suspension points and therefore the thread specific value too")
     public var currentValue: Value? {
@@ -197,18 +196,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
             self.set(newValue)
         }
     }
-    #else
-    /// The value for the current thread.
-    public var currentValue: Value? {
-        get {
-            self.get()
-        }
-        set {
-            self.set(newValue)
-        }
-    }
-    #endif
-    
+
     /// Get the current value for the calling thread.
     func get() -> Value? {
         guard let raw = self.key.get() else { return nil }
@@ -218,7 +206,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
                  .takeUnretainedValue()
                  .value.1 as! Value)
     }
-    
+
     /// Set the current value for the calling threads. The `currentValue` for all other threads remains unchanged.
     func set(_ newValue: Value?) {
         if let raw = self.key.get() {
