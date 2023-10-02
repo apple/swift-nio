@@ -93,7 +93,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     private var upgradeResultPromise: EventLoopPromise<UpgradeResult> {
         precondition(
             self._upgradeResultPromise != nil,
-            "Tried to access the protocol negotiation result before the handler was added to a pipeline"
+            "Tried to access the upgrade result before the handler was added to a pipeline"
         )
         return self._upgradeResultPromise!
     }

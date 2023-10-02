@@ -201,7 +201,7 @@ public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIO
     private let shouldUpgrade: ShouldUpgrade
     private let upgradePipelineHandler: UpgradePipelineHandler
     private let maxFrameSize: Int
-    private let automaticErrorHandling: Bool
+    private let enableAutomaticErrorHandling: Bool
 
     /// Create a new ``NIOTypedWebSocketServerUpgrader``.
     ///
@@ -218,14 +218,14 @@ public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIO
     ///         any headers that it needs on the response *except for* the `Upgrade`, `Connection`,
     ///         and `Sec-WebSocket-Accept` headers, which this upgrader will handle. Should return
     ///         an `EventLoopFuture` containing `nil` if the upgrade should be refused.
-    ///   - upgradePipelineHandler: A function that will be called once the upgrade response is
+    ///   - enableAutomaticErrorHandling: A function that will be called once the upgrade response is
     ///         flushed, and that is expected to mutate the `Channel` appropriately to handle the
     ///         websocket protocol. This only needs to add the user handlers: the
     ///         `WebSocketFrameEncoder` and `WebSocketFrameDecoder` will have been added to the
     ///         pipeline automatically.
     public init(
         maxFrameSize: Int = 1 << 14,
-        automaticErrorHandling: Bool = true,
+        enableAutomaticErrorHandling: Bool = true,
         shouldUpgrade: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
         upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<UpgradeResult>
     ) {
@@ -233,7 +233,7 @@ public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIO
         self.shouldUpgrade = shouldUpgrade
         self.upgradePipelineHandler = upgradePipelineHandler
         self.maxFrameSize = maxFrameSize
-        self.automaticErrorHandling = automaticErrorHandling
+        self.enableAutomaticErrorHandling = enableAutomaticErrorHandling
     }
 
     public func buildUpgradeResponse(
@@ -254,7 +254,7 @@ public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIO
             channel: channel,
             upgradeRequest: upgradeRequest,
             maxFrameSize: self.maxFrameSize,
-            automaticErrorHandling: self.automaticErrorHandling,
+            automaticErrorHandling: self.enableAutomaticErrorHandling,
             upgradePipelineHandler: self.upgradePipelineHandler
         )
     }

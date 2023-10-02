@@ -35,7 +35,7 @@ public struct NIOUpgradableHTTPServerPipelineConfiguration<UpgradeResult: Sendab
     public var httpResponseEncoderConfiguration = HTTPResponseEncoder.Configuration()
 
     /// The configuration for the ``NIOTypedHTTPServerUpgradeHandler``.
-    public var httpServerUpgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>
+    public var upgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>
 
     /// Initializes a new ``NIOUpgradableHTTPServerPipelineConfiguration`` with default values.
     ///
@@ -48,9 +48,9 @@ public struct NIOUpgradableHTTPServerPipelineConfiguration<UpgradeResult: Sendab
     /// The defaults will likely be extended in the future and we recommend to use this initializer to ensure
     /// you get newer features automatically.
     public init(
-        httpServerUpgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>
+        upgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>
     ) {
-        self.httpServerUpgradeConfiguration = httpServerUpgradeConfiguration
+        self.upgradeConfiguration = upgradeConfiguration
     }
 }
 
@@ -70,9 +70,9 @@ extension ChannelPipeline {
             configuration: configuration
         )
     }
+
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    @_spi(AsyncChannel)
-    public func _configureUpgradableHTTPServerPipeline<UpgradeResult: Sendable>(
+    private func _configureUpgradableHTTPServerPipeline<UpgradeResult: Sendable>(
         configuration: NIOUpgradableHTTPServerPipelineConfiguration<UpgradeResult>
     ) -> EventLoopFuture<EventLoopFuture<UpgradeResult>> {
         let future: EventLoopFuture<EventLoopFuture<UpgradeResult>>
@@ -113,6 +113,7 @@ extension ChannelPipeline.SynchronousOperations {
         let requestDecoder = ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .forwardBytes))
 
         var extraHTTPHandlers: [RemovableChannelHandler] = [requestDecoder]
+        extraHTTPHandlers.reserveCapacity(3)
 
         try self.addHandler(responseEncoder)
         try self.addHandler(requestDecoder)
@@ -138,7 +139,7 @@ extension ChannelPipeline.SynchronousOperations {
         let upgrader = NIOTypedHTTPServerUpgradeHandler(
             httpEncoder: responseEncoder,
             extraHTTPHandlers: extraHTTPHandlers,
-            upgradeConfiguration: configuration.httpServerUpgradeConfiguration
+            upgradeConfiguration: configuration.upgradeConfiguration
         )
         try self.addHandler(upgrader)
 
