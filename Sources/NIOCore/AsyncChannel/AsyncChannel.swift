@@ -34,7 +34,7 @@
 /// logic should use ``NIOAsyncChannel`` to consume and produce data to the network.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @_spi(AsyncChannel)
-public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
+public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     @_spi(AsyncChannel)
     public struct Configuration: Sendable {
         /// The backpressure strategy of the ``NIOAsyncChannel/inboundStream``.
@@ -76,6 +76,8 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     @_spi(AsyncChannel)
     public let channel: Channel
     /// The stream of inbound messages.
+    ///
+    /// - Important: The `inboundStream` is a unicast `AsyncSequence` and only one iterator can be created.
     @_spi(AsyncChannel)
     public let inboundStream: NIOAsyncChannelInboundStream<Inbound>
     /// The writer for writing outbound messages.
