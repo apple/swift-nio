@@ -1569,13 +1569,15 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
             .childChannelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
                     connectionChannelPromise.succeed(channel)
-                    return try channel.pipeline.syncOperations.configureTypedHTTPServerPipeline(
-                        isPipeliningEnabled: pipelining,
+                    var configuration = NIOUpgradableHTTPServerPipelineConfiguration(
                         httpServerUpgradeConfiguration: .init(
                             upgraders: upgraders.map { $0 as! any NIOTypedHTTPServerProtocolUpgrader<Bool> },
                             notUpgradingCompletionHandler: { notUpgradingHandler?($0) ??  $0.eventLoop.makeSucceededFuture(false) }
                         )
-                    ).flatMap { result in
+                    )
+                    configuration.enablePipelining = pipelining
+                    return try channel.pipeline.syncOperations.configureUpgradableHTTPServerPipeline(configuration: configuration)
+                    .flatMap { result in
                         if result {
                             return channel.pipeline.context(handlerType: NIOTypedHTTPServerUpgradeHandler<Bool>.self)
                                 .map {

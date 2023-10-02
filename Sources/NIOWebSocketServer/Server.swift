@@ -99,8 +99,8 @@ struct Server {
                         }
                     )
 
-                    let negotiationResultFuture = try channel.pipeline.syncOperations.configureTypedHTTPServerPipeline(
-                        httpServerUpgradeConfiguration: serverUpgradeConfiguration
+                    let negotiationResultFuture = try channel.pipeline.syncOperations.configureUpgradableHTTPServerPipeline(
+                        configuration: .init(httpServerUpgradeConfiguration: serverUpgradeConfiguration)
                     )
 
                     return negotiationResultFuture

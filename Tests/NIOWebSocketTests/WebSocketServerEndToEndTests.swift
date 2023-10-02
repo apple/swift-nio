@@ -539,8 +539,14 @@ final class TypedWebSocketServerEndToEndTests: WebSocketServerEndToEndTests {
             shouldUpgrade: $0.shouldUpgrade,
             upgradePipelineHandler: $0.upgradePipelineHandler
         )}
-        XCTAssertNoThrow(try serverChannel.pipeline.syncOperations.configureTypedHTTPServerPipeline(
-            httpServerUpgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<Void>(upgraders: upgraders, notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() })
+
+        XCTAssertNoThrow(try serverChannel.pipeline.syncOperations.configureUpgradableHTTPServerPipeline(
+            configuration: .init(
+                httpServerUpgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<Void>(
+                    upgraders: upgraders,
+                    notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() }
+                )
+            )
         ))
         let clientChannel = EmbeddedChannel(loop: loop)
         return (loop: loop, serverChannel: serverChannel, clientChannel: clientChannel)
