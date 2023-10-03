@@ -268,6 +268,10 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
                 buffer.write(response: response)
             }, context: context, headers: response.headers, promise: promise)
         case .body(let bodyPart):
+            if case let .byteBuffer(byteBuffer) = bodyPart, byteBuffer.readableBytes == 0 {
+                // empty body parts will end the response which we don't want
+                break
+            }
             writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
         case .end(let trailers):
             writeTrailers(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
