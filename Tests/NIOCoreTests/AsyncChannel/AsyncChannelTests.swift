@@ -317,7 +317,7 @@ final class AsyncChannelTests: XCTestCase {
         try await channel.closeIgnoringSuppression()
     }
 
-    func testManagingBackpressure() async throws {
+    func testManagingBackPressure() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let readCounter = ReadCounter()
@@ -326,7 +326,7 @@ final class AsyncChannelTests: XCTestCase {
             try NIOAsyncChannel(
                 synchronouslyWrapping: channel,
                 configuration: .init(
-                    backpressureStrategy: .init(lowWatermark: 2, highWatermark: 4),
+                    backPressureStrategy: .init(lowWatermark: 2, highWatermark: 4),
                     inboundType: Void.self,
                     outboundType: Never.self
                 )
