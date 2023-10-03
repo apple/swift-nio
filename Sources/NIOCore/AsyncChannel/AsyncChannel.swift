@@ -19,14 +19,14 @@
 /// the following functionality:
 ///
 /// - reads are presented as an `AsyncSequence`
-/// - writes can be written to with async functions on a writer, providing backpressure
+/// - writes can be written to with async functions on a writer, providing back pressure
 /// - channels can be closed seamlessly
 ///
 /// This type does not replace the full complexity of NIO's ``Channel``. In particular, it
 /// does not expose the following functionality:
 ///
 /// - user events
-/// - traditional NIO backpressure such as writability signals and the ``Channel/read()`` call
+/// - traditional NIO back pressure such as writability signals and the ``Channel/read()`` call
 ///
 /// Users are encouraged to separate their ``ChannelHandler``s into those that implement
 /// protocol-specific logic (such as parsers and encoders) and those that implement business
@@ -37,8 +37,8 @@
 public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     @_spi(AsyncChannel)
     public struct Configuration: Sendable {
-        /// The backpressure strategy of the ``NIOAsyncChannel/inboundStream``.
-        public var backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
+        /// The back pressure strategy of the ``NIOAsyncChannel/inboundStream``.
+        public var backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
         /// If outbound half closure should be enabled. Outbound half closure is triggered once
         /// the ``NIOAsyncChannelWriter`` is either finished or deinitialized.
@@ -53,19 +53,19 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
         /// Initializes a new ``NIOAsyncChannel/Configuration``.
         ///
         /// - Parameters:
-        ///   - backpressureStrategy: The backpressure strategy of the ``NIOAsyncChannel/inboundStream``. Defaults
+        ///   - backPressureStrategy: The back pressure strategy of the ``NIOAsyncChannel/inboundStream``. Defaults
         ///     to a watermarked strategy (lowWatermark: 2, highWatermark: 10).
         ///   - isOutboundHalfClosureEnabled: If outbound half closure should be enabled. Outbound half closure is triggered once
         ///     the ``NIOAsyncChannelWriter`` is either finished or deinitialized. Defaults to `false`.
         ///   - inboundType: The ``NIOAsyncChannel/inboundStream`` message's type.
         ///   - outboundType: The ``NIOAsyncChannel/outboundWriter`` message's type.
         public init(
-            backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark = .init(lowWatermark: 2, highWatermark: 10),
+            backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark = .init(lowWatermark: 2, highWatermark: 10),
             isOutboundHalfClosureEnabled: Bool = false,
             inboundType: Inbound.Type = Inbound.self,
             outboundType: Outbound.Type = Outbound.self
         ) {
-            self.backpressureStrategy = backpressureStrategy
+            self.backPressureStrategy = backPressureStrategy
             self.isOutboundHalfClosureEnabled = isOutboundHalfClosureEnabled
             self.inboundType = inboundType
             self.outboundType = outboundType
@@ -99,7 +99,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
         (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
-            backpressureStrategy: configuration.backpressureStrategy,
+            backPressureStrategy: configuration.backPressureStrategy,
             isOutboundHalfClosureEnabled: configuration.isOutboundHalfClosureEnabled
         )
     }
@@ -123,7 +123,7 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
         (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
-            backpressureStrategy: configuration.backpressureStrategy,
+            backPressureStrategy: configuration.backPressureStrategy,
             isOutboundHalfClosureEnabled: configuration.isOutboundHalfClosureEnabled
         )
 
@@ -147,13 +147,13 @@ public final class NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Senda
     @_spi(AsyncChannel)
     public static func wrapAsyncChannelWithTransformations(
         synchronouslyWrapping channel: Channel,
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
         isOutboundHalfClosureEnabled: Bool = false,
         channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<Inbound>
     ) throws -> NIOAsyncChannel<Inbound, Outbound> where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
         let (inboundStream, outboundWriter): (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) = try channel._syncAddAsyncHandlersWithTransformations(
-            backpressureStrategy: backpressureStrategy,
+            backPressureStrategy: backPressureStrategy,
             isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
             channelReadTransformation: channelReadTransformation
         )
@@ -174,7 +174,7 @@ extension Channel {
     @inlinable
     @_spi(AsyncChannel)
     public func _syncAddAsyncHandlers<Inbound: Sendable, Outbound: Sendable>(
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         isOutboundHalfClosureEnabled: Bool
     ) throws -> (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) {
         self.eventLoop.assertInEventLoop()
@@ -182,7 +182,7 @@ extension Channel {
         let closeRatchet = CloseRatchet(isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled)
         let inboundStream = try NIOAsyncChannelInboundStream<Inbound>.makeWrappingHandler(
             channel: self,
-            backpressureStrategy: backpressureStrategy,
+            backPressureStrategy: backPressureStrategy,
             closeRatchet: closeRatchet
         )
         let writer = try NIOAsyncChannelOutboundWriter<Outbound>(
@@ -196,7 +196,7 @@ extension Channel {
     @inlinable
     @_spi(AsyncChannel)
     public func _syncAddAsyncHandlersWithTransformations<ChannelReadResult>(
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         isOutboundHalfClosureEnabled: Bool,
         channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<ChannelReadResult>
     ) throws -> (NIOAsyncChannelInboundStream<ChannelReadResult>, NIOAsyncChannelOutboundWriter<Never>) {
@@ -205,7 +205,7 @@ extension Channel {
         let closeRatchet = CloseRatchet(isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled)
         let inboundStream = try NIOAsyncChannelInboundStream<ChannelReadResult>.makeTransformationHandler(
             channel: self,
-            backpressureStrategy: backpressureStrategy,
+            backPressureStrategy: backPressureStrategy,
             closeRatchet: closeRatchet,
             channelReadTransformation: channelReadTransformation
         )
