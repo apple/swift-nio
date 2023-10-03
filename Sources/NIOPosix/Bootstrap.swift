@@ -2142,6 +2142,7 @@ extension NIOPipeBootstrap {
                      "illegal file descriptor pair. The file descriptors \(input), \(output) " +
                      "must be distinct and both positive integers.")
         let eventLoop = group.next()
+        let channelOptions = self._channelOptions
         try self.validateFileDescriptorIsNotAFile(input)
         try self.validateFileDescriptorIsNotAFile(output)
 
@@ -2161,7 +2162,7 @@ extension NIOPipeBootstrap {
         @Sendable
         func setupChannel() -> EventLoopFuture<PostRegistrationTransformationResult> {
             eventLoop.assertInEventLoop()
-            return self._channelOptions.applyAllChannelOptions(to: channel).flatMap { _ -> EventLoopFuture<ChannelInitializerResult> in
+            return channelOptions.applyAllChannelOptions(to: channel).flatMap { _ -> EventLoopFuture<ChannelInitializerResult> in
                 channelInitializer(channel)
             }.flatMap { result in
                 eventLoop.assertInEventLoop()
