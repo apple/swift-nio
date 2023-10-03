@@ -270,6 +270,8 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
         case .body(let bodyPart):
             if case let .byteBuffer(byteBuffer) = bodyPart, byteBuffer.readableBytes == 0 {
                 // empty body parts will end the response which we don't want
+                // this happens in llhttp which is a vendored C library transpiled from TypeScript
+                // we don't want to change the upstream library and therefore handle this special case here
                 break
             }
             writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
