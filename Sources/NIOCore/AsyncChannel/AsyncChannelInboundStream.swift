@@ -80,14 +80,14 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @inlinable
     init<HandlerInbound: Sendable>(
         channel: Channel,
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         closeRatchet: CloseRatchet,
         handler: NIOAsyncChannelInboundStreamChannelHandler<HandlerInbound, Inbound>
     ) throws {
         channel.eventLoop.preconditionInEventLoop()
         let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
-        if let userProvided = backpressureStrategy {
+        if let userProvided = backPressureStrategy {
             strategy = userProvided
         } else {
             // Default strategy. These numbers are fairly arbitrary, but they line up with the default value of
@@ -108,7 +108,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @inlinable
     static func makeWrappingHandler(
         channel: Channel,
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         closeRatchet: CloseRatchet
     ) throws -> NIOAsyncChannelInboundStream {
         let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound, Inbound>.makeHandler(
@@ -118,7 +118,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
 
         return try .init(
             channel: channel,
-            backpressureStrategy: backpressureStrategy,
+            backPressureStrategy: backPressureStrategy,
             closeRatchet: closeRatchet,
             handler: handler
         )
@@ -128,7 +128,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @inlinable
     static func makeTransformationHandler(
         channel: Channel,
-        backpressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
+        backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         closeRatchet: CloseRatchet,
         channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<Inbound>
     ) throws -> NIOAsyncChannelInboundStream {
@@ -140,7 +140,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
 
         return try .init(
             channel: channel,
-            backpressureStrategy: backpressureStrategy,
+            backPressureStrategy: backPressureStrategy,
             closeRatchet: closeRatchet,
             handler: handler
         )
