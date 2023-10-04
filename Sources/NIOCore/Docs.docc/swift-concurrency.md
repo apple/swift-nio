@@ -119,7 +119,7 @@ server and client.
 The server bootstrap is used to create a new TCP based server. Once any of the
 bind methods on the `ServerBootstrap` is called, a new listening socket is
 created to handle new inbound TCP connections. Let's use the new methods
-to setup a TCP server and configure a ``NIOAsyncChannel`` for each inbound
+to setup a TCP server and configure a `NIOAsyncChannel` for each inbound
 connection.
 
 ```swift
