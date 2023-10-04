@@ -150,6 +150,7 @@ private func basicRequest(path: String = "/") -> String {
     return "GET \(path) HTTP/1.1\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 0"
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 class WebSocketClientEndToEndTests: XCTestCase {
     func testSimpleUpgradeSucceeds() throws {
 
@@ -404,6 +405,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
     func setUpClientChannel(
         clientUpgraders: [any NIOTypedHTTPClientProtocolUpgrader<Void>],

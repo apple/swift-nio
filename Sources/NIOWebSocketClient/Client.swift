@@ -41,7 +41,7 @@ struct Client {
         try await client.run()
     }
 
-    /// This method starts the server and handles incoming connections.
+    /// This method starts the client and tries to setup a WebSocket connection.
     func run() async throws {
         let upgradeResult: EventLoopFuture<UpgradeResult> = try await ClientBootstrap(group: self.eventLoopGroup)
             .connect(

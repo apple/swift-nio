@@ -32,6 +32,7 @@ extension EmbeddedChannel {
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 protocol TypedAndUntypedHTTPClientProtocolUpgrader: NIOHTTPClientProtocolUpgrader, NIOTypedHTTPClientProtocolUpgrader where UpgradeResult == Bool {}
 
 private final class SuccessfulClientUpgrader: TypedAndUntypedHTTPClientProtocolUpgrader {
@@ -278,6 +279,7 @@ private final class RecordingHTTPHandler: ChannelInboundHandler, RemovableChanne
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 private func assertPipelineContainsUpgradeHandler(channel: Channel) {
     let handler = try? channel.pipeline.syncOperations.handler(type: NIOHTTPClientUpgradeHandler.self)
     let typedHandler = try? channel.pipeline.syncOperations.handler(type: NIOTypedHTTPClientUpgradeHandler<Bool>.self)
@@ -958,6 +960,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
     override func setUpClientChannel(
         clientHTTPHandler: RemovableChannelHandler,

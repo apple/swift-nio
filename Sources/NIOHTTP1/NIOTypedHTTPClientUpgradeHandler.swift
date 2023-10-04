@@ -16,7 +16,6 @@ import NIOCore
 /// An object that implements `NIOTypedHTTPClientProtocolUpgrader` knows how to handle HTTP upgrade to
 /// a protocol on a client-side channel.
 /// It has the option of denying this upgrade based upon the server response.
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 @_spi(AsyncChannel)
 public protocol NIOTypedHTTPClientProtocolUpgrader<UpgradeResult> {
     associatedtype UpgradeResult: Sendable
