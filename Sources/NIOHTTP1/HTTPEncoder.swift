@@ -15,26 +15,24 @@
 import NIOCore
 
 private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHandlerContext, isChunked: Bool, chunk: IOData, promise: EventLoopPromise<Void>?) {
-    let (mW1, mW2, mW3): (EventLoopPromise<Void>?, EventLoopPromise<Void>?, EventLoopPromise<Void>?)
-
-    switch (isChunked, promise) {
-    case (true, .some(let p)):
-        /* chunked encoding and the user's interested: we need three promises and need to cascade into the users promise */
-        let (w1, w2, w3) = (context.eventLoop.makePromise() as EventLoopPromise<Void>, context.eventLoop.makePromise() as EventLoopPromise<Void>, context.eventLoop.makePromise() as EventLoopPromise<Void>)
-        w1.futureResult.and(w2.futureResult).and(w3.futureResult).map { (_: ((((), ()), ()))) in }.cascade(to: p)
-        (mW1, mW2, mW3) = (w1, w2, w3)
-    case (false, .some(let p)):
-        /* not chunked, so just use the user's promise for the actual data */
-        (mW1, mW2, mW3) = (nil, p, nil)
-    case (_, .none):
-        /* user isn't interested, let's not bother even allocating promises */
-        (mW1, mW2, mW3) = (nil, nil, nil)
-    }
-
     let readableBytes = chunk.readableBytes
 
-    /* we don't want to copy the chunk unnecessarily and therefore call write an annoyingly large number of times */
-    if isChunked {
+    // we don't want to copy the chunk unnecessarily and therefore call write an annoyingly large number of times
+    // we also don't frame empty chunks as they would otherwise end the response stream
+    // we still need to write the empty IODate to complete the promise in the right order but is otherwise a no-op.
+    if isChunked && readableBytes > 0 {
+        let (mW1, mW2, mW3): (EventLoopPromise<Void>?, EventLoopPromise<Void>?, EventLoopPromise<Void>?)
+
+        if let p = promise {
+            /* chunked encoding and the user's interested: we need three promises and need to cascade into the users promise */
+            let (w1, w2, w3) = (context.eventLoop.makePromise() as EventLoopPromise<Void>, context.eventLoop.makePromise() as EventLoopPromise<Void>, context.eventLoop.makePromise() as EventLoopPromise<Void>)
+            w1.futureResult.and(w2.futureResult).and(w3.futureResult).map { (_: ((((), ()), ()))) in }.cascade(to: p)
+            (mW1, mW2, mW3) = (w1, w2, w3)
+        } else {
+            /* user isn't interested, let's not bother even allocating promises */
+            (mW1, mW2, mW3) = (nil, nil, nil)
+        }
+        
         var buffer = context.channel.allocator.buffer(capacity: 32)
         let len = String(readableBytes, radix: 16)
         buffer.writeString(len)
@@ -47,7 +45,7 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHan
         buffer.moveReaderIndex(forwardBy: buffer.readableBytes - 2)
         context.write(wrapOutboundOut(.byteBuffer(buffer)), promise: mW3)
     } else {
-        context.write(wrapOutboundOut(chunk), promise: mW2)
+        context.write(wrapOutboundOut(chunk), promise: promise)
     }
 }
 
@@ -195,12 +193,6 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
                 buffer.write(request: request)
             }, context: context, headers: request.headers, promise: promise)
         case .body(let bodyPart):
-            guard bodyPart.readableBytes > 0 else {
-                // Empty writes shouldn't send any bytes in chunked or identity encoding.
-                context.write(self.wrapOutboundOut(bodyPart), promise: promise)
-                return
-            }
-
             writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
         case .end(let trailers):
             writeTrailers(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)

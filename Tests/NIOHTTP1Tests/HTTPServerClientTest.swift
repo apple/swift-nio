@@ -251,6 +251,25 @@ class HTTPServerClientTest : XCTestCase {
                             self.sentEnd = true
                             self.maybeClose(context: context)
                     }
+                case "/zero-length-body-part":
+                    
+                    let r = HTTPServerResponsePart.head(.init(version: req.version, status: .ok))
+                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
+                        XCTFail("unexpected error \(error)")
+                    }
+                    
+                    context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer())))).whenFailure { error in
+                        XCTFail("unexpected error \(error)")
+                    }
+                    context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer(string: "Hello World"))))).whenFailure { error in
+                        XCTFail("unexpected error \(error)")
+                    }
+                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                        XCTFail("unexpected error \(error)")
+                    }.whenComplete { (_: Result<Void, Error>) in
+                        self.sentEnd = true
+                        self.maybeClose(context: context)
+                    }
                 default:
                     XCTFail("received request to unknown URI \(req.uri)")
                 }
@@ -436,6 +455,53 @@ class HTTPServerClientTest : XCTestCase {
 
     func testSimpleGetTrailersFileRegion() throws {
         try testSimpleGetTrailers(.fileRegion)
+    }
+    
+    func testSimpleGetChunkedEncodingWithZeroLengthBodyPart() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        var expectedHeaders = HTTPHeaders()
+        expectedHeaders.add(name: "transfer-encoding", value: "chunked")
+
+        let accumulation = HTTPClientResponsePartAssertHandler(.http1_1, .ok, expectedHeaders, "Hello World")
+
+        let httpHandler = SimpleHTTPServer(.byteBuffer)
+        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+
+            // Set the handlers that are appled to the accepted Channels
+            .childChannelInitializer { channel in
+                // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
+                channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
+                    channel.pipeline.addHandler(httpHandler)
+                }
+            }.bind(host: "127.0.0.1", port: 0).wait())
+
+        defer {
+            XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
+            .channelInitializer { channel in
+                channel.pipeline.addHTTPClientHandlers().flatMap {
+                    channel.pipeline.addHandler(accumulation)
+                }
+            }
+            .connect(to: serverChannel.localAddress!)
+            .wait())
+
+        defer {
+            XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
+        }
+
+        var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/zero-length-body-part")
+        head.headers.add(name: "Host", value: "apple.com")
+        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+        try clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
+        accumulation.syncWaitForCompletion()
     }
 
     private func testSimpleGetTrailers(_ mode: SendMode) throws {
