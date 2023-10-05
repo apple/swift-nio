@@ -278,6 +278,7 @@ private final class RecordingHTTPHandler: ChannelInboundHandler, RemovableChanne
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 class HTTPClientUpgradeTestCase: XCTestCase {
     
     // MARK: Test basic happy path requests and responses.

@@ -34,6 +34,7 @@ extension ChannelPipeline {
         }
     }
 
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     fileprivate func assertContainsUpgrader() throws {
         do {
             _ = try self.context(handlerType: NIOTypedHTTPServerUpgradeHandler<Bool>.self).wait()
@@ -88,6 +89,7 @@ extension EmbeddedChannel {
 
 private typealias UpgradeCompletionHandler = @Sendable (ChannelHandlerContext) -> Void
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 private func serverHTTPChannelWithAutoremoval(group: EventLoopGroup,
                                               pipelining: Bool,
                                               upgraders: [any TypedAndUntypedHTTPServerProtocolUpgrader],
@@ -164,6 +166,7 @@ internal func assertResponseIs(response: String, expectedResponseLine: String, e
     XCTAssertEqual(lines.count, 0)
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 protocol TypedAndUntypedHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader, NIOTypedHTTPServerProtocolUpgrader where UpgradeResult == Bool {}
 
 private class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
@@ -407,6 +410,7 @@ private class ReentrantReadOnChannelReadCompleteHandler: ChannelInboundHandler {
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 class HTTPServerUpgradeTestCase: XCTestCase {
     fileprivate func setUpTestWithAutoremoval(pipelining: Bool = false,
                                           upgraders: [any TypedAndUntypedHTTPServerProtocolUpgrader],
@@ -1554,6 +1558,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
     fileprivate override func setUpTestWithAutoremoval(
         pipelining: Bool = false,
