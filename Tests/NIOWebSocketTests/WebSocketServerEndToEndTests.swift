@@ -527,6 +527,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
     }
 }
 
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedWebSocketServerEndToEndTests: WebSocketServerEndToEndTests {
     override func createTestFixtures(
         upgraders: [WebSocketServerUpgraderConfiguration]
