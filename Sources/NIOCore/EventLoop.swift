@@ -877,6 +877,29 @@ extension EventLoop {
     ) -> RepeatedTask {
         self._scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, notifying: promise, task)
     }
+    
+    /// Overload `scheduleRepeatedTask` function with jitter support.
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - maximumAllowableJitter: Upper exlusive bound of jitter range added to the `delay` paramether.
+    ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
+    ///     - task: The closure that will be executed.
+    /// - return: `RepeatedTask`
+    @discardableResult
+    @preconcurrency
+    public func scheduleRepeatedTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        maximumAllowableJitter: TimeAmount,
+        notifying promise: EventLoopPromise<Void>? = nil,
+        _ task: @escaping @Sendable (RepeatedTask) throws -> Void
+    ) -> RepeatedTask {
+        let jitter = Int64.random(in: .zero..<maximumAllowableJitter.nanoseconds)
+        let jitteredDelay = delay + .microseconds(jitter)
+        return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: jitteredDelay, notifying: promise, task)
+    }
     typealias ScheduleRepeatedTaskCallback = @Sendable (RepeatedTask) throws -> Void
 
     func _scheduleRepeatedTask(
