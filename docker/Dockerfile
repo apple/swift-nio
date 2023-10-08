@@ -1,5 +1,5 @@
 ARG swift_version=5.7
-ARG ubuntu_version=bionic
+ARG ubuntu_version=jammy
 ARG base_image=swift:$swift_version-$ubuntu_version
 FROM $base_image
 # needed to do again after FROM due to docker limitation
@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y lsof dnsutils netcat-openbsd net-tools 
 
 # ruby
 RUN apt-get update && apt-get install -y ruby ruby-dev libsqlite3-dev build-essential
+
+# install jemalloc for running allocation benchmarks
+RUN apt-get update & apt-get install -y libjemalloc-dev
 
 # tools
 RUN mkdir -p $HOME/.tools
