@@ -765,6 +765,31 @@ extension EventLoop {
     ) -> Scheduled<T> {
         self._flatScheduleTask(in: delay, file: file, line: line, task)
     }
+    
+    /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
+    ///
+    /// - parameters:
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - maximumAllowableJitter: Upper exlusive bound of jitter range added to the `delay` paramether.
+    ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
+    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the full execution of the task, including its returned `EventLoopFuture`.
+    ///
+    /// - note: You can only cancel a task before it has started executing.
+    @discardableResult
+    @inlinable
+    @preconcurrency
+    public func flatScheduleTask<T>(
+        in delay: TimeAmount,
+        in maximumAllowableJitter: TimeAmount,
+        file: StaticString = #fileID,
+        line: UInt = #line,
+        _ task: @escaping @Sendable () throws -> EventLoopFuture<T>
+    ) -> Scheduled<T> {
+        let jitteredDelay = self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
+        return self.flatScheduleTask(in: jitteredDelay, task)
+    }
+    
     @usableFromInline typealias FlatScheduleTaskDelayCallback<T> = @Sendable () throws -> EventLoopFuture<T>
 
     @inlinable
@@ -878,7 +903,8 @@ extension EventLoop {
         self._scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, notifying: promise, task)
     }
     
-    /// Overload `scheduleRepeatedTask` function with jitter support.
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each
+    /// task.
     ///
     /// - parameters:
     ///     - initialDelay: The delay after which the first task is executed.
@@ -896,8 +922,7 @@ extension EventLoop {
         notifying promise: EventLoopPromise<Void>? = nil,
         _ task: @escaping @Sendable (RepeatedTask) throws -> Void
     ) -> RepeatedTask {
-        let jitter = Int64.random(in: .zero..<maximumAllowableJitter.nanoseconds)
-        let jitteredDelay = delay + .microseconds(jitter)
+        let jitteredDelay = self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
         return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: jitteredDelay, notifying: promise, task)
     }
     typealias ScheduleRepeatedTaskCallback = @Sendable (RepeatedTask) throws -> Void
@@ -945,6 +970,36 @@ extension EventLoop {
     ) -> RepeatedTask {
         self._scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, notifying: promise, task)
     }
+    
+    /// Schedule a repeated asynchronous task to be executed by the `EventLoop` with a fixed delay between the end and
+    /// start of each task.
+    ///
+    /// - note: The delay is measured from the completion of one run's returned future to the start of the execution of
+    ///         the next run. For example: If you schedule a task once per second but your task takes two seconds to
+    ///         complete, the time interval between two subsequent runs will actually be three seconds (2s run time plus
+    ///         the 1s delay.)
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - maximumAllowableJitter: Upper exlusive bound of jitter range added to the `delay` paramether.
+    ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
+    ///     - task: The closure that will be executed. Task will keep repeating regardless of whether the future
+    ///             gets fulfilled with success or error.
+    ///
+    /// - return: `RepeatedTask`
+    @discardableResult
+    @preconcurrency
+    public func scheduleRepeatedAsyncTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        maximumAllowableJitter: TimeAmount,
+        notifying promise: EventLoopPromise<Void>? = nil,
+        _ task: @escaping @Sendable (RepeatedTask) -> EventLoopFuture<Void>
+    ) -> RepeatedTask {
+        let jitteredDelay = self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
+        return self._scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: jitteredDelay, notifying: promise, task)
+    }
     typealias ScheduleRepeatedAsyncTaskCallback = @Sendable (RepeatedTask) -> EventLoopFuture<Void>
 
     func _scheduleRepeatedAsyncTask(
@@ -957,7 +1012,15 @@ extension EventLoop {
         repeated.begin(in: initialDelay)
         return repeated
     }
-    
+
+    @inlinable
+    func _getJitteredDelay(
+        delay: TimeAmount,
+        maximumAllowableJitter: TimeAmount
+    ) -> TimeAmount {
+        let jitter = Int64.random(in: .zero..<maximumAllowableJitter.nanoseconds)
+        return delay + .microseconds(jitter);
+    }
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///
