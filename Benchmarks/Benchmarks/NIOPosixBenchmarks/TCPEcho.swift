@@ -55,8 +55,7 @@ private final class EchoRequestChannelHandler: ChannelInboundHandler {
     }
 }
 
-func runTCPEcho(numberOfWrites: Int) throws {
-    let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
+func runTCPEcho(numberOfWrites: Int, eventLoop: any EventLoop) throws {
     let serverChannel = try ServerBootstrap(group: eventLoop)
         .childChannelInitializer { channel in
             channel.eventLoop.makeCompletedFuture {
