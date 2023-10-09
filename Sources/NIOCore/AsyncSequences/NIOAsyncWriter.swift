@@ -15,6 +15,7 @@
 import Atomics
 import DequeModule
 import NIOConcurrencyHelpers
+import _NIODataStructures
 
 /// The delegate of the ``NIOAsyncWriter``. It is the consumer of the yielded writes to the ``NIOAsyncWriter``.
 /// Furthermore, the delegate gets informed when the ``NIOAsyncWriter`` terminated.
@@ -454,12 +455,27 @@ extension NIOAsyncWriter {
                 let action = self._stateMachine.setWritability(to: writability)
 
                 switch action {
-                case .callDidYieldAndResumeContinuations(let delegate, let elements, let suspendedYields):
+                case .callDidYieldAndResumeContinuations(let delegate, var elements, let suspendedYields):
                     // We are calling the delegate while holding lock. This can lead to potential crashes
                     // if the delegate calls `setWritability` reentrantly. However, we call this
                     // out in the docs of the delegate
                     delegate.didYield(contentsOf: elements)
 
+                    // It is safe to resume the continuations while holding the lock since resume
+                    // is immediately returning and just enqueues the Job on the executor
+                    suspendedYields.forEach { $0.continuation.resume() }
+
+                case .callDidYieldElementAndResumeContinuations(let delegate, let element, let suspendedYields):
+                    // We are calling the delegate while holding lock. This can lead to potential crashes
+                    // if the delegate calls `setWritability` reentrantly. However, we call this
+                    // out in the docs of the delegate
+                    delegate.didYield(element)
+
+                    // It is safe to resume the continuations while holding the lock since resume
+                    // is immediately returning and just enqueues the Job on the executor
+                    suspendedYields.forEach { $0.continuation.resume() }
+
+                case .resumeContinuations(let suspendedYields):
                     // It is safe to resume the continuations while holding the lock since resume
                     // is immediately returning and just enqueues the Job on the executor
                     suspendedYields.forEach { $0.continuation.resume() }
@@ -679,7 +695,7 @@ extension NIOAsyncWriter {
             case streaming(
                 isWritable: Bool,
                 cancelledYields: [YieldID],
-                suspendedYields: [SuspendedYield],
+                suspendedYields: _TinyArray<SuspendedYield>,
                 elements: Deque<Element>,
                 delegate: Delegate
             )
@@ -759,7 +775,12 @@ extension NIOAsyncWriter {
         enum SetWritabilityAction {
             /// Indicates that ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` should be called
             /// and all continuations should be resumed.
-            case callDidYieldAndResumeContinuations(Delegate, Deque<Element>, [SuspendedYield])
+            case callDidYieldAndResumeContinuations(Delegate, Deque<Element>, _TinyArray<SuspendedYield>)
+            /// Indicates that ``NIOAsyncWriterSinkDelegate/didYield(element:)`` should be called
+            /// and all continuations should be resumed.
+            case callDidYieldElementAndResumeContinuations(Delegate, Element, _TinyArray<SuspendedYield>)
+            /// Indicates that all continuations should be resumed.
+            case resumeContinuations(_TinyArray<SuspendedYield>)
             /// Indicates that ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` and
             /// ``NIOAsyncWriterSinkDelegate/didTerminate(error:)``should be called.
             case callDidYieldAndDidTerminate(Delegate, Deque<Element>)
@@ -776,7 +797,7 @@ extension NIOAsyncWriter {
 
                 return .none
 
-            case .streaming(let isWritable, let cancelledYields, let suspendedYields, let elements, let delegate):
+            case .streaming(let isWritable, let cancelledYields, let suspendedYields, var elements, let delegate):
                 if isWritable == newWritability {
                     // The writability didn't change so we can just early exit here
                     return .none
@@ -786,19 +807,53 @@ extension NIOAsyncWriter {
                     // We became writable again. This means we have to resume all the continuations
                     // and yield the values.
 
-                    self._state = .streaming(
-                        isWritable: newWritability,
-                        cancelledYields: cancelledYields,
-                        suspendedYields: [],
-                        elements: .init(),
-                        delegate: delegate
-                    )
+                    if elements.count == 0 {
+                        // We just have to resume the continuations
+                        self._state = .streaming(
+                            isWritable: newWritability,
+                            cancelledYields: cancelledYields,
+                            suspendedYields: .init(),
+                            elements: elements,
+                            delegate: delegate
+                        )
 
-                    // We are taking the whole array of suspended yields and the deque of elements
-                    // and allocate a new empty one.
-                    // As a performance optimization we could always keep multiple arrays/deques and
-                    // switch between them but I don't think this is the performance critical part.
-                    return .callDidYieldAndResumeContinuations(delegate, elements, suspendedYields)
+                        return .resumeContinuations(suspendedYields)
+                    } else if elements.count == 1 {
+                        // We have exactly one element in the buffer. Let's
+                        // pop it and re-use the buffer right away
+                        self._state = .modifying
+
+                        // This force-unwrap is safe since we just checked the count for 1.
+                        let element = elements.popFirst()!
+
+                        self._state = .streaming(
+                            isWritable: newWritability,
+                            cancelledYields: cancelledYields,
+                            suspendedYields: .init(),
+                            elements: elements,
+                            delegate: delegate
+                        )
+
+                        return .callDidYieldElementAndResumeContinuations(
+                            delegate,
+                            element,
+                            suspendedYields
+                        )
+                    } else {
+                        self._state = .streaming(
+                            isWritable: newWritability,
+                            cancelledYields: cancelledYields,
+                            suspendedYields: .init(),
+                            elements: .init(),
+                            delegate: delegate
+                        )
+
+                        // We are taking the whole array of suspended yields and the deque of elements
+                        // and allocate a new empty one.
+                        // As a performance optimization we could always keep multiple arrays/deques and
+                        // switch between them but I don't think this is the performance critical part.
+                        return .callDidYieldAndResumeContinuations(delegate, elements, suspendedYields)
+                    }
                 } else {
                     // We became unwritable nothing really to do here
                     precondition(suspendedYields.isEmpty, "No yield should be suspended at this point")
@@ -867,7 +922,7 @@ extension NIOAsyncWriter {
                 self._state = .streaming(
                     isWritable: isWritable,
                     cancelledYields: [],
-                    suspendedYields: [],
+                    suspendedYields: .init(),
                     elements: .init(),
                     delegate: delegate
                 )
@@ -985,7 +1040,7 @@ extension NIOAsyncWriter {
                 self._state = .streaming(
                     isWritable: isWritable,
                     cancelledYields: [yieldID],
-                    suspendedYields: [],
+                    suspendedYields: .init(),
                     elements: .init(),
                     delegate: delegate
                 )
@@ -1047,7 +1102,7 @@ extension NIOAsyncWriter {
             /// Indicates that ``NIOAsyncWriterSinkDelegate/didTerminate(completion:)`` should be called.
             case callDidTerminate(Delegate)
             /// Indicates that all continuations should be resumed.
-            case resumeContinuations([SuspendedYield])
+            case resumeContinuations(_TinyArray<SuspendedYield>)
             /// Indicates that nothing should be done.
             case none
         }
@@ -1096,7 +1151,7 @@ extension NIOAsyncWriter {
             case callDidTerminate(Delegate, Error?)
             /// Indicates that ``NIOAsyncWriterSinkDelegate/didTerminate(completion:)`` should be called and all
             /// continuations should be resumed with the given error.
-            case resumeContinuationsWithErrorAndCallDidTerminate(Delegate, [SuspendedYield], Error)
+            case resumeContinuationsWithErrorAndCallDidTerminate(Delegate, _TinyArray<SuspendedYield>, Error)
             /// Indicates that nothing should be done.
             case none
         }
