@@ -317,6 +317,10 @@ public protocol EventLoop: EventLoopGroup {
     /// implementation returns a ``NIODefaultSerialEventLoopExecutor`` instead, which provides suboptimal performance.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     var executor: any SerialExecutor { get }
+
+    /// Submit a job to be executed by the `EventLoop`
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    func enqueue(_ job: consuming ExecutorJob)
     #endif
 
     /// Must crash if it is not safe to call `wait()` on an `EventLoopFuture`.
@@ -380,6 +384,18 @@ extension EventLoop {
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public var executor: any SerialExecutor {
         NIODefaultSerialEventLoopExecutor(self)
+    }
+
+    @inlinable
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    public func enqueue(_ job: consuming ExecutorJob) {
+        // By default we are just going to use execute to run the job
+        // this is quite heavy since it allocates the closure for
+        // every single job.
+        let unownedJob = UnownedJob(job)
+        self.execute {
+            unownedJob.runSynchronously(on: self.executor.asUnownedSerialExecutor())
+        }
     }
     #endif
 }

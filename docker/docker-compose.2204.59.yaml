@@ -77,6 +77,11 @@ services:
   performance-test:
     image: swift-nio:22.04-5.9
 
+  update-benchmark-baseline:
+    image: swift-nio:22.04-5.9
+    environment:
+      - SWIFT_VERSION=5.9
+
   shell:
     image: swift-nio:22.04-5.9
 
