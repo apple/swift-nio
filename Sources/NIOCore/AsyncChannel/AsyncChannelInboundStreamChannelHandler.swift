@@ -326,15 +326,23 @@ struct NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate: @unchecked Se
 
     @inlinable
     func didTerminate() {
-        self.eventLoop.execute {
+        if self.eventLoop.inEventLoop {
             self._didTerminate()
+        } else {
+            self.eventLoop.execute {
+                self._didTerminate()
+            }
         }
     }
 
     @inlinable
     func produceMore() {
-        self.eventLoop.execute {
+        if self.eventLoop.inEventLoop {
             self._produceMore()
+        } else {
+            self.eventLoop.execute {
+                self._produceMore()
+            }
         }
     }
 }

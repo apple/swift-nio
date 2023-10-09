@@ -76,6 +76,23 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     }
 
     @inlinable
+    func _didYield(element: OutboundOut) {
+        // This is always called from an async context, so we must loop-hop.
+        // Because we always loop-hop, we're always at the top of a stack frame. As this
+        // is the only source of writes for us, and as this channel handler doesn't implement
+        // func write(), we cannot possibly re-entrantly write. That means we can skip many of the
+        // awkward re-entrancy protections NIO usually requires, and can safely just do an iterative
+        // write.
+        self.eventLoop.preconditionInEventLoop()
+        guard let context = self.context else {
+            // Already removed from the channel by now, we can stop.
+            return
+        }
+
+        self._doOutboundWrite(context: context, write: element)
+    }
+
+    @inlinable
     func _didTerminate(error: Error?) {
         self.eventLoop.preconditionInEventLoop()
 
@@ -99,6 +116,12 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
             context.write(self.wrapOutboundOut(write), promise: nil)
         }
 
+        context.flush()
+    }
+
+    @inlinable
+    func _doOutboundWrite(context: ChannelHandlerContext, write: OutboundOut) {
+        context.write(self.wrapOutboundOut(write), promise: nil)
         context.flush()
     }
 
@@ -150,6 +173,14 @@ extension NIOAsyncChannelOutboundWriterHandler {
             // This always called from an async context, so we must loop-hop.
             self.eventLoop.execute {
                 self.handler._didYield(sequence: sequence)
+            }
+        }
+
+        @inlinable
+        func didYield(_ element: OutboundOut) {
+            // This always called from an async context, so we must loop-hop.
+            self.eventLoop.execute {
+                self.handler._didYield(element: element)
             }
         }
 
