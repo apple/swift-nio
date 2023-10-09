@@ -455,7 +455,7 @@ extension NIOAsyncWriter {
                 let action = self._stateMachine.setWritability(to: writability)
 
                 switch action {
-                case .callDidYieldAndResumeContinuations(let delegate, var elements, let suspendedYields):
+                case .callDidYieldAndResumeContinuations(let delegate, let elements, let suspendedYields):
                     // We are calling the delegate while holding lock. This can lead to potential crashes
                     // if the delegate calls `setWritability` reentrantly. However, we call this
                     // out in the docs of the delegate
