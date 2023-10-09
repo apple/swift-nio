@@ -170,25 +170,34 @@ extension NIOAsyncChannelOutboundWriterHandler {
 
         @inlinable
         func didYield(contentsOf sequence: Deque<OutboundOut>) {
-            // This always called from an async context, so we must loop-hop.
-            self.eventLoop.execute {
+            if self.eventLoop.inEventLoop {
                 self.handler._didYield(sequence: sequence)
+            } else {
+                self.eventLoop.execute {
+                    self.handler._didYield(sequence: sequence)
+                }
             }
         }
 
         @inlinable
         func didYield(_ element: OutboundOut) {
-            // This always called from an async context, so we must loop-hop.
-            self.eventLoop.execute {
+            if self.eventLoop.inEventLoop {
                 self.handler._didYield(element: element)
+            } else {
+                self.eventLoop.execute {
+                    self.handler._didYield(element: element)
+                }
             }
         }
 
         @inlinable
         func didTerminate(error: Error?) {
-            // This always called from an async context, so we must loop-hop.
-            self.eventLoop.execute {
+            if self.eventLoop.inEventLoop {
                 self.handler._didTerminate(error: error)
+            } else {
+                self.eventLoop.execute {
+                    self.handler._didTerminate(error: error)
+                }
             }
         }
     }
