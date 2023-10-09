@@ -420,9 +420,12 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount, once converted to nanoseconds, exceeds `Int64.max`.
     @inlinable
     public static func microseconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * 1000)
+        let nanoseconds = amount &* 1000
+        return nanoseconds >= 0 ? TimeAmount(nanoseconds) : TimeAmount(.max)
     }
 
     /// Creates a new `TimeAmount` for the given amount of milliseconds.
@@ -430,9 +433,12 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount, once converted to nanoseconds, exceeds `Int64.max`.
     @inlinable
     public static func milliseconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000))
+        let nanoseconds = amount &* (1000 * 1000)
+        return nanoseconds >= 0 ? TimeAmount(nanoseconds) : TimeAmount(.max)
     }
 
     /// Creates a new `TimeAmount` for the given amount of seconds.
@@ -440,9 +446,12 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount, once converted to nanoseconds, exceeds `Int64.max`.
     @inlinable
     public static func seconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000 * 1000))
+        let nanoseconds = amount &* (1000 * 1000 * 1000)
+        return nanoseconds >= 0 ? TimeAmount(nanoseconds) : TimeAmount(.max)
     }
 
     /// Creates a new `TimeAmount` for the given amount of minutes.
@@ -450,9 +459,12 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount, once converted to nanoseconds, exceeds `Int64.max`.
     @inlinable
     public static func minutes(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000 * 1000 * 60))
+        let nanoseconds = amount &* (1000 * 1000 * 1000 * 60)
+        return nanoseconds >= 0 ? TimeAmount(nanoseconds) : TimeAmount(.max)
     }
 
     /// Creates a new `TimeAmount` for the given amount of hours.
@@ -460,9 +472,12 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount, once converted to nanoseconds, exceeds `Int64.max`.
     @inlinable
     public static func hours(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000 * 1000 * 60 * 60))
+        let nanoseconds = amount &* (1000 * 1000 * 1000 * 60 * 60)
+        return nanoseconds >= 0 ? TimeAmount(nanoseconds) : TimeAmount(.max)
     }
 }
 
