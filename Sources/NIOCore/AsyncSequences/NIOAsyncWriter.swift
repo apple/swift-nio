@@ -473,7 +473,7 @@ extension NIOAsyncWriter {
             let yieldID = self._yieldIDGenerator.generateUniqueYieldID()
 
             try await withTaskCancellationHandler {
-                // We are manually locking here to hold the lock across the withCheckedContinuation call
+                // We are manually locking here to hold the lock across the withUnsafeContinuation call
                 self._lock.lock()
 
                 let action = self._stateMachine.yield(contentsOf: sequence, yieldID: yieldID)
@@ -493,7 +493,7 @@ extension NIOAsyncWriter {
                     throw error
 
                 case .suspendTask:
-                    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    try await withUnsafeThrowingContinuation { (continuation: UnsafeContinuation<Void, Error>) in
                         self._stateMachine.yield(
                             contentsOf: sequence,
                             continuation: continuation,
@@ -523,7 +523,7 @@ extension NIOAsyncWriter {
             let yieldID = self._yieldIDGenerator.generateUniqueYieldID()
 
             try await withTaskCancellationHandler {
-                // We are manually locking here to hold the lock across the withCheckedContinuation call
+                // We are manually locking here to hold the lock across the withUnsafeContinuation call
                 self._lock.lock()
 
                 let action = self._stateMachine.yield(contentsOf: CollectionOfOne(element), yieldID: yieldID)
@@ -542,7 +542,7 @@ extension NIOAsyncWriter {
                     throw error
 
                 case .suspendTask:
-                    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    try await withUnsafeThrowingContinuation { (continuation: UnsafeContinuation<Void, Error>) in
                         self._stateMachine.yield(
                             contentsOf: CollectionOfOne(element),
                             continuation: continuation,
@@ -622,10 +622,10 @@ extension NIOAsyncWriter {
             /// The yield's produced sequence of elements.
             /// The yield's continuation.
             @usableFromInline
-            var continuation: CheckedContinuation<Void, Error>
+            var continuation: UnsafeContinuation<Void, Error>
 
             @inlinable
-            init(yieldID: YieldID, continuation: CheckedContinuation<Void, Error>) {
+            init(yieldID: YieldID, continuation: UnsafeContinuation<Void, Error>) {
                 self.yieldID = yieldID
                 self.continuation = continuation
             }
@@ -937,7 +937,7 @@ extension NIOAsyncWriter {
         @inlinable
         /* fileprivate */ internal mutating func yield<S: Sequence>(
             contentsOf sequence: S,
-            continuation: CheckedContinuation<Void, Error>,
+            continuation: UnsafeContinuation<Void, Error>,
             yieldID: YieldID
         ) where S.Element == Element {
             switch self._state {
@@ -973,7 +973,7 @@ extension NIOAsyncWriter {
         /// Actions returned by `cancel()`.
         @usableFromInline
         enum CancelAction {
-            case resumeContinuation(CheckedContinuation<Void, Error>)
+            case resumeContinuation(UnsafeContinuation<Void, Error>)
             /// Indicates that nothing should be done.
             case none
         }
