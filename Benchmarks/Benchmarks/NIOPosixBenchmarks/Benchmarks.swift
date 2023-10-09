@@ -15,7 +15,7 @@
 import Benchmark
 import NIOPosix
 
-private let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 
 let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [

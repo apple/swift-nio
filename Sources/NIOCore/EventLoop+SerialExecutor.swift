@@ -25,6 +25,9 @@ public protocol NIOSerialEventLoopExecutor: EventLoop, SerialExecutor { }
 extension NIOSerialEventLoopExecutor {
     @inlinable
     public func enqueue(_ job: consuming ExecutorJob) {
+        // By default we are just going to use execute to run the job
+        // this is quite heavy since it allocates the closure for
+        // every single job.
         let unownedJob = UnownedJob(job)
         self.execute {
             unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
@@ -62,10 +65,7 @@ final class NIODefaultSerialEventLoopExecutor {
 extension NIODefaultSerialEventLoopExecutor: SerialExecutor {
     @inlinable
     public func enqueue(_ job: consuming ExecutorJob) {
-        let unownedJob = UnownedJob(job)
-        self.loop.execute {
-            unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
-        }
+        self.loop.enqueue(job)
     }
 
     @inlinable
