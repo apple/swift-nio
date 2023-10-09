@@ -770,7 +770,7 @@ extension EventLoop {
     ///
     /// - parameters:
     ///     - delay: The delay between the end of one task and the start of the next.
-    ///     - maximumAllowableJitter: Upper exlusive bound of jitter range added to the `delay` paramether.
+    ///     - maximumAllowableJitter: Upper exlusive bound of jitter range added to the `delay` parameter.
     ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the full execution of the task, including its returned `EventLoopFuture`.
@@ -909,7 +909,7 @@ extension EventLoop {
     /// - parameters:
     ///     - initialDelay: The delay after which the first task is executed.
     ///     - delay: The delay between the end of one task and the start of the next.
-    ///     - maximumAllowableJitter: Upper exlusive bound of jitter range added to the `delay` paramether.
+    ///     - maximumAllowableJitter: Upper exlusive bound of jitter range added to the `delay` parameter.
     ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
@@ -982,7 +982,7 @@ extension EventLoop {
     /// - parameters:
     ///     - initialDelay: The delay after which the first task is executed.
     ///     - delay: The delay between the end of one task and the start of the next.
-    ///     - maximumAllowableJitter: Upper exlusive bound of jitter range added to the `delay` paramether.
+    ///     - maximumAllowableJitter: Upper exlusive bound of jitter range added to the `delay` parameter.
     ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
     ///     - task: The closure that will be executed. Task will keep repeating regardless of whether the future
     ///             gets fulfilled with success or error.
