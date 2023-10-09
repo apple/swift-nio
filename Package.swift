@@ -50,6 +50,7 @@ let package = Package(
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
+                "_NIODataStructures",
                 swiftCollections,
                 swiftAtomics,
             ]
