@@ -402,8 +402,36 @@ extension MultiThreadedEventLoopGroup: CustomStringConvertible {
     }
 }
 
+#if swift(>=5.9)
+@usableFromInline
+struct ErasedUnownedJob {
+    @usableFromInline
+    let erasedJob: Any
+
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    init(job: UnownedJob) {
+        self.erasedJob = job
+    }
+
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    @inlinable
+    var unownedJob: UnownedJob {
+        // This force-cast is safe since we only store an UnownedJob
+        self.erasedJob as! UnownedJob
+    }
+}
+#endif
+
 @usableFromInline
 internal struct ScheduledTask {
+    @usableFromInline
+    enum UnderlyingTask {
+        case function(() -> Void)
+        #if swift(>=5.9)
+        case unownedJob(ErasedUnownedJob)
+        #endif
+    }
+
     /// The id of the scheduled task.
     ///
     /// - Important: This id has two purposes. First, it is used to give this struct an identity so that we can implement ``Equatable``
@@ -411,21 +439,32 @@ internal struct ScheduledTask {
     ///     This means, the ids need to be unique for a given ``SelectableEventLoop`` and they need to be in ascending order.
     @usableFromInline
     let id: UInt64
-    let task: () -> Void
-    private let failFn: (Error) ->()
+    let task: UnderlyingTask
+    private let failFn: ((Error) ->())?
     @usableFromInline
     internal let readyTime: NIODeadline
 
     @usableFromInline
     init(id: UInt64, _ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
         self.id = id
-        self.task = task
+        self.task = .function(task)
         self.failFn = failFn
         self.readyTime = time
     }
 
+    #if swift(>=5.9)
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    @usableFromInline
+    init(id: UInt64, job: consuming ExecutorJob, readyTime: NIODeadline) {
+        self.id = id
+        self.task = .unownedJob(.init(job: UnownedJob(job)))
+        self.readyTime = readyTime
+        self.failFn = nil
+    }
+    #endif
+
     func fail(_ error: Error) {
-        failFn(error)
+        failFn?(error)
     }
 }
 
