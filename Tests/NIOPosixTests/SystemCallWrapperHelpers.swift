@@ -17,16 +17,16 @@ import Foundation
 @testable import NIOPosix
 #endif
 
-public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {
-    func measureOne(_ body: () throws -> Int) rethrows -> TimeInterval {
-        let start = Date()
+public func measureRunTime(_ body: () throws -> Int) rethrows -> UInt64 {
+    func measureOne(_ body: () throws -> Int) rethrows -> UInt64 {
+        let start = DispatchTime.now().uptimeNanoseconds
         _ = try body()
-        let end = Date()
-        return end.timeIntervalSince(start)
+        let end = DispatchTime.now().uptimeNanoseconds
+        return end - start
     }
 
     _ = try measureOne(body)
-    var measurements = Array(repeating: 0.0, count: 10)
+    var measurements = Array(repeating: UInt64(0), count: 10)
     for i in 0..<10 {
         measurements[i] = try measureOne(body)
     }
@@ -37,7 +37,7 @@ public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {
 
 public func measureRunTimeAndPrint(desc: String, body: () throws -> Int) rethrows -> Void {
     print("measuring: \(desc)")
-    print("\(try measureRunTime(body))s")
+    print("\(try measureRunTime(body)/1_000_000)s")
 }
 
 enum TestError: Error {
@@ -119,7 +119,8 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
         precondition(isDebugMode)
         print("WARNING: Syscall wrapper test: Over 100% overhead allowed. Running in debug assert configuration which allows \(allowedOverheadPercent)% overhead :(. Consider running in Release mode.")
     }
-    testAssertFunction(directCallTime * (1.0 + Double(allowedOverheadPercent)/100) > withSystemCallWrappersTime,
+    let upper = Double(directCallTime) * (1.0 + Double(allowedOverheadPercent)/100)
+    testAssertFunction( upper > Double(withSystemCallWrappersTime),
                        "Posix wrapper adds more than \(allowedOverheadPercent)% overhead (with wrapper: \(withSystemCallWrappersTime), without: \(directCallTime)",
                        #filePath, #line)
 }
