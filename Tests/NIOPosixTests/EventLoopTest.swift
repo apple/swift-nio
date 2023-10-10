@@ -1608,6 +1608,24 @@ public final class EventLoopTest : XCTestCase {
             XCTAssert(error is DummyError)
         }
     }
+    
+    func testTimeAmountCappedOverflow() {
+        let overflowCap = TimeAmount(Int64.max)
+        XCTAssertEqual(TimeAmount.microseconds(.max), overflowCap)
+        XCTAssertEqual(TimeAmount.milliseconds(.max), overflowCap)
+        XCTAssertEqual(TimeAmount.seconds(.max), overflowCap)
+        XCTAssertEqual(TimeAmount.minutes(.max), overflowCap)
+        XCTAssertEqual(TimeAmount.hours(.max), overflowCap)
+    }
+    
+    func testTimeAmountCappedUnderflow() {
+        let underflowCap = TimeAmount(.min)
+        XCTAssertEqual(TimeAmount.microseconds(.min), underflowCap)
+        XCTAssertEqual(TimeAmount.milliseconds(.min), underflowCap)
+        XCTAssertEqual(TimeAmount.seconds(.min), underflowCap)
+        XCTAssertEqual(TimeAmount.minutes(.min), underflowCap)
+        XCTAssertEqual(TimeAmount.hours(.min), underflowCap)
+    }
 }
 
 fileprivate class EventLoopWithPreSucceededFuture: EventLoop {
