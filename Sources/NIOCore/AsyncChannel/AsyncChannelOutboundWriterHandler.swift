@@ -41,6 +41,10 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     @usableFromInline
     var context: ChannelHandlerContext?
 
+    /// The writes current being written out.
+    @usableFromInline
+    var bufferedWrites: Deque<OutboundOut>?
+
     /// The event loop.
     @usableFromInline
     let eventLoop: EventLoop
@@ -112,17 +116,32 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
 
     @inlinable
     func _doOutboundWrites(context: ChannelHandlerContext, writes: Deque<OutboundOut>) {
-        for write in writes {
-            context.write(self.wrapOutboundOut(write), promise: nil)
-        }
+        if self.bufferedWrites != nil {
+            // The force-unwrap is safe since we just checked if it is nil
+            // We are not unconditionally appending and keeping a Deque around to optimize for the fast path.
+            self.bufferedWrites!.append(contentsOf: writes)
+        } else {
+            self.bufferedWrites = writes
 
-        context.flush()
+            while let write = self.bufferedWrites?.popFirst() {
+                context.write(self.wrapOutboundOut(write), promise: nil)
+            }
+
+            context.flush()
+            self.bufferedWrites = nil
+        }
     }
 
     @inlinable
     func _doOutboundWrite(context: ChannelHandlerContext, write: OutboundOut) {
-        context.write(self.wrapOutboundOut(write), promise: nil)
-        context.flush()
+        if self.bufferedWrites != nil {
+            // The force-unwrap is safe since we just checked if it is nil
+            // We are not unconditionally appending and keeping a Deque around to optimize for the fast path.
+            self.bufferedWrites!.append(write)
+        } else {
+            context.write(self.wrapOutboundOut(write), promise: nil)
+            context.flush()
+        }
     }
 
     @inlinable

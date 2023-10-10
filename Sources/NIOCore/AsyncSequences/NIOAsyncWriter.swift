@@ -33,6 +33,10 @@ public protocol NIOAsyncWriterSinkDelegate: Sendable {
     /// right away to the delegate. If the ``NIOAsyncWriter`` was _NOT_ writable then the sequence will be buffered
     /// until the ``NIOAsyncWriter`` becomes writable again. All buffered writes, while the ``NIOAsyncWriter`` is not writable,
     /// will be coalesced into a single sequence.
+    ///
+    /// The delegate might reentrantly call ``NIOAsyncWriter/Sink/setWritability(to:)`` while still processing writes.
+    /// This might trigger more calls to one of the `didYield` methods and it is up to the delegate to make sure that this reentrancy is
+    /// correctly guarded against.
     func didYield(contentsOf sequence: Deque<Element>)
 
     /// This method is called once a single element was yielded to the ``NIOAsyncWriter``.
@@ -43,6 +47,10 @@ public protocol NIOAsyncWriterSinkDelegate: Sendable {
     /// will be coalesced into a single sequence.
     ///
     /// - Note: This a fast path that you can optionally implement. By default this will just call ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)``.
+    ///
+    /// The delegate might reentrantly call ``NIOAsyncWriter/Sink/setWritability(to:)`` while still processing writes.
+    /// This might trigger more calls to one of the `didYield` methods and it is up to the delegate to make sure that this reentrancy is
+    /// correctly guarded against. 
     func didYield(_ element: Element)
 
     /// This method is called once the ``NIOAsyncWriter`` is terminated.
