@@ -28,7 +28,6 @@ private final class MockAsyncWriterDelegate: NIOAsyncWriterSinkDelegate, @unchec
     }
     var didYieldHandler: ((Deque<String>) -> Void)?
     func didYield(contentsOf sequence: Deque<String>) {
-        print("Got yield", sequence)
         self._didYieldCallCount.withLockedValue { $0 += 1 }
         if let didYieldHandler = self.didYieldHandler {
             didYieldHandler(sequence)
@@ -99,6 +98,32 @@ final class NIOAsyncWriterTests: XCTestCase {
         try await task3.value
 
         XCTAssertEqual(elements, 30)
+    }
+
+    func testMultipleConcurrentBatchWrites() async throws {
+        var elements = 0
+        self.delegate.didYieldHandler = { elements += $0.count }
+        let task1 = Task { [writer] in
+            for i in 0...9 {
+                try await writer!.yield(contentsOf: ["message\(i).1", "message\(i).2"])
+            }
+        }
+        let task2 = Task { [writer] in
+            for i in 10...19 {
+                try await writer!.yield(contentsOf: ["message\(i).1", "message\(i).2"])
+            }
+        }
+        let task3 = Task { [writer] in
+            for i in 20...29 {
+                try await writer!.yield(contentsOf: ["message\(i).1", "message\(i).2"])
+            }
+        }
+
+        try await task1.value
+        try await task2.value
+        try await task3.value
+
+        XCTAssertEqual(elements, 60)
     }
 
     func testWriterCoalescesWrites() async throws {

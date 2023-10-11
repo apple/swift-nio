@@ -933,7 +933,8 @@ extension NIOAsyncWriter {
                     // throw an error.
                     cancelledYields.remove(at: index)
 
-                    if isWritable && !inDelegateOutcall {
+                    switch (isWritable, inDelegateOutcall) {
+                    case (true, false):
                         // We are writable so we can yield the elements right away and then
                         // return normally.
                         self._state = .streaming(
@@ -945,7 +946,8 @@ extension NIOAsyncWriter {
                             delegate: delegate
                         )
                         return .callDidYield(delegate)
-                    } else if isWritable && inDelegateOutcall {
+
+                    case (true, true):
                         // We are writable but already calling out to the delegate
                         // so we have to buffer the elements.
                         elements.append(contentsOf: sequence)
@@ -959,7 +961,7 @@ extension NIOAsyncWriter {
                             delegate: delegate
                         )
                         return .returnNormally
-                    } else {
+                    case (false, _):
                         // We are not writable so we are just going to enqueue the writes
                         // and return normally. We are not suspending the yield since the Task
                         // is marked as cancelled.
@@ -979,7 +981,8 @@ extension NIOAsyncWriter {
                 } else {
                     // Yield hasn't been marked as cancelled.
 
-                    if isWritable && !inDelegateOutcall {
+                    switch (isWritable, inDelegateOutcall) {
+                    case (true, false):
                         self._state = .streaming(
                             isWritable: isWritable,
                             inDelegateOutcall: true, // We are now making a call to the delegate
@@ -990,7 +993,7 @@ extension NIOAsyncWriter {
                         )
 
                         return .callDidYield(delegate)
-                    } else if isWritable && inDelegateOutcall {
+                    case (true, true):
                         elements.append(contentsOf: sequence)
                         self._state = .streaming(
                             isWritable: isWritable,
@@ -1001,7 +1004,7 @@ extension NIOAsyncWriter {
                             delegate: delegate
                         )
                         return .returnNormally
-                    } else {
+                    case (false, _):
                         // We are not writable
                         self._state = .streaming(
                             isWritable: isWritable,
@@ -1295,7 +1298,7 @@ extension NIOAsyncWriter {
                         delegate: delegate
                     )
                     return .none
-                } else if elements.count >= 1 {
+                } else if elements.count > 1 {
                     // We have to yield all of the elements now.
                     self._state = .streaming(
                         isWritable: isWritable,
@@ -1330,12 +1333,12 @@ extension NIOAsyncWriter {
                 }
 
             case .writerFinished(var elements, let delegate, let error):
-                if elements.count == 0 {
+                if elements.isEmpty {
                     // We have returned the last buffered elements and have to
                     // call didTerminate now.
                     self._state = .finished(sinkError: nil)
                     return .callDidTerminate(delegate, error)
-                } else if elements.count >= 1 {
+                } else if elements.count > 1 {
                     // We have to yield all of the elements now.
                     self._state = .writerFinished(
                         elements: .init(),
