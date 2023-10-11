@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-@_spi(AsyncChannel) import NIOHTTP1
+import NIOHTTP1
 import _NIOBase64
 
 @available(*, deprecated, renamed: "NIOWebSocketClientUpgrader")
@@ -80,7 +80,6 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
 /// This upgrader also assumes that the `HTTPClientUpgradeHandler` will appropriately mutate the
 /// pipeline to remove the HTTP `ChannelHandler`s.
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-@_spi(AsyncChannel)
 public final class NIOTypedWebSocketClientUpgrader<UpgradeResult: Sendable>: NIOTypedHTTPClientProtocolUpgrader {
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"

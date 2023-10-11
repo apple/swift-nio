@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 #if swift(>=5.9)
-@_spi(AsyncChannel) import NIOCore
-@_spi(AsyncChannel) import NIOPosix
+import NIOCore
+import NIOPosix
 
 @available(macOS 14, *)
 @main

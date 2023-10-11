@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import Atomics
 import NIOConcurrencyHelpers
-@_spi(AsyncChannel) @testable import NIOCore
+@testable import NIOCore
 import NIOEmbedded
 import XCTest
 
@@ -41,7 +41,7 @@ final class AsyncChannelTests: XCTestCase {
         let thirdRead = try await iterator.next()
         XCTAssertNil(thirdRead)
 
-        try await channel.close()
+        try await channel.closeFuture.get()
     }
 
     func testAsyncChannelBasicWrites() async throws {

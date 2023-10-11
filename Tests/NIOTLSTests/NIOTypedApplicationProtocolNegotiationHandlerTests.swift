@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(AsyncChannel) import NIOTLS
-@_spi(AsyncChannel) import NIOCore
+import NIOTLS
+import NIOCore
 import NIOEmbedded
 import XCTest
 import NIOTestUtils

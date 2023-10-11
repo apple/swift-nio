@@ -16,7 +16,7 @@ import XCTest
 import NIOCore
 import NIOEmbedded
 @testable import NIOPosix
-@testable @_spi(AsyncChannel) import NIOHTTP1
+@testable import NIOHTTP1
 
 extension ChannelPipeline {
     fileprivate func assertDoesNotContainUpgrader() throws {

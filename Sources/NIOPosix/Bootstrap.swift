@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-@_spi(AsyncChannel) import NIOCore
+import NIOCore
 
 #if os(Windows)
 import ucrt
@@ -474,7 +474,6 @@ extension ServerBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         host: String,
         port: Int,
@@ -499,7 +498,6 @@ extension ServerBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         to address: SocketAddress,
         serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
@@ -535,7 +533,6 @@ extension ServerBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         unixDomainSocketPath: String,
         cleanupExistingSocketFile: Bool = false,
@@ -564,7 +561,6 @@ extension ServerBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         _ socket: NIOBSDSocket.Handle,
         cleanupExistingSocketFile: Bool = false,
@@ -623,7 +619,7 @@ extension ServerBootstrap {
                         name: "AcceptHandler"
                     )
                     let asyncChannel = try NIOAsyncChannel<ChannelInitializerResult, Never>
-                        .wrapAsyncChannelWithTransformations(
+                        ._wrapAsyncChannelWithTransformations(
                             synchronouslyWrapping: serverChannel,
                             backPressureStrategy: serverBackPressureStrategy,
                             channelReadTransformation: { channel -> EventLoopFuture<ChannelInitializerResult> in
@@ -1067,7 +1063,6 @@ extension ClientBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         host: String,
         port: Int,
@@ -1093,7 +1088,6 @@ extension ClientBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         to address: SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
@@ -1118,7 +1112,6 @@ extension ClientBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         unixDomainSocketPath: String,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
@@ -1138,7 +1131,6 @@ extension ClientBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func withConnectedSocket<Output: Sendable>(
         _ socket: NIOBSDSocket.Handle,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
@@ -1567,7 +1559,6 @@ extension DatagramBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func withBoundSocket<Output: Sendable>(
         _ socket: NIOBSDSocket.Handle,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
@@ -1598,7 +1589,6 @@ extension DatagramBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         host: String,
         port: Int,
@@ -1623,7 +1613,6 @@ extension DatagramBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         to address: SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
@@ -1649,7 +1638,6 @@ extension DatagramBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         unixDomainSocketPath: String,
         cleanupExistingSocketFile: Bool = false,
@@ -1679,7 +1667,6 @@ extension DatagramBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         host: String,
         port: Int,
@@ -1704,7 +1691,6 @@ extension DatagramBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         to address: SocketAddress,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
@@ -1728,7 +1714,6 @@ extension DatagramBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         unixDomainSocketPath: String,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
@@ -2077,7 +2062,6 @@ extension NIOPipeBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func takingOwnershipOfDescriptor<Output: Sendable>(
         inputOutput: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
@@ -2116,7 +2100,6 @@ extension NIOPipeBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func takingOwnershipOfDescriptors<Output: Sendable>(
         input: CInt,
         output: CInt,
@@ -2131,8 +2114,7 @@ extension NIOPipeBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel) // Should become private
-    public func _takingOwnershipOfDescriptors<ChannelInitializerResult, PostRegistrationTransformationResult: Sendable>(
+    func _takingOwnershipOfDescriptors<ChannelInitializerResult, PostRegistrationTransformationResult: Sendable>(
         input: CInt,
         output: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
