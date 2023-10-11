@@ -15,25 +15,32 @@
 import DequeModule
 import NIOCore
 import XCTest
+import NIOConcurrencyHelpers
 
 private struct SomeError: Error, Hashable {}
 
 private final class MockAsyncWriterDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
     typealias Element = String
 
-    var didYieldCallCount = 0
+    var _didYieldCallCount = NIOLockedValueBox(0)
+    var didYieldCallCount: Int {
+        self._didYieldCallCount.withLockedValue { $0 }
+    }
     var didYieldHandler: ((Deque<String>) -> Void)?
     func didYield(contentsOf sequence: Deque<String>) {
-        self.didYieldCallCount += 1
+        self._didYieldCallCount.withLockedValue { $0 += 1 }
         if let didYieldHandler = self.didYieldHandler {
             didYieldHandler(sequence)
         }
     }
 
-    var didTerminateCallCount = 0
+    var _didTerminateCallCount = NIOLockedValueBox(0)
+    var didTerminateCallCount: Int {
+        self._didTerminateCallCount.withLockedValue { $0 }
+    }
     var didTerminateHandler: ((Error?) -> Void)?
     func didTerminate(error: Error?) {
-        self.didTerminateCallCount += 1
+        self._didTerminateCallCount.withLockedValue { $0 += 1 }
         if let didTerminateHandler = self.didTerminateHandler {
             didTerminateHandler(error)
         }

@@ -85,7 +85,7 @@ final class AsyncChannelTests: XCTestCase {
             inboundReader = wrapped.inboundStream
 
             try await channel.testingEventLoop.executeInContext {
-                XCTAssertEqual(0, closeRecorder.outboundCloses)
+                XCTAssertEqual(1, closeRecorder.outboundCloses)
             }
         }
 
@@ -159,7 +159,7 @@ final class AsyncChannelTests: XCTestCase {
                 inboundReader = wrapped.inboundStream
 
                 try await channel.testingEventLoop.executeInContext {
-                    XCTAssertEqual(0, closeRecorder.allCloses)
+                    XCTAssertEqual(1, closeRecorder.allCloses)
                 }
             }
 

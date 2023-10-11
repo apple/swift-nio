@@ -533,7 +533,7 @@ extension NIOThrowingAsyncSequenceProducer {
                 case .suspendTask:
                     // It is safe to hold the lock across this method
                     // since the closure is guaranteed to be run straight away
-                    return try await withCheckedThrowingContinuation { continuation in
+                    return try await withUnsafeThrowingContinuation { continuation in
                         let action = self._stateMachine.next(for: continuation)
 
                         switch action {
@@ -606,7 +606,7 @@ extension NIOThrowingAsyncSequenceProducer {
             case streaming(
                 backPressureStrategy: Strategy,
                 buffer: Deque<Element>,
-                continuation: CheckedContinuation<Element?, Error>?,
+                continuation: UnsafeContinuation<Element?, Error>?,
                 hasOutstandingDemand: Bool,
                 iteratorInitialized: Bool
             )
@@ -787,20 +787,20 @@ extension NIOThrowingAsyncSequenceProducer {
             /// Indicates that the continuation should be resumed and
             /// ``NIOThrowingAsyncSequenceProducer/Source/YieldResult/produceMore`` should be returned.
             case resumeContinuationAndReturnProduceMore(
-                continuation: CheckedContinuation<Element?, Error>,
+                continuation: UnsafeContinuation<Element?, Error>,
                 element: Element
             )
             /// Indicates that the continuation should be resumed and
             /// ``NIOThrowingAsyncSequenceProducer/Source/YieldResult/stopProducing`` should be returned.
             case resumeContinuationAndReturnStopProducing(
-                continuation: CheckedContinuation<Element?, Error>,
+                continuation: UnsafeContinuation<Element?, Error>,
                 element: Element
             )
             /// Indicates that the yielded elements have been dropped.
             case returnDropped
 
             @usableFromInline
-            init(shouldProduceMore: Bool, continuationAndElement: (CheckedContinuation<Element?, Error>, Element)? = nil) {
+            init(shouldProduceMore: Bool, continuationAndElement: (UnsafeContinuation<Element?, Error>, Element)? = nil) {
                 switch (shouldProduceMore, continuationAndElement) {
                 case (true, .none):
                     self = .returnProduceMore
@@ -902,7 +902,7 @@ extension NIOThrowingAsyncSequenceProducer {
         enum FinishAction {
             /// Indicates that the continuation should be resumed with `nil` and
             /// that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
-            case resumeContinuationWithFailureAndCallDidTerminate(CheckedContinuation<Element?, Error>, Failure?)
+            case resumeContinuationWithFailureAndCallDidTerminate(UnsafeContinuation<Element?, Error>, Failure?)
             /// Indicates that nothing should be done.
             case none
         }
@@ -956,7 +956,7 @@ extension NIOThrowingAsyncSequenceProducer {
             case callDidTerminate
             /// Indicates that the continuation should be resumed with a `CancellationError` and
             /// that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
-            case resumeContinuationWithCancellationErrorAndCallDidTerminate(CheckedContinuation<Element?, Error>)
+            case resumeContinuationWithCancellationErrorAndCallDidTerminate(UnsafeContinuation<Element?, Error>)
             /// Indicates that nothing should be done.
             case none
         }
@@ -1129,7 +1129,7 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @inlinable
-        mutating func next(for continuation: CheckedContinuation<Element?, Error>) -> NextForContinuationAction {
+        mutating func next(for continuation: UnsafeContinuation<Element?, Error>) -> NextForContinuationAction {
             switch self._state {
             case .initial:
                 // We are transitioning away from the initial state in `next()`
