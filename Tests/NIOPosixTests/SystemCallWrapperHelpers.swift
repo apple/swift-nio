@@ -19,10 +19,10 @@ import Foundation
 
 public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {
     func measureOne(_ body: () throws -> Int) rethrows -> TimeInterval {
-        let start = Date()
+        let start = DispatchTime.now().uptimeNanoseconds
         _ = try body()
-        let end = Date()
-        return end.timeIntervalSince(start)
+        let end = DispatchTime.now().uptimeNanoseconds
+        return Double(end - start)/1_000_000
     }
 
     _ = try measureOne(body)
