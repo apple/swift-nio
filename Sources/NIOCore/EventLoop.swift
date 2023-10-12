@@ -782,30 +782,6 @@ extension EventLoop {
         self._flatScheduleTask(in: delay, file: file, line: line, task)
     }
     
-    /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
-    ///
-    /// - parameters:
-    ///     - delay: The delay between the end of one task and the start of the next.
-    ///     - maximumAllowableJitter: Exclusive upper bound of jitter range added to the `delay` parameter.
-    ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
-    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
-    ///            on the full execution of the task, including its returned `EventLoopFuture`.
-    ///
-    /// - note: You can only cancel a task before it has started executing.
-    @discardableResult
-    @inlinable
-    @preconcurrency
-    public func flatScheduleTask<T>(
-        in delay: TimeAmount,
-        in maximumAllowableJitter: TimeAmount,
-        file: StaticString = #fileID,
-        line: UInt = #line,
-        _ task: @escaping @Sendable () throws -> EventLoopFuture<T>
-    ) -> Scheduled<T> {
-        let jitteredDelay = self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
-        return self.flatScheduleTask(in: jitteredDelay, task)
-    }
-    
     @usableFromInline typealias FlatScheduleTaskDelayCallback<T> = @Sendable () throws -> EventLoopFuture<T>
 
     @inlinable
@@ -938,8 +914,9 @@ extension EventLoop {
         notifying promise: EventLoopPromise<Void>? = nil,
         _ task: @escaping @Sendable (RepeatedTask) throws -> Void
     ) -> RepeatedTask {
-        let jitteredDelay = self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
-        return self.scheduleRepeatedTask(initialDelay: initialDelay, delay: jitteredDelay, notifying: promise, task)
+        let jitteredInitialDelay = Self._getJitteredDelay(delay: initialDelay, maximumAllowableJitter: maximumAllowableJitter)
+        let jitteredDelay = Self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
+        return self.scheduleRepeatedTask(initialDelay: jitteredInitialDelay, delay: jitteredDelay, notifying: promise, task)
     }
     typealias ScheduleRepeatedTaskCallback = @Sendable (RepeatedTask) throws -> Void
 
@@ -1013,8 +990,9 @@ extension EventLoop {
         notifying promise: EventLoopPromise<Void>? = nil,
         _ task: @escaping @Sendable (RepeatedTask) -> EventLoopFuture<Void>
     ) -> RepeatedTask {
-        let jitteredDelay = self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
-        return self._scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: jitteredDelay, notifying: promise, task)
+        let jitteredInitialDelay = Self._getJitteredDelay(delay: initialDelay, maximumAllowableJitter: maximumAllowableJitter)
+        let jitteredDelay = Self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
+        return self._scheduleRepeatedAsyncTask(initialDelay: jitteredInitialDelay, delay: jitteredDelay, notifying: promise, task)
     }
     typealias ScheduleRepeatedAsyncTaskCallback = @Sendable (RepeatedTask) -> EventLoopFuture<Void>
 
@@ -1029,13 +1007,19 @@ extension EventLoop {
         return repeated
     }
 
+    /// Adds a random amount of `.nanoseconds` (within `.zero..<maximumAllowableJitter`) to the delay.
+    ///
+    /// - parameters:
+    ///     - delay: the `TimeAmount` delay to jitter.
+    ///     - maximumAllowableJitter: Exclusive upper bound of jitter range added to the `delay` parameter.
+    /// - returns: The jittered delay.
     @inlinable
-    func _getJitteredDelay(
+    static func _getJitteredDelay(
         delay: TimeAmount,
         maximumAllowableJitter: TimeAmount
     ) -> TimeAmount {
-        let jitter = Int64.random(in: .zero..<maximumAllowableJitter.nanoseconds)
-        return delay + .microseconds(jitter);
+        let jitter = TimeAmount.nanoseconds(Int64.random(in: .zero..<maximumAllowableJitter.nanoseconds))
+        return delay + jitter;
     }
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
