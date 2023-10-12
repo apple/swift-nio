@@ -906,7 +906,6 @@ extension EventLoop {
     ///     - task: The closure that will be executed.
     /// - return: `RepeatedTask`
     @discardableResult
-    @preconcurrency
     public func scheduleRepeatedTask(
         initialDelay: TimeAmount,
         delay: TimeAmount,
@@ -982,7 +981,6 @@ extension EventLoop {
     ///
     /// - return: `RepeatedTask`
     @discardableResult
-    @preconcurrency
     public func scheduleRepeatedAsyncTask(
         initialDelay: TimeAmount,
         delay: TimeAmount,
