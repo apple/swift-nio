@@ -387,11 +387,11 @@ public final class EventLoopTest : XCTestCase {
         let initialDelay = TimeAmount.minutes(5)
         let delay = TimeAmount.minutes(2)
         let maximumAllowableJitter = TimeAmount.minutes(1)
-        var sentinel: Int64 = 0
+        let counter = ManagedAtomic<Int64>(0)
         let loop = EmbeddedEventLoop()
 
         _ = loop.scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, maximumAllowableJitter: maximumAllowableJitter, { RepeatedTask in
-            sentinel += 1
+            counter.wrappingIncrement(ordering: .relaxed)
             let p = loop.makePromise(of: Void.self)
             loop.scheduleTask(in: .milliseconds(10)) {
                 p.succeed(())
@@ -411,7 +411,7 @@ public final class EventLoopTest : XCTestCase {
         let maxNumberOfExecutedTasks = (timeRange.nanoseconds - initialDelay.nanoseconds) / delay.nanoseconds + 1
 
         loop.advanceTime(by: timeRange)
-        XCTAssertTrue((minNumberOfExecutedTasks...maxNumberOfExecutedTasks).contains(sentinel))
+        XCTAssertTrue((minNumberOfExecutedTasks...maxNumberOfExecutedTasks).contains(counter.load(ordering: .relaxed)))
     }
     
     public func testEventLoopGroupMakeIterator() throws {
@@ -839,11 +839,11 @@ public final class EventLoopTest : XCTestCase {
         let initialDelay = TimeAmount.minutes(5)
         let delay = TimeAmount.minutes(2)
         let maximumAllowableJitter = TimeAmount.minutes(1)
-        var sentinel: Int64 = 0
+        let counter = ManagedAtomic<Int64>(0)
         let loop = EmbeddedEventLoop()
 
         _ = loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, maximumAllowableJitter: maximumAllowableJitter, { RepeatedTask in
-            sentinel += 1
+            counter.wrappingIncrement(ordering: .relaxed)
         })
 
         let timeRange = TimeAmount.hours(1)
@@ -853,7 +853,7 @@ public final class EventLoopTest : XCTestCase {
         let maxNumberOfExecutedTasks = (timeRange.nanoseconds - initialDelay.nanoseconds) / delay.nanoseconds + 1
 
         loop.advanceTime(by: timeRange)
-        XCTAssertTrue((minNumberOfExecutedTasks...maxNumberOfExecutedTasks).contains(sentinel))
+        XCTAssertTrue((minNumberOfExecutedTasks...maxNumberOfExecutedTasks).contains(counter.load(ordering: .relaxed)))
     }
 
     func testCancelledScheduledTasksDoNotHoldOnToRunClosure() {
