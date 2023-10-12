@@ -78,21 +78,21 @@ public struct NIOAsyncChannel<Inbound, Outbound> : Sendable where Inbound : Send
         /// the ``NIOAsyncChannelOutboundWriter`` is either finished or deinitialized.
         public var isOutboundHalfClosureEnabled: Bool
 
-        /// The ``NIOAsyncChannel/inboundStream`` message's type.
+        /// The ``NIOAsyncChannel/inbound`` message's type.
         public var inboundType: Inbound.Type
 
-        /// The ``NIOAsyncChannel/outboundWriter`` message's type.
+        /// The ``NIOAsyncChannel/outbound`` message's type.
         public var outboundType: Outbound.Type
 
         /// Initializes a new ``NIOAsyncChannel/Configuration``.
         ///
         /// - Parameters:
-        ///   - backPressureStrategy: The back pressure strategy of the ``NIOAsyncChannel/inboundStream``. Defaults
+        ///   - backPressureStrategy: The back pressure strategy of the ``NIOAsyncChannel/inbound``. Defaults
         ///     to a watermarked strategy (lowWatermark: 2, highWatermark: 10).
         ///   - isOutboundHalfClosureEnabled: If outbound half closure should be enabled. Outbound half closure is triggered once
         ///     the ``NIOAsyncChannelOutboundWriter`` is either finished or deinitialized. Defaults to `false`.
-        ///   - inboundType: The ``NIOAsyncChannel/inboundStream`` message's type.
-        ///   - outboundType: The ``NIOAsyncChannel/outboundWriter`` message's type.
+        ///   - inboundType: The ``NIOAsyncChannel/inbound`` message's type.
+        ///   - outboundType: The ``NIOAsyncChannel/outbound`` message's type.
         public init(backPressureStrategy: NIOCore.NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark = .init(lowWatermark: 2, highWatermark: 10), isOutboundHalfClosureEnabled: Bool = false, inboundType: Inbound.Type = Inbound.self, outboundType: Outbound.Type = Outbound.self)
     }
 
@@ -101,11 +101,11 @@ public struct NIOAsyncChannel<Inbound, Outbound> : Sendable where Inbound : Send
 
     /// The stream of inbound messages.
     ///
-    /// - Important: The `inboundStream` is a unicast `AsyncSequence` and only one iterator can be created.
-    public let inboundStream: NIOCore.NIOAsyncChannelInboundStream<Inbound>
+    /// - Important: The `inbound` stream is a unicast `AsyncSequence` and only one iterator can be created.
+    public let inbound: NIOCore.NIOAsyncChannelInboundStream<Inbound>
 
     /// The writer for writing outbound messages.
-    public let outboundWriter: NIOCore.NIOAsyncChannelOutboundWriter<Outbound>
+    public let outbound: NIOCore.NIOAsyncChannelOutboundWriter<Outbound>
 
     /// Initializes a new ``NIOAsyncChannel`` wrapping a ``Channel``.
     ///
@@ -714,8 +714,6 @@ final public class NIOTypedHTTPClientUpgradeHandler<UpgradeResult> : NIOCore.Cha
     ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     ///     - data: The data read from the remote peer, wrapped in a `NIOAny`.
     public func channelRead(context: NIOCore.ChannelHandlerContext, data: NIOCore.NIOAny)
-
-    public func channelRead(context: NIOCore.ChannelHandlerContext, responsePart: NIOHTTP1.HTTPClientResponsePart)
 }
 
 /// An object that implements `NIOTypedHTTPServerProtocolUpgrader` knows how to handle HTTP upgrade to

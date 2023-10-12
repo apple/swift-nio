@@ -114,7 +114,7 @@ struct Server {
         // the results of the group we need the group to automatically discard them; otherwise, this
         // would result in a memory leak over time.
         try await withThrowingDiscardingTaskGroup { group in
-            for try await upgradeResult in channel.inboundStream {
+            for try await upgradeResult in channel.inbound {
                 group.addTask {
                     await self.handleUpgradeResult(upgradeResult)
                 }
@@ -146,7 +146,7 @@ struct Server {
     private func handleWebsocketChannel(_ channel: NIOAsyncChannel<WebSocketFrame, WebSocketFrame>) async throws {
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                for try await frame in channel.inboundStream {
+                for try await frame in channel.inbound {
                     switch frame.opcode {
                     case .ping:
                         print("Received ping")
@@ -158,7 +158,7 @@ struct Server {
                         }
 
                         let responseFrame = WebSocketFrame(fin: true, opcode: .pong, data: frameData)
-                        try await channel.outboundWriter.write(responseFrame)
+                        try await channel.outbound.write(responseFrame)
 
                     case .connectionClose:
                         // This is an unsolicited close. We're going to send a response frame and
@@ -168,7 +168,7 @@ struct Server {
                         var data = frame.unmaskedData
                         let closeDataCode = data.readSlice(length: 2) ?? ByteBuffer()
                         let closeFrame = WebSocketFrame(fin: true, opcode: .connectionClose, data: closeDataCode)
-                        try await channel.outboundWriter.write(closeFrame)
+                        try await channel.outbound.write(closeFrame)
                         return
                     case .binary, .continuation, .pong:
                         // We ignore these frames.
@@ -193,7 +193,7 @@ struct Server {
                     let frame = WebSocketFrame(fin: true, opcode: .text, data: buffer)
 
                     print("Sending time")
-                    try await channel.outboundWriter.write(frame)
+                    try await channel.outbound.write(frame)
                     try await Task.sleep(for: .seconds(1))
                 }
             }
@@ -205,7 +205,7 @@ struct Server {
 
 
     private func handleHTTPChannel(_ channel: NIOAsyncChannel<HTTPServerRequestPart, HTTPPart<HTTPResponseHead, ByteBuffer>>) async throws {
-        for try await requestPart in channel.inboundStream {
+        for try await requestPart in channel.inbound {
             // We're not interested in request bodies here: we're just serving up GET responses
             // to get the client to initiate a websocket request.
             guard case .head(let head) = requestPart else {
@@ -214,7 +214,7 @@ struct Server {
 
             // GETs only.
             guard case .GET = head.method else {
-                try await self.respond405(writer: channel.outboundWriter)
+                try await self.respond405(writer: channel.outbound)
                 return
             }
 
@@ -228,7 +228,7 @@ struct Server {
                 headers: headers
             )
 
-            try await channel.outboundWriter.write(
+            try await channel.outbound.write(
                 contentsOf: [
                     .head(responseHead),
                     .body(Self.responseBody),
