@@ -436,9 +436,11 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func microseconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * 1000)
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of milliseconds.
@@ -446,9 +448,11 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func milliseconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000))
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000 * 1000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of seconds.
@@ -456,9 +460,11 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func seconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000 * 1000))
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000 * 1000 * 1000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of minutes.
@@ -466,9 +472,11 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func minutes(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000 * 1000 * 60))
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000 * 1000 * 1000 * 60))
     }
 
     /// Creates a new `TimeAmount` for the given amount of hours.
@@ -476,9 +484,27 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func hours(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000 * 1000 * 60 * 60))
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000 * 1000 * 1000 * 60 * 60))
+    }
+    
+    /// Converts `amount` to nanoseconds multiplying it by `multiplier`. The return value is capped to `Int64.max` if the multiplication overflows and `Int64.min` if it underflows.
+    ///
+    ///  - parameters:
+    ///     - amount: the amount to be converted to nanoseconds.
+    ///     - multiplier: the multiplier that converts the given amount to nanoseconds.
+    ///  - returns: the amount converted to nanoseconds within [Int64.min, Int64.max].
+    @inlinable
+    static func _cappedNanoseconds(amount: Int64, multiplier: Int64) -> Int64 {
+        let nanosecondsMultiplication = amount.multipliedReportingOverflow(by: multiplier)
+        if nanosecondsMultiplication.overflow {
+            return amount >= 0 ? .max : .min
+        } else {
+            return nanosecondsMultiplication.partialValue
+        }
     }
 }
 
