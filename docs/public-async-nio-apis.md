@@ -42,7 +42,7 @@ applicable.
 
 ## Proposed APIs
 
-This section contains all the new APIs that we are adding and gives us a holstic
+This section contains all the new APIs that we are adding and gives us a holistic
 overview to review them.
 
 ### `NIOAsyncChannel`
@@ -922,10 +922,6 @@ public struct NIOProtocolNegotiationResult<NegotiationResult> where NegotiationR
     ///
     /// - Parameter deferredResult: The deferred result.
     public init(deferredResult: NIOCore.EventLoopFuture<NIOCore.NIOProtocolNegotiationResult<NegotiationResult>>)
-
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @available(*, deprecated, renamed: "getResult")
-    public func waitForFinalResult() async throws -> NegotiationResult
 }
 
 extension EventLoopFuture {
