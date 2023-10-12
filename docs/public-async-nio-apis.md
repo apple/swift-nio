@@ -231,7 +231,9 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut> : Sendable where Outbou
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
     @inlinable public func write<Writes>(contentsOf sequence: Writes) async throws where OutboundOut == Writes.Element, Writes : Sequence
 
-    /// Send a sequence of writes into the ``ChannelPipeline`` and flush them right away.
+    /// Send an asynchronous sequence of writes into the ``ChannelPipeline``.
+    ///
+    /// This will flush after every write.
     ///
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
     @inlinable public func write<Writes>(contentsOf sequence: Writes) async throws where OutboundOut == Writes.Element, Writes : AsyncSequence
@@ -813,62 +815,6 @@ final public class NIOTypedHTTPServerUpgradeHandler<UpgradeResult> : NIOCore.Cha
     ///     - data: The data read from the remote peer, wrapped in a `NIOAny`.
     public func channelRead(context: NIOCore.ChannelHandlerContext, data: NIOCore.NIOAny)
 }
-
-/// Configuration for an upgradable HTTP pipeline.
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-public struct NIOUpgradableHTTPClientPipelineConfiguration<UpgradeResult> where UpgradeResult : Sendable {
-
-    /// The strategy to use when dealing with leftover bytes after removing the ``HTTPDecoder`` from the pipeline.
-    public var leftOverBytesStrategy: NIOHTTP1.RemoveAfterUpgradeStrategy
-
-    /// Whether to validate outbound response headers to confirm that they are
-    /// spec compliant. Defaults to `true`.
-    public var enableOutboundHeaderValidation: Bool
-
-    /// The configuration for the ``HTTPRequestEncoder``.
-    public var encoderConfiguration: NIOHTTP1.HTTPRequestEncoder.Configuration
-
-    /// The configuration for the ``NIOTypedHTTPClientUpgradeHandler``.
-    public var upgradeConfiguration: NIOHTTP1.NIOTypedHTTPClientUpgradeConfiguration<UpgradeResult>
-
-    /// Initializes a new ``NIOUpgradableHTTPClientPipelineConfiguration`` with default values.
-    ///
-    /// The current defaults provide the following features:
-    /// 1. Outbound header fields validation to protect against response splitting attacks.
-    public init(upgradeConfiguration: NIOHTTP1.NIOTypedHTTPClientUpgradeConfiguration<UpgradeResult>)
-}
-
-/// Configuration for an upgradable HTTP pipeline.
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-public struct NIOUpgradableHTTPServerPipelineConfiguration<UpgradeResult> where UpgradeResult : Sendable {
-
-    /// Whether to provide assistance handling HTTP clients that pipeline
-    /// their requests. Defaults to `true`. If `false`, users will need to handle clients that pipeline themselves.
-    public var enablePipelining: Bool
-
-    /// Whether to provide assistance handling protocol errors (e.g. failure to parse the HTTP
-    /// request) by sending 400 errors. Defaults to `true`.
-    public var enableErrorHandling: Bool
-
-    /// Whether to validate outbound response headers to confirm that they are
-    /// spec compliant. Defaults to `true`.
-    public var enableResponseHeaderValidation: Bool
-
-    /// The configuration for the ``HTTPResponseEncoder``.
-    public var encoderConfiguration: NIOHTTP1.HTTPResponseEncoder.Configuration
-
-    /// The configuration for the ``NIOTypedHTTPServerUpgradeHandler``.
-    public var upgradeConfiguration: NIOHTTP1.NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>
-
-    /// Initializes a new ``NIOUpgradableHTTPServerPipelineConfiguration`` with default values.
-    ///
-    /// The current defaults provide the following features:
-    /// 1. Assistance handling clients that pipeline HTTP requests.
-    /// 2. Assistance handling protocol errors.
-    /// 3. Outbound header fields validation to protect against response splitting attacks.
-    public init(upgradeConfiguration: NIOHTTP1.NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult>)
-}
-
 ```
 
 ### Websocket
@@ -964,7 +910,6 @@ final public class NIOTypedWebSocketServerUpgrader<UpgradeResult> : NIOHTTP1.NIO
 ### ALPN
 
 ```swift
-///// Protocol negotiation
 /// The result of protocol negotiation.
 public struct NIOProtocolNegotiationResult<NegotiationResult> where NegotiationResult : Sendable {
 
@@ -1107,7 +1052,10 @@ extension NIOHTTP2Handler {
     /// Outbound stream channel objects are initialized upon creation using the supplied `streamStateInitializer` which returns a type
     /// `Output`. This type may be `HTTP2Frame` or changed to any other type.
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    public struct AsyncStreamMultiplexer<InboundStreamOutput>
+    public struct AsyncStreamMultiplexer<InboundStreamOutput> {
+        /// Create a stream channel initialized with the provided closure
+        public func createStreamChannel<Output: Sendable>(_ initializer: @escaping NIOChannelInitializerWithOutput<Output>) async throws -> Output
+    }
 }
 
 /// `NIOHTTP2InboundStreamChannels` provides access to inbound stream channels as a generic `AsyncSequence`.
@@ -1124,6 +1072,7 @@ public struct NIOHTTP2InboundStreamChannels<Output>: AsyncSequence {
 
     public func makeAsyncIterator() -> AsyncIterator
 }
+
 extension Channel {
     /// Configures a `ChannelPipeline` to speak HTTP/2 and sets up mapping functions so that it may be interacted with from concurrent code.
     ///
@@ -1147,37 +1096,6 @@ extension Channel {
         position: ChannelPipeline.Position = .last,
         inboundStreamInitializer: @escaping NIOChannelInitializerWithOutput<Output>
     ) -> EventLoopFuture<NIOHTTP2Handler.AsyncStreamMultiplexer<Output>>
-
-    /// Configures a channel to perform an HTTP/2 secure upgrade with typed negotiation results.
-    ///
-    /// HTTP/2 secure upgrade uses the Application Layer Protocol Negotiation TLS extension to
-    /// negotiate the inner protocol as part of the TLS handshake. For this reason, until the TLS
-    /// handshake is complete, the ultimate configuration of the channel pipeline cannot be known.
-    ///
-    /// This function configures the channel with a pair of callbacks that will handle the result
-    /// of the negotiation. It explicitly **does not** configure a TLS handler to actually attempt
-    /// to negotiate ALPN. The supported ALPN protocols are provided in
-    /// `NIOHTTP2SupportedALPNProtocols`: please ensure that the TLS handler you are using for your
-    /// pipeline is appropriately configured to perform this protocol negotiation.
-    ///
-    /// If negotiation results in an unexpected protocol, the pipeline will close the connection
-    /// and no callback will fire.
-    ///
-    /// This configuration is acceptable for use on both client and server channel pipelines.
-    ///
-    /// - Parameters:
-    ///   - http1ConnectionInitializer: A callback that will be invoked if HTTP/1.1 has been explicitly
-    ///         negotiated, or if no protocol was negotiated. Must return a future that completes when the
-    ///         channel has been fully mutated.
-    ///   - http2ConnectionInitializer: A callback that will be invoked if HTTP/2 has been negotiated, and that
-    ///         should configure the channel for HTTP/2 use. Must return a future that completes when the
-    ///         channel has been fully mutated.
-    /// - Returns: An `EventLoopFuture` of an `EventLoopFuture` containing the `NIOProtocolNegotiationResult` that completes when the channel
-    ///     is ready to negotiate.
-    internal func configureHTTP2AsyncSecureUpgrade<HTTP1Output: Sendable, HTTP2Output: Sendable>(
-        http1ConnectionInitializer: @escaping NIOChannelInitializerWithOutput<HTTP1Output>,
-        http2ConnectionInitializer: @escaping NIOChannelInitializerWithOutput<HTTP2Output>
-    ) -> EventLoopFuture<EventLoopFuture<NIOProtocolNegotiationResult<NIONegotiatedHTTPVersion<HTTP1Output, HTTP2Output>>>>
 
     /// Configures a `ChannelPipeline` to speak either HTTP/1.1 or HTTP/2 according to what can be negotiated with the client.
     ///
