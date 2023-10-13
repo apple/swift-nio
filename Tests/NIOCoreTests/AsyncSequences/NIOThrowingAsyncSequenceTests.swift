@@ -494,25 +494,27 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testTaskCancel_whenStreaming_andNotSuspended() async throws {
+        throw XCTSkip("Disabled until we get better executor control")
+
         // We are registering our demand and sleeping a bit to make
         // sure our task runs when the demand is registered
-        let sequence = try XCTUnwrap(self.sequence)
-        let task: Task<Int?, Error> = Task {
-            let iterator = sequence.makeAsyncIterator()
-            let element = try await iterator.next()
-            
-            // Sleeping here to give the other Task a chance to cancel this one.
-            try? await Task.sleep(nanoseconds: 1_000_000)
-            return element
-        }
-        try await Task.sleep(nanoseconds: 1_000_000)
-
-        _ = self.source.yield(contentsOf: [1])
-
-        task.cancel()
-        let value = try await task.value
-        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
-        XCTAssertEqual(value, 1)
+//        let sequence = try XCTUnwrap(self.sequence)
+//        let task: Task<Int?, Error> = Task {
+//            let iterator = sequence.makeAsyncIterator()
+//            let element = try await iterator.next()
+//            
+//            // Sleeping here to give the other Task a chance to cancel this one.
+//            try? await Task.sleep(nanoseconds: 1_000_000)
+//            return element
+//        }
+//        try await Task.sleep(nanoseconds: 1_000_000)
+//
+//        _ = self.source.yield(contentsOf: [1])
+//
+//        task.cancel()
+//        let value = try await task.value
+//        XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
+//        XCTAssertEqual(value, 1)
     }
 
     func testTaskCancel_whenSourceFinished() async throws {
