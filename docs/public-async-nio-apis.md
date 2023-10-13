@@ -1079,7 +1079,6 @@ extension Channel {
     /// - Parameters:
     ///   - mode: The mode this pipeline will operate in, server or client.
     ///   - configuration: The settings that will be used when establishing the connection and new streams.
-    ///   - position: The position in the pipeline into which to insert this handler.
     ///   - inboundStreamInitializer: A closure that will be called whenever the remote peer initiates a new stream.
     ///     The output of this closure is the element type of the returned multiplexer
     /// - Returns: An `EventLoopFuture` containing the `AsyncStreamMultiplexer` inserted into this pipeline, which can
@@ -1134,7 +1133,6 @@ extension ChannelPipeline.SynchronousOperations {
     /// - Parameters:
     ///   - mode: The mode this pipeline will operate in, server or client.
     ///   - configuration: The settings that will be used when establishing the connection and new streams.
-    ///   - position: The position in the pipeline into which to insert this handler.
     ///   - inboundStreamInitializer: A closure that will be called whenever the remote peer initiates a new stream.
     ///     The output of this closure is the element type of the returned multiplexer
     /// - Returns: An `EventLoopFuture` containing the `AsyncStreamMultiplexer` inserted into this pipeline, which can
@@ -1143,7 +1141,6 @@ extension ChannelPipeline.SynchronousOperations {
     public func configureAsyncHTTP2Pipeline<Output: Sendable>(
         mode: NIOHTTP2Handler.ParserMode,
         configuration: NIOHTTP2Handler.Configuration = .init(),
-        position: ChannelPipeline.Position = .last,
         inboundStreamInitializer: @escaping NIOChannelInitializerWithOutput<Output>
     ) throws -> NIOHTTP2Handler.AsyncStreamMultiplexer<Output>
 }
