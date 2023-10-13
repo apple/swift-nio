@@ -62,8 +62,15 @@ extension ChannelPipeline {
                 // handler present, keep waiting
                 usleep(50)
             } catch ChannelPipelineError.notFound {
-                // No upgrader, we're good.
-                return
+                // Checking if the typed variant is present
+                do {
+                    _ = try self.context(handlerType: NIOTypedHTTPServerUpgradeHandler<Bool>.self).wait()
+                    // handler present, keep waiting
+                    usleep(50)
+                } catch ChannelPipelineError.notFound {
+                    // No upgrader, we're good.
+                    return
+                }
             }
         }
 
