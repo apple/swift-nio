@@ -73,15 +73,44 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         case none
     }
 
-    internal enum ConnectionStateError: Error, CustomStringConvertible, Equatable {
-        /// A precondition was violated
-        case preconditionViolated(message: String)
+    public struct ConnectionStateError: Error, CustomStringConvertible, Hashable {
+        enum Base: Hashable, CustomStringConvertible {
+            /// A precondition was violated
+            case preconditionViolated(message: String)
 
-        var description: String {
-            switch self {
-            case .preconditionViolated(let message):
-                return message
+            var description: String {
+                switch self {
+                case .preconditionViolated(let message):
+                    return "Precondition violated \(message)"
+                }
             }
+        }
+
+        private var base: Base
+        private var file: String
+        private var line: Int
+
+        private init(base: Base, file: String, line: Int) {
+            self.base = base
+            self.file = file
+            self.line = line
+        }
+
+        public static func ==(lhs: ConnectionStateError, rhs: ConnectionStateError) -> Bool {
+            lhs.base == rhs.base
+        }
+
+        public func hash(into hasher: inout Hasher) {
+            hasher.combine(self.base)
+        }
+
+        /// A precondition was violated
+        public static func preconditionViolated(message: String, file: String = #fileID, line: Int = #line) -> Self {
+            .init(base: .preconditionViolated(message: message), file: file, line: line)
+        }
+
+        public var description: String {
+            "\(self.base) file \(self.file) line \(self.line)"
         }
     }
 
@@ -543,7 +572,6 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         case .forceCloseConnection:
             let message = "The connection has been forcefully closed because further IO was attempted after a precondition was violated"
             let error = ConnectionStateError.preconditionViolated(message: message)
-            self.deliverOneError(context: context, error: error)
             promise?.fail(error)
             self.close(context: context, mode: .all, promise: nil)
             return true
