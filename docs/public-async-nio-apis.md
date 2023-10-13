@@ -1,37 +1,38 @@
 # Async NIO bridges
 
-This is a summary of all the new APIs we had to introduce to make NIO and the
-various network protocols work with new async interfaces. The intention of this
-document is to quickly outline what we had to tackle and then show a holistic
-view over all the new APIs.
+This is a summary of all the new APIs we introduced to make NIO and the various
+network protocols work with new async interfaces. The intention of this document
+is to quickly outline the incompatibilities in the original API and then show a
+holistic view over all the new APIs.
 
 ## What APIs are needed?
 
 The first problem that we had to tackle was bridging NIO's `Channel` to Swift
 Concurrency. To do so we introduced two new foundational types - the
 `NIOAsyncSequenceProducer` and the `NIOAsyncWriter`. Those allow us to bridge
-the read and the write side of the `Channel` upholding the back-pressure across
-the bridge.
+the read and the write side of the `Channel` while propagating the back-pressure
+across the bridge.
 
-On top of those two types, we built out the `NIOAsyncChannel` which allows to
-bridge a `Channel`. To do this it inserts two channel handlers which bridge the
-read and write side using the before mentioned types.
+On top of those two types, we built out the `NIOAsyncChannel` which allows users
+to bridge a `Channel` into Swift Concurrency. To do this it inserts two channel
+handlers which bridge the read and write side using the
+`NIOAsyncSequenceProducer` and the `NIOAsyncWriter`.
 
 Next up we had to look at the bootstraps. Here the import part is that the
 `Channel`s **must** be wrapped at the correct timing otherwise there is the
 potential that reads might be dropped. This is not problematic for most of the
 bootstrap since they call their various `channelInitializer`s and
 `childChannelInitializer`s at the right time. However, there was one tricky
-bootstrap - `ServerBootstrap`. The `ServerBootstrap` is multiplexing the
-incoming connections and we have to make sure that the wrapping of the child
-channels happens at the correct time. Additionally, the new bootstrap APIs
-**must** be able to relay the type information of the configured channels to the
+bootstrap - `ServerBootstrap`. The `ServerBootstrap` multiplexes the incoming
+connections and we have to make sure that the wrapping of the child channels
+happens at the correct time. Additionally, the new bootstrap APIs **must** be
+able to relay the type information of the configured channels to the
 `bind`/`connect` methods.
 
 The next thing we had to tackle was networking protocols that dynamically
 re-configure the `ChannelPipeline`. The two examples that we provide
-implementations for is HTTP/1 protocol upgrades and
-Application-Protocol-Negotiation (ALPN) via TLS. Similar to the bootstraps we
+implementations for are HTTP/1 protocol upgrades and
+Application Protocol Negotiation (ALPN) via TLS. Similar to the bootstraps we
 have to ensure that the type information is upheld so that users can correctly
 identify which reconfiguration path has been taken.
 
@@ -1087,7 +1088,6 @@ extension Channel {
     public func configureAsyncHTTP2Pipeline<Output: Sendable>(
         mode: NIOHTTP2Handler.ParserMode,
         configuration: NIOHTTP2Handler.Configuration = .init(),
-        position: ChannelPipeline.Position = .last,
         inboundStreamInitializer: @escaping NIOChannelInitializerWithOutput<Output>
     ) -> EventLoopFuture<NIOHTTP2Handler.AsyncStreamMultiplexer<Output>>
 
