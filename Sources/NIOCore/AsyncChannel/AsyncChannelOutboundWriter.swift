@@ -138,7 +138,9 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         }
     }
 
-    /// Send a sequence of writes into the ``ChannelPipeline`` and flush them right away.
+    /// Send an asynchronous sequence of writes into the ``ChannelPipeline``.
+    ///
+    /// This will flush after every write.
     ///
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
     @inlinable

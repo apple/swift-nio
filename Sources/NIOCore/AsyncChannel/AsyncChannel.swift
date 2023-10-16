@@ -44,21 +44,21 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
         /// the ``NIOAsyncChannelWriter`` is either finished or deinitialized.
         public var isOutboundHalfClosureEnabled: Bool
 
-        /// The ``NIOAsyncChannel/inboundStream`` message's type.
+        /// The ``NIOAsyncChannel/inbound`` message's type.
         public var inboundType: Inbound.Type
 
-        /// The ``NIOAsyncChannel/outboundWriter`` message's type.
+        /// The ``NIOAsyncChannel/outbound`` message's type.
         public var outboundType: Outbound.Type
 
         /// Initializes a new ``NIOAsyncChannel/Configuration``.
         ///
         /// - Parameters:
-        ///   - backPressureStrategy: The back pressure strategy of the ``NIOAsyncChannel/inboundStream``. Defaults
+        ///   - backPressureStrategy: The back pressure strategy of the ``NIOAsyncChannel/inbound``. Defaults
         ///     to a watermarked strategy (lowWatermark: 2, highWatermark: 10).
         ///   - isOutboundHalfClosureEnabled: If outbound half closure should be enabled. Outbound half closure is triggered once
         ///     the ``NIOAsyncChannelWriter`` is either finished or deinitialized. Defaults to `false`.
-        ///   - inboundType: The ``NIOAsyncChannel/inboundStream`` message's type.
-        ///   - outboundType: The ``NIOAsyncChannel/outboundWriter`` message's type.
+        ///   - inboundType: The ``NIOAsyncChannel/inbound`` message's type.
+        ///   - outboundType: The ``NIOAsyncChannel/outbound`` message's type.
         public init(
             backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark = .init(lowWatermark: 2, highWatermark: 10),
             isOutboundHalfClosureEnabled: Bool = false,
@@ -77,12 +77,12 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     public let channel: Channel
     /// The stream of inbound messages.
     ///
-    /// - Important: The `inboundStream` is a unicast `AsyncSequence` and only one iterator can be created.
+    /// - Important: The `inbound` stream is a unicast `AsyncSequence` and only one iterator can be created.
     @_spi(AsyncChannel)
-    public let inboundStream: NIOAsyncChannelInboundStream<Inbound>
+    public let inbound: NIOAsyncChannelInboundStream<Inbound>
     /// The writer for writing outbound messages.
     @_spi(AsyncChannel)
-    public let outboundWriter: NIOAsyncChannelOutboundWriter<Outbound>
+    public let outbound: NIOAsyncChannelOutboundWriter<Outbound>
 
     /// Initializes a new ``NIOAsyncChannel`` wrapping a ``Channel``.
     ///
@@ -100,7 +100,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     ) throws {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
-        (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
+        (self.inbound, self.outbound) = try channel._syncAddAsyncHandlers(
             backPressureStrategy: configuration.backPressureStrategy,
             isOutboundHalfClosureEnabled: configuration.isOutboundHalfClosureEnabled
         )
@@ -108,7 +108,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
 
     /// Initializes a new ``NIOAsyncChannel`` wrapping a ``Channel`` where the outbound type is `Never`.
     ///
-    /// This initializer will finish the ``NIOAsyncChannel/outboundWriter`` immediately.
+    /// This initializer will finish the ``NIOAsyncChannel/outbound`` immediately.
     ///
     /// - Important: This **must** be called on the channel's event loop otherwise this init will crash. This is necessary because
     /// we must install the handlers before any other event in the pipeline happens otherwise we might drop reads.
@@ -124,12 +124,12 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     ) throws where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
-        (self.inboundStream, self.outboundWriter) = try channel._syncAddAsyncHandlers(
+        (self.inbound, self.outbound) = try channel._syncAddAsyncHandlers(
             backPressureStrategy: configuration.backPressureStrategy,
             isOutboundHalfClosureEnabled: configuration.isOutboundHalfClosureEnabled
         )
 
-        self.outboundWriter.finish()
+        self.outbound.finish()
     }
 
     @inlinable
@@ -141,8 +141,8 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     ) {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
-        self.inboundStream = inboundStream
-        self.outboundWriter = outboundWriter
+        self.inbound = inboundStream
+        self.outbound = outboundWriter
     }
 
     @inlinable

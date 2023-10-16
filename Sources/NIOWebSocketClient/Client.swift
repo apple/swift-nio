@@ -109,9 +109,9 @@ struct Client {
         // start to handle all inbound frames.
 
         let pingFrame = WebSocketFrame(fin: true, opcode: .ping, data: ByteBuffer(string: "Hello!"))
-        try await channel.outboundWriter.write(pingFrame)
+        try await channel.outbound.write(pingFrame)
 
-        for try await frame in channel.inboundStream {
+        for try await frame in channel.inbound {
             switch frame.opcode {
             case .pong:
                 print("Received pong: \(String(buffer: frame.data))")

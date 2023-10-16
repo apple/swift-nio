@@ -25,7 +25,7 @@ final class AsyncChannelTests: XCTestCase {
             try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
         }
 
-        var iterator = wrapped.inboundStream.makeAsyncIterator()
+        var iterator = wrapped.inbound.makeAsyncIterator()
         try await channel.writeInbound("hello")
         let firstRead = try await iterator.next()
         XCTAssertEqual(firstRead, "hello")
@@ -51,8 +51,8 @@ final class AsyncChannelTests: XCTestCase {
             try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel)
         }
 
-        try await wrapped.outboundWriter.write("hello")
-        try await wrapped.outboundWriter.write("world")
+        try await wrapped.outbound.write("hello")
+        try await wrapped.outbound.write("world")
 
         let firstRead = try await channel.waitForOutboundWrite(as: String.self)
         let secondRead = try await channel.waitForOutboundWrite(as: String.self)
@@ -82,7 +82,7 @@ final class AsyncChannelTests: XCTestCase {
                     )
                 )
             }
-            inboundReader = wrapped.inboundStream
+            inboundReader = wrapped.inbound
 
             try await channel.testingEventLoop.executeInContext {
                 XCTAssertEqual(1, closeRecorder.outboundCloses)
@@ -119,7 +119,7 @@ final class AsyncChannelTests: XCTestCase {
                     )
                 )
             }
-            inboundReader = wrapped.inboundStream
+            inboundReader = wrapped.inbound
 
             try await channel.testingEventLoop.executeInContext {
                 XCTAssertEqual(0, closeRecorder.outboundCloses)
@@ -156,7 +156,7 @@ final class AsyncChannelTests: XCTestCase {
                         )
                     )
                 }
-                inboundReader = wrapped.inboundStream
+                inboundReader = wrapped.inbound
 
                 try await channel.testingEventLoop.executeInContext {
                     XCTAssertEqual(1, closeRecorder.allCloses)
@@ -230,7 +230,7 @@ final class AsyncChannelTests: XCTestCase {
 
         try await channel.close().get()
 
-        let reads = try await Array(wrapped.inboundStream)
+        let reads = try await Array(wrapped.inbound)
         XCTAssertEqual(reads, ["hello"])
     }
 
@@ -246,7 +246,7 @@ final class AsyncChannelTests: XCTestCase {
             channel.pipeline.fireErrorCaught(TestError.bang)
         }
 
-        var iterator = wrapped.inboundStream.makeAsyncIterator()
+        var iterator = wrapped.inbound.makeAsyncIterator()
         let first = try await iterator.next()
         XCTAssertEqual(first, "hello")
 
@@ -271,7 +271,7 @@ final class AsyncChannelTests: XCTestCase {
 
         await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                try await wrapped.outboundWriter.write("hello")
+                try await wrapped.outbound.write("hello")
                 lock.withLockedValue {
                     XCTAssertTrue($0)
                 }
@@ -378,7 +378,7 @@ final class AsyncChannelTests: XCTestCase {
         XCTAssertEqual(readCounter.readCount, 6)
 
         // Now consume three elements from the pipeline. This should not unbuffer the read, as 3 elements remain.
-        var reader = wrapped.inboundStream.makeAsyncIterator()
+        var reader = wrapped.inbound.makeAsyncIterator()
         for _ in 0..<3 {
             try await XCTAsyncAssertNotNil(await reader.next())
         }
@@ -437,12 +437,12 @@ final class AsyncChannelTests: XCTestCase {
             try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
         }
 
-        var iterator = wrapped.inboundStream.makeAsyncIterator()
+        var iterator = wrapped.inbound.makeAsyncIterator()
         try await channel.writeInbound("hello")
         let firstRead = try await iterator.next()
         XCTAssertEqual(firstRead, "hello")
 
-        try await wrapped.outboundWriter.write("world")
+        try await wrapped.outbound.write("world")
         let write = try await channel.waitForOutboundWrite(as: String.self)
         XCTAssertEqual(write, "world")
 
