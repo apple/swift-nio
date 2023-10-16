@@ -21,7 +21,7 @@ handlers which bridge the read and write side using the
 Next up we had to look at the bootstraps. Here the import part is that the
 `Channel`s **must** be wrapped at the correct timing otherwise there is the
 potential that reads might be dropped. This is not problematic for most of the
-bootstrap since they call their various `channelInitializer`s and
+bootstraps since they call their various `channelInitializer`s and
 `childChannelInitializer`s at the right time. However, there was one tricky
 bootstrap - `ServerBootstrap`. The `ServerBootstrap` multiplexes the incoming
 connections and we have to make sure that the wrapping of the child channels
@@ -31,14 +31,14 @@ able to relay the type information of the configured channels to the
 
 The next thing we had to tackle was networking protocols that dynamically
 re-configure the `ChannelPipeline`. The two examples that we provide
-implementations for are HTTP/1 protocol upgrades and
-Application Protocol Negotiation (ALPN) via TLS. Similar to the bootstraps we
-have to ensure that the type information is upheld so that users can correctly
-identify which reconfiguration path has been taken.
+implementations for are HTTP/1 protocol upgrades and Application Protocol
+Negotiation (ALPN) via TLS. Similar to the bootstraps we have to ensure that the
+type information is retained so that users can correctly identify which
+reconfiguration path has been taken.
 
-Lastly, we had to look at how to handle protocols that multiplex like HTTP/2.
-Those protocols need to expose a typed async interface to consume new inbound
-connections/streams and to open new outbound connections/streams where
+Lastly, we had to look at how to handle protocols that multiplex, like HTTP/2.
+Multiplexing protocols need to expose a typed async interface to consume new
+inbound connections/streams and to open new outbound connections/streams where
 applicable.
 
 ## Proposed APIs
