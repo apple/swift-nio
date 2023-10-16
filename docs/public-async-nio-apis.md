@@ -909,38 +909,6 @@ final public class NIOTypedWebSocketServerUpgrader<UpgradeResult> : NIOHTTP1.NIO
 ### ALPN
 
 ```swift
-/// The result of protocol negotiation.
-public struct NIOProtocolNegotiationResult<NegotiationResult> where NegotiationResult : Sendable {
-
-    /// Intializes a new ``NIOProtocolNegotiationResult`` with a final result.
-    ///
-    /// - Parameter result: The final result of protocol negotiation.
-    public init(result: NegotiationResult)
-
-    /// Intializes a new ``NIOProtocolNegotiationResult`` with a deferred result.
-    ///
-    /// - Parameter deferredResult: The deferred result.
-    public init(deferredResult: NIOCore.EventLoopFuture<NIOCore.NIOProtocolNegotiationResult<NegotiationResult>>)
-}
-
-extension EventLoopFuture {
-    /// Get the result/error from the protocol negotiation.
-    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func getResult<NegotiationResult>() async throws -> NegotiationResult where Value == NIOCore.NIOProtocolNegotiationResult<NegotiationResult>, NegotiationResult : Sendable
-}
-
-extension NIOProtocolNegotiationResult : Equatable where NegotiationResult : Equatable {
-}
-
-extension NIOProtocolNegotiationResult : Sendable {
-}
-
-extension NIOProtocolNegotiationResult.Result : Equatable where NegotiationResult : Equatable {
-}
-
-extension NIOProtocolNegotiationResult.Result : Sendable {
-}
-
 /// A helper ``ChannelInboundHandler`` that makes it easy to swap channel pipelines
 /// based on the result of an ALPN negotiation.
 ///
@@ -974,21 +942,21 @@ final public class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
     /// The type of the inbound data which will be forwarded to the next `ChannelInboundHandler` in the `ChannelPipeline`.
     public typealias InboundOut = Any
 
-    public var protocolNegotiationResult: NIOCore.EventLoopFuture<NIOCore.NIOProtocolNegotiationResult<NegotiationResult>> { get }
+    public var protocolNegotiationResult: NIOCore.EventLoopFuture<NegotiationResult> { get }
 
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
     /// callback.
     ///
     /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
     ///   negotiation has completed.
-    public init(alpnCompleteHandler: @escaping (NIOTLS.ALPNResult, NIOCore.Channel) -> NIOCore.EventLoopFuture<NIOCore.NIOProtocolNegotiationResult<NegotiationResult>>)
+    public init(alpnCompleteHandler: @escaping (NIOTLS.ALPNResult, NIOCore.Channel) -> NIOCore.EventLoopFuture<NegotiationResult>)
 
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
     /// callback.
     ///
     /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
     ///   negotiation has completed.
-    public convenience init(alpnCompleteHandler: @escaping (NIOTLS.ALPNResult) -> NIOCore.EventLoopFuture<NIOCore.NIOProtocolNegotiationResult<NegotiationResult>>)
+    public convenience init(alpnCompleteHandler: @escaping (NIOTLS.ALPNResult) -> NIOCore.EventLoopFutureNegotiationResult>)
 
     /// Called when this `ChannelHandler` is added to the `ChannelPipeline`.
     ///
@@ -1107,7 +1075,7 @@ extension Channel {
     ///   - http2InboundStreamInitializer: A closure that will be called whenever the remote peer initiates a new stream.
     ///     The output of this closure is the element type of the returned multiplexer
     /// - Returns: An `EventLoopFuture` containing a ``NIOTypedApplicationProtocolNegotiationHandler`` that completes when the channel
-    ///     is ready to negotiate. This can then be used to access the ``NIOProtocolNegotiationResult`` which may itself
+    ///     is ready to negotiate. This can then be used to access the protocol negotiation result which may itself
     ///     be waited on to retrieve the result of the negotiation.
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public func configureAsyncHTTPServerPipeline<HTTP1ConnectionOutput: Sendable, HTTP2ConnectionOutput: Sendable, HTTP2StreamOutput: Sendable>(
@@ -1115,10 +1083,10 @@ extension Channel {
         http1ConnectionInitializer: @escaping NIOChannelInitializerWithOutput<HTTP1ConnectionOutput>,
         http2ConnectionInitializer: @escaping NIOChannelInitializerWithOutput<HTTP2ConnectionOutput>,
         http2InboundStreamInitializer: @escaping NIOChannelInitializerWithOutput<HTTP2StreamOutput>
-    ) -> EventLoopFuture<EventLoopFuture<NIOProtocolNegotiationResult<NIONegotiatedHTTPVersion<
+    ) -> EventLoopFuture<EventLoopFuture<NIONegotiatedHTTPVersion<
             HTTP1ConnectionOutput,
             (HTTP2ConnectionOutput, NIOHTTP2Handler.AsyncStreamMultiplexer<HTTP2StreamOutput>)
-        >>>>
+        >>>
 
 extension ChannelPipeline.SynchronousOperations {
     /// Configures a `ChannelPipeline` to speak HTTP/2 and sets up mapping functions so that it may be interacted with from concurrent code.
