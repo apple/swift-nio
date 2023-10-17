@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 #if swift(>=5.9)
-@_spi(AsyncChannel) import NIOCore
-@_spi(AsyncChannel) import NIOPosix
-@_spi(AsyncChannel) import NIOHTTP1
-@_spi(AsyncChannel) import NIOWebSocket
+import NIOCore
+import NIOPosix
+import NIOHTTP1
+import NIOWebSocket
 
 @available(macOS 14, *)
 @main

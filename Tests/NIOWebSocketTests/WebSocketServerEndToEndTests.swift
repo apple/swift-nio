@@ -15,8 +15,8 @@
 import XCTest
 @testable import NIOCore
 import NIOEmbedded
-@_spi(AsyncChannel) import NIOHTTP1
-@testable @_spi(AsyncChannel) import NIOWebSocket
+import NIOHTTP1
+@testable import NIOWebSocket
 
 extension EmbeddedChannel {
     func readAllInboundBuffers() throws -> ByteBuffer {

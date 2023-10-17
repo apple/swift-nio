@@ -46,7 +46,7 @@ bi-directional streaming pipeline. To bridge such a pipeline into Concurrency
 required new types. Importantly, these types need to uphold the channel's
 back pressure and writability guarantees. NIO introduced the
 ``NIOThrowingAsyncSequenceProducer``, ``NIOAsyncSequenceProducer`` and the
-``NIOAsyncWriter`` which form the foundation to bridge a ``Channel``. On top of
+``NIOAsyncChannelOutboundWriter`` which form the foundation to bridge a ``Channel``. On top of
 these foundational types, NIO provides the `NIOAsyncChannel` which is used to
 wrap a ``Channel`` to produce an interface that can be consumed directly from
 Swift Concurrency. The following sections cover the details of the foundational
@@ -65,7 +65,7 @@ sequence.
 
 #### NIOAsyncWriter
 
-The ``NIOAsyncWriter`` is used for bridging from an asynchronous producer to a
+The ``NIOAsyncChannelOutboundWriter`` is used for bridging from an asynchronous producer to a
 synchronous consumer. It also has back pressure support which allows the
 consumer to stop the producer by suspending the
 ``NIOAsyncWriter/yield(contentsOf:)`` method.

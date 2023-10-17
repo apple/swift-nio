@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOSHA1
-@_spi(AsyncChannel) import NIOCore
-@_spi(AsyncChannel) import NIOHTTP1
+import NIOCore
+import NIOHTTP1
 
 let magicWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
@@ -185,7 +185,6 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
 ///
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
-@_spi(AsyncChannel)
 public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIOTypedHTTPServerProtocolUpgrader, Sendable {
     private typealias ShouldUpgrade = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
     private typealias UpgradePipelineHandler = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<UpgradeResult>

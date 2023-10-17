@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(AsyncChannel) @testable import NIOCore
+@testable import NIOCore
 import XCTest
 
 final class AsyncChannelOutboundWriterTests: XCTestCase {
