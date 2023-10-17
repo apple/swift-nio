@@ -298,7 +298,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     }
 
     private func deliverOneMessage(context: ChannelHandlerContext, data: NIOAny) -> ConnectionStateAction {
-        self.checkPrecondition(self.lifecycleState != .quiescingLastRequestEndReceived &&
+        self.checkAssertion(self.lifecycleState != .quiescingLastRequestEndReceived &&
                                self.lifecycleState != .quiescingCompleted,
                                "deliverOneMessage called in lifecycle illegal state \(self.lifecycleState)")
         let msg = self.unwrapInboundIn(data)
@@ -306,12 +306,12 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         debugOnly {
             switch msg {
             case .head:
-                self.checkPrecondition(self.nextExpectedInboundMessage == .head)
+                self.checkAssertion(self.nextExpectedInboundMessage == .head)
                 self.nextExpectedInboundMessage = .bodyOrEnd
             case .body:
-                self.checkPrecondition(self.nextExpectedInboundMessage == .bodyOrEnd)
+                self.checkAssertion(self.nextExpectedInboundMessage == .bodyOrEnd)
             case .end:
-                self.checkPrecondition(self.nextExpectedInboundMessage == .bodyOrEnd)
+                self.checkAssertion(self.nextExpectedInboundMessage == .bodyOrEnd)
                 self.nextExpectedInboundMessage = .head
             }
         }
@@ -354,7 +354,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case is ChannelShouldQuiesceEvent:
-            self.checkPrecondition(self.lifecycleState == .acceptingEvents,
+            self.checkAssertion(self.lifecycleState == .acceptingEvents,
                                    "unexpected lifecycle state when receiving ChannelShouldQuiesceEvent: \(self.lifecycleState)")
             switch self.state {
             case .responseEndPending:
@@ -400,20 +400,20 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        self.checkPrecondition(self.state != .requestEndPending,
+        self.checkAssertion(self.state != .requestEndPending,
                                "Received second response while waiting for first one to complete")
         debugOnly {
             let res = self.unwrapOutboundIn(data)
             switch res {
             case .head(let head) where head.isInformational:
-                self.checkPrecondition(self.nextExpectedOutboundMessage == .head)
+                self.checkAssertion(self.nextExpectedOutboundMessage == .head)
             case .head:
-                self.checkPrecondition(self.nextExpectedOutboundMessage == .head)
+                self.checkAssertion(self.nextExpectedOutboundMessage == .head)
                 self.nextExpectedOutboundMessage = .bodyOrEnd
             case .body:
-                self.checkPrecondition(self.nextExpectedOutboundMessage == .bodyOrEnd)
+                self.checkAssertion(self.nextExpectedOutboundMessage == .bodyOrEnd)
             case .end:
-                self.checkPrecondition(self.nextExpectedOutboundMessage == .bodyOrEnd)
+                self.checkAssertion(self.nextExpectedOutboundMessage == .bodyOrEnd)
                 self.nextExpectedOutboundMessage = .head
             }
         }
@@ -443,7 +443,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
             case .quiescingCompleted:
                 // Uh, why are we writing more data here? We'll write it, but it should be guaranteed
                 // to fail.
-                self.preconditionFailed("Wrote in quiescing completed state")
+                self.assertionFailed("Wrote in quiescing completed state")
                 context.write(data, promise: promise)
             }
         case .body, .head:
@@ -564,7 +564,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     ) -> Bool {
         switch action {
         case .warnPreconditionViolated(let message):
-            self.preconditionFailed(message)
+            self.assertionFailed(message)
             let error = ConnectionStateError.preconditionViolated(message: message)
             self.deliverOneError(context: context, error: error)
             promise?.fail(error)
@@ -669,18 +669,18 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
     /// This is currently the only way to do this in Swift: see
     /// https://forums.swift.org/t/support-debug-only-code/11037 for a discussion.
     private func debugOnly(_ body: () -> Void) {
-        checkPrecondition({ body(); return true }())
+        self.checkAssertion({ body(); return true }())
     }
 
     /// Calls assertionFailure if and only if `self.failOnPreconditions` is true. This allows us to avoid terminating the program in tests
-    private func preconditionFailed(_ message: @autoclosure () -> String, file: StaticString = #file, line: UInt = #line) {
+    private func assertionFailed(_ message: @autoclosure () -> String, file: StaticString = #file, line: UInt = #line) {
         if self.failOnPreconditions {
             assertionFailure(message(), file: file, line: line)
         }
     }
 
     /// Calls assert if and only if `self.failOnPreconditions` is true. This allows us to avoid terminating the program in tests
-    private func checkPrecondition(
+    private func checkAssertion(
             _ closure: @autoclosure () -> Bool,
             _ message: @autoclosure () -> String = String(),
             file: StaticString = #file,
