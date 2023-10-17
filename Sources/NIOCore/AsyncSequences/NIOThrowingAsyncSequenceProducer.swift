@@ -414,63 +414,65 @@ extension NIOThrowingAsyncSequenceProducer {
 
         @inlinable
         /* fileprivate */ internal func yield<S: Sequence>(_ sequence: S) -> Source.YieldResult where S.Element == Element {
-            self._lock.withLock {
-                let action = self._stateMachine.yield(sequence)
+            // We must not resume the continuation while holding the lock
+            // because it can deadlock in combination with the underlying ulock
+            // in cases where we race with a cancellation handler
+            let action = self._lock.withLock {
+                self._stateMachine.yield(sequence)
+            }
 
-                switch action {
-                case .returnProduceMore:
-                    return .produceMore
+            switch action {
+            case .returnProduceMore:
+                return .produceMore
 
-                case .returnStopProducing:
-                    return .stopProducing
+            case .returnStopProducing:
+                return .stopProducing
 
-                case .returnDropped:
-                    return .dropped
+            case .returnDropped:
+                return .dropped
 
-                case .resumeContinuationAndReturnProduceMore(let continuation, let element):
-                    // It is safe to resume the continuation while holding the lock
-                    // since the task will get enqueued on its executor and the resume method
-                    // is returning immediately
-                    continuation.resume(returning: element)
+            case .resumeContinuationAndReturnProduceMore(let continuation, let element):
+                continuation.resume(returning: element)
 
-                    return .produceMore
+                return .produceMore
 
-                case .resumeContinuationAndReturnStopProducing(let continuation, let element):
-                    // It is safe to resume the continuation while holding the lock
-                    // since the task will get enqueued on its executor and the resume method
-                    // is returning immediately
-                    continuation.resume(returning: element)
+            case .resumeContinuationAndReturnStopProducing(let continuation, let element):
+                continuation.resume(returning: element)
 
-                    return .stopProducing
-                }
+                return .stopProducing
             }
         }
 
         @inlinable
         /* fileprivate */ internal func finish(_ failure: Failure?) {
-            let delegate: Delegate? = self._lock.withLock {
+            // We must not resume the continuation while holding the lock
+            // because it can deadlock in combination with the underlying ulock
+            // in cases where we race with a cancellation handler
+            let (delegate, action): (Delegate?, NIOThrowingAsyncSequenceProducer.StateMachine.FinishAction) = self._lock.withLock {
                 let action = self._stateMachine.finish(failure)
-
+                
                 switch action {
-                case .resumeContinuationWithFailureAndCallDidTerminate(let continuation, let failure):
+                case .resumeContinuationWithFailureAndCallDidTerminate:
                     let delegate = self._delegate
                     self._delegate = nil
-
-                    // It is safe to resume the continuation while holding the lock
-                    // since the task will get enqueued on its executor and the resume method
-                    // is returning immediately
-                    switch failure {
-                    case .some(let error):
-                        continuation.resume(throwing: error)
-                    case .none:
-                        continuation.resume(returning: nil)
-                    }
-
-                    return delegate
+                    return (delegate, action)
 
                 case .none:
-                    return nil
+                    return (nil, action)
                 }
+            }
+
+            switch action {
+            case .resumeContinuationWithFailureAndCallDidTerminate(let continuation, let failure):
+                switch failure {
+                case .some(let error):
+                    continuation.resume(throwing: error)
+                case .none:
+                    continuation.resume(returning: nil)
+                }
+
+            case .none:
+                break
             }
 
             delegate?.didTerminate()
@@ -549,7 +551,10 @@ extension NIOThrowingAsyncSequenceProducer {
                     }
                 }
             } onCancel: {
-                let delegate: Delegate? = self._lock.withLock {
+                // We must not resume the continuation while holding the lock
+                // because it can deadlock in combination with the underlying ulock
+                // in cases where we race with a cancellation handler
+                let (delegate, action): (Delegate?, NIOThrowingAsyncSequenceProducer.StateMachine.CancelledAction) = self._lock.withLock {
                     let action = self._stateMachine.cancelled()
 
                     switch action {
@@ -557,31 +562,40 @@ extension NIOThrowingAsyncSequenceProducer {
                         let delegate = self._delegate
                         self._delegate = nil
 
-                        return delegate
+                        return (delegate, action)
 
-                    case .resumeContinuationWithCancellationErrorAndCallDidTerminate(let continuation):
-                        // We have deprecated the generic Failure type in the public API and Failure should
-                        // now be `Swift.Error`. However, if users have not migrated to the new API they could
-                        // still use a custom generic Error type and this cast might fail.
-                        // In addition, we use `NIOThrowingAsyncSequenceProducer` in the implementation of the
-                        // non-throwing variant `NIOAsyncSequenceProducer` where `Failure` will be `Never` and
-                        // this cast will fail as well.
-                        // Everything is marked @inlinable and the Failure type is known at compile time,
-                        // therefore this cast should be optimised away in release build.
-                        if let failure = CancellationError() as? Failure {
-                            continuation.resume(throwing: failure)
-                        } else {
-                            continuation.resume(returning: nil)
-                        }
-
+                    case .resumeContinuationWithCancellationErrorAndCallDidTerminate:
                         let delegate = self._delegate
                         self._delegate = nil
 
-                        return delegate
+                        return (delegate, action)
 
                     case .none:
-                        return nil
+                        return (nil, action)
                     }
+                }
+
+                switch action {
+                case .callDidTerminate:
+                    break
+
+                case .resumeContinuationWithCancellationErrorAndCallDidTerminate(let continuation):
+                    // We have deprecated the generic Failure type in the public API and Failure should
+                    // now be `Swift.Error`. However, if users have not migrated to the new API they could
+                    // still use a custom generic Error type and this cast might fail.
+                    // In addition, we use `NIOThrowingAsyncSequenceProducer` in the implementation of the
+                    // non-throwing variant `NIOAsyncSequenceProducer` where `Failure` will be `Never` and
+                    // this cast will fail as well.
+                    // Everything is marked @inlinable and the Failure type is known at compile time,
+                    // therefore this cast should be optimised away in release build.
+                    if let failure = CancellationError() as? Failure {
+                        continuation.resume(throwing: failure)
+                    } else {
+                        continuation.resume(returning: nil)
+                    }
+
+                case .none:
+                    break
                 }
 
                 delegate?.didTerminate()

@@ -450,6 +450,9 @@ extension NIOAsyncWriter {
 
         @inlinable
         /* fileprivate */ internal func setWritability(to writability: Bool) {
+            // We must not resume the continuation while holding the lock
+            // because it can deadlock in combination with the underlying ulock
+            // in cases where we race with a cancellation handler
             let action = self._lock.withLock {
                 self._stateMachine.setWritability(to: writability)
             }
@@ -514,6 +517,9 @@ extension NIOAsyncWriter {
                     }
                 }
             } onCancel: {
+                // We must not resume the continuation while holding the lock
+                // because it can deadlock in combination with the underlying ulock
+                // in cases where we race with a cancellation handler
                 let action = self._lock.withLock {
                     self._stateMachine.cancel(yieldID: yieldID)
                 }
@@ -564,6 +570,9 @@ extension NIOAsyncWriter {
                     }
                 }
             } onCancel: {
+                // We must not resume the continuation while holding the lock
+                // because it can deadlock in combination with the underlying ulock
+                // in cases where we race with a cancellation handler
                 let action = self._lock.withLock {
                     self._stateMachine.cancel(yieldID: yieldID)
                 }
@@ -580,6 +589,9 @@ extension NIOAsyncWriter {
 
         @inlinable
         /* fileprivate */ internal func writerFinish(error: Error?) {
+            // We must not resume the continuation while holding the lock
+            // because it can deadlock in combination with the underlying ulock
+            // in cases where we race with a cancellation handler
             let action = self._lock.withLock {
                 self._stateMachine.writerFinish(error: error)
             }
@@ -598,6 +610,9 @@ extension NIOAsyncWriter {
 
         @inlinable
         /* fileprivate */ internal func sinkFinish(error: Error?) {
+            // We must not resume the continuation while holding the lock
+            // because it can deadlock in combination with the underlying ulock
+            // in cases where we race with a cancellation handler
             let action = self._lock.withLock {
                 self._stateMachine.sinkFinish(error: error)
             }
