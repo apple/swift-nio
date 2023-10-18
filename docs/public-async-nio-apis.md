@@ -72,7 +72,7 @@ overview to review them.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public struct NIOAsyncChannel<Inbound, Outbound> : Sendable where Inbound : Sendable, Outbound : Sendable {
     public struct Configuration : Sendable {
-        /// The back pressure strategy of the ``NIOAsyncChannel/inboundStream``.
+        /// The back pressure strategy of the ``NIOAsyncChannel/inbound``.
         public var backPressureStrategy: NIOCore.NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
         /// If outbound half closure should be enabled. Outbound half closure is triggered once

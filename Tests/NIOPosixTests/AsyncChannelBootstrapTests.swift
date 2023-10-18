@@ -13,10 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
-@_spi(AsyncChannel) @testable import NIOCore
-@_spi(AsyncChannel) @testable import NIOPosix
+@testable import NIOCore
+@testable import NIOPosix
 import XCTest
-@_spi(AsyncChannel) import NIOTLS
+import NIOTLS
 
 private final class IPHeaderRemoverHandler: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>

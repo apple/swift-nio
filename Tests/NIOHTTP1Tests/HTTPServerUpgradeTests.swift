@@ -16,7 +16,7 @@ import XCTest
 import NIOCore
 import NIOEmbedded
 @testable import NIOPosix
-@testable @_spi(AsyncChannel) import NIOHTTP1
+@testable import NIOHTTP1
 
 extension ChannelPipeline {
     fileprivate func assertDoesNotContainUpgrader() throws {
@@ -55,6 +55,7 @@ extension ChannelPipeline {
 
     // Waits up to 1 second for the upgrader to be removed by polling the pipeline
     // every 50ms checking for the handler.
+    @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     fileprivate func waitForUpgraderToBeRemoved() throws {
         for _ in 0..<20 {
             do {

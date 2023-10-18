@@ -16,7 +16,6 @@
 ///
 /// This is a unicast async sequence that allows a single iterator to be created.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-@_spi(AsyncChannel)
 public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @usableFromInline
     typealias Producer = NIOThrowingAsyncSequenceProducer<Inbound, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate>
@@ -149,10 +148,8 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncChannelInboundStream: AsyncSequence {
-    @_spi(AsyncChannel)
     public typealias Element = Inbound
 
-    @_spi(AsyncChannel)
     public struct AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline
         enum _Backing {
@@ -172,7 +169,7 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
             }
         }
 
-        @inlinable @_spi(AsyncChannel)
+        @inlinable
         public mutating func next() async throws -> Element? {
             switch self._backing {
             case .asyncStream(var iterator):
@@ -189,7 +186,6 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
     }
 
     @inlinable
-    @_spi(AsyncChannel)
     public func makeAsyncIterator() -> AsyncIterator {
         return AsyncIterator(self._backing)
     }

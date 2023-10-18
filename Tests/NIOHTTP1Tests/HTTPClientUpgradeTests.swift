@@ -16,7 +16,7 @@ import XCTest
 import Dispatch
 @testable import NIOCore
 import NIOEmbedded
-@_spi(AsyncChannel) @testable import NIOHTTP1
+@testable import NIOHTTP1
 
 extension EmbeddedChannel {
     

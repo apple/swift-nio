@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(AsyncChannel) import NIOCore
-@_spi(AsyncChannel) import NIOPosix
+import NIOCore
+import NIOPosix
 
 func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async throws {
     let serverChannel = try await ServerBootstrap(group: eventLoop)
