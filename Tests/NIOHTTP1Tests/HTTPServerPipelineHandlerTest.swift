@@ -1010,7 +1010,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
      }
 
-     func testServerCanRespondProcessingMultipleTimes() throws {
+    func testServerCanRespondProcessingMultipleTimes() throws {
          // Send in a request.
          XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
          XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
@@ -1180,5 +1180,53 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         // Now, in error, the server sends .body and .end. Both pass unannounced.
         XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer()))))
         XCTAssertNoThrow(try self.channel.writeOutbound(HTTPServerResponsePart.end(nil)))
+    }
+
+    func testSendingHeadTwiceGivesError() throws {
+        self.pipelineHandler.failOnPreconditions = false
+        // Sending a head once is normal
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        // Sending a head twice is an error
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead))) { error in
+            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "received request head in state requestAndResponseEndPending"))
+        }
+    }
+
+    func testServerRespondToNothing() {
+        self.pipelineHandler.failOnPreconditions = false
+
+        // Writing an end whilst in state idle is an error
+        XCTAssertThrowsError(try self.channel.writeOutbound(HTTPServerResponsePart.end(nil))) { error in
+            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "Unexpectedly received a response in state idle"))
+        }
+
+        // Calling finish surfaces the error again
+        XCTAssertThrowsError(try self.channel.finish()) { error in
+            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "Unexpectedly received a response in state idle"))
+        }
+    }
+
+    func testServerRequestEndFirstIsError() {
+        self.pipelineHandler.failOnPreconditions = false
+        // End sending a request which was never started
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
+            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "Received second request"))
+        }
+    }
+
+    func testForcefulShutdownWhenViolatedPrecondition() {
+        self.pipelineHandler.failOnPreconditions = false
+
+        // End sending a request which was never started
+        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
+            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "Received second request"))
+        }
+        // The handler should now refuse further io, and forcefully shutdown
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+
+        self.channel.embeddedEventLoop.run()
+
+        // Ensure the channel is closed
+        XCTAssertNoThrow(try self.channel.closeFuture.wait())
     }
 }
