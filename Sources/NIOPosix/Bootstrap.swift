@@ -552,6 +552,36 @@ extension ServerBootstrap {
         )
     }
 
+    /// Bind the `ServerSocketChannel` to a VSOCK socket.
+    ///
+    /// - Parameters:
+    ///   - vsockAddress: The VSOCK socket address to bind on.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    public func bind<Output: Sendable>(
+        to vsockAddress: VsockAddress,
+        serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark? = nil,
+        childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> NIOAsyncChannel<Output, Never> {
+        func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
+            try ServerSocketChannel(eventLoop: eventLoop, group: childEventLoopGroup, protocolFamily: .vsock, enableMPTCP: enableMPTCP)
+        }
+
+        return try await self.bind0(
+            makeServerChannel: makeChannel,
+            serverBackPressureStrategy: serverBackPressureStrategy,
+            childChannelInitializer: childChannelInitializer
+        ) { channel in
+            channel.register().flatMap {
+                let promise = channel.eventLoop.makePromise(of: Void.self)
+                channel.triggerUserOutboundEvent0(
+                    VsockChannelEvents.BindToAddress(vsockAddress),
+                    promise: promise
+                )
+                return promise.futureResult
+            }
+        }.get()
+    }
+
     /// Use the existing bound socket file descriptor.
     ///
     /// - Parameters:
@@ -593,7 +623,7 @@ extension ServerBootstrap {
         makeServerChannel: @escaping (SelectableEventLoop, EventLoopGroup, Bool) throws -> ServerSocketChannel,
         serverBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
         childChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
+        registration: @escaping @Sendable (ServerSocketChannel) -> EventLoopFuture<Void>
     ) -> EventLoopFuture<NIOAsyncChannel<ChannelInitializerResult, Never>>  {
         let eventLoop = self.group.next()
         let childEventLoopGroup = self.childGroup
@@ -931,6 +961,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     ///     - address: The VSOCK address to connect to.
     /// - returns: An `EventLoopFuture<Channel>` for when the `Channel` is connected.
     public func connect(to address: VsockAddress) -> EventLoopFuture<Channel> {
+        let connectTimeout = self.connectTimeout
         return self.initializeAndRegisterNewChannel(
             eventLoop: self.group.next(),
             protocolFamily: .vsock
@@ -938,8 +969,8 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
             let connectPromise = channel.eventLoop.makePromise(of: Void.self)
             channel.triggerUserOutboundEvent(VsockChannelEvents.ConnectToAddress( address), promise: connectPromise)
 
-            let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
-                connectPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
+            let cancelTask = channel.eventLoop.scheduleTask(in: connectTimeout) {
+                connectPromise.fail(ChannelError.connectTimeout(connectTimeout))
                 channel.close(promise: nil)
             }
             connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
@@ -1121,6 +1152,40 @@ extension ClientBootstrap {
             to: address,
             channelInitializer: channelInitializer
         )
+    }
+
+    /// Specify the VSOCK address to connect to for the `Channel`.
+    ///
+    /// - parameters:
+    ///     - address: The VSOCK address to connect to.
+    /// - returns: An `EventLoopFuture<Channel>` for when the `Channel` is connected.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    public func connect<Output: Sendable>(
+        to address: VsockAddress,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
+    ) async throws -> Output {
+        let connectTimeout = self.connectTimeout
+        return try await self.initializeAndRegisterNewChannel(
+            eventLoop: self.group.next(),
+            protocolFamily: NIOBSDSocket.ProtocolFamily.vsock,
+            channelInitializer: channelInitializer,
+            postRegisterTransformation: { result, eventLoop in
+                return eventLoop.makeSucceededFuture(result)
+            }
+        ) { channel in
+            let connectPromise = channel.eventLoop.makePromise(of: Void.self)
+            channel.triggerUserOutboundEvent(VsockChannelEvents.ConnectToAddress( address), promise: connectPromise)
+
+            let cancelTask = channel.eventLoop.scheduleTask(in: connectTimeout) {
+                connectPromise.fail(ChannelError.connectTimeout(connectTimeout))
+                channel.close(promise: nil)
+            }
+            connectPromise.futureResult.whenComplete { (_: Result<Void, Error>) in
+                cancelTask.cancel()
+            }
+
+            return connectPromise.futureResult
+        }.get().1
     }
 
     /// Use the existing connected socket file descriptor.
