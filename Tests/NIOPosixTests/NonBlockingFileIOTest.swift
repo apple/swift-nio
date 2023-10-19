@@ -1016,4 +1016,29 @@ class NonBlockingFileIOTest: XCTestCase {
             }
         })
     }
+
+    func testChunkedReadingToleratesChunkHandlersWithForeignEventLoops() throws {
+        let content = "hello"
+        let contentBytes = Array(content.utf8)
+        var numCalls = 0
+        let otherGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            try! otherGroup.syncShutdownGracefully()
+        }
+        try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
+            let fr = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 5)
+            try self.fileIO.readChunked(fileRegion: fr,
+                                        chunkSize: 1,
+                                        allocator: self.allocator,
+                                        eventLoop: self.eventLoop) { buf in
+                                    var buf = buf
+                                    XCTAssertTrue(self.eventLoop.inEventLoop)
+                                    XCTAssertEqual(1, buf.readableBytes)
+                                    XCTAssertEqual(contentBytes[numCalls], buf.readBytes(length: 1)?.first!)
+                                    numCalls += 1
+                                    return otherGroup.next().makeSucceededFuture(())
+                }.wait()
+        }
+        XCTAssertEqual(content.utf8.count, numCalls)
+    }
 }
