@@ -202,7 +202,7 @@ public struct NonBlockingFileIO: Sendable {
                             return
                         }
                         let bytesRead = Int64(buffer.readableBytes)
-                        chunkHandler(buffer).whenComplete { result in
+                        chunkHandler(buffer).hop(to: eventLoop).whenComplete { result in
                             switch result {
                             case .success(_):
                                 eventLoop.assertInEventLoop()
