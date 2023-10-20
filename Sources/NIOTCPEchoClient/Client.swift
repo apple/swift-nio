@@ -11,7 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if swift(>=5.9)
+
+#if compiler(>=5.9)
 import NIOCore
 import NIOPosix
 
