@@ -292,6 +292,48 @@ extension NIOThreadPool {
     }
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension NIOThreadPool {
+    #if swift(>=5.7)
+    /// Runs the submitted closure if the thread pool is still active, otherwise throw an error.
+    /// The closure will be run on the thread pool so can do blocking work.
+    ///
+    /// - parameters:
+    ///     - body: The closure which performs some blocking work to be done on the thread pool.
+    /// - returns: result of the passed closure.
+    @preconcurrency
+    public func runIfActive<T>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
+        try await self._runIfActive(body)
+    }
+    #else
+    /// Runs the submitted closure if the thread pool is still active, otherwise throw an error.
+    /// The closure will be run on the thread pool so can do blocking work.
+    ///
+    /// - parameters:
+    ///     - body: The closure which performs some blocking work to be done on the thread pool.
+    /// - returns: result of the passed closure.
+    public func runIfActive<T>(_ body: @escaping () throws -> T) async throws -> T {
+        try await self._runIfActive(body)
+    }
+    #endif
+    
+    private func _runIfActive<T>(_ body: @escaping () throws -> T) async throws -> T {
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<T, Error>) in
+            self.submit { shouldRun in
+                guard case shouldRun = NIOThreadPool.WorkItemState.active else {
+                    cont.resume(throwing: NIOThreadPoolError.ThreadPoolInactive())
+                    return
+                }
+                do {
+                    try cont.resume(returning: body())
+                } catch {
+                    cont.resume(throwing: error)
+                }
+            }
+        }
+    }
+}
+
 extension NIOThreadPool {
     @preconcurrency
     public func shutdownGracefully(_ callback: @escaping @Sendable (Error?) -> Void) {
