@@ -473,7 +473,7 @@ public typealias HTTPResponseDecoder = HTTPDecoder<HTTPClientResponsePart, HTTPC
 ///
 /// While the `HTTPRequestDecoder` does not currently have a specific ordering requirement in the
 /// `ChannelPipeline` (unlike `HTTPResponseDecoder`), it is possible that it will develop one. For
-/// that reason, applications should try to ensure that the `HTTPRequestDecoder` *later* in the
+/// that reason, applications should try to ensure that the `HTTPRequestDecoder` is *later* in the
 /// `ChannelPipeline` than the `HTTPResponseEncoder`.
 ///
 /// Rather than set this up manually, consider using `ChannelPipeline.configureHTTPServerPipeline`.
@@ -484,12 +484,18 @@ public enum HTTPDecoderKind: Sendable {
     case response
 }
 
-extension HTTPDecoder: WriteObservingByteToMessageDecoder where In == HTTPClientResponsePart, Out == HTTPClientRequestPart {
+extension HTTPDecoder: WriteObservingByteToMessageDecoder {
     public typealias OutboundIn = Out
 
-    public func write(data: HTTPClientRequestPart) {
-        if case .head(let head) = data {
+    public func write(data: Out) {
+        if Self.self == HTTPResponseDecoder.self,
+            case .head(let head) = (data as? HTTPClientRequestPart) {
             self.parser.requestHeads.append(head)
+        } else if Self.self == HTTPRequestDecoder.self, 
+                    case let .head(head) = data as? HTTPServerResponsePart {
+            if head.isKeepAlive, self.isUpgrade == true, head.status != .switchingProtocols {
+                self.stopParsing = false
+            }
         }
     }
 }
@@ -567,7 +573,6 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         case .response:
             self.context!.fireChannelRead(NIOAny(HTTPClientResponsePart.body(self.buffer!.readSlice(length: bytes.count)!)))
         }
-
     }
 
     func didReceiveHeaderName(_ bytes: UnsafeRawBufferPointer) throws {
