@@ -43,7 +43,7 @@ public struct NonBlockingFileIO: Sendable {
         case descriptorSetToNonBlocking
     }
 
-    private let threadPool: NIOThreadPool
+    internal let threadPool: NIOThreadPool
 
     /// Initialize a `NonBlockingFileIO` which uses the `NIOThreadPool`.
     ///
@@ -320,40 +320,48 @@ public struct NonBlockingFileIO: Sendable {
         }
         let byteCount = rawByteCount < Int32.max ? rawByteCount : size_t(Int32.max)
 
-        var buf = allocator.buffer(capacity: byteCount)
+        let buf = allocator.buffer(capacity: byteCount)
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
-            var bytesRead = 0
-            while bytesRead < byteCount {
-                let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
-                    let res = try fileHandle.withUnsafeFileDescriptor { descriptor -> IOResult<ssize_t> in
-                        if let offset = fromOffset {
-                            return try Posix.pread(descriptor: descriptor,
-                                                   pointer: ptr.baseAddress!,
-                                                   size: byteCount - bytesRead,
-                                                   offset: off_t(offset) + off_t(bytesRead))
-                        } else {
-                            return try Posix.read(descriptor: descriptor,
-                                                  pointer: ptr.baseAddress!,
-                                                  size: byteCount - bytesRead)
-                        }
-                    }
-                    switch res {
-                    case .processed(let n):
-                        assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
-                        return n
-                    case .wouldBlock:
-                        throw Error.descriptorSetToNonBlocking
+            try readSync(fileHandle: fileHandle, fromOffset: fromOffset, byteCount: byteCount, buf: buf)
+        }
+    }
+
+    private func readSync(fileHandle: NIOFileHandle,
+                       fromOffset: Int64?, // > 2 GB offset is reasonable on 32-bit systems
+                       byteCount: Int,
+                       buf: ByteBuffer) throws -> ByteBuffer {
+        var bytesRead = 0
+        var buf = buf
+        while bytesRead < byteCount {
+            let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
+                let res = try fileHandle.withUnsafeFileDescriptor { descriptor -> IOResult<ssize_t> in
+                    if let offset = fromOffset {
+                        return try Posix.pread(descriptor: descriptor,
+                                                pointer: ptr.baseAddress!,
+                                                size: byteCount - bytesRead,
+                                                offset: off_t(offset) + off_t(bytesRead))
+                    } else {
+                        return try Posix.read(descriptor: descriptor,
+                                                pointer: ptr.baseAddress!,
+                                                size: byteCount - bytesRead)
                     }
                 }
-                if n == 0 {
-                    // EOF
-                    break
-                } else {
-                    bytesRead += n
+                switch res {
+                case .processed(let n):
+                    assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
+                    return n
+                case .wouldBlock:
+                    throw Error.descriptorSetToNonBlocking
                 }
             }
-            return buf
+            if n == 0 {
+                // EOF
+                break
+            } else {
+                bytesRead += n
+            }
         }
+        return buf
     }
 
     /// Changes the file size of `fileHandle` to `size`.
@@ -433,35 +441,42 @@ public struct NonBlockingFileIO: Sendable {
         }
 
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            var buf = buffer
+            try writeSync(fileHandle: fileHandle, byteCount: byteCount, toOffset: toOffset, buffer: buffer)
+        }
+    }
 
-            var offsetAccumulator: Int = 0
-            repeat {
-                let n = try buf.readWithUnsafeReadableBytes { ptr in
-                    precondition(ptr.count == byteCount - offsetAccumulator)
-                    let res: IOResult<ssize_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
-                        if let toOffset = toOffset {
-                            return try Posix.pwrite(descriptor: descriptor,
-                                                    pointer: ptr.baseAddress!,
-                                                    size: byteCount - offsetAccumulator,
-                                                    offset: off_t(toOffset + Int64(offsetAccumulator)))
-                        } else {
-                            return try Posix.write(descriptor: descriptor,
-                                                   pointer: ptr.baseAddress!,
-                                                   size: byteCount - offsetAccumulator)
-                        }
-                    }
-                    switch res {
-                    case .processed(let n):
-                        assert(n >= 0, "write claims to have written a negative number of bytes \(n)")
-                        return n
-                    case .wouldBlock:
-                        throw Error.descriptorSetToNonBlocking
+    private func writeSync(fileHandle: NIOFileHandle,
+                        byteCount: Int,
+                        toOffset: Int64?,
+                        buffer: ByteBuffer) throws {
+        var buf = buffer
+
+        var offsetAccumulator: Int = 0
+        repeat {
+            let n = try buf.readWithUnsafeReadableBytes { ptr in
+                precondition(ptr.count == byteCount - offsetAccumulator)
+                let res: IOResult<ssize_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
+                    if let toOffset = toOffset {
+                        return try Posix.pwrite(descriptor: descriptor,
+                                                pointer: ptr.baseAddress!,
+                                                size: byteCount - offsetAccumulator,
+                                                offset: off_t(toOffset + Int64(offsetAccumulator)))
+                    } else {
+                        return try Posix.write(descriptor: descriptor,
+                                                pointer: ptr.baseAddress!,
+                                                size: byteCount - offsetAccumulator)
                     }
                 }
-                offsetAccumulator += n
-            } while offsetAccumulator < byteCount
-        }
+                switch res {
+                case .processed(let n):
+                    assert(n >= 0, "write claims to have written a negative number of bytes \(n)")
+                    return n
+                case .wouldBlock:
+                    throw Error.descriptorSetToNonBlocking
+                }
+            }
+            offsetAccumulator += n
+        } while offsetAccumulator < byteCount
     }
 
     /// Open the file at `path` for reading on a private thread pool which is separate from any `EventLoop` thread.
@@ -712,3 +727,329 @@ public struct NIODirectoryEntry: Hashable {
     }
 }
 #endif
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension NonBlockingFileIO {
+    /// Read a `FileRegion` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// The returned `ByteBuffer` will not have less than `fileRegion.readableBytes` unless we hit end-of-file in which
+    /// case the `ByteBuffer` will contain the bytes available to read.
+    ///
+    /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
+    /// same `FileRegion` in multiple threads.
+    ///
+    /// - note: Only use this function for small enough `FileRegion`s as it will need to allocate enough memory to hold `fileRegion.readableBytes` bytes.
+    /// - note: In most cases you should prefer one of the `readChunked` functions.
+    ///
+    /// - parameters:
+    ///   - fileRegion: The file region to read.
+    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
+    /// - returns: ByteBuffer.
+    public func read(fileRegion: FileRegion, allocator: ByteBufferAllocator) async throws -> ByteBuffer {
+        let readableBytes = fileRegion.readableBytes
+        return try await self.read(fileHandle: fileRegion.fileHandle,
+                         fromOffset: Int64(fileRegion.readerIndex),
+                         byteCount: readableBytes,
+                         allocator: allocator)
+    }
+
+    /// Read `byteCount` bytes from `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// The returned `ByteBuffer` will not have less than `byteCount` bytes unless we hit end-of-file in which
+    /// case the `ByteBuffer` will contain the bytes available to read.
+    ///
+    /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
+    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of
+    ///         raw `NIOFileHandle`s. In case you do want to use raw `NIOFileHandle`s,
+    ///         please consider using `read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)`
+    ///         because it doesn't use the file descriptor's seek pointer (which may be shared with other file
+    ///         descriptors and even across processes.)
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `NIOFileHandle` to read.
+    ///   - byteCount: The number of bytes to read from `fileHandle`.
+    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
+    /// - returns: ByteBuffer.
+    public func read(fileHandle: NIOFileHandle,
+                     byteCount: Int,
+                     allocator: ByteBufferAllocator) async throws-> ByteBuffer {
+        return try await self.read0(fileHandle: fileHandle,
+                         fromOffset: nil,
+                         byteCount: byteCount,
+                         allocator: allocator)
+    }
+
+    /// Read `byteCount` bytes starting at `fileOffset` from `fileHandle` in `NonBlockingFileIO`'s private thread pool
+    /// which is separate from any `EventLoop` thread.
+    ///
+    /// The returned `ByteBuffer` will not have less than `byteCount` bytes unless we hit end-of-file in which
+    /// case the `ByteBuffer` will contain the bytes available to read.
+    ///
+    /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
+    /// same `fileHandle` in multiple threads.
+    ///
+    /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
+    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of raw `NIOFileHandle`s.
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `NIOFileHandle` to read.
+    ///   - fileOffset: The offset to read from.
+    ///   - byteCount: The number of bytes to read from `fileHandle`.
+    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
+    /// - returns: ByteBuffer.
+    public func read(fileHandle: NIOFileHandle,
+                     fromOffset fileOffset: Int64,
+                     byteCount: Int,
+                     allocator: ByteBufferAllocator) async throws -> ByteBuffer {
+        return try await self.read0(fileHandle: fileHandle,
+                          fromOffset: fileOffset,
+                          byteCount: byteCount,
+                          allocator: allocator)
+    }
+
+    private func read0(fileHandle: NIOFileHandle,
+                       fromOffset: Int64?, // > 2 GB offset is reasonable on 32-bit systems
+                       byteCount rawByteCount: Int,
+                       allocator: ByteBufferAllocator) async throws -> ByteBuffer {
+        guard rawByteCount > 0 else {
+            return allocator.buffer(capacity: 0)
+        }
+        let byteCount = rawByteCount < Int32.max ? rawByteCount : size_t(Int32.max)
+
+        let buf = allocator.buffer(capacity: byteCount)
+        return try await self.threadPool.runIfActive { () -> ByteBuffer in
+            try self.readSync(fileHandle: fileHandle, fromOffset: fromOffset, byteCount: byteCount, buf: buf)
+        }
+    }
+
+    /// Changes the file size of `fileHandle` to `size`.
+    ///
+    /// If `size` is smaller than the current file size, the remaining bytes will be truncated and are lost. If `size`
+    /// is larger than the current file size, the gap will be filled with zero bytes.
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `NIOFileHandle` to write to.
+    ///   - size: The new file size in bytes to write.
+    public func changeFileSize(fileHandle: NIOFileHandle,
+                               size: Int64) async throws {
+        return try await self.threadPool.runIfActive {
+            try fileHandle.withUnsafeFileDescriptor { descriptor -> Void in
+                try Posix.ftruncate(descriptor: descriptor, size: off_t(size))
+            }
+        }
+    }
+
+    /// Returns the length of the file associated with `fileHandle`.
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `NIOFileHandle` to read from.
+    public func readFileSize(fileHandle: NIOFileHandle) async throws -> Int64 {
+        return try await self.threadPool.runIfActive {
+            return try fileHandle.withUnsafeFileDescriptor { descriptor in
+                let curr = try Posix.lseek(descriptor: descriptor, offset: 0, whence: SEEK_CUR)
+                let eof = try Posix.lseek(descriptor: descriptor, offset: 0, whence: SEEK_END)
+                try Posix.lseek(descriptor: descriptor, offset: curr, whence: SEEK_SET)
+                return Int64(eof)
+            }
+        }
+    }
+
+    /// Write `buffer` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `NIOFileHandle` to write to.
+    ///   - buffer: The `ByteBuffer` to write.
+    public func write(fileHandle: NIOFileHandle,
+                      buffer: ByteBuffer) async throws {
+        return try await self.write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer)
+    }
+
+    /// Write `buffer` starting from `toOffset` to `fileHandle` in `NonBlockingFileIO`'s private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///   - fileHandle: The `NIOFileHandle` to write to.
+    ///   - toOffset: The file offset to write to.
+    ///   - buffer: The `ByteBuffer` to write.
+    public func write(fileHandle: NIOFileHandle,
+                      toOffset: Int64,
+                      buffer: ByteBuffer,
+                      eventLoop: EventLoop) async throws {
+        return try await self.write0(fileHandle: fileHandle, toOffset: toOffset, buffer: buffer)
+    }
+
+    private func write0(fileHandle: NIOFileHandle,
+                        toOffset: Int64?,
+                        buffer: ByteBuffer) async throws {
+        let byteCount = buffer.readableBytes
+
+        guard byteCount > 0 else {
+            return
+        }
+
+        return try await self.threadPool.runIfActive {
+            try writeSync(fileHandle: fileHandle, byteCount: byteCount, toOffset: toOffset, buffer: buffer)
+        }
+    }
+
+    /// Open the file at `path` for reading on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened and a `FileRegion`
+    /// comprising of the whole file. The caller must close the returned `NIOFileHandle` when it's no longer needed.
+    ///
+    /// - note: The reason this returns the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to be opened for reading.
+    /// - returns: the `NIOFileHandle` and the `FileRegion` comprising the whole file.
+    public func openFile(path: String) async throws -> (NIOFileHandle, FileRegion) {
+        return try await self.threadPool.runIfActive {
+            let fh = try NIOFileHandle(path: path)
+            do {
+                let fr = try FileRegion(fileHandle: fh)
+                return (fh, fr)
+            } catch {
+                _ = try? fh.close()
+                throw error
+            }
+        }
+    }
+
+    /// Open the file at `path` with specified access mode and POSIX flags on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened.
+    /// The caller must close the returned `NIOFileHandle` when it's no longer needed.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to be opened for writing.
+    ///     - mode: File access mode.
+    ///     - flags: Additional POSIX flags.
+    /// - returns: NIOFileHandle`.
+    public func openFile(path: String, mode: NIOFileHandle.Mode, flags: NIOFileHandle.Flags = .default) async throws -> NIOFileHandle {
+        return try await self.threadPool.runIfActive {
+            return try NIOFileHandle(path: path, mode: mode, flags: flags)
+        }
+    }
+
+#if !os(Windows)
+
+    /// Returns information about a file at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - note: If `path` is a symlink, information about the link, not the file it points to.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to get information about.
+    /// - returns: file information.
+    public func lstat(path: String) async throws -> stat {
+        return try await self.threadPool.runIfActive {
+            var s = stat()
+            try Posix.lstat(pathname: path, outStat: &s)
+            return s
+        }
+    }
+
+    /// Creates a symbolic link to a  `destination` file  at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the link.
+    ///     - destination: Target path where this link will point to.
+    public func symlink(path: String, to destination: String) async throws {
+        return try await self.threadPool.runIfActive {
+            try Posix.symlink(pathname: path, destination: destination)
+        }
+    }
+
+    /// Returns target of the symbolic link at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the link to read.
+    /// - returns: link target.
+    public func readlink(path: String) async throws -> String {
+        return try await self.threadPool.runIfActive {
+            let maxLength = Int(PATH_MAX)
+            let pointer = UnsafeMutableBufferPointer<CChar>.allocate(capacity: maxLength)
+            defer {
+                pointer.deallocate()
+            }
+            let length = try Posix.readlink(pathname: path, outPath: pointer.baseAddress!, outPathSize: maxLength)
+            return String(decoding: UnsafeRawBufferPointer(pointer).prefix(length), as: UTF8.self)
+        }
+    }
+
+    /// Removes symbolic link at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the link to remove.
+    public func unlink(path: String) async throws {
+        return try await self.threadPool.runIfActive {
+            try Posix.unlink(pathname: path)
+        }
+    }
+
+
+    /// Creates directory at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the directory to be created.
+    ///     - withIntermediateDirectories: Whether intermediate directories should be created.
+    public func createDirectory(path: String, withIntermediateDirectories createIntermediates: Bool = false, mode: NIOPOSIXFileMode) async throws {
+        return try await self.threadPool.runIfActive {
+            if createIntermediates {
+                #if canImport(Darwin)
+                try Posix.mkpath_np(pathname: path, mode: mode)
+                #else
+                try self.createDirectory0(path, mode: mode)
+                #endif
+            } else {
+                try Posix.mkdir(pathname: path, mode: mode)
+            }
+        }
+    }
+
+    /// List contents of the directory at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the directory to list the content of.
+    /// - returns: The directory entries.
+    public func listDirectory(path: String) async throws -> [NIODirectoryEntry] {
+        return try await self.threadPool.runIfActive {
+            let dir = try Posix.opendir(pathname: path)
+            var entries: [NIODirectoryEntry] = []
+            do {
+                while let entry = try Posix.readdir(dir: dir) {
+                    let name = withUnsafeBytes(of: entry.pointee.d_name) { pointer -> String in
+                        let ptr = pointer.baseAddress!.assumingMemoryBound(to: CChar.self)
+                        return String(cString: ptr)
+                    }
+                    entries.append(NIODirectoryEntry(ino: UInt64(entry.pointee.d_ino), type: entry.pointee.d_type, name: name))
+                }
+                try? Posix.closedir(dir: dir)
+            } catch {
+                try? Posix.closedir(dir: dir)
+                throw error
+            }
+            return entries
+        }
+    }
+
+    /// Renames the file at `path` to `newName` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to be renamed.
+    ///     - newName: New file name.
+    public func rename(path: String, newName: String) async throws {
+        return try await self.threadPool.runIfActive() {
+            try Posix.rename(pathname: path, newName: newName)
+        }
+    }
+
+    /// Removes the file at `path` on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// - parameters:
+    ///     - path: The path of the file to be removed.
+    public func remove(path: String) async throws {
+        return try await self.threadPool.runIfActive() {
+            try Posix.remove(pathname: path)
+        }
+    }
+#endif
+}
