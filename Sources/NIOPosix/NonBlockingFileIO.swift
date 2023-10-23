@@ -872,8 +872,7 @@ extension NonBlockingFileIO {
     ///   - buffer: The `ByteBuffer` to write.
     public func write(fileHandle: NIOFileHandle,
                       toOffset: Int64,
-                      buffer: ByteBuffer,
-                      eventLoop: EventLoop) async throws {
+                      buffer: ByteBuffer) async throws {
         return try await self.write0(fileHandle: fileHandle, toOffset: toOffset, buffer: buffer)
     }
 
