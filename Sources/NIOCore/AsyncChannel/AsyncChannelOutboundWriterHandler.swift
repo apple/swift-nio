@@ -147,6 +147,18 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
         self.sink?.setWritability(to: context.channel.isWritable)
         context.fireChannelWritabilityChanged()
     }
+
+    @inlinable
+    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        switch event {
+        case ChannelEvent.outputClosed:
+            self.sink?.finish()
+        default:
+            break
+        }
+
+        context.fireUserInboundEventTriggered(event)
+    }
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
