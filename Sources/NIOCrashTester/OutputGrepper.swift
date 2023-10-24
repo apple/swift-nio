@@ -33,7 +33,7 @@ internal struct OutputGrepper {
                 channel.pipeline.addHandlers([ByteToMessageHandler(NewlineFramer()),
                                               GrepHandler(promise: outputPromise)])
             }
-            .takingOwnershipOfDescriptors(input: dup(processToChannel.fileHandleForReading.fileDescriptor))
+            .takingOwnershipOfDescriptor(input: dup(processToChannel.fileHandleForReading.fileDescriptor))
         let processOutputPipe = NIOFileHandle(descriptor: dup(processToChannel.fileHandleForWriting.fileDescriptor))
         processToChannel.fileHandleForReading.closeFile()
         processToChannel.fileHandleForWriting.closeFile()

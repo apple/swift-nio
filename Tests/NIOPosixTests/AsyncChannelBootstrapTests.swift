@@ -645,7 +645,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         do {
             toChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .takingOwnershipOfDescriptors(
+                .takingOwnershipOfDescriptor(
                     output: pipe1WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
@@ -659,7 +659,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         do {
             fromChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .takingOwnershipOfDescriptors(
+                .takingOwnershipOfDescriptor(
                     input: pipe2ReadFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
@@ -693,7 +693,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         do {
             channel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .takingOwnershipOfDescriptors(
+                .takingOwnershipOfDescriptor(
                     output: pipe1WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
@@ -707,7 +707,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         do {
             fromChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .takingOwnershipOfDescriptors(
+                .takingOwnershipOfDescriptor(
                     input: pipe1ReadFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
@@ -740,7 +740,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         do {
             channel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .takingOwnershipOfDescriptors(
+                .takingOwnershipOfDescriptor(
                     input: pipe1ReadFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
@@ -754,7 +754,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         do {
             toChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .takingOwnershipOfDescriptors(
+                .takingOwnershipOfDescriptor(
                     output: pipe1WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
@@ -804,7 +804,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         do {
             toChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .takingOwnershipOfDescriptors(
+                .takingOwnershipOfDescriptor(
                     output: pipe1WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
@@ -818,7 +818,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         do {
             fromChannel = try await NIOPipeBootstrap(group: eventLoopGroup)
-                .takingOwnershipOfDescriptors(
+                .takingOwnershipOfDescriptor(
                     input: pipe2ReadFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {

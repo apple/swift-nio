@@ -2058,43 +2058,37 @@ public final class NIOPipeBootstrap {
         self._takingOwnershipOfDescriptors(input: input, output: output)
     }
 
-    /// Create the `PipeChannel` with the provided input and output file descriptors.
+    /// Create the `PipeChannel` with the provided input file descriptor.
     ///
-    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
-    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
-    /// `NIOPipeBootstrap.takingOwnershipOfDescriptor` if it is not a socket.
+    /// The input file descriptor must be distinct.
     ///
-    /// - Note: If this method returns a succeeded future, SwiftNIO will close `input` and `output`
-    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `input` or
-    ///         `output`, including `close`.
-    ///         If this method returns a failed future, you still own the file descriptors and are responsible for
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `input` when the `Channel`
+    ///         becomes inactive. You _must not_ do any further operations to `input`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptor and are responsible for
     ///         closing them.
     ///
     /// - Parameters:
     ///   - input: The _Unix file descriptor_ for the input (ie. the read side).
     /// - Returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-    public func takingOwnershipOfDescriptors(
+    public func takingOwnershipOfDescriptor(
         input: CInt
     ) -> EventLoopFuture<Channel> {
         self._takingOwnershipOfDescriptors(input: input, output: nil)
     }
 
-    /// Create the `PipeChannel` with the provided input and output file descriptors.
+    /// Create the `PipeChannel` with the provided output file descriptor.
     ///
-    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
-    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
-    /// `NIOPipeBootstrap.takingOwnershipOfDescriptor` if it is not a socket.
+    /// The output file descriptor must be distinct.
     ///
-    /// - Note: If this method returns a succeeded future, SwiftNIO will close `input` and `output`
-    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `input` or
-    ///         `output`, including `close`.
-    ///         If this method returns a failed future, you still own the file descriptors and are responsible for
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `output` when the `Channel`
+    ///         becomes inactive. You _must not_ do any further operations to `output`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptor and are responsible for
     ///         closing them.
     ///
     /// - Parameters:
     ///   - output: The _Unix file descriptor_ for the output (ie. the write side).
     /// - Returns: an `EventLoopFuture<Channel>` to deliver the `Channel`.
-    public func takingOwnershipOfDescriptors(
+    public func takingOwnershipOfDescriptor(
         output: CInt
     ) -> EventLoopFuture<Channel> {
         self._takingOwnershipOfDescriptors(input: nil, output: output)
@@ -2170,9 +2164,7 @@ extension NIOPipeBootstrap {
 
     /// Create the `PipeChannel` with the provided input and output file descriptors.
     ///
-    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
-    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
-    /// `NIOPipeBootstrap.takingOwnershipOfDescriptor` if it is not a socket.
+    /// The input and output file descriptors must be distinct.
     ///
     /// - Note: If this method returns a succeeded future, SwiftNIO will close `input` and `output`
     ///         when the `Channel` becomes inactive. You _must not_ do any further operations `input` or
@@ -2199,16 +2191,13 @@ extension NIOPipeBootstrap {
         )
     }
 
-    /// Create the `PipeChannel` with the provided input and output file descriptors.
+    /// Create the `PipeChannel` with the provided input file descriptor.
     ///
-    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
-    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
-    /// `NIOPipeBootstrap.takingOwnershipOfDescriptor` if it is not a socket.
+    /// The input file descriptor must be distinct.
     ///
-    /// - Note: If this method returns a succeeded future, SwiftNIO will close `input` and `output`
-    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `input` or
-    ///         `output`, including `close`.
-    ///         If this method returns a failed future, you still own the file descriptors and are responsible for
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `input` when the `Channel`
+    ///         becomes inactive. You _must not_ do any further operations to `input`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptor and are responsible for
     ///         closing them.
     ///
     /// - Parameters:
@@ -2217,7 +2206,7 @@ extension NIOPipeBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func takingOwnershipOfDescriptors<Output: Sendable>(
+    public func takingOwnershipOfDescriptor<Output: Sendable>(
         input: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
@@ -2228,16 +2217,13 @@ extension NIOPipeBootstrap {
         )
     }
 
-    /// Create the `PipeChannel` with the provided input and output file descriptors.
+    /// Create the `PipeChannel` with the provided output file descriptor.
     ///
-    /// The input and output file descriptors must be distinct. If you have a single file descriptor, consider using
-    /// `ClientBootstrap.withConnectedSocket(descriptor:)` if it's a socket or
-    /// `NIOPipeBootstrap.takingOwnershipOfDescriptor` if it is not a socket.
+    /// The output file descriptor must be distinct.
     ///
-    /// - Note: If this method returns a succeeded future, SwiftNIO will close `input` and `output`
-    ///         when the `Channel` becomes inactive. You _must not_ do any further operations `input` or
-    ///         `output`, including `close`.
-    ///         If this method returns a failed future, you still own the file descriptors and are responsible for
+    /// - Note: If this method returns a succeeded future, SwiftNIO will close `output` when the `Channel`
+    ///         becomes inactive. You _must not_ do any further operations to `output`, including `close`.
+    ///         If this method returns a failed future, you still own the file descriptor and are responsible for
     ///         closing them.
     ///
     /// - Parameters:
@@ -2246,7 +2232,7 @@ extension NIOPipeBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func takingOwnershipOfDescriptors<Output: Sendable>(
+    public func takingOwnershipOfDescriptor<Output: Sendable>(
         output: CInt,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Output>
     ) async throws -> Output {
@@ -2318,15 +2304,11 @@ extension NIOPipeBootstrap {
             }.flatMap { result -> EventLoopFuture<ChannelInitializerResult> in
                 if inputFileHandle == nil {
                     return channel.close(mode: .input).map { result }
-                } else {
-                    return channel.selectableEventLoop.makeSucceededFuture(result)
                 }
-            }.flatMap { result in
                 if outputFileHandle == nil {
                     return channel.close(mode: .output).map { result }
-                } else {
-                    return channel.selectableEventLoop.makeSucceededFuture(result)
                 }
+                return channel.selectableEventLoop.makeSucceededFuture(result)
             }.flatMapError { error in
                 channel.close0(error: error, mode: .all, promise: nil)
                 return channel.eventLoop.makeFailedFuture(error)
