@@ -493,7 +493,7 @@ extension HTTPDecoder: WriteObservingByteToMessageDecoder {
             self.parser.requestHeads.append(head)
         } else if Self.self == HTTPRequestDecoder.self, 
                     case let .head(head) = data as? HTTPServerResponsePart {
-            if head.isKeepAlive, self.isUpgrade == true, head.status != .switchingProtocols {
+            if head.isKeepAlive, head.status != .switchingProtocols, self.stopParsing {
                 self.stopParsing = false
             }
         }
