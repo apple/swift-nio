@@ -770,6 +770,67 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         }
     }
 
+    // MARK: VSock
+
+    func testVSock() async throws {
+        try XCTSkipUnless(System.supportsVsock, "No vsock transport available")
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
+
+        let port = VsockAddress.Port(1234)
+
+        let serverChannel = try await ServerBootstrap(group: eventLoopGroup)
+            .bind(
+                to: VsockAddress(cid: .any, port: port)
+            ) { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
+                    return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
+                }
+            }
+
+        #if canImport(Darwin)
+        let connectAddress = VsockAddress(cid: .any, port: port)
+        #elseif os(Linux) || os(Android)
+        let connectAddress = VsockAddress(cid: .local, port: port)
+        #endif
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
+            var iterator = stream.makeAsyncIterator()
+
+            group.addTask {
+                try await withThrowingTaskGroup(of: Void.self) { _ in
+                    for try await childChannel in serverChannel.inbound {
+                        for try await value in childChannel.inbound {
+                            continuation.yield(.string(value))
+                        }
+                    }
+                }
+            }
+
+            let stringChannel = try await ClientBootstrap(group: eventLoopGroup)
+                .connect(to: connectAddress) { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
+                        try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
+                        try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
+                        return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
+                    }
+                }
+            try await stringChannel.outbound.write("hello")
+
+            await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
+
+            group.cancelAll()
+        }
+    }
+
+
     // MARK: - Test Helpers
 
     private func makePipeFileDescriptors() -> (pipe1ReadFH: Int32, pipe1WriteFH: Int32, pipe2ReadFH: Int32, pipe2WriteFH: Int32) {
