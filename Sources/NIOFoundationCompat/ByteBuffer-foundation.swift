@@ -375,17 +375,23 @@ extension ByteBufferAllocator {
 }
 
 // MARK: - Conformances
+#if compiler(>=5.11)
+extension ByteBufferView: @retroactive ContiguousBytes {}
+extension ByteBufferView: @retroactive DataProtocol {}
+extension ByteBufferView: @retroactive MutableDataProtocol {}
+#else
 extension ByteBufferView: ContiguousBytes {}
+extension ByteBufferView: DataProtocol {}
+extension ByteBufferView: MutableDataProtocol {}
+#endif
 
-extension ByteBufferView: DataProtocol {
+extension ByteBufferView {
     public typealias Regions = CollectionOfOne<ByteBufferView>
 
     public var regions: CollectionOfOne<ByteBufferView> {
         return .init(self)
     }
 }
-
-extension ByteBufferView: MutableDataProtocol {}
 
 // MARK: - Data
 extension Data {
