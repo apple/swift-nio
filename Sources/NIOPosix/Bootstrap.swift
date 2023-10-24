@@ -556,6 +556,10 @@ extension ServerBootstrap {
     ///
     /// - Parameters:
     ///   - vsockAddress: The VSOCK socket address to bind on.
+    ///   - serverBackPressureStrategy: The back pressure strategy used by the server socket channel.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func bind<Output: Sendable>(
         to vsockAddress: VsockAddress,
@@ -1156,9 +1160,11 @@ extension ClientBootstrap {
 
     /// Specify the VSOCK address to connect to for the `Channel`.
     ///
-    /// - parameters:
-    ///     - address: The VSOCK address to connect to.
-    /// - returns: An `EventLoopFuture<Channel>` for when the `Channel` is connected.
+    /// - Parameters:
+    ///   - address: The VSOCK address to connect to.
+    ///   - channelInitializer: A closure to initialize the channel. The return value of this closure is returned from the `connect`
+    ///   method.
+    /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func connect<Output: Sendable>(
         to address: VsockAddress,
