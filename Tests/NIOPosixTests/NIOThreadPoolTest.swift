@@ -14,6 +14,7 @@
 
 import XCTest
 @testable import NIOPosix
+import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
 import NIOEmbedded
@@ -108,6 +109,54 @@ class NIOThreadPoolTest: XCTestCase {
             XCTAssertNotNil(threadTwo)
             XCTAssertEqual(threadOne, threadTwo)
         }
+    }
+
+    func testAsyncThreadPool() async throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        let numberOfThreads = 1
+        let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
+        pool.start()
+        do {
+            let hitCount = ManagedAtomic(false)
+            try await pool.runIfActive {
+                hitCount.store(true, ordering: .relaxed)
+            }
+            XCTAssertEqual(hitCount.load(ordering: .relaxed), true)
+        } catch {}
+        try await pool.shutdownGracefully()
+    }
+
+    func testAsyncThreadPoolErrorPropagation() async throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        struct ThreadPoolError: Error {}
+        let numberOfThreads = 1
+        let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
+        pool.start()
+        do {
+            try await pool.runIfActive {
+                throw ThreadPoolError()
+            }
+            XCTFail("Should not get here as closure sent to runIfActive threw an error")
+        } catch {
+            XCTAssertNotNil(error as? ThreadPoolError, "Error thrown should be of type ThreadPoolError")
+        }
+        try await pool.shutdownGracefully()
+    }
+
+    func testAsyncThreadPoolNotActiveError() async throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
+        struct ThreadPoolError: Error {}
+        let numberOfThreads = 1
+        let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
+        do {
+            try await pool.runIfActive {
+                throw ThreadPoolError()
+            }
+            XCTFail("Should not get here as thread pool isn't active")
+        } catch {
+            XCTAssertNotNil(error as? NIOThreadPoolError.ThreadPoolInactive, "Error thrown should be of type ThreadPoolError")
+        }
+        try await pool.shutdownGracefully()
     }
 
     func testAsyncShutdownWorks() async throws {
