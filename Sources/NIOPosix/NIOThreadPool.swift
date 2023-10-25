@@ -291,7 +291,6 @@ extension NIOThreadPool {
         return promise.futureResult
     }
 
-
     /// Runs the submitted closure if the thread pool is still active, otherwise throw an error.
     /// The closure will be run on the thread pool so can do blocking work.
     ///
