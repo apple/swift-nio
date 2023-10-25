@@ -16,7 +16,7 @@ import XCTest
 import Dispatch
 @testable import NIOCore
 import NIOEmbedded
-@_spi(AsyncChannel) @testable import NIOHTTP1
+@testable import NIOHTTP1
 
 extension EmbeddedChannel {
     
@@ -349,10 +349,8 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         }
         
         // Validate the pipeline still has http handlers.
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: HTTPRequestEncoder.self))
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self))
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
         assertPipelineContainsUpgradeHandler(channel: clientChannel)
 
         // Push the successful server response.
@@ -577,10 +575,8 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         clientChannel.embeddedEventLoop.run()
         
         // Check that the http elements are not removed from the pipeline.
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: HTTPRequestEncoder.self))
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self))
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
 
         // Check that the HTTP handler received its response.
         XCTAssertEqual(1, clientHandler.channelReadChannelHandlerContextDataCallCount)
@@ -619,10 +615,8 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Should fail with error (response is malformed) and remove upgrader from pipeline.
         
         // Check that the http elements are not removed from the pipeline.
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: HTTPRequestEncoder.self))
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self))
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
         
         // Check that the HTTP handler received its response.
         XCTAssertEqual(1, clientHandler.channelReadChannelHandlerContextDataCallCount)
@@ -662,10 +656,8 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Should fail with error (response is malformed) and remove upgrader from pipeline.
         
         // Check that the http elements are not removed from the pipeline.
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: HTTPRequestEncoder.self))
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self))
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
             
         // Check that the HTTP handler received its response.
         XCTAssertLessThanOrEqual(1, clientHandler.channelReadChannelHandlerContextDataCallCount)
@@ -707,10 +699,8 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Should fail with error (response is malformed) and remove upgrader from pipeline.
         
         // Check that the http elements are not removed from the pipeline.
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: HTTPRequestEncoder.self))
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self))
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
             
         // Check that the HTTP handler received its response.
         XCTAssertLessThanOrEqual(1, clientHandler.channelReadChannelHandlerContextDataCallCount)
@@ -754,10 +744,8 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Should fail with error (response is denied) and remove upgrader from pipeline.
         
         // Check that the http elements are not removed from the pipeline.
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: HTTPRequestEncoder.self))
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self))
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
 
         XCTAssertEqual(1, clientUpgrader.addCustomUpgradeRequestHeadersCallCount)
             
@@ -1038,10 +1026,8 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         // Should fail with error (response is malformed) and remove upgrader from pipeline.
 
         // Check that the http elements are not removed from the pipeline.
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: HTTPRequestEncoder.self))
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self))
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
 
         // Check that the HTTP handler received its response.
         XCTAssertLessThanOrEqual(0, clientHandler.channelReadChannelHandlerContextDataCallCount)
@@ -1083,10 +1069,8 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         // Should fail with error (response is denied) and remove upgrader from pipeline.
 
         // Check that the http elements are not removed from the pipeline.
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: HTTPRequestEncoder.self))
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self))
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
 
         XCTAssertEqual(1, clientUpgrader.addCustomUpgradeRequestHeadersCallCount)
 
@@ -1179,10 +1163,8 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         // Should fail with error (response is malformed) and remove upgrader from pipeline.
 
         // Check that the http elements are not removed from the pipeline.
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: HTTPRequestEncoder.self))
-        XCTAssertNoThrow(try clientChannel.pipeline
-            .assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self))
+        clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
+        clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
 
         // Check that the HTTP handler received its response.
         XCTAssertLessThanOrEqual(0, clientHandler.channelReadChannelHandlerContextDataCallCount)

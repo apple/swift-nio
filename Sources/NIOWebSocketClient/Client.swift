@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 #if swift(>=5.9)
-@_spi(AsyncChannel) import NIOCore
-@_spi(AsyncChannel) import NIOPosix
-@_spi(AsyncChannel) import NIOHTTP1
-@_spi(AsyncChannel) import NIOWebSocket
+import NIOCore
+import NIOPosix
+import NIOHTTP1
+import NIOWebSocket
 
 @available(macOS 14, *)
 @main
@@ -109,9 +109,9 @@ struct Client {
         // start to handle all inbound frames.
 
         let pingFrame = WebSocketFrame(fin: true, opcode: .ping, data: ByteBuffer(string: "Hello!"))
-        try await channel.outboundWriter.write(pingFrame)
+        try await channel.outbound.write(pingFrame)
 
-        for try await frame in channel.inboundStream {
+        for try await frame in channel.inbound {
             switch frame.opcode {
             case .pong:
                 print("Received pong: \(String(buffer: frame.data))")

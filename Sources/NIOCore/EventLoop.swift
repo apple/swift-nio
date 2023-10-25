@@ -317,6 +317,10 @@ public protocol EventLoop: EventLoopGroup {
     /// implementation returns a ``NIODefaultSerialEventLoopExecutor`` instead, which provides suboptimal performance.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     var executor: any SerialExecutor { get }
+
+    /// Submit a job to be executed by the `EventLoop`
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    func enqueue(_ job: consuming ExecutorJob)
     #endif
 
     /// Must crash if it is not safe to call `wait()` on an `EventLoopFuture`.
@@ -381,6 +385,18 @@ extension EventLoop {
     public var executor: any SerialExecutor {
         NIODefaultSerialEventLoopExecutor(self)
     }
+
+    @inlinable
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    public func enqueue(_ job: consuming ExecutorJob) {
+        // By default we are just going to use execute to run the job
+        // this is quite heavy since it allocates the closure for
+        // every single job.
+        let unownedJob = UnownedJob(job)
+        self.execute {
+            unownedJob.runSynchronously(on: self.executor.asUnownedSerialExecutor())
+        }
+    }
     #endif
 }
 
@@ -420,9 +436,11 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of microseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func microseconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * 1000)
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of milliseconds.
@@ -430,9 +448,11 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of milliseconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func milliseconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000))
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000 * 1000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of seconds.
@@ -440,9 +460,11 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of seconds this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func seconds(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000 * 1000))
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000 * 1000 * 1000))
     }
 
     /// Creates a new `TimeAmount` for the given amount of minutes.
@@ -450,9 +472,11 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of minutes this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func minutes(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000 * 1000 * 60))
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000 * 1000 * 1000 * 60))
     }
 
     /// Creates a new `TimeAmount` for the given amount of hours.
@@ -460,9 +484,27 @@ public struct TimeAmount: Hashable, Sendable {
     /// - parameters:
     ///     - amount: the amount of hours this `TimeAmount` represents.
     /// - returns: the `TimeAmount` for the given amount.
+    ///
+    /// - note: returns `TimeAmount(.max)` if the amount overflows when converted to nanoseconds and `TimeAmount(.min)` if it underflows.
     @inlinable
     public static func hours(_ amount: Int64) -> TimeAmount {
-        return TimeAmount(amount * (1000 * 1000 * 1000 * 60 * 60))
+        return TimeAmount(_cappedNanoseconds(amount: amount, multiplier: 1000 * 1000 * 1000 * 60 * 60))
+    }
+    
+    /// Converts `amount` to nanoseconds multiplying it by `multiplier`. The return value is capped to `Int64.max` if the multiplication overflows and `Int64.min` if it underflows.
+    ///
+    ///  - parameters:
+    ///     - amount: the amount to be converted to nanoseconds.
+    ///     - multiplier: the multiplier that converts the given amount to nanoseconds.
+    ///  - returns: the amount converted to nanoseconds within [Int64.min, Int64.max].
+    @inlinable
+    static func _cappedNanoseconds(amount: Int64, multiplier: Int64) -> Int64 {
+        let nanosecondsMultiplication = amount.multipliedReportingOverflow(by: multiplier)
+        if nanosecondsMultiplication.overflow {
+            return amount >= 0 ? .max : .min
+        } else {
+            return nanosecondsMultiplication.partialValue
+        }
     }
 }
 
@@ -765,6 +807,7 @@ extension EventLoop {
     ) -> Scheduled<T> {
         self._flatScheduleTask(in: delay, file: file, line: line, task)
     }
+    
     @usableFromInline typealias FlatScheduleTaskDelayCallback<T> = @Sendable () throws -> EventLoopFuture<T>
 
     @inlinable
@@ -877,6 +920,29 @@ extension EventLoop {
     ) -> RepeatedTask {
         self._scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, notifying: promise, task)
     }
+    
+    /// Schedule a repeated task to be executed by the `EventLoop` with a fixed delay between the end and start of each
+    /// task.
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - maximumAllowableJitter: Exclusive upper bound of jitter range added to the `delay` parameter.
+    ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
+    ///     - task: The closure that will be executed.
+    /// - return: `RepeatedTask`
+    @discardableResult
+    public func scheduleRepeatedTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        maximumAllowableJitter: TimeAmount,
+        notifying promise: EventLoopPromise<Void>? = nil,
+        _ task: @escaping @Sendable (RepeatedTask) throws -> Void
+    ) -> RepeatedTask {
+        let jitteredInitialDelay = Self._getJitteredDelay(delay: initialDelay, maximumAllowableJitter: maximumAllowableJitter)
+        let jitteredDelay = Self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
+        return self.scheduleRepeatedTask(initialDelay: jitteredInitialDelay, delay: jitteredDelay, notifying: promise, task)
+    }
     typealias ScheduleRepeatedTaskCallback = @Sendable (RepeatedTask) throws -> Void
 
     func _scheduleRepeatedTask(
@@ -922,6 +988,36 @@ extension EventLoop {
     ) -> RepeatedTask {
         self._scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, notifying: promise, task)
     }
+    
+    /// Schedule a repeated asynchronous task to be executed by the `EventLoop` with a fixed delay between the end and
+    /// start of each task.
+    ///
+    /// - note: The delay is measured from the completion of one run's returned future to the start of the execution of
+    ///         the next run. For example: If you schedule a task once per second but your task takes two seconds to
+    ///         complete, the time interval between two subsequent runs will actually be three seconds (2s run time plus
+    ///         the 1s delay.)
+    ///
+    /// - parameters:
+    ///     - initialDelay: The delay after which the first task is executed.
+    ///     - delay: The delay between the end of one task and the start of the next.
+    ///     - maximumAllowableJitter: Exclusive upper bound of jitter range added to the `delay` parameter.
+    ///     - promise: If non-nil, a promise to fulfill when the task is cancelled and all execution is complete.
+    ///     - task: The closure that will be executed. Task will keep repeating regardless of whether the future
+    ///             gets fulfilled with success or error.
+    ///
+    /// - return: `RepeatedTask`
+    @discardableResult
+    public func scheduleRepeatedAsyncTask(
+        initialDelay: TimeAmount,
+        delay: TimeAmount,
+        maximumAllowableJitter: TimeAmount,
+        notifying promise: EventLoopPromise<Void>? = nil,
+        _ task: @escaping @Sendable (RepeatedTask) -> EventLoopFuture<Void>
+    ) -> RepeatedTask {
+        let jitteredInitialDelay = Self._getJitteredDelay(delay: initialDelay, maximumAllowableJitter: maximumAllowableJitter)
+        let jitteredDelay = Self._getJitteredDelay(delay: delay, maximumAllowableJitter: maximumAllowableJitter)
+        return self._scheduleRepeatedAsyncTask(initialDelay: jitteredInitialDelay, delay: jitteredDelay, notifying: promise, task)
+    }
     typealias ScheduleRepeatedAsyncTaskCallback = @Sendable (RepeatedTask) -> EventLoopFuture<Void>
 
     func _scheduleRepeatedAsyncTask(
@@ -934,7 +1030,21 @@ extension EventLoop {
         repeated.begin(in: initialDelay)
         return repeated
     }
-    
+
+    /// Adds a random amount of `.nanoseconds` (within `.zero..<maximumAllowableJitter`) to the delay.
+    ///
+    /// - parameters:
+    ///     - delay: the `TimeAmount` delay to jitter.
+    ///     - maximumAllowableJitter: Exclusive upper bound of jitter range added to the `delay` parameter.
+    /// - returns: The jittered delay.
+    @inlinable
+    static func _getJitteredDelay(
+        delay: TimeAmount,
+        maximumAllowableJitter: TimeAmount
+    ) -> TimeAmount {
+        let jitter = TimeAmount.nanoseconds(Int64.random(in: .zero..<maximumAllowableJitter.nanoseconds))
+        return delay + jitter;
+    }
 
     /// Returns an `EventLoopIterator` over this `EventLoop`.
     ///

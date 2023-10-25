@@ -22,7 +22,6 @@ internal struct OutputGrepper {
 
     internal static func make(group: EventLoopGroup) -> OutputGrepper {
         let processToChannel = Pipe()
-        let deadPipe = Pipe() // just so we have an output...
 
         let eventLoop = group.next()
         let outputPromise = eventLoop.makePromise(of: ProgramOutput.self)
@@ -34,13 +33,10 @@ internal struct OutputGrepper {
                 channel.pipeline.addHandlers([ByteToMessageHandler(NewlineFramer()),
                                               GrepHandler(promise: outputPromise)])
             }
-            .takingOwnershipOfDescriptors(input: dup(processToChannel.fileHandleForReading.fileDescriptor),
-                       output: dup(deadPipe.fileHandleForWriting.fileDescriptor))
+            .takingOwnershipOfDescriptor(input: dup(processToChannel.fileHandleForReading.fileDescriptor))
         let processOutputPipe = NIOFileHandle(descriptor: dup(processToChannel.fileHandleForWriting.fileDescriptor))
         processToChannel.fileHandleForReading.closeFile()
         processToChannel.fileHandleForWriting.closeFile()
-        deadPipe.fileHandleForReading.closeFile()
-        deadPipe.fileHandleForWriting.closeFile()
         channelFuture.cascadeFailure(to: outputPromise)
         return OutputGrepper(result: outputPromise.futureResult,
                              processOutputPipe: processOutputPipe)

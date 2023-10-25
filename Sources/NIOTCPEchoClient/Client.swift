@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 #if swift(>=5.9)
-@_spi(AsyncChannel) import NIOCore
-@_spi(AsyncChannel) import NIOPosix
+import NIOCore
+import NIOPosix
 
 @available(macOS 14, *)
 @main
@@ -69,9 +69,9 @@ struct Client {
             }
 
         print("Connection(\(number)): Writing request")
-        try await channel.outboundWriter.write("Hello on connection \(number)")
+        try await channel.outbound.write("Hello on connection \(number)")
 
-        for try await inboundData in channel.inboundStream {
+        for try await inboundData in channel.inbound {
             print("Connection(\(number)): Received response (\(inboundData))")
 
             // We only expect a single response so we can exit here.

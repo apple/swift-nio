@@ -202,7 +202,7 @@ public struct NonBlockingFileIO: Sendable {
                             return
                         }
                         let bytesRead = Int64(buffer.readableBytes)
-                        chunkHandler(buffer).whenComplete { result in
+                        chunkHandler(buffer).hop(to: eventLoop).whenComplete { result in
                             switch result {
                             case .success(_):
                                 eventLoop.assertInEventLoop()
@@ -376,12 +376,12 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// Returns the length of the file associated with `fileHandle`.
+    /// Returns the length of the file in bytes associated with `fileHandle`.
     ///
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to read from.
     ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
-    /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
+    /// - returns: An `EventLoopFuture` which is fulfilled with the length of the file in bytes if the write was successful or fails on error.
     public func readFileSize(fileHandle: NIOFileHandle,
                              eventLoop: EventLoop) -> EventLoopFuture<Int64> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {

@@ -26,7 +26,7 @@ private final class EchoChannelHandler: ChannelInboundHandler {
 private final class EchoRequestChannelHandler: ChannelInboundHandler {
     fileprivate typealias InboundIn = ByteBuffer
 
-    private let bufferSize = 10000
+    private let messageSize = 10000
     private let numberOfWrites: Int
     private var batchCount = 0
     private let data: NIOAny
@@ -36,7 +36,7 @@ private final class EchoRequestChannelHandler: ChannelInboundHandler {
     init(numberOfWrites: Int, readsCompletePromise: EventLoopPromise<Void>) {
         self.numberOfWrites = numberOfWrites
         self.readsCompletePromise = readsCompletePromise
-        self.data = NIOAny(ByteBuffer(repeating: 0, count: self.bufferSize))
+        self.data = NIOAny(ByteBuffer(repeating: 0, count: self.messageSize))
     }
 
     func channelActive(context: ChannelHandlerContext) {
@@ -49,14 +49,13 @@ private final class EchoRequestChannelHandler: ChannelInboundHandler {
         let buffer = self.unwrapInboundIn(data)
         self.receivedData += buffer.readableBytes
 
-        if self.receivedData == self.numberOfWrites * self.bufferSize {
+        if self.receivedData == self.numberOfWrites * self.messageSize {
             self.readsCompletePromise.succeed()
         }
     }
 }
 
-func runTCPEcho(numberOfWrites: Int) throws {
-    let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
+func runTCPEcho(numberOfWrites: Int, eventLoop: any EventLoop) throws {
     let serverChannel = try ServerBootstrap(group: eventLoop)
         .childChannelInitializer { channel in
             channel.eventLoop.makeCompletedFuture {

@@ -167,6 +167,7 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
 ///     XCTAssertNoThrow(XCTAssertEqual(responseBody, try requestComplete.wait()))
 public final class NIOHTTP1TestServer {
     private let eventLoop: EventLoop
+    private let aggregateBody: Bool
     // all protected by eventLoop
     private let inboundBuffer: BlockingQueue<HTTPServerRequestPart> = .init()
     private var currentClientChannel: Channel? = nil
@@ -213,7 +214,11 @@ public final class NIOHTTP1TestServer {
             return
         }
         channel.pipeline.configureHTTPServerPipeline().flatMap {
-            channel.pipeline.addHandler(AggregateBodyHandler())
+            if self.aggregateBody {
+                return channel.pipeline.addHandler(AggregateBodyHandler())
+            } else {
+                return self.eventLoop.makeSucceededVoidFuture()
+            }
         }.flatMap {
             channel.pipeline.addHandler(WebServerHandler(webServer: self))
         }.whenSuccess {
@@ -221,8 +226,13 @@ public final class NIOHTTP1TestServer {
         }
     }
 
-    public init(group: EventLoopGroup) {
+    public convenience init(group: EventLoopGroup) {
+        self.init(group: group, aggregateBody: true)
+    }
+
+    public init(group: EventLoopGroup, aggregateBody: Bool) {
         self.eventLoop = group.next()
+        self.aggregateBody = aggregateBody
 
         self.serverChannel = try! ServerBootstrap(group: self.eventLoop)
             .childChannelOption(ChannelOptions.autoRead, value: false)

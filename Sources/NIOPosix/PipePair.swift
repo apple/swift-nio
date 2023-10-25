@@ -38,14 +38,14 @@ extension SelectableFileHandle: Selectable {
 final class PipePair: SocketProtocol {
     typealias SelectableType = SelectableFileHandle
 
-    let inputFD: SelectableFileHandle
-    let outputFD: SelectableFileHandle
+    let inputFD: SelectableFileHandle?
+    let outputFD: SelectableFileHandle?
 
-    init(inputFD: NIOFileHandle, outputFD: NIOFileHandle) throws {
-        self.inputFD = SelectableFileHandle(inputFD)
-        self.outputFD = SelectableFileHandle(outputFD)
+    init(inputFD: NIOFileHandle?, outputFD: NIOFileHandle?) throws {
+        self.inputFD = inputFD.flatMap { SelectableFileHandle($0) }
+        self.outputFD = outputFD.flatMap { SelectableFileHandle($0) }
         try self.ignoreSIGPIPE()
-        for fileHandle in [inputFD, outputFD] {
+        for fileHandle in [inputFD, outputFD].compactMap({ $0 }) {
             try fileHandle.withUnsafeFileDescriptor {
                 try NIOFileHandle.setNonBlocking(fileDescriptor: $0)
             }
@@ -53,7 +53,7 @@ final class PipePair: SocketProtocol {
     }
 
     func ignoreSIGPIPE() throws {
-        for fileHandle in [self.inputFD, self.outputFD] {
+        for fileHandle in [self.inputFD, self.outputFD].compactMap({ $0 }) {
             try fileHandle.withUnsafeHandle {
                 try PipePair.ignoreSIGPIPE(descriptor: $0)
             }
@@ -61,7 +61,7 @@ final class PipePair: SocketProtocol {
     }
 
     var description: String {
-        return "PipePair { in=\(inputFD), out=\(outputFD) }"
+        return "PipePair { in=\(String(describing: inputFD)), out=\(String(describing: inputFD)) }"
     }
 
     func connect(to address: SocketAddress) throws -> Bool {
@@ -73,19 +73,28 @@ final class PipePair: SocketProtocol {
     }
 
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
-        return try self.outputFD.withUnsafeHandle {
+        guard let outputFD = self.outputFD else {
+            fatalError("Internal inconsistency inside NIO. Please file a bug")
+        }
+        return try outputFD.withUnsafeHandle {
             try Posix.write(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
 
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
-        return try self.outputFD.withUnsafeHandle {
+        guard let outputFD = self.outputFD else {
+            fatalError("Internal inconsistency inside NIO. Please file a bug")
+        }
+        return try outputFD.withUnsafeHandle {
             try Posix.writev(descriptor: $0, iovecs: iovecs)
         }
     }
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        return try self.inputFD.withUnsafeHandle {
+        guard let inputFD = self.inputFD else {
+            fatalError("Internal inconsistency inside NIO. Please file a bug")
+        }
+        return try inputFD.withUnsafeHandle {
             try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
         }
     }
@@ -119,30 +128,30 @@ final class PipePair: SocketProtocol {
     func shutdown(how: Shutdown) throws {
         switch how {
         case .RD:
-            try self.inputFD.close()
+            try self.inputFD?.close()
         case .WR:
-            try self.outputFD.close()
+            try self.outputFD?.close()
         case .RDWR:
             try self.close()
         }
     }
 
     var isOpen: Bool {
-        return self.inputFD.isOpen || self.outputFD.isOpen
+        return self.inputFD?.isOpen ?? false || self.outputFD?.isOpen ?? false
     }
 
     func close() throws {
-        guard self.inputFD.isOpen || self.outputFD.isOpen else {
+        guard self.isOpen else {
             throw ChannelError.alreadyClosed
         }
         let r1 = Result {
-            if self.inputFD.isOpen {
-                try self.inputFD.close()
+            if let inputFD = self.inputFD, inputFD.isOpen {
+                try inputFD.close()
             }
         }
         let r2 = Result {
-            if self.outputFD.isOpen {
-                try self.outputFD.close()
+            if let outputFD = self.outputFD, outputFD.isOpen {
+                try outputFD.close()
             }
         }
         try r1.get()

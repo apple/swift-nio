@@ -295,5 +295,5 @@ internal func debugOnly(_ body: () -> Void) {
 }
 
 @available(*, deprecated)
-extension Lock: Sendable {}
+extension Lock: @unchecked Sendable {}
 extension ConditionLock: @unchecked Sendable {}

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(AsyncChannel) import NIOTLS
-@_spi(AsyncChannel) import NIOCore
+import NIOTLS
+import NIOCore
 import NIOEmbedded
 import XCTest
 import NIOTestUtils
@@ -31,7 +31,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let channel = EmbeddedChannel()
 
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result, channel in
-            return channel.eventLoop.makeSucceededFuture(.init(result: (.negotiated(result))))
+            return channel.eventLoop.makeSucceededFuture(.negotiated(result))
         }
         try channel.pipeline.addHandler(handler).wait()
         try channel.pipeline.removeHandler(handler).wait()
@@ -49,14 +49,14 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
             called = true
             XCTAssertEqual(result, self.negotiatedResult)
             XCTAssertTrue(emChannel === channel)
-            return loop.makeSucceededFuture(.init(result: (.negotiated(result))))
+            return loop.makeSucceededFuture(.negotiated(result))
         }
 
         try emChannel.pipeline.addHandler(handler).wait()
         emChannel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
         XCTAssertTrue(called)
 
-        XCTAssertEqual(try handler.protocolNegotiationResult.wait(), .init(result: (.negotiated(negotiatedResult))))
+        XCTAssertEqual(try handler.protocolNegotiationResult.wait(), .negotiated(negotiatedResult))
     }
 
     func testIgnoresUnknownUserEvents() throws {
@@ -65,7 +65,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             XCTFail("Negotiation fired")
-            return loop.makeSucceededFuture(.init(result: (.failed)))
+            return loop.makeSucceededFuture(.failed)
         }
 
         try channel.pipeline.addHandler(handler).wait()
@@ -86,7 +86,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             XCTFail("Should not be called")
-            return loop.makeSucceededFuture(.init(result: (.failed)))
+            return loop.makeSucceededFuture(.failed)
         }
 
         try channel.pipeline.addHandler(handler).wait()
@@ -101,7 +101,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testBufferingWhileWaitingForFuture() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.makePromise(of: NIOProtocolNegotiationResult<NegotiationResult>.self)
+        let continuePromise = loop.makePromise(of: NegotiationResult.self)
 
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             return continuePromise.futureResult
@@ -119,7 +119,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         // Complete the pipeline swap.
-        continuePromise.succeed(.init(result: (.failed)))
+        continuePromise.succeed(.failed)
 
         // Now everything should have been unbuffered.
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "writes"))
@@ -132,7 +132,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testNothingBufferedDoesNotFireReadCompleted() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.makePromise(of: NIOProtocolNegotiationResult<NegotiationResult>.self)
+        let continuePromise = loop.makePromise(of: NegotiationResult.self)
 
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             continuePromise.futureResult
@@ -150,7 +150,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
 
         // Now satisfy the future, which forces data unbuffering. As we haven't buffered any data,
         // readComplete should not be fired.
-        continuePromise.succeed(.init(result: (.failed)))
+        continuePromise.succeed(.failed)
         XCTAssertEqual(eventCounterHandler.channelReadCompleteCalls, 0)
 
         XCTAssertTrue(try channel.finish().isClean)
@@ -159,7 +159,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testUnbufferingFiresReadCompleted() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.makePromise(of: NIOProtocolNegotiationResult<NegotiationResult>.self)
+        let continuePromise = loop.makePromise(of: NegotiationResult.self)
 
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             continuePromise.futureResult
@@ -179,7 +179,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertEqual(eventCounterHandler.channelReadCompleteCalls, 1)
 
         // Now satisfy the future, which forces data unbuffering. This should fire readComplete.
-        continuePromise.succeed(.init(result: (.failed)))
+        continuePromise.succeed(.failed)
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
 
         XCTAssertEqual(eventCounterHandler.channelReadCompleteCalls, 2)
@@ -190,7 +190,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
     func testUnbufferingHandlesReentrantReads() throws {
         let channel = EmbeddedChannel()
         let loop = channel.eventLoop as! EmbeddedEventLoop
-        let continuePromise = loop.makePromise(of: NIOProtocolNegotiationResult<NegotiationResult>.self)
+        let continuePromise = loop.makePromise(of: NegotiationResult.self)
 
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
             continuePromise.futureResult
@@ -211,7 +211,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         XCTAssertEqual(eventCounterHandler.channelReadCompleteCalls, 1)
 
         // Now satisfy the future, which forces data unbuffering. This should fire readComplete.
-        continuePromise.succeed(.init(result: .failed))
+        continuePromise.succeed(.failed)
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
         
