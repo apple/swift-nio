@@ -298,7 +298,7 @@ extension NIOThreadPool {
     ///     - body: The closure which performs some blocking work to be done on the thread pool.
     /// - returns: result of the passed closure.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func runIfActive<T>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
+    public func runIfActive<T: Sendable>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<T, Error>) in
             self.submit { shouldRun in
                 guard case shouldRun = NIOThreadPool.WorkItemState.active else {
