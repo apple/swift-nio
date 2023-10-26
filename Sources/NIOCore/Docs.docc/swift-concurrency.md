@@ -87,8 +87,8 @@ the inbound data and echo it back outbound.
 let channel = ...
 let asyncChannel = try NIOAsyncChannel<ByteBuffer, ByteBuffer>(synchronouslyWrapping: channel)
 
-for try await inboundData in asyncChannel.inboundStream {
-    try await asyncChannel.outboundWriter.write(inboundData)
+for try await inboundData in asyncChannel.inbound {
+    try await asyncChannel.outbound.write(inboundData)
 }
 ```
 
@@ -137,12 +137,12 @@ let serverChannel = try await ServerBootstrap(group: eventLoopGroup)
     }
 
 try await withThrowingDiscardingTaskGroup { group in
-    for try await connectionChannel in serverChannel.inboundStream {
+    for try await connectionChannel in serverChannel.inbound {
         group.addTask {
             do {
-                for try await inboundData in connectionChannel.inboundStream {
+                for try await inboundData in connectionChannel.inbound {
                     // Let's echo back all inbound data
-                    try await connectionChannel.outboundWriter.write(inboundData)
+                    try await connectionChannel.outbound.write(inboundData)
                 }
             } catch {
                 // Handle errors
@@ -185,9 +185,9 @@ let clientChannel = try await ClientBootstrap(group: eventLoopGroup)
         }
     }
 
-clientChannel.outboundWriter.write(ByteBuffer(string: "hello"))
+clientChannel.outbound.write(ByteBuffer(string: "hello"))
 
-for try await inboundData in clientChannel.inboundStream {
+for try await inboundData in clientChannel.inbound {
     print(inboundData)
 }
 ```
