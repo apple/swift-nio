@@ -43,7 +43,7 @@ public struct NonBlockingFileIO: Sendable {
         case descriptorSetToNonBlocking
     }
 
-    internal let threadPool: NIOThreadPool
+    private let threadPool: NIOThreadPool
 
     /// Initialize a `NonBlockingFileIO` which uses the `NIOThreadPool`.
     ///
@@ -320,18 +320,17 @@ public struct NonBlockingFileIO: Sendable {
         }
         let byteCount = rawByteCount < Int32.max ? rawByteCount : size_t(Int32.max)
 
-        let buf = allocator.buffer(capacity: byteCount)
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
-            try readSync(fileHandle: fileHandle, fromOffset: fromOffset, byteCount: byteCount, buf: buf)
+            try readSync(fileHandle: fileHandle, fromOffset: fromOffset, byteCount: byteCount, allocator: allocator)
         }
     }
 
     private func readSync(fileHandle: NIOFileHandle,
                        fromOffset: Int64?, // > 2 GB offset is reasonable on 32-bit systems
                        byteCount: Int,
-                       buf: ByteBuffer) throws -> ByteBuffer {
+                       allocator: ByteBufferAllocator) throws -> ByteBuffer {
         var bytesRead = 0
-        var buf = buf
+        var buf = allocator.buffer(capacity: byteCount)
         while bytesRead < byteCount {
             let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
                 let res = try fileHandle.withUnsafeFileDescriptor { descriptor -> IOResult<ssize_t> in
@@ -816,9 +815,8 @@ extension NonBlockingFileIO {
         }
         let byteCount = rawByteCount < Int32.max ? rawByteCount : size_t(Int32.max)
 
-        let buf = allocator.buffer(capacity: byteCount)
         return try await self.threadPool.runIfActive { () -> ByteBuffer in
-            try self.readSync(fileHandle: fileHandle, fromOffset: fromOffset, byteCount: byteCount, buf: buf)
+            try self.readSync(fileHandle: fileHandle, fromOffset: fromOffset, byteCount: byteCount, allocator: allocator)
         }
     }
 
