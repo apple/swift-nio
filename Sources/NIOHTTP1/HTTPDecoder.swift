@@ -488,11 +488,11 @@ extension HTTPDecoder: WriteObservingByteToMessageDecoder {
     public typealias OutboundIn = Out
 
     public func write(data: Out) {
-        if Self.self == HTTPResponseDecoder.self,
+        if kind == .request,
             case .head(let head) = (data as? HTTPClientRequestPart) {
             self.parser.requestHeads.append(head)
-        } else if Self.self == HTTPRequestDecoder.self, 
-                    case let .head(head) = data as? HTTPServerResponsePart {
+        } else if kind == .response, 
+                case let .head(head) = data as? HTTPServerResponsePart {
             if head.isKeepAlive, head.status != .switchingProtocols, self.stopParsing {
                 self.stopParsing = false
             }
