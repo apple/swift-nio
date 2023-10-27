@@ -18,6 +18,25 @@ import NIOEmbedded
 import XCTest
 
 final class AsyncChannelTests: XCTestCase {
+    func testAsyncChannelCloseOnWrite() async throws {
+        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
+        final class CloseOnWriteHandler: ChannelOutboundHandler {
+            typealias OutboundIn = String
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                context.close(promise: promise)
+            }
+        }
+        let channel = NIOAsyncTestingChannel()
+        let wrapped = try await channel.testingEventLoop.executeInContext {
+            try channel.pipeline.syncOperations.addHandler(CloseOnWriteHandler())
+            return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
+        }
+
+        try await wrapped.outbound.write("Test")
+        try await channel.closeFuture.get()
+    }
+
     func testAsyncChannelBasicFunctionality() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()

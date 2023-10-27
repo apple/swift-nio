@@ -133,7 +133,7 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     @inlinable
     func handlerRemoved(context: ChannelHandlerContext) {
         self.context = nil
-        self.sink = nil
+        self.sink?.finish()
     }
 
     @inlinable
