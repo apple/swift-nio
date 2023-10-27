@@ -248,6 +248,10 @@ public struct NIOClientTCPBootstrap {
     }
 }
 
+@available(*, unavailable)
+extension NIOClientTCPBootstrap: Sendable { }
+
+
 public protocol NIOClientTLSProvider {
     associatedtype Bootstrap
 
@@ -261,3 +265,7 @@ public struct NIOInsecureNoTLS<Bootstrap: NIOClientTCPBootstrapProtocol>: NIOCli
         fatalError("NIOInsecureNoTLS cannot enable TLS.")
     }
 }
+
+@available(*, unavailable)
+extension NIOInsecureNoTLS: Sendable { }
+

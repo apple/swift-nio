@@ -378,7 +378,7 @@ extension ChannelError: Equatable { }
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
 
-public enum DatagramChannelError {
+public enum DatagramChannelError: Sendable {
     public struct WriteOnUnconnectedSocketWithoutAddress: Error {
         public init() {}
     }

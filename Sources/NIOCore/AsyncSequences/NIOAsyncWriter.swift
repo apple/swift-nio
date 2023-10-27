@@ -147,7 +147,7 @@ public struct NIOAsyncWriter<
     /// This struct contains two properties:
     /// 1. The ``sink`` which should be retained by the consumer and is used to set the writability.
     /// 2. The ``writer`` which is the actual ``NIOAsyncWriter`` and should be passed to the producer.
-    public struct NewWriter {
+    public struct NewWriter: @unchecked Sendable {
         /// The ``sink`` which **MUST** be retained by the consumer and is used to set the writability.
         public let sink: Sink
         /// The ``writer`` which is the actual ``NIOAsyncWriter`` and should be passed to the producer.
@@ -375,6 +375,9 @@ extension NIOAsyncWriter {
         }
     }
 }
+
+@available(*, unavailable)
+extension NIOAsyncWriter.Sink: Sendable { }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncWriter {

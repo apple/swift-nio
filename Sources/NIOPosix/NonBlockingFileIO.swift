@@ -697,7 +697,7 @@ public struct NonBlockingFileIO: Sendable {
 
 #if !os(Windows)
 /// A `NIODirectoryEntry` represents a single directory entry.
-public struct NIODirectoryEntry: Hashable {
+public struct NIODirectoryEntry: Hashable, Sendable {
     // File number of entry
     public var ino: UInt64
     // File type

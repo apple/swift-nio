@@ -21,7 +21,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     typealias Producer = NIOThrowingAsyncSequenceProducer<Inbound, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate>
 
     /// A source used for driving a ``NIOAsyncChannelInboundStream`` during tests.
-    public struct TestSource {
+    public struct TestSource: Sendable{
         @usableFromInline
         internal let continuation: AsyncThrowingStream<Inbound, Error>.Continuation
 

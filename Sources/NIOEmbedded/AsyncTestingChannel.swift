@@ -611,7 +611,7 @@ public final class NIOAsyncTestingChannel: Channel {
         }
     }
 
-    public struct SynchronousOptions: NIOSynchronousChannelOptions {
+    public struct SynchronousOptions: NIOSynchronousChannelOptions, Sendable {
         @usableFromInline
         internal let channel: NIOAsyncTestingChannel
 
@@ -636,6 +636,7 @@ public final class NIOAsyncTestingChannel: Channel {
         return SynchronousOptions(channel: self)
     }
 }
+
 
 // MARK: Unchecked sendable
 //

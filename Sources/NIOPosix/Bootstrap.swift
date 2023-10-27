@@ -2269,8 +2269,8 @@ extension NIOPipeBootstrap {
         let channelOptions = self._channelOptions
 
         let channel: PipeChannel
-        let inputFileHandle: NIOFileHandle?
-        let outputFileHandle: NIOFileHandle?
+        let inputFileHandle: NIOLoopBound<NIOFileHandle?>
+        let outputFileHandle: NIOLoopBound<NIOFileHandle?>
         do {
             if let input = input {
                 try self.validateFileDescriptorIsNotAFile(input)
@@ -2279,12 +2279,12 @@ extension NIOPipeBootstrap {
                 try self.validateFileDescriptorIsNotAFile(output)
             }
 
-            inputFileHandle = input.flatMap { NIOFileHandle(descriptor: $0) }
-            outputFileHandle = output.flatMap { NIOFileHandle(descriptor: $0) }
+            inputFileHandle = NIOLoopBound(input.flatMap { NIOFileHandle(descriptor: $0) }, eventLoop: eventLoop)
+            outputFileHandle = NIOLoopBound(output.flatMap { NIOFileHandle(descriptor: $0) }, eventLoop: eventLoop)
             channel = try PipeChannel(
                 eventLoop: eventLoop as! SelectableEventLoop,
-                inputPipe: inputFileHandle,
-                outputPipe: outputFileHandle
+                inputPipe: inputFileHandle.value,
+                outputPipe: outputFileHandle.value
             )
         } catch {
             return eventLoop.makeFailedFuture(error)
@@ -2302,10 +2302,10 @@ extension NIOPipeBootstrap {
                 channel.registerAlreadyConfigured0(promise: promise)
                 return promise.futureResult.map { result }
             }.flatMap { result -> EventLoopFuture<ChannelInitializerResult> in
-                if inputFileHandle == nil {
+                if inputFileHandle.value == nil {
                     return channel.close(mode: .input).map { result }
                 }
-                if outputFileHandle == nil {
+                if outputFileHandle.value == nil {
                     return channel.close(mode: .output).map { result }
                 }
                 return channel.selectableEventLoop.makeSucceededFuture(result)

@@ -857,6 +857,14 @@ public final class EmbeddedChannel: Channel {
     }
 }
 
+// Stores NIOAny which isn't Sendable
+@available(*, unavailable)
+extension EmbeddedChannel.LeftOverState: Sendable { }
+
+// Stores NIOAny which isn't Sendable
+@available(*, unavailable)
+extension EmbeddedChannel.BufferState: Sendable { }
+
 extension EmbeddedChannel {
     public struct SynchronousOptions: NIOSynchronousChannelOptions {
         @usableFromInline

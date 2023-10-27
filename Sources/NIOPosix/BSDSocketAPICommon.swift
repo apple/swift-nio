@@ -142,7 +142,7 @@ extension NIOBSDSocket {
     /// They aren't necessarily protocols in their own right: for example, ``mptcp``
     /// is not. They act to modify the socket type instead: thus, ``mptcp`` acts
     /// to modify `SOCK_STREAM` to ask for ``mptcp`` support.
-    public struct ProtocolSubtype: RawRepresentable, Hashable {
+    public struct ProtocolSubtype: RawRepresentable, Hashable, Sendable {
         public typealias RawValue = CInt
 
         /// The underlying value of the protocol subtype.

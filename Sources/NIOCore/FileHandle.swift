@@ -97,6 +97,9 @@ public final class NIOFileHandle: FileDescriptor {
     }
 }
 
+@available(*, unavailable)
+extension NIOFileHandle: Sendable { }
+
 extension NIOFileHandle {
     /// `Mode` represents file access modes.
     public struct Mode: OptionSet, Sendable {

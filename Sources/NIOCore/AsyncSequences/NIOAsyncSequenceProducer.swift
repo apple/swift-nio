@@ -251,7 +251,7 @@ extension NIOAsyncSequenceProducer {
         }
 
         /// The result of a call to ``NIOAsyncSequenceProducer/Source/yield(_:)``.
-        public enum YieldResult: Hashable {
+        public enum YieldResult: Hashable, Sendable {
             /// Indicates that the caller should produce more elements for now. The delegate's ``NIOAsyncSequenceProducerDelegate/produceMore()``
             /// will **NOT** get called, since the demand was already signalled through this ``NIOAsyncSequenceProducer/Source/YieldResult``.
             case produceMore

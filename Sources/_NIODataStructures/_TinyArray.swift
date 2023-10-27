@@ -99,6 +99,8 @@ extension _TinyArray: RandomAccessCollection {
     }
 }
 
+extension _TinyArray.Iterator: Sendable where Element: Sendable {}
+
 extension _TinyArray {
     @inlinable
     public init(_ elements: some Sequence<Element>) {

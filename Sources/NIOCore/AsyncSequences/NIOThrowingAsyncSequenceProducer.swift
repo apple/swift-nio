@@ -264,7 +264,7 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         /// The result of a call to ``NIOThrowingAsyncSequenceProducer/Source/yield(_:)``.
-        public enum YieldResult: Hashable {
+        public enum YieldResult: Hashable, Sendable {
             /// Indicates that the caller should produce more elements.
             case produceMore
             /// Indicates that the caller should stop producing elements.

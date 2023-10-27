@@ -17,7 +17,7 @@ import NIOCore
 import NIOConcurrencyHelpers
 
 /// Errors that may be thrown when executing work on a `NIOThreadPool`
-public enum NIOThreadPoolError {
+public enum NIOThreadPoolError: Sendable{
 
     /// The `NIOThreadPool` was not active.
     public struct ThreadPoolInactive: Error { 

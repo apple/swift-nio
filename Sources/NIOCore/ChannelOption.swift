@@ -64,7 +64,7 @@ public typealias ConnectTimeoutOption = ChannelOptions.Types.ConnectTimeoutOptio
 public typealias AllowRemoteHalfClosureOption = ChannelOptions.Types.AllowRemoteHalfClosureOption
 
 extension ChannelOptions {
-    public enum Types {
+    public enum Types: Sendable {
 
         /// `SocketOption` allows users to specify configuration settings that are directly applied to the underlying socket file descriptor.
         ///
@@ -291,7 +291,7 @@ extension ChannelOptions {
 }
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
-public struct ChannelOptions {
+public struct ChannelOptions: Sendable {
     #if !os(Windows)
         public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
             .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
