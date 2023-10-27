@@ -500,6 +500,65 @@ class HTTPDecoderTest: XCTestCase {
                                                                           status: .ok)), try channel.readInbound()))
     }
 
+    func testHTTPRequestParsingReenabledAfterFailedUpgrade() {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+        var inBuffer = channel.allocator.buffer(capacity: 128)
+        inBuffer.writeStaticString("GET / HTTP/1.1\r\nHost: localhost\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n")
+
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .fireError))).wait())
+        // Server receives an upgrade request.
+        XCTAssertNoThrow(try channel.writeInbound(inBuffer))
+        XCTAssertNoThrow(XCTAssertEqual(HTTPServerRequestPart.head(.init(version: .http1_1,
+                                                                         method: .GET, uri: "/",
+                                                                         headers: .init([("Host", "localhost"),
+                                                                                         ("Connection", "Upgrade"),
+                                                                                         ("Upgrade", "websocket")]))),
+                                        try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertEqual(HTTPServerRequestPart.end(nil), try channel.readInbound()))
+        // Server sees a non upgrade response come through.
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(.init(version: .http1_1, status: .internalServerError))))
+        inBuffer.clear()
+        // Server receives another request.
+        inBuffer.writeStaticString("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        XCTAssertNoThrow(try channel.writeInbound(inBuffer))
+        // Server should properly parse that request.
+        XCTAssertNoThrow(XCTAssertEqual(HTTPServerRequestPart.head(.init(version: .http1_1,
+                                                                         method: .GET, uri: "/",
+                                                                         headers: .init([("Host", "localhost")]))),
+                                        try channel.readInbound()))
+    }
+
+    func testHTTPRequestParsingStopsAfterSuccessfulUpgrade() {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+        var inBuffer = channel.allocator.buffer(capacity: 128)
+        inBuffer.writeStaticString("GET / HTTP/1.1\r\nHost: localhost\r\nConnection: Upgrade\r\nUpgrade: websocket\r\n\r\n")
+
+        XCTAssertNoThrow(try channel.pipeline.addHandler(ByteToMessageHandler(HTTPRequestDecoder(leftOverBytesStrategy: .fireError))).wait())
+        // Server receives an upgrade request.
+        XCTAssertNoThrow(try channel.writeInbound(inBuffer))
+        XCTAssertNoThrow(XCTAssertEqual(HTTPServerRequestPart.head(.init(version: .http1_1,
+                                                                         method: .GET, uri: "/",
+                                                                         headers: .init([("Host", "localhost"),
+                                                                                         ("Connection", "Upgrade"),
+                                                                                         ("Upgrade", "websocket")]))),
+                                        try channel.readInbound()))
+        XCTAssertNoThrow(XCTAssertEqual(HTTPServerRequestPart.end(nil), try channel.readInbound()))
+        // Server sees successful upgrade response come through.
+        XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(.init(version: .http1_1, status: .switchingProtocols))))
+        inBuffer.clear()
+        // Server receives another request.
+        inBuffer.writeStaticString("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        XCTAssertNoThrow(try channel.writeInbound(inBuffer))
+        // Server should not parse that request.
+        XCTAssertNoThrow(XCTAssertEqual(nil, try channel.readInbound(as: HTTPServerRequestPart.self)))
+    }
+
     func testBasicVerifications() {
         let byteBufferContainingJustAnX = ByteBuffer(string: "X")
         let expectedInOuts: [(String, [HTTPServerRequestPart])] = [
