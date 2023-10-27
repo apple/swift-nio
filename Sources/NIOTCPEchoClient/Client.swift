@@ -15,7 +15,7 @@
 import NIOCore
 import NIOPosix
 
-@available(macOS 14, *)
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 @main
 struct Client {
     /// The host to connect to.
