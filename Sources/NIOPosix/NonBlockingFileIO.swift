@@ -320,8 +320,9 @@ public struct NonBlockingFileIO: Sendable {
         }
         let byteCount = rawByteCount < Int32.max ? rawByteCount : size_t(Int32.max)
 
-        var buf = allocator.buffer(capacity: byteCount)
+        
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
+            var buf = allocator.buffer(capacity: byteCount)
             var bytesRead = 0
             while bytesRead < byteCount {
                 let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
