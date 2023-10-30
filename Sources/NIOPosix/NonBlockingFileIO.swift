@@ -899,23 +899,17 @@ extension NonBlockingFileIO {
     ///     - path: The path of the file to be opened for reading.
     /// - returns: the `NIOFileHandle` and the `FileRegion` comprising the whole file.
     public func openFile(path: String) async throws -> (NIOFileHandle, FileRegion) {
-        // NIOThreadPool.runIfActive requires that its return values are Sendable. 
-        // Given the FileRegion is initialised and immediately passed back I think we
-        // are safe to wrap it in an unchecked Sendable wrapper type
-        struct FileRegionWrapper: @unchecked Sendable {
-            let wrapped: FileRegion
-        }
-        let (fh, fr) = try await self.threadPool.runIfActive {
+        let result = try await self.threadPool.runIfActive {
             let fh = try NIOFileHandle(path: path)
             do {
-                let fr = try FileRegionWrapper(wrapped: .init(fileHandle: fh))
-                return (fh, fr)
+                let fr = try FileRegion(fileHandle: fh)
+                return UnsafeTransfer((fh, fr))
             } catch {
                 _ = try? fh.close()
                 throw error
             }
         }
-        return (fh, fr.wrapped)
+        return result.wrappedValue
     }
 
     /// Open the file at `path` with specified access mode and POSIX flags on a private thread pool which is separate from any `EventLoop` thread.
@@ -929,9 +923,10 @@ extension NonBlockingFileIO {
     ///     - flags: Additional POSIX flags.
     /// - returns: NIOFileHandle`.
     public func openFile(path: String, mode: NIOFileHandle.Mode, flags: NIOFileHandle.Flags = .default) async throws -> NIOFileHandle {
-        return try await self.threadPool.runIfActive {
-            return try NIOFileHandle(path: path, mode: mode, flags: flags)
+        let result = try await self.threadPool.runIfActive {
+            return try UnsafeTransfer(NIOFileHandle(path: path, mode: mode, flags: flags))
         }
+        return result.wrappedValue
     }
 
 #if !os(Windows)
