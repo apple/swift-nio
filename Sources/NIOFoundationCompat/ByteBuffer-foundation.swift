@@ -375,10 +375,16 @@ extension ByteBufferAllocator {
 }
 
 // MARK: - Conformances
-#if compiler(>=5.11)
+#if swift(>=5.8)
+#if hasFeature(RetroactiveAttribute)
 extension ByteBufferView: @retroactive ContiguousBytes {}
 extension ByteBufferView: @retroactive DataProtocol {}
 extension ByteBufferView: @retroactive MutableDataProtocol {}
+#else
+extension ByteBufferView: ContiguousBytes {}
+extension ByteBufferView: DataProtocol {}
+extension ByteBufferView: MutableDataProtocol {}
+#endif
 #else
 extension ByteBufferView: ContiguousBytes {}
 extension ByteBufferView: DataProtocol {}
