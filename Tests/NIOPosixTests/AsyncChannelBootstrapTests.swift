@@ -234,25 +234,35 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
 
         try await withThrowingTaskGroup(of: Void.self) { group in
-            let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
+            let (stream, producer) = AsyncStream<StringOrByte>.makeStream()
+            defer {
+                producer.finish()
+            }
             var iterator = stream.makeAsyncIterator()
 
             group.addTask {
                 try await withThrowingTaskGroup(of: Void.self) { _ in
                     for try await childChannel in channel.inbound {
+                        defer {
+                            childChannel.outbound.finish()
+                        }
                         for try await value in childChannel.inbound {
-                            continuation.yield(.string(value))
+                            producer.yield(.string(value))
                         }
                     }
                 }
             }
 
-            let stringChannel = try await self.makeClientChannel(eventLoopGroup: eventLoopGroup, port: channel.channel.localAddress!.port!)
-            try await stringChannel.outbound.write("hello")
+            try await self.withClientChannel(
+                eventLoopGroup: eventLoopGroup,
+                port: channel.channel.localAddress!.port!
+            ) { stringChannel in
+                try await stringChannel.outbound.write("hello")
 
-            await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
+                await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
 
-            group.cancelAll()
+                group.cancelAll()
+            }
         }
     }
 
@@ -275,7 +285,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
 
         try await withThrowingTaskGroup(of: Void.self) { group in
-            let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
+            let (stream, producer) = AsyncStream<StringOrByte>.makeStream()
             var serverIterator = stream.makeAsyncIterator()
 
             group.addTask {
@@ -284,12 +294,18 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         group.addTask {
                             switch try await negotiationResult.get() {
                             case .string(let channel):
+                                defer {
+                                    channel.outbound.finish()
+                                }
                                 for try await value in channel.inbound {
-                                    continuation.yield(.string(value))
+                                    producer.yield(.string(value))
                                 }
                             case .byte(let channel):
+                                defer {
+                                    channel.outbound.finish()
+                                }
                                 for try await value in channel.inbound {
-                                    continuation.yield(.byte(value))
+                                    producer.yield(.byte(value))
                                 }
                             }
                         }
@@ -863,17 +879,18 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             try! eventLoopGroup.syncShutdownGracefully()
         }
 
-        let serverChannel = try await self.makeRawSocketServerChannel(eventLoopGroup: eventLoopGroup)
-        let clientChannel = try await self.makeRawSocketClientChannel(eventLoopGroup: eventLoopGroup)
+        try await self.withRawSocketServerChannel(eventLoopGroup: eventLoopGroup) { serverChannel in
+            try await self.withRawSocketClientChannel(eventLoopGroup: eventLoopGroup) { clientChannel in
+                var serverInboundIterator = serverChannel.inbound.makeAsyncIterator()
+                var clientInboundIterator = clientChannel.inbound.makeAsyncIterator()
 
-        var serverInboundIterator = serverChannel.inbound.makeAsyncIterator()
-        var clientInboundIterator = clientChannel.inbound.makeAsyncIterator()
+                try await clientChannel.outbound.write("request")
+                try await XCTAsyncAssertEqual(try await serverInboundIterator.next(), "request")
 
-        try await clientChannel.outbound.write("request")
-        try await XCTAsyncAssertEqual(try await serverInboundIterator.next(), "request")
-
-        try await serverChannel.outbound.write("response")
-        try await XCTAsyncAssertEqual(try await clientInboundIterator.next(), "response")
+                try await serverChannel.outbound.write("response")
+                try await XCTAsyncAssertEqual(try await clientInboundIterator.next(), "response")
+            }
+        }
     }
 
     func testRawSocketBootstrap_withProtocolNegotiation() async throws {
@@ -886,9 +903,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         try await withThrowingTaskGroup(of: EventLoopFuture<NegotiationResult>.self) { group in
             group.addTask {
                 // We have to use a fixed port here since we only get the channel once protocol negotiation is done
-                try await self.makeRawSocketServerChannelWithProtocolNegotiation(
+                try await self.withRawSocketServerChannelWithProtocolNegotiation(
                     eventLoopGroup: eventLoopGroup
-                )
+                ) { result in eventLoopGroup.any().makeFutureWithTask { result } }
             }
 
             // We need to sleep here since we can only connect the client after the server started.
@@ -1006,8 +1023,11 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
 
 
-    private func makeRawSocketServerChannel(eventLoopGroup: EventLoopGroup) async throws -> NIOAsyncChannel<String, String> {
-        try await NIORawSocketBootstrap(group: eventLoopGroup)
+    private func withRawSocketServerChannel<R: Sendable>(
+        eventLoopGroup: EventLoopGroup,
+        _ body: (NIOAsyncChannel<String, String>) async throws -> R
+    ) async throws -> R {
+        let channel = try await NIORawSocketBootstrap(group: eventLoopGroup)
             .bind(
                 host: "127.0.0.1",
                 ipProtocol: .reservedForTesting
@@ -1018,13 +1038,17 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder(inboundID: 1)))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder(outboundID: 2)))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                    return try NIOAsyncChannel(synchronouslyWrapping: channel)
+                    return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
                 }
             }
+        return try await body(channel)
     }
 
-    private func makeRawSocketClientChannel(eventLoopGroup: EventLoopGroup) async throws -> NIOAsyncChannel<String, String> {
-        try await NIORawSocketBootstrap(group: eventLoopGroup)
+    private func withRawSocketClientChannel<R: Sendable>(
+        eventLoopGroup: EventLoopGroup,
+        _ body: (NIOAsyncChannel<String, String>) async throws -> R
+    ) async throws -> R {
+        let channel = try await NIORawSocketBootstrap(group: eventLoopGroup)
             .connect(
                 host: "127.0.0.1",
                 ipProtocol: .reservedForTesting
@@ -1035,15 +1059,17 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder(inboundID: 2)))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder(outboundID: 1)))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                    return try NIOAsyncChannel(synchronouslyWrapping: channel)
+                    return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
                 }
             }
+        return try await body(channel)
     }
 
-    private func makeRawSocketServerChannelWithProtocolNegotiation(
-        eventLoopGroup: EventLoopGroup
-    ) async throws -> EventLoopFuture<NegotiationResult> {
-        try await NIORawSocketBootstrap(group: eventLoopGroup)
+    private func withRawSocketServerChannelWithProtocolNegotiation<R: Sendable>(
+        eventLoopGroup: EventLoopGroup,
+        _ body: @escaping (NegotiationResult) -> EventLoopFuture<R>
+    ) async throws -> EventLoopFuture<R> {
+        let negotiationResult = try await NIORawSocketBootstrap(group: eventLoopGroup)
             .bind(
                 host: "127.0.0.1",
                 ipProtocol: .reservedForTesting
@@ -1054,6 +1080,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     return try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: nil, inboundID: 1, outboundID: 2)
                 }
             }
+        return negotiationResult.flatMap { body($0) }
     }
 
     private func makeRawSocketClientChannelWithProtocolNegotiation(
@@ -1073,19 +1100,31 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
     }
 
-    private func makeClientChannel(eventLoopGroup: EventLoopGroup, port: Int) async throws -> NIOAsyncChannel<String, String> {
-        return try await ClientBootstrap(group: eventLoopGroup)
+    private func withClientChannel<R: Sendable>(
+        eventLoopGroup: EventLoopGroup,
+        port: Int,
+        body: (NIOAsyncChannel<String, String>) async throws -> R
+    ) async throws -> R {
+        let channel = try await ClientBootstrap(group: eventLoopGroup)
             .connect(
-                to: .init(ipAddress: "127.0.0.1", port: port)
+                to: try SocketAddress(ipAddress: "127.0.0.1", port: port)
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                    return try NIOAsyncChannel(synchronouslyWrapping: channel)
+                    return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
                 }
             }
+        do {
+            let result = try await body(channel)
+            try? await channel.channel.close()
+            return result
+        } catch {
+            try? await channel.channel.close()
+            throw error
+        }
     }
 
     private func makeClientChannelWithProtocolNegotiation(

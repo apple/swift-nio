@@ -233,7 +233,7 @@ extension NIOAsyncSequenceProducer {
             @inlinable
             deinit {
                 // We need to call finish here to resume any suspended continuation.
-                self._throwingSource.finish()
+                //self._throwingSource.finish()
             }
         }
 

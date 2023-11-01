@@ -14,8 +14,9 @@
 import NIOCore
 import NIOPosix
 
-private final class EchoHandler: ChannelInboundHandler {
+private final class EchoHandler: ChannelDuplexHandler {
     public typealias InboundIn = ByteBuffer
+    public typealias OutboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -36,6 +37,8 @@ private final class EchoHandler: ChannelInboundHandler {
         // reduce allocations.
         context.close(promise: nil)
     }
+
+    public func read(context: ChannelHandlerContext) {}
 }
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let bootstrap = ServerBootstrap(group: group)

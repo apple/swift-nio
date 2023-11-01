@@ -25,11 +25,19 @@ private final class EchoHandler: ChannelInboundHandler {
     
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress?.description ?? "unknown")")
-        
+
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
-        let buffer = context.channel.allocator.buffer(string: line)
+        var buffer = context.channel.allocator.buffer(string: line)
+        for _ in 0..<100000 {
+            buffer.writeString(line)
+        }
         self.sendBytes = buffer.readableBytes
-        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+        context.writeAndFlush(self.wrapOutboundOut(buffer)).whenComplete {
+            result in print("write", result)
+        }
+        context.eventLoop.scheduleTask(in: .seconds(10)) {
+            context.channel.close(promise: nil)
+        }
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {

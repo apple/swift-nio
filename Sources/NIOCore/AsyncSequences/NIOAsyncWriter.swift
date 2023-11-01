@@ -170,13 +170,18 @@ public struct NIOAsyncWriter<
         internal let _storage: Storage
 
         @inlinable
-        init(storage: Storage) {
+        init(storage: Storage, finishOnDeinit: Bool) {
             self._storage = storage
         }
 
         @inlinable
         deinit {
-            _storage.writerDeinitialized()
+            if self._storage.finishOnDeinit {
+                // User asked us to be bad, let's complain
+                self._storage.writerDeinitialized()
+            } else {
+                assert(self._storage.hasFinished, "NIOAsyncWriter has been deallocated without being closed")
+            }
         }
     }
 
@@ -186,6 +191,40 @@ public struct NIOAsyncWriter<
     @inlinable
     /* private */ internal var _storage: Storage {
         self._internalClass._storage
+    }
+
+    /// Initializes a new ``NIOAsyncWriter`` and a ``NIOAsyncWriter/Sink``.
+    ///
+    /// It is strongly recommended to not set `finishOnDeinit: true` because that
+    /// leads to non-deterministic and unreliable finishes.
+    ///
+    /// If you have to use `finishOnDeinit: true` please be aware that this method returns a struct
+    /// containing a ``NIOAsyncWriter/Sink`` and
+    /// a ``NIOAsyncWriter``. The sink MUST be held by the caller and is used to set the writability.
+    /// The writer MUST be passed to the actual producer and MUST NOT be held by the
+    /// caller. This is due to the fact that deiniting the sequence is used as part of a trigger to terminate the underlying sink.
+    ///
+    /// - Parameters:
+    ///   - elementType: The element type of the sequence.
+    ///   - isWritable: The initial writability state of the writer.
+    ///   - delegate: The delegate of the writer.
+    ///   - finishOnDeinit: Whether `deinit` triggers the finalisation of the sequence (*NOT RECOMMENDED*).
+    /// - Returns: A ``NIOAsyncWriter/NewWriter``.
+    @inlinable
+    public static func makeWriter(
+        elementType: Element.Type = Element.self,
+        isWritable: Bool,
+        delegate: Delegate,
+        finishOnDeinit: Bool = false
+    ) -> NewWriter {
+        let writer = Self(
+            isWritable: isWritable,
+            delegate: delegate,
+            finishOnDeinit: finishOnDeinit
+        )
+        let sink = Sink(storage: writer._storage, finishOnDeinit: finishOnDeinit)
+
+        return .init(sink: sink, writer: writer)
     }
 
     /// Initializes a new ``NIOAsyncWriter`` and a ``NIOAsyncWriter/Sink``.
@@ -201,30 +240,33 @@ public struct NIOAsyncWriter<
     ///   - delegate: The delegate of the writer.
     /// - Returns: A ``NIOAsyncWriter/NewWriter``.
     @inlinable
+    @_disfavoredOverload
+    @available(*, deprecated, renamed: "makeWriter(elementType:isWritable:delegate:finishOnDeinit:)")
     public static func makeWriter(
         elementType: Element.Type = Element.self,
         isWritable: Bool,
         delegate: Delegate
     ) -> NewWriter {
-        let writer = Self(
+        return self.makeWriter(
+            elementType: elementType,
             isWritable: isWritable,
-            delegate: delegate
+            delegate: delegate,
+            finishOnDeinit: true
         )
-        let sink = Sink(storage: writer._storage)
-
-        return .init(sink: sink, writer: writer)
     }
 
     @inlinable
     /* private */ internal init(
         isWritable: Bool,
-        delegate: Delegate
+        delegate: Delegate,
+        finishOnDeinit: Bool
     ) {
         let storage = Storage(
             isWritable: isWritable,
-            delegate: delegate
+            delegate: delegate,
+            finishOnDeinit: finishOnDeinit
         )
-        self._internalClass = .init(storage: storage)
+        self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
     }
 
     /// Yields a sequence of new elements to the ``NIOAsyncWriter``.
@@ -315,15 +357,23 @@ extension NIOAsyncWriter {
             @usableFromInline
             /* fileprivate */ internal let _storage: Storage
 
+            @usableFromInline
+            /* fileprivate */ internal let _finishOnDeinit: Bool
+
             @inlinable
-            init(storage: Storage) {
+            init(storage: Storage, finishOnDeinit: Bool) {
                 self._storage = storage
+                self._finishOnDeinit = finishOnDeinit
             }
 
             @inlinable
             deinit {
-                // We need to call finish here to resume any suspended continuation.
-                self._storage.sinkFinish(error: nil)
+                if self._finishOnDeinit {
+                    // All bets are off but the user asked us to commit crimes, so let's do it
+                    self._storage.sinkFinish(error: nil)
+                } else {
+                    assert(self._storage.isFinished, "NIOAsyncWriter released without finishing the source")
+                }
             }
         }
 
@@ -336,8 +386,8 @@ extension NIOAsyncWriter {
         }
 
         @inlinable
-        init(storage: Storage) {
-            self._internalClass = .init(storage: storage)
+        init(storage: Storage, finishOnDeinit: Bool) {
+            self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
         }
 
         /// Sets the writability of the ``NIOAsyncWriter``.
@@ -414,12 +464,17 @@ extension NIOAsyncWriter {
             }
         }
 
-        /// The lock that protects our state.
         @usableFromInline
         /* private */ internal let _lock = NIOLock()
+
         /// The counter used to assign an ID to all our yields.
         @usableFromInline
         /* private */ internal let _yieldIDGenerator = YieldIDGenerator()
+
+        @usableFromInline
+        internal let finishOnDeinit: Bool
+
+        // Properties below protected by `self._lock`.
         /// The state machine.
         @usableFromInline
         /* private */ internal var _stateMachine: StateMachine
@@ -427,13 +482,23 @@ extension NIOAsyncWriter {
         @inlinable
         /* fileprivate */ internal init(
             isWritable: Bool,
-            delegate: Delegate
+            delegate: Delegate,
+            finishOnDeinit: Bool
         ) {
+            self.finishOnDeinit = finishOnDeinit
             self._stateMachine = .init(isWritable: isWritable, delegate: delegate)
         }
 
         @inlinable
+        internal var hasFinished: Bool {
+            return self._lock.withLock {
+                return self._stateMachine.hasFinished
+            }
+        }
+
+        @inlinable
         /* fileprivate */ internal func writerDeinitialized() {
+            assert(self.finishOnDeinit, "BUG IN NIO (please report): \(#function) called")
             let action = self._lock.withLock {
                 self._stateMachine.writerDeinitialized()
             }
@@ -609,6 +674,13 @@ extension NIOAsyncWriter {
         }
 
         @inlinable
+        var isFinished: Bool {
+            return self._lock.withLock {
+                return self._stateMachine.isFinished
+            }
+        }
+
+        @inlinable
         /* fileprivate */ internal func sinkFinish(error: Error?) {
             // We must not resume the continuation while holding the lock
             // because it can deadlock in combination with the underlying ulock
@@ -716,6 +788,16 @@ extension NIOAsyncWriter {
         /// The state machine's current state.
         @usableFromInline
         /* private */ internal var _state: State
+
+        @inlinable
+        internal var hasFinished: Bool {
+            switch self._state {
+            case .initial, .streaming, .modifying:
+                return false
+            case .finished, .writerFinished:
+                return true
+            }
+        }
 
         @inlinable
         init(
@@ -1282,6 +1364,16 @@ extension NIOAsyncWriter {
 
             case .modifying:
                 preconditionFailure("Invalid state")
+            }
+        }
+
+        @inlinable
+        var isFinished: Bool {
+            switch self._state {
+            case .finished, .writerFinished:
+                return true
+            case .initial, .modifying, .streaming:
+                return false
             }
         }
 

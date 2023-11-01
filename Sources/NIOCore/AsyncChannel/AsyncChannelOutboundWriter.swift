@@ -84,7 +84,8 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @inlinable
     init(
         channel: Channel,
-        closeRatchet: CloseRatchet
+        closeRatchet: CloseRatchet,
+        finishOnDeinit: Bool
     ) throws {
         let handler = NIOAsyncChannelOutboundWriterHandler<OutboundOut>(
             eventLoop: channel.eventLoop,
