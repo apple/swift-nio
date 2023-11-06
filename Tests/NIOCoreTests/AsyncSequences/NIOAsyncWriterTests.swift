@@ -76,7 +76,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
     func testMultipleConcurrentWrites() async throws {
         var elements = 0
-        self.delegate.didYieldHandler = { print("DIDYIELD"); elements += $0.count }
+        self.delegate.didYieldHandler = { elements += $0.count }
         let task1 = Task { [writer] in
             for i in 0...9 {
                 try await writer!.yield("message\(i)")
