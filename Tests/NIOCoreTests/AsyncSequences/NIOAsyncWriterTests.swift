@@ -60,6 +60,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         let newWriter = NIOAsyncWriter.makeWriter(
             elementType: String.self,
             isWritable: true,
+            finishOnDeinit: false,
             delegate: self.delegate
         )
         self.writer = newWriter.writer
@@ -67,6 +68,12 @@ final class NIOAsyncWriterTests: XCTestCase {
     }
 
     override func tearDown() {
+        if let writer = self.writer {
+            writer.finish()
+        }
+        if let sink = self.sink {
+            sink.finish()
+        }
         self.delegate = nil
         self.writer = nil
         self.sink = nil
@@ -129,16 +136,42 @@ final class NIOAsyncWriterTests: XCTestCase {
     // MARK: - WriterDeinitialized
 
     func testWriterDeinitialized_whenInitial() async throws {
-        self.writer = nil
+        var newWriter: NIOAsyncWriter<String, MockAsyncWriterDelegate>.NewWriter? =  NIOAsyncWriter.makeWriter(
+            elementType: String.self,
+            isWritable: true,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sink = newWriter!.sink
+        var writer: NIOAsyncWriter<String, MockAsyncWriterDelegate>? = newWriter!.writer
+        newWriter = nil
+
+        writer = nil
 
         XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertNil(writer)
+
+        sink.finish()
     }
 
     func testWriterDeinitialized_whenStreaming() async throws {
-        try await writer.yield("message1")
-        self.writer = nil
+        var newWriter: NIOAsyncWriter<String, MockAsyncWriterDelegate>.NewWriter? =  NIOAsyncWriter.makeWriter(
+            elementType: String.self,
+            isWritable: true,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sink = newWriter!.sink
+        var writer: NIOAsyncWriter<String, MockAsyncWriterDelegate>? = newWriter!.writer
+        newWriter = nil
+
+        try await writer!.yield("message1")
+        writer = nil
 
         XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        XCTAssertNil(writer)
+
+        sink.finish()
     }
 
     func testWriterDeinitialized_whenWriterFinished() async throws {

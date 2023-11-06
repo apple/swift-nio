@@ -87,8 +87,10 @@ the inbound data and echo it back outbound.
 let channel = ...
 let asyncChannel = try NIOAsyncChannel<ByteBuffer, ByteBuffer>(synchronouslyWrapping: channel)
 
-for try await inboundData in asyncChannel.inbound {
-    try await asyncChannel.outbound.write(inboundData)
+try await asyncChannel.withInboundOutbound { inbound, outbound in
+    for try await inboundData in inbound {
+        try await outbound.write(inboundData)
+    }
 }
 ```
 
@@ -137,15 +139,19 @@ let serverChannel = try await ServerBootstrap(group: eventLoopGroup)
     }
 
 try await withThrowingDiscardingTaskGroup { group in
-    for try await connectionChannel in serverChannel.inbound {
-        group.addTask {
-            do {
-                for try await inboundData in connectionChannel.inbound {
-                    // Let's echo back all inbound data
-                    try await connectionChannel.outbound.write(inboundData)
+    try await serverChannel.withInbound { serverChannelInbound in
+        for try await connectionChannel in serverChannelInbound {
+            group.addTask {
+                do {
+                    try await connectionChannel.withInboundOutbound { connectionChannelInbound, connectionChannelOutbound in
+                        for try await inboundData in connectionChannelInbound {
+                            // Let's echo back all inbound data
+                            try await connectionChannelOutbound.write(inboundData)
+                        }
+                    }
+                } catch {
+                    // Handle errors
                 }
-            } catch {
-                // Handle errors
             }
         }
     }
@@ -185,10 +191,12 @@ let clientChannel = try await ClientBootstrap(group: eventLoopGroup)
         }
     }
 
-clientChannel.outbound.write(ByteBuffer(string: "hello"))
+try await clientChannel.withInboundOutbound { inbound, outbound in
+    outbound.write(ByteBuffer(string: "hello"))
 
-for try await inboundData in clientChannel.inbound {
-    print(inboundData)
+    for try await inboundData in inbound {
+        print(inboundData)
+    }
 }
 ```
 

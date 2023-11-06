@@ -53,37 +53,43 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
     try await withThrowingTaskGroup(of: Void.self) { group in
         // This child task is echoing back the data on the server.
         group.addTask {
-            for try await connectionChannel in serverChannel.inbound {
-                for try await inboundData in connectionChannel.inbound {
-                    try await connectionChannel.outbound.write(inboundData)
+            try await serverChannel.withInbound { serverChannelInbound in
+                for try await connectionChannel in serverChannelInbound {
+                    try await connectionChannel.withInboundOutbound { connectionChannelInbound, connectionChannelOutbound in
+                        for try await inboundData in connectionChannelInbound {
+                            try await connectionChannelOutbound.write(inboundData)
+                        }
+                    }
                 }
             }
         }
 
-        // This child task is collecting the echoed back responses.
-        group.addTask {
-            var receivedData = 0
-            for try await inboundData in clientChannel.inbound  {
-                receivedData += inboundData.readableBytes
+        try await clientChannel.withInboundOutbound { inbound, outbound in
+            // This child task is collecting the echoed back responses.
+            group.addTask {
+                var receivedData = 0
+                for try await inboundData in inbound  {
+                    receivedData += inboundData.readableBytes
 
-                if receivedData == numberOfWrites * messageSize {
-                    return
+                    if receivedData == numberOfWrites * messageSize {
+                        return
+                    }
                 }
             }
+
+            // Let's start sending data.
+            let data = ByteBuffer(repeating: 0, count: messageSize)
+            for _ in 0..<numberOfWrites {
+                try await outbound.write(data)
+            }
+
+            // Waiting for the child task that collects the responses to finish.
+            try await group.next()
+
+            // Cancelling the server child task.
+            group.cancelAll()
+            try await serverChannel.channel.closeFuture.get()
+            try await clientChannel.channel.closeFuture.get()
         }
-
-        // Let's start sending data.
-        let data = ByteBuffer(repeating: 0, count: messageSize)
-        for _ in 0..<numberOfWrites {
-            try await clientChannel.outbound.write(data)
-        }
-
-        // Waiting for the child task that collects the responses to finish.
-        try await group.next()
-
-        // Cancelling the server child task.
-        group.cancelAll()
-        try await serverChannel.channel.closeFuture.get()
-        try await clientChannel.channel.closeFuture.get()
     }
 }

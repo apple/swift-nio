@@ -68,16 +68,18 @@ struct Client {
                 }
             }
 
-        print("Connection(\(number)): Writing request")
-        try await channel.outbound.write("Hello on connection \(number)")
+        try await channel.withInboundOutbound { inbound, outbound in
+            print("Connection(\(number)): Writing request")
+            try await outbound.write("Hello on connection \(number)")
 
-        for try await inboundData in channel.inbound {
-            print("Connection(\(number)): Received response (\(inboundData))")
+            for try await inboundData in inbound {
+                print("Connection(\(number)): Received response (\(inboundData))")
 
-            // We only expect a single response so we can exit here.
-            // Once, we exit out of this loop and the references to the `NIOAsyncChannel` are dropped
-            // the connection is going to close itself.
-            break
+                // We only expect a single response so we can exit here.
+                // Once, we exit out of this loop and the references to the `NIOAsyncChannel` are dropped
+                // the connection is going to close itself.
+                break
+            }
         }
     }
 }

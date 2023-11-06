@@ -72,12 +72,24 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
 
     /// The underlying channel being wrapped by this ``NIOAsyncChannel``.
     public let channel: Channel
+
     /// The stream of inbound messages.
     ///
     /// - Important: The `inbound` stream is a unicast `AsyncSequence` and only one iterator can be created.
-    public let inbound: NIOAsyncChannelInboundStream<Inbound>
+    @available(*, deprecated, message: "Use the withInboundOutbound scoped method instead.")
+    public var inbound: NIOAsyncChannelInboundStream<Inbound> {
+        self._inbound
+    }
     /// The writer for writing outbound messages.
-    public let outbound: NIOAsyncChannelOutboundWriter<Outbound>
+    @available(*, deprecated, message: "Use the withInboundOutbound scoped method instead.")
+    public var outbound: NIOAsyncChannelOutboundWriter<Outbound> {
+        self._outbound
+    }
+
+    @usableFromInline
+    let _inbound: NIOAsyncChannelInboundStream<Inbound>
+    @usableFromInline
+    let _outbound: NIOAsyncChannelOutboundWriter<Outbound>
 
     /// Initializes a new ``NIOAsyncChannel`` wrapping a ``Channel``.
     ///
@@ -94,7 +106,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     ) throws {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
-        (self.inbound, self.outbound) = try channel._syncAddAsyncHandlers(
+        (self._inbound, self._outbound) = try channel._syncAddAsyncHandlers(
             backPressureStrategy: configuration.backPressureStrategy,
             isOutboundHalfClosureEnabled: configuration.isOutboundHalfClosureEnabled
         )
@@ -117,12 +129,12 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     ) throws where Outbound == Never {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
-        (self.inbound, self.outbound) = try channel._syncAddAsyncHandlers(
+        (self._inbound, self._outbound) = try channel._syncAddAsyncHandlers(
             backPressureStrategy: configuration.backPressureStrategy,
             isOutboundHalfClosureEnabled: configuration.isOutboundHalfClosureEnabled
         )
 
-        self.outbound.finish()
+        self._outbound.finish()
     }
 
     @inlinable
@@ -133,8 +145,8 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     ) {
         channel.eventLoop.preconditionInEventLoop()
         self.channel = channel
-        self.inbound = inboundStream
-        self.outbound = outboundWriter
+        self._inbound = inboundStream
+        self._outbound = outboundWriter
     }
 
 
@@ -164,6 +176,52 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
             outboundWriter: outboundWriter
         )
     }
+
+    /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
+    ///
+    /// - Important: After this method returned the underlying ``Channel`` will be closed.
+    ///
+    /// - Parameter body: A closure that gets scoped access to the inbound and outbound.
+    public func withInboundOutbound<Result>(
+        _ body: (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) async throws -> Result
+    ) async throws -> Result {
+        let result: Result
+        do {
+            result = try await body(self._inbound, self._outbound)
+        } catch let bodyError {
+            do {
+                self._outbound.finish()
+                try await self.channel.close().get()
+                throw bodyError
+            } catch {
+                throw bodyError
+            }
+        }
+
+        do {
+            self._outbound.finish()
+            try await self.channel.close().get()
+        } catch {
+            if let error = error as? ChannelError, error == .alreadyClosed {
+                return result
+            }
+            throw error
+        }
+        return result
+    }
+
+    /// Provides scoped access to the inbound side of the underlying ``Channel``.
+    ///
+    /// - Important: After this method returned the underlying ``Channel`` will be closed.
+    ///
+    /// - Parameter body: A closure that gets scoped access to the inbound.
+    public func withInbound<Result>(
+        _ body: (NIOAsyncChannelInboundStream<Inbound>) async throws -> Result
+    ) async throws -> Result where Outbound == Never{
+        try await self.withInboundOutbound { inbound, _ in
+            try await body(inbound)
+        }
+    }
 }
 
 extension Channel {
@@ -175,15 +233,13 @@ extension Channel {
     ) throws -> (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) {
         self.eventLoop.assertInEventLoop()
 
-        let closeRatchet = CloseRatchet(isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled)
         let inboundStream = try NIOAsyncChannelInboundStream<Inbound>.makeWrappingHandler(
             channel: self,
-            backPressureStrategy: backPressureStrategy,
-            closeRatchet: closeRatchet
+            backPressureStrategy: backPressureStrategy
         )
         let writer = try NIOAsyncChannelOutboundWriter<Outbound>(
             channel: self,
-            closeRatchet: closeRatchet
+            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
         return (inboundStream, writer)
     }
@@ -197,16 +253,14 @@ extension Channel {
     ) throws -> (NIOAsyncChannelInboundStream<ChannelReadResult>, NIOAsyncChannelOutboundWriter<Never>) {
         self.eventLoop.assertInEventLoop()
 
-        let closeRatchet = CloseRatchet(isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled)
         let inboundStream = try NIOAsyncChannelInboundStream<ChannelReadResult>.makeTransformationHandler(
             channel: self,
             backPressureStrategy: backPressureStrategy,
-            closeRatchet: closeRatchet,
             channelReadTransformation: channelReadTransformation
         )
         let writer = try NIOAsyncChannelOutboundWriter<Never>(
             channel: self,
-            closeRatchet: closeRatchet
+            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
         return (inboundStream, writer)
     }
