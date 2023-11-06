@@ -31,6 +31,14 @@ extension System {
 #if canImport(Darwin) || os(Linux) || os(Android)
         guard let socket = try? Socket(protocolFamily: .vsock, type: .stream) else { return false }
         XCTAssertNoThrow(try socket.close())
+#if !canImport(Darwin)
+        do {
+            let fd = try Posix.open(file: "/dev/vsock", oFlag: O_RDONLY | O_CLOEXEC)
+            try Posix.close(descriptor: fd)
+        } catch {
+            return false
+        }
+#endif
         return true
 #else
         return false
