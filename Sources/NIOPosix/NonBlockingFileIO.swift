@@ -735,8 +735,8 @@ public struct NIODirectoryEntry: Hashable {
 extension NonBlockingFileIO {
     /// Read a ``FileRegion`` in ``NonBlockingFileIO``'s private thread pool which is separate from any ``EventLoop`` thread.
     ///
-    /// The returned ``ByteBuffer`` will not have less than `fileRegion.readableBytes` unless we hit end-of-file in which
-    /// case the ``ByteBuffer`` will contain the bytes available to read.
+    /// The returned ``ByteBuffer`` will not have less than the minimum of `fileRegion.readableBytes` and `UInt32.max` unless we hit 
+    /// end-of-file in which case the ``ByteBuffer`` will contain the bytes available to read.
     ///
     /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
     /// same ``FileRegion`` in multiple threads.
