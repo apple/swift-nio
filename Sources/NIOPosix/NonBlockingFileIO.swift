@@ -440,7 +440,7 @@ public struct NonBlockingFileIO: Sendable {
         }
 
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
-            try writeSync(fileHandle: fileHandle, byteCount: byteCount, toOffset: toOffset, buffer: buffer)
+            try self.writeSync(fileHandle: fileHandle, byteCount: byteCount, toOffset: toOffset, buffer: buffer)
         }
     }
 
