@@ -1292,34 +1292,34 @@ extension NonBlockingFileIOTest {
     func testAsyncFileOpenWorks() async throws {
         let content = "123"
         try await withTemporaryFile(content: content) { (fileHandle, path) -> Void in
-            let (fh, fr) = try await self.fileIO.openFile(path: path)
-            try fh.withUnsafeFileDescriptor { fd in
-                XCTAssertGreaterThanOrEqual(fd, 0)
+            try await self.fileIO.withOpenFile(path: path) { fh, fr in
+                try fh.withUnsafeFileDescriptor { fd in
+                    XCTAssertGreaterThanOrEqual(fd, 0)
+                }
+                XCTAssertTrue(fh.isOpen)
+                XCTAssertEqual(0, fr.readerIndex)
+                XCTAssertEqual(3, fr.endIndex)
             }
-            XCTAssertTrue(fh.isOpen)
-            XCTAssertEqual(0, fr.readerIndex)
-            XCTAssertEqual(3, fr.endIndex)
-            try fh.close()
         }
     }
 
     func testAsyncFileOpenWorksWithEmptyFile() async throws {
         let content = ""
         try await withTemporaryFile(content: content) { (fileHandle, path) -> Void in
-            let (fh, fr) = try await self.fileIO.openFile(path: path)
-            try fh.withUnsafeFileDescriptor { fd in
-                XCTAssertGreaterThanOrEqual(fd, 0)
+            try await self.fileIO.withOpenFile(path: path) { fh, fr in
+                try fh.withUnsafeFileDescriptor { fd in
+                    XCTAssertGreaterThanOrEqual(fd, 0)
+                }
+                XCTAssertTrue(fh.isOpen)
+                XCTAssertEqual(0, fr.readerIndex)
+                XCTAssertEqual(0, fr.endIndex)
             }
-            XCTAssertTrue(fh.isOpen)
-            XCTAssertEqual(0, fr.readerIndex)
-            XCTAssertEqual(0, fr.endIndex)
-            try fh.close()
         }
     }
 
     func testAsyncFileOpenFails() async throws {
         do {
-            _ = try await self.fileIO.openFile(path: "/dev/null/this/does/not/exist")
+            _ = try await self.fileIO.withOpenFile(path: "/dev/null/this/does/not/exist") { _,_ in}
             XCTFail("should've thrown")
         } catch let e as IOError where e.errnoCode == ENOTDIR {
             // OK
@@ -1330,18 +1330,22 @@ extension NonBlockingFileIOTest {
 
     func testAsyncOpeningFilesForWriting() async throws {
         try await withTemporaryDirectory { dir in
-            try await self.fileIO!.openFile(path: "\(dir)/file",
+            try await self.fileIO!.withOpenFile(
+                path: "\(dir)/file",
                 mode: .write,
-                flags: .allowFileCreation()).close()
+                flags: .allowFileCreation()
+            ) { _ in }
         }
     }
 
     func testAsyncOpeningFilesForWritingFailsIfWeDontAllowItExplicitly() async throws {
         do {
             try await withTemporaryDirectory { dir in
-                try await self.fileIO!.openFile(path: "\(dir)/file",
+                try await self.fileIO!.withOpenFile(
+                    path: "\(dir)/file",
                     mode: .write,
-                    flags: .default).close()
+                    flags: .default
+                ) { _ in }
             }
             XCTFail("testAsyncOpeningFilesForWritingFailsIfWeDontAllowItExplicitly: openFile should fail")
         } catch {
@@ -1351,37 +1355,37 @@ extension NonBlockingFileIOTest {
 
     func testAsyncOpeningFilesForWritingDoesNotAllowReading() async throws {
         try await withTemporaryDirectory { dir in
-            let fileHandle = try await self.fileIO!.openFile(path: "\(dir)/file",
+            try await self.fileIO!.withOpenFile(
+                path: "\(dir)/file",
                 mode: .write,
-                flags: .allowFileCreation())
-            defer {
-                try! fileHandle.close()
+                flags: .allowFileCreation()
+            ) { fileHandle in
+                XCTAssertEqual(-1 /* read must fail */,
+                    try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
+                    var data: UInt8 = 0
+                    return withUnsafeMutableBytes(of: &data) { ptr in
+                        read(fd, ptr.baseAddress, ptr.count)
+                    }
+                })
             }
-            XCTAssertEqual(-1 /* read must fail */,
-                try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
-                var data: UInt8 = 0
-                return withUnsafeMutableBytes(of: &data) { ptr in
-                    read(fd, ptr.baseAddress, ptr.count)
-                }
-            })
         }
     }
 
     func testAsyncOpeningFilesForWritingAndReading() async throws {
         try await withTemporaryDirectory { dir in
-            let fileHandle = try await self.fileIO!.openFile(path: "\(dir)/file",
+            try await self.fileIO!.withOpenFile(
+                path: "\(dir)/file",
                 mode: [.write, .read],
-                flags: .allowFileCreation())
-            defer {
-                try! fileHandle.close()
+                flags: .allowFileCreation()
+            ) { fileHandle in
+                XCTAssertEqual(0 /* read should read EOF */,
+                    try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
+                        var data: UInt8 = 0
+                        return withUnsafeMutableBytes(of: &data) { ptr in
+                            read(fd, ptr.baseAddress, ptr.count)
+                        }
+                })
             }
-            XCTAssertEqual(0 /* read should read EOF */,
-                try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
-                    var data: UInt8 = 0
-                    return withUnsafeMutableBytes(of: &data) { ptr in
-                        read(fd, ptr.baseAddress, ptr.count)
-                    }
-            })
         }
     }
 
@@ -1389,48 +1393,48 @@ extension NonBlockingFileIOTest {
         try await withTemporaryDirectory { dir in
             // open 1 + write
             do {
-                let fileHandle = try await self.fileIO!.openFile(path: "\(dir)/file",
+                try await self.fileIO.withOpenFile(
+                    path: "\(dir)/file",
                     mode: [.write, .read],
-                    flags: .allowFileCreation())
-                defer {
-                    try! fileHandle.close()
-                }
-                try fileHandle.withUnsafeFileDescriptor { fd in
-                    var data = UInt8(ascii: "X")
-                    XCTAssertEqual(IOResult<Int>.processed(1),
-                                    try withUnsafeBytes(of: &data) { ptr in
-                                    try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
-                    })
+                    flags: .allowFileCreation()
+                ) { fileHandle in
+                    try fileHandle.withUnsafeFileDescriptor { fd in
+                        var data = UInt8(ascii: "X")
+                        XCTAssertEqual(IOResult<Int>.processed(1),
+                                        try withUnsafeBytes(of: &data) { ptr in
+                                        try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                        })
+                    }
                 }
             }
 
             // open 2 + write again + read
             do {
-                let fileHandle = try await self.fileIO!.openFile(path: "\(dir)/file",
+                try await self.fileIO!.withOpenFile(
+                    path: "\(dir)/file",
                     mode: [.write, .read],
-                    flags: .default)
-                defer {
-                    try! fileHandle.close()
+                    flags: .default
+                ) { fileHandle in
+                    try fileHandle.withUnsafeFileDescriptor { fd in
+                        try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
+                        var data = UInt8(ascii: "Y")
+                        XCTAssertEqual(IOResult<Int>.processed(1),
+                                        try withUnsafeBytes(of: &data) { ptr in
+                                        try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                        })
+                    }
+                    XCTAssertEqual(2 /* both bytes */,
+                        try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
+                            var data: UInt16 = 0
+                            try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
+                            let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
+                                read(fd, ptr.baseAddress, ptr.count)
+                            }
+                            XCTAssertEqual(UInt16(bigEndian: (UInt16(UInt8(ascii: "X")) << 8) | UInt16(UInt8(ascii: "Y"))),
+                                            data)
+                            return readReturn
+                        })
                 }
-                try fileHandle.withUnsafeFileDescriptor { fd in
-                    try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
-                    var data = UInt8(ascii: "Y")
-                    XCTAssertEqual(IOResult<Int>.processed(1),
-                                    try withUnsafeBytes(of: &data) { ptr in
-                                    try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
-                    })
-                }
-                XCTAssertEqual(2 /* both bytes */,
-                    try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
-                        var data: UInt16 = 0
-                        try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
-                        let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
-                            read(fd, ptr.baseAddress, ptr.count)
-                        }
-                        XCTAssertEqual(UInt16(bigEndian: (UInt16(UInt8(ascii: "X")) << 8) | UInt16(UInt8(ascii: "Y"))),
-                                        data)
-                        return readReturn
-                    })
             }
         }
     }
@@ -1439,46 +1443,46 @@ extension NonBlockingFileIOTest {
         try await withTemporaryDirectory { dir in
             // open 1 + write
             do {
-                let fileHandle = try await self.fileIO!.openFile(path: "\(dir)/file",
+                try await self.fileIO!.withOpenFile(
+                    path: "\(dir)/file",
                     mode: [.write, .read],
-                    flags: .allowFileCreation())
-                defer {
-                    try! fileHandle.close()
-                }
-                try fileHandle.withUnsafeFileDescriptor { fd in
-                    var data = UInt8(ascii: "X")
-                    XCTAssertEqual(IOResult<Int>.processed(1),
-                                   try withUnsafeBytes(of: &data) { ptr in
-                                    try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
-                        })
+                    flags: .allowFileCreation()
+                ) { fileHandle in
+                    try fileHandle.withUnsafeFileDescriptor { fd in
+                        var data = UInt8(ascii: "X")
+                        XCTAssertEqual(IOResult<Int>.processed(1),
+                                    try withUnsafeBytes(of: &data) { ptr in
+                                        try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                            })
+                    }
                 }
             }
             // open 2 (with truncation) + write again + read
             do {
-                let fileHandle = try await self.fileIO!.openFile(path: "\(dir)/file",
+                try await self.fileIO!.withOpenFile(
+                    path: "\(dir)/file",
                     mode: [.write, .read],
-                    flags: .posix(flags: O_TRUNC, mode: 0))
-                defer {
-                    try! fileHandle.close()
-                }
-                try fileHandle.withUnsafeFileDescriptor { fd in
-                    try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
-                    var data = UInt8(ascii: "Y")
-                    XCTAssertEqual(IOResult<Int>.processed(1),
-                                   try withUnsafeBytes(of: &data) { ptr in
-                                    try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                    flags: .posix(flags: O_TRUNC, mode: 0)
+                ) { fileHandle in
+                    try fileHandle.withUnsafeFileDescriptor { fd in
+                        try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
+                        var data = UInt8(ascii: "Y")
+                        XCTAssertEqual(IOResult<Int>.processed(1),
+                                    try withUnsafeBytes(of: &data) { ptr in
+                                        try Posix.write(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                            })
+                    }
+                    XCTAssertEqual(1 /* read should read just one byte because we truncated the file */,
+                        try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
+                            var data: UInt16 = 0
+                            try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
+                            let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
+                                read(fd, ptr.baseAddress, ptr.count)
+                            }
+                            XCTAssertEqual(UInt16(bigEndian: UInt16(UInt8(ascii: "Y")) << 8), data)
+                            return readReturn
                         })
                 }
-                XCTAssertEqual(1 /* read should read just one byte because we truncated the file */,
-                    try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
-                        var data: UInt16 = 0
-                        try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
-                        let readReturn = withUnsafeMutableBytes(of: &data) { ptr in
-                            read(fd, ptr.baseAddress, ptr.count)
-                        }
-                        XCTAssertEqual(UInt16(bigEndian: UInt16(UInt8(ascii: "Y")) << 8), data)
-                        return readReturn
-                    })
             }
         }
     }
@@ -1522,7 +1526,7 @@ extension NonBlockingFileIOTest {
             let threadPool = NIOThreadPool(numberOfThreads: 1)
             let fileIO = NonBlockingFileIO(threadPool: threadPool)
             do {
-                _ = try await fileIO.openFile(path: path)
+                try await fileIO.withOpenFile(path: path) { _,_ in }
                 XCTFail("testAsyncThrowsErrorOnUnstartedPool: openFile should throw an error")
             } catch {
             }
@@ -1583,42 +1587,40 @@ extension NonBlockingFileIOTest {
     func testAsyncListDirectory() async throws {
         try await withTemporaryDirectory { path in
             let file = "\(path)/file"
-            let handle = try await self.fileIO.openFile(path: file,
-                                                  mode: .write,
-                                                  flags: .allowFileCreation())
-            defer {
-                try? handle.close()
+            try await self.fileIO.withOpenFile(
+                path: file,
+                mode: .write,
+                flags: .allowFileCreation()
+            ) { handle in
+                let list = try await self.fileIO.listDirectory(path: path)
+                XCTAssertEqual([".", "..", "file"], list.sorted(by: { $0.name < $1.name }).map(\.name))
             }
-
-            let list = try await self.fileIO.listDirectory(path: path)
-            XCTAssertEqual([".", "..", "file"], list.sorted(by: { $0.name < $1.name }).map(\.name))
         }
     }
 
     func testAsyncRename() async throws {
         try await withTemporaryDirectory { path in
             let file = "\(path)/file"
-            let handle = try await self.fileIO.openFile(path: file,
-                                                  mode: .write,
-                                                  flags: .allowFileCreation())
-            defer {
-                try? handle.close()
-            }
+            try await self.fileIO.withOpenFile(
+                path: file,
+                mode: .write,
+                flags: .allowFileCreation()
+            ) { handle in
+                let stat = try await self.fileIO.lstat(path: file)
+                XCTAssertEqual(S_IFREG, S_IFMT & stat.st_mode)
 
-            let stat = try await self.fileIO.lstat(path: file)
-            XCTAssertEqual(S_IFREG, S_IFMT & stat.st_mode)
+                let new = "\(path).new"
+                try await self.fileIO.rename(path: file, newName: new)
 
-            let new = "\(path).new"
-            try await self.fileIO.rename(path: file, newName: new)
+                let stat2 = try await self.fileIO.lstat(path: new)
+                XCTAssertEqual(S_IFREG, S_IFMT & stat2.st_mode)
 
-            let stat2 = try await self.fileIO.lstat(path: new)
-            XCTAssertEqual(S_IFREG, S_IFMT & stat2.st_mode)
-
-            do {
-                _ = try await self.fileIO.lstat(path: file)
-                XCTFail("testAsyncRename: lstat should throw an error after file renamed")
-            } catch {
-                XCTAssertEqual(ENOENT, (error as? IOError)?.errnoCode)
+                do {
+                    _ = try await self.fileIO.lstat(path: file)
+                    XCTFail("testAsyncRename: lstat should throw an error after file renamed")
+                } catch {
+                    XCTAssertEqual(ENOENT, (error as? IOError)?.errnoCode)
+                }
             }
         }
     }
@@ -1626,22 +1628,21 @@ extension NonBlockingFileIOTest {
     func testAsyncRemove() async throws {
         try await withTemporaryDirectory { path in
             let file = "\(path)/file"
-            let handle = try await self.fileIO.openFile(path: file,
-                                                  mode: .write,
-                                                  flags: .allowFileCreation())
-            defer {
-                try? handle.close()
-            }
+            try await self.fileIO.withOpenFile(
+                path: file,
+                mode: .write,
+                flags: .allowFileCreation()
+            ) { handle in
+                let stat = try await self.fileIO.lstat(path: file)
+                XCTAssertEqual(S_IFREG, S_IFMT & stat.st_mode)
 
-            let stat = try await self.fileIO.lstat(path: file)
-            XCTAssertEqual(S_IFREG, S_IFMT & stat.st_mode)
-
-            try await self.fileIO.remove(path: file)
-            do {
-                _ = try await self.fileIO.lstat(path: file)
-                XCTFail("testAsyncRemove: lstat should throw an error after file removed")
-            } catch {
-                XCTAssertEqual(ENOENT, (error as? IOError)?.errnoCode)
+                try await self.fileIO.remove(path: file)
+                do {
+                    _ = try await self.fileIO.lstat(path: file)
+                    XCTFail("testAsyncRemove: lstat should throw an error after file removed")
+                } catch {
+                    XCTAssertEqual(ENOENT, (error as? IOError)?.errnoCode)
+                }
             }
         }
     }

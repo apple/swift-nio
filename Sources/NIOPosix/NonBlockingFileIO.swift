@@ -906,18 +906,21 @@ extension NonBlockingFileIO {
     /// - parameters:
     ///     - path: The path of the file to be opened for reading.
     /// - returns: the ``NIOFileHandle`` and the ``FileRegion`` comprising the whole file.
-    public func openFile(path: String) async throws -> (NIOFileHandle, FileRegion) {
-        let result = try await self.threadPool.runIfActive {
+    public func withOpenFile<Result>(path: String, _ body: (NIOFileHandle, FileRegion) async throws -> Result) async throws -> Result {
+        let file = try await self.threadPool.runIfActive {
             let fh = try NIOFileHandle(path: path)
             do {
                 let fr = try FileRegion(fileHandle: fh)
-                return UnsafeTransfer((fh, fr))
+                return UnsafeTransfer((handle: fh, region: fr))
             } catch {
                 _ = try? fh.close()
                 throw error
             }
         }
-        return result.wrappedValue
+        defer {
+            try? file.wrappedValue.handle.close()
+        }
+        return try await body(file.wrappedValue.handle, file.wrappedValue.region)
     }
 
     /// Open the file at `path` with specified access mode and POSIX flags on a private thread pool which is separate from any ``EventLoop`` thread.
@@ -930,11 +933,19 @@ extension NonBlockingFileIO {
     ///     - mode: File access mode.
     ///     - flags: Additional POSIX flags.
     /// - returns: NIOFileHandle`.
-    public func openFile(path: String, mode: NIOFileHandle.Mode, flags: NIOFileHandle.Flags = .default) async throws -> NIOFileHandle {
-        let result = try await self.threadPool.runIfActive {
+    public func withOpenFile<Result>(
+        path: String, 
+        mode: NIOFileHandle.Mode, 
+        flags: NIOFileHandle.Flags = .default, 
+        _ body: (NIOFileHandle) async throws -> Result
+    ) async throws -> Result {
+        let fileHandle = try await self.threadPool.runIfActive {
             return try UnsafeTransfer(NIOFileHandle(path: path, mode: mode, flags: flags))
         }
-        return result.wrappedValue
+        defer {
+            try? fileHandle.wrappedValue.close()
+        }
+        return try await body(fileHandle.wrappedValue)
     }
 
 #if !os(Windows)
