@@ -780,10 +780,12 @@ extension NonBlockingFileIO {
         byteCount: Int,
         allocator: ByteBufferAllocator
     ) async throws-> ByteBuffer {
-        return try await self.read0(fileHandle: fileHandle,
-                         fromOffset: nil,
-                         byteCount: byteCount,
-                         allocator: allocator)
+        return try await self.read0(
+            fileHandle: fileHandle,
+            fromOffset: nil,
+            byteCount: byteCount,
+            allocator: allocator
+        )
     }
 
     /// Read `byteCount` bytes starting at `fileOffset` from `fileHandle` in ``NonBlockingFileIO``'s private thread pool
