@@ -733,7 +733,7 @@ public struct NIODirectoryEntry: Hashable {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NonBlockingFileIO {
-    /// Read a ``FileRegion`` in ``NonBlockingFileIO``'s private thread pool which is separate from any ``EventLoop`` thread.
+    /// Read a ``FileRegion`` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
     ///
     /// The returned ``ByteBuffer`` will not have less than the minimum of `fileRegion.readableBytes` and `UInt32.max` unless we hit 
     /// end-of-file in which case the ``ByteBuffer`` will contain the bytes available to read.
@@ -758,7 +758,7 @@ extension NonBlockingFileIO {
         )
     }
 
-    /// Read `byteCount` bytes from `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from any ``EventLoop`` thread.
+    /// Read `byteCount` bytes from `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
     ///
     /// The returned ``ByteBuffer`` will not have less than `byteCount` bytes unless we hit end-of-file in which
     /// case the ``ByteBuffer`` will contain the bytes available to read.
@@ -789,7 +789,7 @@ extension NonBlockingFileIO {
     }
 
     /// Read `byteCount` bytes starting at `fileOffset` from `fileHandle` in ``NonBlockingFileIO``'s private thread pool
-    /// which is separate from any ``EventLoop`` thread.
+    /// which is separate from Task pool.
     ///
     /// The returned ``ByteBuffer`` will not have less than `byteCount` bytes unless we hit end-of-file in which
     /// case the ``ByteBuffer`` will contain the bytes available to read.
@@ -862,7 +862,7 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Write `buffer` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from any ``EventLoop`` thread.
+    /// Write `buffer` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
     ///
     /// - parameters:
     ///   - fileHandle: The ``NIOFileHandle`` to write to.
@@ -872,7 +872,7 @@ extension NonBlockingFileIO {
         return try await self.write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer)
     }
 
-    /// Write `buffer` starting from `toOffset` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from any ``EventLoop`` thread.
+    /// Write `buffer` starting from `toOffset` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
     ///
     /// - parameters:
     ///   - fileHandle: The ``NIOFileHandle`` to write to.
@@ -898,16 +898,17 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Open the file at `path` for reading on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Open file at `path` on a private thread pool, run an operation given the file handle and region and then close the file handle.
     ///
-    /// This function will return (a future) of the ``NIOFileHandle`` associated with the file opened and a ``FileRegion``
-    /// comprising of the whole file. The caller must close the returned ``NIOFileHandle`` when it's no longer needed.
-    ///
-    /// - note: The reason this returns the ``NIOFileHandle`` and the ``FileRegion`` is that both the opening of a file as well as the querying of its size are blocking.
+    /// The open file operation runs on a private thread pool which is separate from Task pool.
+    ///    
+    /// - note: The reason this provides the ``NIOFileHandle`` and the ``FileRegion`` is that both the opening of a file as well as 
+    /// the querying of its size are blocking.
     ///
     /// - parameters:
     ///     - path: The path of the file to be opened for reading.
-    /// - returns: the ``NIOFileHandle`` and the ``FileRegion`` comprising the whole file.
+    ///     - body: operation to run with file handle and region
+    /// - returns: return value of operation
     public func withOpenFile<Result>(path: String, _ body: (NIOFileHandle, FileRegion) async throws -> Result) async throws -> Result {
         let file = try await self.threadPool.runIfActive {
             let fh = try NIOFileHandle(path: path)
@@ -925,10 +926,11 @@ extension NonBlockingFileIO {
         return try await body(file.wrappedValue.handle, file.wrappedValue.region)
     }
 
-    /// Open the file at `path` with specified access mode and POSIX flags on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Open file at `path` on a private thread pool, run an operation given the file handle and region and then close the file handle.
     ///
-    /// This function will return (a future) of the ``NIOFileHandle`` associated with the file opened.
-    /// The caller must close the returned ``NIOFileHandle`` when it's no longer needed.
+    /// The open file operation runs on a private thread pool which is separate from Task pool.
+    ///    
+    /// This function will return the result of the operation.
     ///
     /// - parameters:
     ///     - path: The path of the file to be opened for writing.
@@ -952,7 +954,7 @@ extension NonBlockingFileIO {
 
 #if !os(Windows)
 
-    /// Returns information about a file at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Returns information about a file at `path` on a private thread pool which is separate from Task pool.
     ///
     /// - note: If `path` is a symlink, information about the link, not the file it points to.
     ///
@@ -967,7 +969,7 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Creates a symbolic link to a  `destination` file  at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Creates a symbolic link to a  `destination` file  at `path` on a private thread pool which is separate from Task pool.
     ///
     /// - parameters:
     ///     - path: The path of the link.
@@ -978,7 +980,7 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Returns target of the symbolic link at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Returns target of the symbolic link at `path` on a private thread pool which is separate from Task pool.
     ///
     /// - parameters:
     ///     - path: The path of the link to read.
@@ -1006,7 +1008,7 @@ extension NonBlockingFileIO {
     }
 
 
-    /// Creates directory at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Creates directory at `path` on a private thread pool which is separate from Task pool.
     ///
     /// - parameters:
     ///     - path: The path of the directory to be created.
@@ -1025,7 +1027,7 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// List contents of the directory at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// List contents of the directory at `path` on a private thread pool which is separate from Task pool.
     ///
     /// - parameters:
     ///     - path: The path of the directory to list the content of.
@@ -1051,7 +1053,7 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Renames the file at `path` to `newName` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Renames the file at `path` to `newName` on a private thread pool which is separate from Task pool.
     ///
     /// - parameters:
     ///     - path: The path of the file to be renamed.
@@ -1062,7 +1064,7 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Removes the file at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Removes the file at `path` on a private thread pool which is separate from Task pool.
     ///
     /// - parameters:
     ///     - path: The path of the file to be removed.
