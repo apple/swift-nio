@@ -53,8 +53,8 @@ public struct NonBlockingFileIO: Sendable {
         self.threadPool = threadPool
     }
 
-    /// Read a ``FileRegion`` in chunks of `chunkSize` bytes on ``NonBlockingFileIO``'s private thread
-    /// pool which is separate from any ``EventLoop`` thread.
+    /// Read a `FileRegion` in chunks of `chunkSize` bytes on ``NonBlockingFileIO``'s private thread
+    /// pool which is separate from any `EventLoop` thread.
     ///
     /// `chunkHandler` will be called on `eventLoop` for every chunk that was read. Assuming `fileRegion.readableBytes` is greater than
     /// zero and there are enough bytes available `chunkHandler` will be called `1 + |_ fileRegion.readableBytes / chunkSize _|`
@@ -64,13 +64,13 @@ public struct NonBlockingFileIO: Sendable {
     /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
     ///
     /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
-    /// same ``FileRegion`` in multiple threads.
+    /// same `FileRegion` in multiple threads.
     ///
     /// - parameters:
     ///   - fileRegion: The file region to read.
     ///   - chunkSize: The size of the individual chunks to deliver.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the chunks.
-    ///   - eventLoop: The ``EventLoop`` to call `chunkHandler` on.
+    ///   - eventLoop: The `EventLoop` to call `chunkHandler` on.
     ///   - chunkHandler: Called for every chunk read. The next chunk will be read upon successful completion of the returned `EventLoopFuture`. If the returned `EventLoopFuture` fails, the overall operation is aborted.
     /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `fileHandle` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `fileHandle` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
     @preconcurrency
@@ -90,7 +90,7 @@ public struct NonBlockingFileIO: Sendable {
     }
 
     /// Read `byteCount` bytes in chunks of `chunkSize` bytes from `fileHandle` in ``NonBlockingFileIO``'s private thread
-    /// pool which is separate from any ``EventLoop`` thread.
+    /// pool which is separate from any `EventLoop` thread.
     ///
     /// `chunkHandler` will be called on `eventLoop` for every chunk that was read. Assuming `byteCount` is greater than
     /// zero and there are enough bytes available `chunkHandler` will be called `1 + |_ byteCount / chunkSize _|`
@@ -100,17 +100,17 @@ public struct NonBlockingFileIO: Sendable {
     /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
     ///
     /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses
-    ///         ``FileRegion`` object instead of raw ``NIOFileHandle``s. In case you do want to use raw ``NIOFileHandle``s,
+    ///         `FileRegion` object instead of raw `NIOFileHandle`s. In case you do want to use raw `NIOFileHandle`s,
     ///         please consider using `readChunked(fileHandle:fromOffset:chunkSize:allocator:eventLoop:chunkHandler:)`
     ///         because it doesn't use the file descriptor's seek pointer (which may be shared with other file
     ///         descriptors and even across processes.)
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to read from.
+    ///   - fileHandle: The `NIOFileHandle` to read from.
     ///   - byteCount: The number of bytes to read from `fileHandle`.
     ///   - chunkSize: The size of the individual chunks to deliver.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the chunks.
-    ///   - eventLoop: The ``EventLoop`` to call `chunkHandler` on.
+    ///   - eventLoop: The `EventLoop` to call `chunkHandler` on.
     ///   - chunkHandler: Called for every chunk read. The next chunk will be read upon successful completion of the returned `EventLoopFuture`. If the returned `EventLoopFuture` fails, the overall operation is aborted.
     /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `fileHandle` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `fileHandle` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
     @preconcurrency
@@ -129,7 +129,7 @@ public struct NonBlockingFileIO: Sendable {
     }
 
     /// Read `byteCount` bytes from offset `fileOffset` in chunks of `chunkSize` bytes from `fileHandle` in ``NonBlockingFileIO``'s private thread
-    /// pool which is separate from any ``EventLoop`` thread.
+    /// pool which is separate from any `EventLoop` thread.
     ///
     /// `chunkHandler` will be called on `eventLoop` for every chunk that was read. Assuming `byteCount` is greater than
     /// zero and there are enough bytes available `chunkHandler` will be called `1 + |_ byteCount / chunkSize _|`
@@ -139,17 +139,17 @@ public struct NonBlockingFileIO: Sendable {
     /// The allocation and reading of a subsequent chunk will only be attempted when `chunkHandler` succeeds.
     ///
     /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
-    /// same ``NIOFileHandle`` in multiple threads.
+    /// same `NIOFileHandle` in multiple threads.
     ///
     /// - note: `readChunked(fileRegion:chunkSize:allocator:eventLoop:chunkHandler:)` should be preferred as it uses
-    ///         ``FileRegion`` object instead of raw ``NIOFileHandle``s.
+    ///         `FileRegion` object instead of raw `NIOFileHandle`s.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to read from.
+    ///   - fileHandle: The `NIOFileHandle` to read from.
     ///   - byteCount: The number of bytes to read from `fileHandle`.
     ///   - chunkSize: The size of the individual chunks to deliver.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the chunks.
-    ///   - eventLoop: The ``EventLoop`` to call `chunkHandler` on.
+    ///   - eventLoop: The `EventLoop` to call `chunkHandler` on.
     ///   - chunkHandler: Called for every chunk read. The next chunk will be read upon successful completion of the returned `EventLoopFuture`. If the returned `EventLoopFuture` fails, the overall operation is aborted.
     /// - returns: An `EventLoopFuture` which is the result of the overall operation. If either the reading of `fileHandle` or `chunkHandler` fails, the `EventLoopFuture` will fail too. If the reading of `fileHandle` as well as `chunkHandler` always succeeded, the `EventLoopFuture` will succeed too.
     @preconcurrency
@@ -225,22 +225,22 @@ public struct NonBlockingFileIO: Sendable {
         return promise.futureResult
     }
 
-    /// Read a ``FileRegion`` in ``NonBlockingFileIO``'s private thread pool which is separate from any ``EventLoop`` thread.
+    /// Read a `FileRegion` in ``NonBlockingFileIO``'s private thread pool which is separate from any `EventLoop` thread.
     ///
-    /// The returned ``ByteBuffer`` will not have less than `fileRegion.readableBytes` unless we hit end-of-file in which
-    /// case the ``ByteBuffer`` will contain the bytes available to read.
+    /// The returned `ByteBuffer` will not have less than `fileRegion.readableBytes` unless we hit end-of-file in which
+    /// case the `ByteBuffer` will contain the bytes available to read.
     ///
     /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
-    /// same ``FileRegion`` in multiple threads.
+    /// same `FileRegion` in multiple threads.
     ///
-    /// - note: Only use this function for small enough ``FileRegion``s as it will need to allocate enough memory to hold `fileRegion.readableBytes` bytes.
+    /// - note: Only use this function for small enough `FileRegion`s as it will need to allocate enough memory to hold `fileRegion.readableBytes` bytes.
     /// - note: In most cases you should prefer one of the `readChunked` functions.
     ///
     /// - parameters:
     ///   - fileRegion: The file region to read.
-    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned ``ByteBuffer``.
-    ///   - eventLoop: The ``EventLoop`` to create the returned `EventLoopFuture` from.
-    /// - returns: An `EventLoopFuture` which delivers a ``ByteBuffer`` if the read was successful or a failure on error.
+    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
+    /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
     public func read(fileRegion: FileRegion, allocator: ByteBufferAllocator, eventLoop: EventLoop) -> EventLoopFuture<ByteBuffer> {
         let readableBytes = fileRegion.readableBytes
         return self.read(fileHandle: fileRegion.fileHandle,
@@ -250,24 +250,24 @@ public struct NonBlockingFileIO: Sendable {
                          eventLoop: eventLoop)
     }
 
-    /// Read `byteCount` bytes from `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from any ``EventLoop`` thread.
+    /// Read `byteCount` bytes from `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from any `EventLoop` thread.
     ///
-    /// The returned ``ByteBuffer`` will not have less than `byteCount` bytes unless we hit end-of-file in which
-    /// case the ``ByteBuffer`` will contain the bytes available to read.
+    /// The returned `ByteBuffer` will not have less than `byteCount` bytes unless we hit end-of-file in which
+    /// case the `ByteBuffer` will contain the bytes available to read.
     ///
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
-    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses ``FileRegion`` object instead of
-    ///         raw ``NIOFileHandle``s. In case you do want to use raw ``NIOFileHandle``s,
+    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of
+    ///         raw `NIOFileHandle`s. In case you do want to use raw `NIOFileHandle`s,
     ///         please consider using `read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)`
     ///         because it doesn't use the file descriptor's seek pointer (which may be shared with other file
     ///         descriptors and even across processes.)
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to read.
+    ///   - fileHandle: The `NIOFileHandle` to read.
     ///   - byteCount: The number of bytes to read from `fileHandle`.
-    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned ``ByteBuffer``.
-    ///   - eventLoop: The ``EventLoop`` to create the returned `EventLoopFuture` from.
-    /// - returns: An `EventLoopFuture` which delivers a ``ByteBuffer`` if the read was successful or a failure on error.
+    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
+    /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
     public func read(fileHandle: NIOFileHandle,
                      byteCount: Int,
                      allocator: ByteBufferAllocator,
@@ -280,24 +280,24 @@ public struct NonBlockingFileIO: Sendable {
     }
 
     /// Read `byteCount` bytes starting at `fileOffset` from `fileHandle` in ``NonBlockingFileIO``'s private thread pool
-    /// which is separate from any ``EventLoop`` thread.
+    /// which is separate from any `EventLoop` thread.
     ///
-    /// The returned ``ByteBuffer`` will not have less than `byteCount` bytes unless we hit end-of-file in which
-    /// case the ``ByteBuffer`` will contain the bytes available to read.
+    /// The returned `ByteBuffer` will not have less than `byteCount` bytes unless we hit end-of-file in which
+    /// case the `ByteBuffer` will contain the bytes available to read.
     ///
     /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
     /// same `fileHandle` in multiple threads.
     ///
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
-    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses ``FileRegion`` object instead of raw ``NIOFileHandle``s.
+    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of raw `NIOFileHandle`s.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to read.
+    ///   - fileHandle: The `NIOFileHandle` to read.
     ///   - fileOffset: The offset to read from.
     ///   - byteCount: The number of bytes to read from `fileHandle`.
-    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned ``ByteBuffer``.
-    ///   - eventLoop: The ``EventLoop`` to create the returned `EventLoopFuture` from.
-    /// - returns: An `EventLoopFuture` which delivers a ``ByteBuffer`` if the read was successful or a failure on error.
+    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
+    /// - returns: An `EventLoopFuture` which delivers a `ByteBuffer` if the read was successful or a failure on error.
     public func read(fileHandle: NIOFileHandle,
                      fromOffset fileOffset: Int64,
                      byteCount: Int,
@@ -371,9 +371,9 @@ public struct NonBlockingFileIO: Sendable {
     /// is larger than the current file size, the gap will be filled with zero bytes.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to write to.
+    ///   - fileHandle: The `NIOFileHandle` to write to.
     ///   - size: The new file size in bytes to write.
-    ///   - eventLoop: The ``EventLoop`` to create the returned `EventLoopFuture` from.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
     /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
     public func changeFileSize(fileHandle: NIOFileHandle,
                                size: Int64,
@@ -388,8 +388,8 @@ public struct NonBlockingFileIO: Sendable {
     /// Returns the length of the file in bytes associated with `fileHandle`.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to read from.
-    ///   - eventLoop: The ``EventLoop`` to create the returned `EventLoopFuture` from.
+    ///   - fileHandle: The `NIOFileHandle` to read from.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
     /// - returns: An `EventLoopFuture` which is fulfilled with the length of the file in bytes if the write was successful or fails on error.
     public func readFileSize(fileHandle: NIOFileHandle,
                              eventLoop: EventLoop) -> EventLoopFuture<Int64> {
@@ -403,12 +403,12 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// Write `buffer` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from any ``EventLoop`` thread.
+    /// Write `buffer` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to write to.
-    ///   - buffer: The ``ByteBuffer`` to write.
-    ///   - eventLoop: The ``EventLoop`` to create the returned `EventLoopFuture` from.
+    ///   - fileHandle: The `NIOFileHandle` to write to.
+    ///   - buffer: The `ByteBuffer` to write.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
     /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
     public func write(fileHandle: NIOFileHandle,
                       buffer: ByteBuffer,
@@ -416,13 +416,13 @@ public struct NonBlockingFileIO: Sendable {
         return self.write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer, eventLoop: eventLoop)
     }
 
-    /// Write `buffer` starting from `toOffset` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from any ``EventLoop`` thread.
+    /// Write `buffer` starting from `toOffset` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to write to.
+    ///   - fileHandle: The `NIOFileHandle` to write to.
     ///   - toOffset: The file offset to write to.
-    ///   - buffer: The ``ByteBuffer`` to write.
-    ///   - eventLoop: The ``EventLoop`` to create the returned `EventLoopFuture` from.
+    ///   - buffer: The `ByteBuffer` to write.
+    ///   - eventLoop: The `EventLoop` to create the returned `EventLoopFuture` from.
     /// - returns: An `EventLoopFuture` which is fulfilled if the write was successful or fails on error.
     public func write(fileHandle: NIOFileHandle,
                       toOffset: Int64,
@@ -482,17 +482,17 @@ public struct NonBlockingFileIO: Sendable {
         } while offsetAccumulator < byteCount
     }
 
-    /// Open the file at `path` for reading on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Open the file at `path` for reading on a private thread pool which is separate from any `EventLoop` thread.
     ///
-    /// This function will return (a future) of the ``NIOFileHandle`` associated with the file opened and a ``FileRegion``
-    /// comprising of the whole file. The caller must close the returned ``NIOFileHandle`` when it's no longer needed.
+    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened and a `FileRegion`
+    /// comprising of the whole file. The caller must close the returned `NIOFileHandle` when it's no longer needed.
     ///
-    /// - note: The reason this returns the ``NIOFileHandle`` and the ``FileRegion`` is that both the opening of a file as well as the querying of its size are blocking.
+    /// - note: The reason this returns the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
     ///
     /// - parameters:
     ///     - path: The path of the file to be opened for reading.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
-    /// - returns: An `EventLoopFuture` containing the ``NIOFileHandle`` and the ``FileRegion`` comprising the whole file.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
     public func openFile(path: String, eventLoop: EventLoop) -> EventLoopFuture<(NIOFileHandle, FileRegion)> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
             let fh = try NIOFileHandle(path: path)
@@ -506,17 +506,17 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// Open the file at `path` with specified access mode and POSIX flags on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Open the file at `path` with specified access mode and POSIX flags on a private thread pool which is separate from any `EventLoop` thread.
     ///
-    /// This function will return (a future) of the ``NIOFileHandle`` associated with the file opened.
-    /// The caller must close the returned ``NIOFileHandle`` when it's no longer needed.
+    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened.
+    /// The caller must close the returned `NIOFileHandle` when it's no longer needed.
     ///
     /// - parameters:
     ///     - path: The path of the file to be opened for writing.
     ///     - mode: File access mode.
     ///     - flags: Additional POSIX flags.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
-    /// - returns: An `EventLoopFuture` containing the ``NIOFileHandle``.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - returns: An `EventLoopFuture` containing the `NIOFileHandle`.
     public func openFile(path: String, mode: NIOFileHandle.Mode, flags: NIOFileHandle.Flags = .default, eventLoop: EventLoop) -> EventLoopFuture<NIOFileHandle> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
             return try NIOFileHandle(path: path, mode: mode, flags: flags)
@@ -524,13 +524,13 @@ public struct NonBlockingFileIO: Sendable {
     }
 
 #if !os(Windows)
-    /// Returns information about a file at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Returns information about a file at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - note: If `path` is a symlink, information about the link, not the file it points to.
     ///
     /// - parameters:
     ///     - path: The path of the file to get information about.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing file information.
     public func lstat(path: String, eventLoop: EventLoop) -> EventLoopFuture<stat> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
@@ -540,12 +540,12 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// Creates a symbolic link to a  `destination` file  at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Creates a symbolic link to a  `destination` file  at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
     ///     - path: The path of the link.
     ///     - destination: Target path where this link will point to.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` which is fulfilled if the rename was successful or fails on error.
     public func symlink(path: String, to destination: String, eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
@@ -553,11 +553,11 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// Returns target of the symbolic link at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Returns target of the symbolic link at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
     ///     - path: The path of the link to read.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing link target.
     public func readlink(path: String, eventLoop: EventLoop) -> EventLoopFuture<String> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
@@ -571,11 +571,11 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// Removes symbolic link at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Removes symbolic link at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
     ///     - path: The path of the link to remove.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` which is fulfilled if the rename was successful or fails on error.
     public func unlink(path: String, eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
@@ -638,12 +638,12 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// Creates directory at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Creates directory at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
     ///     - path: The path of the directory to be created.
     ///     - withIntermediateDirectories: Whether intermediate directories should be created.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` which is fulfilled if the rename was successful or fails on error.
     public func createDirectory(path: String, withIntermediateDirectories createIntermediates: Bool = false, mode: NIOPOSIXFileMode, eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
@@ -659,11 +659,11 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// List contents of the directory at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// List contents of the directory at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
     ///     - path: The path of the directory to list the content of.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` containing the directory entries.
     public func listDirectory(path: String, eventLoop: EventLoop) -> EventLoopFuture<[NIODirectoryEntry]> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
@@ -686,12 +686,12 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// Renames the file at `path` to `newName` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Renames the file at `path` to `newName` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
     ///     - path: The path of the file to be renamed.
     ///     - newName: New file name.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` which is fulfilled if the rename was successful or fails on error.
     public func rename(path: String, newName: String, eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
@@ -699,11 +699,11 @@ public struct NonBlockingFileIO: Sendable {
         }
     }
 
-    /// Removes the file at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Removes the file at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
     ///     - path: The path of the file to be removed.
-    ///     - eventLoop: The ``EventLoop`` on which the returned `EventLoopFuture` will fire.
+    ///     - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - returns: An `EventLoopFuture` which is fulfilled if the remove was successful or fails on error.
     public func remove(path: String, eventLoop: EventLoop) -> EventLoopFuture<Void> {
         return self.threadPool.runIfActive(eventLoop: eventLoop) {
@@ -733,20 +733,20 @@ public struct NIODirectoryEntry: Hashable {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NonBlockingFileIO {
-    /// Read a ``FileRegion`` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
+    /// Read a `FileRegion` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
     ///
-    /// The returned ``ByteBuffer`` will not have less than the minimum of `fileRegion.readableBytes` and `UInt32.max` unless we hit 
-    /// end-of-file in which case the ``ByteBuffer`` will contain the bytes available to read.
+    /// The returned `ByteBuffer` will not have less than the minimum of `fileRegion.readableBytes` and `UInt32.max` unless we hit 
+    /// end-of-file in which case the `ByteBuffer` will contain the bytes available to read.
     ///
     /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
-    /// same ``FileRegion`` in multiple threads.
+    /// same `FileRegion` in multiple threads.
     ///
-    /// - note: Only use this function for small enough ``FileRegion``s as it will need to allocate enough memory to hold `fileRegion.readableBytes` bytes.
+    /// - note: Only use this function for small enough `FileRegion`s as it will need to allocate enough memory to hold `fileRegion.readableBytes` bytes.
     /// - note: In most cases you should prefer one of the `readChunked` functions.
     ///
     /// - parameters:
     ///   - fileRegion: The file region to read.
-    ///   - allocator: A ``ByteBufferAllocator`` used to allocate space for the returned ``ByteBuffer``.
+    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
     /// - returns: ByteBuffer.
     public func read(fileRegion: FileRegion, allocator: ByteBufferAllocator) async throws -> ByteBuffer {
         let readableBytes = fileRegion.readableBytes
@@ -760,20 +760,20 @@ extension NonBlockingFileIO {
 
     /// Read `byteCount` bytes from `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
     ///
-    /// The returned ``ByteBuffer`` will not have less than `byteCount` bytes unless we hit end-of-file in which
-    /// case the ``ByteBuffer`` will contain the bytes available to read.
+    /// The returned `ByteBuffer` will not have less than `byteCount` bytes unless we hit end-of-file in which
+    /// case the `ByteBuffer` will contain the bytes available to read.
     ///
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
-    /// - note: ``read(fileRegion:allocator:eventLoop:)`` should be preferred as it uses ``FileRegion`` object instead of
-    ///         raw ``NIOFileHandle``s. In case you do want to use raw ``NIOFileHandle``s,
+    /// - note: ``read(fileRegion:allocator:eventLoop:)`` should be preferred as it uses `FileRegion` object instead of
+    ///         raw `NIOFileHandle`s. In case you do want to use raw `NIOFileHandle`s,
     ///         please consider using ``read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)```
     ///         because it doesn't use the file descriptor's seek pointer (which may be shared with other file
     ///         descriptors and even across processes.)
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to read.
+    ///   - fileHandle: The `NIOFileHandle` to read.
     ///   - byteCount: The number of bytes to read from `fileHandle`.
-    ///   - allocator: A ``ByteBufferAllocator`` used to allocate space for the returned ``ByteBuffer``.
+    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
     /// - returns: ByteBuffer.
     public func read(
         fileHandle: NIOFileHandle,
@@ -791,20 +791,20 @@ extension NonBlockingFileIO {
     /// Read `byteCount` bytes starting at `fileOffset` from `fileHandle` in ``NonBlockingFileIO``'s private thread pool
     /// which is separate from Task pool.
     ///
-    /// The returned ``ByteBuffer`` will not have less than `byteCount` bytes unless we hit end-of-file in which
-    /// case the ``ByteBuffer`` will contain the bytes available to read.
+    /// The returned `ByteBuffer` will not have less than `byteCount` bytes unless we hit end-of-file in which
+    /// case the `ByteBuffer` will contain the bytes available to read.
     ///
     /// This method will not use the file descriptor's seek pointer which means there is no danger of reading from the
     /// same `fileHandle` in multiple threads.
     ///
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
-    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses ``FileRegion`` object instead of raw ``NIOFileHandle``s.
+    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of raw `NIOFileHandle`s.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to read.
+    ///   - fileHandle: The `NIOFileHandle` to read.
     ///   - fileOffset: The offset to read from.
     ///   - byteCount: The number of bytes to read from `fileHandle`.
-    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned ``ByteBuffer``.
+    ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
     /// - returns: ByteBuffer.
     public func read(fileHandle: NIOFileHandle,
                      fromOffset fileOffset: Int64,
@@ -836,7 +836,7 @@ extension NonBlockingFileIO {
     /// is larger than the current file size, the gap will be filled with zero bytes.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to write to.
+    ///   - fileHandle: The `NIOFileHandle` to write to.
     ///   - size: The new file size in bytes to write.
     public func changeFileSize(fileHandle: NIOFileHandle,
                                size: Int64) async throws {
@@ -850,7 +850,7 @@ extension NonBlockingFileIO {
     /// Returns the length of the file associated with `fileHandle`.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to read from.
+    ///   - fileHandle: The `NIOFileHandle` to read from.
     public func readFileSize(fileHandle: NIOFileHandle) async throws -> Int64 {
         return try await self.threadPool.runIfActive {
             return try fileHandle.withUnsafeFileDescriptor { descriptor in
@@ -865,8 +865,8 @@ extension NonBlockingFileIO {
     /// Write `buffer` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to write to.
-    ///   - buffer: The ``ByteBuffer`` to write.
+    ///   - fileHandle: The `NIOFileHandle` to write to.
+    ///   - buffer: The `ByteBuffer` to write.
     public func write(fileHandle: NIOFileHandle,
                       buffer: ByteBuffer) async throws {
         return try await self.write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer)
@@ -875,9 +875,9 @@ extension NonBlockingFileIO {
     /// Write `buffer` starting from `toOffset` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
     ///
     /// - parameters:
-    ///   - fileHandle: The ``NIOFileHandle`` to write to.
+    ///   - fileHandle: The `NIOFileHandle` to write to.
     ///   - toOffset: The file offset to write to.
-    ///   - buffer: The ``ByteBuffer`` to write.
+    ///   - buffer: The `ByteBuffer` to write.
     public func write(fileHandle: NIOFileHandle,
                       toOffset: Int64,
                       buffer: ByteBuffer) async throws {
@@ -902,7 +902,7 @@ extension NonBlockingFileIO {
     ///
     /// The open file operation runs on a private thread pool which is separate from Task pool.
     ///    
-    /// - note: The reason this provides the ``NIOFileHandle`` and the ``FileRegion`` is that both the opening of a file as well as 
+    /// - note: The reason this provides the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as 
     /// the querying of its size are blocking.
     ///
     /// - parameters:
@@ -997,7 +997,7 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Removes symbolic link at `path` on a private thread pool which is separate from any ``EventLoop`` thread.
+    /// Removes symbolic link at `path` on a private thread pool which is separate from any `EventLoop` thread.
     ///
     /// - parameters:
     ///     - path: The path of the link to remove.
