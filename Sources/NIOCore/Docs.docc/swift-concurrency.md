@@ -192,7 +192,7 @@ let clientChannel = try await ClientBootstrap(group: eventLoopGroup)
     }
 
 try await clientChannel.withInboundOutbound { inbound, outbound in
-    outbound.write(ByteBuffer(string: "hello"))
+    try await outbound.write(ByteBuffer(string: "hello"))
 
     for try await inboundData in inbound {
         print(inboundData)

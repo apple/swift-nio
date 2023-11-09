@@ -749,8 +749,7 @@ extension NIOAsyncWriter {
 
                     return .callDidTerminate(delegate)
                 } else {
-                    assertionFailure("Deinited NIOAsyncWriter without finishing")
-                    return .none
+                    preconditionFailure("Deinited NIOAsyncWriter without finishing")
                 }
 
             case .streaming(_, _, _, let suspendedYields, let delegate):
@@ -767,8 +766,7 @@ extension NIOAsyncWriter {
 
                     return .callDidTerminate(delegate)
                 } else {
-                    assertionFailure("Deinited NIOAsyncWriter without finishing")
-                    return .none
+                    preconditionFailure("Deinited NIOAsyncWriter without finishing")
                 }
 
             case .finished, .writerFinished:

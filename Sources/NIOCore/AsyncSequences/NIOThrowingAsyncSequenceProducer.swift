@@ -96,8 +96,8 @@ public struct NIOThrowingAsyncSequenceProducer<
     ///   - elementType: The element type of the sequence.
     ///   - failureType: The failure type of the sequence. Must be `Swift.Error`
     ///   - backPressureStrategy: The back-pressure strategy of the sequence.
-    ///   - finishOnDeinit: Indicates if ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called on deinit. We do not recommend to rely on
-    ///   deinit based resource tear down.
+    ///   - finishOnDeinit: Indicates if ``NIOThrowingAsyncSequenceProducer/Source/finish()`` should be called on deinit of the.
+    ///   We do not recommend to rely on  deinit based resource tear down.
     ///   - delegate: The delegate of the sequence
     /// - Returns: A ``NIOThrowingAsyncSequenceProducer/Source`` and a ``NIOThrowingAsyncSequenceProducer``.
     @inlinable
@@ -887,8 +887,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
                     return .none
                 } else {
-                    assertionFailure("Deinited NIOAsyncSequenceProducer.Source without finishing it first")
-                    return .none
+                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without finishing it first")
                 }
 
             case .streaming(_, let buffer, .some(let continuation), _, let iteratorInitialized):
@@ -902,8 +901,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
                     return .resumeContinuationWithFailureAndCallDidTerminate(continuation, nil)
                 } else {
-                    assertionFailure("Deinited NIOAsyncSequenceProducer.Source without finishing it first")
-                    return .none
+                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without finishing it first")
                 }
 
             case .streaming(_, let buffer, continuation: .none, _, let iteratorInitialized):
@@ -916,8 +914,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
                     return .none
                 } else {
-                    assertionFailure("Deinited NIOAsyncSequenceProducer.Source without finishing it first")
-                    return .none
+                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without finishing it first")
                 }
 
             case .cancelled, .sourceFinished, .finished:
