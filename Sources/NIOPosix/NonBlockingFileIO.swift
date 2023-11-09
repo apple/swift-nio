@@ -920,10 +920,14 @@ extension NonBlockingFileIO {
                 throw error
             }
         }
-        defer {
-            try? file.wrappedValue.handle.close()
+        do {
+            let result = try await body(file.wrappedValue.handle, file.wrappedValue.region)
+            try file.wrappedValue.handle.close()
+            return result
+        } catch {
+            try file.wrappedValue.handle.close()
+            throw error
         }
-        return try await body(file.wrappedValue.handle, file.wrappedValue.region)
     }
 
     /// Open file at `path` on a private thread pool, run an operation given the file handle and region and then close the file handle.
@@ -946,10 +950,14 @@ extension NonBlockingFileIO {
         let fileHandle = try await self.threadPool.runIfActive {
             return try UnsafeTransfer(NIOFileHandle(path: path, mode: mode, flags: flags))
         }
-        defer {
-            try? fileHandle.wrappedValue.close()
+        do {
+            let result = try await body(fileHandle.wrappedValue)
+            try fileHandle.wrappedValue.close()
+            return result
+        } catch {
+            try fileHandle.wrappedValue.close()
+            throw error
         }
-        return try await body(fileHandle.wrappedValue)
     }
 
 #if !os(Windows)
