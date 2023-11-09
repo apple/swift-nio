@@ -256,9 +256,9 @@ public struct NonBlockingFileIO: Sendable {
     /// case the `ByteBuffer` will contain the bytes available to read.
     ///
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
-    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of
+    /// - note: ``read(fileRegion:allocator:eventLoop:)`` should be preferred as it uses `FileRegion` object instead of
     ///         raw `NIOFileHandle`s. In case you do want to use raw `NIOFileHandle`s,
-    ///         please consider using `read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)`
+    ///         please consider using ``read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)``
     ///         because it doesn't use the file descriptor's seek pointer (which may be shared with other file
     ///         descriptors and even across processes.)
     ///
@@ -289,7 +289,7 @@ public struct NonBlockingFileIO: Sendable {
     /// same `fileHandle` in multiple threads.
     ///
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
-    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of raw `NIOFileHandle`s.
+    /// - note: ``read(fileRegion:allocator:eventLoop:)`` should be preferred as it uses `FileRegion` object instead of raw `NIOFileHandle`s.
     ///
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to read.
@@ -766,7 +766,7 @@ extension NonBlockingFileIO {
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
     /// - note: ``read(fileRegion:allocator:eventLoop:)`` should be preferred as it uses `FileRegion` object instead of
     ///         raw `NIOFileHandle`s. In case you do want to use raw `NIOFileHandle`s,
-    ///         please consider using ``read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)```
+    ///         please consider using ``read(fileHandle:fromOffset:byteCount:allocator:eventLoop:)``
     ///         because it doesn't use the file descriptor's seek pointer (which may be shared with other file
     ///         descriptors and even across processes.)
     ///
@@ -798,7 +798,7 @@ extension NonBlockingFileIO {
     /// same `fileHandle` in multiple threads.
     ///
     /// - note: Only use this function for small enough `byteCount`s as it will need to allocate enough memory to hold `byteCount` bytes.
-    /// - note: `read(fileRegion:allocator:eventLoop:)` should be preferred as it uses `FileRegion` object instead of raw `NIOFileHandle`s.
+    /// - note: ``read(fileRegion:allocator:eventLoop:)`` should be preferred as it uses `FileRegion` object instead of raw `NIOFileHandle`s.
     ///
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to read.
