@@ -1330,7 +1330,7 @@ extension NonBlockingFileIOTest {
 
     func testAsyncOpeningFilesForWriting() async throws {
         try await withTemporaryDirectory { dir in
-            try await self.fileIO!.withOpenFile(
+            try await self.fileIO!.withFileHandle(
                 path: "\(dir)/file",
                 mode: .write,
                 flags: .allowFileCreation()
@@ -1341,7 +1341,7 @@ extension NonBlockingFileIOTest {
     func testAsyncOpeningFilesForWritingFailsIfWeDontAllowItExplicitly() async throws {
         do {
             try await withTemporaryDirectory { dir in
-                try await self.fileIO!.withOpenFile(
+                try await self.fileIO!.withFileHandle(
                     path: "\(dir)/file",
                     mode: .write,
                     flags: .default
@@ -1355,7 +1355,7 @@ extension NonBlockingFileIOTest {
 
     func testAsyncOpeningFilesForWritingDoesNotAllowReading() async throws {
         try await withTemporaryDirectory { dir in
-            try await self.fileIO!.withOpenFile(
+            try await self.fileIO!.withFileHandle(
                 path: "\(dir)/file",
                 mode: .write,
                 flags: .allowFileCreation()
@@ -1373,7 +1373,7 @@ extension NonBlockingFileIOTest {
 
     func testAsyncOpeningFilesForWritingAndReading() async throws {
         try await withTemporaryDirectory { dir in
-            try await self.fileIO!.withOpenFile(
+            try await self.fileIO!.withFileHandle(
                 path: "\(dir)/file",
                 mode: [.write, .read],
                 flags: .allowFileCreation()
@@ -1393,7 +1393,7 @@ extension NonBlockingFileIOTest {
         try await withTemporaryDirectory { dir in
             // open 1 + write
             do {
-                try await self.fileIO.withOpenFile(
+                try await self.fileIO.withFileHandle(
                     path: "\(dir)/file",
                     mode: [.write, .read],
                     flags: .allowFileCreation()
@@ -1410,7 +1410,7 @@ extension NonBlockingFileIOTest {
 
             // open 2 + write again + read
             do {
-                try await self.fileIO!.withOpenFile(
+                try await self.fileIO!.withFileHandle(
                     path: "\(dir)/file",
                     mode: [.write, .read],
                     flags: .default
@@ -1443,7 +1443,7 @@ extension NonBlockingFileIOTest {
         try await withTemporaryDirectory { dir in
             // open 1 + write
             do {
-                try await self.fileIO!.withOpenFile(
+                try await self.fileIO!.withFileHandle(
                     path: "\(dir)/file",
                     mode: [.write, .read],
                     flags: .allowFileCreation()
@@ -1459,7 +1459,7 @@ extension NonBlockingFileIOTest {
             }
             // open 2 (with truncation) + write again + read
             do {
-                try await self.fileIO!.withOpenFile(
+                try await self.fileIO!.withFileHandle(
                     path: "\(dir)/file",
                     mode: [.write, .read],
                     flags: .posix(flags: O_TRUNC, mode: 0)
@@ -1587,7 +1587,7 @@ extension NonBlockingFileIOTest {
     func testAsyncListDirectory() async throws {
         try await withTemporaryDirectory { path in
             let file = "\(path)/file"
-            try await self.fileIO.withOpenFile(
+            try await self.fileIO.withFileHandle(
                 path: file,
                 mode: .write,
                 flags: .allowFileCreation()
@@ -1601,7 +1601,7 @@ extension NonBlockingFileIOTest {
     func testAsyncRename() async throws {
         try await withTemporaryDirectory { path in
             let file = "\(path)/file"
-            try await self.fileIO.withOpenFile(
+            try await self.fileIO.withFileHandle(
                 path: file,
                 mode: .write,
                 flags: .allowFileCreation()
@@ -1628,7 +1628,7 @@ extension NonBlockingFileIOTest {
     func testAsyncRemove() async throws {
         try await withTemporaryDirectory { path in
             let file = "\(path)/file"
-            try await self.fileIO.withOpenFile(
+            try await self.fileIO.withFileHandle(
                 path: file,
                 mode: .write,
                 flags: .allowFileCreation()

@@ -941,7 +941,7 @@ extension NonBlockingFileIO {
     ///     - mode: File access mode.
     ///     - flags: Additional POSIX flags.
     /// - returns: NIOFileHandle`.
-    public func withOpenFile<Result>(
+    public func withFileHandle<Result>(
         path: String, 
         mode: NIOFileHandle.Mode, 
         flags: NIOFileHandle.Flags = .default, 
