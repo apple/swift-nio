@@ -340,7 +340,7 @@ extension NIOAsyncWriter {
             @inlinable
             deinit {
                 // We need to call finish here to resume any suspended continuation.
-                self._storage.sinkFinish(error: nil)
+                self._storage.sinkDeinitialized()
             }
         }
 

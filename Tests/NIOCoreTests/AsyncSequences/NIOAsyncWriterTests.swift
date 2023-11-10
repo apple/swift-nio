@@ -547,20 +547,43 @@ final class NIOAsyncWriterTests: XCTestCase {
     // MARK: - Sink Finish
 
     func testSinkFinish_whenInitial() async throws {
-        self.sink = nil
+        var newWriter: NIOAsyncWriter<String, MockAsyncWriterDelegate>.NewWriter? = NIOAsyncWriter.makeWriter(
+            elementType: String.self,
+            isWritable: true,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        var sink: NIOAsyncWriter<String, MockAsyncWriterDelegate>.Sink? = newWriter!.sink
+        let writer = newWriter!.writer
+        newWriter = nil
 
+        sink = nil
+
+        XCTAssertNil(sink)
+        XCTAssertNotNil(writer)
         XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
     }
 
     func testSinkFinish_whenStreaming() async throws {
+        var newWriter: NIOAsyncWriter<String, MockAsyncWriterDelegate>.NewWriter? = NIOAsyncWriter.makeWriter(
+            elementType: String.self,
+            isWritable: true,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        var sink: NIOAsyncWriter<String, MockAsyncWriterDelegate>.Sink? = newWriter!.sink
+        let writer = newWriter!.writer
+        newWriter = nil
+
         Task { [writer] in
-            try await writer!.yield("message1")
+            try await writer.yield("message1")
         }
 
         try await Task.sleep(nanoseconds: 1_000_000)
 
-        self.sink = nil
+        sink = nil
 
+        XCTAssertNil(sink)
         XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
     }
 
