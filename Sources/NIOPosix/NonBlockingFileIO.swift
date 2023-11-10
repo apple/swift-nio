@@ -731,9 +731,8 @@ public struct NIODirectoryEntry: Hashable {
 }
 #endif
 
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NonBlockingFileIO {
-    /// Read a `FileRegion` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
+    /// Read a `FileRegion` in ``NonBlockingFileIO``'s private thread pool.
     ///
     /// The returned `ByteBuffer` will not have less than the minimum of `fileRegion.readableBytes` and `UInt32.max` unless we hit 
     /// end-of-file in which case the `ByteBuffer` will contain the bytes available to read.
@@ -748,6 +747,7 @@ extension NonBlockingFileIO {
     ///   - fileRegion: The file region to read.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
     /// - returns: ByteBuffer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func read(fileRegion: FileRegion, allocator: ByteBufferAllocator) async throws -> ByteBuffer {
         let readableBytes = fileRegion.readableBytes
         return try await self.read(
@@ -758,7 +758,7 @@ extension NonBlockingFileIO {
         )
     }
 
-    /// Read `byteCount` bytes from `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
+    /// Read `byteCount` bytes from `fileHandle` in ``NonBlockingFileIO``'s private thread pool.
     ///
     /// The returned `ByteBuffer` will not have less than `byteCount` bytes unless we hit end-of-file in which
     /// case the `ByteBuffer` will contain the bytes available to read.
@@ -775,6 +775,7 @@ extension NonBlockingFileIO {
     ///   - byteCount: The number of bytes to read from `fileHandle`.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
     /// - returns: ByteBuffer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func read(
         fileHandle: NIOFileHandle,
         byteCount: Int,
@@ -789,7 +790,7 @@ extension NonBlockingFileIO {
     }
 
     /// Read `byteCount` bytes starting at `fileOffset` from `fileHandle` in ``NonBlockingFileIO``'s private thread pool
-    /// which is separate from Task pool.
+    ///.
     ///
     /// The returned `ByteBuffer` will not have less than `byteCount` bytes unless we hit end-of-file in which
     /// case the `ByteBuffer` will contain the bytes available to read.
@@ -806,6 +807,7 @@ extension NonBlockingFileIO {
     ///   - byteCount: The number of bytes to read from `fileHandle`.
     ///   - allocator: A `ByteBufferAllocator` used to allocate space for the returned `ByteBuffer`.
     /// - returns: ByteBuffer.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func read(fileHandle: NIOFileHandle,
                      fromOffset fileOffset: Int64,
                      byteCount: Int,
@@ -816,6 +818,7 @@ extension NonBlockingFileIO {
                           allocator: allocator)
     }
 
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     private func read0(fileHandle: NIOFileHandle,
                        fromOffset: Int64?, // > 2 GB offset is reasonable on 32-bit systems
                        byteCount rawByteCount: Int,
@@ -838,6 +841,7 @@ extension NonBlockingFileIO {
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to write to.
     ///   - size: The new file size in bytes to write.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func changeFileSize(fileHandle: NIOFileHandle,
                                size: Int64) async throws {
         return try await self.threadPool.runIfActive {
@@ -851,6 +855,7 @@ extension NonBlockingFileIO {
     ///
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to read from.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func readFileSize(fileHandle: NIOFileHandle) async throws -> Int64 {
         return try await self.threadPool.runIfActive {
             return try fileHandle.withUnsafeFileDescriptor { descriptor in
@@ -862,28 +867,31 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Write `buffer` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
+    /// Write `buffer` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool.
     ///
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to write to.
     ///   - buffer: The `ByteBuffer` to write.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func write(fileHandle: NIOFileHandle,
                       buffer: ByteBuffer) async throws {
         return try await self.write0(fileHandle: fileHandle, toOffset: nil, buffer: buffer)
     }
 
-    /// Write `buffer` starting from `toOffset` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool which is separate from Task pool.
+    /// Write `buffer` starting from `toOffset` to `fileHandle` in ``NonBlockingFileIO``'s private thread pool.
     ///
     /// - parameters:
     ///   - fileHandle: The `NIOFileHandle` to write to.
     ///   - toOffset: The file offset to write to.
     ///   - buffer: The `ByteBuffer` to write.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func write(fileHandle: NIOFileHandle,
                       toOffset: Int64,
                       buffer: ByteBuffer) async throws {
         return try await self.write0(fileHandle: fileHandle, toOffset: toOffset, buffer: buffer)
     }
 
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     private func write0(fileHandle: NIOFileHandle,
                         toOffset: Int64?,
                         buffer: ByteBuffer) async throws {
@@ -900,7 +908,7 @@ extension NonBlockingFileIO {
 
     /// Open file at `path` on a private thread pool, run an operation given the file handle and region and then close the file handle.
     ///
-    /// The open file operation runs on a private thread pool which is separate from Task pool.
+    /// The open file operation runs on a private thread pool.
     ///    
     /// - note: The reason this provides the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as 
     /// the querying of its size are blocking.
@@ -909,7 +917,11 @@ extension NonBlockingFileIO {
     ///     - path: The path of the file to be opened for reading.
     ///     - body: operation to run with file handle and region
     /// - returns: return value of operation
-    public func withOpenFile<Result>(path: String, _ body: (NIOFileHandle, FileRegion) async throws -> Result) async throws -> Result {
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    public func withOpenFile<Result>(
+        path: String, 
+        _ body: (_ fileHandle: NIOFileHandle, _ fileRegion: FileRegion) async throws -> Result
+    ) async throws -> Result {
         let file = try await self.threadPool.runIfActive {
             let fh = try NIOFileHandle(path: path)
             do {
@@ -920,19 +932,20 @@ extension NonBlockingFileIO {
                 throw error
             }
         }
+        let result: Result
         do {
-            let result = try await body(file.wrappedValue.handle, file.wrappedValue.region)
-            try file.wrappedValue.handle.close()
-            return result
+            result = try await body(file.wrappedValue.handle, file.wrappedValue.region)
         } catch {
             try file.wrappedValue.handle.close()
             throw error
         }
+        try file.wrappedValue.handle.close()
+        return result
     }
 
     /// Open file at `path` on a private thread pool, run an operation given the file handle and region and then close the file handle.
     ///
-    /// The open file operation runs on a private thread pool which is separate from Task pool.
+    /// The open file operation runs on a private thread pool.
     ///    
     /// This function will return the result of the operation.
     ///
@@ -941,6 +954,7 @@ extension NonBlockingFileIO {
     ///     - mode: File access mode.
     ///     - flags: Additional POSIX flags.
     /// - returns: NIOFileHandle`.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func withFileHandle<Result>(
         path: String, 
         mode: NIOFileHandle.Mode, 
@@ -950,25 +964,27 @@ extension NonBlockingFileIO {
         let fileHandle = try await self.threadPool.runIfActive {
             return try UnsafeTransfer(NIOFileHandle(path: path, mode: mode, flags: flags))
         }
+        let result: Result
         do {
-            let result = try await body(fileHandle.wrappedValue)
-            try fileHandle.wrappedValue.close()
-            return result
+            result = try await body(fileHandle.wrappedValue)
         } catch {
             try fileHandle.wrappedValue.close()
             throw error
         }
+        try fileHandle.wrappedValue.close()
+        return result
     }
 
 #if !os(Windows)
 
-    /// Returns information about a file at `path` on a private thread pool which is separate from Task pool.
+    /// Returns information about a file at `path` on a private thread pool.
     ///
     /// - note: If `path` is a symlink, information about the link, not the file it points to.
     ///
     /// - parameters:
     ///     - path: The path of the file to get information about.
     /// - returns: file information.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func lstat(path: String) async throws -> stat {
         return try await self.threadPool.runIfActive {
             var s = stat()
@@ -977,22 +993,24 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Creates a symbolic link to a  `destination` file  at `path` on a private thread pool which is separate from Task pool.
+    /// Creates a symbolic link to a  `destination` file  at `path` on a private thread pool.
     ///
     /// - parameters:
     ///     - path: The path of the link.
     ///     - destination: Target path where this link will point to.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func symlink(path: String, to destination: String) async throws {
         return try await self.threadPool.runIfActive {
             try Posix.symlink(pathname: path, destination: destination)
         }
     }
 
-    /// Returns target of the symbolic link at `path` on a private thread pool which is separate from Task pool.
+    /// Returns target of the symbolic link at `path` on a private thread pool.
     ///
     /// - parameters:
     ///     - path: The path of the link to read.
     /// - returns: link target.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func readlink(path: String) async throws -> String {
         return try await self.threadPool.runIfActive {
             let maxLength = Int(PATH_MAX)
@@ -1009,6 +1027,7 @@ extension NonBlockingFileIO {
     ///
     /// - parameters:
     ///     - path: The path of the link to remove.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func unlink(path: String) async throws {
         return try await self.threadPool.runIfActive {
             try Posix.unlink(pathname: path)
@@ -1016,11 +1035,12 @@ extension NonBlockingFileIO {
     }
 
 
-    /// Creates directory at `path` on a private thread pool which is separate from Task pool.
+    /// Creates directory at `path` on a private thread pool.
     ///
     /// - parameters:
     ///     - path: The path of the directory to be created.
     ///     - withIntermediateDirectories: Whether intermediate directories should be created.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func createDirectory(path: String, withIntermediateDirectories createIntermediates: Bool = false, mode: NIOPOSIXFileMode) async throws {
         return try await self.threadPool.runIfActive {
             if createIntermediates {
@@ -1035,11 +1055,12 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// List contents of the directory at `path` on a private thread pool which is separate from Task pool.
+    /// List contents of the directory at `path` on a private thread pool.
     ///
     /// - parameters:
     ///     - path: The path of the directory to list the content of.
     /// - returns: The directory entries.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func listDirectory(path: String) async throws -> [NIODirectoryEntry] {
         return try await self.threadPool.runIfActive {
             let dir = try Posix.opendir(pathname: path)
@@ -1061,21 +1082,23 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Renames the file at `path` to `newName` on a private thread pool which is separate from Task pool.
+    /// Renames the file at `path` to `newName` on a private thread pool.
     ///
     /// - parameters:
     ///     - path: The path of the file to be renamed.
     ///     - newName: New file name.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func rename(path: String, newName: String) async throws {
         return try await self.threadPool.runIfActive() {
             try Posix.rename(pathname: path, newName: newName)
         }
     }
 
-    /// Removes the file at `path` on a private thread pool which is separate from Task pool.
+    /// Removes the file at `path` on a private thread pool.
     ///
     /// - parameters:
     ///     - path: The path of the file to be removed.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func remove(path: String) async throws {
         return try await self.threadPool.runIfActive() {
             try Posix.remove(pathname: path)
