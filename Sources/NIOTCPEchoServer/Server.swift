@@ -64,7 +64,7 @@ struct Server {
         // the results of the group we need the group to automatically discard them; otherwise, this
         // would result in a memory leak over time.
         try await withThrowingDiscardingTaskGroup { group in
-            try await channel.withInbound { inbound in
+            try await channel.executeThenCloseChannel { inbound in
                 for try await connectionChannel in inbound {
                     group.addTask {
                         print("Handling new connection")
@@ -82,7 +82,7 @@ struct Server {
         // We do this since we don't want to tear down the whole server when a single connection
         // encounters an error.
         do {
-            try await channel.withInboundOutbound { inbound, outbound in
+            try await channel.executeThenCloseChannel { inbound, outbound in
                 for try await inboundData in inbound {
                     print("Received request (\(inboundData))")
                     try await outbound.write(inboundData)

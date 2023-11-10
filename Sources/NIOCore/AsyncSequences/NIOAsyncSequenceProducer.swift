@@ -244,39 +244,20 @@ extension NIOAsyncSequenceProducer {
     /// This type allows the producer to synchronously `yield` new elements to the ``NIOAsyncSequenceProducer``
     /// and to `finish` the sequence.
     public struct Source {
-        /// This class is needed to hook the deinit to observe once all references to the ``NIOAsyncSequenceProducer/Source`` are dropped.
-        ///
-        /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
         @usableFromInline
-        /* fileprivate */ internal final class InternalClass: Sendable {
-            @usableFromInline
-            typealias ThrowingSource = NIOThrowingAsyncSequenceProducer<
-                Element,
-                Never,
-                Strategy,
-                Delegate
-            >.Source
-
-            @usableFromInline
-            /* fileprivate */ internal let _throwingSource: ThrowingSource
-
-            @inlinable
-            init(throwingSource: ThrowingSource) {
-                self._throwingSource = throwingSource
-            }
-        }
+        typealias ThrowingSource = NIOThrowingAsyncSequenceProducer<
+            Element,
+            Never,
+            Strategy,
+            Delegate
+        >.Source
 
         @usableFromInline
-        /* private */ internal let _internalClass: InternalClass
+        /* private */ internal var _throwingSource: ThrowingSource
 
         @usableFromInline
-        /* private */ internal var _throwingSource: InternalClass.ThrowingSource {
-            self._internalClass._throwingSource
-        }
-
-        @usableFromInline
-        /* fileprivate */ internal init(throwingSource: InternalClass.ThrowingSource) {
-            self._internalClass = .init(throwingSource: throwingSource)
+        /* fileprivate */ internal init(throwingSource: ThrowingSource) {
+            self._throwingSource = throwingSource
         }
 
         /// The result of a call to ``NIOAsyncSequenceProducer/Source/yield(_:)``.

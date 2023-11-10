@@ -76,12 +76,12 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     /// The stream of inbound messages.
     ///
     /// - Important: The `inbound` stream is a unicast `AsyncSequence` and only one iterator can be created.
-    @available(*, deprecated, message: "Use the withInboundOutbound scoped method instead.")
+    @available(*, deprecated, message: "Use the executeThenCloseChannel scoped method instead.")
     public var inbound: NIOAsyncChannelInboundStream<Inbound> {
         self._inbound
     }
     /// The writer for writing outbound messages.
-    @available(*, deprecated, message: "Use the withInboundOutbound scoped method instead.")
+    @available(*, deprecated, message: "Use the executeThenCloseChannel scoped method instead.")
     public var outbound: NIOAsyncChannelOutboundWriter<Outbound> {
         self._outbound
     }
@@ -182,7 +182,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
     ///
     /// - Parameter body: A closure that gets scoped access to the inbound and outbound.
-    public func withInboundOutbound<Result>(
+    public func executeThenCloseChannel<Result>(
         _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>, _ outbound: NIOAsyncChannelOutboundWriter<Outbound>) async throws -> Result
     ) async throws -> Result {
         let result: Result
@@ -215,10 +215,10 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
     ///
     /// - Parameter body: A closure that gets scoped access to the inbound.
-    public func withInbound<Result>(
+    public func executeThenCloseChannel<Result>(
         _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>) async throws -> Result
     ) async throws -> Result where Outbound == Never{
-        try await self.withInboundOutbound { inbound, _ in
+        try await self.executeThenCloseChannel { inbound, _ in
             try await body(inbound)
         }
     }
