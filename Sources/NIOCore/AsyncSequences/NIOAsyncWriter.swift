@@ -749,7 +749,7 @@ extension NIOAsyncWriter {
 
                     return .callDidTerminate(delegate)
                 } else {
-                    preconditionFailure("Deinited NIOAsyncWriter without finishing")
+                    preconditionFailure("Deinited NIOAsyncWriter without calling writer.finish()")
                 }
 
             case .streaming(_, _, _, let suspendedYields, let delegate):
@@ -766,7 +766,7 @@ extension NIOAsyncWriter {
 
                     return .callDidTerminate(delegate)
                 } else {
-                    preconditionFailure("Deinited NIOAsyncWriter without finishing")
+                    preconditionFailure("Deinited NIOAsyncWriter without calling writer.finish()")
                 }
 
             case .finished, .writerFinished:
@@ -785,21 +785,21 @@ extension NIOAsyncWriter {
                 if self.finishOnDeinit {
                     return self.sinkFinish(error: nil)
                 } else {
-                    preconditionFailure("Deinited NIOAsyncWriter.Sink without finishing")
+                    preconditionFailure("Deinited NIOAsyncWriter.Sink without calling sink.finish()")
                 }
 
             case .streaming(_, _, _, _, _):
                 if self.finishOnDeinit {
                     return self.sinkFinish(error: nil)
                 } else {
-                    preconditionFailure("Deinited NIOAsyncWriter.Sink without finishing")
+                    preconditionFailure("Deinited NIOAsyncWriter.Sink without calling sink.finish()")
                 }
 
             case .writerFinished:
                 if self.finishOnDeinit {
                     return self.sinkFinish(error: nil)
                 } else {
-                    preconditionFailure("Deinited NIOAsyncWriter.Sink without finishing")
+                    preconditionFailure("Deinited NIOAsyncWriter.Sink without calling sink.finish()")
                 }
 
             case .finished:

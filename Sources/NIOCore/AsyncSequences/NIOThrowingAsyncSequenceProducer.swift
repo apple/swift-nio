@@ -887,7 +887,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
                     return .none
                 } else {
-                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without finishing it first")
+                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without calling source.finish()")
                 }
 
             case .streaming(_, let buffer, .some(let continuation), _, let iteratorInitialized):
@@ -901,7 +901,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
                     return .resumeContinuationWithFailureAndCallDidTerminate(continuation, nil)
                 } else {
-                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without finishing it first")
+                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without calling source.finish()")
                 }
 
             case .streaming(_, let buffer, continuation: .none, _, let iteratorInitialized):
@@ -914,7 +914,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
                     return .none
                 } else {
-                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without finishing it first")
+                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without calling source.finish()")
                 }
 
             case .cancelled, .sourceFinished, .finished:
