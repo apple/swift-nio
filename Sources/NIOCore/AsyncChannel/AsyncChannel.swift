@@ -183,7 +183,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     ///
     /// - Parameter body: A closure that gets scoped access to the inbound and outbound.
     public func withInboundOutbound<Result>(
-        _ body: (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) async throws -> Result
+        _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>, _ outbound: NIOAsyncChannelOutboundWriter<Outbound>) async throws -> Result
     ) async throws -> Result {
         let result: Result
         do {
@@ -216,7 +216,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     ///
     /// - Parameter body: A closure that gets scoped access to the inbound.
     public func withInbound<Result>(
-        _ body: (NIOAsyncChannelInboundStream<Inbound>) async throws -> Result
+        _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>) async throws -> Result
     ) async throws -> Result where Outbound == Never{
         try await self.withInboundOutbound { inbound, _ in
             try await body(inbound)
