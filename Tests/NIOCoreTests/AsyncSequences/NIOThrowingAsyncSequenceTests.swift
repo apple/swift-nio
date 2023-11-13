@@ -41,6 +41,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             elementType: Int.self,
             failureType: Error.self,
             backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: false,
             delegate: self.delegate
         )
         self.source = result.source
@@ -51,6 +52,8 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         self.backPressureStrategy = nil
         self.delegate = nil
         self.sequence = nil
+        self.source.finish()
+        self.source = nil
 
         super.tearDown()
     }
@@ -383,39 +386,86 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     // MARK: - Source Deinited
 
     func testSourceDeinited_whenInitial() async {
-        self.source = nil
+        var newSequence: NIOThrowingAsyncSequenceProducer<
+            Int,
+            any Error,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sequence = newSequence?.sequence
+        var source = newSequence?.source
+        newSequence = nil
+
+        source = nil
+        
+        XCTAssertNil(source)
+        XCTAssertNotNil(sequence)
     }
 
     func testSourceDeinited_whenStreaming_andSuspended() async throws {
+        var newSequence: NIOThrowingAsyncSequenceProducer<
+            Int,
+            any Error,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sequence = newSequence?.sequence
+        var source = newSequence?.source
+        newSequence = nil
+
         // We are registering our demand and sleeping a bit to make
         // sure the other child task runs when the demand is registered
-        let sequence = try XCTUnwrap(self.sequence)
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                let element = try await sequence.first { _ in true }
+                let element = try await sequence!.first { _ in true }
                 return element
             }
 
             try await Task.sleep(nanoseconds: 1_000_000)
 
-            self.source = nil
+            source = nil
 
             return try await group.next() ?? nil
         }
 
         XCTAssertEqual(element, nil)
+        XCTAssertNil(source)
         XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
-        _ = self.source.yield(contentsOf: [])
+        var newSequence: NIOThrowingAsyncSequenceProducer<
+            Int,
+            any Error,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sequence = newSequence?.sequence
+        var source = newSequence?.source
+        newSequence = nil
 
-        self.source = nil
+        _ = source!.yield(contentsOf: [])
 
-        let sequence = try XCTUnwrap(self.sequence)
+        source = nil
+
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence.first { _ in true }
+                return try await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -426,14 +476,28 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
-        _ = self.source.yield(contentsOf: [1])
+        var newSequence: NIOThrowingAsyncSequenceProducer<
+            Int,
+            any Error,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sequence = newSequence?.sequence
+        var source = newSequence?.source
+        newSequence = nil
 
-        self.source = nil
+        _ = source!.yield(contentsOf: [1])
 
-        let sequence = try XCTUnwrap(self.sequence)
+        source = nil
+
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence.first { _ in true }
+                return try await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil
