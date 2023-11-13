@@ -68,7 +68,7 @@ struct Client {
                 }
             }
 
-        try await channel.executeThenCloseChannel { inbound, outbound in
+        try await channel.executeThenClose { inbound, outbound in
             print("Connection(\(number)): Writing request")
             try await outbound.write("Hello on connection \(number)")
 

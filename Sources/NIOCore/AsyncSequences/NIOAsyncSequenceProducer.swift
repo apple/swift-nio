@@ -139,7 +139,7 @@ public struct NIOAsyncSequenceProducer<
     /// - Parameters:
     ///   - elementType: The element type of the sequence.
     ///   - backPressureStrategy: The back-pressure strategy of the sequence.
-    ///   - finishOnDeinit: Indicates if ``NIOAsyncSequenceProducer/Source/finish()`` should be called on deinit of the.
+    ///   - finishOnDeinit: Indicates if ``NIOAsyncSequenceProducer/Source/finish()`` should be called on deinit of the the source.
     ///   We do not recommend to rely on  deinit based resource tear down.
     ///   - delegate: The delegate of the sequence
     /// - Returns: A ``NIOAsyncSequenceProducer/Source`` and a ``NIOAsyncSequenceProducer``.

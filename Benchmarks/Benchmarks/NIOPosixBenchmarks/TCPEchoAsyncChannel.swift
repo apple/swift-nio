@@ -53,9 +53,9 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
     try await withThrowingTaskGroup(of: Void.self) { group in
         // This child task is echoing back the data on the server.
         group.addTask {
-            try await serverChannel.withInbound { serverChannelInbound in
+            try await serverChannel.executeThenClose { serverChannelInbound in
                 for try await connectionChannel in serverChannelInbound {
-                    try await connectionChannel.withInboundOutbound { connectionChannelInbound, connectionChannelOutbound in
+                    try await connectionChannel.executeThenClose { connectionChannelInbound, connectionChannelOutbound in
                         for try await inboundData in connectionChannelInbound {
                             try await connectionChannelOutbound.write(inboundData)
                         }
@@ -64,7 +64,7 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
             }
         }
 
-        try await clientChannel.withInboundOutbound { inbound, outbound in
+        try await clientChannel.executeThenClose { inbound, outbound in
             // This child task is collecting the echoed back responses.
             group.addTask {
                 var receivedData = 0

@@ -33,7 +33,7 @@ final class AsyncChannelTests: XCTestCase {
             return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
         }
 
-        try await wrapped.executeThenCloseChannel { _, outbound in
+        try await wrapped.executeThenClose { _, outbound in
             try await outbound.write("Test")
         }
     }
@@ -45,7 +45,7 @@ final class AsyncChannelTests: XCTestCase {
             try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
         }
 
-        try await wrapped.executeThenCloseChannel { inbound, _ in
+        try await wrapped.executeThenClose { inbound, _ in
             var iterator = inbound.makeAsyncIterator()
             try await channel.writeInbound("hello")
             let firstRead = try await iterator.next()
@@ -71,7 +71,7 @@ final class AsyncChannelTests: XCTestCase {
             try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel)
         }
 
-        try await wrapped.executeThenCloseChannel { _, outbound in
+        try await wrapped.executeThenClose { _, outbound in
             try await outbound.write("hello")
             try await outbound.write("world")
 
@@ -100,7 +100,7 @@ final class AsyncChannelTests: XCTestCase {
             )
         }
 
-        try await wrapped.executeThenCloseChannel { inbound, outbound in
+        try await wrapped.executeThenClose { inbound, outbound in
             outbound.finish()
 
             await channel.testingEventLoop.run()
@@ -160,7 +160,7 @@ final class AsyncChannelTests: XCTestCase {
 
         try await channel.close().get()
 
-        try await wrapped.executeThenCloseChannel { inbound, _ in
+        try await wrapped.executeThenClose { inbound, _ in
             let reads = try await Array(inbound)
             XCTAssertEqual(reads, ["hello"])
         }
@@ -178,7 +178,7 @@ final class AsyncChannelTests: XCTestCase {
             channel.pipeline.fireErrorCaught(TestError.bang)
         }
 
-        try await wrapped.executeThenCloseChannel { inbound, _ in
+        try await wrapped.executeThenClose { inbound, _ in
             var iterator = inbound.makeAsyncIterator()
             let first = try await iterator.next()
             XCTAssertEqual(first, "hello")
@@ -205,7 +205,7 @@ final class AsyncChannelTests: XCTestCase {
 
         await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                try await wrapped.executeThenCloseChannel { _, outbound in
+                try await wrapped.executeThenClose { _, outbound in
                     try await outbound.write("hello")
                     lock.withLockedValue {
                         XCTAssertTrue($0)
@@ -311,7 +311,7 @@ final class AsyncChannelTests: XCTestCase {
         }
         XCTAssertEqual(readCounter.readCount, 6)
 
-        try await wrapped.executeThenCloseChannel { inbound, outbound in
+        try await wrapped.executeThenClose { inbound, outbound in
             // Now consume three elements from the pipeline. This should not unbuffer the read, as 3 elements remain.
             var reader = inbound.makeAsyncIterator()
             for _ in 0..<3 {
@@ -373,7 +373,7 @@ final class AsyncChannelTests: XCTestCase {
             try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
         }
 
-        try await wrapped.executeThenCloseChannel { inbound, outbound in
+        try await wrapped.executeThenClose { inbound, outbound in
             var iterator = inbound.makeAsyncIterator()
             try await channel.writeInbound("hello")
             let firstRead = try await iterator.next()
