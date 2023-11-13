@@ -110,10 +110,9 @@ public struct NIOThrowingAsyncSequenceProducer<
     ) -> NewSequence where Failure == Error {
         let sequence = Self(
             backPressureStrategy: backPressureStrategy,
-            finishOnDeinit: finishOnDeinit,
             delegate: delegate
         )
-        let source = Source(storage: sequence._storage)
+        let source = Source(storage: sequence._storage, finishOnDeinit: finishOnDeinit)
 
         return .init(source: source, sequence: sequence)
     }
@@ -141,10 +140,9 @@ public struct NIOThrowingAsyncSequenceProducer<
     ) -> NewSequence {
         let sequence = Self(
             backPressureStrategy: backPressureStrategy,
-            finishOnDeinit: true,
             delegate: delegate
         )
-        let source = Source(storage: sequence._storage)
+        let source = Source(storage: sequence._storage, finishOnDeinit: true)
 
         return .init(source: source, sequence: sequence)
     }
@@ -172,10 +170,9 @@ public struct NIOThrowingAsyncSequenceProducer<
     ) -> NewSequence where Failure == Error {
         let sequence = Self(
             backPressureStrategy: backPressureStrategy,
-            finishOnDeinit: true,
             delegate: delegate
         )
-        let source = Source(storage: sequence._storage)
+        let source = Source(storage: sequence._storage, finishOnDeinit: true)
 
         return .init(source: source, sequence: sequence)
     }
@@ -190,10 +187,9 @@ public struct NIOThrowingAsyncSequenceProducer<
     ) -> NewSequence where Failure == Never {
         let sequence = Self(
             backPressureStrategy: backPressureStrategy,
-            finishOnDeinit: finishOnDeinit,
             delegate: delegate
         )
-        let source = Source(storage: sequence._storage)
+        let source = Source(storage: sequence._storage, finishOnDeinit: finishOnDeinit)
 
         return .init(source: source, sequence: sequence)
     }
@@ -201,12 +197,10 @@ public struct NIOThrowingAsyncSequenceProducer<
     @inlinable
     /* private */ internal init(
         backPressureStrategy: Strategy,
-        finishOnDeinit: Bool,
         delegate: Delegate
     ) {
         let storage = Storage(
             backPressureStrategy: backPressureStrategy,
-            finishOnDeinit: finishOnDeinit,
             delegate: delegate
         )
         self._internalClass = .init(storage: storage)
@@ -278,15 +272,23 @@ extension NIOThrowingAsyncSequenceProducer {
             @usableFromInline
             internal let _storage: Storage
 
+            @usableFromInline
+            internal let _finishOnDeinit: Bool
+
             @inlinable
-            init(storage: Storage) {
+            init(storage: Storage, finishOnDeinit: Bool) {
                 self._storage = storage
+                self._finishOnDeinit = finishOnDeinit
             }
 
             @inlinable
             deinit {
-                // We need to call finish here to resume any suspended continuation.
-                self._storage.sourceDeinitialized()
+                if !self._finishOnDeinit && !self._storage.isFinished {
+                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without calling source.finish()")
+                } else {
+                    // We need to call finish here to resume any suspended continuation.
+                    self._storage.finish(nil)
+                }
             }
         }
 
@@ -299,8 +301,8 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @usableFromInline
-        /* fileprivate */ internal init(storage: Storage) {
-            self._internalClass = .init(storage: storage)
+        /* fileprivate */ internal init(storage: Storage, finishOnDeinit: Bool) {
+            self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
         }
 
         /// The result of a call to ``NIOThrowingAsyncSequenceProducer/Source/yield(_:)``.
@@ -397,13 +399,17 @@ extension NIOThrowingAsyncSequenceProducer {
         @usableFromInline
         /* private */ internal var _delegate: Delegate?
 
+        @inlinable
+        var isFinished: Bool {
+            self._lock.withLock { self._stateMachine.isFinished }
+        }
+
         @usableFromInline
         /* fileprivate */ internal init(
             backPressureStrategy: Strategy,
-            finishOnDeinit: Bool,
             delegate: Delegate
         ) {
-            self._stateMachine = .init(backPressureStrategy: backPressureStrategy, finishOnDeinit: finishOnDeinit)
+            self._stateMachine = .init(backPressureStrategy: backPressureStrategy)
             self._delegate = delegate
         }
 
@@ -448,41 +454,6 @@ extension NIOThrowingAsyncSequenceProducer {
                 case .none:
                     return nil
                 }
-            }
-
-            delegate?.didTerminate()
-        }
-
-        @inlinable
-        /* fileprivate */ internal func sourceDeinitialized() {
-            // We must not resume the continuation while holding the lock
-            // because it can deadlock in combination with the underlying ulock
-            // in cases where we race with a cancellation handler
-            let (delegate, action): (Delegate?, NIOThrowingAsyncSequenceProducer.StateMachine.FinishAction) = self._lock.withLock {
-                let action = self._stateMachine.sourceDeinitialized()
-
-                switch action {
-                case .resumeContinuationWithFailureAndCallDidTerminate:
-                    let delegate = self._delegate
-                    self._delegate = nil
-                    return (delegate, action)
-
-                case .none:
-                    return (nil, action)
-                }
-            }
-
-            switch action {
-            case .resumeContinuationWithFailureAndCallDidTerminate(let continuation, let failure):
-                switch failure {
-                case .some(let error):
-                    continuation.resume(throwing: error)
-                case .none:
-                    continuation.resume(returning: nil)
-                }
-
-            case .none:
-                break
             }
 
             delegate?.didTerminate()
@@ -724,8 +695,17 @@ extension NIOThrowingAsyncSequenceProducer {
         @usableFromInline
         /* private */ internal var _state: State
 
-        @usableFromInline
-        /* private */ internal let _finishOnDeinit: Bool
+        @inlinable
+        var isFinished: Bool {
+            switch self._state {
+            case .initial, .streaming:
+                return false
+            case .cancelled, .sourceFinished, .finished:
+                return true
+            case .modifying:
+                preconditionFailure("Invalid state")
+            }
+        }
 
 
         /// Initializes a new `StateMachine`.
@@ -735,12 +715,11 @@ extension NIOThrowingAsyncSequenceProducer {
         ///
         /// - Parameter backPressureStrategy: The back-pressure strategy.
         @inlinable
-        init(backPressureStrategy: Strategy, finishOnDeinit: Bool) {
+        init(backPressureStrategy: Strategy) {
             self._state = .initial(
                 backPressureStrategy: backPressureStrategy,
                 iteratorInitialized: false
             )
-            self._finishOnDeinit = finishOnDeinit
         }
 
         /// Actions returned by `sequenceDeinitialized()`.
@@ -865,60 +844,6 @@ extension NIOThrowingAsyncSequenceProducer {
             case .finished:
                 // We are already finished so there is nothing left to clean up.
                 // This is just the references dropping afterwards.
-                return .none
-
-            case .modifying:
-                preconditionFailure("Invalid state")
-            }
-        }
-
-        @inlinable
-        mutating func sourceDeinitialized() -> FinishAction {
-            switch self._state {
-            case .initial(_, let iteratorInitialized):
-                if self._finishOnDeinit {
-                    // Nothing was yielded nor did anybody call next
-                    // This means we can transition to sourceFinished and store the failure
-                    self._state = .sourceFinished(
-                        buffer: .init(),
-                        iteratorInitialized: iteratorInitialized,
-                        failure: nil
-                    )
-
-                    return .none
-                } else {
-                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without calling source.finish()")
-                }
-
-            case .streaming(_, let buffer, .some(let continuation), _, let iteratorInitialized):
-                if self._finishOnDeinit {
-                    // We have a continuation, this means our buffer must be empty
-                    // Furthermore, we can now transition to finished
-                    // and resume the continuation with the failure
-                    precondition(buffer.isEmpty, "Expected an empty buffer")
-
-                    self._state = .finished(iteratorInitialized: iteratorInitialized)
-
-                    return .resumeContinuationWithFailureAndCallDidTerminate(continuation, nil)
-                } else {
-                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without calling source.finish()")
-                }
-
-            case .streaming(_, let buffer, continuation: .none, _, let iteratorInitialized):
-                if self._finishOnDeinit {
-                    self._state = .sourceFinished(
-                        buffer: buffer,
-                        iteratorInitialized: iteratorInitialized,
-                        failure: nil
-                    )
-
-                    return .none
-                } else {
-                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without calling source.finish()")
-                }
-
-            case .cancelled, .sourceFinished, .finished:
-                // If the source has finished, finishing again has no effect.
                 return .none
 
             case .modifying:

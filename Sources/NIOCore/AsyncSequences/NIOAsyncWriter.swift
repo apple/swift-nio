@@ -161,14 +161,23 @@ public struct NIOAsyncWriter<
         @usableFromInline
         internal let _storage: Storage
 
+        @usableFromInline
+        internal let _finishOnDeinit: Bool
+
         @inlinable
-        init(storage: Storage) {
+        init(storage: Storage, finishOnDeinit: Bool) {
             self._storage = storage
+            self._finishOnDeinit = finishOnDeinit
         }
 
         @inlinable
         deinit {
-            _storage.writerDeinitialized()
+            if !self._finishOnDeinit && !self._storage.isWriterFinished {
+                preconditionFailure("Deinited NIOAsyncWriter without calling finish()")
+            } else {
+                // We need to call finish here to resume any suspended continuation.
+                self._storage.writerFinish(error: nil)
+            }
         }
     }
 
@@ -204,7 +213,7 @@ public struct NIOAsyncWriter<
             finishOnDeinit: true,
             delegate: delegate
         )
-        let sink = Sink(storage: writer._storage)
+        let sink = Sink(storage: writer._storage, finishOnDeinit: true)
 
         return .init(sink: sink, writer: writer)
     }
@@ -235,7 +244,7 @@ public struct NIOAsyncWriter<
             finishOnDeinit: finishOnDeinit,
             delegate: delegate
         )
-        let sink = Sink(storage: writer._storage)
+        let sink = Sink(storage: writer._storage, finishOnDeinit: finishOnDeinit)
 
         return .init(sink: sink, writer: writer)
     }
@@ -248,10 +257,9 @@ public struct NIOAsyncWriter<
     ) {
         let storage = Storage(
             isWritable: isWritable,
-            finishOnDeinit: finishOnDeinit,
             delegate: delegate
         )
-        self._internalClass = .init(storage: storage)
+        self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
     }
 
     /// Yields a sequence of new elements to the ``NIOAsyncWriter``.
@@ -332,15 +340,23 @@ extension NIOAsyncWriter {
             @usableFromInline
             /* fileprivate */ internal let _storage: Storage
 
+            @usableFromInline
+            internal let _finishOnDeinit: Bool
+
             @inlinable
-            init(storage: Storage) {
+            init(storage: Storage, finishOnDeinit: Bool) {
                 self._storage = storage
+                self._finishOnDeinit = finishOnDeinit
             }
 
             @inlinable
             deinit {
-                // We need to call finish here to resume any suspended continuation.
-                self._storage.sinkDeinitialized()
+                if !self._finishOnDeinit && !self._storage.isSinkFinished {
+                    preconditionFailure("Deinited NIOAsyncWriter.Sink without calling sink.finish()")
+                } else {
+                    // We need to call finish here to resume any suspended continuation.
+                    self._storage.sinkFinish(error: nil)
+                }
             }
         }
 
@@ -353,8 +369,8 @@ extension NIOAsyncWriter {
         }
 
         @inlinable
-        init(storage: Storage) {
-            self._internalClass = .init(storage: storage)
+        init(storage: Storage, finishOnDeinit: Bool) {
+            self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
         }
 
         /// Sets the writability of the ``NIOAsyncWriter``.
@@ -442,47 +458,24 @@ extension NIOAsyncWriter {
         /* private */ internal var _stateMachine: StateMachine
 
         @inlinable
+        internal var isWriterFinished: Bool {
+            self._lock.withLock { self._stateMachine.isWriterFinished }
+        }
+
+        @inlinable
+        internal var isSinkFinished: Bool {
+            self._lock.withLock { self._stateMachine.isSinkFinished }
+        }
+
+        @inlinable
         /* fileprivate */ internal init(
             isWritable: Bool,
-            finishOnDeinit: Bool,
             delegate: Delegate
         ) {
             self._stateMachine = .init(
                 isWritable: isWritable,
-                finishOnDeinit: finishOnDeinit,
                 delegate: delegate
             )
-        }
-
-        @inlinable
-        /* fileprivate */ internal func writerDeinitialized() {
-            let action = self._lock.withLock {
-                self._stateMachine.writerDeinitialized()
-            }
-
-            switch action {
-            case .callDidTerminate(let delegate):
-                delegate.didTerminate(error: nil)
-
-            case .none:
-                break
-            }
-
-        }
-
-        @inlinable
-        /* fileprivate */ internal func sinkDeinitialized() {
-            let action = self._lock.withLock {
-                self._stateMachine.sinkDeinitialized()
-            }
-
-            switch action {
-            case .resumeContinuationsWithError(let suspendedYields, let error):
-                suspendedYields.forEach { $0.continuation.resume(throwing: error) }
-
-            case .none:
-                break
-            }
         }
 
         @inlinable
@@ -716,99 +709,37 @@ extension NIOAsyncWriter {
         @usableFromInline
         /* private */ internal var _state: State
 
-        @usableFromInline
-        /* private */ let finishOnDeinit: Bool
+        @inlinable
+        internal var isWriterFinished: Bool {
+            switch self._state {
+            case .initial, .streaming:
+                return false
+            case .writerFinished, .finished:
+                return true
+            case .modifying:
+                preconditionFailure("Invalid state")
+            }
+        }
+
+        @inlinable
+        internal var isSinkFinished: Bool {
+            switch self._state {
+            case .initial, .streaming, .writerFinished:
+                return false
+            case .finished:
+                return true
+            case .modifying:
+                preconditionFailure("Invalid state")
+            }
+        }
+
 
         @inlinable
         init(
             isWritable: Bool,
-            finishOnDeinit: Bool,
             delegate: Delegate
         ) {
             self._state = .initial(isWritable: isWritable, delegate: delegate)
-            self.finishOnDeinit = finishOnDeinit
-        }
-
-        /// Actions returned by `writerDeinitialized()`.
-        @usableFromInline
-        enum WriterDeinitializedAction {
-            /// Indicates that ``NIOAsyncWriterSinkDelegate/didTerminate(completion:)`` should be called.
-            case callDidTerminate(Delegate)
-            /// Indicates that nothing should be done.
-            case none
-        }
-
-        @inlinable
-        /* fileprivate */ internal mutating func writerDeinitialized() -> WriterDeinitializedAction {
-            switch self._state {
-            case .initial(_, let delegate):
-                if self.finishOnDeinit {
-                    // The writer deinited before writing anything.
-                    // We can transition to finished and inform our delegate
-                    self._state = .finished(sinkError: nil)
-
-                    return .callDidTerminate(delegate)
-                } else {
-                    preconditionFailure("Deinited NIOAsyncWriter without calling writer.finish()")
-                }
-
-            case .streaming(_, _, _, let suspendedYields, let delegate):
-                if self.finishOnDeinit {
-                    // The writer got deinited after we started streaming.
-                    // This is normal and we need to transition to finished
-                    // and call the delegate. However, we should not have
-                    // any suspended yields because they MUST strongly retain
-                    // the writer.
-                    precondition(suspendedYields.isEmpty, "We have outstanding suspended yields")
-
-                    // We can transition to finished directly
-                    self._state = .finished(sinkError: nil)
-
-                    return .callDidTerminate(delegate)
-                } else {
-                    preconditionFailure("Deinited NIOAsyncWriter without calling writer.finish()")
-                }
-
-            case .finished, .writerFinished:
-                // We are already finished nothing to do here
-                return .none
-
-            case .modifying:
-                preconditionFailure("Invalid state")
-            }
-        }
-
-        @inlinable
-        /* fileprivate */ internal mutating func sinkDeinitialized() -> SinkFinishAction {
-            switch self._state {
-            case .initial(_, _):
-                if self.finishOnDeinit {
-                    return self.sinkFinish(error: nil)
-                } else {
-                    preconditionFailure("Deinited NIOAsyncWriter.Sink without calling sink.finish()")
-                }
-
-            case .streaming(_, _, _, _, _):
-                if self.finishOnDeinit {
-                    return self.sinkFinish(error: nil)
-                } else {
-                    preconditionFailure("Deinited NIOAsyncWriter.Sink without calling sink.finish()")
-                }
-
-            case .writerFinished:
-                if self.finishOnDeinit {
-                    return self.sinkFinish(error: nil)
-                } else {
-                    preconditionFailure("Deinited NIOAsyncWriter.Sink without calling sink.finish()")
-                }
-
-            case .finished:
-                // We are already finished nothing to do here
-                return .none
-
-            case .modifying:
-                preconditionFailure("Invalid state")
-            }
         }
 
         /// Actions returned by `setWritability()`.
