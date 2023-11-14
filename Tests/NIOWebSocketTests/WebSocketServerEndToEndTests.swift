@@ -526,3 +526,30 @@ class WebSocketServerEndToEndTests: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual([], try server.readAllOutboundBytes()))
     }
 }
+
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+final class TypedWebSocketServerEndToEndTests: WebSocketServerEndToEndTests {
+    override func createTestFixtures(
+        upgraders: [WebSocketServerUpgraderConfiguration]
+    ) -> (loop: EmbeddedEventLoop, serverChannel: EmbeddedChannel, clientChannel: EmbeddedChannel) {
+        let loop = EmbeddedEventLoop()
+        let serverChannel = EmbeddedChannel(loop: loop)
+        let upgraders = upgraders.map { NIOTypedWebSocketServerUpgrader(
+            maxFrameSize: $0.maxFrameSize,
+            enableAutomaticErrorHandling: $0.automaticErrorHandling,
+            shouldUpgrade: $0.shouldUpgrade,
+            upgradePipelineHandler: $0.upgradePipelineHandler
+        )}
+
+        XCTAssertNoThrow(try serverChannel.pipeline.syncOperations.configureUpgradableHTTPServerPipeline(
+            configuration: .init(
+                upgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<Void>(
+                    upgraders: upgraders,
+                    notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() }
+                )
+            )
+        ))
+        let clientChannel = EmbeddedChannel(loop: loop)
+        return (loop: loop, serverChannel: serverChannel, clientChannel: clientChannel)
+    }
+}
