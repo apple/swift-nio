@@ -84,7 +84,8 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @inlinable
     init(
         channel: Channel,
-        isOutboundHalfClosureEnabled: Bool
+        isOutboundHalfClosureEnabled: Bool,
+        closeOnDeinit: Bool
     ) throws {
         let handler = NIOAsyncChannelOutboundWriterHandler<OutboundOut>(
             eventLoop: channel.eventLoop,
@@ -93,7 +94,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         let writer = _Writer.makeWriter(
             elementType: OutboundOut.self,
             isWritable: true,
-            finishOnDeinit: false,
+            finishOnDeinit: closeOnDeinit,
             delegate: .init(handler: handler)
         )
         handler.sink = writer.sink

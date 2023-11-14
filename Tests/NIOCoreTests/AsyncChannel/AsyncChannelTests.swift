@@ -30,7 +30,7 @@ final class AsyncChannelTests: XCTestCase {
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
             try channel.pipeline.syncOperations.addHandler(CloseOnWriteHandler())
-            return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
+            return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel, closeOnDeinit: false)
         }
 
         try await wrapped.executeThenClose { _, outbound in
@@ -42,7 +42,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel, closeOnDeinit: false)
         }
 
         try await wrapped.executeThenClose { inbound, _ in
@@ -68,7 +68,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel, closeOnDeinit: false)
         }
 
         try await wrapped.executeThenClose { _, outbound in
@@ -96,7 +96,8 @@ final class AsyncChannelTests: XCTestCase {
                     isOutboundHalfClosureEnabled: true,
                     inboundType: Never.self,
                     outboundType: Never.self
-                )
+                ),
+                closeOnDeinit: false
             )
         }
 
@@ -130,7 +131,8 @@ final class AsyncChannelTests: XCTestCase {
                         isOutboundHalfClosureEnabled: false,
                         inboundType: Never.self,
                         outboundType: Never.self
-                    )
+                    ),
+                    closeOnDeinit: false
                 )
             }
 
@@ -151,7 +153,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel, closeOnDeinit: false)
         }
 
         try await channel.writeInbound("hello")
@@ -170,7 +172,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel, closeOnDeinit: false)
         }
 
         try await channel.writeInbound("hello")
@@ -193,7 +195,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel, closeOnDeinit: false)
         }
 
         try await channel.testingEventLoop.executeInContext {
@@ -233,7 +235,7 @@ final class AsyncChannelTests: XCTestCase {
         do {
             // Create the NIOAsyncChannel, then drop it. The handler will still be in the pipeline.
             _ = try await channel.testingEventLoop.executeInContext {
-                _ = try NIOAsyncChannel<Sentinel, Never>(synchronouslyWrapping: channel)
+                _ = try NIOAsyncChannel<Sentinel, Never>(synchronouslyWrapping: channel, closeOnDeinit: false)
             }
         }
 
@@ -263,7 +265,8 @@ final class AsyncChannelTests: XCTestCase {
                     backPressureStrategy: .init(lowWatermark: 2, highWatermark: 4),
                     inboundType: Void.self,
                     outboundType: Never.self
-                )
+                ),
+                closeOnDeinit: false
             )
         }
 
@@ -370,7 +373,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel, closeOnDeinit: false)
         }
 
         try await wrapped.executeThenClose { inbound, outbound in

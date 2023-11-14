@@ -228,7 +228,8 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         configuration: .init(
                             inboundType: String.self,
                             outboundType: String.self
-                        )
+                        ),
+                        closeOnDeinit: false
                     )
                 }
             }
@@ -681,7 +682,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     output: pipe2WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel)
+                        try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
         } catch {
@@ -695,7 +696,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     output: pipe1WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel)
+                        try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
         } catch {
@@ -709,7 +710,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     input: pipe2ReadFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel)
+                        try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
         } catch {
@@ -749,7 +750,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     output: pipe1WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel)
+                        try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
         } catch {
@@ -763,7 +764,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     input: pipe1ReadFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel)
+                        try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
         } catch {
@@ -800,7 +801,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     input: pipe1ReadFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel)
+                        try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
         } catch {
@@ -814,7 +815,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     output: pipe1WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel)
+                        try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
         } catch {
@@ -868,7 +869,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     output: pipe1WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel)
+                        try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
         } catch {
@@ -882,7 +883,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     input: pipe2ReadFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try NIOAsyncChannel(synchronouslyWrapping: channel)
+                        try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
         } catch {
@@ -1014,7 +1015,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                    return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
+                    return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel, closeOnDeinit: false)
                 }
             }
 
@@ -1048,7 +1049,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
                         try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
                         try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                        return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
+                        return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel, closeOnDeinit: false)
                     }
                 }
             try await stringChannel.executeThenClose { _, outbound in
@@ -1098,7 +1099,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder(inboundID: 1)))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder(outboundID: 2)))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                    return try NIOAsyncChannel(synchronouslyWrapping: channel)
+                    return try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                 }
             }
     }
@@ -1115,7 +1116,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder(inboundID: 2)))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder(outboundID: 1)))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                    return try NIOAsyncChannel(synchronouslyWrapping: channel)
+                    return try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                 }
             }
     }
@@ -1163,7 +1164,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                    return try NIOAsyncChannel(synchronouslyWrapping: channel)
+                    return try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                 }
             }
     }
@@ -1214,7 +1215,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                    return try NIOAsyncChannel(synchronouslyWrapping: channel)
+                    return try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                 }
             }
     }
@@ -1247,7 +1248,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
                     try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
-                    return try NIOAsyncChannel(synchronouslyWrapping: channel)
+                    return try NIOAsyncChannel(synchronouslyWrapping: channel, closeOnDeinit: false)
                 }
             }
     }
@@ -1330,7 +1331,8 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     return channel.eventLoop.makeCompletedFuture {
                         try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
                         let asyncChannel = try NIOAsyncChannel<String, String>(
-                            synchronouslyWrapping: channel
+                            synchronouslyWrapping: channel,
+                            closeOnDeinit: false
                         )
 
                         return .string(asyncChannel)
@@ -1340,7 +1342,8 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         try channel.pipeline.syncOperations.addHandler(ByteBufferToByteHandler())
 
                         let asyncChannel = try NIOAsyncChannel<UInt8, UInt8>(
-                            synchronouslyWrapping: channel
+                            synchronouslyWrapping: channel,
+                            closeOnDeinit: false
                         )
 
                         return .byte(asyncChannel)

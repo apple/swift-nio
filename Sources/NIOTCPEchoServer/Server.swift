@@ -52,7 +52,8 @@ struct Server {
                         configuration: NIOAsyncChannel.Configuration(
                             inboundType: String.self,
                             outboundType: String.self
-                        )
+                        ),
+                        closeOnDeinit: false
                     )
                 }
             }

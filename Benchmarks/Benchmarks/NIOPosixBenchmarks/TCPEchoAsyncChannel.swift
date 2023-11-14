@@ -27,7 +27,8 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
                     configuration: .init(
                         inboundType: ByteBuffer.self,
                         outboundType: ByteBuffer.self
-                    )
+                    ),
+                    closeOnDeinit: false
                 )
             }
         }
@@ -43,7 +44,8 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
                     configuration: .init(
                         inboundType: ByteBuffer.self,
                         outboundType: ByteBuffer.self
-                    )
+                    ),
+                    closeOnDeinit: false
                 )
             }
         }
