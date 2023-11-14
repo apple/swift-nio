@@ -654,9 +654,8 @@ extension ServerBootstrap {
                     )
                     let asyncChannel = try NIOAsyncChannel<ChannelInitializerResult, Never>
                         ._wrapAsyncChannelWithTransformations(
-                            synchronouslyWrapping: serverChannel,
+                            wrappingChannelSynchronously: serverChannel,
                             backPressureStrategy: serverBackPressureStrategy,
-                            closeOnDeinit: false, // This is fine because we are always finishing the writer since Output == Never
                             channelReadTransformation: { channel -> EventLoopFuture<ChannelInitializerResult> in
                                 // The channelReadTransformation is run on the EL of the server channel
                                 // We have to make sure that we execute child channel initializer on the

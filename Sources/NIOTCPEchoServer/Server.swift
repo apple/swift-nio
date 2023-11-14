@@ -48,12 +48,11 @@ struct Server {
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
 
                     return try NIOAsyncChannel(
-                        synchronouslyWrapping: channel,
+                        wrappingChannelSynchronously: channel,
                         configuration: NIOAsyncChannel.Configuration(
                             inboundType: String.self,
                             outboundType: String.self
-                        ),
-                        closeOnDeinit: false
+                        )
                     )
                 }
             }

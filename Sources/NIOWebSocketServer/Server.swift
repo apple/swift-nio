@@ -91,7 +91,7 @@ struct Server {
 //                        },
 //                        upgradePipelineHandler: { (channel, _) in
 //                            channel.eventLoop.makeCompletedFuture {
-//                                let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(synchronouslyWrapping: channel)
+//                                let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(wrappingChannelSynchronously: channel)
 //                                return UpgradeResult.websocket(asyncChannel)
 //                            }
 //                        }
@@ -102,7 +102,7 @@ struct Server {
 //                        notUpgradingCompletionHandler: { channel in
 //                            channel.eventLoop.makeCompletedFuture {
 //                                try channel.pipeline.syncOperations.addHandler(HTTPByteBufferResponsePartHandler())
-//                                let asyncChannel = try NIOAsyncChannel<HTTPServerRequestPart, HTTPPart<HTTPResponseHead, ByteBuffer>>(synchronouslyWrapping: channel)
+//                                let asyncChannel = try NIOAsyncChannel<HTTPServerRequestPart, HTTPPart<HTTPResponseHead, ByteBuffer>>(wrappingChannelSynchronously: channel)
 //                                return UpgradeResult.notUpgraded(asyncChannel)
 //                            }
 //                        }
