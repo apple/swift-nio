@@ -61,7 +61,7 @@ struct Client {
 //                    let upgrader = NIOTypedWebSocketClientUpgrader<UpgradeResult>(
 //                        upgradePipelineHandler: { (channel, _) in
 //                            channel.eventLoop.makeCompletedFuture {
-//                                let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(synchronouslyWrapping: channel)
+//                                let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(wrappingChannelSynchronously: channel)
 //                                return UpgradeResult.websocket(asyncChannel)
 //                            }
 //                        }

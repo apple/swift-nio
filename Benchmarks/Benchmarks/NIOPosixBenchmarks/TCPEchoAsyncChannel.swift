@@ -23,7 +23,7 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
         ) { channel in
             channel.eventLoop.makeCompletedFuture {
                 return try NIOAsyncChannel(
-                    synchronouslyWrapping: channel,
+                    wrappingChannelSynchronously: channel,
                     configuration: .init(
                         inboundType: ByteBuffer.self,
                         outboundType: ByteBuffer.self
@@ -39,7 +39,7 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
         ) { channel in
             channel.eventLoop.makeCompletedFuture {
                 return try NIOAsyncChannel(
-                    synchronouslyWrapping: channel,
+                    wrappingChannelSynchronously: channel,
                     configuration: .init(
                         inboundType: ByteBuffer.self,
                         outboundType: ByteBuffer.self

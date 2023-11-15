@@ -85,7 +85,7 @@ the inbound data and echo it back outbound.
 
 ```swift
 let channel = ...
-let asyncChannel = try NIOAsyncChannel<ByteBuffer, ByteBuffer>(synchronouslyWrapping: channel)
+let asyncChannel = try NIOAsyncChannel<ByteBuffer, ByteBuffer>(wrappingChannelSynchronously: channel)
 
 try await asyncChannel.executeThenClose { inbound, outbound in
     for try await inboundData in inbound {
@@ -186,7 +186,7 @@ let clientChannel = try await ClientBootstrap(group: eventLoopGroup)
     ) { channel in
         channel.eventLoop.makeCompletedFuture {
             return try NIOAsyncChannel<ByteBuffer, ByteBuffer>(
-                synchronouslyWrapping: channel
+                wrappingChannelSynchronously: channel
             )
         }
     }
@@ -245,7 +245,7 @@ let upgradeResult: EventLoopFuture<UpgradeResult> = try await ClientBootstrap(gr
                     // This configures the pipeline after the websocket upgrade was successful.
                     // We are wrapping the pipeline in a NIOAsyncChannel.
                     channel.eventLoop.makeCompletedFuture {
-                        let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(synchronouslyWrapping: channel)
+                        let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(wrappingChannelSynchronously: channel)
                         return UpgradeResult.websocket(asyncChannel)
                     }
                 }
