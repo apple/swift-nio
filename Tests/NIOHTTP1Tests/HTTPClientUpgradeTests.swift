@@ -32,8 +32,13 @@ extension EmbeddedChannel {
     }
 }
 
+#if !canImport(Darwin) || (canImport(Darwin) && swift(>=5.10))
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+protocol TypedAndUntypedHTTPClientProtocolUpgrader: NIOHTTPClientProtocolUpgrader, NIOTypedHTTPClientProtocolUpgrader where UpgradeResult == Bool {}
+#else
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 protocol TypedAndUntypedHTTPClientProtocolUpgrader: NIOHTTPClientProtocolUpgrader {}
+#endif
 
 private final class SuccessfulClientUpgrader: TypedAndUntypedHTTPClientProtocolUpgrader {
     fileprivate let supportedProtocol: String
@@ -948,6 +953,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
     }
 }
 
+#if !canImport(Darwin) || (canImport(Darwin) && swift(>=5.10))
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
     override func setUpClientChannel(
@@ -1177,3 +1183,4 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
             .assertDoesNotContain(handlerType: NIOHTTPClientUpgradeHandler.self))
     }
 }
+#endif

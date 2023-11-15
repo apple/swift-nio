@@ -174,8 +174,13 @@ internal func assertResponseIs(response: String, expectedResponseLine: String, e
     XCTAssertEqual(lines.count, 0)
 }
 
+#if !canImport(Darwin) || (canImport(Darwin) && swift(>=5.10))
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+protocol TypedAndUntypedHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader, NIOTypedHTTPServerProtocolUpgrader where UpgradeResult == Bool {}
+#else
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 protocol TypedAndUntypedHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader {}
+#endif
 
 private class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
     let supportedProtocol: String
@@ -1552,6 +1557,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
     }
 }
 
+#if !canImport(Darwin) || (canImport(Darwin) && swift(>=5.10))
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
     fileprivate override func setUpTestWithAutoremoval(
@@ -2051,3 +2057,4 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
     }
 }
+#endif
