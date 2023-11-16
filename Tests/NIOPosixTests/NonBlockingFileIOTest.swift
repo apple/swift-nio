@@ -1292,11 +1292,11 @@ extension NonBlockingFileIOTest {
     func testAsyncFileOpenWorks() async throws {
         let content = "123"
         try await withTemporaryFile(content: content) { (fileHandle, path) -> Void in
-            try await self.fileIO.withOpenFile(path: path) { fh, fr in
-                try fh.withUnsafeFileDescriptor { fd in
+            try await self.fileIO.withFileRegion(path: path) { fr in
+                try fr.fileHandle.withUnsafeFileDescriptor { fd in
                     XCTAssertGreaterThanOrEqual(fd, 0)
                 }
-                XCTAssertTrue(fh.isOpen)
+                XCTAssertTrue(fr.fileHandle.isOpen)
                 XCTAssertEqual(0, fr.readerIndex)
                 XCTAssertEqual(3, fr.endIndex)
             }
@@ -1306,11 +1306,11 @@ extension NonBlockingFileIOTest {
     func testAsyncFileOpenWorksWithEmptyFile() async throws {
         let content = ""
         try await withTemporaryFile(content: content) { (fileHandle, path) -> Void in
-            try await self.fileIO.withOpenFile(path: path) { fh, fr in
-                try fh.withUnsafeFileDescriptor { fd in
+            try await self.fileIO.withFileRegion(path: path) { fr in
+                try fr.fileHandle.withUnsafeFileDescriptor { fd in
                     XCTAssertGreaterThanOrEqual(fd, 0)
                 }
-                XCTAssertTrue(fh.isOpen)
+                XCTAssertTrue(fr.fileHandle.isOpen)
                 XCTAssertEqual(0, fr.readerIndex)
                 XCTAssertEqual(0, fr.endIndex)
             }
@@ -1319,7 +1319,7 @@ extension NonBlockingFileIOTest {
 
     func testAsyncFileOpenFails() async throws {
         do {
-            _ = try await self.fileIO.withOpenFile(path: "/dev/null/this/does/not/exist") { _,_ in}
+            _ = try await self.fileIO.withFileRegion(path: "/dev/null/this/does/not/exist") { _ in}
             XCTFail("should've thrown")
         } catch let e as IOError where e.errnoCode == ENOTDIR {
             // OK
@@ -1526,7 +1526,7 @@ extension NonBlockingFileIOTest {
             let threadPool = NIOThreadPool(numberOfThreads: 1)
             let fileIO = NonBlockingFileIO(threadPool: threadPool)
             do {
-                try await fileIO.withOpenFile(path: path) { _,_ in }
+                try await fileIO.withFileRegion(path: path) { _ in }
                 XCTFail("testAsyncThrowsErrorOnUnstartedPool: openFile should throw an error")
             } catch {
             }

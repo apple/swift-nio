@@ -906,27 +906,27 @@ extension NonBlockingFileIO {
         }
     }
 
-    /// Open file at `path` on a private thread pool, run an operation given the file handle and region and then close the file handle.
+    /// Open file at `path` and query its size on a private thread pool, run an operation given 
+    /// the resulting file region and then close the file handle.
     ///
-    /// The open file operation runs on a private thread pool.
-    ///    
-    /// - note: The reason this provides the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as 
-    /// the querying of its size are blocking.
+    /// The will return the result of the operation.
+    ///
+    /// - note: This function opens a file and queries it size which are both blocking operations
     ///
     /// - parameters:
     ///     - path: The path of the file to be opened for reading.
     ///     - body: operation to run with file handle and region
     /// - returns: return value of operation
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func withOpenFile<Result>(
+    public func withFileRegion<Result>(
         path: String, 
-        _ body: (_ fileHandle: NIOFileHandle, _ fileRegion: FileRegion) async throws -> Result
+        _ body: (_ fileRegion: FileRegion) async throws -> Result
     ) async throws -> Result {
-        let file = try await self.threadPool.runIfActive {
+        let fileRegion = try await self.threadPool.runIfActive {
             let fh = try NIOFileHandle(path: path)
             do {
                 let fr = try FileRegion(fileHandle: fh)
-                return UnsafeTransfer((handle: fh, region: fr))
+                return UnsafeTransfer(fr)
             } catch {
                 _ = try? fh.close()
                 throw error
@@ -934,26 +934,24 @@ extension NonBlockingFileIO {
         }
         let result: Result
         do {
-            result = try await body(file.wrappedValue.handle, file.wrappedValue.region)
+            result = try await body(fileRegion.wrappedValue)
         } catch {
-            try file.wrappedValue.handle.close()
+            try fileRegion.wrappedValue.fileHandle.close()
             throw error
         }
-        try file.wrappedValue.handle.close()
+        try fileRegion.wrappedValue.fileHandle.close()
         return result
     }
 
-    /// Open file at `path` on a private thread pool, run an operation given the file handle and region and then close the file handle.
+    /// Open file at `path` on a private thread pool, run an operation given the file handle and then close the file handle.
     ///
-    /// The open file operation runs on a private thread pool.
-    ///    
     /// This function will return the result of the operation.
     ///
     /// - parameters:
     ///     - path: The path of the file to be opened for writing.
     ///     - mode: File access mode.
     ///     - flags: Additional POSIX flags.
-    /// - returns: NIOFileHandle`.
+    /// - returns: return value of operation
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func withFileHandle<Result>(
         path: String, 
