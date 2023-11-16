@@ -321,7 +321,7 @@ public struct NonBlockingFileIO: Sendable {
         let byteCount = rawByteCount < Int32.max ? rawByteCount : size_t(Int32.max)
 
         return self.threadPool.runIfActive(eventLoop: eventLoop) { () -> ByteBuffer in
-            try readSync(fileHandle: fileHandle, fromOffset: fromOffset, byteCount: byteCount, allocator: allocator)
+            try self.readSync(fileHandle: fileHandle, fromOffset: fromOffset, byteCount: byteCount, allocator: allocator)
         }
     }
 
