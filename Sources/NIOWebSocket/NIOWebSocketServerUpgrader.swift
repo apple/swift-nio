@@ -175,7 +175,7 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
     }
 }
 
-#if !canImport(Darwin) || (canImport(Darwin) && swift(>=5.10))
+#if !canImport(Darwin) || swift(>=5.10)
 /// A `NIOTypedHTTPServerProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// Users may frequently want to offer multiple websocket endpoints on the same port. For this
