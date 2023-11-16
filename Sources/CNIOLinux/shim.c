@@ -18,7 +18,10 @@ void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug(void) {}
 
 #ifdef __linux__
 
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+#error You must define _GNU_SOURCE
+#endif
+
 #include <CNIOLinux.h>
 #include <pthread.h>
 #include <sched.h>
