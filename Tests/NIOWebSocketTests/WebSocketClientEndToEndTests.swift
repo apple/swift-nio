@@ -405,7 +405,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
     }
 }
 
-#if !canImport(Darwin) || (canImport(Darwin) && swift(>=5.10))
+#if !canImport(Darwin) || swift(>=5.10)
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
     func setUpClientChannel(

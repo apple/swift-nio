@@ -74,7 +74,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     }
 }
 
-#if !canImport(Darwin) || (canImport(Darwin) && swift(>=5.10))
+#if !canImport(Darwin) || swift(>=5.10)
 /// A `NIOTypedHTTPClientProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
 /// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request.

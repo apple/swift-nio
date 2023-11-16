@@ -32,7 +32,7 @@ extension EmbeddedChannel {
     }
 }
 
-#if !canImport(Darwin) || (canImport(Darwin) && swift(>=5.10))
+#if !canImport(Darwin) || swift(>=5.10)
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 protocol TypedAndUntypedHTTPClientProtocolUpgrader: NIOHTTPClientProtocolUpgrader, NIOTypedHTTPClientProtocolUpgrader where UpgradeResult == Bool {}
 #else
@@ -287,9 +287,13 @@ private final class RecordingHTTPHandler: ChannelInboundHandler, RemovableChanne
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 private func assertPipelineContainsUpgradeHandler(channel: Channel) {
     let handler = try? channel.pipeline.syncOperations.handler(type: NIOHTTPClientUpgradeHandler.self)
-    let typedHandler = try? channel.pipeline.syncOperations.handler(type: NIOTypedHTTPClientUpgradeHandler<Bool>.self)
 
+    #if !canImport(Darwin) || swift(>=5.10)
+    let typedHandler = try? channel.pipeline.syncOperations.handler(type: NIOTypedHTTPClientUpgradeHandler<Bool>.self)
     XCTAssertTrue(handler != nil || typedHandler != nil)
+    #else
+    XCTAssertTrue(handler != nil)
+    #endif
 }
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
@@ -953,7 +957,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
     }
 }
 
-#if !canImport(Darwin) || (canImport(Darwin) && swift(>=5.10))
+#if !canImport(Darwin) || swift(>=5.10)
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
     override func setUpClientChannel(
