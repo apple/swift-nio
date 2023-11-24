@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import DequeModule
-import NIOCore
+@testable import NIOCore
 import XCTest
 import NIOConcurrencyHelpers
 
@@ -31,6 +31,18 @@ private final class MockAsyncWriterDelegate: NIOAsyncWriterSinkDelegate, @unchec
         self._didYieldCallCount.withLockedValue { $0 += 1 }
         if let didYieldHandler = self.didYieldHandler {
             didYieldHandler(sequence)
+        }
+    }
+
+    var _didSuspendCallCount = NIOLockedValueBox(0)
+    var didSuspendCallCount: Int {
+        self._didSuspendCallCount.withLockedValue { $0 }
+    }
+    var didSuspendHandler: (() -> Void)?
+    func didSuspend() {
+        self._didSuspendCallCount.withLockedValue { $0 += 1 }
+        if let didSuspendHandler = self.didSuspendHandler {
+            didSuspendHandler()
         }
     }
 
@@ -65,6 +77,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         )
         self.writer = newWriter.writer
         self.sink = newWriter.sink
+        self.sink._storage._didSuspend = self.delegate.didSuspend
     }
 
     override func tearDown() {
@@ -79,6 +92,18 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.sink = nil
 
         super.tearDown()
+    }
+
+    func assert(
+        numSuspends: Int,
+        numYields: Int,
+        numTerminates: Int,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertEqual(self.delegate.didSuspendCallCount, numSuspends, "Unexpeced suspends", file: file, line: line)
+        XCTAssertEqual(self.delegate.didYieldCallCount, numYields, "Unexpected yields", file: file, line: line)
+        XCTAssertEqual(self.delegate.didTerminateCallCount, numTerminates, "Unexpected terminates", file: file, line: line)
     }
 
     func testMultipleConcurrentWrites() async throws {
@@ -148,7 +173,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         writer = nil
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
         XCTAssertNil(writer)
 
         sink.finish()
@@ -168,7 +193,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         try await writer!.yield("message1")
         writer = nil
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 1)
         XCTAssertNil(writer)
 
         sink.finish()
@@ -179,18 +204,17 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.writer.finish()
         self.writer = nil
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 1)
     }
 
     func testWriterDeinitialized_whenFinished() async throws {
         self.sink.finish()
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
 
         self.writer = nil
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
     }
 
     // MARK: - ToggleWritability
@@ -198,15 +222,18 @@ final class NIOAsyncWriterTests: XCTestCase {
     func testSetWritability_whenInitial() async throws {
         self.sink.setWritability(to: false)
 
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
+
         Task { [writer] in
             try await writer!.yield("message1")
         }
 
-        // Sleep a bit so that the other Task suspends on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 0)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
     }
 
     func testSetWritability_whenStreaming_andBecomingUnwritable() async throws {
@@ -215,75 +242,88 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         self.sink.setWritability(to: false)
 
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
+
         Task { [writer] in
             try await writer!.yield("message2")
         }
 
-        // Sleep a bit so that the other Task suspends on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
     }
 
     func testSetWritability_whenStreaming_andBecomingWritable() async throws {
         self.sink.setWritability(to: false)
 
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
+        let resumed = expectation(description: "yield completed")
+
         Task { [writer] in
             try await writer!.yield("message2")
+            resumed.fulfill()
         }
 
-        // Sleep a bit so that the other Task suspends on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
 
         self.sink.setWritability(to: true)
 
-        // Sleep a bit so that the other Task can retry the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [resumed], timeout: 1)
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
     }
 
     func testSetWritability_whenStreaming_andSettingSameWritability() async throws {
         self.sink.setWritability(to: false)
 
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
+
         Task { [writer] in
             try await writer!.yield("message1")
         }
 
-        // Sleep a bit so that the other Task suspends on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
 
         // Setting the writability to the same state again shouldn't change anything
         self.sink.setWritability(to: false)
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 0)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
     }
 
     func testSetWritability_whenWriterFinished() async throws {
         self.sink.setWritability(to: false)
 
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
+        let resumed = expectation(description: "yield completed")
+
         Task { [writer] in
             try await writer!.yield("message1")
+            resumed.fulfill()
         }
 
-        // Sleep a bit so that the other Task suspends on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
 
         self.writer.finish()
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 0)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
 
         self.sink.setWritability(to: true)
 
-        // Sleep a bit so that the other Task can retry the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [resumed], timeout: 1)
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 1, numYields: 1, numTerminates: 1)
     }
 
     func testSetWritability_whenFinished() async throws {
@@ -291,7 +331,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         self.sink.setWritability(to: false)
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
     }
 
     // MARK: - Yield
@@ -299,86 +339,98 @@ final class NIOAsyncWriterTests: XCTestCase {
     func testYield_whenInitial_andWritable() async throws {
         try await self.writer.yield("message1")
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
     }
 
     func testYield_whenInitial_andNotWritable() async throws {
         self.sink.setWritability(to: false)
 
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
+
         Task { [writer] in
             try await writer!.yield("message2")
         }
 
-        // Sleep a bit so that the other Task suspends on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 0)
+        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
     }
 
     func testYield_whenStreaming_andWritable() async throws {
         try await self.writer.yield("message1")
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
 
         try await self.writer.yield("message2")
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 2)
+        self.assert(numSuspends: 0, numYields: 2, numTerminates: 0)
     }
 
     func testYield_whenStreaming_andNotWritable() async throws {
         try await self.writer.yield("message1")
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
 
         self.sink.setWritability(to: false)
+
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
 
         Task { [writer] in
             try await writer!.yield("message2")
         }
 
-        // Sleep a bit so that the other Task suspends on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
     }
 
     func testYield_whenStreaming_andYieldCancelled() async throws {
         try await self.writer.yield("message1")
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+
+        let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            // Sleeping here a bit to delay the call to yield
-            // The idea is that we call yield once the Task is
-            // already cancelled
-            try? await Task.sleep(nanoseconds: 1_000_000)
+            await fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message2")
         }
 
         task.cancel()
+        cancelled.fulfill()
 
         await XCTAssertThrowsError(try await task.value) { error in
             XCTAssertTrue(error is CancellationError)
         }
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
     }
 
     func testYield_whenWriterFinished() async throws {
         self.sink.setWritability(to: false)
 
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
+
         Task { [writer] in
             try await writer!.yield("message1")
         }
 
-        // Sleep a bit so that the other Task suspends on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
 
         self.writer.finish()
 
         await XCTAssertThrowsError(try await self.writer.yield("message1")) { error in
             XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished())
         }
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
     }
 
     func testYield_whenFinished() async throws {
@@ -387,7 +439,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         await XCTAssertThrowsError(try await self.writer.yield("message1")) { error in
             XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished())
         }
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
     }
 
     func testYield_whenFinishedError() async throws {
@@ -396,75 +448,80 @@ final class NIOAsyncWriterTests: XCTestCase {
         await XCTAssertThrowsError(try await self.writer.yield("message1")) { error in
             XCTAssertTrue(error is SomeError)
         }
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
     }
 
     // MARK: - Cancel
 
     func testCancel_whenInitial() async throws {
+        let cancelled = expectation(description: "task cancelled")
+
         let task = Task { [writer] in
-            // Sleeping here a bit to delay the call to yield
-            // The idea is that we call yield once the Task is
-            // already cancelled
-            try? await Task.sleep(nanoseconds: 1_000_000)
+            await fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message1")
         }
 
         task.cancel()
+        cancelled.fulfill()
 
         await XCTAssertThrowsError(try await task.value) { error in
             XCTAssertTrue(error is CancellationError)
         }
-        XCTAssertEqual(self.delegate.didYieldCallCount, 0)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
     }
 
     func testCancel_whenStreaming_andCancelBeforeYield() async throws {
         try await self.writer.yield("message1")
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+
+        let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            // Sleeping here a bit to delay the call to yield
-            // The idea is that we call yield once the Task is
-            // already cancelled
-            try? await Task.sleep(nanoseconds: 1_000_000)
+            await fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message2")
         }
 
         task.cancel()
+        cancelled.fulfill()
 
         await XCTAssertThrowsError(try await task.value) { error in
             XCTAssertTrue(error is CancellationError)
         }
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
     }
 
     func testCancel_whenStreaming_andCancelAfterSuspendedYield() async throws {
         try await self.writer.yield("message1")
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
 
         self.sink.setWritability(to: false)
+
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
 
         let task = Task { [writer] in
             try await writer!.yield("message2")
         }
 
-        // Sleeping here to give the task enough time to suspend on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
+
+        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
 
         task.cancel()
 
         await XCTAssertThrowsError(try await task.value) { error in
             XCTAssertTrue(error is CancellationError)
         }
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+
+        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
 
         self.sink.setWritability(to: true)
-        XCTAssertEqual(self.delegate.didYieldCallCount, 1)
+
+        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
     }
 
     func testCancel_whenFinished() async throws {
@@ -472,23 +529,20 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
 
+        let cancelled = expectation(description: "task cancelled")
+
         let task = Task { [writer] in
-            // Sleeping here a bit to delay the call to yield
-            // The idea is that we call yield once the Task is
-            // already cancelled
-            try? await Task.sleep(nanoseconds: 1_000_000)
+            await fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message1")
         }
 
-        // Sleeping here to give the task enough time to suspend on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
-
         task.cancel()
+        cancelled.fulfill()
 
-        XCTAssertEqual(self.delegate.didYieldCallCount, 0)
         await XCTAssertThrowsError(try await task.value) { error in
             XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished())
         }
+        XCTAssertEqual(self.delegate.didYieldCallCount, 0)
     }
 
     // MARK: - Writer Finish
@@ -496,13 +550,13 @@ final class NIOAsyncWriterTests: XCTestCase {
     func testWriterFinish_whenInitial() async throws {
         self.writer.finish()
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
     }
 
     func testWriterFinish_whenInitial_andFailure() async throws {
         self.writer.finish(error: SomeError())
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
     }
 
     func testWriterFinish_whenStreaming() async throws {
@@ -510,38 +564,42 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         self.writer.finish()
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 1)
     }
 
     func testWriterFinish_whenStreaming_AndBufferedElements() async throws {
         // We are setting up a suspended yield here to check that it gets resumed
         self.sink.setWritability(to: false)
 
+
+        let suspended = expectation(description: "suspended on yield")
+        self.delegate.didSuspendHandler = {
+            suspended.fulfill()
+        }
         let task = Task { [writer] in
             try await writer!.yield("message1")
         }
-
-        // Sleeping here to give the task enough time to suspend on the yield
-        try await Task.sleep(nanoseconds: 1_000_000)
+        await fulfillment(of: [suspended], timeout: 1)
 
         self.writer.finish()
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
 
         // We have to become writable again to unbuffer the yield
         self.sink.setWritability(to: true)
 
         await XCTAssertNoThrow(try await task.value)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+
+        self.assert(numSuspends: 1, numYields: 1, numTerminates: 1)
     }
 
     func testWriterFinish_whenFinished() {
         // This tests just checks that finishing again is a no-op
         self.writer.finish()
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
 
         self.writer.finish()
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
     }
 
     // MARK: - Sink Finish
@@ -561,7 +619,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         XCTAssertNil(sink)
         XCTAssertNotNil(writer)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
     }
 
     func testSinkFinish_whenStreaming() async throws {
@@ -575,25 +633,33 @@ final class NIOAsyncWriterTests: XCTestCase {
         let writer = newWriter!.writer
         newWriter = nil
 
-        Task { [writer] in
-            try await writer.yield("message1")
-        }
-
-        try await Task.sleep(nanoseconds: 1_000_000)
+        try await writer.yield("message1")
 
         sink = nil
 
         XCTAssertNil(sink)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 0)
+        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
     }
 
     func testSinkFinish_whenFinished() async throws {
         self.writer.finish()
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
 
         self.sink = nil
 
-        XCTAssertEqual(self.delegate.didTerminateCallCount, 1)
+        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
     }
 }
+
+#if !canImport(Darwin) && swift(<5.10)
+extension XCTestCase {
+    func fulfillment(
+        of expectations: [XCTestExpectation],
+        timeout seconds: TimeInterval,
+        enforceOrder enforceOrderOfFulfillment: Bool = false
+    ) async {
+        wait(for: expectations, timeout: seconds)
+    }
+}
+#endif
