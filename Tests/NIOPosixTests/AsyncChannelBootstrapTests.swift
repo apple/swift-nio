@@ -191,6 +191,7 @@ private final class AddressedEnvelopingHandler: ChannelDuplexHandler {
     }
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncChannelBootstrapTests: XCTestCase {
     enum NegotiationResult {
         case string(NIOAsyncChannel<String, String>)
@@ -1358,6 +1359,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension AsyncStream {
     fileprivate static func makeStream(
         of elementType: Element.Type = Element.self,

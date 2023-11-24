@@ -850,6 +850,7 @@ fileprivate func XCTAssertEqualWithoutAutoclosure<T>(
     XCTAssertEqual(expression1, expression2, message(), file: file, line: line)
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension AsyncSequence {
     /// Collect all elements in the sequence into an array.
     fileprivate func collect() async rethrows -> [Element] {
