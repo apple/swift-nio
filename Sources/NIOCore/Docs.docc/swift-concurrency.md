@@ -85,10 +85,12 @@ the inbound data and echo it back outbound.
 
 ```swift
 let channel = ...
-let asyncChannel = try NIOAsyncChannel<ByteBuffer, ByteBuffer>(synchronouslyWrapping: channel)
+let asyncChannel = try NIOAsyncChannel<ByteBuffer, ByteBuffer>(wrappingChannelSynchronously: channel)
 
-for try await inboundData in asyncChannel.inbound {
-    try await asyncChannel.outbound.write(inboundData)
+try await asyncChannel.executeThenClose { inbound, outbound in
+    for try await inboundData in inbound {
+        try await outbound.write(inboundData)
+    }
 }
 ```
 
@@ -137,15 +139,19 @@ let serverChannel = try await ServerBootstrap(group: eventLoopGroup)
     }
 
 try await withThrowingDiscardingTaskGroup { group in
-    for try await connectionChannel in serverChannel.inbound {
-        group.addTask {
-            do {
-                for try await inboundData in connectionChannel.inbound {
-                    // Let's echo back all inbound data
-                    try await connectionChannel.outbound.write(inboundData)
+    try await serverChannel.executeThenClose { serverChannelInbound in
+        for try await connectionChannel in serverChannelInbound {
+            group.addTask {
+                do {
+                    try await connectionChannel.executeThenClose { connectionChannelInbound, connectionChannelOutbound in
+                        for try await inboundData in connectionChannelInbound {
+                            // Let's echo back all inbound data
+                            try await connectionChannelOutbound.write(inboundData)
+                        }
+                    }
+                } catch {
+                    // Handle errors
                 }
-            } catch {
-                // Handle errors
             }
         }
     }
@@ -180,15 +186,17 @@ let clientChannel = try await ClientBootstrap(group: eventLoopGroup)
     ) { channel in
         channel.eventLoop.makeCompletedFuture {
             return try NIOAsyncChannel<ByteBuffer, ByteBuffer>(
-                synchronouslyWrapping: channel
+                wrappingChannelSynchronously: channel
             )
         }
     }
 
-clientChannel.outbound.write(ByteBuffer(string: "hello"))
+try await clientChannel.executeThenClose { inbound, outbound in
+    try await outbound.write(ByteBuffer(string: "hello"))
 
-for try await inboundData in clientChannel.inbound {
-    print(inboundData)
+    for try await inboundData in inbound {
+        print(inboundData)
+    }
 }
 ```
 
@@ -237,7 +245,7 @@ let upgradeResult: EventLoopFuture<UpgradeResult> = try await ClientBootstrap(gr
                     // This configures the pipeline after the websocket upgrade was successful.
                     // We are wrapping the pipeline in a NIOAsyncChannel.
                     channel.eventLoop.makeCompletedFuture {
-                        let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(synchronouslyWrapping: channel)
+                        let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(wrappingChannelSynchronously: channel)
                         return UpgradeResult.websocket(asyncChannel)
                     }
                 }

@@ -45,17 +45,16 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     @usableFromInline
     let eventLoop: EventLoop
 
-    /// The shared `CloseRatchet` between this handler and the inbound stream handler.
     @usableFromInline
-    let closeRatchet: CloseRatchet
+    let isOutboundHalfClosureEnabled: Bool
 
     @inlinable
     init(
         eventLoop: EventLoop,
-        closeRatchet: CloseRatchet
+        isOutboundHalfClosureEnabled: Bool
     ) {
         self.eventLoop = eventLoop
-        self.closeRatchet = closeRatchet
+        self.isOutboundHalfClosureEnabled = isOutboundHalfClosureEnabled
     }
 
     @inlinable
@@ -96,15 +95,8 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     func _didTerminate(error: Error?) {
         self.eventLoop.preconditionInEventLoop()
 
-        switch self.closeRatchet.closeWrite() {
-        case .nothing:
-            break
-
-        case .closeOutput:
+        if self.isOutboundHalfClosureEnabled {
             self.context?.close(mode: .output, promise: nil)
-
-        case .close:
-            self.context?.close(promise: nil)
         }
 
         self.sink = nil

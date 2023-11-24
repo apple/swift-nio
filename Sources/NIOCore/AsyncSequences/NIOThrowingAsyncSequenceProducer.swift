@@ -94,6 +94,38 @@ public struct NIOThrowingAsyncSequenceProducer<
     ///
     /// - Parameters:
     ///   - elementType: The element type of the sequence.
+    ///   - failureType: The failure type of the sequence. Must be `Swift.Error`
+    ///   - backPressureStrategy: The back-pressure strategy of the sequence.
+    ///   - finishOnDeinit: Indicates if ``NIOThrowingAsyncSequenceProducer/Source/finish()`` should be called on deinit of the.
+    ///   We do not recommend to rely on  deinit based resource tear down.
+    ///   - delegate: The delegate of the sequence
+    /// - Returns: A ``NIOThrowingAsyncSequenceProducer/Source`` and a ``NIOThrowingAsyncSequenceProducer``.
+    @inlinable
+    public static func makeSequence(
+        elementType: Element.Type = Element.self,
+        failureType: Failure.Type = Error.self,
+        backPressureStrategy: Strategy,
+        finishOnDeinit: Bool,
+        delegate: Delegate
+    ) -> NewSequence where Failure == Error {
+        let sequence = Self(
+            backPressureStrategy: backPressureStrategy,
+            delegate: delegate
+        )
+        let source = Source(storage: sequence._storage, finishOnDeinit: finishOnDeinit)
+
+        return .init(source: source, sequence: sequence)
+    }
+
+    /// Initializes a new ``NIOThrowingAsyncSequenceProducer`` and a ``NIOThrowingAsyncSequenceProducer/Source``.
+    ///
+    /// - Important: This method returns a struct containing a ``NIOThrowingAsyncSequenceProducer/Source`` and
+    /// a ``NIOThrowingAsyncSequenceProducer``. The source MUST be held by the caller and
+    /// used to signal new elements or finish. The sequence MUST be passed to the actual consumer and MUST NOT be held by the
+    /// caller. This is due to the fact that deiniting the sequence is used as part of a trigger to terminate the underlying source.
+    ///
+    /// - Parameters:
+    ///   - elementType: The element type of the sequence.
     ///   - failureType: The failure type of the sequence.
     ///   - backPressureStrategy: The back-pressure strategy of the sequence.
     ///   - delegate: The delegate of the sequence
@@ -110,7 +142,7 @@ public struct NIOThrowingAsyncSequenceProducer<
             backPressureStrategy: backPressureStrategy,
             delegate: delegate
         )
-        let source = Source(storage: sequence._storage)
+        let source = Source(storage: sequence._storage, finishOnDeinit: true)
 
         return .init(source: source, sequence: sequence)
     }
@@ -129,6 +161,7 @@ public struct NIOThrowingAsyncSequenceProducer<
     ///   - delegate: The delegate of the sequence
     /// - Returns: A ``NIOThrowingAsyncSequenceProducer/Source`` and a ``NIOThrowingAsyncSequenceProducer``.
     @inlinable
+    @available(*, deprecated, renamed: "makeSequence(elementType:failureType:backPressureStrategy:finishOnDeinit:delegate:)", message: "This method has been deprecated since it defaults to deinit based resource teardown")
     public static func makeSequence(
         elementType: Element.Type = Element.self,
         failureType: Failure.Type = Error.self,
@@ -139,7 +172,7 @@ public struct NIOThrowingAsyncSequenceProducer<
             backPressureStrategy: backPressureStrategy,
             delegate: delegate
         )
-        let source = Source(storage: sequence._storage)
+        let source = Source(storage: sequence._storage, finishOnDeinit: true)
 
         return .init(source: source, sequence: sequence)
     }
@@ -149,13 +182,14 @@ public struct NIOThrowingAsyncSequenceProducer<
     internal static func makeNonThrowingSequence(
         elementType: Element.Type = Element.self,
         backPressureStrategy: Strategy,
+        finishOnDeinit: Bool,
         delegate: Delegate
     ) -> NewSequence where Failure == Never {
         let sequence = Self(
             backPressureStrategy: backPressureStrategy,
             delegate: delegate
         )
-        let source = Source(storage: sequence._storage)
+        let source = Source(storage: sequence._storage, finishOnDeinit: finishOnDeinit)
 
         return .init(source: source, sequence: sequence)
     }
@@ -238,15 +272,23 @@ extension NIOThrowingAsyncSequenceProducer {
             @usableFromInline
             internal let _storage: Storage
 
+            @usableFromInline
+            internal let _finishOnDeinit: Bool
+
             @inlinable
-            init(storage: Storage) {
+            init(storage: Storage, finishOnDeinit: Bool) {
                 self._storage = storage
+                self._finishOnDeinit = finishOnDeinit
             }
 
             @inlinable
             deinit {
-                // We need to call finish here to resume any suspended continuation.
-                self._storage.finish(nil)
+                if !self._finishOnDeinit && !self._storage.isFinished {
+                    preconditionFailure("Deinited NIOAsyncSequenceProducer.Source without calling source.finish()")
+                } else {
+                    // We need to call finish here to resume any suspended continuation.
+                    self._storage.finish(nil)
+                }
             }
         }
 
@@ -259,8 +301,8 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @usableFromInline
-        /* fileprivate */ internal init(storage: Storage) {
-            self._internalClass = .init(storage: storage)
+        /* fileprivate */ internal init(storage: Storage, finishOnDeinit: Bool) {
+            self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
         }
 
         /// The result of a call to ``NIOThrowingAsyncSequenceProducer/Source/yield(_:)``.
@@ -356,6 +398,11 @@ extension NIOThrowingAsyncSequenceProducer {
         /// The delegate.
         @usableFromInline
         /* private */ internal var _delegate: Delegate?
+
+        @inlinable
+        var isFinished: Bool {
+            self._lock.withLock { self._stateMachine.isFinished }
+        }
 
         @usableFromInline
         /* fileprivate */ internal init(
@@ -647,6 +694,19 @@ extension NIOThrowingAsyncSequenceProducer {
         /// The state machine's current state.
         @usableFromInline
         /* private */ internal var _state: State
+
+        @inlinable
+        var isFinished: Bool {
+            switch self._state {
+            case .initial, .streaming:
+                return false
+            case .cancelled, .sourceFinished, .finished:
+                return true
+            case .modifying:
+                preconditionFailure("Invalid state")
+            }
+        }
+
 
         /// Initializes a new `StateMachine`.
         ///

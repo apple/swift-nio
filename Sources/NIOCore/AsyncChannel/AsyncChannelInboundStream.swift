@@ -80,7 +80,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     init<HandlerInbound: Sendable>(
         channel: Channel,
         backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeRatchet: CloseRatchet,
+        closeOnDeinit: Bool,
         handler: NIOAsyncChannelInboundStreamChannelHandler<HandlerInbound, Inbound>
     ) throws {
         channel.eventLoop.preconditionInEventLoop()
@@ -96,6 +96,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
 
         let sequence = Producer.makeSequence(
             backPressureStrategy: strategy,
+            finishOnDeinit: closeOnDeinit,
             delegate: NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate(handler: handler)
         )
         handler.source = sequence.source
@@ -108,17 +109,16 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     static func makeWrappingHandler(
         channel: Channel,
         backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeRatchet: CloseRatchet
+        closeOnDeinit: Bool
     ) throws -> NIOAsyncChannelInboundStream {
         let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound, Inbound>.makeHandler(
-            eventLoop: channel.eventLoop,
-            closeRatchet: closeRatchet
+            eventLoop: channel.eventLoop
         )
 
         return try .init(
             channel: channel,
             backPressureStrategy: backPressureStrategy,
-            closeRatchet: closeRatchet,
+            closeOnDeinit: closeOnDeinit,
             handler: handler
         )
     }
@@ -128,19 +128,18 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     static func makeTransformationHandler(
         channel: Channel,
         backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeRatchet: CloseRatchet,
+        closeOnDeinit: Bool,
         channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<Inbound>
     ) throws -> NIOAsyncChannelInboundStream {
         let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, Inbound>.makeHandlerWithTransformations(
             eventLoop: channel.eventLoop,
-            closeRatchet: closeRatchet,
             channelReadTransformation: channelReadTransformation
         )
 
         return try .init(
             channel: channel,
             backPressureStrategy: backPressureStrategy,
-            closeRatchet: closeRatchet,
+            closeOnDeinit: closeOnDeinit,
             handler: handler
         )
     }

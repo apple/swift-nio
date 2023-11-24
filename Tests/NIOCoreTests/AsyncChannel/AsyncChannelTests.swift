@@ -30,178 +30,92 @@ final class AsyncChannelTests: XCTestCase {
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
             try channel.pipeline.syncOperations.addHandler(CloseOnWriteHandler())
-            return try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
+            return try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
         }
 
-        try await wrapped.outbound.write("Test")
-        try await channel.closeFuture.get()
+        try await wrapped.executeThenClose { _, outbound in
+            try await outbound.write("Test")
+        }
     }
 
     func testAsyncChannelBasicFunctionality() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<String, Never>(wrappingChannelSynchronously: channel)
         }
 
-        var iterator = wrapped.inbound.makeAsyncIterator()
-        try await channel.writeInbound("hello")
-        let firstRead = try await iterator.next()
-        XCTAssertEqual(firstRead, "hello")
+        try await wrapped.executeThenClose { inbound, _ in
+            var iterator = inbound.makeAsyncIterator()
+            try await channel.writeInbound("hello")
+            let firstRead = try await iterator.next()
+            XCTAssertEqual(firstRead, "hello")
 
-        try await channel.writeInbound("world")
-        let secondRead = try await iterator.next()
-        XCTAssertEqual(secondRead, "world")
+            try await channel.writeInbound("world")
+            let secondRead = try await iterator.next()
+            XCTAssertEqual(secondRead, "world")
 
-        try await channel.testingEventLoop.executeInContext {
-            channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+            }
+
+            let thirdRead = try await iterator.next()
+            XCTAssertNil(thirdRead)
         }
-
-        let thirdRead = try await iterator.next()
-        XCTAssertNil(thirdRead)
-
-        try await channel.closeFuture.get()
     }
 
     func testAsyncChannelBasicWrites() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<Never, String>(wrappingChannelSynchronously: channel)
         }
 
-        try await wrapped.outbound.write("hello")
-        try await wrapped.outbound.write("world")
+        try await wrapped.executeThenClose { _, outbound in
+            try await outbound.write("hello")
+            try await outbound.write("world")
 
-        let firstRead = try await channel.waitForOutboundWrite(as: String.self)
-        let secondRead = try await channel.waitForOutboundWrite(as: String.self)
+            let firstRead = try await channel.waitForOutboundWrite(as: String.self)
+            let secondRead = try await channel.waitForOutboundWrite(as: String.self)
 
-        XCTAssertEqual(firstRead, "hello")
-        XCTAssertEqual(secondRead, "world")
-
-        try await channel.close()
+            XCTAssertEqual(firstRead, "hello")
+            XCTAssertEqual(secondRead, "world")
+        }
     }
 
-    func testDroppingTheWriterClosesTheWriteSideOfTheChannel() async throws {
+    func testFinishingTheWriterClosesTheWriteSideOfTheChannel() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let closeRecorder = CloseRecorder()
         try await channel.pipeline.addHandler(closeRecorder)
 
-        let inboundReader: NIOAsyncChannelInboundStream<Never>
-
-        do {
-            let wrapped = try await channel.testingEventLoop.executeInContext {
-                try NIOAsyncChannel(
-                    synchronouslyWrapping: channel,
-                    configuration: .init(
-                        isOutboundHalfClosureEnabled: true,
-                        inboundType: Never.self,
-                        outboundType: Never.self
-                    )
+        let wrapped = try await channel.testingEventLoop.executeInContext {
+            try NIOAsyncChannel(
+                wrappingChannelSynchronously: channel,
+                configuration: .init(
+                    isOutboundHalfClosureEnabled: true,
+                    inboundType: Never.self,
+                    outboundType: Never.self
                 )
-            }
-            inboundReader = wrapped.inbound
+            )
+        }
+
+        try await wrapped.executeThenClose { inbound, outbound in
+            outbound.finish()
+
+            await channel.testingEventLoop.run()
 
             try await channel.testingEventLoop.executeInContext {
                 XCTAssertEqual(1, closeRecorder.outboundCloses)
             }
-        }
-
-        await channel.testingEventLoop.run()
-
-        try await channel.testingEventLoop.executeInContext {
-            XCTAssertEqual(1, closeRecorder.outboundCloses)
-        }
-
-        // Just use this to keep the inbound reader alive.
-        withExtendedLifetime(inboundReader) {}
-        channel.close(promise: nil)
-    }
-
-    func testDroppingTheWriterDoesntCloseTheWriteSideOfTheChannelIfHalfClosureIsDisabled() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
-        let channel = NIOAsyncTestingChannel()
-        let closeRecorder = CloseRecorder()
-        try await channel.pipeline.addHandler(closeRecorder)
-
-        let inboundReader: NIOAsyncChannelInboundStream<Never>
-
-        do {
-            let wrapped = try await channel.testingEventLoop.executeInContext {
-                try NIOAsyncChannel(
-                    synchronouslyWrapping: channel,
-                    configuration: .init(
-                        isOutboundHalfClosureEnabled: false,
-                        inboundType: Never.self,
-                        outboundType: Never.self
-                    )
-                )
-            }
-            inboundReader = wrapped.inbound
-
-            try await channel.testingEventLoop.executeInContext {
-                XCTAssertEqual(0, closeRecorder.outboundCloses)
-            }
-        }
-
-        try await channel.testingEventLoop.executeInContext {
-            XCTAssertEqual(0, closeRecorder.outboundCloses)
-        }
-
-        // Just use this to keep the inbound reader alive.
-        withExtendedLifetime(inboundReader) {}
-        channel.close(promise: nil)
-    }
-
-    func testDroppingTheWriterFirstLeadsToChannelClosureWhenReaderIsAlsoDropped() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
-        let channel = NIOAsyncTestingChannel()
-        let closeRecorder = CloseRecorder()
-        try await channel.pipeline.addHandler(CloseSuppressor())
-        try await channel.pipeline.addHandler(closeRecorder)
-
-        do {
-            let inboundReader: NIOAsyncChannelInboundStream<Never>
-
-            do {
-                let wrapped = try await channel.testingEventLoop.executeInContext {
-                    try NIOAsyncChannel(
-                        synchronouslyWrapping: channel,
-                        configuration: .init(
-                            isOutboundHalfClosureEnabled: true,
-                            inboundType: Never.self,
-                            outboundType: Never.self
-                        )
-                    )
-                }
-                inboundReader = wrapped.inbound
-
-                try await channel.testingEventLoop.executeInContext {
-                    XCTAssertEqual(1, closeRecorder.allCloses)
-                }
-            }
-
-            await channel.testingEventLoop.run()
-
-            // First we see half-closure.
-            try await channel.testingEventLoop.executeInContext {
-                XCTAssertEqual(1, closeRecorder.allCloses)
-            }
 
             // Just use this to keep the inbound reader alive.
-            withExtendedLifetime(inboundReader) {}
-        }
+            withExtendedLifetime(inbound) {}
 
-        // Now the inbound reader is dead, we see full closure.
-        try await channel.testingEventLoop.executeInContext {
-            XCTAssertEqual(2, closeRecorder.allCloses)
         }
-
-        try await channel.closeIgnoringSuppression()
     }
 
-    func testDroppingEverythingClosesTheChannel() async throws {
+    func testDroppingEverythingDoesntCloseTheChannel() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let closeRecorder = CloseRecorder()
@@ -209,9 +123,9 @@ final class AsyncChannelTests: XCTestCase {
         try await channel.pipeline.addHandler(closeRecorder)
 
         do {
-            let wrapped = try await channel.testingEventLoop.executeInContext {
+            _ = try await channel.testingEventLoop.executeInContext {
                 try NIOAsyncChannel(
-                    synchronouslyWrapping: channel,
+                    wrappingChannelSynchronously: channel,
                     configuration: .init(
                         isOutboundHalfClosureEnabled: false,
                         inboundType: Never.self,
@@ -223,14 +137,11 @@ final class AsyncChannelTests: XCTestCase {
             try await channel.testingEventLoop.executeInContext {
                 XCTAssertEqual(0, closeRecorder.allCloses)
             }
-
-            // Just use this to keep the wrapper alive until here.
-            withExtendedLifetime(wrapped) {}
         }
 
         // Now that everything is dead, we see full closure.
         try await channel.testingEventLoop.executeInContext {
-            XCTAssertEqual(1, closeRecorder.allCloses)
+            XCTAssertEqual(0, closeRecorder.allCloses)
         }
 
         try await channel.closeIgnoringSuppression()
@@ -240,7 +151,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<String, Never>(wrappingChannelSynchronously: channel)
         }
 
         try await channel.writeInbound("hello")
@@ -249,15 +160,17 @@ final class AsyncChannelTests: XCTestCase {
 
         try await channel.close().get()
 
-        let reads = try await Array(wrapped.inbound)
-        XCTAssertEqual(reads, ["hello"])
+        try await wrapped.executeThenClose { inbound, _ in
+            let reads = try await Array(inbound)
+            XCTAssertEqual(reads, ["hello"])
+        }
     }
 
     func testErrorsArePropagatedButAfterReads() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<String, Never>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<String, Never>(wrappingChannelSynchronously: channel)
         }
 
         try await channel.writeInbound("hello")
@@ -265,12 +178,14 @@ final class AsyncChannelTests: XCTestCase {
             channel.pipeline.fireErrorCaught(TestError.bang)
         }
 
-        var iterator = wrapped.inbound.makeAsyncIterator()
-        let first = try await iterator.next()
-        XCTAssertEqual(first, "hello")
+        try await wrapped.executeThenClose { inbound, _ in
+            var iterator = inbound.makeAsyncIterator()
+            let first = try await iterator.next()
+            XCTAssertEqual(first, "hello")
 
-        try await XCTAssertThrowsError(await iterator.next()) { error in
-            XCTAssertEqual(error as? TestError, .bang)
+            try await XCTAssertThrowsError(await iterator.next()) { error in
+                XCTAssertEqual(error as? TestError, .bang)
+            }
         }
     }
 
@@ -278,7 +193,7 @@ final class AsyncChannelTests: XCTestCase {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<Never, String>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<Never, String>(wrappingChannelSynchronously: channel)
         }
 
         try await channel.testingEventLoop.executeInContext {
@@ -290,9 +205,11 @@ final class AsyncChannelTests: XCTestCase {
 
         await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                try await wrapped.outbound.write("hello")
-                lock.withLockedValue {
-                    XCTAssertTrue($0)
+                try await wrapped.executeThenClose { _, outbound in
+                    try await outbound.write("hello")
+                    lock.withLockedValue {
+                        XCTAssertTrue($0)
+                    }
                 }
             }
 
@@ -307,8 +224,6 @@ final class AsyncChannelTests: XCTestCase {
                 }
             }
         }
-
-        try await channel.close().get()
     }
 
     func testBufferDropsReadsIfTheReaderIsGone() async throws {
@@ -318,7 +233,7 @@ final class AsyncChannelTests: XCTestCase {
         do {
             // Create the NIOAsyncChannel, then drop it. The handler will still be in the pipeline.
             _ = try await channel.testingEventLoop.executeInContext {
-                _ = try NIOAsyncChannel<Sentinel, Never>(synchronouslyWrapping: channel)
+                _ = try NIOAsyncChannel<Sentinel, Never>(wrappingChannelSynchronously: channel)
             }
         }
 
@@ -343,7 +258,7 @@ final class AsyncChannelTests: XCTestCase {
         try await channel.pipeline.addHandler(readCounter)
         let wrapped = try await channel.testingEventLoop.executeInContext {
             try NIOAsyncChannel(
-                synchronouslyWrapping: channel,
+                wrappingChannelSynchronously: channel,
                 configuration: .init(
                     backPressureStrategy: .init(lowWatermark: 2, highWatermark: 4),
                     inboundType: Void.self,
@@ -396,83 +311,85 @@ final class AsyncChannelTests: XCTestCase {
         }
         XCTAssertEqual(readCounter.readCount, 6)
 
-        // Now consume three elements from the pipeline. This should not unbuffer the read, as 3 elements remain.
-        var reader = wrapped.inbound.makeAsyncIterator()
-        for _ in 0..<3 {
+        try await wrapped.executeThenClose { inbound, outbound in
+            // Now consume three elements from the pipeline. This should not unbuffer the read, as 3 elements remain.
+            var reader = inbound.makeAsyncIterator()
+            for _ in 0..<3 {
+                try await XCTAsyncAssertNotNil(await reader.next())
+            }
+            await channel.testingEventLoop.run()
+            XCTAssertEqual(readCounter.readCount, 6)
+
+            // Removing the next element should trigger an automatic read.
             try await XCTAsyncAssertNotNil(await reader.next())
+            await channel.testingEventLoop.run()
+            XCTAssertEqual(readCounter.readCount, 7)
+
+            // Reads now work again, even if more data arrives.
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelReadComplete()
+
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+            }
+            XCTAssertEqual(readCounter.readCount, 13)
+
+            // The next reads arriving pushes us past the limit again.
+            // This time we won't read.
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelReadComplete()
+            }
+            XCTAssertEqual(readCounter.readCount, 13)
+
+            // This time we'll consume 4 more elements, and we won't find a read at all.
+            for _ in 0..<4 {
+                try await XCTAsyncAssertNotNil(await reader.next())
+            }
+            await channel.testingEventLoop.run()
+            XCTAssertEqual(readCounter.readCount, 13)
+
+            // But the next reads work fine.
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.read()
+                channel.pipeline.read()
+                channel.pipeline.read()
+            }
+            XCTAssertEqual(readCounter.readCount, 16)
         }
-        await channel.testingEventLoop.run()
-        XCTAssertEqual(readCounter.readCount, 6)
-
-        // Removing the next element should trigger an automatic read.
-        try await XCTAsyncAssertNotNil(await reader.next())
-        await channel.testingEventLoop.run()
-        XCTAssertEqual(readCounter.readCount, 7)
-
-        // Reads now work again, even if more data arrives.
-        try await channel.testingEventLoop.executeInContext {
-            channel.pipeline.read()
-            channel.pipeline.read()
-            channel.pipeline.read()
-
-            channel.pipeline.fireChannelRead(NIOAny(()))
-            channel.pipeline.fireChannelReadComplete()
-
-            channel.pipeline.read()
-            channel.pipeline.read()
-            channel.pipeline.read()
-        }
-        XCTAssertEqual(readCounter.readCount, 13)
-
-        // The next reads arriving pushes us past the limit again.
-        // This time we won't read.
-        try await channel.testingEventLoop.executeInContext {
-            channel.pipeline.fireChannelRead(NIOAny(()))
-            channel.pipeline.fireChannelRead(NIOAny(()))
-            channel.pipeline.fireChannelReadComplete()
-        }
-        XCTAssertEqual(readCounter.readCount, 13)
-
-        // This time we'll consume 4 more elements, and we won't find a read at all.
-        for _ in 0..<4 {
-            try await XCTAsyncAssertNotNil(await reader.next())
-        }
-        await channel.testingEventLoop.run()
-        XCTAssertEqual(readCounter.readCount, 13)
-
-        // But the next reads work fine.
-        try await channel.testingEventLoop.executeInContext {
-            channel.pipeline.read()
-            channel.pipeline.read()
-            channel.pipeline.read()
-        }
-        XCTAssertEqual(readCounter.readCount, 16)
     }
 
     func testCanWrapAChannelSynchronously() async throws {
         guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            try NIOAsyncChannel<String, String>(synchronouslyWrapping: channel)
+            try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
         }
 
-        var iterator = wrapped.inbound.makeAsyncIterator()
-        try await channel.writeInbound("hello")
-        let firstRead = try await iterator.next()
-        XCTAssertEqual(firstRead, "hello")
+        try await wrapped.executeThenClose { inbound, outbound in
+            var iterator = inbound.makeAsyncIterator()
+            try await channel.writeInbound("hello")
+            let firstRead = try await iterator.next()
+            XCTAssertEqual(firstRead, "hello")
 
-        try await wrapped.outbound.write("world")
-        let write = try await channel.waitForOutboundWrite(as: String.self)
-        XCTAssertEqual(write, "world")
+            try await outbound.write("world")
+            let write = try await channel.waitForOutboundWrite(as: String.self)
+            XCTAssertEqual(write, "world")
 
-        try await channel.testingEventLoop.executeInContext {
-            channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+            try await channel.testingEventLoop.executeInContext {
+                channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+            }
+
+            let secondRead = try await iterator.next()
+            XCTAssertNil(secondRead)
         }
-
-        let secondRead = try await iterator.next()
-        XCTAssertNil(secondRead)
-
-        try await channel.close()
     }
 }
 
