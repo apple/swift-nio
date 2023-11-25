@@ -422,7 +422,7 @@ private final class HTTPHandler: ChannelInboundHandler {
                 return
             }
             let path = self.htdocsPath + "/" + path
-            let fileHandleAndRegion = self.fileIO.openFile(path: path, eventLoop: context.eventLoop)
+            let fileHandleAndRegion = self.fileIO.openFile(_deprecatedPath: path, eventLoop: context.eventLoop)
             fileHandleAndRegion.whenFailure {
                 sendErrorResponse(request: request, $0)
             }

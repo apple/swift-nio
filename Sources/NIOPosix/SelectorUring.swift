@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2021-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -131,8 +131,8 @@ extension Selector: _SelectorBackendProtocol {
         assert(self.eventFD == -1, "self.eventFD == \(self.eventFD) on deinitAssertions0 deinit, forgot close?")
     }
 
-    func register0<S: Selectable>(
-        selectable: S,
+    func register0(
+        selectableFD: CInt,
         fileDescriptor: CInt,
         interested: SelectorEventSet,
         registrationID: SelectorRegistrationID
@@ -150,8 +150,8 @@ extension Selector: _SelectorBackendProtocol {
         )
     }
 
-    func reregister0<S: Selectable>(
-        selectable: S,
+    func reregister0(
+        selectableFD: CInt,
         fileDescriptor: CInt,
         oldInterested: SelectorEventSet,
         newInterested: SelectorEventSet,
@@ -190,8 +190,8 @@ extension Selector: _SelectorBackendProtocol {
         }
     }
 
-    func deregister0<S: Selectable>(
-        selectable: S,
+    func deregister0(
+        selectableFD: CInt,
         fileDescriptor: CInt,
         oldInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
