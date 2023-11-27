@@ -68,8 +68,13 @@ import Musl
 #endif
 import CNIOLinux
 
+#if os(Android)
+private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer, UnsafeMutablePointer<CChar>, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
+private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>, UnsafeMutableRawPointer) -> CInt = inet_pton
+#else
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
+#endif
 #elseif canImport(Darwin)
 import Darwin
 

@@ -19,7 +19,11 @@ import CNIOLinux
 
 private let sys_pthread_getname_np = CNIOLinux_pthread_getname_np
 private let sys_pthread_setname_np = CNIOLinux_pthread_setname_np
+#if os(Android)
+private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer) -> UnsafeMutableRawPointer
+#else
 private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
+#endif
 #elseif canImport(Darwin)
 private let sys_pthread_getname_np = pthread_getname_np
 // Emulate the same method signature as pthread_setname_np on Linux.
@@ -111,7 +115,11 @@ enum ThreadOpsPosix: ThreadOps {
 
             body(NIOThread(handle: hThread, desiredName: name))
 
+            #if os(Android)
+            return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!
+            #else
             return nil
+            #endif
         }, args: argv0)
         precondition(res == 0, "Unable to create thread: \(res)")
 

@@ -43,10 +43,15 @@ private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, NIOPOSI
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
 private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t) -> size_t = read
 #endif
-private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 
+#if os(Android)
+private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>) -> CUnsignedInt = if_nametoindex
+private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) -> CInt = getifaddrs
+#else
+private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 #if !os(Windows)
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
+#endif
 #endif
 
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
@@ -173,7 +178,7 @@ enum SystemCalls {
     @inline(never)
     internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
         return try syscall(blocking: false) {
-            sysIfNameToIndex(name)
+            sysIfNameToIndex(name!)
         }.result
     }
 

@@ -123,7 +123,7 @@ public final class NIONetworkInterface {
     }
 #else
     internal init?(_ caddr: ifaddrs) {
-        self.name = String(cString: caddr.ifa_name)
+        self.name = String(cString: caddr.ifa_name!)
 
         guard caddr.ifa_addr != nil else {
             return nil
@@ -414,7 +414,7 @@ extension NIONetworkDevice {
         }
 #else
         internal init?(_ caddr: ifaddrs) {
-            self.name = String(cString: caddr.ifa_name)
+            self.name = String(cString: caddr.ifa_name!)
             self.address = caddr.ifa_addr.flatMap { $0.convert() }
             self.netmask = caddr.ifa_netmask.flatMap { $0.convert() }
 

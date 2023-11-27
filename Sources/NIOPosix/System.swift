@@ -90,7 +90,7 @@ func sysRecvFrom_wrapper(sockfd: CInt, buf: UnsafeMutableRawPointer, len: CLong,
     return recvfrom(sockfd, buf, len, flags, src_addr, addrlen) // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
 }
 func sysWritev_wrapper(fd: CInt, iov: UnsafePointer<iovec>?, iovcnt: CInt) -> CLong {
-    return CLong(writev(fd, iov, iovcnt)) // cast 'Int32' to 'CLong'
+    return CLong(writev(fd, iov!, iovcnt)) // cast 'Int32' to 'CLong'
 }
 private let sysWritev = sysWritev_wrapper
 #elseif !os(Windows)
@@ -106,12 +106,16 @@ private let sysGetpeername: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>
 private let sysGetsockname: @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getsockname
 #endif
 
+#if os(Android)
+private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>) -> CUnsignedInt = if_nametoindex
+#else
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
+#endif
 #if !os(Windows)
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 #endif
 
-#if os(Linux) && !canImport(Musl)
+#if (os(Linux) && !canImport(Musl)) || os(Android)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = stat
 private let sysLstat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = lstat
@@ -122,9 +126,14 @@ private let sysMkdir: @convention(c) (UnsafePointer<CChar>, mode_t) -> CInt = mk
 private let sysOpendir: @convention(c) (UnsafePointer<CChar>) -> OpaquePointer? = opendir
 private let sysReaddir: @convention(c) (OpaquePointer) -> UnsafeMutablePointer<dirent>? = readdir
 private let sysClosedir: @convention(c) (OpaquePointer) -> CInt = closedir
+#if os(Android)
+private let sysRename: @convention(c) (UnsafePointer<CChar>, UnsafePointer<CChar>) -> CInt = rename
+private let sysRemove: @convention(c) (UnsafePointer<CChar>) -> CInt = remove
+#else
 private let sysRename: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = rename
 private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
-#elseif canImport(Darwin) || os(Android)
+#endif
+#elseif canImport(Darwin)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = stat
 private let sysLstat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = lstat
@@ -132,16 +141,10 @@ private let sysSymlink: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CCh
 private let sysReadlink: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<CChar>?, Int) -> CLong = readlink
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>?) -> CInt = unlink
 private let sysMkdir: @convention(c) (UnsafePointer<CChar>?, mode_t) -> CInt = mkdir
-#if os(Android)
-private let sysOpendir: @convention(c) (UnsafePointer<CChar>?) -> OpaquePointer? = opendir
-private let sysReaddir: @convention(c) (OpaquePointer?) -> UnsafeMutablePointer<dirent>? = readdir
-private let sysClosedir: @convention(c) (OpaquePointer?) -> CInt = closedir
-#else
 private let sysMkpath: @convention(c) (UnsafePointer<CChar>?, mode_t) -> CInt = mkpath_np
 private let sysOpendir: @convention(c) (UnsafePointer<CChar>?) -> UnsafeMutablePointer<DIR>? = opendir
 private let sysReaddir: @convention(c) (UnsafeMutablePointer<DIR>?) -> UnsafeMutablePointer<dirent>? = readdir
 private let sysClosedir: @convention(c) (UnsafeMutablePointer<DIR>?) -> CInt = closedir
-#endif
 private let sysRename: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = rename
 private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
 #endif
@@ -732,7 +735,7 @@ internal enum Posix {
     @inline(never)
     internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
         return try syscall(blocking: false) {
-            sysIfNameToIndex(name)
+            sysIfNameToIndex(name!)
         }.result
     }
 
