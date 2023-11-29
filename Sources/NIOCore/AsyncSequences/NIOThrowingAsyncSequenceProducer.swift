@@ -398,6 +398,9 @@ extension NIOThrowingAsyncSequenceProducer {
         /// The delegate.
         @usableFromInline
         /* private */ internal var _delegate: Delegate?
+        /// Hook used in testing.
+        @usableFromInline
+        internal var _didSuspend: (() -> Void)?
 
         @inlinable
         var isFinished: Bool {
@@ -595,6 +598,7 @@ extension NIOThrowingAsyncSequenceProducer {
                         case .none:
                             self._lock.unlock()
                         }
+                        self._didSuspend?()
                     }
                 }
             } onCancel: {
