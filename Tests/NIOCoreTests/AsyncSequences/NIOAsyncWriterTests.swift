@@ -95,15 +95,15 @@ final class NIOAsyncWriterTests: XCTestCase {
     }
 
     func assert(
-        numSuspends: Int,
-        numYields: Int,
-        numTerminates: Int,
+        suspendCallCount: Int,
+        yieldCallCount: Int,
+        terminateCallCount: Int,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        XCTAssertEqual(self.delegate.didSuspendCallCount, numSuspends, "Unexpeced suspends", file: file, line: line)
-        XCTAssertEqual(self.delegate.didYieldCallCount, numYields, "Unexpected yields", file: file, line: line)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, numTerminates, "Unexpected terminates", file: file, line: line)
+        XCTAssertEqual(self.delegate.didSuspendCallCount, suspendCallCount, "Unexpeced suspends", file: file, line: line)
+        XCTAssertEqual(self.delegate.didYieldCallCount, yieldCallCount, "Unexpected yields", file: file, line: line)
+        XCTAssertEqual(self.delegate.didTerminateCallCount, terminateCallCount, "Unexpected terminates", file: file, line: line)
     }
 
     func testMultipleConcurrentWrites() async throws {
@@ -173,7 +173,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         writer = nil
 
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 1)
         XCTAssertNil(writer)
 
         sink.finish()
@@ -193,7 +193,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         try await writer!.yield("message1")
         writer = nil
 
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 1)
         XCTAssertNil(writer)
 
         sink.finish()
@@ -204,17 +204,17 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.writer.finish()
         self.writer = nil
 
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 1)
     }
 
     func testWriterDeinitialized_whenFinished() async throws {
         self.sink.finish()
 
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 0)
 
         self.writer = nil
 
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     // MARK: - ToggleWritability
@@ -233,7 +233,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         await fulfillment(of: [suspended], timeout: 1)
 
-        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     func testSetWritability_whenStreaming_andBecomingUnwritable() async throws {
@@ -253,7 +253,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         await fulfillment(of: [suspended], timeout: 1)
 
-        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 0)
     }
 
     func testSetWritability_whenStreaming_andBecomingWritable() async throws {
@@ -276,7 +276,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         await fulfillment(of: [resumed], timeout: 1)
 
-        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 0)
     }
 
     func testSetWritability_whenStreaming_andSettingSameWritability() async throws {
@@ -296,7 +296,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         // Setting the writability to the same state again shouldn't change anything
         self.sink.setWritability(to: false)
 
-        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     func testSetWritability_whenWriterFinished() async throws {
@@ -317,13 +317,13 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         self.writer.finish()
 
-        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 0, terminateCallCount: 0)
 
         self.sink.setWritability(to: true)
 
         await fulfillment(of: [resumed], timeout: 1)
 
-        self.assert(numSuspends: 1, numYields: 1, numTerminates: 1)
+        self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 1)
     }
 
     func testSetWritability_whenFinished() async throws {
@@ -331,7 +331,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         self.sink.setWritability(to: false)
 
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     // MARK: - Yield
@@ -339,7 +339,7 @@ final class NIOAsyncWriterTests: XCTestCase {
     func testYield_whenInitial_andWritable() async throws {
         try await self.writer.yield("message1")
 
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
     }
 
     func testYield_whenInitial_andNotWritable() async throws {
@@ -356,23 +356,23 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         await fulfillment(of: [suspended], timeout: 1)
 
-        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     func testYield_whenStreaming_andWritable() async throws {
         try await self.writer.yield("message1")
 
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
 
         try await self.writer.yield("message2")
 
-        self.assert(numSuspends: 0, numYields: 2, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 2, terminateCallCount: 0)
     }
 
     func testYield_whenStreaming_andNotWritable() async throws {
         try await self.writer.yield("message1")
 
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
 
         self.sink.setWritability(to: false)
 
@@ -387,13 +387,13 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         await fulfillment(of: [suspended], timeout: 1)
 
-        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 0)
     }
 
     func testYield_whenStreaming_andYieldCancelled() async throws {
         try await self.writer.yield("message1")
 
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
 
         let cancelled = expectation(description: "task cancelled")
 
@@ -408,7 +408,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         await XCTAssertThrowsError(try await task.value) { error in
             XCTAssertTrue(error is CancellationError)
         }
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
     }
 
     func testYield_whenWriterFinished() async throws {
@@ -430,7 +430,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         await XCTAssertThrowsError(try await self.writer.yield("message1")) { error in
             XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished())
         }
-        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     func testYield_whenFinished() async throws {
@@ -439,7 +439,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         await XCTAssertThrowsError(try await self.writer.yield("message1")) { error in
             XCTAssertEqual(error as? NIOAsyncWriterError, .alreadyFinished())
         }
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     func testYield_whenFinishedError() async throws {
@@ -448,7 +448,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         await XCTAssertThrowsError(try await self.writer.yield("message1")) { error in
             XCTAssertTrue(error is SomeError)
         }
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     // MARK: - Cancel
@@ -467,13 +467,13 @@ final class NIOAsyncWriterTests: XCTestCase {
         await XCTAssertThrowsError(try await task.value) { error in
             XCTAssertTrue(error is CancellationError)
         }
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     func testCancel_whenStreaming_andCancelBeforeYield() async throws {
         try await self.writer.yield("message1")
 
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
 
         let cancelled = expectation(description: "task cancelled")
 
@@ -488,13 +488,13 @@ final class NIOAsyncWriterTests: XCTestCase {
         await XCTAssertThrowsError(try await task.value) { error in
             XCTAssertTrue(error is CancellationError)
         }
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
     }
 
     func testCancel_whenStreaming_andCancelAfterSuspendedYield() async throws {
         try await self.writer.yield("message1")
 
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
 
         self.sink.setWritability(to: false)
 
@@ -509,7 +509,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         await fulfillment(of: [suspended], timeout: 1)
 
-        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 0)
 
         task.cancel()
 
@@ -517,11 +517,11 @@ final class NIOAsyncWriterTests: XCTestCase {
             XCTAssertTrue(error is CancellationError)
         }
 
-        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 0)
 
         self.sink.setWritability(to: true)
 
-        self.assert(numSuspends: 1, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 0)
     }
 
     func testCancel_whenFinished() async throws {
@@ -550,13 +550,13 @@ final class NIOAsyncWriterTests: XCTestCase {
     func testWriterFinish_whenInitial() async throws {
         self.writer.finish()
 
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 1)
     }
 
     func testWriterFinish_whenInitial_andFailure() async throws {
         self.writer.finish(error: SomeError())
 
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 1)
     }
 
     func testWriterFinish_whenStreaming() async throws {
@@ -564,7 +564,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         self.writer.finish()
 
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 1)
     }
 
     func testWriterFinish_whenStreaming_AndBufferedElements() async throws {
@@ -583,23 +583,23 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         self.writer.finish()
 
-        self.assert(numSuspends: 1, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 1, yieldCallCount: 0, terminateCallCount: 0)
 
         // We have to become writable again to unbuffer the yield
         self.sink.setWritability(to: true)
 
         await XCTAssertNoThrow(try await task.value)
 
-        self.assert(numSuspends: 1, numYields: 1, numTerminates: 1)
+        self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 1)
     }
 
     func testWriterFinish_whenFinished() {
         // This tests just checks that finishing again is a no-op
         self.writer.finish()
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 1)
 
         self.writer.finish()
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 1)
     }
 
     // MARK: - Sink Finish
@@ -619,7 +619,7 @@ final class NIOAsyncWriterTests: XCTestCase {
 
         XCTAssertNil(sink)
         XCTAssertNotNil(writer)
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 0)
     }
 
     func testSinkFinish_whenStreaming() async throws {
@@ -638,17 +638,17 @@ final class NIOAsyncWriterTests: XCTestCase {
         sink = nil
 
         XCTAssertNil(sink)
-        self.assert(numSuspends: 0, numYields: 1, numTerminates: 0)
+        self.assert(suspendCallCount: 0, yieldCallCount: 1, terminateCallCount: 0)
     }
 
     func testSinkFinish_whenFinished() async throws {
         self.writer.finish()
 
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 1)
 
         self.sink = nil
 
-        self.assert(numSuspends: 0, numYields: 0, numTerminates: 1)
+        self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 1)
     }
 }
 
