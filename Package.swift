@@ -115,7 +115,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOLinux",
-            dependencies: []
+            dependencies: [],
+            cSettings: [
+                .define("_GNU_SOURCE"),
+            ]
         ),
         .target(
             name: "CNIODarwin",

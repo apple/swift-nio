@@ -28,8 +28,10 @@ import typealias WinSDK.WORD
 internal func MAKELANGID(_ p: WORD, _ s: WORD) -> DWORD {
   return DWORD((s << 10) | p)
 }
-#elseif os(Linux) || os(Android)
+#elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #elseif canImport(Darwin)
 import Darwin
 #else
