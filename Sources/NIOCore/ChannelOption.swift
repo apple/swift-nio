@@ -19,7 +19,7 @@ public protocol ChannelOption: Equatable, _NIOPreconcurrencySendable {
 }
 
 public typealias SocketOptionName = Int32
-#if os(Linux) || os(Android)
+#if (os(Linux) || os(Android)) && !canImport(Musl)
     public typealias SocketOptionLevel = Int
     public typealias SocketOptionValue = Int
 #else

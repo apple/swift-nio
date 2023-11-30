@@ -425,6 +425,7 @@ private final class CloseSuppressor: ChannelOutboundHandler, RemovableChannelHan
     }
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncTestingChannel {
     fileprivate func closeIgnoringSuppression() async throws {
         try await self.pipeline.context(handlerType: CloseSuppressor.self).flatMap {
@@ -455,6 +456,7 @@ private enum TestError: Error {
     case bang
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension Array {
     fileprivate init<AS: AsyncSequence>(_ sequence: AS) async throws where AS.Element == Self.Element {
         self = []
