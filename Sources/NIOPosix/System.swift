@@ -115,53 +115,31 @@ private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsigne
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 #endif
 
-#if (os(Linux) && !canImport(Musl)) || os(Android)
-private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
-private let sysStat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = stat
-private let sysLstat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = lstat
-private let sysSymlink: @convention(c) (UnsafePointer<CChar>, UnsafePointer<CChar>) -> CInt = symlink
-private let sysReadlink: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<CChar>, Int) -> CLong = readlink
-private let sysUnlink: @convention(c) (UnsafePointer<CChar>) -> CInt = unlink
-private let sysMkdir: @convention(c) (UnsafePointer<CChar>, mode_t) -> CInt = mkdir
-private let sysOpendir: @convention(c) (UnsafePointer<CChar>) -> OpaquePointer? = opendir
-private let sysReaddir: @convention(c) (OpaquePointer) -> UnsafeMutablePointer<dirent>? = readdir
-private let sysClosedir: @convention(c) (OpaquePointer) -> CInt = closedir
-#if os(Android)
-private let sysRename: @convention(c) (UnsafePointer<CChar>, UnsafePointer<CChar>) -> CInt = rename
-private let sysRemove: @convention(c) (UnsafePointer<CChar>) -> CInt = remove
-#else
-private let sysRename: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = rename
-private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
-#endif
-#elseif canImport(Darwin)
-private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
-private let sysStat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = stat
-private let sysLstat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = lstat
-private let sysSymlink: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = symlink
-private let sysReadlink: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<CChar>?, Int) -> CLong = readlink
-private let sysUnlink: @convention(c) (UnsafePointer<CChar>?) -> CInt = unlink
-private let sysMkdir: @convention(c) (UnsafePointer<CChar>?, mode_t) -> CInt = mkdir
-private let sysMkpath: @convention(c) (UnsafePointer<CChar>?, mode_t) -> CInt = mkpath_np
-private let sysOpendir: @convention(c) (UnsafePointer<CChar>?) -> UnsafeMutablePointer<DIR>? = opendir
-private let sysReaddir: @convention(c) (UnsafeMutablePointer<DIR>?) -> UnsafeMutablePointer<dirent>? = readdir
-private let sysClosedir: @convention(c) (UnsafeMutablePointer<DIR>?) -> CInt = closedir
-private let sysRename: @convention(c) (UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> CInt = rename
-private let sysRemove: @convention(c) (UnsafePointer<CChar>?) -> CInt = remove
+#if os(Linux) || os(Android) || canImport(Darwin)
+private let sysFstat = fstat
+private let sysStat = stat
+private let sysLstat = lstat
+private let sysSymlink = symlink
+private let sysReadlink = readlink
+private let sysUnlink = unlink
+private let sysMkdir = mkdir
+private let sysOpendir = opendir
+private let sysReaddir = readdir
+private let sysClosedir = closedir
+private let sysRename = rename
+private let sysRemove = remove
 #endif
 #if os(Linux) || os(Android)
-private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
-private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
+private let sysSendMmsg = CNIOLinux_sendmmsg
+private let sysRecvMmsg = CNIOLinux_recvmmsg
 #elseif canImport(Darwin)
 private let sysKevent = kevent
-private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
-private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
+private let sysMkpath = mkpath_np
+private let sysSendMmsg = CNIODarwin_sendmmsg
+private let sysRecvMmsg = CNIODarwin_recvmmsg
 #endif
 #if !os(Windows)
-#if canImport(Musl)
-private let sysIoctl: @convention(c) (CInt, CInt, UnsafeMutableRawPointer) -> CInt = ioctl
-#else
 private let sysIoctl: @convention(c) (CInt, CUnsignedLong, UnsafeMutableRawPointer) -> CInt = ioctl
-#endif  // canImport(Musl)
 #endif  // !os(Windows)
 
 private func isUnacceptableErrno(_ code: Int32) -> Bool {
