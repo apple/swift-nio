@@ -456,6 +456,9 @@ extension NIOAsyncWriter {
         /// The state machine.
         @usableFromInline
         /* private */ internal var _stateMachine: StateMachine
+        /// Hook used in testing.
+        @usableFromInline
+        internal var _didSuspend: (() -> Void)?
 
         @inlinable
         internal var isWriterFinished: Bool {
@@ -540,6 +543,7 @@ extension NIOAsyncWriter {
                         )
 
                         self._lock.unlock()
+                        self._didSuspend?()
                     }
                 }
             } onCancel: {
