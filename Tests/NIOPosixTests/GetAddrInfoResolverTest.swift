@@ -24,15 +24,12 @@ class GetaddrinfoResolverTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let resolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: .tcp)
-        let v4Future = resolver.initiateAQuery(host: "127.0.0.1", port: 12345)
-        let v6Future = resolver.initiateAAAAQuery(host: "127.0.0.1", port: 12345)
+        let resolver = GetaddrinfoResolver(aiSocktype: .stream, aiProtocol: .tcp)
+        let future = resolver.resolve(name: "127.0.0.1", destinationPort: 12345, on: group.next())
 
-        let addressV4 = try v4Future.wait()
-        let addressV6 = try v6Future.wait()
-        XCTAssertEqual(1, addressV4.count)
-        XCTAssertEqual(try SocketAddress(ipAddress: "127.0.0.1", port: 12345), addressV4[0])
-        XCTAssertTrue(addressV6.isEmpty)
+        let results = try future.wait()
+        XCTAssertEqual(1, results.count)
+        XCTAssertEqual(try SocketAddress(ipAddress: "127.0.0.1", port: 12345), results[0])
     }
 
     func testResolveNoDuplicatesV6() throws {
@@ -41,14 +38,11 @@ class GetaddrinfoResolverTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let resolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: .tcp)
-        let v4Future = resolver.initiateAQuery(host: "::1", port: 12345)
-        let v6Future = resolver.initiateAAAAQuery(host: "::1", port: 12345)
+        let resolver = GetaddrinfoResolver(aiSocktype: .stream, aiProtocol: .tcp)
+        let future = resolver.resolve(name: "::1", destinationPort: 12345, on: group.next())
 
-        let addressV4 = try v4Future.wait()
-        let addressV6 = try v6Future.wait()
-        XCTAssertEqual(1, addressV6.count)
-        XCTAssertEqual(try SocketAddress(ipAddress: "::1", port: 12345), addressV6[0])
-        XCTAssertTrue(addressV4.isEmpty)
+        let results = try future.wait()
+        XCTAssertEqual(1, results.count)
+        XCTAssertEqual(try SocketAddress(ipAddress: "::1", port: 12345), results[0])
     }
 }

@@ -236,7 +236,7 @@ private func buildEyeballer(
 ) -> (eyeballer: HappyEyeballsConnector<Void>, resolver: DummyResolver, loop: EmbeddedEventLoop) {
     let loop = EmbeddedEventLoop()
     let resolver = DummyResolver(loop: loop)
-    let eyeballer = HappyEyeballsConnector(resolver: resolver,
+    let eyeballer = HappyEyeballsConnector(resolver: NIOResolverToStreamingResolver(resolver: resolver),
                                            loop: loop,
                                            host: host,
                                            port: port,
@@ -286,12 +286,13 @@ public final class HappyEyeballsTest : XCTestCase {
         let target = try targetFuture.wait()
         XCTAssertEqual(target!, "fe80::1")
 
-        // We should have had queries for AAAA and A.
         let expectedQueries: [DummyResolver.Event] = [
             .aaaa(host: "example.com", port: 80),
             .a(host: "example.com", port: 80)
         ]
-        XCTAssertEqual(resolver.events, expectedQueries)
+        // We should have had queries for AAAA and A. We should then have had a cancel, because the
+        // connection succeeds before the resolver completes.
+        XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
     }
 
     func testTimeOutDuringDNSResolution() throws {
@@ -430,8 +431,9 @@ public final class HappyEyeballsTest : XCTestCase {
         let target = try targetFuture.wait()
         XCTAssertEqual(target!, "fe80::1")
 
-        // We should have had queries for AAAA and A, with no cancel.
-        XCTAssertEqual(resolver.events, expectedQueries)
+        // We should have had queries for AAAA and A. We should then have had a cancel, because the
+        // connection succeeds before the resolver completes.
+        XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
     }
 
     func testAQueryReturningFirstThenAAAAErrors() throws {
@@ -525,8 +527,7 @@ public final class HappyEyeballsTest : XCTestCase {
         if let error = channelFuture.getError() as? NIOConnectionError {
             XCTAssertEqual(error.host, "example.com")
             XCTAssertEqual(error.port, 80)
-            XCTAssertNil(error.dnsAError)
-            XCTAssertNil(error.dnsAAAAError)
+            XCTAssertNil(error.resolutionError)
             XCTAssertEqual(error.connectionErrors.count, 0)
         } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
@@ -557,8 +558,7 @@ public final class HappyEyeballsTest : XCTestCase {
         if let error = channelFuture.getError() as? NIOConnectionError {
             XCTAssertEqual(error.host, "example.com")
             XCTAssertEqual(error.port, 80)
-            XCTAssertEqual(error.dnsAError as? DummyError ?? DummyError(), v4Error)
-            XCTAssertEqual(error.dnsAAAAError as? DummyError ?? DummyError(), v6Error)
+            XCTAssertEqual(error.resolutionError as? DummyError ?? DummyError(), v6Error)
             XCTAssertEqual(error.connectionErrors.count, 0)
         } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
@@ -692,8 +692,7 @@ public final class HappyEyeballsTest : XCTestCase {
         if let error = channelFuture.getError() as? NIOConnectionError {
             XCTAssertEqual(error.host, "example.com")
             XCTAssertEqual(error.port, 80)
-            XCTAssertNil(error.dnsAError)
-            XCTAssertNil(error.dnsAAAAError)
+            XCTAssertNil(error.resolutionError)
             XCTAssertEqual(error.connectionErrors.count, 20)
 
             for (idx, error) in error.connectionErrors.enumerated() {
@@ -1240,7 +1239,7 @@ public final class HappyEyeballsTest : XCTestCase {
         // Tests a regression where the happy eyeballs connector would update its state on the event
         // loop of the future returned by the resolver (which may be different to its own). Prior
         // to the fix this test would trigger TSAN warnings.
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -1254,10 +1253,8 @@ public final class HappyEyeballsTest : XCTestCase {
         }
 
         // Run the resolver and connection on different event loops.
-        let resolverLoop = group.next()
         let connectionLoop = group.next()
-        XCTAssertNotIdentical(resolverLoop, connectionLoop)
-        let resolver = GetaddrinfoResolver(loop: resolverLoop, aiSocktype: .stream, aiProtocol: .tcp)
+        let resolver = GetaddrinfoResolver(aiSocktype: .stream, aiProtocol: .tcp)
         let client = try ClientBootstrap(group: connectionLoop)
             .resolver(resolver)
             .connect(host: "localhost", port: server.localAddress!.port!)
