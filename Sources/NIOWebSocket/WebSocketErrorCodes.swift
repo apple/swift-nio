@@ -25,7 +25,7 @@ public enum WebSocketErrorCode: Sendable {
     /// Corresponds to code 1000.
     case normalClosure
 
-    /// Ondicates that an endpoint is "going away", such as a server
+    /// Indicates that an endpoint is "going away", such as a server
     /// going down or a browser having navigated away from a page.
     /// Corresponds to code 1001.
     case goingAway
