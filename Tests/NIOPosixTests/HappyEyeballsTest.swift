@@ -28,6 +28,7 @@ private let CONNECT_RECORDER = "connectRecorder"
 private let CONNECT_DELAYER = "connectDelayer"
 private let SINGLE_IPv6_RESULT = [SocketAddress(host: "example.com", ipAddress: "fe80::1", port: 80)]
 private let SINGLE_IPv4_RESULT = [SocketAddress(host: "example.com", ipAddress: "10.0.0.1", port: 80)]
+private let SECOND_IPv4_RESULT = [SocketAddress(host: "example.com", ipAddress: "10.0.0.2", port: 80)]
 private let MANY_IPv6_RESULTS = (1...10).map { SocketAddress(host: "example.com", ipAddress: "fe80::\($0)", port: 80) }
 private let MANY_IPv4_RESULTS = (1...10).map { SocketAddress(host: "example.com", ipAddress: "10.0.0.\($0)", port: 80) }
 
@@ -187,34 +188,22 @@ private extension EventLoopFuture {
 }
 
 // A simple resolver that allows control over the DNS resolution process.
-private class DummyResolver: Resolver {
-    let v4Promise: EventLoopPromise<[SocketAddress]>
-    let v6Promise: EventLoopPromise<[SocketAddress]>
+private class DummyResolver: NIOStreamingResolver {
 
     enum Event {
-        case a(host: String, port: Int)
-        case aaaa(host: String, port: Int)
+        case resolve(name: String, destinationPort: Int)
         case cancel
     }
 
+    var session: NIONameResolutionSession?
     var events: [Event] = []
 
-    init(loop: EventLoop) {
-        self.v4Promise = loop.makePromise()
-        self.v6Promise = loop.makePromise()
+    func resolve(name: String, destinationPort: Int, session: NIONameResolutionSession) {
+        self.session = session
+        events.append(.resolve(name: name, destinationPort: destinationPort))
     }
 
-    func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
-        events.append(.a(host: host, port: port))
-        return self.v4Promise.futureResult
-    }
-
-    func initiateAAAAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
-        events.append(.aaaa(host: host, port: port))
-        return self.v6Promise.futureResult
-    }
-
-    func cancelQueries() {
+    func cancel(_ session: NIONameResolutionSession) {
         events.append(.cancel)
     }
 }
@@ -235,8 +224,8 @@ private func buildEyeballer(
     channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel> = defaultChannelBuilder
 ) -> (eyeballer: HappyEyeballsConnector<Void>, resolver: DummyResolver, loop: EmbeddedEventLoop) {
     let loop = EmbeddedEventLoop()
-    let resolver = DummyResolver(loop: loop)
-    let eyeballer = HappyEyeballsConnector(resolver: NIOResolverToStreamingResolver(resolver: resolver),
+    let resolver = DummyResolver()
+    let eyeballer = HappyEyeballsConnector(resolver: resolver,
                                            loop: loop,
                                            host: host,
                                            port: port,
@@ -253,20 +242,19 @@ public final class HappyEyeballsTest : XCTestCase {
             _ = try (channel as! EmbeddedChannel).finish()
             return target
         }
+        let expectedQueries: [DummyResolver.Event] = [
+            .resolve(name: "example.com", destinationPort: 80),
+        ]
         loop.run()
-        resolver.v6Promise.fail(DummyError())
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
+        resolver.session!.resolutionComplete(.success(()))
         loop.run()
 
         // No time should have needed to pass: we return only one target and it connects immediately.
         let target = try targetFuture.wait()
         XCTAssertEqual(target!, "10.0.0.1")
 
-        // We should have had queries for AAAA and A.
-        let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
-        ]
+        // We should have had one query.
         XCTAssertEqual(resolver.events, expectedQueries)
     }
 
@@ -277,21 +265,52 @@ public final class HappyEyeballsTest : XCTestCase {
             _ = try (channel as! EmbeddedChannel).finish()
             return target
         }
+        let expectedQueries: [DummyResolver.Event] = [
+            .resolve(name: "example.com", destinationPort: 80),
+        ]
         loop.run()
-        resolver.v4Promise.fail(DummyError())
-        resolver.v6Promise.succeed(SINGLE_IPv6_RESULT)
+        resolver.session!.deliverResults(SINGLE_IPv6_RESULT)
         loop.run()
 
         // No time should have needed to pass: we return only one target and it connects immediately.
         let target = try targetFuture.wait()
         XCTAssertEqual(target!, "fe80::1")
 
+        // We should have had one query. We should then have had a cancel, because the resolver
+        // never completed.
+        XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
+
+        // Now complete. Nothing bad should happen.
+        resolver.session!.resolutionComplete(.success(()))
+        loop.run()
+        XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
+    }
+
+    func testIPv4AndIPv6Resolution() throws {
+        let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
+        let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
+            let target = channel.connectTarget()
+            _ = try (channel as! EmbeddedChannel).finish()
+            return target
+        }
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
-        // We should have had queries for AAAA and A. We should then have had a cancel, because the
-        // connection succeeds before the resolver completes.
+        loop.run()
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT + SINGLE_IPv6_RESULT)
+        loop.run()
+
+        // No time should have needed to pass: we return only one target and it connects immediately.
+        let target = try targetFuture.wait()
+        XCTAssertEqual(target!, "fe80::1")
+
+        // We should have had one query. We should then have had a cancel, because the resolver
+        // never completed.
+        XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
+
+        // Now complete. Nothing bad should happen.
+        resolver.session!.resolutionComplete(.success(()))
+        loop.run()
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
     }
 
@@ -299,8 +318,7 @@ public final class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .seconds(10))
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertFalse(channelFuture.isFulfilled)
@@ -321,13 +339,14 @@ public final class HappyEyeballsTest : XCTestCase {
 
         // We now want to confirm that nothing awful happens if those DNS results
         // return late.
-        resolver.v6Promise.succeed(SINGLE_IPv6_RESULT)
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        resolver.session!.deliverResults(SINGLE_IPv6_RESULT)
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
+        resolver.session!.resolutionComplete(.success(()))
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
     }
 
-    func testAAAAQueryReturningFirst() throws {
+    func testIPv6ResultsReturningFirst() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
         let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
@@ -335,31 +354,31 @@ public final class HappyEyeballsTest : XCTestCase {
             return target
         }
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(targetFuture.isFulfilled)
 
-        resolver.v6Promise.succeed(SINGLE_IPv6_RESULT)
+        resolver.session!.deliverResults(SINGLE_IPv6_RESULT)
         loop.run()
 
         // No time should have needed to pass: we return only one target and it connects immediately.
         let target = try targetFuture.wait()
         XCTAssertEqual(target!, "fe80::1")
 
-        // We should have had queries for AAAA and A. We should then have had a cancel, because the A
-        // never returned.
+        // We should have had one query. We should then have had a cancel, because the resolver
+        // never completed.
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
 
-        // Now return a result for the IPv4 query. Nothing bad should happen.
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        // Now return an IPv4 result and complete. Nothing bad should happen.
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
+        resolver.session!.resolutionComplete(.success(()))
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
     }
 
-    func testAQueryReturningFirstDelayElapses() throws {
+    func testIPv4ResultsReturningFirstDelayElapses() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
         let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
@@ -367,14 +386,13 @@ public final class HappyEyeballsTest : XCTestCase {
             return target
         }
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(targetFuture.isFulfilled)
 
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
         loop.run()
 
         // There should have been no connection attempt yet.
@@ -391,17 +409,18 @@ public final class HappyEyeballsTest : XCTestCase {
         let target = try targetFuture.wait()
         XCTAssertEqual(target!, "10.0.0.1")
 
-        // We should have had queries for AAAA and A. We should then have had a cancel, because the A
-        // never returned.
+        // We should have had one query. We should then have had a cancel, because the resolver
+        // never completed.
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
 
-        // Now return a result for the IPv6 query. Nothing bad should happen.
-        resolver.v6Promise.succeed(SINGLE_IPv6_RESULT)
+        // Now return an IPv6 result. Nothing bad should happen.
+        resolver.session!.deliverResults(SINGLE_IPv6_RESULT)
+        resolver.session!.resolutionComplete(.success(()))
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
     }
 
-    func testAQueryReturningFirstThenAAAAReturns() throws {
+    func testIPv4ReturningFirstThenIPv6Results() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
         let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
@@ -409,34 +428,38 @@ public final class HappyEyeballsTest : XCTestCase {
             return target
         }
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(targetFuture.isFulfilled)
 
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
         loop.run()
 
         // There should have been no connection attempt yet.
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(targetFuture.isFulfilled)
 
-        // Now the AAAA returns.
-        resolver.v6Promise.succeed(SINGLE_IPv6_RESULT)
+        // Now the IPv6 result returns.
+        resolver.session!.deliverResults(SINGLE_IPv6_RESULT)
         loop.run()
 
         // The connection attempt should have been made with the IPv6 result.
         let target = try targetFuture.wait()
         XCTAssertEqual(target!, "fe80::1")
 
-        // We should have had queries for AAAA and A. We should then have had a cancel, because the
-        // connection succeeds before the resolver completes.
+        // We should have had one query. We should then have had a cancel, because the resolver
+        // never completed.
+        XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
+
+        // Now complete. Nothing bad should happen.
+        resolver.session!.resolutionComplete(.success(()))
+        loop.run()
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
     }
 
-    func testAQueryReturningFirstThenAAAAErrors() throws {
+    func testIPv4ResultsReturningFirstThenFailure() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
         let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
@@ -444,33 +467,32 @@ public final class HappyEyeballsTest : XCTestCase {
             return target
         }
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(targetFuture.isFulfilled)
 
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
         loop.run()
 
         // There should have been no connection attempt yet.
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(targetFuture.isFulfilled)
 
-        // Now the AAAA fails.
-        resolver.v6Promise.fail(DummyError())
+        // Now the resolver fails.
+        resolver.session!.resolutionComplete(.failure(DummyError()))
         loop.run()
 
         // The connection attempt should have been made with the IPv4 result.
         let target = try targetFuture.wait()
         XCTAssertEqual(target!, "10.0.0.1")
 
-        // We should have had queries for AAAA and A, with no cancel.
+        // We should have had one query, with no cancel.
         XCTAssertEqual(resolver.events, expectedQueries)
     }
 
-    func testAQueryReturningFirstThenEmptyAAAA() throws {
+    func testIPv4ResultsReturningFirstThenSuccess() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
         let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
             let target = channel.connectTarget()
@@ -478,29 +500,28 @@ public final class HappyEyeballsTest : XCTestCase {
             return target
         }
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(targetFuture.isFulfilled)
 
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
         loop.run()
 
         // There should have been no connection attempt yet.
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(targetFuture.isFulfilled)
 
-        // Now the AAAA returns empty.
-        resolver.v6Promise.succeed([])
+        // Now the resolver completes.
+        resolver.session!.resolutionComplete(.success(()))
         loop.run()
 
         // The connection attempt should have been made with the IPv4 result.
         let target = try targetFuture.wait()
         XCTAssertEqual(target!, "10.0.0.1")
 
-        // We should have had queries for AAAA and A, with no cancel.
+        // We should have had one query, with no cancel.
         XCTAssertEqual(resolver.events, expectedQueries)
     }
 
@@ -508,19 +529,17 @@ public final class HappyEyeballsTest : XCTestCase {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        resolver.v4Promise.succeed([])
-        resolver.v6Promise.succeed([])
+        resolver.session!.resolutionComplete(.success(()))
         loop.run()
 
 
-        // We should have had queries for AAAA and A, with no cancel.
+        // We should have had one query, with no cancel.
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
@@ -534,31 +553,28 @@ public final class HappyEyeballsTest : XCTestCase {
         }
     }
 
-    func testAllDNSFail() throws {
+    func testResolverFails() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80)
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        let v4Error = DummyError()
-        let v6Error = DummyError()
-        resolver.v4Promise.fail(v4Error)
-        resolver.v6Promise.fail(v6Error)
+        let resolutionError = DummyError()
+        resolver.session!.resolutionComplete(.failure(resolutionError))
         loop.run()
 
-        // We should have had queries for AAAA and A, with no cancel.
+        // We should have had one query, with no cancel.
         XCTAssertEqual(resolver.events, expectedQueries)
 
         // But we should have failed.
         if let error = channelFuture.getError() as? NIOConnectionError {
             XCTAssertEqual(error.host, "example.com")
             XCTAssertEqual(error.port, 80)
-            XCTAssertEqual(error.resolutionError as? DummyError ?? DummyError(), v6Error)
+            XCTAssertEqual(error.resolutionError as? DummyError, resolutionError)
             XCTAssertEqual(error.connectionErrors.count, 0)
         } else {
             XCTFail("Got \(String(describing: channelFuture.getError()))")
@@ -581,8 +597,7 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -590,8 +605,8 @@ public final class HappyEyeballsTest : XCTestCase {
 
         // We're providing the IPv4 and IPv6 results. This will lead to 20 total hosts
         // for us to try to connect to.
-        resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
-        resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv4_RESULTS + MANY_IPv6_RESULTS)
+        resolver.session!.resolutionComplete(.success(()))
 
         for connectionCount in 1...20 {
             XCTAssertEqual(channels.count, connectionCount)
@@ -650,8 +665,7 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
@@ -659,8 +673,8 @@ public final class HappyEyeballsTest : XCTestCase {
 
         // We're providing the IPv4 and IPv6 results. This will lead to 20 total hosts
         // for us to try to connect to.
-        resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
-        resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv4_RESULTS + MANY_IPv6_RESULTS)
+        resolver.session!.resolutionComplete(.success(()))
 
         // Let all the connections fire.
         for _ in 1...20 {
@@ -703,7 +717,7 @@ public final class HappyEyeballsTest : XCTestCase {
         }
     }
 
-    func testDelayedAAAAResult() throws {
+    func testDelayedIPv6Results() throws {
         var channels: [Channel] = []
         defer {
             channels.finishAll()
@@ -719,15 +733,14 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
         // Provide the IPv4 results and let five connection attempts play out.
-        resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv4_RESULTS)
         loop.advanceTime(by: .milliseconds(50))
 
         for connectionCount in 1...4 {
@@ -737,7 +750,8 @@ public final class HappyEyeballsTest : XCTestCase {
         XCTAssertEqual(channels.last!.connectTarget()!, "10.0.0.5")
 
         // Now the IPv6 results come in.
-        resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv6_RESULTS)
+        resolver.session!.resolutionComplete(.success(()))
 
         // The next 10 connection attempts will interleave the IPv6 and IPv4 results,
         // starting with IPv6.
@@ -755,28 +769,27 @@ public final class HappyEyeballsTest : XCTestCase {
         }
     }
 
-    func testTimeoutWaitingForAAAA() throws {
+    func testTimeoutWaitingForIPv6() throws {
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80, connectTimeout: .milliseconds(49))
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Here the A result returns, but the timeout is sufficiently low that the connect attempt
-        // times out before the AAAA can return.
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        // Here the IPv4 result returns, but the timeout is sufficiently low that the connect attempt
+        // times out before the IPv6 can return.
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
         loop.advanceTime(by: .milliseconds(48))
         XCTAssertFalse(channelFuture.isFulfilled)
 
         loop.advanceTime(by: .milliseconds(1))
         XCTAssertTrue(channelFuture.isFulfilled)
 
-        // We should have had queries for AAAA and A. We should then have had a cancel, because the AAAA
-        // never returned.
+        // We should have had one query. We should then have had a cancel, because the resolver
+        // never completed.
         XCTAssertEqual(resolver.events, expectedQueries + [.cancel])
         switch channelFuture.getError() {
         case .some(ChannelError.connectTimeout(.milliseconds(49))):
@@ -786,7 +799,7 @@ public final class HappyEyeballsTest : XCTestCase {
         }
     }
 
-    func testTimeoutAfterAQuery() throws {
+    func testTimeoutAfterIPv4Results() throws {
         var channels: [Channel] = []
         defer {
             channels.finishAll()
@@ -802,22 +815,30 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Here the A result returns, but the timeout is sufficiently low that the connect attempt
-        // times out before the AAAA can return and before the connection succeeds.
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
-        loop.advanceTime(by: .milliseconds(99))
+        // Here the IPv4 result returns.
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
+        XCTAssertEqual(channels.count, 0)
+
+        // Here another IPv4 result returns before the resolution delay (default of 50 ms) elapses.
+        loop.advanceTime(by: .milliseconds(49))
+        resolver.session!.deliverResults(SECOND_IPv4_RESULT)
+        XCTAssertEqual(channels.count, 0)
+
+        // Now the resolution delay has elapsed.
+        loop.advanceTime(by: .milliseconds(1))
         XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 1)
         XCTAssertEqual(channels.first!.state(), .idle)
+        loop.advanceTime(by: .milliseconds(49))
+        XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Now the timeout fires.
+        // Now the timeout fires before the connection succeeds.
         loop.advanceTime(by: .milliseconds(1))
         XCTAssertTrue(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 1)
@@ -831,7 +852,7 @@ public final class HappyEyeballsTest : XCTestCase {
         }
     }
 
-    func testAConnectFailsWaitingForAAAA() throws {
+    func testIPv4ConnectFailsWaitingForIPv6() throws {
         var channels: [Channel] = []
         defer {
             channels.finishAll()
@@ -847,16 +868,15 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Here the A result returns and a connection attempt is made. This fails, and we test that
-        // we wait for the AAAA query to come in before acting. That connection attempt then times out.
-        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        // Here the IPv4 result returns and a connection attempt is made. This fails, and we test that
+        // we wait for the IPv6 result to come in before acting. That connection attempt then times out.
+        resolver.session!.deliverResults(SINGLE_IPv4_RESULT)
         loop.advanceTime(by: .milliseconds(50))
         XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 1)
@@ -866,8 +886,9 @@ public final class HappyEyeballsTest : XCTestCase {
         channels.first!.failConnection(error: DummyError())
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Now the AAAA returns.
-        resolver.v6Promise.succeed(SINGLE_IPv6_RESULT)
+        // Now the IPv6 result returns.
+        resolver.session!.deliverResults(SINGLE_IPv6_RESULT)
+        resolver.session!.resolutionComplete(.success(()))
         XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 2)
         XCTAssertEqual(channels.last!.state(), .idle)
@@ -886,7 +907,7 @@ public final class HappyEyeballsTest : XCTestCase {
         }
     }
 
-    func testDelayedAResult() throws {
+    func testDelayedIPv4Results() throws {
         var channels: [Channel] = []
         defer {
             channels.finishAll()
@@ -902,15 +923,14 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
         // Provide the IPv6 results and let all 10 connection attempts play out.
-        resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv6_RESULTS)
 
         for connectionCount in 1...10 {
             XCTAssertEqual(channels.last!.connectTarget()!, "fe80::\(connectionCount)")
@@ -918,13 +938,14 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Advance time by 30 minutes just to prove that we'll wait a long, long time for the
-        // A result.
+        // Advance time by 30 minutes just to prove that we'll wait a long, long time for
+        // more results.
         loop.advanceTime(by: .minutes(30))
         XCTAssertFalse(channelFuture.isFulfilled)
 
         // Now the IPv4 results come in. Let all 10 connection attempts play out.
-        resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv4_RESULTS)
+        resolver.session!.resolutionComplete(.success(()))
         for connectionCount in 1...10 {
             XCTAssertEqual(channels.last!.connectTarget()!, "10.0.0.\(connectionCount)")
             loop.advanceTime(by: .milliseconds(250))
@@ -932,7 +953,7 @@ public final class HappyEyeballsTest : XCTestCase {
         XCTAssertFalse(channelFuture.isFulfilled)
     }
 
-    func testTimeoutBeforeAResponse() throws {
+    func testTimeoutBeforeIPv4Result() throws {
         var channels: [Channel] = []
         defer {
             channels.finishAll()
@@ -948,16 +969,15 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Here the AAAA result returns, but the timeout is sufficiently low that the connect attempt
-        // times out before the A returns.
-        resolver.v6Promise.succeed(SINGLE_IPv6_RESULT)
+        // Here the IPv6 result returns, but the timeout is sufficiently low that the connect attempt
+        // times out before the IPv4 result returns.
+        resolver.session!.deliverResults(SINGLE_IPv6_RESULT)
         loop.advanceTime(by: .milliseconds(99))
         XCTAssertFalse(channelFuture.isFulfilled)
         XCTAssertEqual(channels.count, 1)
@@ -993,16 +1013,15 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Here the AAAA and A results return. We are going to fail the connections
+        // Here the IPv6 and IPv4 results return. We are going to fail the connections
         // instantly, which should cause all 20 to appear.
-        resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv6_RESULTS)
         for channelCount in 1...10 {
             XCTAssertFalse(channelFuture.isFulfilled)
             XCTAssertEqual(channels.count, channelCount)
@@ -1010,7 +1029,8 @@ public final class HappyEyeballsTest : XCTestCase {
             channels.last?.failConnection(error: DummyError())
         }
 
-        resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv4_RESULTS)
+        resolver.session!.resolutionComplete(.success(()))
         for channelCount in 11...20 {
             XCTAssertFalse(channelFuture.isFulfilled)
             XCTAssertEqual(channels.count, channelCount)
@@ -1043,15 +1063,14 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Here the AAAA results return. Let all the connection attempts go out.
-        resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
+        // Here the IPv6 results return. Let all the connection attempts go out.
+        resolver.session!.deliverResults(MANY_IPv6_RESULTS)
         for channelCount in 1...10 {
             XCTAssertEqual(channels.count, channelCount)
             loop.advanceTime(by: .milliseconds(250))
@@ -1080,15 +1099,14 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
         // Return the IPv6 results and observe the channel creation attempts.
-        resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv6_RESULTS)
         for channelCount in 1...10 {
             XCTAssertEqual(ourChannelFutures.count, channelCount)
             loop.advanceTime(by: .milliseconds(250))
@@ -1124,19 +1142,19 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Here the AAAA and A results return. We are going to fail the channel creation
+        // Here the IPv6 and IPv4 results return. We are going to fail the channel creation
         // instantly, which should cause all 20 to appear.
-        resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv6_RESULTS)
         XCTAssertEqual(errors.count, 10)
         XCTAssertFalse(channelFuture.isFulfilled)
-        resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
+        resolver.session!.deliverResults(MANY_IPv4_RESULTS)
+        resolver.session!.resolutionComplete(.success(()))
         XCTAssertEqual(errors.count, 20)
 
         XCTAssertTrue(channelFuture.isFulfilled)
@@ -1163,15 +1181,14 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Here the AAAA results return. Let the first connection attempt go out.
-        resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
+        // Here the IPv6 results return. Let the first connection attempt go out.
+        resolver.session!.deliverResults(MANY_IPv6_RESULTS)
         XCTAssertEqual(channels.count, 1)
 
         // Advance time by 250 ms.
@@ -1207,15 +1224,14 @@ public final class HappyEyeballsTest : XCTestCase {
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
-            .aaaa(host: "example.com", port: 80),
-            .a(host: "example.com", port: 80)
+            .resolve(name: "example.com", destinationPort: 80),
         ]
         loop.run()
         XCTAssertEqual(resolver.events, expectedQueries)
         XCTAssertFalse(channelFuture.isFulfilled)
 
-        // Here the A results return. Let the first connection attempt go out.
-        resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
+        // Here the IPv4 results return. Let the first connection attempt go out.
+        resolver.session!.deliverResults(MANY_IPv4_RESULTS)
         XCTAssertEqual(channels.count, 0)
 
         // Advance time by 50 ms.
