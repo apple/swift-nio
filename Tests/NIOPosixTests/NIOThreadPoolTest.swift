@@ -19,6 +19,7 @@ import Dispatch
 import NIOConcurrencyHelpers
 import NIOEmbedded
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class NIOThreadPoolTest: XCTestCase {
     func testThreadNamesAreSetUp() {
         let numberOfThreads = 11
@@ -112,7 +113,6 @@ class NIOThreadPoolTest: XCTestCase {
     }
 
     func testAsyncThreadPool() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let numberOfThreads = 1
         let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
         pool.start()
@@ -127,7 +127,6 @@ class NIOThreadPoolTest: XCTestCase {
     }
 
     func testAsyncThreadPoolErrorPropagation() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         struct ThreadPoolError: Error {}
         let numberOfThreads = 1
         let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
@@ -144,7 +143,6 @@ class NIOThreadPoolTest: XCTestCase {
     }
 
     func testAsyncThreadPoolNotActiveError() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         struct ThreadPoolError: Error {}
         let numberOfThreads = 1
         let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
@@ -160,7 +158,6 @@ class NIOThreadPoolTest: XCTestCase {
     }
 
     func testAsyncShutdownWorks() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let threadPool = NIOThreadPool(numberOfThreads: 17)
         let eventLoop = NIOAsyncTestingEventLoop()
 

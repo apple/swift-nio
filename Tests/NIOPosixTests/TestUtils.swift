@@ -68,6 +68,7 @@ func withPipe(_ body: (NIOCore.NIOFileHandle, NIOCore.NIOFileHandle) throws -> [
     }
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 func withPipe(_ body: (NIOCore.NIOFileHandle, NIOCore.NIOFileHandle) async throws -> [NIOCore.NIOFileHandle]) async throws {
     var fds: [Int32] = [-1, -1]
     fds.withUnsafeMutableBufferPointer { ptr in
@@ -98,6 +99,7 @@ func withTemporaryDirectory<T>(_ body: (String) throws -> T) rethrows -> T {
     return try body(dir)
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 func withTemporaryDirectory<T>(_ body: (String) async throws -> T) async rethrows -> T {
     let dir = createTemporaryDirectory()
     defer {
@@ -170,6 +172,7 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle
     return try body(fileHandle, path)
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 func withTemporaryFile<T>(content: String? = nil, _ body: @escaping @Sendable (NIOCore.NIOFileHandle, String) async throws -> T) async rethrows -> T {
     let (fd, path) = openTemporaryFile()
     let fileHandle = NIOFileHandle(descriptor: fd)

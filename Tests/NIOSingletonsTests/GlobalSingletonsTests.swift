@@ -18,11 +18,13 @@ import NIOPosix
 import Foundation
 
 final class NIOSingletonsTests: XCTestCase {
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     func testSingletonMultiThreadedEventLoopWorks() async throws {
         let works = try await MultiThreadedEventLoopGroup.singleton.any().submit { "yes" }.get()
         XCTAssertEqual(works, "yes")
     }
 
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     func testSingletonBlockingPoolWorks() async throws {
         let works = try await NIOThreadPool.singleton.runIfActive(
             eventLoop: MultiThreadedEventLoopGroup.singleton.any()
