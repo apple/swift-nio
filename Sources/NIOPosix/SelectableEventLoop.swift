@@ -31,6 +31,30 @@ internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
 #endif
 }
 
+/// Information about an EventLoop tick
+public struct NIOEventLoopTickInfo: Sendable, Hashable {
+    /// The eventloop which ticked
+    public var eventLoopID: ObjectIdentifier
+    /// The number of tasks which were executed in this tick
+    public var numberOfTasks: Int
+    /// The time at which the tick began
+    public var startTime: NIODeadline
+
+    internal init(eventLoopID: ObjectIdentifier, numberOfTasks: Int, startTime: NIODeadline) {
+        self.eventLoopID = eventLoopID
+        self.numberOfTasks = numberOfTasks
+        self.startTime = startTime
+    }
+}
+
+/// Implement this delegate to receive information about the EventLoop, such as each tick
+public protocol NIOEventLoopMetricsDelegate: Sendable {
+    /// Called after a tick has run
+    /// This function is called after every tick - avoid long-running tasks here
+    /// - Parameter info: Information about the tick, such as how many tasks were executed
+    func processedTick(info: NIOEventLoopTickInfo)
+}
+
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
 /// The whole processing of I/O and tasks is done by a `NIOThread` that is tied to the `SelectableEventLoop`. This `NIOThread`
 /// is guaranteed to never change!
@@ -121,6 +145,8 @@ internal final class SelectableEventLoop: EventLoop {
     private let promiseCreationStoreLock = NIOLock()
     private var _promiseCreationStore: [_NIOEventLoopFutureIdentifier: (file: StaticString, line: UInt)] = [:]
 
+    private let metricsDelegate: (any NIOEventLoopMetricsDelegate)?
+
     @usableFromInline
     internal func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
@@ -183,7 +209,9 @@ Further information:
     internal init(thread: NIOThread,
                   parentGroup: MultiThreadedEventLoopGroup?, /* nil iff thread take-over */
                   selector: NIOPosix.Selector<NIORegistration>,
-                  canBeShutdownIndividually: Bool) {
+                  canBeShutdownIndividually: Bool,
+                  metricsDelegate: NIOEventLoopMetricsDelegate?) {
+        self.metricsDelegate = metricsDelegate
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
@@ -562,7 +590,13 @@ Further information:
         return nextDeadline
     }
 
-    private func runLoop() -> NIODeadline? {
+    private func runLoop(selfIdentifier: ObjectIdentifier) -> NIODeadline? {
+        let tickStartTime: NIODeadline = .now()
+        var tasksProcessedInTick = 0
+        defer {
+            let tickInfo = NIOEventLoopTickInfo(eventLoopID: selfIdentifier, numberOfTasks: tasksProcessedInTick, startTime: tickStartTime)
+            self.metricsDelegate?.processedTick(info: tickInfo)
+        }
         while true {
             let nextReadyDeadline = self._tasksLock.withLock { () -> NIODeadline? in
                 let deadline = Self._popTasksLocked(
@@ -583,6 +617,12 @@ Further information:
             }
 
             // Execute all the tasks that were submitted
+            let (partialTotal, totalOverflowed) = tasksProcessedInTick.addingReportingOverflow(self.tasksCopy.count)
+            if totalOverflowed {
+                tasksProcessedInTick = Int.max
+            } else {
+                tasksProcessedInTick = partialTotal
+            }
             for task in self.tasksCopy {
                 self.run(task)
             }
@@ -646,6 +686,7 @@ Further information:
                 nextReadyDeadline =  NIODeadline.now()
             }
         }
+        let selfIdentifier = ObjectIdentifier(self)
         while self.internalState != .noLongerRunning && self.internalState != .exitingThread {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
@@ -673,7 +714,7 @@ Further information:
                     }
                 }
             }
-            nextReadyDeadline = runLoop()
+            nextReadyDeadline = runLoop(selfIdentifier: selfIdentifier)
         }
 
         // This EventLoop was closed so also close the underlying selector.
