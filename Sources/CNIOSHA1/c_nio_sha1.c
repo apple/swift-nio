@@ -4,6 +4,7 @@
     - defined the __min_size macro inline
     - included sys/endian.h on Android
     - use welcoming language (soundness check)
+    - ensure BYTE_ORDER is defined
 */
 /*	$KAME: sha1.c,v 1.5 2000/11/08 06:13:08 itojun Exp $	*/
 /*-
@@ -53,14 +54,15 @@
 #endif
 #ifdef __ANDROID__
 #include <sys/endian.h>
-#elif __linux__
+#elif defined(__linux__) || defined(__APPLE__)
 #include <sys/types.h>
 #endif
 
 
-
 /* soundness check */
-#if BYTE_ORDER != BIG_ENDIAN
+#if !defined(BYTE_ORDER)
+#error "BYTE_ORDER not defined"
+#elif BYTE_ORDER != BIG_ENDIAN
 # if BYTE_ORDER != LITTLE_ENDIAN
 #  define unsupported 1
 # endif

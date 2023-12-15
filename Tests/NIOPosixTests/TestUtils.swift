@@ -31,6 +31,14 @@ extension System {
 #if canImport(Darwin) || os(Linux) || os(Android)
         guard let socket = try? Socket(protocolFamily: .vsock, type: .stream) else { return false }
         XCTAssertNoThrow(try socket.close())
+#if !canImport(Darwin)
+        do {
+            let fd = try Posix.open(file: "/dev/vsock", oFlag: O_RDONLY | O_CLOEXEC)
+            try Posix.close(descriptor: fd)
+        } catch {
+            return false
+        }
+#endif
         return true
 #else
         return false
@@ -60,12 +68,44 @@ func withPipe(_ body: (NIOCore.NIOFileHandle, NIOCore.NIOFileHandle) throws -> [
     }
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+func withPipe(_ body: (NIOCore.NIOFileHandle, NIOCore.NIOFileHandle) async throws -> [NIOCore.NIOFileHandle]) async throws {
+    var fds: [Int32] = [-1, -1]
+    fds.withUnsafeMutableBufferPointer { ptr in
+        XCTAssertEqual(0, pipe(ptr.baseAddress!))
+    }
+    let readFH = NIOFileHandle(descriptor: fds[0])
+    let writeFH = NIOFileHandle(descriptor: fds[1])
+    var toClose: [NIOFileHandle] = [readFH, writeFH]
+    var error: Error? = nil
+    do {
+        toClose = try await body(readFH, writeFH)
+    } catch let err {
+        error = err
+    }
+    try toClose.forEach { fh in
+        XCTAssertNoThrow(try fh.close())
+    }
+    if let error = error {
+        throw error
+    }
+}
+
 func withTemporaryDirectory<T>(_ body: (String) throws -> T) rethrows -> T {
     let dir = createTemporaryDirectory()
     defer {
         try? FileManager.default.removeItem(atPath: dir)
     }
     return try body(dir)
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+func withTemporaryDirectory<T>(_ body: (String) async throws -> T) async rethrows -> T {
+    let dir = createTemporaryDirectory()
+    defer {
+        try? FileManager.default.removeItem(atPath: dir)
+    }
+    return try await body(dir)
 }
 
 /// This function creates a filename that can be used for a temporary UNIX domain socket path.
@@ -130,6 +170,35 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle
         }
     }
     return try body(fileHandle, path)
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+func withTemporaryFile<T>(content: String? = nil, _ body: @escaping @Sendable (NIOCore.NIOFileHandle, String) async throws -> T) async rethrows -> T {
+    let (fd, path) = openTemporaryFile()
+    let fileHandle = NIOFileHandle(descriptor: fd)
+    defer {
+        XCTAssertNoThrow(try fileHandle.close())
+        XCTAssertEqual(0, unlink(path))
+    }
+    if let content = content {
+        try Array(content.utf8).withUnsafeBufferPointer { ptr in
+            var toWrite = ptr.count
+            var start = ptr.baseAddress!
+            while toWrite > 0 {
+                let res = try Posix.write(descriptor: fd, pointer: start, size: toWrite)
+                switch res {
+                case .processed(let written):
+                    toWrite -= written
+                    start = start + written
+                case .wouldBlock:
+                    XCTFail("unexpectedly got .wouldBlock from a file")
+                    continue
+                }
+            }
+            XCTAssertEqual(0, lseek(fd, 0, SEEK_SET))
+        }
+    }
+    return try await body(fileHandle, path)
 }
 var temporaryDirectory: String {
     get {

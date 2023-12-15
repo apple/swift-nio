@@ -25,9 +25,9 @@ fileprivate struct TestCase {
     }
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncSequenceCollectTests: XCTestCase {
     func testAsyncSequenceCollect() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let testCases = [
             TestCase([
                 [],

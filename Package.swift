@@ -107,7 +107,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOAtomics",
-            dependencies: []
+            dependencies: [],
+            cSettings: [
+                .define("_GNU_SOURCE"),
+            ]
         ),
         .target(
             name: "CNIOSHA1",
@@ -115,7 +118,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOLinux",
-            dependencies: []
+            dependencies: [],
+            cSettings: [
+                .define("_GNU_SOURCE"),
+            ]
         ),
         .target(
             name: "CNIODarwin",
@@ -156,7 +162,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOLLHTTP",
-            cSettings: [.define("LLHTTP_STRICT_MODE")]
+            cSettings: [
+              .define("_GNU_SOURCE"),
+              .define("LLHTTP_STRICT_MODE")
+            ]
         ),
         .target(
             name: "NIOTLS",

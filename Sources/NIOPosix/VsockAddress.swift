@@ -220,12 +220,11 @@ extension VsockAddress.ContextID {
         let fd = socketFD
 #elseif os(Linux) || os(Android)
         let request = CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID
-        let fd = try! Posix.open(file: "/dev/vsock", oFlag: O_RDONLY | O_CLOEXEC)
+        let fd = try Posix.open(file: "/dev/vsock", oFlag: O_RDONLY | O_CLOEXEC)
         defer { try! Posix.close(descriptor: fd) }
 #endif
         var cid = Self.any.rawValue
         try Posix.ioctl(fd: fd, request: request, ptr: &cid)
-        precondition(cid != Self.any.rawValue)
         return Self(rawValue: cid)
     }
 }

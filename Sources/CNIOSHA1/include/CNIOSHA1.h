@@ -4,6 +4,7 @@
     - defined the __min_size macro inline
     - included sys/endian.h on Android
     - use welcoming language (soundness check)
+    - ensure BYTE_ORDER is defined
 */
 /*	$FreeBSD$	*/
 /*	$KAME: sha1.h,v 1.5 2000/03/27 04:36:23 sumikawa Exp $	*/

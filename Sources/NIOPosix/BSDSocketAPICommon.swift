@@ -83,8 +83,8 @@ extension NIOBSDSocket.SocketType {
         internal static let stream: NIOBSDSocket.SocketType =
                 NIOBSDSocket.SocketType(rawValue: SOCK_STREAM)
     #endif
-    
-    #if os(Linux)
+
+    #if os(Linux) && !canImport(Musl)
         internal static let raw: NIOBSDSocket.SocketType =
                 NIOBSDSocket.SocketType(rawValue: CInt(SOCK_RAW.rawValue))
     #else

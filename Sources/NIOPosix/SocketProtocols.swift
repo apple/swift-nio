@@ -73,7 +73,13 @@ protocol SocketProtocol: BaseSocketProtocol {
 // This is a lazily initialised global variable that when read for the first time, will ignore SIGPIPE.
 private let globallyIgnoredSIGPIPE: Bool = {
     /* no F_SETNOSIGPIPE on Linux :( */
+    #if canImport(Glibc)
     _ = Glibc.signal(SIGPIPE, SIG_IGN)
+    #elseif canImport(Musl)
+    _ = Musl.signal(SIGPIPE, SIG_IGN)
+    #else
+    #error("Don't know which stdlib to use")
+    #endif
     return true
 }()
 #endif
