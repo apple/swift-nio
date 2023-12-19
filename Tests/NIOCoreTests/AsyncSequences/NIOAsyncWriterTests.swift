@@ -652,7 +652,7 @@ final class NIOAsyncWriterTests: XCTestCase {
     }
 }
 
-#if !canImport(Darwin) && swift(<5.10)
+#if !canImport(Darwin) && swift(<5.9.2)
 extension XCTestCase {
     func fulfillment(
         of expectations: [XCTestExpectation],
