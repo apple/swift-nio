@@ -89,3 +89,6 @@ services:
 
   http:
     image: swift-nio:22.04-5.10
+    
+  cxx-interop-build:
+    image: swift-nio:22.04-5.10
