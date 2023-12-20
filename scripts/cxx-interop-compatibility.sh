@@ -57,12 +57,7 @@ let package = Package(
                 .product(name: "_NIOConcurrency", package: "swift-nio")
             ],
             swiftSettings: [.interoperabilityMode(.Cxx)]
-        ),
-        .testTarget(
-            name: "interopTests",
-            dependencies: ["interop"],
-            swiftSettings: [.interoperabilityMode(.Cxx)]
-        ),
+        )
     ]
 )
 EOF
