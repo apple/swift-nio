@@ -17,6 +17,7 @@ set -eu
 
 sourcedir=$(pwd)
 workingdir=$(mktemp -d)
+projectname=$(basename $workingdir)
 
 cd $workingdir
 swift package init
@@ -40,6 +41,8 @@ let package = Package(
     targets: [
         .target(
             name: "interop",
+            // Depend on all products of swift-nio to make sure they're all
+            // compatible with cxx interop.
             dependencies: [
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
@@ -50,7 +53,8 @@ let package = Package(
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
                 .product(name: "NIOWebSocket", package: "swift-nio"),
-                .product(name: "NIOTestUtils", package: "swift-nio")
+                .product(name: "NIOTestUtils", package: "swift-nio"),
+                .product(name: "_NIOConcurrency", package: "swift-nio")
             ],
             swiftSettings: [.interoperabilityMode(.Cxx)]
         ),
@@ -61,6 +65,20 @@ let package = Package(
         ),
     ]
 )
+EOF
+
+cat << EOF > Sources/$projectname/$(echo $projectname | tr . _).swift
+import NIO
+import NIOCore
+import NIOConcurrencyHelpers
+import NIOTLS
+import NIOEmbedded
+import NIOPosix
+import NIOHTTP1
+import NIOFoundationCompat
+import NIOWebSocket
+import NIOTestUtils
+import _NIOConcurrency
 EOF
 
 swift build
