@@ -96,3 +96,12 @@ This product contains a derivation of "_TinyArray.swift" from SwiftCertificates.
     * https://www.apache.org/licenses/LICENSE-2.0
   * HOMEPAGE:
     * https://github.com/apple/swift-certificates
+
+---
+
+This product contains a derivation of the mocking infrastructure from Swift System.
+
+  * LICENSE (Apache License 2.0):
+    * https://www.apache.org/licenses/LICENSE-2.0
+  * HOMEPAGE:
+    * https://github.com/apple/swift-system
