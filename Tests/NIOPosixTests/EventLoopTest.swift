@@ -600,6 +600,11 @@ public final class EventLoopTest : XCTestCase {
 
         let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
 
+        // The threads are lazily constructed, so we need to wait for them.
+        for el in group.makeIterator() {
+            try el.submit { }.wait()
+        }
+
         XCTAssertEqual(2, counter)
         XCTAssertNoThrow(try group.syncShutdownGracefully())
     }
@@ -1259,14 +1264,28 @@ public final class EventLoopTest : XCTestCase {
         let el: EventLoop = elg.next()
         let expectedPrefix = "SelectableEventLoop { selector = Selector { descriptor ="
         let expectedContains = "thread = NIOThread(name = NIO-ELT-"
+        let expectedRacingContains = "thread = nil"
         let expectedSuffix = " }"
-        let desc = el.description
-        XCTAssert(el.description.starts(with: expectedPrefix), desc)
-        XCTAssert(el.description.reversed().starts(with: expectedSuffix.reversed()), desc)
-        // let's check if any substring contains the `expectedContains`
-        XCTAssert(desc.indices.contains { startIndex in
-            desc[startIndex...].starts(with: expectedContains)
-        }, desc)
+
+        // Get one description racing with the background thread, and one after the thread starts.
+        let originalDesc = el.description
+        try? el.submit { }.wait()
+        let secondDesc = el.description
+
+        XCTAssert(originalDesc.starts(with: expectedPrefix), originalDesc)
+        XCTAssert(secondDesc.starts(with: expectedPrefix), secondDesc)
+        XCTAssert(originalDesc.reversed().starts(with: expectedSuffix.reversed()), originalDesc)
+        XCTAssert(secondDesc.reversed().starts(with: expectedSuffix.reversed()), secondDesc)
+
+        // let's check if any substring contains the `expectedContains`. For secondDesc, it must be `expectedContains`
+        XCTAssert(secondDesc.indices.contains { startIndex in
+            secondDesc[startIndex...].starts(with: expectedContains)
+        }, secondDesc)
+
+        // For original desc, it may be either of expectedContains or racingContains
+        XCTAssert(originalDesc.indices.contains { startIndex in
+            originalDesc[startIndex...].starts(with: expectedContains) || originalDesc[startIndex...].starts(with: expectedRacingContains)
+        }, originalDesc)
     }
 
     func testMultiThreadedEventLoopGroupDescription() {

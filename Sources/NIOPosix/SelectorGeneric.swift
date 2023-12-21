@@ -14,6 +14,7 @@
 
 import NIOCore
 import NIOConcurrencyHelpers
+import Atomics
 
 internal enum SelectorLifecycleState {
     case open
@@ -127,7 +128,12 @@ internal class Selector<R: Registration>  {
     var registrations = [Int: R]()
     var registrationID: SelectorRegistrationID = .initialRegistrationID
 
-    let myThread: NIOThread
+    var myThread: NIOThread {
+        // Force-unwrap is safe, we should only access this after the EL has started
+        // and the loop is running.
+        self._myThread.load()!
+    }
+    let _myThread: ManagedAtomicLazyReference<NIOThread>
     // The rules for `self.selectorFD`, `self.eventFD`, and `self.timerFD`:
     // reads: `self.externalSelectorFDLock` OR access from the EventLoop thread
     // writes: `self.externalSelectorFDLock` AND access from the EventLoop thread
@@ -169,7 +175,7 @@ internal class Selector<R: Registration>  {
     }
 
     init() throws {
-        self.myThread = NIOThread.current
+        self._myThread = ManagedAtomicLazyReference()
         self.lifecycleState = .closed
         events = Selector.allocateEventsArray(capacity: eventsCapacity)
         try self.initialiseState0()
@@ -182,7 +188,12 @@ internal class Selector<R: Registration>  {
         assert(self.selectorFD == -1, "self.selectorFD == \(self.selectorFD) on Selector deinit, forgot close?")
         Selector.deallocateEventsArray(events: events, capacity: eventsCapacity)
     }
-    
+
+    func threadLaunched(_ thread: NIOThread) {
+        let original = self._myThread.storeIfNilThenLoad(thread)
+        precondition(original == thread)
+    }
+
     private static func allocateEventsArray(capacity: Int) -> UnsafeMutablePointer<EventType> {
         let events: UnsafeMutablePointer<EventType> = UnsafeMutablePointer.allocate(capacity: capacity)
         events.initialize(to: EventType())
@@ -313,7 +324,7 @@ extension Selector: CustomStringConvertible {
             return "Selector { descriptor = \(self.selectorFD) }"
         }
 
-        if NIOThread.current == self.myThread {
+        if NIOThread.current == self._myThread.load() {
             return makeDescription()
         } else {
             return self.externalSelectorFDLock.withLock {

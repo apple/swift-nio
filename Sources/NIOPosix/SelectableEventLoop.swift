@@ -68,7 +68,7 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     /* private but tests */ internal let _selector: NIOPosix.Selector<NIORegistration>
-    private let thread: NIOThread
+    private let thread: ManagedAtomicLazyReference<NIOThread>
     @usableFromInline
     // _pendingTaskPop is set to `true` if the event loop is about to pop tasks off the task queue.
     // This may only be read/written while holding the _tasksLock.
@@ -82,11 +82,7 @@ internal final class SelectableEventLoop: EventLoop {
     // for every appended closure. https://bugs.swift.org/browse/SR-15872
     private var tasksCopy = ContiguousArray<ScheduledTask>()
     @usableFromInline
-    internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
-        didSet {
-            self.assertInEventLoop()
-        }
-    }
+    internal var _succeededVoidPromise: Optional<EventLoopPromise<Void>> = nil
 
     private let canBeShutdownIndividually: Bool
     @usableFromInline
@@ -173,13 +169,12 @@ Further information:
         }
     }
 
-    internal init(thread: NIOThread,
-                  parentGroup: MultiThreadedEventLoopGroup?, /* nil iff thread take-over */
+    internal init(parentGroup: MultiThreadedEventLoopGroup?, /* nil iff thread take-over */
                   selector: NIOPosix.Selector<NIORegistration>,
                   canBeShutdownIndividually: Bool) {
         self._parentGroup = parentGroup
         self._selector = selector
-        self.thread = thread
+        self.thread = .init()
         self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
         self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
         // We will process 4096 tasks per while loop.
@@ -188,9 +183,17 @@ Further information:
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
         // note: We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
         //       fairly dumb, but it's the only option we have.
-        let voidPromise = self.makePromise(of: Void.self)
-        voidPromise.succeed(())
-        self._succeededVoidFuture = voidPromise.futureResult
+        self._succeededVoidPromise = self.makePromise(of: Void.self)
+    }
+
+    internal func launchedThread(_ thread: NIOThread) {
+        precondition(NIOThread.current == thread)
+        let original = self.thread.storeIfNilThenLoad(thread)
+        precondition(original == thread)
+        self._selector.threadLaunched(thread)
+
+        // Force-unwrap is safe, can only be nil if we have called deinit
+        self._succeededVoidPromise!.succeed()
     }
 
     deinit {
@@ -246,7 +249,7 @@ Further information:
     /// - see: `EventLoop.inEventLoop`
     @usableFromInline
     internal var inEventLoop: Bool {
-        return thread.isCurrent
+        return self.thread.load()?.isCurrent ?? false
     }
 
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
@@ -553,7 +556,7 @@ Further information:
         try self._selector.close()
 
         // This breaks the retain cycle created in `init`.
-        self._succeededVoidFuture = nil
+        self._succeededVoidPromise = nil
     }
 
     internal func initiateClose(queue: DispatchQueue, completionHandler: @escaping (Result<Void, Error>) -> Void) {
@@ -626,7 +629,8 @@ Further information:
             return
         }
         if joinThread {
-            self.thread.join()
+            // Force-unwrap is safe: we cannot join the thread until the thread has started, at which point this cannot be nil.
+            self.thread.load()!.join()
         }
         self.externalStateLock.withLock {
             precondition(self.externalState == .reclaimingResources)
@@ -657,7 +661,7 @@ Further information:
 
     @inlinable
     public func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
-        guard self.inEventLoop, let voidFuture = self._succeededVoidFuture else {
+        guard self.inEventLoop, let voidFuture = self._succeededVoidPromise?.futureResult else {
             // We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
             // fairly dumb, but it's the only option we have. This one can only happen after the loop is shut down, or when calling from off the loop.
             let voidPromise = self.makePromise(of: Void.self)
@@ -677,13 +681,13 @@ Further information:
 extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvertible {
     @usableFromInline
     var description: String {
-        return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread) }"
+        return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread.load()?.description ?? "nil") }"
     }
 
     @usableFromInline
     var debugDescription: String {
         return self._tasksLock.withLock {
-            return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
+            return "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread.load()?.description ?? "nil"), scheduledTasks = \(self._scheduledTasks.description) }"
         }
     }
 }

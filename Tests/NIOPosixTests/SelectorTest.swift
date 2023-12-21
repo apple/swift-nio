@@ -36,6 +36,7 @@ class SelectorTest: XCTestCase {
         }
 
         let selector = try NIOPosix.Selector<TestRegistration>()
+        selector.threadLaunched(NIOThread.current)
         defer {
             XCTAssertNoThrow(try selector.close())
         }

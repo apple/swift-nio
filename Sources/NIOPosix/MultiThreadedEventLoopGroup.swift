@@ -71,20 +71,15 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private var runState: RunState = .running
     private let canBeShutDown: Bool
 
-    private static func runTheLoop(thread: NIOThread,
-                                   parentGroup: MultiThreadedEventLoopGroup? /* nil iff thread take-over */,
-                                   canEventLoopBeShutdownIndividually: Bool,
-                                   selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
+    private static func runTheLoop(loop: SelectableEventLoop,
+                                   thread: NIOThread,
                                    initializer: @escaping ThreadInitializer,
                                    _ callback: @escaping (SelectableEventLoop) -> Void) {
         assert(NIOThread.current == thread)
         initializer(thread)
 
         do {
-            let loop = SelectableEventLoop(thread: thread,
-                                           parentGroup: parentGroup,
-                                           selector: try selectorFactory(),
-                                           canBeShutdownIndividually: canEventLoopBeShutdownIndividually)
+            loop.launchedThread(thread)
             threadSpecificEventLoop.currentValue = loop
             defer {
                 threadSpecificEventLoop.currentValue = nil
@@ -101,29 +96,28 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private static func setupThreadAndEventLoop(name: String,
                                                 parentGroup: MultiThreadedEventLoopGroup,
                                                 selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
-                                                initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
-        let lock = NIOLock()
-        /* the `loopUpAndRunningGroup` is done by the calling thread when the EventLoop has been created and was written to `_loop` */
-        let loopUpAndRunningGroup = DispatchGroup()
+                                                initializer: @escaping ThreadInitializer) -> SelectableEventLoop {
+        let loop: SelectableEventLoop
 
-        /* synchronised by `lock` */
-        var _loop: SelectableEventLoop! = nil
+        do {
+            loop = SelectableEventLoop(
+                parentGroup: parentGroup,
+                selector: try selectorFactory(),
+                canBeShutdownIndividually: false // part of MTELG
+            )
+        } catch {
+            // We fatalError here because the only reasons this can be hit is if the underlying kqueue/epoll give us
+            // errors that we cannot handle which is an unrecoverable error for us.
+            fatalError("Unexpected error while creating SelectableEventLoop: \(error).")
+        }
 
-        loopUpAndRunningGroup.enter()
         NIOThread.spawnAndRun(name: name, detachThread: false) { t in
-            MultiThreadedEventLoopGroup.runTheLoop(thread: t,
-                                                   parentGroup: parentGroup,
-                                                   canEventLoopBeShutdownIndividually: false, // part of MTELG
-                                                   selectorFactory: selectorFactory,
+            MultiThreadedEventLoopGroup.runTheLoop(loop: loop,
+                                                   thread: t,
                                                    initializer: initializer) { l in
-                lock.withLock {
-                    _loop = l
-                }
-                loopUpAndRunningGroup.leave()
             }
         }
-        loopUpAndRunningGroup.wait()
-        return lock.withLock { _loop }
+        return loop
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
@@ -373,10 +367,22 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///                 `EventLoop` reference. Just like usually on the `EventLoop`, do not block in `callback`.
     public static func withCurrentThreadAsEventLoop(_ callback: @escaping (EventLoop) -> Void) {
         let callingThread = NIOThread.current
-        MultiThreadedEventLoopGroup.runTheLoop(thread: callingThread,
-                                               parentGroup: nil,
-                                               canEventLoopBeShutdownIndividually: true,
-                                               selectorFactory: NIOPosix.Selector<NIORegistration>.init,
+        let loop: SelectableEventLoop
+
+        do {
+            loop = SelectableEventLoop(
+                parentGroup: nil,
+                selector: try NIOPosix.Selector<NIORegistration>(),
+                canBeShutdownIndividually: true
+            )
+        } catch {
+            // We fatalError here because the only reasons this can be hit is if the underlying kqueue/epoll give us
+            // errors that we cannot handle which is an unrecoverable error for us.
+            fatalError("Unexpected error while creating SelectableEventLoop: \(error).")
+        }
+
+        MultiThreadedEventLoopGroup.runTheLoop(loop: loop,
+                                               thread: callingThread,
                                                initializer: { _ in }) { loop in
             loop.assertInEventLoop()
             callback(loop)
