@@ -152,7 +152,7 @@ public protocol FileHandleProtocol {
 ///
 /// There are two requirements for implementing this protocol:
 /// 1. ``readChunk(fromAbsoluteOffset:length:)``, and
-/// 2. ``readChunks(in:chunkLength:)-8of2k
+/// 2. ``readChunks(in:chunkLength:)-8of2k``
 ///
 /// A number of overloads are provided which provide sensible defaults.
 ///

@@ -134,15 +134,10 @@ In depth documentation can be found in the following sections.
 - ``DirectoryFileHandle``
 - ``withFileSystem(numberOfThreads:_:)``
 
-### Locating Files
-
-- ``FilePath``
-
 ### File and Directory Information
 
 - ``FileInfo``
 - ``FileType``
-- ``FilePermissions``
 
 ### Reading Files
 
@@ -165,7 +160,6 @@ In depth documentation can be found in the following sections.
 
 - ``FileSystemError``
 - ``FileSystemError/SystemCallError``
-- ``Errno-struct``
 
 ### Creating a File System
 

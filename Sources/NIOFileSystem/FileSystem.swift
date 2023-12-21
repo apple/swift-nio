@@ -742,7 +742,7 @@ extension FileSystem {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
     /// The file system executes blocking work in a thread pool which defaults to having two
-    /// threads. This can be modified by ``NIOSingletons/fileSystemThreadCountSuggestion`` or by
+    /// threads. This can be modified by `fileSystemThreadCountSuggestion` or by
     /// setting the `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` environment variable.
     public static var shared: FileSystem { globalFileSystem }
 }
@@ -752,7 +752,7 @@ extension NIOSingletons {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
     /// The file system executes blocking work in a thread pool which defaults to having two
-    /// threads. This can be modified by ``NIOSingletons/fileSystemThreadCountSuggestion`` or by
+    /// threads. This can be modified by `fileSystemThreadCountSuggestion` or by
     /// setting the `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` environment variable.
     public static var fileSystem: FileSystem { globalFileSystem }
 }
