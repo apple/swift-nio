@@ -371,6 +371,9 @@ public enum ChannelError: Error {
 
     /// An attempt was made to remove a ChannelHandler that is not removable.
     case unremovableHandler
+    
+    /// An attempt to bind a `Channel` failed.
+    case bindFailed
 }
 
 extension ChannelError: Equatable { }

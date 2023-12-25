@@ -266,14 +266,18 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             promise?.fail(error)
         }
         executeAndComplete(p) {
-            switch target {
-            case .socketAddress(let address):
-                try socket.bind(to: address)
-            case .vsockAddress(let address):
-                try socket.bind(to: address)
+            do {
+                switch target {
+                case .socketAddress(let address):
+                    try socket.bind(to: address)
+                case .vsockAddress(let address):
+                    try socket.bind(to: address)
+                }
+                self.updateCachedAddressesFromSocket(updateRemote: false)
+                try self.socket.listen(backlog: backlog)
+            } catch {
+                promise?.fail(ChannelError.bindFailed)
             }
-            self.updateCachedAddressesFromSocket(updateRemote: false)
-            try self.socket.listen(backlog: backlog)
         }
     }
 

@@ -322,6 +322,48 @@ final class SALChannelTest: XCTestCase, SALTest {
                 }
         }.salWait())
     }
+    
+    func testBindFailureClosesChannel() {
+        guard let channel = try? self.makeSocketChannel() else {
+            XCTFail("couldn't make a channel")
+            return
+        }
+        let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
+        let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
+        
+        XCTAssertThrowsError(try channel.eventLoop.runSAL(syscallAssertions: {
+            try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                return (value as? SocketOptionValue) == 1
+            }
+            try self.assertSetOption(expectedLevel: .socket, expectedOption: .so_reuseaddr) { value in
+                return (value as? SocketOptionValue) == 1
+            }
+            try self.assertBindFailure(expectedAddress: localAddress)
+            try self.assertDeregister { selectable in
+                return true
+            }
+            try self.assertClose(expectedFD: .max)
+
+        })  {
+            ClientBootstrap(group: channel.eventLoop)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(ChannelOptions.autoRead, value: false)
+                .bind(to: localAddress)
+                .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                .flatMapError { error in
+                    guard let ioError = error as? IOError else {
+                        XCTFail("Expected IOError, got \(error)")
+                        return channel.eventLoop.makeFailedFuture(error)
+                    }
+                    XCTAssertEqual(ioError.errnoCode, EPERM, "Expected EPERM error code")
+                    XCTAssertTrue(!channel.isActive, "Channel should be closed")
+                    return channel.eventLoop.makeFailedFuture(error)
+                }
+                .flatMap { channel in
+                    channel.close()
+                }
+        }.salWait())
+    }
 
     func testAcceptingInboundConnections() throws {
         final class ConnectionRecorder: ChannelInboundHandler {
