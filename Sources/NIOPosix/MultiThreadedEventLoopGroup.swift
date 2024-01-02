@@ -402,7 +402,7 @@ extension MultiThreadedEventLoopGroup: CustomStringConvertible {
     }
 }
 
-#if swift(>=5.9)
+#if compiler(>=5.9)
 @usableFromInline
 struct ErasedUnownedJob {
     @usableFromInline
@@ -427,7 +427,7 @@ internal struct ScheduledTask {
     @usableFromInline
     enum UnderlyingTask {
         case function(() -> Void)
-        #if swift(>=5.9)
+        #if compiler(>=5.9)
         case unownedJob(ErasedUnownedJob)
         #endif
     }
@@ -452,7 +452,7 @@ internal struct ScheduledTask {
         self.readyTime = time
     }
 
-    #if swift(>=5.9)
+    #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     @usableFromInline
     init(id: UInt64, job: consuming ExecutorJob, readyTime: NIODeadline) {
