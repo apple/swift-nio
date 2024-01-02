@@ -49,6 +49,10 @@ services:
   update-benchmark-baseline:
     <<: *common
     command: /bin/bash -xcl "cd Benchmarks && swift package --disable-sandbox --scratch-path .build/$${SWIFT_VERSION-}/ --allow-writing-to-package-directory benchmark --format metricP90AbsoluteThresholds --path Thresholds/$${SWIFT_VERSION-}/"
+    
+  cxx-interop-build:
+    <<: *common
+    command: /bin/bash -xcl "./scripts/cxx-interop-compatibility.sh"
 
   # util
 

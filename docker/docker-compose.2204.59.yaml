@@ -21,6 +21,7 @@ services:
   test:
     image: swift-nio:22.04-5.9
     environment:
+      - SWIFT_VERSION=5.9
       - MAX_ALLOCS_ALLOWED_10000000_asyncsequenceproducer=21
       - MAX_ALLOCS_ALLOWED_1000000_asyncwriter=1000050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=45050
@@ -89,4 +90,7 @@ services:
     image: swift-nio:22.04-5.9
 
   http:
+    image: swift-nio:22.04-5.9
+    
+  cxx-interop-build:
     image: swift-nio:22.04-5.9

@@ -20,6 +20,7 @@ services:
   test:
     image: swift-nio:22.04-main
     environment:
+      - SWIFT_VERSION=main
       - MAX_ALLOCS_ALLOWED_10000000_asyncsequenceproducer=21
       - MAX_ALLOCS_ALLOWED_1000000_asyncwriter=1000050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=45050
