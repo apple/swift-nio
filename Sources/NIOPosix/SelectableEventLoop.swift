@@ -299,7 +299,7 @@ Further information:
         }, .now()))
     }
 
-    #if swift(>=5.9)
+    #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     @usableFromInline
     func enqueue(_ job: consuming ExecutorJob) {
@@ -533,7 +533,7 @@ Further information:
                         case .function(let function):
                             function()
 
-                        #if swift(>=5.9)
+                        #if compiler(>=5.9)
                         case .unownedJob(let erasedUnownedJob):
                             if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
                                 erasedUnownedJob.unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
