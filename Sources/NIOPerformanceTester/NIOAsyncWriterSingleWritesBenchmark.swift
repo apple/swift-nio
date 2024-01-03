@@ -44,7 +44,9 @@ final class NIOAsyncWriterSingleWritesBenchmark: AsyncBenchmark, @unchecked Send
     }
 
     func setUp() async throws {}
-    func tearDown() {}
+    func tearDown() {
+        self.writer.finish()
+    }
 
     func run() async throws -> Int {
         for i in 0..<self.iterations {
