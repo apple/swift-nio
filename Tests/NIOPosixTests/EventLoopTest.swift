@@ -382,7 +382,38 @@ public final class EventLoopTest : XCTestCase {
         eventLoop.advanceTime(by: .hours(10))
         XCTAssertEqual(5, counter)
     }
+    
+    func testScheduledRepeatedAsyncTaskIsJittered() throws {
+        let initialDelay = TimeAmount.minutes(5)
+        let delay = TimeAmount.minutes(2)
+        let maximumAllowableJitter = TimeAmount.minutes(1)
+        let counter = ManagedAtomic<Int64>(0)
+        let loop = EmbeddedEventLoop()
 
+        _ = loop.scheduleRepeatedAsyncTask(initialDelay: initialDelay, delay: delay, maximumAllowableJitter: maximumAllowableJitter, { RepeatedTask in
+            counter.wrappingIncrement(ordering: .relaxed)
+            let p = loop.makePromise(of: Void.self)
+            loop.scheduleTask(in: .milliseconds(10)) {
+                p.succeed(())
+            }
+            return p.futureResult
+        })
+        
+        for _ in 0..<10 {
+            // just running shouldn't do anything
+            loop.run()
+        }
+
+        let timeRange = TimeAmount.hours(1)
+        // Due to jittered delays is not possible to exactly know how many tasks will be executed in a given time range,
+        // instead calculate a range representing an estimate of the number of tasks executed during that given time range.
+        let minNumberOfExecutedTasks = (timeRange.nanoseconds - initialDelay.nanoseconds) / (delay.nanoseconds + maximumAllowableJitter.nanoseconds)
+        let maxNumberOfExecutedTasks = (timeRange.nanoseconds - initialDelay.nanoseconds) / delay.nanoseconds + 1
+
+        loop.advanceTime(by: timeRange)
+        XCTAssertTrue((minNumberOfExecutedTasks...maxNumberOfExecutedTasks).contains(counter.load(ordering: .relaxed)))
+    }
+    
     public func testEventLoopGroupMakeIterator() throws {
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         defer {
@@ -802,6 +833,27 @@ public final class EventLoopTest : XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [expectFail1, expectFail2], timeout: 0.5), .timedOut)
         semaphore.signal()
         XCTAssertEqual(XCTWaiter.wait(for: [expect1, expect2], timeout: 0.5), .completed)
+    }
+    
+    func testRepeatedTaskIsJittered() throws {
+        let initialDelay = TimeAmount.minutes(5)
+        let delay = TimeAmount.minutes(2)
+        let maximumAllowableJitter = TimeAmount.minutes(1)
+        let counter = ManagedAtomic<Int64>(0)
+        let loop = EmbeddedEventLoop()
+
+        _ = loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay, maximumAllowableJitter: maximumAllowableJitter, { RepeatedTask in
+            counter.wrappingIncrement(ordering: .relaxed)
+        })
+
+        let timeRange = TimeAmount.hours(1)
+        // Due to jittered delays is not possible to exactly know how many tasks will be executed in a given time range,
+        // instead calculate a range representing an estimate of the number of tasks executed during that given time range.
+        let minNumberOfExecutedTasks = (timeRange.nanoseconds - initialDelay.nanoseconds) / (delay.nanoseconds + maximumAllowableJitter.nanoseconds)
+        let maxNumberOfExecutedTasks = (timeRange.nanoseconds - initialDelay.nanoseconds) / delay.nanoseconds + 1
+
+        loop.advanceTime(by: timeRange)
+        XCTAssertTrue((minNumberOfExecutedTasks...maxNumberOfExecutedTasks).contains(counter.load(ordering: .relaxed)))
     }
 
     func testCancelledScheduledTasksDoNotHoldOnToRunClosure() {

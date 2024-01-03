@@ -45,17 +45,16 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     @usableFromInline
     let eventLoop: EventLoop
 
-    /// The shared `CloseRatchet` between this handler and the inbound stream handler.
     @usableFromInline
-    let closeRatchet: CloseRatchet
+    let isOutboundHalfClosureEnabled: Bool
 
     @inlinable
     init(
         eventLoop: EventLoop,
-        closeRatchet: CloseRatchet
+        isOutboundHalfClosureEnabled: Bool
     ) {
         self.eventLoop = eventLoop
-        self.closeRatchet = closeRatchet
+        self.isOutboundHalfClosureEnabled = isOutboundHalfClosureEnabled
     }
 
     @inlinable
@@ -76,18 +75,28 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     }
 
     @inlinable
+    func _didYield(element: OutboundOut) {
+        // This is always called from an async context, so we must loop-hop.
+        // Because we always loop-hop, we're always at the top of a stack frame. As this
+        // is the only source of writes for us, and as this channel handler doesn't implement
+        // func write(), we cannot possibly re-entrantly write. That means we can skip many of the
+        // awkward re-entrancy protections NIO usually requires, and can safely just do an iterative
+        // write.
+        self.eventLoop.preconditionInEventLoop()
+        guard let context = self.context else {
+            // Already removed from the channel by now, we can stop.
+            return
+        }
+
+        self._doOutboundWrite(context: context, write: element)
+    }
+
+    @inlinable
     func _didTerminate(error: Error?) {
         self.eventLoop.preconditionInEventLoop()
 
-        switch self.closeRatchet.closeWrite() {
-        case .nothing:
-            break
-
-        case .closeOutput:
+        if self.isOutboundHalfClosureEnabled {
             self.context?.close(mode: .output, promise: nil)
-
-        case .close:
-            self.context?.close(promise: nil)
         }
 
         self.sink = nil
@@ -103,6 +112,12 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     }
 
     @inlinable
+    func _doOutboundWrite(context: ChannelHandlerContext, write: OutboundOut) {
+        context.write(self.wrapOutboundOut(write), promise: nil)
+        context.flush()
+    }
+
+    @inlinable
     func handlerAdded(context: ChannelHandlerContext) {
         self.context = context
     }
@@ -110,7 +125,7 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     @inlinable
     func handlerRemoved(context: ChannelHandlerContext) {
         self.context = nil
-        self.sink = nil
+        self.sink?.finish()
     }
 
     @inlinable
@@ -123,6 +138,18 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     func channelWritabilityChanged(context: ChannelHandlerContext) {
         self.sink?.setWritability(to: context.channel.isWritable)
         context.fireChannelWritabilityChanged()
+    }
+
+    @inlinable
+    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        switch event {
+        case ChannelEvent.outputClosed:
+            self.sink?.finish()
+        default:
+            break
+        }
+
+        context.fireUserInboundEventTriggered(event)
     }
 }
 
@@ -147,17 +174,34 @@ extension NIOAsyncChannelOutboundWriterHandler {
 
         @inlinable
         func didYield(contentsOf sequence: Deque<OutboundOut>) {
-            // This always called from an async context, so we must loop-hop.
-            self.eventLoop.execute {
+            if self.eventLoop.inEventLoop {
                 self.handler._didYield(sequence: sequence)
+            } else {
+                self.eventLoop.execute {
+                    self.handler._didYield(sequence: sequence)
+                }
+            }
+        }
+
+        @inlinable
+        func didYield(_ element: OutboundOut) {
+            if self.eventLoop.inEventLoop {
+                self.handler._didYield(element: element)
+            } else {
+                self.eventLoop.execute {
+                    self.handler._didYield(element: element)
+                }
             }
         }
 
         @inlinable
         func didTerminate(error: Error?) {
-            // This always called from an async context, so we must loop-hop.
-            self.eventLoop.execute {
+            if self.eventLoop.inEventLoop {
                 self.handler._didTerminate(error: error)
+            } else {
+                self.eventLoop.execute {
+                    self.handler._didTerminate(error: error)
+                }
             }
         }
     }

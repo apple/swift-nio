@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(AsyncChannel) import NIOCore
+import NIOCore
 
-/// A helper ``ChannelInboundHandler`` that makes it easy to swap channel pipelines
+/// A helper `ChannelInboundHandler` that makes it easy to swap channel pipelines
 /// based on the result of an ALPN negotiation.
 ///
 /// The standard pattern used by applications that want to use ALPN is to select
@@ -26,48 +26,43 @@
 ///
 /// The user of this channel handler provides a single closure that is called with
 /// an ``ALPNResult`` when the ALPN negotiation is complete. Based on that result
-/// the user is free to reconfigure the ``ChannelPipeline`` as required, and should
-/// return an ``EventLoopFuture`` that will complete when the pipeline is reconfigured.
+/// the user is free to reconfigure the `ChannelPipeline` as required, and should
+/// return an `EventLoopFuture` that will complete when the pipeline is reconfigured.
 ///
-/// Until the ``EventLoopFuture`` completes, this channel handler will buffer inbound
-/// data. When the ``EventLoopFuture`` completes, the buffered data will be replayed
+/// Until the `EventLoopFuture` completes, this channel handler will buffer inbound
+/// data. When the `EventLoopFuture` completes, the buffered data will be replayed
 /// down the channel. Then, finally, this channel handler will automatically remove
 /// itself from the channel pipeline, leaving the pipeline in its final
 /// configuration.
 ///
 /// Importantly, this is a typed variant of the ``ApplicationProtocolNegotiationHandler`` and allows the user to
 /// specify a type that must be returned from the supplied closure. The result will then be used to succeed the ``NIOTypedApplicationProtocolNegotiationHandler/protocolNegotiationResult``
-/// promise. This allows us to construct pipelines that include protocol negotiation handlers and be able to bridge them into ``NIOAsyncChannel``
+/// promise. This allows us to construct pipelines that include protocol negotiation handlers and be able to bridge them into `NIOAsyncChannel`
 /// based bootstraps.
-@_spi(AsyncChannel)
 public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>: ChannelInboundHandler, RemovableChannelHandler {
-    @_spi(AsyncChannel)
     public typealias InboundIn = Any
 
-    @_spi(AsyncChannel)
     public typealias InboundOut = Any
 
-    @_spi(AsyncChannel)
-    public var protocolNegotiationResult: EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>> {
+    public var protocolNegotiationResult: EventLoopFuture<NegotiationResult> {
         return self.negotiatedPromise.futureResult
     }
 
-    private var negotiatedPromise: EventLoopPromise<NIOProtocolNegotiationResult<NegotiationResult>> {
+    private var negotiatedPromise: EventLoopPromise<NegotiationResult> {
         precondition(self._negotiatedPromise != nil, "Tried to access the protocol negotiation result before the handler was added to a pipeline")
         return self._negotiatedPromise!
     }
-    private var _negotiatedPromise: EventLoopPromise<NIOProtocolNegotiationResult<NegotiationResult>>?
+    private var _negotiatedPromise: EventLoopPromise<NegotiationResult>?
 
-    private let completionHandler: (ALPNResult, Channel) -> EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>
-    private var stateMachine = ProtocolNegotiationHandlerStateMachine<NIOProtocolNegotiationResult<NegotiationResult>>()
+    private let completionHandler: (ALPNResult, Channel) -> EventLoopFuture<NegotiationResult>
+    private var stateMachine = ProtocolNegotiationHandlerStateMachine<NegotiationResult>()
 
     /// Create an `ApplicationProtocolNegotiationHandler` with the given completion
     /// callback.
     ///
     /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
     ///   negotiation has completed.
-    @_spi(AsyncChannel)
-    public init(alpnCompleteHandler: @escaping (ALPNResult, Channel) -> EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>) {
+    public init(alpnCompleteHandler: @escaping (ALPNResult, Channel) -> EventLoopFuture<NegotiationResult>) {
         self.completionHandler = alpnCompleteHandler
     }
 
@@ -76,8 +71,7 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
     ///
     /// - Parameter alpnCompleteHandler: The closure that will fire when ALPN
     ///   negotiation has completed.
-    @_spi(AsyncChannel)
-    public convenience init(alpnCompleteHandler: @escaping (ALPNResult) -> EventLoopFuture<NIOProtocolNegotiationResult<NegotiationResult>>) {
+    public convenience init(alpnCompleteHandler: @escaping (ALPNResult) -> EventLoopFuture<NegotiationResult>) {
         self.init { result, _ in
             alpnCompleteHandler(result)
         }
@@ -97,7 +91,6 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
         }
     }
 
-    @_spi(AsyncChannel)
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch self.stateMachine.userInboundEventTriggered(event: event) {
         case .fireUserInboundEventTriggered:
@@ -108,7 +101,6 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
         }
     }
 
-    @_spi(AsyncChannel)
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.stateMachine.channelRead(data: data) {
         case .fireChannelRead:
@@ -119,7 +111,6 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
         }
     }
 
-    @_spi(AsyncChannel)
     public func channelInactive(context: ChannelHandlerContext) {
         self.stateMachine.channelInactive()
         
@@ -137,7 +128,7 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
             }
     }
 
-    private func userFutureCompleted(context: ChannelHandlerContext, result: Result<NIOProtocolNegotiationResult<NegotiationResult>, Error>) {
+    private func userFutureCompleted(context: ChannelHandlerContext, result: Result<NegotiationResult, Error>) {
         switch self.stateMachine.userFutureCompleted(with: result) {
         case .fireErrorCaughtAndRemoveHandler(let error):
             self.negotiatedPromise.fail(error)

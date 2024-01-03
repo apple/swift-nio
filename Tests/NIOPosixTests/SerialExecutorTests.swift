@@ -37,14 +37,12 @@ actor EventLoopBoundActor {
 }
 #endif
 
+@available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
 final class SerialExecutorTests: XCTestCase {
     private func _testBasicExecutorFitsOnEventLoop(loop1: EventLoop, loop2: EventLoop) async throws {
         #if compiler(<5.9)
         throw XCTSkip("Custom executors are only supported in 5.9")
         #else
-        guard #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) else {
-            throw XCTSkip("Custom executors not available on this platform")
-        }
 
         let testActor = EventLoopBoundActor(loop: loop1)
         await testActor.assertInLoop(loop1)

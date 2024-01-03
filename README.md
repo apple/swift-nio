@@ -11,7 +11,7 @@ It's like [Netty](https://netty.io), but written for Swift.
 
 The SwiftNIO project is split across multiple repositories:
 
-Repository | NIO 2 (Swift 5.6+)
+Repository | NIO 2 (Swift 5.7+)
 --- | ---
 [https://github.com/apple/swift-nio][repo-nio] <br> SwiftNIO core | `from: "2.0.0"`
 [https://github.com/apple/swift-nio-ssl][repo-nio-ssl] <br> TLS (SSL) support | `from: "2.0.0"`
@@ -60,7 +60,7 @@ Protocol | Client | Server | Repository | Module | Comment
 --- |  --- | --- | --- | --- | ---
 HTTP | ✅| ❌ | [swift-server/async-http-client](https://github.com/swift-server/async-http-client) | `AsyncHTTPClient` | SSWG community project
 gRPC | ✅| ✅ | [grpc/grpc-swift](https://github.com/grpc/grpc-swift) | `GRPC` | also offers a low-level API; SSWG community project
-APNS | ✅ | ❌ | [kylebrowning/APNSwift](https://github.com/kylebrowning/APNSwift) | `APNSwift` | SSWG community project
+APNS | ✅ | ❌ | [swift-server-community/APNSwift](https://github.com/swift-server-community/APNSwift) | `APNSwift` | SSWG community project
 PostgreSQL | ✅ | ❌ | [vapor/postgres-nio](https://github.com/vapor/postgres-nio) | `PostgresNIO` | SSWG community project
 Redis | ✅ | ❌ | [swift-server/RediStack](https://github.com/swift-server/RediStack) | `RediStack` | SSWG community project
 
@@ -70,7 +70,7 @@ Redis | ✅ | ❌ | [swift-server/RediStack](https://github.com/swift-server/Red
 
 This is the current version of SwiftNIO and will be supported for the foreseeable future.
 
-The most recent versions of SwiftNIO support Swift 5.6 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
+The most recent versions of SwiftNIO support Swift 5.7 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
 
 SwiftNIO            | Minimum Swift Version
 --------------------|----------------------
@@ -78,7 +78,8 @@ SwiftNIO            | Minimum Swift Version
 `2.30.0 ..< 2.40.0` | 5.2
 `2.40.0 ..< 2.43.0` | 5.4
 `2.43.0 ..< 2.51.0` | 5.5.2
-`2.51.0 ...`        | 5.6
+`2.51.0 ..< 2.60.0` | 5.6
+`2.60.0 ...`        | 5.7
 
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.
@@ -159,7 +160,7 @@ In general, [`ChannelHandler`][ch]s are designed to be highly re-usable componen
 
 SwiftNIO ships with many [`ChannelHandler`][ch]s built in that provide useful functionality, such as HTTP parsing. In addition, high-performance applications will want to provide as much of their logic as possible in [`ChannelHandler`][ch]s, as it helps avoid problems with context switching.
 
-Additionally, SwiftNIO ships with a few [`Channel`][c] implementations. In particular, it ships with `ServerSocketChannel`, a [`Channel`][c] for sockets that accept inbound connections; `SocketChannel`, a [`Channel`][c] for TCP connections; and `DatagramChannel`, a [`Channel`][c] for UDP sockets. All of these are provided by the `NIOPosix` module. It also provides[`EmbeddedChannel`][ec], a [`Channel`][c] primarily used for testing, provided by the `NIOEmbedded` module.
+Additionally, SwiftNIO ships with a few [`Channel`][c] implementations. In particular, it ships with `ServerSocketChannel`, a [`Channel`][c] for sockets that accept inbound connections; `SocketChannel`, a [`Channel`][c] for TCP connections; and `DatagramChannel`, a [`Channel`][c] for UDP sockets. All of these are provided by the `NIOPosix` module. It also provides [`EmbeddedChannel`][ec], a [`Channel`][c] primarily used for testing, provided by the `NIOEmbedded` module.
 
 ##### A Note on Blocking
 
@@ -332,7 +333,7 @@ have a few prerequisites installed on your system.
 
 ### Linux
 
-- Swift 5.6 or newer from [swift.org/download](https://swift.org/download/#releases). We always recommend to use the latest released version.
+- Swift 5.7 or newer from [swift.org/download](https://swift.org/download/#releases). We always recommend to use the latest released version.
 - netcat (for integration tests only)
 - lsof (for integration tests only)
 - shasum (for integration tests only)
@@ -350,6 +351,19 @@ apt-get install -y git curl libatomic1 libxml2 netcat-openbsd lsof perl
 ```
 dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 ```
+
+### Benchmarks
+
+Benchmarks for `swift-nio` are in a separate Swift Package in the `Benchmarks` subfolder of this repository. 
+They use the [`package-benchmark`](https://github.com/ordo-one/package-benchmark) plugin.
+Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics.
+An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`. 
+Afterwards you can run the benchmarks from CLI by going to the `Benchmarks` subfolder (e.g. `cd Benchmarks`) and invoking:
+```
+swift package benchmark
+```
+
+For more information please refer to `swift package benchmark --help` or the [documentation of `package-benchmark`](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark). 
 
 [ch]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelhandler
 [c]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channel

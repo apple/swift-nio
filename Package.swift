@@ -1,4 +1,4 @@
-// swift-tools-version:5.6
+// swift-tools-version:5.7
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -50,6 +50,7 @@ let package = Package(
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
+                "_NIODataStructures",
                 swiftCollections,
                 swiftAtomics,
             ]
@@ -106,7 +107,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOAtomics",
-            dependencies: []
+            dependencies: [],
+            cSettings: [
+                .define("_GNU_SOURCE"),
+            ]
         ),
         .target(
             name: "CNIOSHA1",
@@ -114,7 +118,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOLinux",
-            dependencies: []
+            dependencies: [],
+            cSettings: [
+                .define("_GNU_SOURCE"),
+            ]
         ),
         .target(
             name: "CNIODarwin",
@@ -140,6 +147,7 @@ let package = Package(
                 "NIOCore",
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
+                swiftCollections
             ]
         ),
         .target(
@@ -154,7 +162,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOLLHTTP",
-            cSettings: [.define("LLHTTP_STRICT_MODE")]
+            cSettings: [
+              .define("_GNU_SOURCE"),
+              .define("LLHTTP_STRICT_MODE")
+            ]
         ),
         .target(
             name: "NIOTLS",

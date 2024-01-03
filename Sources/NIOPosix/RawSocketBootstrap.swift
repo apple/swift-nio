@@ -11,7 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-@_spi(AsyncChannel) import NIOCore
+import NIOCore
 
 /// A `RawSocketBootstrap` is an easy way to interact with IP based protocols other then TCP and UDP.
 ///
@@ -204,7 +204,6 @@ extension NIORawSocketBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func bind<Output: Sendable>(
         host: String,
         ipProtocol: NIOIPProtocol,
@@ -227,7 +226,6 @@ extension NIORawSocketBootstrap {
     ///   method.
     /// - Returns: The result of the channel initializer.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @_spi(AsyncChannel)
     public func connect<Output: Sendable>(
         host: String,
         ipProtocol: NIOIPProtocol,

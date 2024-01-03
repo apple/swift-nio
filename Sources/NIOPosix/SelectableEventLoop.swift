@@ -299,6 +299,20 @@ Further information:
         }, .now()))
     }
 
+    #if compiler(>=5.9)
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    @usableFromInline
+    func enqueue(_ job: consuming ExecutorJob) {
+        let scheduledTask = ScheduledTask(
+            id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed),
+            job: job,
+            readyTime: .now()
+        )
+        // nothing we can do if we fail enqueuing here.
+        try? self._schedule0(scheduledTask)
+    }
+    #endif
+
     /// Add the `ScheduledTask` to be executed.
     @usableFromInline
     internal func _schedule0(_ task: ScheduledTask) throws {
@@ -515,7 +529,19 @@ Further information:
                 for task in self.tasksCopy {
                     /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
                     withAutoReleasePool {
-                        task.task()
+                        switch task.task {
+                        case .function(let function):
+                            function()
+
+                        #if compiler(>=5.9)
+                        case .unownedJob(let erasedUnownedJob):
+                            if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
+                                erasedUnownedJob.unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
+                            } else {
+                                fatalError("Tried to run an UnownedJob without runtime support")
+                            }
+                        #endif
+                        }
                     }
                 }
                 // Drop everything (but keep the capacity) so we can fill it again on the next iteration.

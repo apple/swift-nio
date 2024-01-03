@@ -63,10 +63,6 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     @usableFromInline
     let eventLoop: EventLoop
 
-    /// The shared `CloseRatchet` between this handler and the writer handler.
-    @usableFromInline
-    let closeRatchet: CloseRatchet
-
     /// A type indicating what kind of transformation to apply to reads.
     @usableFromInline
     enum Transformation {
@@ -84,23 +80,19 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     @inlinable
     init(
         eventLoop: EventLoop,
-        closeRatchet: CloseRatchet,
         transformation: Transformation
     ) {
         self.eventLoop = eventLoop
-        self.closeRatchet = closeRatchet
         self.transformation = transformation
     }
 
     /// Creates a new ``NIOAsyncChannelInboundStreamChannelHandler`` which is used when the pipeline got synchronously wrapped.
     @inlinable
     static func makeHandler(
-        eventLoop: EventLoop,
-        closeRatchet: CloseRatchet
+        eventLoop: EventLoop
     ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == ProducerElement {
         return .init(
             eventLoop: eventLoop,
-            closeRatchet: closeRatchet,
             transformation: .syncWrapping { $0 }
         )
     }
@@ -109,12 +101,10 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
     @inlinable
     static func makeHandlerWithTransformations(
         eventLoop: EventLoop,
-        closeRatchet: CloseRatchet,
         channelReadTransformation: @Sendable @escaping (InboundIn) -> EventLoopFuture<ProducerElement>
     ) -> NIOAsyncChannelInboundStreamChannelHandler where InboundIn == Channel {
         return .init(
             eventLoop: eventLoop,
-            closeRatchet: closeRatchet,
             transformation: .transformation(
                 channelReadTransformation: channelReadTransformation
             )
@@ -277,14 +267,6 @@ extension NIOAsyncChannelInboundStreamChannelHandler {
 
         // Wedges the read open forever, we'll never read again.
         self.producingState = .producingPausedWithOutstandingRead
-
-        switch self.closeRatchet.closeRead() {
-        case .nothing:
-            break
-
-        case .close:
-            self.context?.close(promise: nil)
-        }
     }
 
     @inlinable
@@ -326,15 +308,23 @@ struct NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate: @unchecked Se
 
     @inlinable
     func didTerminate() {
-        self.eventLoop.execute {
+        if self.eventLoop.inEventLoop {
             self._didTerminate()
+        } else {
+            self.eventLoop.execute {
+                self._didTerminate()
+            }
         }
     }
 
     @inlinable
     func produceMore() {
-        self.eventLoop.execute {
+        if self.eventLoop.inEventLoop {
             self._produceMore()
+        } else {
+            self.eventLoop.execute {
+                self._produceMore()
+            }
         }
     }
 }

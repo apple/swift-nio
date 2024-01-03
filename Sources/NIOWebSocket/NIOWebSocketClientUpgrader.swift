@@ -25,7 +25,6 @@ public typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader
 /// This upgrader also assumes that the `HTTPClientUpgradeHandler` will appropriately mutate the
 /// pipeline to remove the HTTP `ChannelHandler`s.
 public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
-    
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
     /// None of the websocket headers are actually defined as 'required'.
@@ -34,7 +33,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     private let requestKey: String
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
-    private let upgradePipelineHandler: (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
+    private let upgradePipelineHandler: @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
 
     /// - Parameters:
     ///   - requestKey: sent to the server in the `Sec-WebSocket-Key` HTTP header. Default is random request key.
@@ -45,7 +44,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
         requestKey: String = randomRequestKey(),
         maxFrameSize: Int = 1 << 14,
         automaticErrorHandling: Bool = true,
-        upgradePipelineHandler: @escaping (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
+        upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
     ) {
         precondition(requestKey != "", "The request key must contain a valid Sec-WebSocket-Key")
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
@@ -57,48 +56,80 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
 
     /// Add additional headers that are needed for a WebSocket upgrade request.
     public func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
-        upgradeRequestHeaders.add(name: "Sec-WebSocket-Key", value: self.requestKey)
-        upgradeRequestHeaders.add(name: "Sec-WebSocket-Version", value: "13")
+        _addCustom(upgradeRequestHeaders: &upgradeRequestHeaders, requestKey: self.requestKey)
     }
 
-    /// Allow or deny the upgrade based on the upgrade HTTP response
-    /// headers containing the correct accept key.
     public func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
-        
-        let acceptValueHeader = upgradeResponse.headers["Sec-WebSocket-Accept"]
-
-        guard acceptValueHeader.count == 1 else {
-            return false
-        }
-
-        // Validate the response key in 'Sec-WebSocket-Accept'.
-        var hasher = SHA1()
-        hasher.update(string: self.requestKey)
-        hasher.update(string: magicWebSocketGUID)
-        let expectedAcceptValue = String(base64Encoding: hasher.finish())
-
-        return expectedAcceptValue == acceptValueHeader[0]
+        _shouldAllowUpgrade(upgradeResponse: upgradeResponse, requestKey: self.requestKey)
     }
 
-    /// Called when the upgrade response has been flushed and it is safe to mutate the channel
-    /// pipeline. Adds channel handlers for websocket frame encoding, decoding and errors.
     public func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void> {
-
-        var upgradeFuture = context.pipeline.addHandler(WebSocketFrameEncoder()).flatMap {
-            context.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: self.maxFrameSize)))
-        }
-        
-        if self.automaticErrorHandling {
-            upgradeFuture = upgradeFuture.flatMap {
-                context.pipeline.addHandler(WebSocketProtocolErrorHandler())
-            }
-        }
-        
-        return upgradeFuture.flatMap {
-            self.upgradePipelineHandler(context.channel, upgradeResponse)
-        }
+        _upgrade(
+            channel: context.channel,
+            upgradeResponse: upgradeResponse,
+            maxFrameSize: self.maxFrameSize,
+            enableAutomaticErrorHandling: self.automaticErrorHandling,
+            upgradePipelineHandler: self.upgradePipelineHandler
+        )
     }
 }
+
+#if !canImport(Darwin) || swift(>=5.10)
+/// A `NIOTypedHTTPClientProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
+///
+/// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request.
+/// This upgrader also assumes that the `HTTPClientUpgradeHandler` will appropriately mutate the
+/// pipeline to remove the HTTP `ChannelHandler`s.
+@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
+public final class NIOTypedWebSocketClientUpgrader<UpgradeResult: Sendable>: NIOTypedHTTPClientProtocolUpgrader {
+    /// RFC 6455 specs this as the required entry in the Upgrade header.
+    public let supportedProtocol: String = "websocket"
+    /// None of the websocket headers are actually defined as 'required'.
+    public let requiredUpgradeHeaders: [String] = []
+
+    private let requestKey: String
+    private let maxFrameSize: Int
+    private let enableAutomaticErrorHandling: Bool
+    private let upgradePipelineHandler: @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
+
+    /// - Parameters:
+    ///   - requestKey: Sent to the server in the `Sec-WebSocket-Key` HTTP header. Default is random request key.
+    ///   - maxFrameSize: Largest incoming `WebSocketFrame` size in bytes. Default is 16,384 bytes.
+    ///   - enableAutomaticErrorHandling: If true, adds `WebSocketProtocolErrorHandler` to the channel pipeline to catch and respond to WebSocket protocol errors. Default is true.
+    ///   - upgradePipelineHandler: Called once the upgrade was successful.
+    public init(
+        requestKey: String = NIOWebSocketClientUpgrader.randomRequestKey(),
+        maxFrameSize: Int = 1 << 14,
+        enableAutomaticErrorHandling: Bool = true,
+        upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
+    ) {
+        precondition(requestKey != "", "The request key must contain a valid Sec-WebSocket-Key")
+        precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
+        self.requestKey = requestKey
+        self.upgradePipelineHandler = upgradePipelineHandler
+        self.maxFrameSize = maxFrameSize
+        self.enableAutomaticErrorHandling = enableAutomaticErrorHandling
+    }
+
+    public func addCustom(upgradeRequestHeaders: inout NIOHTTP1.HTTPHeaders) {
+        _addCustom(upgradeRequestHeaders: &upgradeRequestHeaders, requestKey: self.requestKey)
+    }
+
+    public func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
+        _shouldAllowUpgrade(upgradeResponse: upgradeResponse, requestKey: self.requestKey)
+    }
+
+    public func upgrade(channel: Channel, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<UpgradeResult> {
+        _upgrade(
+            channel: channel,
+            upgradeResponse: upgradeResponse,
+            maxFrameSize: self.maxFrameSize,
+            enableAutomaticErrorHandling: self.enableAutomaticErrorHandling,
+            upgradePipelineHandler: self.upgradePipelineHandler
+        )
+    }
+}
+#endif
 
 @available(*, unavailable)
 extension NIOWebSocketClientUpgrader: Sendable {}
@@ -126,5 +157,50 @@ extension NIOWebSocketClientUpgrader {
     public static func randomRequestKey() -> String {
         var generator = SystemRandomNumberGenerator()
         return NIOWebSocketClientUpgrader.randomRequestKey(using: &generator)
+    }
+}
+
+/// Add additional headers that are needed for a WebSocket upgrade request.
+private func _addCustom(upgradeRequestHeaders: inout HTTPHeaders, requestKey: String) {
+    upgradeRequestHeaders.add(name: "Sec-WebSocket-Key", value: requestKey)
+    upgradeRequestHeaders.add(name: "Sec-WebSocket-Version", value: "13")
+}
+
+/// Allow or deny the upgrade based on the upgrade HTTP response
+/// headers containing the correct accept key.
+private func _shouldAllowUpgrade(upgradeResponse: HTTPResponseHead, requestKey: String) -> Bool {
+    let acceptValueHeader = upgradeResponse.headers["Sec-WebSocket-Accept"]
+
+    guard acceptValueHeader.count == 1 else {
+        return false
+    }
+
+    // Validate the response key in 'Sec-WebSocket-Accept'.
+    var hasher = SHA1()
+    hasher.update(string: requestKey)
+    hasher.update(string: magicWebSocketGUID)
+    let expectedAcceptValue = String(base64Encoding: hasher.finish())
+
+    return expectedAcceptValue == acceptValueHeader[0]
+}
+
+/// Called when the upgrade response has been flushed and it is safe to mutate the channel
+/// pipeline. Adds channel handlers for websocket frame encoding, decoding and errors.
+private func _upgrade<UpgradeResult>(
+    channel: Channel,
+    upgradeResponse: HTTPResponseHead,
+    maxFrameSize: Int,
+    enableAutomaticErrorHandling: Bool,
+    upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
+) -> EventLoopFuture<UpgradeResult> {
+    return channel.eventLoop.makeCompletedFuture {
+        try channel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder())
+        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: maxFrameSize)))
+        if enableAutomaticErrorHandling {
+            try channel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler())
+        }
+    }
+    .flatMap {
+        upgradePipelineHandler(channel, upgradeResponse)
     }
 }

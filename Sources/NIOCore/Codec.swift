@@ -485,10 +485,8 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension ByteToMessageHandler: Sendable {}
-#endif
 
 // MARK: ByteToMessageHandler: Test Helpers
 extension ByteToMessageHandler {
@@ -776,10 +774,8 @@ public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelO
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension MessageToByteHandler: Sendable {}
-#endif
 
 extension MessageToByteHandler {
     public func handlerAdded(context: ChannelHandlerContext) {

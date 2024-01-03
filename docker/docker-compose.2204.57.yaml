@@ -21,6 +21,7 @@ services:
   test:
     image: swift-nio:22.04-5.7
     environment:
+      - SWIFT_VERSION=5.7
       - MAX_ALLOCS_ALLOWED_10000000_asyncsequenceproducer=22
       - MAX_ALLOCS_ALLOWED_1000000_asyncwriter=1000050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=45050
@@ -63,7 +64,7 @@ services:
       - MAX_ALLOCS_ALLOWED_modifying_1000_circular_buffer_elements=0
       - MAX_ALLOCS_ALLOWED_modifying_byte_buffer_view=6050
       - MAX_ALLOCS_ALLOWED_ping_pong_1000_reqs_1_conn=341
-      - MAX_ALLOCS_ALLOWED_read_10000_chunks_from_file=140050
+      - MAX_ALLOCS_ALLOWED_read_10000_chunks_from_file=130050
       - MAX_ALLOCS_ALLOWED_schedule_10000_tasks=50100
       - MAX_ALLOCS_ALLOWED_schedule_and_run_10000_tasks=50050
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=85
@@ -75,6 +76,11 @@ services:
 
   performance-test:
     image: swift-nio:22.04-5.7
+
+  update-benchmark-baseline:
+    image: swift-nio:22.04-5.7
+    environment:
+      - SWIFT_VERSION=5.7
 
   shell:
     image: swift-nio:22.04-5.7

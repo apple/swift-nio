@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
+@testable import NIOCore
 import XCTest
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class MockNIOElementStreamBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy, @unchecked Sendable {
     enum Event {
         case didYield
@@ -48,6 +49,7 @@ final class MockNIOElementStreamBackPressureStrategy: NIOAsyncSequenceProducerBa
     }
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class MockNIOBackPressuredStreamSourceDelegate: NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
     enum Event {
         case produceMore
@@ -102,6 +104,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let result = NIOAsyncSequenceProducer.makeSequence(
             elementType: Int.self,
             backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: false,
             delegate: self.delegate
         )
         self.source = result.source
@@ -112,6 +115,8 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         self.backPressureStrategy = nil
         self.delegate = nil
         self.sequence = nil
+        self.source.finish()
+        self.source = nil
 
         super.tearDown()
     }
@@ -261,11 +266,14 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testFinish_whenStreaming_andSuspended() async throws {
-        // We are registering our demand and sleeping a bit to make
-        // sure the other child task runs when the demand is registered
         let sequence = try XCTUnwrap(self.sequence)
+
+        let suspended = expectation(description: "task suspended")
+        sequence._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+
         async let element = sequence.first { _ in true }
-        try await Task.sleep(nanoseconds: 1_000_000)
+
+        await fulfillment(of: [suspended], timeout: 1)
 
         self.source.finish()
 
@@ -307,39 +315,83 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     // MARK: - Source Deinited
 
     func testSourceDeinited_whenInitial() async {
-        self.source = nil
+        var newSequence: NIOAsyncSequenceProducer<
+            Int,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sequence = newSequence?.sequence
+        var source = newSequence?.source
+        newSequence = nil
+
+        source = nil
+        XCTAssertNil(source)
+        XCTAssertNotNil(sequence)
     }
 
     func testSourceDeinited_whenStreaming_andSuspended() async throws {
-        // We are registering our demand and sleeping a bit to make
-        // sure the other child task runs when the demand is registered
-        let sequence = try XCTUnwrap(self.sequence)
+        var newSequence: NIOAsyncSequenceProducer<
+            Int,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sequence = newSequence?.sequence
+        var source = newSequence?.source
+        newSequence = nil
+
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
+            let suspended = expectation(description: "task suspended")
+            sequence!._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+
             group.addTask {
-                let element = await sequence.first { _ in true }
+                let element = await sequence!.first { _ in true }
                 return element
             }
 
-            try await Task.sleep(nanoseconds: 1_000_000)
+            await fulfillment(of: [suspended], timeout: 1)
 
-            self.source = nil
+            source = nil
 
             return try await group.next() ?? nil
         }
 
         XCTAssertEqual(element, nil)
+        XCTAssertNil(source)
         XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
-        _ = self.source.yield(contentsOf: [])
+        var newSequence: NIOAsyncSequenceProducer<
+            Int,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sequence = newSequence?.sequence
+        var source = newSequence?.source
+        newSequence = nil
 
-        self.source = nil
+        _ = source!.yield(contentsOf: [])
 
-        let sequence = try XCTUnwrap(self.sequence)
+        source = nil
+
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return await sequence.first { _ in true }
+                return await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -350,14 +402,27 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
-        _ = self.source.yield(contentsOf: [1])
+        var newSequence: NIOAsyncSequenceProducer<
+            Int,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            backPressureStrategy: self.backPressureStrategy,
+            finishOnDeinit: true,
+            delegate: self.delegate
+        )
+        let sequence = newSequence?.sequence
+        var source = newSequence?.source
+        newSequence = nil
 
-        self.source = nil
+        _ = source!.yield(contentsOf: [1])
 
-        let sequence = try XCTUnwrap(self.sequence)
+        source = nil
+
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return await sequence.first { _ in true }
+                return await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -371,14 +436,18 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     // MARK: - Task cancel
 
     func testTaskCancel_whenStreaming_andSuspended() async throws {
-        // We are registering our demand and sleeping a bit to make
-        // sure our task runs when the demand is registered
         let sequence = try XCTUnwrap(self.sequence)
+
+        let suspended = expectation(description: "task suspended")
+        sequence._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+
+
         let task: Task<Int?, Never> = Task {
             let iterator = sequence.makeAsyncIterator()
             return await iterator.next()
         }
-        try await Task.sleep(nanoseconds: 1_000_000)
+
+        await fulfillment(of: [suspended], timeout: 1)
 
         task.cancel()
         let value = await task.value
@@ -387,41 +456,51 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testTaskCancel_whenStreaming_andNotSuspended() async throws {
-        // We are registering our demand and sleeping a bit to make
-        // sure our task runs when the demand is registered
         let sequence = try XCTUnwrap(self.sequence)
+
+        let suspended = expectation(description: "task suspended")
+        let resumed = expectation(description: "task resumed")
+        let cancelled = expectation(description: "task cancelled")
+
+        sequence._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+
         let task: Task<Int?, Never> = Task {
             let iterator = sequence.makeAsyncIterator()
+
             let value = await iterator.next()
+            resumed.fulfill()
 
-            // Sleeping here a bit to make sure we hit the case where
-            // we are streaming and still retain the iterator.
-            try? await Task.sleep(nanoseconds: 1_000_000)
-
+            await fulfillment(of: [cancelled], timeout: 1)
             return value
         }
 
-        try await Task.sleep(nanoseconds: 2_000_000)
-
+        await fulfillment(of: [suspended], timeout: 1)
         _ = self.source.yield(contentsOf: [1])
 
+        await fulfillment(of: [resumed], timeout: 1)
         task.cancel()
+        cancelled.fulfill()
+
         let value = await task.value
         XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
         XCTAssertEqual(value, 1)
     }
 
     func testTaskCancel_whenSourceFinished() async throws {
-        // We are registering our demand and sleeping a bit to make
-        // sure our task runs when the demand is registered
         let sequence = try XCTUnwrap(self.sequence)
+
+        let suspended = expectation(description: "task suspended")
+        sequence._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+
         let task: Task<Int?, Never> = Task {
             let iterator = sequence.makeAsyncIterator()
             return await iterator.next()
         }
-        try await Task.sleep(nanoseconds: 1_000_000)
+
+        await fulfillment(of: [suspended], timeout: 1)
 
         self.source.finish()
+
         XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.didTerminate])
         task.cancel()
         let value = await task.value
@@ -430,15 +509,17 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
     func testTaskCancel_whenStreaming_andTaskIsAlreadyCancelled() async throws {
         let sequence = try XCTUnwrap(self.sequence)
+
+        let cancelled = expectation(description: "task cancelled")
+
         let task: Task<Int?, Never> = Task {
-            // We are sleeping here to allow some time for us to cancel the task.
-            // Once the Task is cancelled we will call `next()`
-            try? await Task.sleep(nanoseconds: 1_000_000)
+            await fulfillment(of: [cancelled], timeout: 1)
             let iterator = sequence.makeAsyncIterator()
             return await iterator.next()
         }
 
         task.cancel()
+        cancelled.fulfill()
 
         let value = await task.value
 
@@ -614,6 +695,7 @@ fileprivate func XCTAssertEqualWithoutAutoclosure<T>(
     XCTAssertEqual(expression1, expression2, message(), file: file, line: line)
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension AsyncSequence {
     /// Collect all elements in the sequence into an array.
     fileprivate func collect() async rethrows -> [Element] {

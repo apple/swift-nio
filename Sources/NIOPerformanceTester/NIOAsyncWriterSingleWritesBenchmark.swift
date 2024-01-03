@@ -38,13 +38,15 @@ final class NIOAsyncWriterSingleWritesBenchmark: AsyncBenchmark, @unchecked Send
     init(iterations: Int) {
         self.iterations = iterations
         self.delegate = .init()
-        let newWriter = NIOAsyncWriter<Int, NoOpDelegate>.makeWriter(isWritable: true, delegate: self.delegate)
+        let newWriter = NIOAsyncWriter<Int, NoOpDelegate>.makeWriter(isWritable: true, finishOnDeinit: false, delegate: self.delegate)
         self.writer = newWriter.writer
         self.sink = newWriter.sink
     }
 
     func setUp() async throws {}
-    func tearDown() {}
+    func tearDown() {
+        self.writer.finish()
+    }
 
     func run() async throws -> Int {
         for i in 0..<self.iterations {

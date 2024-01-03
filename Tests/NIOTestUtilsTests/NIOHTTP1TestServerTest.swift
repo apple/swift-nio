@@ -313,6 +313,43 @@ class NIOHTTP1TestServerTest: XCTestCase {
         XCTAssertNotNil(channel)
         XCTAssertNoThrow(try channel.closeFuture.wait())
     }
+
+    func testReceiveBodyWithoutAggregation() {
+        let testServer = NIOHTTP1TestServer(group: self.group, aggregateBody: false)
+
+        let responsePromise = self.group.next().makePromise(of: String.self)
+        var channel: Channel!
+        XCTAssertNoThrow(channel = try self.connect(serverPort: testServer.serverPort,
+                                                    responsePromise: responsePromise).wait())
+
+        var headers = HTTPHeaders()
+        headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
+        let requestHead = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri", headers: headers)
+        channel.writeAndFlush(NIOAny(HTTPClientRequestPart.head(requestHead)), promise: nil)
+        XCTAssertNoThrow(try testServer.receiveHeadAndVerify { head in
+            XCTAssertEqual(head.uri, "/uri")
+            XCTAssertEqual(head.headers["Content-Type"], ["text/plain; charset=utf-8"])
+        })
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
+
+        for _ in 0..<10 {
+            channel.writeAndFlush(NIOAny(HTTPClientRequestPart.body(.byteBuffer(ByteBuffer(string: "ping")))), promise: nil)
+            XCTAssertNoThrow(try testServer.receiveBodyAndVerify { buffer in
+                XCTAssertEqual(String(buffer: buffer), "ping")
+            })
+            XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(ByteBuffer(string: "pong")))))
+        }
+
+        channel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
+        XCTAssertNoThrow(try testServer.receiveEndAndVerify { trailers in
+            XCTAssertNil(trailers)
+        })
+        XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
+
+        XCTAssertNoThrow(try testServer.stop())
+        XCTAssertNotNil(channel)
+        XCTAssertNoThrow(try channel.closeFuture.wait())
+    }
 }
 
 private final class TestHTTPHandler: ChannelInboundHandler {

@@ -12,13 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A ``NIOAsyncChannelWriter`` is used to write and flush new outbound messages in a channel.
+/// A ``NIOAsyncChannelOutboundWriter`` is used to write and flush new outbound messages in a channel.
 ///
 /// The writer acts as a bridge between the Concurrency and NIO world. It allows to write and flush messages into the
 /// underlying ``Channel``. Furthermore, it respects back-pressure of the channel by suspending the calls to write until
 /// the channel becomes writable again.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-@_spi(AsyncChannel)
 public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @usableFromInline
     typealias _Writer = NIOAsyncChannelOutboundWriterHandler<OutboundOut>.Writer
@@ -85,15 +84,17 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @inlinable
     init(
         channel: Channel,
-        closeRatchet: CloseRatchet
+        isOutboundHalfClosureEnabled: Bool,
+        closeOnDeinit: Bool
     ) throws {
         let handler = NIOAsyncChannelOutboundWriterHandler<OutboundOut>(
             eventLoop: channel.eventLoop,
-            closeRatchet: closeRatchet
+            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
         let writer = _Writer.makeWriter(
             elementType: OutboundOut.self,
             isWritable: true,
+            finishOnDeinit: closeOnDeinit,
             delegate: .init(handler: handler)
         )
         handler.sink = writer.sink
@@ -112,7 +113,6 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     ///
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
     @inlinable
-    @_spi(AsyncChannel)
     public func write(_ data: OutboundOut) async throws {
         switch self._backing {
         case .asyncStream(let continuation):
@@ -126,7 +126,6 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     ///
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
     @inlinable
-    @_spi(AsyncChannel)
     public func write<Writes: Sequence>(contentsOf sequence: Writes) async throws where Writes.Element == OutboundOut {
         switch self._backing {
         case .asyncStream(let continuation):
@@ -138,11 +137,12 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         }
     }
 
-    /// Send a sequence of writes into the ``ChannelPipeline`` and flush them right away.
+    /// Send an asynchronous sequence of writes into the ``ChannelPipeline``.
+    ///
+    /// This will flush after every write.
     ///
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
     @inlinable
-    @_spi(AsyncChannel)
     public func write<Writes: AsyncSequence>(contentsOf sequence: Writes) async throws where Writes.Element == OutboundOut {
         for try await data in sequence {
             try await self.write(data)
@@ -152,7 +152,6 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     /// Finishes the writer.
     ///
     /// This might trigger a half closure if the ``NIOAsyncChannel`` was configured to support it.
-    @_spi(AsyncChannel)
     public func finish() {
         switch self._backing {
         case .asyncStream(let continuation):
@@ -163,11 +162,5 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     }
 }
 
-#if swift(>=5.7)
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncChannelOutboundWriter.TestSink: Sendable {}
-#else
-// AsyncStream wasn't marked as `Sendable` in 5.6
-@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-extension NIOAsyncChannelOutboundWriter.TestSink: @unchecked Sendable {}
-#endif

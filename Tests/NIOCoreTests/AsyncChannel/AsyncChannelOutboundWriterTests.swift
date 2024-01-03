@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(AsyncChannel) @testable import NIOCore
+@testable import NIOCore
 import XCTest
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncChannelOutboundWriterTests: XCTestCase {
     func testTestingWriter() async throws {
         let (writer, sink) = NIOAsyncChannelOutboundWriter<Int>.makeTestingWriter()

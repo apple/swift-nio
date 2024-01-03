@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_spi(AsyncChannel) @testable import NIOCore
+@testable import NIOCore
 import XCTest
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncChannelInboundStreamTests: XCTestCase {
     func testTestingStream() async throws {
         let (stream, source) = NIOAsyncChannelInboundStream<Int>.makeTestingStream()

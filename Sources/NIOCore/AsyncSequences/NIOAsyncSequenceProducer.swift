@@ -139,9 +139,43 @@ public struct NIOAsyncSequenceProducer<
     /// - Parameters:
     ///   - elementType: The element type of the sequence.
     ///   - backPressureStrategy: The back-pressure strategy of the sequence.
+    ///   - finishOnDeinit: Indicates if ``NIOAsyncSequenceProducer/Source/finish()`` should be called on deinit of the the source.
+    ///   We do not recommend to rely on  deinit based resource tear down.
     ///   - delegate: The delegate of the sequence
     /// - Returns: A ``NIOAsyncSequenceProducer/Source`` and a ``NIOAsyncSequenceProducer``.
     @inlinable
+    public static func makeSequence(
+        elementType: Element.Type = Element.self,
+        backPressureStrategy: Strategy,
+        finishOnDeinit: Bool,
+        delegate: Delegate
+    ) -> NewSequence {
+        let newSequence = NIOThrowingAsyncSequenceProducer.makeNonThrowingSequence(
+            elementType: Element.self,
+            backPressureStrategy: backPressureStrategy,
+            finishOnDeinit: finishOnDeinit,
+            delegate: delegate
+        )
+
+        let sequence = self.init(throwingSequence: newSequence.sequence)
+
+        return .init(source: Source(throwingSource: newSequence.source), sequence: sequence)
+    }
+
+    /// Initializes a new ``NIOAsyncSequenceProducer`` and a ``NIOAsyncSequenceProducer/Source``.
+    ///
+    /// - Important: This method returns a struct containing a ``NIOAsyncSequenceProducer/Source`` and
+    /// a ``NIOAsyncSequenceProducer``. The source MUST be held by the caller and
+    /// used to signal new elements or finish. The sequence MUST be passed to the actual consumer and MUST NOT be held by the
+    /// caller. This is due to the fact that deiniting the sequence is used as part of a trigger to terminate the underlying source.
+    ///
+    /// - Parameters:
+    ///   - elementType: The element type of the sequence.
+    ///   - backPressureStrategy: The back-pressure strategy of the sequence.
+    ///   - delegate: The delegate of the sequence
+    /// - Returns: A ``NIOAsyncSequenceProducer/Source`` and a ``NIOAsyncSequenceProducer``.
+    @inlinable
+    @available(*, deprecated, renamed: "makeSequence(elementType:backPressureStrategy:finishOnDeinit:delegate:)", message: "This method has been deprecated since it defaults to deinit based resource teardown")
     public static func makeSequence(
         elementType: Element.Type = Element.self,
         backPressureStrategy: Strategy,
@@ -150,6 +184,7 @@ public struct NIOAsyncSequenceProducer<
         let newSequence = NIOThrowingAsyncSequenceProducer.makeNonThrowingSequence(
             elementType: Element.self,
             backPressureStrategy: backPressureStrategy,
+            finishOnDeinit: true,
             delegate: delegate
         )
 
@@ -209,45 +244,20 @@ extension NIOAsyncSequenceProducer {
     /// This type allows the producer to synchronously `yield` new elements to the ``NIOAsyncSequenceProducer``
     /// and to `finish` the sequence.
     public struct Source {
-        /// This class is needed to hook the deinit to observe once all references to the ``NIOAsyncSequenceProducer/Source`` are dropped.
-        ///
-        /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
         @usableFromInline
-        /* fileprivate */ internal final class InternalClass: Sendable {
-            @usableFromInline
-            typealias ThrowingSource = NIOThrowingAsyncSequenceProducer<
-                Element,
-                Never,
-                Strategy,
-                Delegate
-            >.Source
-
-            @usableFromInline
-            /* fileprivate */ internal let _throwingSource: ThrowingSource
-
-            @inlinable
-            init(throwingSource: ThrowingSource) {
-                self._throwingSource = throwingSource
-            }
-
-            @inlinable
-            deinit {
-                // We need to call finish here to resume any suspended continuation.
-                self._throwingSource.finish()
-            }
-        }
+        typealias ThrowingSource = NIOThrowingAsyncSequenceProducer<
+            Element,
+            Never,
+            Strategy,
+            Delegate
+        >.Source
 
         @usableFromInline
-        /* private */ internal let _internalClass: InternalClass
+        /* private */ internal var _throwingSource: ThrowingSource
 
         @usableFromInline
-        /* private */ internal var _throwingSource: InternalClass.ThrowingSource {
-            self._internalClass._throwingSource
-        }
-
-        @usableFromInline
-        /* fileprivate */ internal init(throwingSource: InternalClass.ThrowingSource) {
-            self._internalClass = .init(throwingSource: throwingSource)
+        /* fileprivate */ internal init(throwingSource: ThrowingSource) {
+            self._throwingSource = throwingSource
         }
 
         /// The result of a call to ``NIOAsyncSequenceProducer/Source/yield(_:)``.

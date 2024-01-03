@@ -11,11 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if swift(>=5.9)
-@_spi(AsyncChannel) import NIOCore
-@_spi(AsyncChannel) import NIOPosix
 
-@available(macOS 14, *)
+#if compiler(>=5.9)
+import NIOCore
+import NIOPosix
+
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 @main
 struct Client {
     /// The host to connect to.
@@ -59,7 +60,7 @@ struct Client {
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
 
                     return try NIOAsyncChannel(
-                        synchronouslyWrapping: channel,
+                        wrappingChannelSynchronously: channel,
                         configuration: NIOAsyncChannel.Configuration(
                             inboundType: String.self,
                             outboundType: String.self
@@ -68,16 +69,18 @@ struct Client {
                 }
             }
 
-        print("Connection(\(number)): Writing request")
-        try await channel.outboundWriter.write("Hello on connection \(number)")
+        try await channel.executeThenClose { inbound, outbound in
+            print("Connection(\(number)): Writing request")
+            try await outbound.write("Hello on connection \(number)")
 
-        for try await inboundData in channel.inboundStream {
-            print("Connection(\(number)): Received response (\(inboundData))")
+            for try await inboundData in inbound {
+                print("Connection(\(number)): Received response (\(inboundData))")
 
-            // We only expect a single response so we can exit here.
-            // Once, we exit out of this loop and the references to the `NIOAsyncChannel` are dropped
-            // the connection is going to close itself.
-            break
+                // We only expect a single response so we can exit here.
+                // Once, we exit out of this loop and the references to the `NIOAsyncChannel` are dropped
+                // the connection is going to close itself.
+                break
+            }
         }
     }
 }
