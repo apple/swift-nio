@@ -281,11 +281,8 @@ extension Selector: _SelectorBackendProtocol {
 
     /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
     func wakeup0() throws {
-        guard let thread = self._myThread.load() else {
-            // No need to wake up, the thread hasn't started yet. It'll run anyway.
-            return
-        }
-
+        // If `thread` is unset (and so nil) this assertion is still valid: we can't possibly be on the EL thread.
+        let thread = self._myThread.load()
         assert(NIOThread.current != thread)
         try self.externalSelectorFDLock.withLock {
                 guard self.eventFD >= 0 else {

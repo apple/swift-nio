@@ -1679,6 +1679,32 @@ public final class EventLoopTest : XCTestCase {
             XCTAssert(error is DummyError)
         }
     }
+
+    func testSchedulingWorkBeforeELThreadExists() {
+        let sem = DispatchSemaphore(value: 0)
+
+        let group = MultiThreadedEventLoopGroup(threadInitializers: [ { _ in sem.wait() }])
+        defer {
+            try! group.syncShutdownGracefully()
+        }
+
+        // Ok, the thread cannot have launched yet. Let's schedule some work.
+        let counter = ManagedAtomic(0)
+        let loop = group.next()
+
+
+        for _ in 0..<5 {
+            loop.execute { counter.wrappingIncrement(ordering: .relaxed) }
+        }
+
+        // All scheduled, nice. Let the loop actually start.
+        sem.signal()
+
+        // Now wait until we know all of these are done.
+        try! loop.submit { }.wait()
+
+        XCTAssertEqual(counter.load(ordering: .relaxed), 5)
+    }
 }
 
 fileprivate class EventLoopWithPreSucceededFuture: EventLoop {
