@@ -68,7 +68,21 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     /* private but tests */ internal let _selector: NIOPosix.Selector<NIORegistration>
+
+    /// The thread on which this EL is running.
+    ///
+    /// This is a lazy reference because we may create the SelectableEventLoop before we have
+    /// started the thread on which it runs.
+    ///
+    /// This will be initialized when the EL thread starts (by a call to `launchedThread`).
+    /// It is always initialized by the EL thread, as the first thing the thread does before it
+    /// starts actually running the loop.
+    ///
+    /// This is acceptable because we only use this to detect whether we are "on" the EL. As we
+    /// can only be on the EL when we are on the thread, we know that if this value hasn't yet
+    /// been initialized then we cannot possibly be on the EL thread.
     private let thread: ManagedAtomicLazyReference<NIOThread>
+
     @usableFromInline
     // _pendingTaskPop is set to `true` if the event loop is about to pop tasks off the task queue.
     // This may only be read/written while holding the _tasksLock.

@@ -133,7 +133,21 @@ internal class Selector<R: Registration>  {
         // and the loop is running.
         self._myThread.load()!
     }
+    
+    /// The thread that owns this selector.
+    ///
+    /// This is a lazy reference because we may create the Selector before we have
+    /// started the thread to which it is bound.
+    ///
+    /// This will be initialized when the EL thread starts (by a call to `threadLaunched`).
+    /// It is always initialized by the EL thread, as the first thing the thread does before it
+    /// starts actually running the loop.
+    ///
+    /// This is acceptable because we only use this to detect whether we are "on" the EL. As we
+    /// can only be on the EL when we are on the thread, we know that if this value hasn't yet
+    /// been initialized then we cannot possibly be on the EL thread.
     let _myThread: ManagedAtomicLazyReference<NIOThread>
+    
     // The rules for `self.selectorFD`, `self.eventFD`, and `self.timerFD`:
     // reads: `self.externalSelectorFDLock` OR access from the EventLoop thread
     // writes: `self.externalSelectorFDLock` AND access from the EventLoop thread
