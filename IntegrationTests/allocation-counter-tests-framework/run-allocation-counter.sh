@@ -62,6 +62,7 @@ EOF
     ],
     dependencies: [
         .package(url: "HookedFunctions/", branch: "main"),
+        .package(url: "AtomicCounter/", branch: "main"),
         .package(url: "$swiftpm_pkg_name/", branch: "main"),
 EOF
     if [[ -n "$extra_dependencies_file" ]]; then
@@ -82,7 +83,7 @@ function hooked_package_swift_target() {
         deps="$deps .product(name: \"$dep\", package: \"swift-nio\"),"
     done
     cat <<EOF
-            .target(name: "Test_$target_name", dependencies: [$deps]),
+            .target(name: "Test_$target_name", dependencies: [$deps "AtomicCounter"]),
             .executableTarget(name: "bootstrap_$target_name",
                     dependencies: ["Test_$target_name", "HookedFunctions"]),
 EOF
