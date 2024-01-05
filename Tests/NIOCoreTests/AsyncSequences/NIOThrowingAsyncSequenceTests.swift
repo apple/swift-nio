@@ -860,7 +860,8 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testIteratorThrows_whenCancelled() async {
-        _ = self.source.yield(contentsOf: Array(0..<100))
+        let maxSequenceValue = 99
+        _ = self.source.yield(contentsOf: Array(0...maxSequenceValue))
         await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 var counter = 0
@@ -871,7 +872,19 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
                 do {
                     for try await next in sequence {
                         XCTAssertEqual(next, counter)
-                        counter += 1
+                        
+                        if next < maxSequenceValue {
+                            // This loop will exit when the task is cancelled
+                            // or when all of the elements have been iterated.
+                            // It is possible that the cancellation will be
+                            // triggered after the last element was yielded,
+                            // just before the iterator can return the `nil`
+                            // signifying the end of the sequence.
+                            // If this happens, we avoid incrementing the counter,
+                            // so that we don't increase it to a value beyond the
+                            // maximum possible sequence value.
+                            counter += 1
+                        }
                     }
                     XCTFail("Expected that this throws")
                 } catch is CancellationError {
