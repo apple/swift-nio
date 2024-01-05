@@ -102,28 +102,25 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                                                 parentGroup: MultiThreadedEventLoopGroup,
                                                 selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
                                                 initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
-        let lock = NIOLock()
-        /* the `loopUpAndRunningGroup` is done by the calling thread when the EventLoop has been created and was written to `_loop` */
-        let loopUpAndRunningGroup = DispatchGroup()
+        let lock = ConditionLock(value: 0)
 
         /* synchronised by `lock` */
         var _loop: SelectableEventLoop! = nil
 
-        loopUpAndRunningGroup.enter()
         NIOThread.spawnAndRun(name: name, detachThread: false) { t in
             MultiThreadedEventLoopGroup.runTheLoop(thread: t,
                                                    parentGroup: parentGroup,
                                                    canEventLoopBeShutdownIndividually: false, // part of MTELG
                                                    selectorFactory: selectorFactory,
                                                    initializer: initializer) { l in
-                lock.withLock {
-                    _loop = l
-                }
-                loopUpAndRunningGroup.leave()
+                lock.lock(whenValue: 0)
+                _loop = l
+                lock.unlock(withValue: 1)
             }
         }
-        loopUpAndRunningGroup.wait()
-        return lock.withLock { _loop }
+        lock.lock(whenValue: 1)
+        defer { lock.unlock() }
+        return _loop!
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
