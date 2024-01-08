@@ -42,9 +42,9 @@ do {
   // Reading a whole file requires a limit. If the file is larger than the limit
   // then an error is thrown. This avoids accidentally consuming too much memory
   // if the file is larger than expected.
-  let plan = try await Array<UInt8>(
+  let plan = try await ByteBuffer(
     contentsOf: "/Users/hal9000/demise-of-dave.txt",
-    maximumBytesAllowed: 1024 * 1024
+    maximumSizeAllowed: .mebibytes(1)
   )
   print("Plan for Dave's demise:", String(decoding: plan, as: UTF8.self))
 } catch let error as FileSystemError where error.code == .notFound {
@@ -60,7 +60,7 @@ do {
     forWritingAt: "/Users/hal9000/demise-of-dave.txt",
     options: .newFile(replaceExisting: false)
   ) { file in
-    let plan = ByteBuffer(text: "TODO...")
+    let plan = ByteBuffer(string: "TODO...")
     try await file.write(contentsOf: plan.readableBytesView, toAbsoluteOffset: 0)
   }
 }
