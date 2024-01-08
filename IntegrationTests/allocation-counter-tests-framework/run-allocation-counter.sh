@@ -40,7 +40,7 @@ function hooked_package_swift_start() {
     shift 2
 
     cat <<"EOF"
-// swift-tools-version:5.1
+// swift-tools-version:5.7
 import PackageDescription
 
 let package = Package(
@@ -61,8 +61,9 @@ EOF
     cat <<EOF
     ],
     dependencies: [
-        .package(url: "HookedFunctions/", .branch("main")),
-        .package(url: "$swiftpm_pkg_name/", .branch("main")),
+        .package(url: "HookedFunctions/", branch: "main"),
+        .package(url: "AtomicCounter/", branch: "main"),
+        .package(url: "$swiftpm_pkg_name/", branch: "main"),
 EOF
     if [[ -n "$extra_dependencies_file" ]]; then
         cat "$extra_dependencies_file"
@@ -79,11 +80,11 @@ function hooked_package_swift_target() {
     shift
     local deps=""
     for dep in "$@"; do
-        deps="$deps \"$dep\","
+        deps="$deps .product(name: \"$dep\", package: \"swift-nio\"),"
     done
     cat <<EOF
-            .target(name: "Test_$target_name", dependencies: [$deps]),
-            .target(name: "bootstrap_$target_name",
+            .target(name: "Test_$target_name", dependencies: [$deps "AtomicCounter"]),
+            .executableTarget(name: "bootstrap_$target_name",
                     dependencies: ["Test_$target_name", "HookedFunctions"]),
 EOF
 }
@@ -110,7 +111,7 @@ function dir_basename() {
 
 function fake_package_swift() {
     cat > Package.swift <<EOF
-// swift-tools-version:5.0
+// swift-tools-version:5.7
 import PackageDescription
 
 let package = Package(name: "$1")
