@@ -192,8 +192,8 @@ const char* CNIOLinux_dirent_dname(struct dirent* ent) {
   return ent->d_name;
 }
 
-int CNIOLinux_renameat2(int oldfd, const char* old, int newfd, const char* new, unsigned int flags) {
-  return renameat2(oldfd, old, newfd, new, flags);
+int CNIOLinux_renameat2(int oldfd, const char* old, int newfd, const char* newName, unsigned int flags) {
+  return renameat2(oldfd, old, newfd, newName, flags);
 }
 
 const int CNIOLinux_O_TMPFILE = O_TMPFILE;

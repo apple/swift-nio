@@ -126,12 +126,12 @@ extern const unsigned long CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID;
 
 const char* CNIOLinux_dirent_dname(struct dirent* ent);
 
-int CNIOLinux_renameat2(int oldfd, const char* old, int newfd, const char* new, unsigned int flags);
+int CNIOLinux_renameat2(int oldfd, const char* old, int newfd, const char* newName, unsigned int flags);
 
-const int CNIOLinux_O_TMPFILE;
-const int CNIOLinux_AT_EMPTY_PATH;
-const unsigned int CNIOLinux_RENAME_NOREPLACE;
-const unsigned int CNIOLinux_RENAME_EXCHANGE;
+extern const int CNIOLinux_O_TMPFILE;
+extern const int CNIOLinux_AT_EMPTY_PATH;
+extern const unsigned int CNIOLinux_RENAME_NOREPLACE;
+extern const unsigned int CNIOLinux_RENAME_EXCHANGE;
 
 #endif
 #endif
