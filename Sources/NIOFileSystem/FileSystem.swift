@@ -27,8 +27,8 @@ import Glibc
 ///
 /// ### Creating a `FileSystem`
 ///
-/// You should prefer using the ``FileSystem/shared`` instance of the file system. The
-/// ``FileSystem/shared`` instance uses two threads unless the `SWIFT_FILE_SYSTEM_THREAD_COUNT`
+/// You should prefer using the `shared` instance of the file system. The
+/// `shared` instance uses two threads unless the `SWIFT_FILE_SYSTEM_THREAD_COUNT`
 /// environment variable is set.
 ///
 /// If you require more granular control you can create a ``FileSystem`` with the required number
@@ -757,8 +757,6 @@ extension NIOSingletons {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystemProtocol where Self == FileSystem {
     /// A global shared instance of ``FileSystem``.
-    ///
-    /// See also ``FileSystem/shared``.
     public static var shared: FileSystem {
         return FileSystem.shared
     }
