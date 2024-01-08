@@ -46,6 +46,13 @@ import Glibc
 /// returns a structured multi-line string containing information about the error.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public final class FileSystem: Sendable, FileSystemProtocol {
+    /// Returns a shared global instance of the ``FileSystem``.
+    ///
+    /// The file system executes blocking work in a thread pool which defaults to having two
+    /// threads. This can be modified by `fileSystemThreadCountSuggestion` or by
+    /// setting the `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` environment variable.
+    public static var shared: FileSystem { globalFileSystem }
+
     private let executor: IOExecutor
 
     fileprivate func shutdown() async {
@@ -736,16 +743,6 @@ private let globalFileSystem: FileSystem = {
     _ = Unmanaged.passUnretained(fileSystem).retain()  // never gonna let you down.
     return fileSystem
 }()
-
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension FileSystem {
-    /// Returns a shared global instance of the ``FileSystem``.
-    ///
-    /// The file system executes blocking work in a thread pool which defaults to having two
-    /// threads. This can be modified by `fileSystemThreadCountSuggestion` or by
-    /// setting the `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` environment variable.
-    public static var shared: FileSystem { globalFileSystem }
-}
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension NIOSingletons {
