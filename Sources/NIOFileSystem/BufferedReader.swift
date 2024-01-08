@@ -36,7 +36,6 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
     private var readEOF = false
 
     /// A buffer containing the read bytes.
-    ///
     private var buffer: ByteBuffer
 
     /// The capacity of the buffer.

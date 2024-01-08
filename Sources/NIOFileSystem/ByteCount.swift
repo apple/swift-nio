@@ -14,7 +14,6 @@
 
 /// Represents the number of bytes.
 public struct ByteCount: Hashable, Sendable {
-
     /// The number of bytes
     public var bytes: Int64
 
