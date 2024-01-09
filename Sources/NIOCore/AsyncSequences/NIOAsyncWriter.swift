@@ -293,7 +293,7 @@ public struct NIOAsyncWriter<
     /// - Parameter element: The element to yield.
     @inlinable
     public func yield(_ element: Element) async throws {
-        try await self._storage.yield(contentsOf: CollectionOfOne(element))
+        try await self._storage.yield(element: element)
     }
 
     /// Finishes the writer.
@@ -520,7 +520,7 @@ extension NIOAsyncWriter {
                 // We are manually locking here to hold the lock across the withCheckedContinuation call
                 self._lock.lock()
 
-                let action = self._stateMachine.yield(contentsOf: sequence, yieldID: yieldID)
+                let action = self._stateMachine.yield(yieldID: yieldID)
 
                 switch action {
                 case .callDidYield(let delegate):
@@ -537,7 +537,70 @@ extension NIOAsyncWriter {
                 case .suspendTask:
                     return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
                         self._stateMachine.yield(
-                            contentsOf: sequence,
+                            continuation: continuation,
+                            yieldID: yieldID
+                        )
+
+                        self._lock.unlock()
+                        self._didSuspend?()
+                    }
+                }
+            } onCancel: {
+                // We must not resume the continuation while holding the lock
+                // because it can deadlock in combination with the underlying ulock
+                // in cases where we race with a cancellation handler
+                let action = self._lock.withLock {
+                    self._stateMachine.cancel(yieldID: yieldID)
+                }
+
+                switch action {
+                case .resumeContinuationWithCancellationError(let continuation):
+                    continuation.resume(throwing: CancellationError())
+
+                case .none:
+                    break
+                }
+            }
+        }
+
+        @inlinable
+        /* fileprivate */ internal func yield(element: Element) async throws {
+            let yieldID = self._yieldIDGenerator.generateUniqueYieldID()
+            while true {
+                switch try await self._yield(element: element, yieldID: yieldID) {
+                case .retry:
+                    continue
+                case .yielded:
+                    return
+                }
+            }
+        }
+
+        @inlinable
+        /* fileprivate */ internal func _yield(element: Element, yieldID: StateMachine.YieldID?) async throws -> StateMachine.YieldResult {
+            let yieldID = yieldID ?? self._yieldIDGenerator.generateUniqueYieldID()
+
+            return try await withTaskCancellationHandler {
+                // We are manually locking here to hold the lock across the withCheckedContinuation call
+                self._lock.lock()
+
+                let action = self._stateMachine.yield(yieldID: yieldID)
+
+                switch action {
+                case .callDidYield(let delegate):
+                    // We are allocating a new Deque for every write here
+                    self._lock.unlock()
+                    delegate.didYield(element)
+                    self.unbufferQueuedEvents()
+                    return .yielded
+
+                case .throwError(let error):
+                    self._lock.unlock()
+                    throw error
+
+                case .suspendTask:
+                    return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
+                        self._stateMachine.yield(
                             continuation: continuation,
                             yieldID: yieldID
                         )
@@ -878,10 +941,9 @@ extension NIOAsyncWriter {
         }
 
         @inlinable
-        /* fileprivate */ internal mutating func yield<S: Sequence>(
-            contentsOf sequence: S,
+        /* fileprivate */ internal mutating func yield(
             yieldID: YieldID
-        ) -> YieldAction where S.Element == Element {
+        ) -> YieldAction {
             switch self._state {
             case .initial(let isWritable, let delegate):
                 // We can transition to streaming now
@@ -1005,11 +1067,10 @@ extension NIOAsyncWriter {
 
         /// This method is called as a result of the above `yield` method if it decided that the task needs to get suspended.
         @inlinable
-        /* fileprivate */ internal mutating func yield<S: Sequence>(
-            contentsOf sequence: S,
+        /* fileprivate */ internal mutating func yield(
             continuation: CheckedContinuation<YieldResult, Error>,
             yieldID: YieldID
-        ) where S.Element == Element {
+        ) {
             switch self._state {
             case .streaming(let isWritable, let inDelegateOutcall, let cancelledYields, var suspendedYields, let delegate):
                 // We have a suspended yield at this point that hasn't been cancelled yet.
