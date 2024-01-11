@@ -39,26 +39,28 @@ let benchmarks = {
     // This benchmark is only available above 5.9 since our EL conformance
     // to serial executor is also gated behind 5.9.
     #if compiler(>=5.9)
-    Benchmark(
-        "TCPEchoAsyncChannel",
-        configuration: .init(
-            metrics: defaultMetrics,
-            timeUnits: .milliseconds,
-            scalingFactor: .mega,
-            setup: {
-                swiftTaskEnqueueGlobalHook = { job, _ in
-                    eventLoop.executor.enqueue(job)
-                }
-            },
-            teardown: {
-                swiftTaskEnqueueGlobalHook = nil
-            }
-        )
-    ) { benchmark in
-        try await runTCPEchoAsyncChannel(
-            numberOfWrites: benchmark.scaledIterations.upperBound,
-            eventLoop: eventLoop
-        )
-    }
+// In addition this benchmark currently doesn't produce deterministic results on our CI
+// and therefore is currently disabled
+//    Benchmark(
+//        "TCPEchoAsyncChannel",
+//        configuration: .init(
+//            metrics: defaultMetrics,
+//            timeUnits: .milliseconds,
+//            scalingFactor: .mega,
+//            setup: {
+//                swiftTaskEnqueueGlobalHook = { job, _ in
+//                    eventLoop.executor.enqueue(job)
+//                }
+//            },
+//            teardown: {
+//                swiftTaskEnqueueGlobalHook = nil
+//            }
+//        )
+//    ) { benchmark in
+//        try await runTCPEchoAsyncChannel(
+//            numberOfWrites: benchmark.scaledIterations.upperBound,
+//            eventLoop: eventLoop
+//        )
+//    }
     #endif
 }
