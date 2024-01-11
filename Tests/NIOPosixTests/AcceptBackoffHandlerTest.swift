@@ -280,6 +280,4 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
 
         return serverChannel
     }
-
-
 }
