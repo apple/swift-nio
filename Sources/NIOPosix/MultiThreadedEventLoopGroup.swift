@@ -102,28 +102,25 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                                                 parentGroup: MultiThreadedEventLoopGroup,
                                                 selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
                                                 initializer: @escaping ThreadInitializer)  -> SelectableEventLoop {
-        let lock = NIOLock()
-        /* the `loopUpAndRunningGroup` is done by the calling thread when the EventLoop has been created and was written to `_loop` */
-        let loopUpAndRunningGroup = DispatchGroup()
+        let lock = ConditionLock(value: 0)
 
         /* synchronised by `lock` */
         var _loop: SelectableEventLoop! = nil
 
-        loopUpAndRunningGroup.enter()
         NIOThread.spawnAndRun(name: name, detachThread: false) { t in
             MultiThreadedEventLoopGroup.runTheLoop(thread: t,
                                                    parentGroup: parentGroup,
                                                    canEventLoopBeShutdownIndividually: false, // part of MTELG
                                                    selectorFactory: selectorFactory,
                                                    initializer: initializer) { l in
-                lock.withLock {
-                    _loop = l
-                }
-                loopUpAndRunningGroup.leave()
+                lock.lock(whenValue: 0)
+                _loop = l
+                lock.unlock(withValue: 1)
             }
         }
-        loopUpAndRunningGroup.wait()
-        return lock.withLock { _loop }
+        lock.lock(whenValue: 1)
+        defer { lock.unlock() }
+        return _loop!
     }
 
     /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
@@ -402,7 +399,7 @@ extension MultiThreadedEventLoopGroup: CustomStringConvertible {
     }
 }
 
-#if swift(>=5.9)
+#if compiler(>=5.9)
 @usableFromInline
 struct ErasedUnownedJob {
     @usableFromInline
@@ -427,7 +424,7 @@ internal struct ScheduledTask {
     @usableFromInline
     enum UnderlyingTask {
         case function(() -> Void)
-        #if swift(>=5.9)
+        #if compiler(>=5.9)
         case unownedJob(ErasedUnownedJob)
         #endif
     }
@@ -452,7 +449,7 @@ internal struct ScheduledTask {
         self.readyTime = time
     }
 
-    #if swift(>=5.9)
+    #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     @usableFromInline
     init(id: UInt64, job: consuming ExecutorJob, readyTime: NIODeadline) {

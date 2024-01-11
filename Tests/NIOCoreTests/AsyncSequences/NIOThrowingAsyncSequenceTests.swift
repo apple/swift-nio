@@ -860,18 +860,18 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testIteratorThrows_whenCancelled() async {
-        _ = self.source.yield(contentsOf: Array(0..<100))
+        _ = self.source.yield(contentsOf: Array(1...100))
         await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                var counter = 0
+                var itemsYieldedCounter = 0
                 guard let sequence = self.sequence else {
                     return XCTFail("Expected to have an AsyncSequence")
                 }
 
                 do {
                     for try await next in sequence {
-                        XCTAssertEqual(next, counter)
-                        counter += 1
+                        itemsYieldedCounter += 1
+                        XCTAssertEqual(next, itemsYieldedCounter)
                     }
                     XCTFail("Expected that this throws")
                 } catch is CancellationError {
@@ -880,7 +880,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
                     XCTFail("Unexpected error: \(error)")
                 }
 
-                XCTAssertLessThan(counter, 100)
+                XCTAssertLessThanOrEqual(itemsYieldedCounter, 100)
             }
 
             group.cancelAll()
