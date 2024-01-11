@@ -11,7 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if (!canImport(Darwin) && swift(>=5.9)) || (canImport(Darwin) && swift(>=5.10))
+
+#if (!canImport(Darwin) && compiler(>=5.9)) || (canImport(Darwin) && compiler(>=5.10))
 import NIOCore
 import NIOPosix
 import NIOHTTP1
