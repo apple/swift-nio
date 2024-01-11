@@ -263,21 +263,18 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
         }.whenFailure{ error in
+            self.close0(error: error, mode: .all, promise: nil)
             promise?.fail(error)
         }
         executeAndComplete(p) {
-            do {
-                switch target {
-                case .socketAddress(let address):
-                    try socket.bind(to: address)
-                case .vsockAddress(let address):
-                    try socket.bind(to: address)
-                }
-                self.updateCachedAddressesFromSocket(updateRemote: false)
-                try self.socket.listen(backlog: backlog)
-            } catch {
-                promise?.fail(ChannelError.bindFailed)
+            switch target {
+            case .socketAddress(let address):
+                try socket.bind(to: address)
+            case .vsockAddress(let address):
+                try socket.bind(to: address)
             }
+            self.updateCachedAddressesFromSocket(updateRemote: false)
+            try self.socket.listen(backlog: backlog)
         }
     }
 
