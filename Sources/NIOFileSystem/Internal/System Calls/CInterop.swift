@@ -16,6 +16,7 @@ import SystemPackage
 
 #if canImport(Darwin)
 import Darwin
+import CNIODarwin
 #elseif canImport(Glibc)
 import Glibc
 import CNIOLinux
@@ -50,8 +51,8 @@ extension CInterop {
     #endif
 
     #if canImport(Darwin)
-    typealias FTS = Darwin.FTS
-    typealias FTSEnt = Darwin.FTSENT
+    typealias FTS = CNIODarwin.FTS
+    typealias FTSEnt = CNIODarwin.FTSENT
     #elseif canImport(Glibc)
     typealias FTS = CNIOLinux.FTS
     typealias FTSEnt = CNIOLinux.FTSENT

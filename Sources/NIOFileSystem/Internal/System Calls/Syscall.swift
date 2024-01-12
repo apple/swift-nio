@@ -16,6 +16,7 @@ import SystemPackage
 
 #if canImport(Darwin)
 import Darwin
+import CNIODarwin
 #elseif canImport(Glibc)
 import Glibc
 import CNIOLinux

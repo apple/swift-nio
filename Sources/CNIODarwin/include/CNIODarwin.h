@@ -20,6 +20,9 @@
 #include <sys/ioctl.h>
 #include <time.h>
 #include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fts.h>
 
 // Darwin platforms do not have a sendmmsg implementation available to them. This C module
 // provides a shim that implements sendmmsg on top of sendmsg. It also provides a shim for
