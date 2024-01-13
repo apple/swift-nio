@@ -874,9 +874,10 @@ extension SALTest {
         }
     }
 
-    func assertBind(expectedAddress: SocketAddress, file: StaticString = #filePath, line: UInt = #line) throws {
+    func assertBind(expectedAddress: SocketAddress, errorReturn: IOError? = nil, file: StaticString = #filePath, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
-        try self.selector.assertSyscallAndReturn(.returnVoid, file: (file), line: line) { syscall in
+
+        try self.selector.assertSyscallAndReturn(errorReturn != nil ? .error(errorReturn!) : .returnVoid, file: file, line: line) { syscall in
             if case .bind(let address) = syscall {
                 return address == expectedAddress
             } else {
@@ -884,18 +885,7 @@ extension SALTest {
             }
         }
     }
-    
-    func assertBindFailure(expectedAddress: SocketAddress, file: StaticString = #filePath, line: UInt = #line) throws {
-        SAL.printIfDebug("\(#function)")
-        try self.selector.assertSyscallAndReturn(.error(IOError(errnoCode: EPERM, reason: "bind"))) { syscall in
-            if case .bind(let address) = syscall {
-                return address == expectedAddress
-            } else {
-                return false
-            }
-        }
-    }
-    
+
     func assertClose(expectedFD: CInt, file: StaticString = #filePath, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
         try self.selector.assertSyscallAndReturn(.returnVoid, file: (file), line: line) { syscall in

@@ -338,7 +338,7 @@ final class SALChannelTest: XCTestCase, SALTest {
             try self.assertSetOption(expectedLevel: .socket, expectedOption: .so_reuseaddr) { value in
                 return (value as? SocketOptionValue) == 1
             }
-            try self.assertBindFailure(expectedAddress: localAddress)
+            try self.assertBind(expectedAddress: localAddress, errorReturn: IOError(errnoCode: EPERM, reason: "bind"))
             try self.assertDeregister { selectable in
                 return true
             }
