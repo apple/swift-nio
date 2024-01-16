@@ -15,6 +15,7 @@
 @_spi(Testing) import NIOFileSystem
 import XCTest
 
+#if ENABLE_MOCKING
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal final class FileHandleTests: XCTestCase {
     private func withHandleForMocking(
@@ -267,3 +268,4 @@ extension MockingDriver {
         }
     }
 }
+#endif
