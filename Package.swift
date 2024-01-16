@@ -17,6 +17,7 @@ import PackageDescription
 
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
+let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPackage", package: "swift-system")
 
 
 let package = Package(
@@ -33,10 +34,13 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
+        .library(name: "_NIOFileSystem", targets: ["NIOFileSystem"]),
+        .library(name: "_NIOFileSystemFoundationCompat", targets: ["NIOFileSystemFoundationCompat"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
+        .package(url: "https://github.com/apple/swift-system.git", from: "1.2.0"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
     ],
     targets: [
@@ -183,6 +187,26 @@ let package = Package(
                 "NIOEmbedded",
                 "NIOHTTP1",
                 swiftAtomics,
+            ]
+        ),
+        .target(
+            name: "NIOFileSystem",
+            dependencies: [
+                "NIOCore",
+                "CNIOLinux",
+                "CNIODarwin",
+                swiftAtomics,
+                swiftCollections,
+                swiftSystem,
+            ],
+            swiftSettings: [
+                .define("ENABLE_MOCKING", .when(configuration: .debug))
+            ]
+        ),
+        .target(
+            name: "NIOFileSystemFoundationCompat",
+            dependencies: [
+                "NIOFileSystem",
             ]
         ),
 
@@ -434,5 +458,39 @@ let package = Package(
             name: "NIOSingletonsTests",
             dependencies: ["NIOCore", "NIOPosix"]
         ),
+        .testTarget(
+            name: "NIOFileSystemTests",
+            dependencies: [
+                "NIOCore",
+                "NIOFileSystem",
+                swiftAtomics,
+                swiftCollections,
+                swiftSystem,
+            ],
+            swiftSettings: [
+                .define("ENABLE_MOCKING", .when(configuration: .debug))
+            ]
+        ),
+        .testTarget(
+            name: "NIOFileSystemIntegrationTests",
+            dependencies: [
+                "NIOCore",
+                "NIOFileSystem",
+                "NIOFoundationCompat",
+            ],
+            exclude: [
+                // Contains known files and directory structures used
+                // for the integration tests. Exclude the whole tree from
+                // the build.
+                "Test Data",
+            ]
+        ),
+        .testTarget(
+            name: "NIOFileSystemFoundationCompatTests",
+            dependencies: [
+                "NIOFileSystem",
+                "NIOFileSystemFoundationCompat",
+            ]
+        )
     ]
 )

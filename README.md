@@ -34,6 +34,7 @@ Within this repository we have a number of products that provide different funct
 - `NIOHTTP1`. This provides a low-level HTTP/1.1 protocol implementation.
 - `NIOWebSocket`. This provides a low-level WebSocket protocol implementation.
 - `NIOTestUtils`. This provides a number of helpers for testing projects that use SwiftNIO.
+- `NIOFileSystem`. This provides `async` APIs for interacting with the file system.
 
 ### Protocol Implementations
 
@@ -354,16 +355,16 @@ dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 
 ### Benchmarks
 
-Benchmarks for `swift-nio` are in a separate Swift Package in the `Benchmarks` subfolder of this repository. 
+Benchmarks for `swift-nio` are in a separate Swift Package in the `Benchmarks` subfolder of this repository.
 They use the [`package-benchmark`](https://github.com/ordo-one/package-benchmark) plugin.
 Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics.
-An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`. 
+An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`.
 Afterwards you can run the benchmarks from CLI by going to the `Benchmarks` subfolder (e.g. `cd Benchmarks`) and invoking:
 ```
 swift package benchmark
 ```
 
-For more information please refer to `swift package benchmark --help` or the [documentation of `package-benchmark`](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark). 
+For more information please refer to `swift package benchmark --help` or the [documentation of `package-benchmark`](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark).
 
 [ch]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelhandler
 [c]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channel
