@@ -16,6 +16,7 @@
 import SystemPackage
 import XCTest
 
+#if ENABLE_MOCKING
 final class SyscallTests: XCTestCase {
     func test_openat() throws {
         let fd = FileDescriptor(rawValue: 42)
@@ -468,3 +469,4 @@ extension Array where Element == MockTestCase {
         }
     }
 }
+#endif

@@ -25,6 +25,7 @@
 import SystemPackage
 import XCTest
 
+#if ENABLE_MOCKING
 internal struct Wildcard: Hashable {}
 
 extension Trace.Entry {
@@ -252,3 +253,4 @@ internal struct MockTestCase: TestCase {
 internal func withWindowsPaths(enabled: Bool, _ body: () -> Void) {
     _withWindowsPaths(enabled: enabled, body)
 }
+#endif

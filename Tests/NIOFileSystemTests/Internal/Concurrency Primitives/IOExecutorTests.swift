@@ -15,6 +15,7 @@
 @_spi(Testing) import NIOFileSystem
 import XCTest
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal final class IOExecutorTests: XCTestCase {
     func testExecuteAsync() async throws {
         try await withExecutor { executor in
@@ -158,6 +159,7 @@ private func fibonacci(_ n: Int) -> Int {
     }
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 private func withExecutor(
     numberOfThreads: Int = 1,
     execute: (IOExecutor) async throws -> Void
