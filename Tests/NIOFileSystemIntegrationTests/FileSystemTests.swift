@@ -1028,6 +1028,7 @@ final class FileSystemTests: XCTestCase {
     }
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystemTests {
     private func checkDirectoriesMatch(_ root1: FilePath, _ root2: FilePath) async throws {
         func namesAndTypes(_ root: FilePath) async throws -> [(FilePath.Component, FileType)] {

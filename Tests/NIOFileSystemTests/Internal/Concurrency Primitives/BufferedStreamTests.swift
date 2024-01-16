@@ -16,6 +16,7 @@ import XCTest
 
 @testable import NIOFileSystem
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class BufferedStreamTests: XCTestCase {
     // MARK: - sequenceDeinitialized
 
@@ -1077,6 +1078,7 @@ final class BufferedStreamTests: XCTestCase {
     }
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension AsyncSequence {
     /// Collect all elements in the sequence into an array.
     fileprivate func collect() async rethrows -> [Element] {
@@ -1086,6 +1088,7 @@ extension AsyncSequence {
     }
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension BufferedStream.Source.WriteResult {
     func assertIsProducerMore() {
         switch self {
@@ -1108,6 +1111,7 @@ extension BufferedStream.Source.WriteResult {
     }
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension AsyncStream {
     static func makeStream(
         of elementType: Element.Type = Element.self,
@@ -1119,6 +1123,7 @@ extension AsyncStream {
     }
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension AsyncThrowingStream {
     static func makeStream(
         of elementType: Element.Type = Element.self,

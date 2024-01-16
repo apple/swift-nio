@@ -146,6 +146,7 @@ final class FileSystemErrorTests: XCTestCase {
         )
     }
 
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     func testCopyOnWrite() throws {
         let error1 = FileSystemError(
             code: .io,
@@ -180,6 +181,7 @@ final class FileSystemErrorTests: XCTestCase {
         XCTAssertEqual(error5.location.line, 42)
     }
 
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     func testErrorsMapToCorrectSyscallCause() throws {
         let here = FileSystemError.SourceLocation(function: "fn", file: "file", line: 42)
         let path = FilePath("/foo")
@@ -308,6 +310,7 @@ final class FileSystemErrorTests: XCTestCase {
         }
     }
 
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     func testErrnoMapping_fchmod() {
         self.testErrnoToErrorCode(
             expected: [

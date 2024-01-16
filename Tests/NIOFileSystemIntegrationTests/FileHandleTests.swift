@@ -1093,6 +1093,7 @@ final class FileHandleTests: XCTestCase {
     }
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 private func assertThrowsErrorClosed<R>(
     line: UInt = #line,
     _ expression: () async throws -> R
