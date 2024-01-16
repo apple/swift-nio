@@ -45,7 +45,7 @@ import Glibc
 /// more information about the error by calling ``FileSystemError/detailedDescription()`` which
 /// returns a structured multi-line string containing information about the error.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public final class FileSystem: Sendable, FileSystemProtocol {
+public struct FileSystem: Sendable, FileSystemProtocol {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
     /// The file system executes blocking work in a thread pool which defaults to having two
@@ -63,7 +63,7 @@ public final class FileSystem: Sendable, FileSystemProtocol {
         self.executor = executor
     }
 
-    fileprivate convenience init(numberOfThreads: Int) async {
+    fileprivate init(numberOfThreads: Int) async {
         let executor = await IOExecutor.running(numberOfThreads: numberOfThreads)
         self.init(executor: executor)
     }
@@ -739,9 +739,7 @@ private let globalFileSystem: FileSystem = {
     }
 
     let threadCount = NIOSingletons.fileSystemThreadCountSuggestion
-    let fileSystem = FileSystem(executor: .runningAsync(numberOfThreads: threadCount))
-    _ = Unmanaged.passUnretained(fileSystem).retain()  // never gonna let you down.
-    return fileSystem
+    return FileSystem(executor: .runningAsync(numberOfThreads: threadCount))
 }()
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
