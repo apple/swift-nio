@@ -308,6 +308,7 @@ public enum Libc {
         }
     }
 
+    #if !os(Android)
     static func constr(_ name: CInt) -> Result<String, Errno> {
         var buffer = [CInterop.PlatformChar](repeating: 0, count: 128)
 
@@ -331,6 +332,7 @@ public enum Libc {
             }
         } while true
     }
+    #endif
 
     static func ftsOpen(_ path: FilePath, options: FTSOpenOptions) -> Result<CInterop.FTSPointer, Errno> {
         // 'fts_open' needs an unsafe mutable pointer to the C-string, `FilePath` doesn't offer this
