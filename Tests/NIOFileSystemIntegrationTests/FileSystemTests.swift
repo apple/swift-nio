@@ -567,14 +567,14 @@ final class FileSystemTests: XCTestCase {
         ) { file in
             // On Linux we use sendfile to copy which has a limit of 2GB; write at least that much
             // to much sure we handle files above that size correctly.
-            var bytesToWrite = 3 * 1024 * 1024 * 1024
+            var bytesToWrite: Int64 = 3 * 1024 * 1024 * 1024
             var offset: Int64 = 0
             // Write a blob a handful of times to avoid consuming too much memory in one go.
             let blob = [UInt8](repeating: 0, count: 1024 * 1024 * 32)  // 32MB
             while bytesToWrite > 0 {
                 try await file.write(contentsOf: blob, toAbsoluteOffset: offset)
                 offset += Int64(blob.count)
-                bytesToWrite -= blob.count
+                bytesToWrite -= Int64(blob.count)
             }
 
             return try await file.info()
