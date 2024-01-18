@@ -18,6 +18,8 @@ import SystemPackage
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #endif
 
 extension Errno {
@@ -28,6 +30,8 @@ extension Errno {
             return Errno(rawValue: Darwin.errno)
             #elseif canImport(Glibc)
             return Errno(rawValue: Glibc.errno)
+            #elseif canImport(Musl)
+            return Errno(rawValue: Musl.errno)
             #endif
         }
         set {
@@ -35,6 +39,8 @@ extension Errno {
             Darwin.errno = newValue.rawValue
             #elseif canImport(Glibc)
             Glibc.errno = newValue.rawValue
+            #elseif canImport(Musl)
+            Musl.errno = newValue.rawValue
             #endif
         }
     }
@@ -44,6 +50,8 @@ extension Errno {
         Darwin.errno = 0
         #elseif canImport(Glibc)
         Glibc.errno = 0
+        #elseif canImport(Musl)
+        Musl.errno = 0
         #endif
     }
 }

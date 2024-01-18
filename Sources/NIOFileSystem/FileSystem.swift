@@ -20,6 +20,8 @@ import NIOCore
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #endif
 
 /// A file system which interacts with the local system. The file system uses a thread pool to
@@ -1146,7 +1148,7 @@ extension FileSystem {
                         location: .here()
                     )
                 }
-                #elseif canImport(Glibc)
+                #elseif canImport(Glibc) || canImport(Musl)
                 var offset = 0
 
                 while offset < sourceInfo.size {

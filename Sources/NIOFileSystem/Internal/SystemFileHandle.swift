@@ -20,6 +20,8 @@ import NIOCore
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #endif
 
 /// An implementation of ``FileHandleProtocol`` which is backed by system calls and a file
@@ -49,7 +51,7 @@ public final class SystemFileHandle {
         enum Mode {
             /// Rename the created file to become the desired file.
             case rename
-            #if canImport(Glibc)
+            #if canImport(Glibc) || canImport(Musl)
             /// Link the unnamed file to the desired file using 'linkat(2)'.
             case link
             #endif
@@ -640,7 +642,7 @@ extension SystemFileHandle.SendableView {
 
         let result: Result<Void, FileSystemError>
         switch materialization.mode {
-        #if canImport(Glibc)
+        #if canImport(Glibc) || canImport(Musl)
         case .link:
             if materialize {
                 func linkAtEmptyPath() -> Result<Void, Errno> {
@@ -742,7 +744,7 @@ extension SystemFileHandle.SendableView {
                     to: desiredPath,
                     options: materialization.exclusive ? [.exclusive] : []
                 )
-                #elseif canImport(Glibc)
+                #elseif canImport(Glibc) || canImport(Musl)
                 // The created and desired paths are absolute, so the relative descriptors are
                 // ignored. However, they must still be provided to 'rename' in order to pass
                 // flags.
@@ -1217,7 +1219,7 @@ extension SystemFileHandle {
             }
 
             func makePath() -> FilePath {
-                #if canImport(Glibc)
+                #if canImport(Glibc) || canImport(Musl)
                 if useTemporaryFileIfPossible {
                     return currentWorkingDirectory.appending(path.components.dropLast())
                 }
@@ -1230,7 +1232,7 @@ extension SystemFileHandle {
             desiredPath = currentWorkingDirectory.appending(path.components)
         } else {
             func makePath() -> FilePath {
-                #if canImport(Glibc)
+                #if canImport(Glibc) || canImport(Musl)
                 if useTemporaryFileIfPossible {
                     return path.removingLastComponent()
                 }
@@ -1246,7 +1248,7 @@ extension SystemFileHandle {
         let materializationMode: Materialization.Mode
         let options: FileDescriptor.OpenOptions
 
-        #if canImport(Glibc)
+        #if canImport(Glibc) || canImport(Musl)
         if useTemporaryFileIfPossible {
             options = [.temporaryFile]
             materializationMode = .link
@@ -1283,7 +1285,7 @@ extension SystemFileHandle {
 
             return .success(handle)
         } catch {
-            #if canImport(Glibc)
+          #if canImport(Glibc) || canImport(Musl)
             // 'O_TMPFILE' isn't supported for the current file system, try again but using
             // rename instead.
             if useTemporaryFileIfPossible, let errno = error as? Errno, errno == .notSupported {

@@ -20,6 +20,9 @@ import CNIODarwin
 #elseif canImport(Glibc)
 import Glibc
 import CNIOLinux
+#elseif canImport(Musl)
+import Musl
+import CNIOLinux
 #endif
 
 /// Aliases for platform-dependent types used for system calls.
@@ -28,6 +31,8 @@ extension CInterop {
     public typealias Stat = Darwin.stat
     #elseif canImport(Glibc)
     public typealias Stat = Glibc.stat
+    #elseif canImport(Musl)
+    public typealias Stat = Musl.stat
     #endif
 
     #if canImport(Darwin)
@@ -36,11 +41,14 @@ extension CInterop {
     #elseif canImport(Glibc)
     @_spi(Testing)
     public static let maxPathLength = Glibc.PATH_MAX
+    #elseif canImport(Musl)
+    @_spi(Testing)
+    public static let maxPathLength = Musl.PATH_MAX
     #endif
 
     #if canImport(Darwin)
     typealias DirPointer = UnsafeMutablePointer<Darwin.DIR>
-    #elseif canImport(Glibc)
+    #elseif canImport(Glibc) || canImport(Musl)
     typealias DirPointer = OpaquePointer
     #endif
 
@@ -48,12 +56,14 @@ extension CInterop {
     typealias DirEnt = Darwin.dirent
     #elseif canImport(Glibc)
     typealias DirEnt = Glibc.dirent
+    #elseif canImport(Musl)
+    typealias DirEnt = Musl.dirent
     #endif
 
     #if canImport(Darwin)
     typealias FTS = CNIODarwin.FTS
     typealias FTSEnt = CNIODarwin.FTSENT
-    #elseif canImport(Glibc)
+    #elseif canImport(Glibc) || canImport(Musl)
     typealias FTS = CNIOLinux.FTS
     typealias FTSEnt = CNIOLinux.FTSENT
     #endif

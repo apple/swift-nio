@@ -18,6 +18,8 @@ import SystemPackage
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #endif
 
 /// The type of a file system object.
@@ -133,7 +135,7 @@ extension FileType {
     /// Initializes a file type from the `d_type` from `dirent`.
     @_spi(Testing)
     public init(direntType: UInt8) {
-        #if canImport(Darwin)
+        #if canImport(Darwin) || canImport(Musl)
         let value = Int32(direntType)
         #elseif canImport(Glibc)
         let value = Int(direntType)

@@ -28,6 +28,9 @@ import Darwin
 #elseif canImport(Glibc)
 import Glibc
 import CNIOLinux
+#elseif canImport(Musl)
+import Musl
+import CNIOLinux
 #endif
 
 // Syscall mocking support.
@@ -278,6 +281,11 @@ internal var system_errno: CInt {
 internal var system_errno: CInt {
     get { Glibc.errno }
     set { Glibc.errno = newValue }
+}
+#elseif canImport(Musl)
+internal var system_errno: CInt {
+    get { Musl.errno }
+    set { Musl.errno = newValue }
 }
 #endif
 
