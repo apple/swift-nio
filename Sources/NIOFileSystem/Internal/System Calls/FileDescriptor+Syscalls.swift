@@ -20,6 +20,9 @@ import Darwin
 #elseif canImport(Glibc)
 import Glibc
 import CNIOLinux
+#elseif canImport(Musl)
+import Musl
+import CNIOLinux
 #endif
 
 extension FileDescriptor {
@@ -305,7 +308,7 @@ extension FileDescriptor {
     }
 }
 
-#if canImport(Glibc)
+#if canImport(Glibc) || canImport(Musl)
 extension FileDescriptor.OpenOptions {
     static var temporaryFile: Self {
         Self(rawValue: CNIOLinux_O_TMPFILE)

@@ -20,6 +20,9 @@ import CNIODarwin
 #elseif canImport(Glibc)
 import Glibc
 import CNIOLinux
+#elseif canImport(Musl)
+import Musl
+import CNIOLinux
 #endif
 
 // MARK: - system
@@ -171,7 +174,7 @@ internal func system_flistxattr(
     #if canImport(Darwin)
     // The final parameter is 'options'; there is no equivalent on Linux.
     return flistxattr(fd, namebuf, size, 0)
-    #elseif canImport(Glibc)
+    #elseif canImport(Glibc) || canImport(Musl)
     return flistxattr(fd, namebuf, size)
     #endif
 }
@@ -193,7 +196,7 @@ internal func system_fgetxattr(
     // Penultimate parameter is position which is reserved and should be zero.
     // The final parameter is 'options'; there is no equivalent on Linux.
     return fgetxattr(fd, name, value, size, 0, 0)
-    #elseif canImport(Glibc)
+    #elseif canImport(Glibc) || canImport(Musl)
     return fgetxattr(fd, name, value, size)
     #endif
 }
@@ -215,7 +218,7 @@ internal func system_fsetxattr(
     #if canImport(Darwin)
     // Penultimate parameter is position which is reserved and should be zero.
     return fsetxattr(fd, name, value, size, 0, 0)
-    #elseif canImport(Glibc)
+    #elseif canImport(Glibc) || canImport(Musl)
     return fsetxattr(fd, name, value, size, 0)
     #endif
 }
@@ -234,7 +237,7 @@ internal func system_fremovexattr(
     #if canImport(Darwin)
     // The final parameter is 'options'; there is no equivalent on Linux.
     return fremovexattr(fd, name, 0)
-    #elseif canImport(Glibc)
+    #elseif canImport(Glibc) || canImport(Musl)
     return fremovexattr(fd, name)
     #endif
 }
@@ -267,7 +270,7 @@ internal func system_renamex_np(
 }
 #endif
 
-#if canImport(Glibc)
+#if canImport(Glibc) || canImport(Musl)
 internal func system_renameat2(
     _ oldFD: FileDescriptor.RawValue,
     _ old: UnsafePointer<CInterop.PlatformChar>,
@@ -285,7 +288,7 @@ internal func system_renameat2(
 #endif
 
 /// link(2): Creates a new link for a file.
-#if canImport(Glibc)
+#if canImport(Glibc) || canImport(Musl)
 internal func system_linkat(
     _ oldFD: FileDescriptor.RawValue,
     _ old: UnsafePointer<CInterop.PlatformChar>,
@@ -302,7 +305,7 @@ internal func system_linkat(
 }
 #endif
 
-#if canImport(Glibc)
+#if canImport(Glibc) || canImport(Musl)
 /// sendfile(2): Transfer data between descriptors
 internal func system_sendfile(
     _ outFD: CInt,

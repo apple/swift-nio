@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if canImport(Glibc)
+#if canImport(Glibc) || canImport(Musl)
 import CNIOLinux
 
 private let sys_pthread_getname_np = CNIOLinux_pthread_getname_np
@@ -41,8 +41,12 @@ private func sysPthread_create(
 ) -> CInt {
     #if canImport(Darwin)
     return pthread_create(handle, nil, destructor, args)
-    #elseif canImport(Glibc)
+    #elseif canImport(Glibc) || canImport(Musl)
+    #if canImport(Glibc)
     var handleLinux = pthread_t()
+    #else
+    var handleLinux = pthread_t(bitPattern: 0)
+    #endif
     let result = pthread_create(
         &handleLinux,
         nil,
@@ -61,7 +65,7 @@ enum ThreadOpsPosix: ThreadOps {
     typealias ThreadSpecificKey = pthread_key_t
     #if canImport(Darwin)
     typealias ThreadSpecificKeyDestructor = @convention(c) (UnsafeMutableRawPointer) -> Void
-    #elseif canImport(Glibc)
+    #elseif canImport(Glibc) || canImport(Musl)
     typealias ThreadSpecificKeyDestructor = @convention(c) (UnsafeMutableRawPointer?) -> Void
     #endif
 
@@ -100,7 +104,7 @@ enum ThreadOpsPosix: ThreadOps {
 
                 if let name = name {
                     let maximumThreadNameLength: Int
-                    #if canImport(Glibc)
+                    #if canImport(Glibc) || canImport(Musl)
                     maximumThreadNameLength = 15
                     #elseif canImport(Darwin)
                     maximumThreadNameLength = .max

@@ -18,6 +18,8 @@ import SystemPackage
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Musl)
+import Musl
 #endif
 
 /// Information about a file system object.
@@ -80,7 +82,7 @@ public struct FileInfo: Hashable, Sendable {
         self.lastAccessTime = Timespec(platformSpecificStatus.st_atimespec)
         self.lastDataModificationTime = Timespec(platformSpecificStatus.st_mtimespec)
         self.lastStatusChangeTime = Timespec(platformSpecificStatus.st_ctimespec)
-        #elseif canImport(Glibc)
+        #elseif canImport(Glibc) || canImport(Musl)
         self.lastAccessTime = Timespec(platformSpecificStatus.st_atim)
         self.lastDataModificationTime = Timespec(platformSpecificStatus.st_mtim)
         self.lastStatusChangeTime = Timespec(platformSpecificStatus.st_ctim)
@@ -190,7 +192,7 @@ private struct Stat: Hashable {
         hasher.combine(FileInfo.Timespec(stat.st_birthtimespec))
         hasher.combine(stat.st_flags)
         hasher.combine(stat.st_gen)
-        #elseif canImport(Glibc)
+        #elseif canImport(Glibc) || canImport(Musl)
         hasher.combine(FileInfo.Timespec(stat.st_atim))
         hasher.combine(FileInfo.Timespec(stat.st_mtim))
         hasher.combine(FileInfo.Timespec(stat.st_ctim))
@@ -231,7 +233,7 @@ private struct Stat: Hashable {
                 == FileInfo.Timespec(rStat.st_birthtimespec)
         isEqual = isEqual && lStat.st_flags == rStat.st_flags
         isEqual = isEqual && lStat.st_gen == rStat.st_gen
-        #elseif canImport(Glibc)
+        #elseif canImport(Glibc) || canImport(Musl)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_atim) == FileInfo.Timespec(rStat.st_atim)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_mtim) == FileInfo.Timespec(rStat.st_mtim)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_ctim) == FileInfo.Timespec(rStat.st_ctim)

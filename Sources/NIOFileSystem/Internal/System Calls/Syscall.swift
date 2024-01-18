@@ -20,6 +20,9 @@ import CNIODarwin
 #elseif canImport(Glibc)
 import Glibc
 import CNIOLinux
+#elseif canImport(Musl)
+import Musl
+import CNIOLinux
 #endif
 
 @_spi(Testing)
@@ -102,7 +105,7 @@ public enum Syscall {
     }
     #endif
 
-    #if canImport(Glibc)
+    #if canImport(Glibc) || canImport(Musl)
     @_spi(Testing)
     public static func rename(
         from old: FilePath,
@@ -144,7 +147,7 @@ public enum Syscall {
     }
     #endif
 
-    #if canImport(Glibc)
+    #if canImport(Glibc) || canImport(Musl)
     @_spi(Testing)
     public struct LinkAtFlags: OptionSet {
         @_spi(Testing)
@@ -226,7 +229,7 @@ public enum Syscall {
         }
     }
 
-    #if canImport(Glibc)
+    #if canImport(Glibc) || canImport(Musl)
     @_spi(Testing)
     public static func sendfile(
         to output: FileDescriptor,
