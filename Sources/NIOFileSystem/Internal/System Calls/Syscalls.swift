@@ -384,6 +384,7 @@ internal func libc_getcwd(
 }
 
 /// confstr(3)
+#if !os(Android)
 internal func libc_confstr(
     _ name: CInt,
     _ buffer: UnsafeMutablePointer<CInterop.PlatformChar>,
@@ -391,6 +392,7 @@ internal func libc_confstr(
 ) -> Int {
     return confstr(name, buffer, size)
 }
+#endif
 
 /// fts(3)
 internal func libc_fts_open(
