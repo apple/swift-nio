@@ -16,7 +16,7 @@ import NIOCore
 
 private let maxOneByteSize = 125
 private let maxTwoByteSize = Int(UInt16.max)
-#if arch(arm) || arch(i386)
+#if arch(arm) || arch(i386) || arch(arm64_32)
 // on 32-bit platforms we can't put a whole UInt32 in an Int
 private let maxNIOFrameSize = Int(UInt32.max / 2)
 #else
