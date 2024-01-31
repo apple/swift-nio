@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
 @_spi(Testing) import NIOFileSystem
 import NIOFoundationCompat
@@ -1104,3 +1105,4 @@ private func assertThrowsErrorClosed<R>(
         XCTAssertEqual(error.code, .closed)
     }
 }
+#endif

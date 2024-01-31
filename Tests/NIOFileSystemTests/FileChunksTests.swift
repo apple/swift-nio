@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
 import NIOFileSystem
 import XCTest
@@ -38,3 +39,4 @@ final class FileChunksTests: XCTestCase {
         XCTAssertNil(end)
     }
 }
+#endif

@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
+
 import Atomics
 import NIOCore
 @preconcurrency import SystemPackage
@@ -1435,3 +1437,5 @@ extension FileSystem {
         }
     }
 }
+
+#endif

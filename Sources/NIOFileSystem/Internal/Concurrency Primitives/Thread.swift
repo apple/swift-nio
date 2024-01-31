@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
 #endif
@@ -95,3 +96,4 @@ final class Thread {
         ThreadOpsSystem.run(handle: &handle, args: box, detachThread: detachThread)
     }
 }
+#endif

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 @_spi(Testing) import NIOFileSystem
 import XCTest
 
@@ -98,3 +99,4 @@ final class FileOpenOptionsTests: XCTestCase {
         XCTAssertEqual(FileDescriptor.OpenOptions(options), [.create, .exclusiveCreate, .noFollow])
     }
 }
+#endif

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import Atomics
 @_spi(Testing) import NIOFileSystem
 import XCTest
@@ -87,3 +88,4 @@ final class CancellationTests: XCTestCase {
         }
     }
 }
+#endif

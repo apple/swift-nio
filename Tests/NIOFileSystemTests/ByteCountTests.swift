@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOFileSystem
 import XCTest
 
@@ -58,3 +59,4 @@ class ByteCountTests: XCTestCase {
         XCTAssertNotEqual(byteCount1, byteCount2)
     }
 }
+#endif

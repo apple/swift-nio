@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOFileSystem
 import XCTest
 
@@ -67,3 +68,4 @@ func XCTAssertSystemCallError(
     XCTAssertEqual(systemCallError.systemCall, name, file: file, line: line)
     XCTAssertEqual(systemCallError.errno, errno, file: file, line: line)
 }
+#endif

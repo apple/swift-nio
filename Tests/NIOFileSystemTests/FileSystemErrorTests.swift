@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 @_spi(Testing) import NIOFileSystem
 import XCTest
 
@@ -608,3 +609,4 @@ private func assertCauseIsSyscall(
 extension FileSystemError.SourceLocation {
     fileprivate static let fixed = Self(function: "fn", file: "file", line: 1)
 }
+#endif

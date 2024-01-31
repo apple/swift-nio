@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
 import SystemPackage
 
@@ -320,4 +321,5 @@ extension FileDescriptor {
         Self(rawValue: AT_FDCWD)
     }
 }
+#endif
 #endif

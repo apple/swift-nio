@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
 @_spi(Testing) import NIOFileSystem
 import XCTest
@@ -141,3 +142,4 @@ final class BufferedWriterTests: XCTestCase {
         }
     }
 }
+#endif

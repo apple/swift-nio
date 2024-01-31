@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOFileSystem
 import XCTest
 
@@ -70,3 +71,4 @@ final class DirectoryEntriesTests: XCTestCase {
         XCTAssertNil(end)
     }
 }
+#endif

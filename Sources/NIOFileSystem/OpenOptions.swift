@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
 
 /// Options for opening file handles.
@@ -295,3 +296,5 @@ extension FilePermissions {
         .otherReadExecute,
     ]
 }
+
+#endif

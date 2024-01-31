@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import CNIODarwin
 import CNIOLinux
 import NIOConcurrencyHelpers
@@ -652,3 +653,5 @@ extension UnsafeMutablePointer<CInterop.FTSEnt> {
         return FilePath(platformString: self.pointee.fts_path)
     }
 }
+
+#endif

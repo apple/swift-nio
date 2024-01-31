@@ -17,7 +17,11 @@ import PackageDescription
 
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
-let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPackage", package: "swift-system")
+let swiftSystem: PackageDescription.Target.Dependency = .product(
+  name: "SystemPackage",
+  package: "swift-system",
+  condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
+)
 
 
 let package = Package(

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
 
 @usableFromInline
@@ -43,3 +44,5 @@ extension Array where Element == UInt8 {
         return alphaNumericValues
     }()
 }
+
+#endif
