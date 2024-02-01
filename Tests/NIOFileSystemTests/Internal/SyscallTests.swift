@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 @_spi(Testing) import NIOFileSystem
 import SystemPackage
 import XCTest
@@ -469,4 +470,5 @@ extension Array where Element == MockTestCase {
         }
     }
 }
+#endif
 #endif

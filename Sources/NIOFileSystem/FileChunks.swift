@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOConcurrencyHelpers
 import NIOCore
 @preconcurrency import SystemPackage
@@ -335,3 +336,5 @@ private struct ProducerState: Sendable {
         self.state = .done
     }
 }
+
+#endif

@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
+
 /// A writer which buffers bytes in memory before writing them to the file system.
 ///
 /// You can create a ``BufferedWriter`` by calling
@@ -185,3 +187,5 @@ extension WritableFileHandleProtocol {
         )
     }
 }
+
+#endif

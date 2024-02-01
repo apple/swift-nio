@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
 import NIOFileSystem
 import XCTest
@@ -71,3 +72,4 @@ final class ConvenienceTests: XCTestCase {
         XCTAssertEqual(bytes, ByteBuffer(bytes: Array(0..<64)))
     }
 }
+#endif

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOFileSystem
 import XCTest
 
@@ -68,3 +69,4 @@ func XCTAssertThrowsFileSystemErrorAsync<R>(
         }
     }
 }
+#endif

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 /// Wraps a ``BufferedStream<Element>`` or ``AnyAsyncSequence<Element>``.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal enum BufferedOrAnyStream<Element> {
@@ -88,3 +89,5 @@ internal struct AnyAsyncSequence<Element>: AsyncSequence {
         }
     }
 }
+
+#endif

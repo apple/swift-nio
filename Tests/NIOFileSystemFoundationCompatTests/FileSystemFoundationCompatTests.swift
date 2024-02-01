@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOFileSystem
 import NIOFileSystemFoundationCompat
 import XCTest
@@ -33,3 +34,4 @@ final class FileSystemBytesConformanceTests: XCTestCase {
         )
     }
 }
+#endif

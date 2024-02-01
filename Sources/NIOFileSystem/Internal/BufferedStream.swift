@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import DequeModule
 import NIOConcurrencyHelpers
 
@@ -1731,3 +1732,5 @@ extension BufferedStream {
         }
     }
 }
+
+#endif

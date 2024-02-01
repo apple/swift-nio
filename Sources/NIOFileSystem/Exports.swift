@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
+
 // These types are used in our public API; expose them to make
 // life easier for users.
 @_exported import enum SystemPackage.CInterop
@@ -19,3 +21,5 @@
 @_exported import struct SystemPackage.FileDescriptor
 @_exported import struct SystemPackage.FilePath
 @_exported import struct SystemPackage.FilePermissions
+
+#endif

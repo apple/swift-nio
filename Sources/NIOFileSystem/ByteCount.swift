@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
+
 /// Represents the number of bytes.
 public struct ByteCount: Hashable, Sendable {
     /// The number of bytes
@@ -77,3 +79,5 @@ public struct ByteCount: Hashable, Sendable {
         return ByteCount(bytes: 1024 * 1024 * 1024 * count)
     }
 }
+
+#endif

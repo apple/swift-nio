@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOFileSystem
 
 import struct Foundation.Date
@@ -29,3 +30,4 @@ extension FileInfo.Timespec {
         return Date(timespec: self)
     }
 }
+#endif

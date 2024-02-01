@@ -21,6 +21,7 @@
  See https://swift.org/LICENSE.txt for license information
  */
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
 
 #if canImport(Darwin)
@@ -365,3 +366,4 @@ internal func setTLS(_ key: _PlatformTLSKey, _ p: UnsafeMutableRawPointer?) {
 internal func getTLS(_ key: _PlatformTLSKey) -> UnsafeMutableRawPointer? {
     return pthread_getspecific(key)
 }
+#endif

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 @_spi(Testing) import NIOFileSystem
 import XCTest
 
@@ -172,3 +173,4 @@ private func withExecutor(
         await executor.drain()
     }
 }
+#endif

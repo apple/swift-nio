@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 #if canImport(Glibc) || canImport(Musl)
 import CNIOLinux
 
@@ -143,3 +144,4 @@ enum ThreadOpsPosix: ThreadOps {
         return pthread_equal(lhs, rhs) != 0
     }
 }
+#endif

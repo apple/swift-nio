@@ -290,6 +290,8 @@ final class SocketOptionProviderTest: XCTestCase {
         // We just need to soundness check something here to ensure that the data is vaguely reasonable.
         XCTAssertEqual(tcpConnectionInfo.tcpi_state, UInt8(TSI_S_ESTABLISHED))
         #endif
+        // Suppress the unused warning
+        _ = tcpConnectionInfo
         #endif
     }
 }

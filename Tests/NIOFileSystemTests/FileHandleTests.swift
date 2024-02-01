@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 @_spi(Testing) import NIOFileSystem
 import XCTest
 
@@ -268,4 +269,5 @@ extension MockingDriver {
         }
     }
 }
+#endif
 #endif
