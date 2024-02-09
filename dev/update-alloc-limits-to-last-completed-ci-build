@@ -22,7 +22,7 @@ url_prefix=${1-"https://ci.swiftserver.group/job/swift-nio2-swift"}
 target_repo=${2-"$here/.."}
 tmpdir=$(mktemp -d /tmp/.last-build_XXXXXX)
 
-for f in 56 57 58 59 -nightly; do
+for f in 57 58 59 510 -nightly; do
     echo "swift$f"
     url="$url_prefix$f-prb/lastCompletedBuild/consoleFull"
     echo "$url"
