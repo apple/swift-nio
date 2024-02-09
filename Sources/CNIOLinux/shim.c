@@ -199,9 +199,12 @@ int CNIOLinux_renameat2(int oldfd, const char* old, int newfd, const char* newNa
 }
 
 // Musl also doesn't define the flags for renameat2, so we will do so.
-// Again, we may as well do this unconditionally.
+#ifndef RENAME_NOREPLACE
 #define RENAME_NOREPLACE 1
+#endif
+#ifndef RENAME_EXCHANGE
 #define RENAME_EXCHANGE  2
+#endif
 
 const int CNIOLinux_O_TMPFILE = O_TMPFILE;
 const unsigned int CNIOLinux_RENAME_NOREPLACE = RENAME_NOREPLACE;
