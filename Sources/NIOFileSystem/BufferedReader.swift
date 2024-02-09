@@ -204,7 +204,7 @@ extension ReadableFileHandleProtocol {
         startingAtAbsoluteOffset initialOffset: Int64 = 0,
         capacity: ByteCount = .kibibytes(512)
     ) -> BufferedReader<Self> {
-        return BufferedReader(wrapping: self, initialOffset: 0, capacity: Int(capacity.bytes))
+        return BufferedReader(wrapping: self, initialOffset: initialOffset, capacity: Int(capacity.bytes))
     }
 }
 
