@@ -86,15 +86,21 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
             var buffer = self.buffer
             self.buffer = ByteBuffer()
 
+            // The bytes to read from the chunk is the difference in what the caller requested
+            // and is already stored in buffer. Note that if we get to the end of the file this
+            // number could be larger than the available number of bytes.
             let bytesFromChunk = byteCount &- buffer.readableBytes
             let bytesToRead = bytesFromChunk + self.capacity
 
+            // Read a chunk from the file and store it.
             let chunk = try await self.readFromFile(bytesToRead)
             self.buffer.writeImmutableBuffer(chunk)
 
-            if let readBytes = self.buffer.readSlice(length: bytesFromChunk) {
-                buffer.writeImmutableBuffer(readBytes)
-            }
+            // Finally read off the required bytes from the chunk we just read. If we read short
+            // then the chunk we just appended might not less than 'bytesFromChunk', that's fine,
+            // just take what's available.
+            var slice = self.buffer.readSlice(length: min(bytesFromChunk, chunk.readableBytes))!
+            buffer.writeBuffer(&slice)
 
             return buffer
         }
