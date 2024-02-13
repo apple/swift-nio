@@ -519,23 +519,21 @@ Further information:
             var drained = false
             repeat { // We may need to do multiple rounds of this because failing tasks may lead to more work.
 
-                let (scheduledTasksCopy, immediateTasksCopy) = self._tasksLock.withLock {
+                var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
+                var immediateTasksCopy = ContiguousArray<UnderlyingTask>()
+                self._tasksLock.withLock {
                     // In this state we never want the selector to be woken again, so we pretend we're permanently running.
                     self._pendingTaskPop = true
 
-                    // During the shutdown we don't need to be that careful about reallocs
-                    var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
                     // reserve the correct capacity so we don't need to realloc later on.
                     scheduledTasksCopy.reserveCapacity(self._scheduledTasks.count)
                     while let sched = self._scheduledTasks.pop() {
                         scheduledTasksCopy.append(sched)
                     }
-                    var immediateTasksCopy = ContiguousArray<UnderlyingTask>()
                     immediateTasksCopy.reserveCapacity(self._immediateTasks.count)
                     while let immediate = self._immediateTasks.popFirst() {
                         immediateTasksCopy.append(immediate)
                     }
-                    return (scheduledTasksCopy, immediateTasksCopy)
                 }
 
                 // Run all the immediate tasks. They're all "expired" and don't have failFn,
@@ -547,8 +545,11 @@ Further information:
                 for task in scheduledTasksCopy {
                     task.fail(EventLoopError.shutdown)
                 }
+
                 iterations += 1
                 drained = immediateTasksCopy.count == 0 && scheduledTasksCopy.count == 0
+                immediateTasksCopy.removeAll(keepingCapacity: true)
+                scheduledTasksCopy.removeAll(keepingCapacity: true)
             } while !drained && iterations < 1000
             precondition(drained, "EventLoop \(self) didn't quiesce after 1000 ticks.")
 
