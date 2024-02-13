@@ -86,6 +86,22 @@ final class BufferedReaderTests: XCTestCase {
         }
     }
 
+    func testBufferedReaderReadingShort() async throws {
+        let fs = FileSystem.shared
+        try await fs.withFileHandle(forReadingAt: #filePath) { handle in
+            var reader = handle.bufferedReader(capacity: .bytes(128))
+            var buffer = ByteBuffer()
+            while true {
+                let chunk = try await reader.read(.bytes(128))
+                buffer.writeImmutableBuffer(chunk)
+                if chunk.readableBytes < 128 { break }
+            }
+
+            let info = try await handle.info()
+            XCTAssertEqual(Int64(buffer.readableBytes), info.size)
+        }
+    }
+
     func testBufferedReaderReadWhile() async throws {
         let fs = FileSystem.shared
         let path = try await fs.temporaryFilePath()
