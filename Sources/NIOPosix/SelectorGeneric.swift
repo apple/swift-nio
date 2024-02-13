@@ -17,7 +17,7 @@ import NIOConcurrencyHelpers
 
 internal enum SelectorLifecycleState {
     case open
-    case closing
+//    case closing
     case closed
 }
 
@@ -155,7 +155,11 @@ internal class Selector<R: Registration>  {
     #error("Unsupported platform, no suitable selector backend (we need kqueue or epoll support)")
     #endif
 
-    var events: UnsafeMutablePointer<EventType>
+    var events: UnsafeMutablePointer<EventType> {
+        didSet {
+            print("Set events")
+        }
+    }
     var eventsCapacity = 64
 
     internal func testsOnly_withUnsafeSelectorFD<T>(_ body: (CInt) throws -> T) throws -> T {
