@@ -444,6 +444,72 @@ Further information:
             }
         }
     }
+    
+    private func runLoop() -> NIODeadline? {
+        // We need to ensure we process all tasks, even if a task added another task again
+        while true {
+            // TODO: Better locking
+            let nextReadyDeadline = self._tasksLock.withLock { () -> NIODeadline? in
+                var moreImmediateTasksToConsider = !self._immediateTasks.isEmpty
+                var moreScheduledTasksToConsider = !self._scheduledTasks.isEmpty
+                
+                guard moreImmediateTasksToConsider || moreScheduledTasksToConsider else {
+                    // We will not continue to loop here. We need to be woken if a new task is enqueued.
+                    self._pendingTaskPop = false
+                    
+                    // Reset nextReadyDeadline to nil which means we will do a blocking select.
+                    return nil
+                }
+                
+                // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
+                let now: NIODeadline = .now()
+                var nextScheduledTaskDeadline = now
+
+                while self.tasksCopy.count < self.tasksCopy.capacity &&
+                        (moreImmediateTasksToConsider || moreScheduledTasksToConsider) {
+                    // We pick one item from self._immediateTasks & self._scheduledTask per iteration of the loop.
+                    // This prevents one task queue starving the other.
+                    if moreImmediateTasksToConsider, let task = self._immediateTasks.popFirst() {
+                        self.tasksCopy.append(task)
+                    } else {
+                        moreImmediateTasksToConsider = false
+                    }
+                    
+                    if moreScheduledTasksToConsider, let task = self._scheduledTasks.peek() {
+                        if task.readyTime.readyIn(now) <= .nanoseconds(0) {
+                            self._scheduledTasks.pop()
+                            self.tasksCopy.append(.function(task.task))
+                        } else {
+                            nextScheduledTaskDeadline = task.readyTime
+                            moreScheduledTasksToConsider = false
+                        }
+                    } else {
+                        moreScheduledTasksToConsider = false
+                    }
+                }
+        
+                if self.tasksCopy.isEmpty {
+                    // Rare, but it's possible to find no tasks to execute if all scheduled tasks are expiring in the future.
+                    self._pendingTaskPop = false
+                }
+                
+                // nextScheduledTaskDeadline is the overall next deadline, but iff there are no more immediate tasks left.
+                return moreImmediateTasksToConsider ? now : nextScheduledTaskDeadline
+            }
+            
+            // all pending tasks are set to occur in the future, so we can stop looping.
+            if self.tasksCopy.isEmpty {
+                return nextReadyDeadline
+            }
+
+            // Execute all the tasks that were submitted
+            for task in self.tasksCopy {
+                run(task)
+            }
+            // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
+            self.tasksCopy.removeAll(keepingCapacity: true)
+        }
+    }
 
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
     internal func run() throws {
@@ -530,53 +596,7 @@ Further information:
                     }
                 }
             }
-
-            // We need to ensure we process all tasks, even if a task added another task again
-            while true {
-                // TODO: Better locking
-                self._tasksLock.withLock { () -> Void in
-                    if !self._immediateTasks.isEmpty {
-                        while self.tasksCopy.count < self.tasksCopy.capacity, let task = self._immediateTasks.popFirst() {
-                            self.tasksCopy.append(task)
-                        }
-                    } else
-                    if !self._scheduledTasks.isEmpty {
-                        // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
-                        let now: NIODeadline = .now()
-
-                        // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                        while self.tasksCopy.count < self.tasksCopy.capacity, let task = self._scheduledTasks.peek() {
-                            if task.readyTime.readyIn(now) <= .nanoseconds(0) {
-                                self._scheduledTasks.pop()
-                                self.tasksCopy.append(.function(task.task))
-                            } else {
-                                nextReadyDeadline = task.readyTime
-                                break
-                            }
-                        }
-                    } else {
-                        // Reset nextreadyDeadline to nil which means we will do a blocking select.
-                        nextReadyDeadline = nil
-                    }
-
-                    if self.tasksCopy.isEmpty {
-                        // We will not continue to loop here. We need to be woken if a new task is enqueued.
-                        self._pendingTaskPop = false
-                    }
-                }
-
-                // all pending tasks are set to occur in the future, so we can stop looping.
-                if self.tasksCopy.isEmpty {
-                    break
-                }
-
-                // Execute all the tasks that were submitted
-                for task in self.tasksCopy {
-                    run(task)
-                }
-                // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
-                self.tasksCopy.removeAll(keepingCapacity: true)
-            }
+            nextReadyDeadline = runLoop()
         }
 
         // This EventLoop was closed so also close the underlying selector.

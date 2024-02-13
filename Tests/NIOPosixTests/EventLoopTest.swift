@@ -1660,6 +1660,34 @@ public final class EventLoopTest : XCTestCase {
             XCTAssert(error is DummyError)
         }
     }
+    
+    // Test for possible starvation discussed here: https://github.com/apple/swift-nio/pull/2645#discussion_r1486747118
+    func testNonStarvation() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let eventLoop = group.next()
+        var stop = false  // no additional synchronisation needed, since only one thread is used
+        var reExecuteTask: (() -> Void)!
+        reExecuteTask = {
+            if !stop {
+                eventLoop.execute(reExecuteTask)
+            }
+        }
+        eventLoop.execute {
+            // SelectableEventLoop runs batches of up to 4096.
+            // Submit significantly over that for good measure.
+            (0..<10000).forEach { _ in
+                eventLoop.execute(reExecuteTask)
+            }
+        }
+        let stopTask = eventLoop.scheduleTask(in: .microseconds(10)) {
+            stop = true
+        }
+        try stopTask.futureResult.wait()
+    }
 }
 
 fileprivate class EventLoopWithPreSucceededFuture: EventLoop {
