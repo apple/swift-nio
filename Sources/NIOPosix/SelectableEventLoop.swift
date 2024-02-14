@@ -80,8 +80,9 @@ internal final class SelectableEventLoop: EventLoop {
     @usableFromInline
     internal var _immediateTasks = CircularBuffer<UnderlyingTask>()
 
-    // We only need the ScheduledTask's task closure. However, an `Array<() -> Void>` allocates
-    // for every appended closure. https://bugs.swift.org/browse/SR-15872
+    // Historical note: an `Array<() -> Void>` allocates for every appended closure. https://bugs.swift.org/browse/SR-15872
+    // we're now appending an enum type, one member of which is such closure. We're
+    // therefore side stepping the issue. It may become relevant again if we reorganised the code.
     private var tasksCopy = ContiguousArray<UnderlyingTask>()
     @usableFromInline
     internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
