@@ -575,7 +575,7 @@ Further information:
 
             // Execute all the tasks that were submitted
             for task in self.tasksCopy {
-                run(task)
+                self.run(task)
             }
             // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
             self.tasksCopy.removeAll(keepingCapacity: true)
