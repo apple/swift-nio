@@ -35,7 +35,7 @@ final class ChannelPipelineBenchmark: Benchmark {
         self.runCount = runCount
     }
 
-    func setUp() throws {
+    func setUp(runs: Int) throws {
         for _ in 0..<self.extraHandlers {
             let handler = NoOpHandler()
             self.handlers.append(handler)

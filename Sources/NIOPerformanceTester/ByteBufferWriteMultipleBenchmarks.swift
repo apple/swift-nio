@@ -24,7 +24,7 @@ final class ByteBufferReadWriteMultipleIntegersBenchmark<I: FixedWidthInteger>: 
         self.numberOfInts = numberOfInts
     }
 
-    func setUp() throws {
+    func setUp(runs: Int) throws {
         self.buffer.reserveCapacity(self.numberOfInts * MemoryLayout<I>.size)
     }
 
@@ -55,7 +55,7 @@ final class ByteBufferMultiReadWriteTenIntegersBenchmark<I: FixedWidthInteger>: 
         self.iterations = iterations
     }
 
-    func setUp() throws {
+    func setUp(runs: Int) throws {
         self.buffer.reserveCapacity(10 * MemoryLayout<I>.size)
     }
 

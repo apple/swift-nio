@@ -25,7 +25,7 @@ final class ByteToMessageDecoderDecodeManySmallsBenchmark: Benchmark {
         self.channel = EmbeddedChannel(handler: ByteToMessageHandler(Decoder()))
     }
 
-    func setUp() throws {
+    func setUp(runs: Int) throws {
         try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait()
     }
 

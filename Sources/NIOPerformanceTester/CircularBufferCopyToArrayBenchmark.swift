@@ -25,7 +25,7 @@ final class CircularBufferViewCopyToArrayBenchmark: Benchmark {
         self.buffer = CircularBuffer()
     }
 
-    func setUp() throws {
+    func setUp(runs: Int) throws {
         self.buffer = CircularBuffer(repeating: UInt8(0xfe), count: self.size)
     }
 

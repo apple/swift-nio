@@ -33,7 +33,7 @@ assert({
     return true
     }())
 
-public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
+public func measure(runs: Int, _ fn: () throws -> Int) rethrows -> [Double] {
     func measureOne(_ fn: () throws -> Int) rethrows -> Double {
         let start = DispatchTime.now().uptimeNanoseconds
         _ = try fn()
@@ -41,9 +41,12 @@ public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
         return Double(end - start) / Double(TimeAmount.seconds(1).nanoseconds)
     }
 
+    guard runs > 1 else {
+        return []
+    }
     _ = try measureOne(fn) /* pre-heat and throw away */
-    var measurements = Array(repeating: 0.0, count: 10)
-    for i in 0..<10 {
+    var measurements = Array(repeating: 0.0, count: runs-1)
+    for i in 0..<runs-1 {
         measurements[i] = try measureOne(fn)
     }
 
@@ -52,10 +55,10 @@ public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
 
 let limitSet = CommandLine.arguments.dropFirst()
 
-public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void {
+public func measureAndPrint(desc: String, runs: Int = 11, fn: () throws -> Int) rethrows -> Void {
     if limitSet.isEmpty || limitSet.contains(desc) {
         print("measuring\(warning): \(desc): ", terminator: "")
-        let measurements = try measure(fn)
+        let measurements = try measure(runs: runs, fn)
         print(measurements.reduce(into: "") { $0.append("\($1), ") })
     } else {
         print("skipping '\(desc)', limit set = \(limitSet)")
@@ -63,7 +66,7 @@ public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
+public func measure(runs: Int, _ fn: () async throws -> Int) async rethrows -> [Double] {
     func measureOne(_ fn: () async throws -> Int) async rethrows -> Double {
         let start = DispatchTime.now().uptimeNanoseconds
         _ = try await fn()
@@ -71,9 +74,12 @@ public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
         return Double(end - start) / Double(TimeAmount.seconds(1).nanoseconds)
     }
 
+    guard runs > 1 else {
+        return []
+    }
     _ = try await measureOne(fn) /* pre-heat and throw away */
-    var measurements = Array(repeating: 0.0, count: 10)
-    for i in 0..<10 {
+    var measurements = Array(repeating: 0.0, count: runs-1)
+    for i in 0..<runs-1 {
         measurements[i] = try await measureOne(fn)
     }
 
@@ -81,10 +87,10 @@ public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public func measureAndPrint(desc: String, fn: () async throws -> Int) async rethrows -> Void {
+public func measureAndPrint(desc: String, runs: Int, fn: () async throws -> Int) async rethrows -> Void {
     if limitSet.isEmpty || limitSet.contains(desc) {
         print("measuring\(warning): \(desc): ", terminator: "")
-        let measurements = try await measure(fn)
+        let measurements = try await measure(runs: runs, fn)
         print(measurements.reduce(into: "") { $0.append("\($1), ") })
     } else {
         print("skipping '\(desc)', limit set = \(limitSet)")

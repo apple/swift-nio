@@ -30,7 +30,7 @@ final class NIOAsyncSequenceProducerBenchmark: AsyncBenchmark, NIOAsyncSequenceP
         self.iterations = iterations
     }
 
-    func setUp() async throws {
+    func setUp(runs: Int) async throws {
         let producer = SequenceProducer.makeSequence(
             backPressureStrategy: .init(lowWatermark: 100, highWatermark: 500),
             finishOnDeinit: false,

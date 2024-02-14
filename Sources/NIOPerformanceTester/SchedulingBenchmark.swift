@@ -18,36 +18,44 @@ import NIOPosix
 
 final class SchedulingBenchmark: Benchmark {
     private var group: MultiThreadedEventLoopGroup!
-    private var loop: EventLoop!
+    private var loops: EventLoopIterator!
     private let numTasks: Int
 
     init(numTasks: Int) {
         self.numTasks = numTasks
     }
 
-    func setUp() throws {
-        group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        loop = group.next()
-
-        // We are preheating the EL to avoid growing the `ScheduledTask` `PriorityQueue`
-        // during the actual test
-        try! self.loop.submit {
-            var counter: Int = 0
-            for _ in 0..<self.numTasks {
-                self.loop.scheduleTask(in: .nanoseconds(0)) {
-                    counter &+= 1
+    func setUp(runs: Int) throws {
+        // The test schedules tasks for ~far future (and doesn't drain them). We therefore need
+        // to have fresh loop for each performance run.
+        //
+        // We are preheating the ELG, sized to the expected # of perf runs. The preheating is
+        // designed to avoid growing the `ScheduledTask` `PriorityQueue` during the actual test.
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: runs)
+        self.group.makeIterator().forEach { loop in
+            let loop = group.next()
+            try! loop.submit {
+                var counter: Int = 0
+                for _ in 0..<self.numTasks {
+                    loop.scheduleTask(in: .nanoseconds(0)) {
+                        counter &+= 1
+                    }
                 }
-            }
-        }.wait()
+            }.wait()
+        }
+        self.loops = self.group.makeIterator()
     }
 
     func tearDown() { }
 
     func run() -> Int {
-        let counter = try! self.loop.submit { () -> Int in
+        guard let loop = self.loops.next() else {
+            fatalError("Test harness run the benchmark more times than it promised in `setUp()`")
+        }
+        let counter = try! loop.submit { () -> Int in
             var counter: Int = 0
             for _ in 0..<self.numTasks {
-                self.loop.scheduleTask(in: .hours(1)) {
+                loop.scheduleTask(in: .hours(1)) {
                     counter &+= 1
                 }
             }

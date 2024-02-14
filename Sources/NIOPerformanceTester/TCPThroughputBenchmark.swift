@@ -103,7 +103,7 @@ final class TCPThroughputBenchmark: Benchmark {
         self.messageSize = messageSize
     }
 
-    func setUp() throws {
+    func setUp(runs: Int) throws {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 4)
 
         let connectionEstablished: EventLoopPromise<EventLoop> = self.group.next().makePromise()

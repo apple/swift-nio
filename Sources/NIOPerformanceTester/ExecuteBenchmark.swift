@@ -27,7 +27,7 @@ final class ExecuteBenchmark: Benchmark {
         self.numTasks = numTasks
     }
 
-    func setUp() throws {
+    func setUp(runs: Int) throws {
         group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         loop = group.next()
         dg = DispatchGroup()

@@ -15,39 +15,39 @@
 import Dispatch
 
 protocol Benchmark: AnyObject {
-    func setUp() throws
+    func setUp(runs: Int) throws
     func tearDown()
     func run() throws -> Int
 }
 
-func measureAndPrint<B: Benchmark>(desc: String, benchmark bench: B) throws {
-    try bench.setUp()
+func measureAndPrint<B: Benchmark>(desc: String, runs: Int = 11, benchmark bench: B) throws {
+    try bench.setUp(runs: runs)
     defer {
         bench.tearDown()
     }
-    try measureAndPrint(desc: desc) {
+    try measureAndPrint(desc: desc, runs: runs) {
         return try bench.run()
     }
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 protocol AsyncBenchmark: AnyObject, Sendable {
-    func setUp() async throws
+    func setUp(runs: Int) async throws
     func tearDown()
     func run() async throws -> Int
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-func measureAndPrint<B: AsyncBenchmark>(desc: String, benchmark bench: B) throws {
+func measureAndPrint<B: AsyncBenchmark>(desc: String, runs: Int = 11, benchmark bench: B) throws {
     let group = DispatchGroup()
     group.enter()
     Task {
         do {
-            try await bench.setUp()
+            try await bench.setUp(runs: runs)
             defer {
                 bench.tearDown()
             }
-            try await measureAndPrint(desc: desc) {
+            try await measureAndPrint(desc: desc, runs: runs) {
                 return try await bench.run()
             }
         }
