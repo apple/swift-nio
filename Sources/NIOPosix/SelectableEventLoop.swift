@@ -84,6 +84,8 @@ internal final class SelectableEventLoop: EventLoop {
     // we're now appending an enum type, one member of which is such closure. We're
     // therefore side stepping the issue. It may become relevant again if we reorganised the code.
     private var tasksCopy = ContiguousArray<UnderlyingTask>()
+    static private let taskCopyBatchSize = 4096
+
     @usableFromInline
     internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
         didSet {
@@ -186,7 +188,7 @@ Further information:
         self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
         self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
         // We will process 4096 tasks per while loop.
-        self.tasksCopy.reserveCapacity(4096)
+        self.tasksCopy.reserveCapacity(Self.taskCopyBatchSize)
         self.canBeShutdownIndividually = canBeShutdownIndividually
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
         // note: We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
@@ -466,7 +468,7 @@ Further information:
                 let now: NIODeadline = .now()
                 var nextScheduledTaskDeadline = now
 
-                while self.tasksCopy.count < self.tasksCopy.capacity &&
+                while self.tasksCopy.count < Self.taskCopyBatchSize &&
                         (moreImmediateTasksToConsider || moreScheduledTasksToConsider) {
                     // We pick one item from self._immediateTasks & self._scheduledTask per iteration of the loop.
                     // This prevents one task queue starving the other.
