@@ -190,7 +190,7 @@ public struct NIOClientTCPBootstrap {
     ///
     /// - parameters:
     ///     - handler: A closure that initializes the provided `Channel`.
-    public func channelInitializer(_ handler: @escaping (Channel) -> EventLoopFuture<Void>) -> NIOClientTCPBootstrap {
+    public func channelInitializer(_ handler: @escaping @Sendable (Channel) -> EventLoopFuture<Void>) -> NIOClientTCPBootstrap {
         return NIOClientTCPBootstrap(self.underlyingBootstrap.channelInitializer(handler),
                                      tlsEnabler: self.tlsEnablerTypeErased)
     }
