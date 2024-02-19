@@ -1458,6 +1458,10 @@ public final class ChannelHandlerContext: ChannelInvoker {
     public var eventLoop: EventLoop {
         return self.pipeline.eventLoop
     }
+    
+    public var currentEventLoop: CurrentEventLoop {
+        self.pipeline.eventLoop.iKnowIAmOnThisEventLoop()
+    }
 
     public let name: String
     private let inboundHandler: _ChannelInboundHandler?
