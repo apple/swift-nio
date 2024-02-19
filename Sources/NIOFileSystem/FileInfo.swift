@@ -73,8 +73,8 @@ public struct FileInfo: Hashable, Sendable {
     /// Creates a ``FileInfo`` by deriving values from a platform-specific value.
     public init(platformSpecificStatus: CInterop.Stat) {
         self._platformSpecificStatus = Stat(platformSpecificStatus)
-        self.type = FileType(platformSpecificMode: platformSpecificStatus.st_mode)
-        self.permissions = FilePermissions(masking: platformSpecificStatus.st_mode)
+        self.type = FileType(platformSpecificMode: CInterop.Mode(platformSpecificStatus.st_mode))
+        self.permissions = FilePermissions(masking: CInterop.Mode(platformSpecificStatus.st_mode))
         self.size = Int64(platformSpecificStatus.st_size)
         self.userID = UserID(rawValue: platformSpecificStatus.st_uid)
         self.groupID = GroupID(rawValue: platformSpecificStatus.st_gid)

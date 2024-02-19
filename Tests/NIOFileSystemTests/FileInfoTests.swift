@@ -26,7 +26,7 @@ final class FileInfoTests: XCTestCase {
     private var status: CInterop.Stat {
         var status = CInterop.Stat()
         status.st_dev = 1
-        status.st_mode = S_IFREG | 0o777
+        status.st_mode = .init(S_IFREG | 0o777)
         status.st_nlink = 3
         status.st_ino = 4
         status.st_uid = 5
