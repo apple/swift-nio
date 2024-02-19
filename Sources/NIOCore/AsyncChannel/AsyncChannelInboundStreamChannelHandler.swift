@@ -138,14 +138,16 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
             channelReadTransformation(unwrapped)
                 .hop(to: context.eventLoop)
                 .assumeIsolated()
-                .map { result -> ProducerElement in
-                    // We have to fire through the original data now. Since our channelReadTransformation
-                    // is the channel initializer. Once that's done we need to fire the channel as a read
-                    // so that it hits channelRead0 in the base socket channel.
-                    context.fireChannelRead(data)
-                    return result
-                }
                 .whenComplete { result in
+                    switch result {
+                    case .success:
+                        // We have to fire through the original data now. Since our channelReadTransformation
+                        // is the channel initializer. Once that's done we need to fire the channel as a read
+                        // so that it hits channelRead0 in the base socket channel.
+                        context.fireChannelRead(data)
+                    case .failure:
+                        break
+                    }
                     self._transformationCompleted(context: context, result: result)
                 }
         }
