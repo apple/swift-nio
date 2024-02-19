@@ -130,7 +130,19 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func handlerRemoved(context: ChannelHandlerContext) {
         switch self.stateMachine.handlerRemoved() {
         case .failUpgradePromise:
-            self.upgradeResultPromise.fail(ChannelError.inappropriateOperationForState)
+            // Make sure the completion handler is called on the failed upgrade path
+            self.notUpgradingCompletionHandler(context.channel)
+                .hop(to: context.eventLoop)
+                .whenComplete { result in
+                    switch result {
+                    case .success(let value):
+                        // Expected upgrade failure without error
+                        self.upgradeResultPromise.succeed(value)
+                    case .failure(let error):
+                        // Unexpected upgrade failure with error
+                        self.upgradeResultPromise.fail(error)
+                    }
+                }
         case .none:
             break
         }
