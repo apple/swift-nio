@@ -736,7 +736,7 @@ extension EventLoop {
     /// - returns: An `EventLoopFuture` identical to the `EventLoopFuture` returned from `task`.
     @inlinable
     @preconcurrency
-    public func flatSubmit<T: Sendable>(_ task: @escaping @Sendable () -> EventLoopFuture<T>) -> EventLoopFuture<T> { // TODO: This should take a closure that returns fresh
+    public func flatSubmit<T: Sendable>(_ task: @escaping @Sendable () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
         self.submit(task).flatMap { $0 }
     }
 

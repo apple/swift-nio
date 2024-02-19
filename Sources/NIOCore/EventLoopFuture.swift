@@ -184,17 +184,6 @@ public struct EventLoopPromise<Value> {
         self._resolve(value: .success(value))
     }
 
-    /// Deliver a successful result to the associated `EventLoopFuture<Value>` object.
-    ///
-    /// - Note: The call to this method must happen on the same event loop as this promise was created from.
-    ///
-    /// - parameters:
-    ///     - eventLoopBoundValue: The successful result of the operation.
-    @inlinable
-    public func succeed(eventLoopBoundValue: Value) {
-        self._resolve(eventLoopBoundResult: .success(eventLoopBoundValue))
-    }
-
     /// Deliver an error to the associated `EventLoopFuture<Value>` object.
     ///
     /// - parameters:
@@ -247,27 +236,6 @@ public struct EventLoopPromise<Value> {
         self._resolve(value: result)
     }
 
-    /// Complete the promise with the passed in `Result<Value, Error>`.
-    ///
-    /// This method is equivalent to invoking:
-    /// ```
-    /// switch result {
-    /// case .success(let value):
-    ///     promise.succeed(value)
-    /// case .failure(let error):
-    ///     promise.fail(error)
-    /// }
-    /// ```
-    ///
-    /// - Note: The call to this method must happen on the same event loop as this promise was created from.
-    ///
-    /// - parameters:
-    ///     - result: The result which will be used to succeed or fail this promise.
-    @inlinable
-    public func completeWith(eventLoopBoundResult: Result<Value, Error>) {
-        self._resolve(eventLoopBoundResult: eventLoopBoundResult)
-    }
-
     /// Fire the associated `EventLoopFuture` on the appropriate event loop.
     ///
     /// This method provides the primary difference between the `EventLoopPromise` and most
@@ -285,23 +253,6 @@ public struct EventLoopPromise<Value> {
                 self._setValue(value: value)._run()
             }
         }
-    }
-
-    /// Fire the associated `EventLoopFuture` on the appropriate event loop.
-    ///
-    /// This method provides the primary difference between the `EventLoopPromise` and most
-    /// other `Promise` implementations: specifically, all callbacks fire on the `EventLoop`
-    /// that was used to create the promise.
-    ///
-    /// - Note: The call to this method must happen on the same event loop as this promise was created from.
-    ///
-    /// - parameters:
-    ///     - value: The value to fire the future with.
-    @inlinable
-    internal func _resolve(eventLoopBoundResult: Result<Value, Error>) {
-        self.futureResult.eventLoop.assertInEventLoop()
-
-        self._setValue(value: eventLoopBoundResult)._run()
     }
 
     /// Set the future result and get the associated callbacks.
@@ -1435,17 +1386,17 @@ extension EventLoopFuture {
                     processResult(index, .success(()))
                 case .failure(let error):
                     processResult(index, .failure(error))
-                }
-                if case .failure = result {
-                    return  // Once the promise is failed, future results do not need to be processed.
+                    return
                 }
             } else {
                 // We have to map to `Void` here to avoid sharing the potentially non-Sendable
                 // value across event loops.
-                future
-                    .map { _ in () }
-                    .hop(to: eventLoop)
-                    .whenComplete { result in processResult(index, result) }
+                future.whenComplete { result in
+                    let voidResult = result.map { _ in }
+                    future.eventLoop.execute {
+                        processResult(index, voidResult)
+                    }
+                }
             }
         }
     }
@@ -1661,10 +1612,12 @@ extension EventLoopFuture {
             } else {
                 // We have to map to `Void` here to avoid sharing the potentially non-Sendable
                 // value across event loops.
-                future
-                    .map { _ in () }
-                    .hop(to: eventLoop)
-                    .whenComplete { result in processResult(index, result) }
+                future.whenComplete { result in
+                    let voidResult = result.map { _ in }
+                    future.eventLoop.execute {
+                        processResult(index, voidResult)
+                    }
+                }
             }
         }
     }
