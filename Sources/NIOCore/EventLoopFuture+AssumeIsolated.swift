@@ -15,7 +15,7 @@
 /// A struct wrapping an ``EventLoop`` that ensures all calls to any method on this struct
 /// are coming from the event loop.
 @usableFromInline
-struct AssumeIsolatedEventLoop: Sendable {
+struct AssumeIsolatedEventLoop {
     @usableFromInline
     let wrapped: EventLoop
 
@@ -116,6 +116,12 @@ struct AssumeIsolatedEventLoop: Sendable {
             try unsafeTransfer.wrappedValue()
         }
     }
+
+    /// Returns the wrapped event loop.
+    @inlinable
+    func nonisolated() -> any EventLoop {
+        return self.wrapped
+    }
 }
 extension EventLoop {
     /// Assumes the calling context is isolated to the event loop.
@@ -129,7 +135,7 @@ extension EventLoopFuture {
     /// A struct wrapping an ``EventLoopFuture`` that ensures all calls to any method on this struct
     /// are coming from the event loop of the future.
     @usableFromInline
-    struct AssumeIsolated: @unchecked Sendable {
+    struct AssumeIsolated {
         @usableFromInline
         let wrapped: EventLoopFuture<Value>
 
@@ -163,12 +169,12 @@ extension EventLoopFuture {
         @inlinable
         func flatMap<NewValue: Sendable>(
             _ callback: @escaping (Value) -> EventLoopFuture<NewValue>
-        ) -> EventLoopFuture<NewValue> {
+        ) -> EventLoopFuture<NewValue>.AssumeIsolated {
             self.wrapped.eventLoop.assertInEventLoop()
             let unsafeTransfer = UnsafeTransfer(callback)
             return wrapped.flatMap {
                 unsafeTransfer.wrappedValue($0)
-            }
+            }.assumeIsolated()
         }
 
         /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
@@ -188,12 +194,12 @@ extension EventLoopFuture {
         @inlinable
         func flatMapThrowing<NewValue>(
             _ callback: @escaping (Value) throws -> NewValue
-        ) -> EventLoopFuture<NewValue> {
+        ) -> EventLoopFuture<NewValue>.AssumeIsolated {
             self.wrapped.eventLoop.assertInEventLoop()
             let unsafeTransfer = UnsafeTransfer(callback)
             return wrapped.flatMapThrowing {
                 try unsafeTransfer.wrappedValue($0)
-            }
+            }.assumeIsolated()
         }
 
         /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
@@ -213,12 +219,12 @@ extension EventLoopFuture {
         @inlinable
         func flatMapErrorThrowing(
             _ callback: @escaping (Error) throws -> Value
-        ) -> EventLoopFuture<Value> {
+        ) -> EventLoopFuture<Value>.AssumeIsolated {
             self.wrapped.eventLoop.assertInEventLoop()
             let unsafeTransfer = UnsafeTransfer(callback)
             return wrapped.flatMapErrorThrowing {
                 try unsafeTransfer.wrappedValue($0)
-            }
+            }.assumeIsolated()
         }
 
         /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
@@ -250,12 +256,12 @@ extension EventLoopFuture {
         @inlinable
         func map<NewValue>(
             _ callback: @escaping (Value) -> (NewValue)
-        ) -> EventLoopFuture<NewValue> {
+        ) -> EventLoopFuture<NewValue>.AssumeIsolated {
             self.wrapped.eventLoop.assertInEventLoop()
             let unsafeTransfer = UnsafeTransfer(callback)
             return wrapped.map {
                 unsafeTransfer.wrappedValue($0)
-            }
+            }.assumeIsolated()
         }
 
         /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
@@ -275,12 +281,12 @@ extension EventLoopFuture {
         @inlinable
         func flatMapError(
             _ callback: @escaping (Error) -> EventLoopFuture<Value>
-        ) -> EventLoopFuture<Value> where Value: Sendable {
+        ) -> EventLoopFuture<Value>.AssumeIsolated where Value: Sendable {
             self.wrapped.eventLoop.assertInEventLoop()
             let unsafeTransfer = UnsafeTransfer(callback)
             return wrapped.flatMapError {
                 unsafeTransfer.wrappedValue($0)
-            }
+            }.assumeIsolated()
         }
 
         /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
@@ -299,12 +305,12 @@ extension EventLoopFuture {
         @inlinable
         func flatMapResult<NewValue, SomeError: Error>(
             _ body: @escaping (Value) -> Result<NewValue, SomeError>
-        ) -> EventLoopFuture<NewValue> {
+        ) -> EventLoopFuture<NewValue>.AssumeIsolated {
             self.wrapped.eventLoop.assertInEventLoop()
             let unsafeTransfer = UnsafeTransfer(body)
             return wrapped.flatMapResult {
                 unsafeTransfer.wrappedValue($0)
-            }
+            }.assumeIsolated()
         }
 
         /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
@@ -322,12 +328,12 @@ extension EventLoopFuture {
         @inlinable
         func recover(
             _ callback: @escaping (Error) -> Value
-        ) -> EventLoopFuture<Value> {
+        ) -> EventLoopFuture<Value>.AssumeIsolated {
             self.wrapped.eventLoop.assertInEventLoop()
             let unsafeTransfer = UnsafeTransfer(callback)
             return wrapped.recover {
                 unsafeTransfer.wrappedValue($0)
-            }
+            }.assumeIsolated()
         }
 
         /// Adds an observer callback to this `EventLoopFuture` that is called when the
@@ -415,7 +421,7 @@ extension EventLoopFuture {
         @inlinable
         func unwrap<NewValue>(
             orReplace replacement: NewValue
-        ) -> EventLoopFuture<NewValue> where Value == Optional<NewValue> {
+        ) -> EventLoopFuture<NewValue>.AssumeIsolated where Value == Optional<NewValue> {
             return self.map { (value) -> NewValue in
                 guard let value = value else {
                     return replacement
@@ -441,13 +447,19 @@ extension EventLoopFuture {
         @inlinable
         func unwrap<NewValue>(
             orElse callback: @escaping () -> NewValue
-        ) -> EventLoopFuture<NewValue> where Value == Optional<NewValue> {
+        ) -> EventLoopFuture<NewValue>.AssumeIsolated where Value == Optional<NewValue> {
             return self.map { (value) -> NewValue in
                 guard let value = value else {
                     return callback()
                 }
                 return value
             }
+        }
+
+        /// Returns the wrapped event loop future.
+        @inlinable
+        func nonisolated() -> EventLoopFuture<Value> {
+            return self.wrapped
         }
     }
 
@@ -464,7 +476,7 @@ extension EventLoopPromise {
     /// A struct wrapping an ``EventLoopPromise`` that ensures all calls to any method on this struct
     /// are coming from the event loop of the promise.
     @usableFromInline
-    struct AssumeIsolated: @unchecked Sendable {
+    struct AssumeIsolated {
         @usableFromInline
         let wrapped: EventLoopPromise<Value>
 
@@ -497,6 +509,12 @@ extension EventLoopPromise {
         func completeWith(_ result: Result<Value, Error>) {
             self.wrapped.futureResult.eventLoop.assertInEventLoop()
             self.wrapped._setValue(value: result)._run()
+        }
+
+        /// Returns the wrapped event loop promise.
+        @inlinable
+        func nonisolated() -> EventLoopPromise<Value> {
+            return self.wrapped
         }
     }
 

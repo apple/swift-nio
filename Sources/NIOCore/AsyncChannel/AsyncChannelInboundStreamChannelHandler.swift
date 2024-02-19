@@ -145,7 +145,6 @@ internal final class NIOAsyncChannelInboundStreamChannelHandler<InboundIn: Senda
                     context.fireChannelRead(data)
                     return result
                 }
-                .assumeIsolated()
                 .whenComplete { result in
                     self._transformationCompleted(context: context, result: result)
                 }
