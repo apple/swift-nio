@@ -562,6 +562,11 @@ final class FileSystemTests: XCTestCase {
     func testCopyLargeFile() async throws {
         let sourcePath = try await self.fs.temporaryFilePath()
         let destPath = try await self.fs.temporaryFilePath()
+        self.addTeardownBlock {
+            _ = try? await self.fs.removeItem(at: sourcePath)
+            _ = try? await self.fs.removeItem(at: destPath)
+        }
+
         let sourceInfo = try await self.fs.withFileHandle(
             forWritingAt: sourcePath,
             options: .newFile(replaceExisting: false)
