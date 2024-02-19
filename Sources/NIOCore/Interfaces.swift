@@ -64,7 +64,7 @@ private extension ifaddrs {
 
 /// A representation of a single network interface on a system.
 @available(*, deprecated, renamed: "NIONetworkDevice")
-public final class NIONetworkInterface {
+public final class NIONetworkInterface: Sendable {
     // This is a class because in almost all cases this will carry
     // four structs that are backed by classes, and so will incur 4
     // refcount operations each time it is copied.
