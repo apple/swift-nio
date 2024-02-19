@@ -92,7 +92,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     }
 
     private func scheduleRead(at: NIODeadline, context: ChannelHandlerContext) {
-        self.scheduledRead = context.eventLoop.scheduleTask(deadline: at) {
+        self.scheduledRead = context.eventLoop.assumeIsolated().scheduleTask(deadline: at) {
             self.doRead(context)
         }
     }
@@ -232,7 +232,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
         }
 
         let writePromise = promise ?? context.eventLoop.makePromise()
-        writePromise.futureResult.whenComplete { (_: Result<Void, Error>) in
+        writePromise.futureResult.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
             self.lastWriteCompleteTime = .now()
         }
         context.write(data, promise: writePromise)
@@ -252,19 +252,19 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
             }
 
             if self.reading {
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeReadTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(in: timeout, self.makeReadTimeoutTask(context, timeout))
                 return
             }
 
             let diff = .now() - self.lastReadTime
             if diff >= timeout {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeReadTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(in: timeout, self.makeReadTimeoutTask(context, timeout))
 
                 context.fireUserInboundEventTriggered(IdleStateEvent.read)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(deadline: self.lastReadTime + timeout, self.makeReadTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(deadline: self.lastReadTime + timeout, self.makeReadTimeoutTask(context, timeout))
             }
         }
     }
@@ -280,12 +280,12 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
 
             if diff >= timeout {
                 // Writer is idle - set a new timeout and notify the callback.
-                self.scheduledWriterTask = context.eventLoop.scheduleTask(in: timeout, self.makeWriteTimeoutTask(context, timeout))
+                self.scheduledWriterTask = context.eventLoop.assumeIsolated().scheduleTask(in: timeout, self.makeWriteTimeoutTask(context, timeout))
 
                 context.fireUserInboundEventTriggered(IdleStateEvent.write)
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledWriterTask = context.eventLoop.scheduleTask(deadline: self.lastWriteCompleteTime + timeout, self.makeWriteTimeoutTask(context, timeout))
+                self.scheduledWriterTask = context.eventLoop.assumeIsolated().scheduleTask(deadline: self.lastWriteCompleteTime + timeout, self.makeWriteTimeoutTask(context, timeout))
             }
         }
     }
@@ -297,7 +297,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
             }
 
             if self.reading {
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
                 return
             }
             let lastRead = self.lastReadTime
@@ -307,19 +307,19 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
             let diff = .now() - latestLast
             if diff >= timeout {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
 
                 context.fireUserInboundEventTriggered(IdleStateEvent.all)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(deadline: latestLast + timeout, self.makeAllTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(deadline: latestLast + timeout, self.makeAllTimeoutTask(context, timeout))
             }
         }
     }
 
     private func schedule(_ context: ChannelHandlerContext, _ amount: TimeAmount?, _ body: @escaping (ChannelHandlerContext, TimeAmount) -> (() -> Void) ) -> Scheduled<Void>? {
         if let timeout = amount {
-            return context.eventLoop.scheduleTask(in: timeout, body(context, timeout))
+            return context.eventLoop.assumeIsolated().scheduleTask(in: timeout, body(context, timeout))
         }
         return nil
     }
