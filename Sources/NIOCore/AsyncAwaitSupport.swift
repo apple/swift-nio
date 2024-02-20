@@ -161,14 +161,16 @@ extension ChannelOutboundInvoker {
 
 extension ChannelPipeline {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func addHandler(_ handler: ChannelHandler,
+    @preconcurrency
+    public func addHandler(_ handler: ChannelHandler & Sendable,
                            name: String? = nil,
                            position: ChannelPipeline.Position = .last) async throws {
         try await self.addHandler(handler, name: name, position: position).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func removeHandler(_ handler: RemovableChannelHandler) async throws {
+    @preconcurrency
+    public func removeHandler(_ handler: RemovableChannelHandler & Sendable) async throws {
         try await self.removeHandler(handler).get()
     }
 
@@ -184,31 +186,34 @@ extension ChannelPipeline {
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
-    public func context(handler: ChannelHandler) async throws -> ChannelHandlerContext {
-        return try await self.context(handler: handler).get()
+    @preconcurrency
+    public func context(handler: ChannelHandler & Sendable) async throws -> ChannelHandlerContext {
+        return try await self.context(handler: handler).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     public func context(name: String) async throws -> ChannelHandlerContext {
-        return try await self.context(name: name).get()
+        return try await self.context(name: name).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
     @inlinable
     public func context<Handler: ChannelHandler>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
-        return try await self.context(handlerType: handlerType).get()
+        return try await self.context(handlerType: handlerType).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func addHandlers(_ handlers: [ChannelHandler],
+    @preconcurrency
+    public func addHandlers(_ handlers: [ChannelHandler & Sendable],
                             position: ChannelPipeline.Position = .last) async throws {
-        try await self.addHandlers(handlers, position: position).get()
+        try await self.addHandlers(handlers, position: position).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func addHandlers(_ handlers: ChannelHandler...,
+    @preconcurrency
+    public func addHandlers(_ handlers: (ChannelHandler & Sendable)...,
                             position: ChannelPipeline.Position = .last) async throws {
         try await self.addHandlers(handlers, position: position)
     }

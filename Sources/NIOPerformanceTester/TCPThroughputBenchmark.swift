@@ -119,8 +119,9 @@ final class TCPThroughputBenchmark: Benchmark {
 
         self.clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHandler(ByteToMessageHandler(StreamDecoder())).flatMap { _ in
-                    channel.pipeline.addHandler(ClientHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(StreamDecoder()))
+                    try channel.pipeline.syncOperations.addHandler(ClientHandler())
                 }
             }
             .connect(to: serverChannel.localAddress!)

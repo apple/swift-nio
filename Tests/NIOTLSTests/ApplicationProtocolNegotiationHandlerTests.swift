@@ -71,7 +71,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return loop.makeSucceededFuture(())
         }
 
-        try emChannel.pipeline.addHandler(handler).wait()
+        try emChannel.pipeline.syncOperations.addHandler(handler)
         emChannel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
         XCTAssertTrue(called)
     }
@@ -85,7 +85,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return loop.makeSucceededFuture(())
         }
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
 
         // Fire a pair of events that should be ignored.
         channel.pipeline.fireUserInboundEventTriggered(EventType.basic)
@@ -110,7 +110,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return continuePromise.futureResult
         }
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
 
         // Fire the handshake complete event.
         channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
@@ -146,7 +146,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return loop.makeSucceededFuture(())
         }
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
 
         // The data we write should not be buffered.
         try channel.writeInbound("hello")
@@ -164,7 +164,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
             continuePromise.futureResult
         }
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
@@ -196,7 +196,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         }
         let readCompleteHandler = ReadCompletedHandler()
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
         try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
@@ -223,7 +223,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         }
         let readCompleteHandler = ReadCompletedHandler()
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
         try channel.pipeline.addHandler(readCompleteHandler).wait()
 
         // Fire in the event.
@@ -253,7 +253,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         }
         let readCompleteHandler = ReadCompletedHandler()
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
         try channel.pipeline.addHandler(DuplicatingReadHandler(embeddedChannel: channel)).wait()
         try channel.pipeline.addHandler(readCompleteHandler).wait()
 
