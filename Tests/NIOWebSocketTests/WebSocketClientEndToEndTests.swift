@@ -49,6 +49,26 @@ extension ChannelPipeline {
     }
 }
 
+private func interactInMemory(_ first: EmbeddedChannel,
+                              _ second: EmbeddedChannel,
+                              eventLoop: EmbeddedEventLoop) throws {
+    var operated: Bool
+
+    repeat {
+        eventLoop.run()
+        operated = false
+
+        if let data = try first.readOutbound(as: ByteBuffer.self) {
+            operated = true
+            try second.writeInbound(data)
+        }
+        if let data = try second.readOutbound(as: ByteBuffer.self) {
+            operated = true
+            try first.writeInbound(data)
+        }
+    } while operated
+}
+
 private func setUpClientChannel(clientHTTPHandler: RemovableChannelHandler,
                                 clientUpgraders: [NIOHTTPClientProtocolUpgrader],
                                 _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void) throws -> EmbeddedChannel {
@@ -591,7 +611,7 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
             requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
                 channel.pipeline.addHandler(handler)
-        })
+            })
 
         // The process should kick-off independently by sending the upgrade request to the server.
         let (clientChannel, upgradeResult) = try setUpClientChannel(
@@ -614,6 +634,81 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         try upgradeResult.wait()
 
         return (clientChannel, handler)
+    }
+
+    func testSimpleUpgradeRejectedWhenServerSendsUpgradeNil() throws {
+
+        enum TestUpgradeResult: Int {
+            case successfulUpgrade
+            case notUpgraded
+        }
+
+        let serverRecorder = WebSocketRecorderHandler()
+        let clientRecorder = WebSocketRecorderHandler()
+        let loop = EmbeddedEventLoop()
+        let serverChannel = EmbeddedChannel(loop: loop)
+        let clientChannel = EmbeddedChannel(loop: loop)
+
+        let serverUpgrader = NIOTypedWebSocketServerUpgrader(
+            shouldUpgrade: { (channel, head) in
+                channel.eventLoop.makeSucceededFuture(nil)
+            },
+            upgradePipelineHandler: { (channel, req) in
+                channel.pipeline.addHandler(serverRecorder)
+            }
+        )
+
+        XCTAssertNoThrow(try serverChannel.pipeline.syncOperations.configureUpgradableHTTPServerPipeline(
+            configuration: .init(
+                upgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<Void>(
+                    upgraders: [serverUpgrader],
+                    notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() }
+                )
+            )
+        ))
+
+        let basicClientUpgrader = NIOTypedWebSocketClientUpgrader<TestUpgradeResult>(
+            upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
+                channel.eventLoop.makeCompletedFuture {
+                    print("s")
+                    return TestUpgradeResult.successfulUpgrade
+                }
+            })
+
+        var headers = HTTPHeaders()
+        headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
+        headers.add(name: "Content-Length", value: "\(0)")
+        let requestHead = HTTPRequestHead(
+            version: .http1_1,
+            method: .GET,
+            uri: "/",
+            headers: headers
+        )
+        let config = NIOTypedHTTPClientUpgradeConfiguration<TestUpgradeResult>(
+            upgradeRequestHead: requestHead,
+            upgraders: [basicClientUpgrader],
+            notUpgradingCompletionHandler: { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    return TestUpgradeResult.notUpgraded
+                }
+            }
+        )
+        let updgradeResult = try clientChannel.pipeline.syncOperations.configureUpgradableHTTPClientPipeline(configuration: .init(upgradeConfiguration: config))
+
+        XCTAssertNoThrow(try interactInMemory(clientChannel, serverChannel, eventLoop: loop))
+        XCTAssertNoThrow(try clientChannel.finish())
+        updgradeResult.whenComplete { result in
+            switch result {
+            case .success(let value):
+                XCTAssertTrue(value == .notUpgraded)
+            case .failure(let error):
+                XCTFail("There should be no failure here \(error)")
+            }
+        }
+        XCTAssertNoThrow(try serverChannel.finishAcceptingAlreadyClosed())
+        XCTAssertEqual(clientRecorder.errors.count, 0)
+        XCTAssertEqual(serverRecorder.errors.count, 0)
+        XCTAssertNoThrow(try loop.syncShutdownGracefully())
     }
 }
 #endif
