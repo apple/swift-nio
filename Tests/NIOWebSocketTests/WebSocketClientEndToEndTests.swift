@@ -670,7 +670,6 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         let basicClientUpgrader = NIOTypedWebSocketClientUpgrader<TestUpgradeResult>(
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
                 channel.eventLoop.makeCompletedFuture {
-                    print("s")
                     return TestUpgradeResult.successfulUpgrade
                 }
             })
