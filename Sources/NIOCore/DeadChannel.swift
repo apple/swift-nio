@@ -75,7 +75,7 @@ private final class DeadChannelCore: ChannelCore {
 /// A `ChannelPipeline` that is associated with a closed `Channel` must be careful to no longer use that original
 /// channel as it only holds an unowned reference to the original `Channel`. `DeadChannel` serves as a replacement
 /// that can be used when the original `Channel` might no longer be valid.
-internal final class DeadChannel: Channel {
+internal final class DeadChannel: Channel, @unchecked Sendable {
     let eventLoop: EventLoop
     let pipeline: ChannelPipeline
 
