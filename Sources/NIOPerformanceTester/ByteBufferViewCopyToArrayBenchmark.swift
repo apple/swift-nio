@@ -25,7 +25,7 @@ final class ByteBufferViewCopyToArrayBenchmark: Benchmark {
         self.view = ByteBufferView()
     }
 
-    func setUp(runs: Int) throws {
+    func setUp() throws {
         self.view = ByteBuffer(repeating: 0xfe, count: self.size).readableBytesView
     }
 

@@ -28,7 +28,7 @@ final class CircularBufferIntoByteBufferBenchmark: Benchmark {
         self.buffer = ByteBufferAllocator().buffer(capacity: self.bufferSize)
     }
 
-    func setUp(runs: Int) throws {
+    func setUp() throws {
         for i in 0..<self.bufferSize {
             self.circularBuffer.append(UInt8(i % 256))
         }

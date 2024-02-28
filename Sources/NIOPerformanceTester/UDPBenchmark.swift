@@ -39,7 +39,7 @@ final class UDPBenchmark {
 }
 
 extension UDPBenchmark: Benchmark {
-    func setUp(runs: Int) throws {
+    func setUp() throws {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
         let address = try SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0)

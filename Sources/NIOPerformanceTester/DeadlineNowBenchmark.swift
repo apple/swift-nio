@@ -21,7 +21,7 @@ final class DeadlineNowBenchmark: Benchmark {
         self.iterations = iterations
     }
 
-    func setUp(runs: Int) throws {
+    func setUp() throws {
     }
 
     func tearDown() {

@@ -63,7 +63,7 @@ extension WebSocketFrameEncoderBenchmark {
 
 
 extension WebSocketFrameEncoderBenchmark: Benchmark {
-    func setUp(runs: Int) throws {
+    func setUp() throws {
         // We want the pipeline walk to have some cost.
         try! self.channel.pipeline.addHandler(WriteConsumingHandler()).wait()
         for _ in 0..<3 {

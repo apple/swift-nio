@@ -26,7 +26,7 @@ final class ByteBufferViewIteratorBenchmark: Benchmark {
         self.buffer = ByteBufferAllocator().buffer(capacity: self.bufferSize)
     }
 
-    func setUp(runs: Int) throws {
+    func setUp() throws {
         self.buffer.writeBytes(Array(repeating: UInt8(ascii: "A"), count: self.bufferSize - 1))
         self.buffer.writeInteger(UInt8(ascii: "B"))
     }

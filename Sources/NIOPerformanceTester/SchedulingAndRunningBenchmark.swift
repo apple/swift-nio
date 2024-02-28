@@ -27,7 +27,7 @@ final class SchedulingAndRunningBenchmark: Benchmark {
         self.numTasks = numTasks
     }
 
-    func setUp(runs: Int) throws {
+    func setUp() throws {
         group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         loop = group.next()
         dg = DispatchGroup()

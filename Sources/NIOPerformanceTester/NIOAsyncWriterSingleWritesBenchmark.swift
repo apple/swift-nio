@@ -43,7 +43,7 @@ final class NIOAsyncWriterSingleWritesBenchmark: AsyncBenchmark, @unchecked Send
         self.sink = newWriter.sink
     }
 
-    func setUp(runs: Int) async throws {}
+    func setUp() async throws {}
     func tearDown() {
         self.writer.finish()
     }

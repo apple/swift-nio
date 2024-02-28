@@ -36,7 +36,7 @@ final class NIOLockBenchmark: Benchmark {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     }
     
-    func setUp(runs: Int) throws {
+    func setUp() throws {
         self.threadPool.start()
     }
     
