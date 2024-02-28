@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import DequeModule
 import Dispatch
 import NIOConcurrencyHelpers
 import NIOCore
@@ -63,7 +64,7 @@ public final class NIOThreadPool {
         /// The `NIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.
         case shuttingDown([Bool])
         /// The `NIOThreadPool` is up and running, the `CircularBuffer` containing the yet unprocessed `WorkItems`.
-        case running(CircularBuffer<WorkItem>)
+        case running(Deque<WorkItem>)
         /// Temporary state used when mutating the .running(items). Used to avoid CoW copies.
         /// It should never be "leaked" outside of the lock block.
         case modifying
@@ -221,7 +222,7 @@ public final class NIOThreadPool {
                 // This should never happen
                 fatalError("start() called while in shuttingDown")
             case .stopped:
-                self.state = .running(CircularBuffer(initialCapacity: 16))
+                self.state = .running(Deque(minimumCapacity: 16))
                 return false
             case .modifying:
                 fatalError(".modifying state misuse")
