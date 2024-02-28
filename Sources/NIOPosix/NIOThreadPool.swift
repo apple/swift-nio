@@ -12,24 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+import DequeModule
 import Dispatch
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 
 /// Errors that may be thrown when executing work on a `NIOThreadPool`
 public enum NIOThreadPoolError {
 
     /// The `NIOThreadPool` was not active.
-    public struct ThreadPoolInactive: Error { 
+    public struct ThreadPoolInactive: Error {
         public init() {}
     }
 
     /// The `NIOThreadPool` operation is unsupported (e.g. shutdown of a perpetual pool).
-    public struct UnsupportedOperation: Error { 
+    public struct UnsupportedOperation: Error {
         public init() {}
     }
 }
-
 
 /// A thread pool that should be used if some (kernel thread) blocking work
 /// needs to be performed for which no non-blocking API exists.
@@ -64,11 +64,14 @@ public final class NIOThreadPool {
         /// The `NIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.
         case shuttingDown([Bool])
         /// The `NIOThreadPool` is up and running, the `CircularBuffer` containing the yet unprocessed `WorkItems`.
-        case running(CircularBuffer<WorkItem>)
+        case running(Deque<WorkItem>)
+        /// Temporary state used when mutating the .running(items). Used to avoid CoW copies.
+        /// It should never be "leaked" outside of the lock block.
+        case modifying
     }
     private let semaphore = DispatchSemaphore(value: 0)
     private let lock = NIOLock()
-    private var threads: [NIOThread]? = nil // protected by `lock`
+    private var threads: [NIOThread]? = nil  // protected by `lock`
     private var state: State = .stopped
     private let numberOfThreads: Int
     private let canBeStopped: Bool
@@ -94,6 +97,7 @@ public final class NIOThreadPool {
         let threadsToJoin = self.lock.withLock { () -> [NIOThread] in
             switch self.state {
             case .running(let items):
+                self.state = .modifying
                 queue.async {
                     items.forEach { $0(.cancelled) }
                 }
@@ -108,6 +112,8 @@ public final class NIOThreadPool {
                 return threads
             case .shuttingDown, .stopped:
                 return []
+            case .modifying:
+                fatalError(".modifying state misuse")
             }
         }
 
@@ -119,8 +125,6 @@ public final class NIOThreadPool {
             callback(nil)
         }
     }
-
-
 
     /// Submit a `WorkItem` to process.
     ///
@@ -137,12 +141,15 @@ public final class NIOThreadPool {
         let item = self.lock.withLock { () -> WorkItem? in
             switch self.state {
             case .running(var items):
+                self.state = .modifying
                 items.append(body)
                 self.state = .running(items)
                 self.semaphore.signal()
                 return nil
             case .shuttingDown, .stopped:
                 return body
+            case .modifying:
+                fatalError(".modifying state misuse")
             }
         }
         /* if item couldn't be added run it immediately indicating that it couldn't be run */
@@ -171,17 +178,17 @@ public final class NIOThreadPool {
         self.canBeStopped = canBeStopped
     }
 
-
     private func process(identifier: Int) {
         var item: WorkItem? = nil
         repeat {
             /* wait until work has become available */
-            item = nil	// ensure previous work item is not retained for duration of semaphore wait
+            item = nil  // ensure previous work item is not retained for duration of semaphore wait
             self.semaphore.wait()
 
             item = self.lock.withLock { () -> (WorkItem)? in
                 switch self.state {
                 case .running(var items):
+                    self.state = .modifying
                     let item = items.removeFirst()
                     self.state = .running(items)
                     return item
@@ -192,6 +199,8 @@ public final class NIOThreadPool {
                     return nil
                 case .stopped:
                     return nil
+                case .modifying:
+                    fatalError(".modifying state misuse")
                 }
             }
             /* if there was a work item popped, run it */
@@ -213,8 +222,10 @@ public final class NIOThreadPool {
                 // This should never happen
                 fatalError("start() called while in shuttingDown")
             case .stopped:
-                self.state = .running(CircularBuffer(initialCapacity: 16))
+                self.state = .running(Deque(minimumCapacity: 16))
                 return false
+            case .modifying:
+                fatalError(".modifying state misuse")
             }
         }
 
@@ -248,8 +259,9 @@ public final class NIOThreadPool {
     }
 
     deinit {
-        assert(self.canBeStopped,
-               "Perpetual NIOThreadPool has been deinited, you must make sure that perpetual pools don't deinit")
+        assert(
+            self.canBeStopped,
+            "Perpetual NIOThreadPool has been deinited, you must make sure that perpetual pools don't deinit")
         switch self.state {
         case .stopped, .shuttingDown:
             ()
