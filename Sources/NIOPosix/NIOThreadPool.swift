@@ -57,14 +57,12 @@ public final class NIOThreadPool {
 
     /// The work that should be done by the `NIOThreadPool`.
     public typealias WorkItem = @Sendable (WorkItemState) -> Void
-
     private enum State {
         /// The `NIOThreadPool` is already stopped.
         case stopped
         /// The `NIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.
         case shuttingDown([Bool])
-        /// The `NIOThreadPool` is up and running, `WorkItems` contains the yet unprocessed
-        /// `WorkItems`.
+        /// The `NIOThreadPool` is up and running, the `CircularBuffer` containing the yet unprocessed `WorkItems`.
         case running(CircularBuffer<WorkItem>)
         /// Temporary state used when mutating the .running(items). Used to avoid CoW copies.
         /// It should never be "leaked" outside of the lock block.
