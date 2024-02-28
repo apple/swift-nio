@@ -205,7 +205,7 @@ public final class NIOThreadPool {
 
             item = self.lock.withLock { () -> (WorkItem)? in
                 switch self.state {
-                case .running(var items):
+                case .running(let items):
                     return items.removeFirst()
                 case .shuttingDown(var aliveStates):
                     assert(aliveStates[identifier])
