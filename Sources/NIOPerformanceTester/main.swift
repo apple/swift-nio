@@ -1056,6 +1056,16 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
+    desc: "runIfActive_1_thread_100k_tasks",
+    benchmark: RunIfActiveBenchmark(numThreads: 1, numTasks: 100_000)
+)
+
+try measureAndPrint(
+    desc: "runIfActive_8_threads_100k_tasks",
+    benchmark: RunIfActiveBenchmark(numThreads: 8, numTasks: 100_000)
+)
+
+try measureAndPrint(
     desc: "bytebufferview_copy_to_array_100k_times_1kb",
     benchmark: ByteBufferViewCopyToArrayBenchmark(
         iterations: 100_000,

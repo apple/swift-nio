@@ -293,23 +293,23 @@ extension ChannelOptions {
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions: Sendable {
     #if !os(Windows)
-        public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
+        public static let socket: @Sendable (SocketOptionLevel, SocketOptionName) -> ChannelOptions.Types.SocketOption = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
             .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
         }
     #endif
 
     /// - seealso: `SocketOption`.
-    public static let socketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+    public static let socketOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .socket, name: name)
     }
 
     /// - seealso: `SocketOption`.
-    public static let ipOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+    public static let ipOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .ip, name: name)
     }
 
     /// - seealso: `SocketOption`.
-    public static let tcpOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+    public static let tcpOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .tcp, name: name)
     }
 
