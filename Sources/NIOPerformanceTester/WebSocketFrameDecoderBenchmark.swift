@@ -35,7 +35,7 @@ extension WebSocketFrameDecoderBenchmark: Benchmark {
 
     func setUp() throws {
         self.data = ByteBufferAllocator().webSocketFrame(size: dataSize, maskingKey: maskingKey)
-        try self.channel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: dataSize))).wait()
+        try self.channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: dataSize)))
     }
 
     func tearDown() {

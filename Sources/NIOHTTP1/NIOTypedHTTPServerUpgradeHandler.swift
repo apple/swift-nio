@@ -323,7 +323,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         self.removeExtraHandlers(context: context).flatMap {
             self.sendUpgradeResponse(context: context, responseHeaders: responseHeaders)
         }.flatMap {
-            context.pipeline.removeHandler(self.httpEncoder)
+            context.pipeline.syncOperations.removeHandler(self.httpEncoder)
         }.flatMap { () -> EventLoopFuture<UpgradeResult> in
             return upgrader.upgrade(channel: context.channel, upgradeRequest: requestHead)
         }.hop(to: context.eventLoop)

@@ -111,11 +111,11 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         self.writeRecorder = WriteRecorder()
         self.aggregatorHandler = NIOHTTPServerRequestAggregator(maxContentLength: 1024 * 1024)
         
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.writeRecorder).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.aggregatorHandler).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
-        
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(HTTPResponseEncoder()))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.writeRecorder))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.aggregatorHandler))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.readRecorder))
+
         self.requestHead = HTTPRequestHead(version: .http1_1, method: .PUT, uri: "/path")
         self.requestHead.headers.add(name: "Host", value: "example.com")
         self.requestHead.headers.add(name: "X-Test", value: "True")
@@ -129,11 +129,11 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
 
     /// Modify pipeline setup to use aggregator with a smaller `maxContentLength`
     private func resetSmallHandler(maxContentLength: Int) {
-        XCTAssertNoThrow(try self.channel.pipeline.removeHandler(self.readRecorder!).wait())
-        XCTAssertNoThrow(try self.channel.pipeline.removeHandler(self.aggregatorHandler!).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.removeHandler(self.readRecorder!).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.removeHandler(self.aggregatorHandler!).wait())
         self.aggregatorHandler = NIOHTTPServerRequestAggregator(maxContentLength: maxContentLength)
-        XCTAssertNoThrow(try self.channel.pipeline.addHandler(self.aggregatorHandler).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.addHandler(self.aggregatorHandler))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.readRecorder))
     }
     
     override func tearDown() {
@@ -341,9 +341,9 @@ class NIOHTTPClientResponseAggregatorTest: XCTestCase {
         self.readRecorder = ReadRecorder()
         self.aggregatorHandler = NIOHTTPClientResponseAggregator(maxContentLength: 1024 * 1024)
 
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPRequestEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.aggregatorHandler).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(HTTPRequestEncoder()))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.aggregatorHandler))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.readRecorder))
 
         self.requestHead = HTTPRequestHead(version: .http1_1, method: .PUT, uri: "/path")
         self.requestHead.headers.add(name: "Host", value: "example.com")
@@ -358,11 +358,11 @@ class NIOHTTPClientResponseAggregatorTest: XCTestCase {
 
     /// Modify pipeline setup to use aggregator with a smaller `maxContentLength`
     private func resetSmallHandler(maxContentLength: Int) {
-        XCTAssertNoThrow(try self.channel.pipeline.removeHandler(self.readRecorder!).wait())
-        XCTAssertNoThrow(try self.channel.pipeline.removeHandler(self.aggregatorHandler!).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.removeHandler(self.readRecorder!).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.removeHandler(self.aggregatorHandler!).wait())
         self.aggregatorHandler = NIOHTTPClientResponseAggregator(maxContentLength: maxContentLength)
-        XCTAssertNoThrow(try self.channel.pipeline.addHandler(self.aggregatorHandler).wait())
-        XCTAssertNoThrow(try self.channel.pipeline.addHandler(self.readRecorder!).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.addHandler(self.aggregatorHandler))
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.addHandler(self.readRecorder!))
     }
 
     override func tearDown() {

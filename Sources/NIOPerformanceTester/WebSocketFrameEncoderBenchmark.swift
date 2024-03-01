@@ -69,7 +69,7 @@ extension WebSocketFrameEncoderBenchmark: Benchmark {
         for _ in 0..<3 {
             try! self.channel.pipeline.addHandler(NoOpOutboundHandler()).wait()
         }
-        try! self.channel.pipeline.addHandler(WebSocketFrameEncoder()).wait()
+        try! self.channel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder())
         self.frame = WebSocketFrame(opcode: .binary, maskKey: self.maskingKey, data: self.data, extensionData: nil)
     }
 

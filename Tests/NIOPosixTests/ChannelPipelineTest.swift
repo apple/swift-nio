@@ -100,7 +100,22 @@ class ChannelPipelineTest: XCTestCase {
         let result3 = try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()
         XCTAssertTrue(result3 === handler3)
     }
-    
+
+    func testContainsHandler() throws {
+        let handler1 = SimpleTypedHandler1()
+        let handler2 = SimpleTypedHandler2()
+
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+        try channel.pipeline.syncOperations.addHandler(handler1)
+        try channel.pipeline.syncOperations.addHandler(handler2, name: "Handler2")
+
+        try channel.pipeline.containsHandler(type: SimpleTypedHandler1.self).wait()
+        try channel.pipeline.containsHandler(name: "Handler2").wait()
+    }
+
     func testGetFirstHandler() throws {
         let sameTypeHandler1 = SimpleTypedHandler1()
         let sameTypeHandler2 = SimpleTypedHandler1()
@@ -652,10 +667,10 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(h1).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(h2).wait())
 
-        XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TypeAHandler.self).wait().handler)
-        XCTAssertTrue(try h2 === channel.pipeline.context(handlerType: TypeBHandler.self).wait().handler)
+        XCTAssertTrue(try h1 === channel.pipeline.syncOperations.context(handlerType: TypeAHandler.self).handler)
+        XCTAssertTrue(try h2 === channel.pipeline.syncOperations.context(handlerType: TypeBHandler.self).handler)
 
-        XCTAssertThrowsError(try channel.pipeline.context(handlerType: TypeCHandler.self).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(handlerType: TypeCHandler.self)) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
@@ -676,8 +691,8 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(h1).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(h2).wait())
 
-        XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
-        XCTAssertFalse(try h2 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
+        XCTAssertTrue(try h1 === channel.pipeline.syncOperations.context(handlerType: TestHandler.self).handler)
+        XCTAssertFalse(try h2 === channel.pipeline.syncOperations.context(handlerType: TestHandler.self).handler)
     }
 
     func testContextForHeadOrTail() throws {
@@ -687,19 +702,19 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertTrue(try channel.finish().isClean)
         }
 
-        XCTAssertThrowsError(try channel.pipeline.context(name: HeadChannelHandler.name).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(name: HeadChannelHandler.name)) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
 
-        XCTAssertThrowsError(try channel.pipeline.context(handlerType: HeadChannelHandler.self).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(handlerType: HeadChannelHandler.self)) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
 
-        XCTAssertThrowsError(try channel.pipeline.context(name: TailChannelHandler.name).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(name: TailChannelHandler.name)) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
 
-        XCTAssertThrowsError(try channel.pipeline.context(handlerType: TailChannelHandler.self).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(handlerType: TailChannelHandler.self)) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
@@ -733,7 +748,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler()).wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -774,7 +789,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler()).wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -803,7 +818,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler(), name: "TestHandler").wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -841,7 +856,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler(), name: "TestHandler").wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -871,7 +886,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler = NoOpHandler()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -908,7 +923,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler = NoOpHandler()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -1031,7 +1046,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[1]).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[2], name: "the last one to remove").wait())
 
-        let lastContext = try! channel.pipeline.context(name: "the last one to remove").wait()
+        let lastContext = try! channel.pipeline.syncOperations.context(name: "the last one to remove")
 
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "the first one to remove").wait())
         XCTAssertNoThrow(try channel.pipeline.removeHandler(allHandlers[1]).wait())
@@ -1057,7 +1072,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[0], name: "1").wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[1], name: "2").wait())
 
-        let lastContext = try! channel.pipeline.context(name: "1").wait()
+        let lastContext = try! channel.pipeline.syncOperations.context(name: "1")
 
         XCTAssertThrowsError(try channel.pipeline.removeHandler(name: "2").wait()) { error in
             if let error = error as? ChannelError {

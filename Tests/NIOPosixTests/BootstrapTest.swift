@@ -448,7 +448,7 @@ class BootstrapTest: XCTestCase {
         }
 
         // But now, it should be there.
-        XCTAssertNoThrow(_ = try server.pipeline.context(name: "AcceptHandler").wait())
+        XCTAssertNoThrow(_ = try server.pipeline.containsHandler(name: "AcceptHandler").wait())
         XCTAssertNoThrow(try server.close().wait())
     }
 

@@ -27,8 +27,10 @@ extension ChannelPipeline {
                                                        file: StaticString = #filePath,
                                                        line: UInt = #line) throws {
         do {
-            let context = try self.context(handlerType: handlerType).wait()
-            XCTFail("Found handler: \(context.handler)", file: (file), line: line)
+            try self.context(handlerType: handlerType)
+                .map { context in
+                    XCTFail("Found handler: \(context.handler)", file: (file), line: line)
+                }.wait()
         } catch ChannelPipelineError.notFound {
             // Nothing to see here
         }
@@ -38,7 +40,7 @@ extension ChannelPipeline {
     fileprivate func assertContainsUpgrader() {
         #if !canImport(Darwin) || swift(>=5.10)
         do {
-            _ = try self.context(handlerType: NIOTypedHTTPServerUpgradeHandler<Bool>.self).wait()
+            _ = try self.containsHandler(type: NIOTypedHTTPServerUpgradeHandler<Bool>.self).wait()
         } catch {
             self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
         }
@@ -48,7 +50,7 @@ extension ChannelPipeline {
     }
 
     func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) {
-        XCTAssertNoThrow(try self.context(handlerType: handlerType).wait(), "did not find handler")
+        XCTAssertNoThrow(try self.containsHandler(type: handlerType).wait(), "did not find handler")
     }
 
     fileprivate func removeUpgrader() throws {
@@ -63,14 +65,14 @@ extension ChannelPipeline {
     fileprivate func waitForUpgraderToBeRemoved() throws {
         for _ in 0..<20 {
             do {
-                _ = try self.context(handlerType: HTTPServerUpgradeHandler.self).wait()
+                _ = try self.containsHandler(type: HTTPServerUpgradeHandler.self).wait()
                 // handler present, keep waiting
                 usleep(50)
             } catch ChannelPipelineError.notFound {
                 #if !canImport(Darwin) || swift(>=5.10)
                 // Checking if the typed variant is present
                 do {
-                    _ = try self.context(handlerType: NIOTypedHTTPServerUpgradeHandler<Bool>.self).wait()
+                    _ = try self.containsHandler(type: NIOTypedHTTPServerUpgradeHandler<Bool>.self).wait()
                     // handler present, keep waiting
                     usleep(50)
                 } catch ChannelPipelineError.notFound {
@@ -1498,14 +1500,14 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             ()
         }
 
-        XCTAssertNoThrow(try channel.pipeline.addHandler(FailAllWritesHandler()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(encoder).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(FailAllWritesHandler()))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(encoder))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
 
         let userEventSaver = UserEventSaver<HTTPServerUpgradeEvents>()
         let dataRecorder = DataRecorder<HTTPServerRequestPart>()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(userEventSaver).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(dataRecorder).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(userEventSaver))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(dataRecorder))
 
         let head = HTTPServerRequestPart.head(.init(version: .http1_1, method: .GET, uri: "/foo", headers: ["upgrade": "myproto"]))
         XCTAssertNoThrow(try channel.writeInbound(head))
@@ -1541,10 +1543,10 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         let userEventSaver = UserEventSaver<HTTPServerUpgradeEvents>()
         let dataRecorder = DataRecorder<HTTPServerRequestPart>()
 
-        XCTAssertNoThrow(try channel.pipeline.addHandler(encoder).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(userEventSaver).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(dataRecorder).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(encoder))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(userEventSaver))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(dataRecorder))
 
         let head = HTTPServerRequestPart.head(.init(version: .http1_1, method: .GET, uri: "/foo", headers: ["upgrade": "myproto"]))
         XCTAssertNoThrow(try channel.writeInbound(head))
