@@ -13,7 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+#if canImport(Dispatch)
 import Dispatch
+#endif
 import _NIODataStructures
 import NIOCore
 import NIOConcurrencyHelpers

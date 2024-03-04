@@ -19,6 +19,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("The File Handle module was unable to identify your C library.")
 #endif
@@ -54,6 +56,7 @@ public final class NIOFileHandle: FileDescriptor {
         assert(!self.isOpen, "leaked open NIOFileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
     }
 
+#if !os(WASI)
     /// Duplicates this `NIOFileHandle`. This means that a new `NIOFileHandle` object with a new underlying file descriptor
     /// is returned. The caller takes ownership of the returned `NIOFileHandle` and is responsible for closing it.
     ///
@@ -65,6 +68,7 @@ public final class NIOFileHandle: FileDescriptor {
             NIOFileHandle(descriptor: try SystemCalls.dup(descriptor: fd))
         }
     }
+#endif
 
     /// Take the ownership of the underlying file descriptor. This is similar to `close()` but the underlying file
     /// descriptor remains open. The caller is responsible for closing the file descriptor by some other means.
@@ -138,6 +142,7 @@ extension NIOFileHandle {
         public static let defaultPermissions = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
 #endif
 
+#if !os(WASI)
         /// Allows file creation when opening file for writing. File owner is set to the effective user ID of the process.
         ///
         /// - parameters:
@@ -145,6 +150,7 @@ extension NIOFileHandle {
         public static func allowFileCreation(posixMode: NIOPOSIXFileMode = defaultPermissions) -> Flags {
             return Flags(posixMode: posixMode, posixFlags: O_CREAT)
         }
+#endif
 
         /// Allows the specification of POSIX flags (e.g. `O_TRUNC`) and mode (e.g. `S_IWUSR`)
         ///

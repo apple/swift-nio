@@ -13,7 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import DequeModule
+#if canImport(Dispatch)
 import Dispatch
+#endif
 import NIOConcurrencyHelpers
 import NIOCore
 

@@ -14,7 +14,9 @@
 
 import Atomics
 import NIOConcurrencyHelpers
+#if canImport(Dispatch)
 import Dispatch
+#endif
 import _NIODataStructures
 import NIOCore
 import DequeModule

@@ -36,6 +36,8 @@ import struct WinSDK.ULONG
 import typealias WinSDK.DWORD
 #elseif canImport(Darwin)
 import Darwin
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("The Core utilities module was unable to identify your C library.")
 #endif
@@ -116,7 +118,7 @@ public enum System {
 #endif
     }
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
     /// A utility function that enumerates the available network interfaces on this machine.
     ///
     /// This function returns values that are true for a brief snapshot in time. These results can
@@ -193,7 +195,7 @@ public enum System {
             }
             pAdapter = pAdapter!.pointee.Next
         }
-#else
+#elseif !os(WASI)
         var interface: UnsafeMutablePointer<ifaddrs>? = nil
         try SystemCalls.getifaddrs(&interface)
         let originalInterface = interface

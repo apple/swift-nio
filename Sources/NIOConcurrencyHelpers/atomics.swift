@@ -30,6 +30,8 @@ fileprivate func sys_sched_yield() {
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("The concurrency atomics module was unable to identify your C library.")
 #endif

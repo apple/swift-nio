@@ -14,7 +14,9 @@
 
 import NIOCore
 import NIOConcurrencyHelpers
+#if canImport(Dispatch)
 import Dispatch
+#endif
 import Atomics
 
 struct NIORegistration: Registration {

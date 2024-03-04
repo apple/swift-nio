@@ -22,6 +22,8 @@ import WinSDK
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("Unsupported C library")
 #endif

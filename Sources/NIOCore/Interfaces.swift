@@ -20,6 +20,8 @@ import Musl
 import CNIOLinux
 #elseif canImport(Darwin)
 import Darwin
+#elseif canImport(WASILibc)
+import WASILibc
 #elseif os(Windows)
 import let WinSDK.AF_INET
 import let WinSDK.AF_INET6
@@ -42,7 +44,7 @@ import typealias WinSDK.UINT8
 #error("The Core interfaces module was unable to identify your C library.")
 #endif
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
 private extension ifaddrs {
     var dstaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
@@ -62,6 +64,7 @@ private extension ifaddrs {
 }
 #endif
 
+#if !os(WASI)
 /// A representation of a single network interface on a system.
 @available(*, deprecated, renamed: "NIONetworkDevice")
 public final class NIONetworkInterface: Sendable {
@@ -186,6 +189,7 @@ extension NIONetworkInterface: Equatable {
                lhs.interfaceIndex == rhs.interfaceIndex
     }
 }
+#endif
 
 /// A helper extension for working with sockaddr pointers.
 extension UnsafeMutablePointer where Pointee == sockaddr {
@@ -193,10 +197,12 @@ extension UnsafeMutablePointer where Pointee == sockaddr {
     fileprivate func convert() -> SocketAddress? {
         let addressBytes = UnsafeRawPointer(self)
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(pointee.sa_family)) {
+#if !os(WASI)
         case .inet:
             return SocketAddress(addressBytes.load(as: sockaddr_in.self))
         case .inet6:
             return SocketAddress(addressBytes.load(as: sockaddr_in6.self))
+#endif
         case .unix:
             return SocketAddress(addressBytes.load(as: sockaddr_un.self))
         default:
@@ -302,7 +308,7 @@ public struct NIONetworkDevice {
         }
         self.backing = backing
     }
-#else
+#elseif !os(WASI)
     internal init?(_ caddr: ifaddrs) {
         guard let backing = Backing(caddr) else {
             return nil
@@ -312,7 +318,7 @@ public struct NIONetworkDevice {
     }
 #endif
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
     /// Convert a `NIONetworkInterface` to a `NIONetworkDevice`. As `NIONetworkDevice`s are a superset of `NIONetworkInterface`s,
     /// it is always possible to perform this conversion.
     @available(*, deprecated, message: "This is a compatibility helper, and will be removed in a future release")
@@ -412,7 +418,7 @@ extension NIONetworkDevice {
             self.pointToPointDestinationAddress = nil
             self.multicastSupported = false
         }
-#else
+#elseif !os(WASI)
         internal init?(_ caddr: ifaddrs) {
             self.name = String(cString: caddr.ifa_name!)
             self.address = caddr.ifa_addr.flatMap { $0.convert() }
