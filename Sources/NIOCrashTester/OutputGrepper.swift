@@ -30,8 +30,10 @@ internal struct OutputGrepper {
         let channelFuture = NIOPipeBootstrap(group: group)
             .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .channelInitializer { channel in
-                channel.pipeline.addHandlers([ByteToMessageHandler(NewlineFramer()),
-                                              GrepHandler(promise: outputPromise)])
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandlers([ByteToMessageHandler(NewlineFramer()),
+                                                                 GrepHandler(promise: outputPromise)])
+                }
             }
             .takingOwnershipOfDescriptor(input: dup(processToChannel.fileHandleForReading.fileDescriptor))
         let processOutputPipe = NIOFileHandle(descriptor: dup(processToChannel.fileHandleForWriting.fileDescriptor))

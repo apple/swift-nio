@@ -513,6 +513,28 @@ public final class ChannelPipeline: ChannelInvoker {
         return promise.futureResult
     }
 
+    /// Returns if the ``ChannelHandler`` of the given type is contained in the pipeline.
+    ///
+    /// - Parameters:
+    ///   - type: The type of the handler.
+    /// - Returns: An ``EventLoopFuture`` that is succeeded if a handler of the given type is contained in the pipeline. Otherwise
+    /// the future will be failed with an error.
+    @inlinable
+    public func containsHandler<Handler: ChannelHandler>(type: Handler.Type) -> EventLoopFuture<Void> {
+        self.handler(type: type).map { _ in () }
+    }
+
+    /// Returns if the ``ChannelHandler`` of the given type is contained in the pipeline.
+    ///
+    /// - Parameters:
+    ///   - name: The name of the handler. 
+    /// - Returns: An ``EventLoopFuture`` that is succeeded if a handler of the given type is contained in the pipeline. Otherwise
+    /// the future will be failed with an error.
+    @inlinable
+    public func containsHandler(name: String) -> EventLoopFuture<Void> {
+        self.context(name: name).map { _ in () }
+    }
+
     /// Synchronously finds and returns the `ChannelHandlerContext` that belongs to the first
     /// `ChannelHandler` of the given type.
     ///
@@ -1080,6 +1102,23 @@ extension ChannelPipeline {
         public func addHandlers(_ handlers: ChannelHandler...,
                                 position: ChannelPipeline.Position = .last) throws {
             try self._pipeline.addHandlersSync(handlers, position: position).get()
+        }
+
+        /// Remove a `ChannelHandler` from the `ChannelPipeline`.
+        ///
+        /// - parameters:
+        ///     - handler: the `ChannelHandler` to remove.
+        /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
+        @preconcurrency
+        public func removeHandler(_ handler: RemovableChannelHandler) -> EventLoopFuture<Void> {
+            let promise = self.eventLoop.makePromise(of: Void.self)
+            switch self._pipeline.contextSync(handler: handler) {
+            case .success(let context):
+                self._pipeline.removeHandler(context: context, promise: promise)
+            case .failure(let error):
+                promise.fail(error)
+            }
+            return promise.futureResult
         }
 
         /// Returns the `ChannelHandlerContext` for the given handler instance if it is in

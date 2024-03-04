@@ -33,8 +33,8 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result, channel in
             return channel.eventLoop.makeSucceededFuture(.negotiated(result))
         }
-        try channel.pipeline.addHandler(handler).wait()
-        try channel.pipeline.removeHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
+        try channel.pipeline.syncOperations.removeHandler(handler).wait()
         XCTAssertThrowsError(try handler.protocolNegotiationResult.wait()) { error in
             XCTAssertEqual(error as? ChannelError, .inappropriateOperationForState)
         }
@@ -52,7 +52,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return loop.makeSucceededFuture(.negotiated(result))
         }
 
-        try emChannel.pipeline.addHandler(handler).wait()
+        try emChannel.pipeline.syncOperations.addHandler(handler)
         emChannel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
         XCTAssertTrue(called)
 
@@ -68,7 +68,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return loop.makeSucceededFuture(.failed)
         }
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
 
         // Fire a pair of events that should be ignored.
         channel.pipeline.fireUserInboundEventTriggered("FakeEvent")
@@ -89,7 +89,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return loop.makeSucceededFuture(.failed)
         }
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
 
         // The data we write should not be buffered.
         try channel.writeInbound("hello")
@@ -107,7 +107,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
             return continuePromise.futureResult
         }
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
@@ -139,7 +139,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         }
         let eventCounterHandler = EventCounterHandler()
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
         try channel.pipeline.addHandler(eventCounterHandler).wait()
 
         // Fire in the event.
@@ -166,7 +166,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         }
         let eventCounterHandler = EventCounterHandler()
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
         try channel.pipeline.addHandler(eventCounterHandler).wait()
 
         // Fire in the event.
@@ -197,7 +197,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         }
         let eventCounterHandler = EventCounterHandler()
 
-        try channel.pipeline.addHandler(handler).wait()
+        try channel.pipeline.syncOperations.addHandler(handler)
         try channel.pipeline.addHandler(DuplicatingReadHandler(embeddedChannel: channel)).wait()
         try channel.pipeline.addHandler(eventCounterHandler).wait()
 

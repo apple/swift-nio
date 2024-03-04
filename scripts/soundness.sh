@@ -18,7 +18,7 @@ here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 function replace_acceptable_years() {
     # this needs to replace all acceptable forms with 'YEARS'
-    sed -e 's/20[12][7890123]-20[12][890123]/YEARS/' -e 's/20[12][890123]/YEARS/'
+    sed -e 's/20[12][7890123]-20[12][8901234]/YEARS/' -e 's/20[12][8901234]/YEARS/'
 }
 
 printf "=> Checking for unacceptable language... "
