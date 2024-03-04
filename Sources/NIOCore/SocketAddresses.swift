@@ -574,6 +574,7 @@ extension SocketAddress: Equatable {
 #else
             let bufferSize = MemoryLayout.size(ofValue: addr1.address.sun_path)
 
+
             // Swift implicitly binds the memory for homogeneous tuples to both the tuple type and the element type.
             // This allows us to use assumingMemoryBound(to:) for managing the types. However, we add a static assertion here to validate
             // that the element type _really is_ what we're assuming it to be.
