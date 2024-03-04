@@ -81,6 +81,13 @@ internal final class SelectableEventLoop: EventLoop {
     @usableFromInline
     internal var _immediateTasks = Deque<UnderlyingTask>()
 
+    // We only need the ScheduledTask's task closure. However, an `Array<() -> Void>` allocates
+    // for every appended closure. https://bugs.swift.org/browse/SR-15872
+    private var tasksCopy = ContiguousArray<UnderlyingTask>()
+    private static var tasksCopyBatchSize: Int {
+        return 4096
+    }
+
     @usableFromInline
     internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
         didSet {
@@ -182,6 +189,7 @@ Further information:
         self.thread = thread
         self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
         self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
+        self.tasksCopy.reserveCapacity(Self.tasksCopyBatchSize)
         self.canBeShutdownIndividually = canBeShutdownIndividually
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
         // note: We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
@@ -575,22 +583,13 @@ Further information:
     }
 
     private func runLoop() -> NIODeadline? {
-        // We need to ensure we process all tasks, even if a task added another task again
-        let tasksCopyBatchSize = 4096
-
-        // Historical note: an `Array<() -> Void>` allocates for every appended closure. https://bugs.swift.org/browse/SR-15872
-        // we're now appending an enum type, one member of which is such closure. We're
-        // therefore side stepping the issue. It may become relevant again if we reorganised the code.
-        var tasksCopy = ContiguousArray<UnderlyingTask>()
-        tasksCopy.reserveCapacity(tasksCopyBatchSize)
-
         while true {
             let nextReadyDeadline = self._tasksLock.withLock { () -> NIODeadline? in
                 let deadline = Self._popTasksLocked(immediateTasks: &self._immediateTasks,
                                                     scheduledTasks: &self._scheduledTasks,
-                                                    tasksCopy: &tasksCopy,
-                                                    tasksCopyBatchSize: tasksCopyBatchSize)
-                if tasksCopy.isEmpty {
+                                                    tasksCopy: &self.tasksCopy,
+                                                    tasksCopyBatchSize: Self.tasksCopyBatchSize)
+                if self.tasksCopy.isEmpty {
                     // Rare, but it's possible to find no tasks to execute if all scheduled tasks are expiring in the future.
                     self._pendingTaskPop = false
                 }
@@ -598,16 +597,16 @@ Further information:
             }
 
            // all pending tasks are set to occur in the future, so we can stop looping.
-            if tasksCopy.isEmpty {
+            if self.tasksCopy.isEmpty {
                 return nextReadyDeadline
             }
 
             // Execute all the tasks that were submitted
-            for task in tasksCopy {
+            for task in self.tasksCopy {
                 self.run(task)
             }
             // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
-            tasksCopy.removeAll(keepingCapacity: true)
+            self.tasksCopy.removeAll(keepingCapacity: true)
         }
     }
 
