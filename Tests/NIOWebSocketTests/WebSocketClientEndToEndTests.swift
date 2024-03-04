@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import NIOCore
+@testable import NIOCore
 import NIOEmbedded
 import NIOHTTP1
 @testable import NIOWebSocket
@@ -35,14 +35,14 @@ extension ChannelPipeline {
     fileprivate func assertDoesNotContain<Handler: ChannelHandler>(handlerType: Handler.Type,
                                                                    file: StaticString = #filePath,
                                                                    line: UInt = #line) throws {
-        XCTAssertThrowsError(try self.context(handlerType: handlerType).wait(), file: (file), line: line) { error in
+        XCTAssertThrowsError(try self.syncOperations.context(handlerType: handlerType), file: (file), line: line) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
     
     fileprivate func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) throws {
         do {
-            _ = try self.context(handlerType: handlerType).wait()
+            _ = try self.syncOperations.context(handlerType: handlerType)
         } catch ChannelPipelineError.notFound {
             XCTFail("Did not find handler")
         }
@@ -362,7 +362,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
         
         let dataFrame = WebSocketFrame(fin: true, opcode: .binary, data: buffer)
         
-        try serverChannel.pipeline.addHandler(WebSocketFrameEncoder()).wait()
+        try serverChannel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder())
         serverChannel.writeAndFlush(dataFrame, promise: nil)
 
         return (dataFrame, try serverChannel.readAllOutboundBytes())

@@ -1046,11 +1046,6 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "schedule_100k_tasks",
-    benchmark: SchedulingBenchmark(numTasks: 100_000)
-)
-
-try measureAndPrint(
     desc: "schedule_and_run_100k_tasks",
     benchmark: SchedulingAndRunningBenchmark(numTasks: 100_000)
 )

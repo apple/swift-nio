@@ -125,13 +125,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.writeRecorder = WriteRecorder()
         self.pipelineHandler = HTTPServerPipelineHandler()
         self.quiesceEventRecorder = QuiesceEventRecorder()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(CloseOutputSuppressor()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.readCounter).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.writeRecorder).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.pipelineHandler).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.readRecorder).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(self.quiesceEventRecorder).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(CloseOutputSuppressor()))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.readCounter))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(HTTPResponseEncoder()))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.writeRecorder))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.pipelineHandler))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.readRecorder))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.quiesceEventRecorder))
 
         self.requestHead = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/path")
         self.requestHead.headers.add(name: "Host", value: "example.com")
@@ -764,8 +764,8 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
 
         let handler = VerifyOrderHandler()
-        XCTAssertNoThrow(try self.channel.pipeline.addHandler(HTTPServerProtocolErrorHandler()).wait())
-        XCTAssertNoThrow(try self.channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.addHandler(HTTPServerProtocolErrorHandler()))
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.addHandler(handler))
 
         self.channel.pipeline.fireErrorCaught(HTTPParserError.unknown)
 
@@ -824,8 +824,8 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
 
         let handler = VerifyOrderHandler()
-        XCTAssertNoThrow(try self.channel.pipeline.addHandler(HTTPServerProtocolErrorHandler()).wait())
-        XCTAssertNoThrow(try self.channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.addHandler(HTTPServerProtocolErrorHandler()))
+        XCTAssertNoThrow(try self.channel.pipeline.syncOperations.addHandler(handler))
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(makeRequestHead(uri: "/one"))))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
@@ -852,7 +852,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertEqual(self.readCounter.readCount, 1)
 
         // Remove the handler.
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(self.pipelineHandler).wait())
 
         // This should have automatically triggered a call to read(), but only one.
         XCTAssertEqual(self.readCounter.readCount, 2)
@@ -881,7 +881,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertEqual(self.readCounter.readCount, 1)
 
         // Remove the handler.
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(self.pipelineHandler).wait())
 
         // This should have automatically triggered a call to read(), but only one.
         XCTAssertEqual(self.readCounter.readCount, 2)
@@ -902,7 +902,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                         .channelRead(HTTPServerRequestPart.end(nil))])
 
         // Remove the handler.
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(self.pipelineHandler).wait())
 
         // The extra data should have been forwarded.
         XCTAssertEqual(self.readRecorder.reads,
@@ -945,7 +945,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertEqual(self.readCounter.readCount, 1)
 
         // Now remove the handler.
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(self.pipelineHandler).wait())
 
         // Channel should be open, but the quiesce event should have fired, and read
         // shouldn't have been called as we aren't expecting more data.
@@ -981,7 +981,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertEqual(self.readCounter.readCount, 3)
 
         // Now remove the handler.
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(self.pipelineHandler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(self.pipelineHandler).wait())
 
         // Channel should be open, but the quiesce event should have fired, and read
         // shouldn't be (as it passed through.
