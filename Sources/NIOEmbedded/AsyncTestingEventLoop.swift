@@ -12,10 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Atomics
 #if canImport(Dispatch)
+import Atomics
 import Dispatch
-#endif
 import _NIODataStructures
 import NIOCore
 import NIOConcurrencyHelpers
@@ -383,3 +382,4 @@ private class PromiseCreationStore {
         precondition(self.promiseCreationStore.isEmpty, "NIOAsyncTestingEventLoop freed with uncompleted promises!")
     }
 }
+#endif
