@@ -617,10 +617,9 @@ Further information:
         defer {
             var iterations = 0
             var drained = false
+            var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
+            var immediateTasksCopy = Deque<UnderlyingTask>()
             repeat { // We may need to do multiple rounds of this because failing tasks may lead to more work.
-
-                var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
-                var immediateTasksCopy = ContiguousArray<UnderlyingTask>()
                 self._tasksLock.withLock {
                     // In this state we never want the selector to be woken again, so we pretend we're permanently running.
                     self._pendingTaskPop = true
@@ -630,10 +629,7 @@ Further information:
                     while let sched = self._scheduledTasks.pop() {
                         scheduledTasksCopy.append(sched)
                     }
-                    immediateTasksCopy.reserveCapacity(self._immediateTasks.count)
-                    while let immediate = self._immediateTasks.popFirst() {
-                        immediateTasksCopy.append(immediate)
-                    }
+                    swap(&immediateTasksCopy, &self._immediateTasks)
                 }
 
                 // Run all the immediate tasks. They're all "expired" and don't have failFn,
