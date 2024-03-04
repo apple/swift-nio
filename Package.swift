@@ -15,14 +15,15 @@
 
 import PackageDescription
 
+let posixishPlatforms: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
+
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(
   name: "SystemPackage",
   package: "swift-system",
-  condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
+  condition: .when(platforms: posixishPlatforms)
 )
-
 
 let package = Package(
     name: "swift-nio",
@@ -156,7 +157,7 @@ let package = Package(
         .target(
             name: "NIOHTTP1",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: posixishPlatforms)),
                 "NIOCore",
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
