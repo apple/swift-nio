@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import DequeModule
 import Dispatch
 import NIOCore
 import NIOConcurrencyHelpers
@@ -78,13 +79,7 @@ internal final class SelectableEventLoop: EventLoop {
     @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
     @usableFromInline
-    internal var _immediateTasks = CircularBuffer<UnderlyingTask>()
-
-    // Historical note: an `Array<() -> Void>` allocates for every appended closure. https://bugs.swift.org/browse/SR-15872
-    // we're now appending an enum type, one member of which is such closure. We're
-    // therefore side stepping the issue. It may become relevant again if we reorganised the code.
-    private var tasksCopy = ContiguousArray<UnderlyingTask>()
-    static private let taskCopyBatchSize = 4096
+    internal var _immediateTasks = Deque<UnderlyingTask>()
 
     @usableFromInline
     internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
@@ -187,8 +182,6 @@ Further information:
         self.thread = thread
         self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
         self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
-        // We will process 4096 tasks per while loop.
-        self.tasksCopy.reserveCapacity(Self.taskCopyBatchSize)
         self.canBeShutdownIndividually = canBeShutdownIndividually
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
         // note: We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
@@ -447,138 +440,174 @@ Further information:
             }
         }
     }
-    
+
+    private static func _popTasksLockedAssertInvariants(immediateTasks: Deque<UnderlyingTask>,
+                                                        scheduledTasks: PriorityQueue<ScheduledTask>,
+                                                        tasksCopy: ContiguousArray<UnderlyingTask>,
+                                                        tasksCopyBatchSize: Int,
+                                                        now: NIODeadline,
+                                                        nextScheduledTaskDeadline: NIODeadline,
+                                                        moreImmediateTasksToConsider: Bool,
+                                                        moreScheduledTasksToConsider: Bool) {
+        assert(tasksCopy.count <= tasksCopyBatchSize)
+        // When we exit the loop, we would expect to
+        // * have taskCopy full, or:
+        // * to have completely drained task queues
+        //     * that means all _immediateTasks, and:
+        //     * all _scheduledTasks that are ready
+        assertExpression {
+            if tasksCopy.count == tasksCopyBatchSize {
+                return true
+            }
+
+            if !immediateTasks.isEmpty {
+                return false
+            }
+
+            guard let nextScheduledTask = scheduledTasks.peek() else {
+                return true
+            }
+
+            return nextScheduledTask.readyTime.readyIn(now) > .nanoseconds(0)
+        }
+
+        // If moreImmediateTasksToConsider is true, this means there must be more tasks
+        // in self._immediateTasks, or we've just filled up taskCopy on the last loop iteration
+        assertExpression {
+            if !moreImmediateTasksToConsider {
+                return true
+            }
+
+            if tasksCopy.count == tasksCopyBatchSize {
+                return true
+            }
+
+            return immediateTasks.isEmpty
+        }
+
+        // Same as above, but for scheduled tasks
+        assertExpression {
+            if !moreScheduledTasksToConsider {
+                return true
+            }
+
+            if tasksCopy.count == tasksCopyBatchSize {
+                return true
+            }
+
+            return scheduledTasks.isEmpty
+        }
+
+        // nextScheduledTaskDeadline should be set to > now, iff there are more
+        // scheduled tasks, and they are all scheduled for the future
+        // Moreover, nextScheduledTaskDeadline must equal the expiry time for the
+        // "top-most" scheduled task
+        assertExpression {
+            if nextScheduledTaskDeadline == now {
+                return true
+            }
+
+            guard let topMostScheduledTask = scheduledTasks.peek() else {
+                return false
+            }
+
+            return topMostScheduledTask.readyTime == nextScheduledTaskDeadline
+        }
+    }
+
+    private static func _popTasksLocked(immediateTasks: inout Deque<UnderlyingTask>,
+                                        scheduledTasks: inout PriorityQueue<ScheduledTask>,
+                                        tasksCopy: inout ContiguousArray<UnderlyingTask>,
+                                        tasksCopyBatchSize: Int) -> NIODeadline? {
+        // We expect empty tasksCopy, to put a new batch of tasks into
+        assert(tasksCopy.isEmpty)
+
+        var moreImmediateTasksToConsider = !immediateTasks.isEmpty
+        var moreScheduledTasksToConsider = !scheduledTasks.isEmpty
+
+        guard moreImmediateTasksToConsider || moreScheduledTasksToConsider else {
+            // Reset nextReadyDeadline to nil which means we will do a blocking select.
+            return nil
+        }
+
+        // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
+        let now: NIODeadline = .now()
+        var nextScheduledTaskDeadline = now
+
+        while moreImmediateTasksToConsider || moreScheduledTasksToConsider {
+            // We pick one item from immediateTasks & scheduledTask per iteration of the loop.
+            // This prevents one task queue starving the other.
+            if moreImmediateTasksToConsider, tasksCopy.count < tasksCopyBatchSize, let task = immediateTasks.popFirst() {
+                tasksCopy.append(task)
+            } else {
+                moreImmediateTasksToConsider = false
+            }
+
+            if moreScheduledTasksToConsider, tasksCopy.count < tasksCopyBatchSize, let task = scheduledTasks.peek() {
+                if task.readyTime.readyIn(now) <= .nanoseconds(0) {
+                    scheduledTasks.pop()
+                    tasksCopy.append(.function(task.task))
+                } else {
+                    nextScheduledTaskDeadline = task.readyTime
+                    moreScheduledTasksToConsider = false
+                }
+            } else {
+                moreScheduledTasksToConsider = false
+            }
+        }
+
+        debugOnly {
+            // The asserts are spun off to a separate functions to aid code clarity
+            // and to remove mutable access to certain structures, e.g. `immediateTasks`.
+            Self._popTasksLockedAssertInvariants(
+                immediateTasks: immediateTasks,
+                                        scheduledTasks: scheduledTasks,
+                                        tasksCopy: tasksCopy,
+                                        tasksCopyBatchSize: tasksCopyBatchSize,
+                                        now: now,
+                                        nextScheduledTaskDeadline: nextScheduledTaskDeadline,
+                                        moreImmediateTasksToConsider: moreImmediateTasksToConsider, moreScheduledTasksToConsider: moreScheduledTasksToConsider)
+        }
+
+
+        // nextScheduledTaskDeadline is the overall next deadline, but iff there are no more immediate tasks left.
+        return moreImmediateTasksToConsider ? now : nextScheduledTaskDeadline
+    }
+
     private func runLoop() -> NIODeadline? {
         // We need to ensure we process all tasks, even if a task added another task again
+        let tasksCopyBatchSize = 4096
+
+        // Historical note: an `Array<() -> Void>` allocates for every appended closure. https://bugs.swift.org/browse/SR-15872
+        // we're now appending an enum type, one member of which is such closure. We're
+        // therefore side stepping the issue. It may become relevant again if we reorganised the code.
+        var tasksCopy = ContiguousArray<UnderlyingTask>()
+        tasksCopy.reserveCapacity(tasksCopyBatchSize)
+
         while true {
-            // TODO: Better locking
             let nextReadyDeadline = self._tasksLock.withLock { () -> NIODeadline? in
-                // We expect empty self.taskCopy, to put a new batch of tasks into
-                assert(self.tasksCopy.isEmpty)
-
-                var moreImmediateTasksToConsider = !self._immediateTasks.isEmpty
-                var moreScheduledTasksToConsider = !self._scheduledTasks.isEmpty
-
-                guard moreImmediateTasksToConsider || moreScheduledTasksToConsider else {
-                    // We will not continue to loop here. We need to be woken if a new task is enqueued.
-                    self._pendingTaskPop = false
-                    
-                    // Reset nextReadyDeadline to nil which means we will do a blocking select.
-                    return nil
-                }
-
-                // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
-                let now: NIODeadline = .now()
-                var nextScheduledTaskDeadline = now
-
-                while self.tasksCopy.count < Self.taskCopyBatchSize &&
-                        (moreImmediateTasksToConsider || moreScheduledTasksToConsider) {
-                    // We pick one item from self._immediateTasks & self._scheduledTask per iteration of the loop.
-                    // This prevents one task queue starving the other.
-                    if moreImmediateTasksToConsider, let task = self._immediateTasks.popFirst() {
-                        self.tasksCopy.append(task)
-                    } else {
-                        moreImmediateTasksToConsider = false
-                    }
-
-                    if moreScheduledTasksToConsider, let task = self._scheduledTasks.peek() {
-                        if task.readyTime.readyIn(now) <= .nanoseconds(0) {
-                            self._scheduledTasks.pop()
-                            self.tasksCopy.append(.function(task.task))
-                        } else {
-                            nextScheduledTaskDeadline = task.readyTime
-                            moreScheduledTasksToConsider = false
-                        }
-                    } else {
-                        moreScheduledTasksToConsider = false
-                    }
-                }
-
-                assert(self.tasksCopy.count <= Self.taskCopyBatchSize)
-                // When we exit the loop, we would expect to
-                // * have taskCopy full, or:
-                // * to have completely drained task queues
-                //     * that means all _immediateTasks, and:
-                //     * all _scheduledTasks that are ready
-                assertExpression {
-                    if self.tasksCopy.count == Self.taskCopyBatchSize {
-                        return true
-                    }
-
-                    if !self._immediateTasks.isEmpty {
-                        return false
-                    }
-
-                    guard let nextScheduledTask = self._scheduledTasks.peek() else {
-                        return true
-                    }
-
-                    return nextScheduledTask.readyTime.readyIn(now) > .nanoseconds(0)
-                }
-
-                // If moreImmediateTasksToConsider is true, this means there must be more tasks
-                // in self._immediateTasks, or we've just filled up taskCopy on the last loop iteration
-                assertExpression {
-                    if !moreImmediateTasksToConsider {
-                        return true
-                    }
-
-                    if self.tasksCopy.count == Self.taskCopyBatchSize {
-                        return true
-                    }
-
-                    return self._immediateTasks.isEmpty
-                }
-
-                // Same as above, but for scheduled tasks
-                assertExpression {
-                    if !moreScheduledTasksToConsider {
-                        return true
-                    }
-
-                    if self.tasksCopy.count == Self.taskCopyBatchSize {
-                        return true
-                    }
-
-                    return self._scheduledTasks.isEmpty
-                }
-
-                // nextScheduledTaskDeadline should be set to > now, iff there are more
-                // scheduled tasks, and they are all scheduled for the future
-                // Moreover, nextScheduledTaskDeadline must equal the expiry time for the
-                // "top-most" scheduled task
-                assertExpression {
-                    if nextScheduledTaskDeadline == now {
-                        return true
-                    }
-
-                    guard let topMostScheduledTask = self._scheduledTasks.peek() else {
-                        return false
-                    }
-
-                    return topMostScheduledTask.readyTime == nextScheduledTaskDeadline
-                }
-
-                if self.tasksCopy.isEmpty {
+                let deadline = Self._popTasksLocked(immediateTasks: &self._immediateTasks,
+                                                    scheduledTasks: &self._scheduledTasks,
+                                                    tasksCopy: &tasksCopy,
+                                                    tasksCopyBatchSize: tasksCopyBatchSize)
+                if tasksCopy.isEmpty {
                     // Rare, but it's possible to find no tasks to execute if all scheduled tasks are expiring in the future.
                     self._pendingTaskPop = false
                 }
-                
-                // nextScheduledTaskDeadline is the overall next deadline, but iff there are no more immediate tasks left.
-                return moreImmediateTasksToConsider ? now : nextScheduledTaskDeadline
+                return deadline
             }
-            
-            // all pending tasks are set to occur in the future, so we can stop looping.
-            if self.tasksCopy.isEmpty {
+
+           // all pending tasks are set to occur in the future, so we can stop looping.
+            if tasksCopy.isEmpty {
                 return nextReadyDeadline
             }
 
             // Execute all the tasks that were submitted
-            for task in self.tasksCopy {
+            for task in tasksCopy {
                 self.run(task)
             }
             // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
-            self.tasksCopy.removeAll(keepingCapacity: true)
+            tasksCopy.removeAll(keepingCapacity: true)
         }
     }
 

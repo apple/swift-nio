@@ -1688,6 +1688,115 @@ public final class EventLoopTest : XCTestCase {
         }
         try stopTask.futureResult.wait()
     }
+
+    func testMixedImmediateAndScheduledTasks() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let eventLoop = group.next()
+        let scheduledTaskMagic = 17
+        let scheduledTask = eventLoop.scheduleTask(in: .microseconds(10)) {
+            return scheduledTaskMagic
+        }
+
+        let immediateTaskMagic = 18
+        let immediateTask = eventLoop.submit {
+            return immediateTaskMagic
+        }
+
+        let scheduledTaskMagicOut = try scheduledTask.futureResult.wait()
+        XCTAssertEqual(scheduledTaskMagicOut, scheduledTaskMagic)
+
+        let immediateTaskMagicOut = try immediateTask.wait()
+        XCTAssertEqual(immediateTaskMagicOut, immediateTaskMagic)
+    }
+
+    func testLotsOfMixedImmediateAndScheduledTasks() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let eventLoop = group.next()
+        struct Counter {
+            var submitCount: Int = 0
+            var scheduleCount: Int = 0
+        }
+
+        var achieved = Counter()
+        var immediateTasks = [EventLoopFuture<Void>]()
+        var scheduledTasks = [Scheduled<Void>]()
+        (0..<100_000).forEach { _ in
+            if Bool.random() {
+                let task = eventLoop.submit {
+                    achieved.submitCount += 1
+                }
+                immediateTasks.append(task)
+            }
+            if Bool.random() {
+                let task = eventLoop.scheduleTask(in: .microseconds(10)) {
+                    achieved.scheduleCount += 1
+                }
+                scheduledTasks.append(task)
+            }
+        }
+
+        let submitCount = try EventLoopFuture.whenAllSucceed(immediateTasks, on: eventLoop).map ({ _ in
+            return achieved.submitCount
+        }).wait()
+        XCTAssertEqual(submitCount, achieved.submitCount)
+
+        let scheduleCount = try EventLoopFuture.whenAllSucceed(scheduledTasks.map { $0.futureResult }, on: eventLoop).map({ _ in
+            return achieved.scheduleCount
+        }).wait()
+        XCTAssertEqual(scheduleCount, scheduledTasks.count)
+    }
+
+    func testLotsOfMixedImmediateAndScheduledTasksFromEventLoop() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let eventLoop = group.next()
+        struct Counter {
+            var submitCount: Int = 0
+            var scheduleCount: Int = 0
+        }
+
+        var achieved = Counter()
+        let (immediateTasks, scheduledTasks) = try eventLoop.submit {
+            var immediateTasks = [EventLoopFuture<Void>]()
+            var scheduledTasks = [Scheduled<Void>]()
+            (0..<100_000).forEach { _ in
+                if Bool.random() {
+                    let task = eventLoop.submit {
+                        achieved.submitCount += 1
+                    }
+                    immediateTasks.append(task)
+                }
+                if Bool.random() {
+                    let task = eventLoop.scheduleTask(in: .microseconds(10)) {
+                        achieved.scheduleCount += 1
+                    }
+                    scheduledTasks.append(task)
+                }
+            }
+            return (immediateTasks, scheduledTasks)
+        }.wait()
+
+        let submitCount = try EventLoopFuture.whenAllSucceed(immediateTasks, on: eventLoop).map ({ _ in
+            return achieved.submitCount
+        }).wait()
+        XCTAssertEqual(submitCount, achieved.submitCount)
+
+        let scheduleCount = try EventLoopFuture.whenAllSucceed(scheduledTasks.map { $0.futureResult }, on: eventLoop).map({ _ in
+            return achieved.scheduleCount
+        }).wait()
+        XCTAssertEqual(scheduleCount, scheduledTasks.count)
+    }
 }
 
 fileprivate class EventLoopWithPreSucceededFuture: EventLoop {
