@@ -15,15 +15,18 @@
 
 import PackageDescription
 
-let posixishPlatforms: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
 
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(
   name: "SystemPackage",
   package: "swift-system",
-  condition: .when(platforms: posixishPlatforms)
+  condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
+
+// These platforms require a depdency on `NIOPosix` from `NIOHTTP1` to maintain backward
+// compatibility with previous NIO versions.
+let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
 
 let package = Package(
     name: "swift-nio",
@@ -157,7 +160,7 @@ let package = Package(
         .target(
             name: "NIOHTTP1",
             dependencies: [
-                .target(name: "NIO", condition: .when(platforms: posixishPlatforms)),
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
