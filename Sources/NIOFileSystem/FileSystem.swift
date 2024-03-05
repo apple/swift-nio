@@ -625,6 +625,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                     )
                 }.get()
             }
+            #elseif os(Android)
+            return "/data/local/tmp"
             #else
             return "/tmp"
             #endif
@@ -959,6 +961,7 @@ extension FileSystem {
                 permissions: info.permissions
             )
 
+            #if !os(Android)
             // Copy over extended attributes, if any exist.
             do {
                 let attributes = try await dir.attributeNames()
@@ -979,6 +982,7 @@ extension FileSystem {
                 // that is the case.
                 ()
             }
+            #endif
 
             // Build a list of directories to copy over. Do this after closing the current
             // directory to avoid using too many descriptors.

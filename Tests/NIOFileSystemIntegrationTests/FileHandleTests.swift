@@ -34,7 +34,7 @@ final class FileHandleTests: XCTestCase {
         autoClose: Bool = true,
         _ execute: @Sendable (SystemFileHandle) async throws -> Void
     ) async throws {
-        let path = FilePath("/tmp/\(Self.temporaryFileName())")
+        let path = try await FilePath("\(FileSystem.shared.temporaryDirectory)/\(Self.temporaryFileName())")
         defer {
             // Remove the file when we're done.
             XCTAssertNoThrow(try Libc.remove(path).get())

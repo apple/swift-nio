@@ -18,8 +18,13 @@ import CNIOLinux
 
 private let sys_pthread_getname_np = CNIOLinux_pthread_getname_np
 private let sys_pthread_setname_np = CNIOLinux_pthread_setname_np
+#if os(Android)
+private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer) ->
+    UnsafeMutableRawPointer
+#else
 private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer?) ->
     UnsafeMutableRawPointer?
+#endif
 #elseif canImport(Darwin)
 import Darwin
 
@@ -119,7 +124,11 @@ enum ThreadOpsPosix: ThreadOps {
 
                 body(Thread(handle: hThread, desiredName: name))
 
+                #if os(Android)
+                return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!
+                #else
                 return nil
+                #endif
             },
             args: argv0
         )
