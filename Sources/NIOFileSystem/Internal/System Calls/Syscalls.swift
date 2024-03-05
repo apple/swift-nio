@@ -330,7 +330,7 @@ internal func system_sendfile(
 internal func libc_fdopendir(
     _ fd: FileDescriptor.RawValue
 ) -> CInterop.DirPointer {
-    return fdopendir(fd)
+    return fdopendir(fd)!
 }
 
 /// readdir(3): Returns a pointer to the next directory entry
@@ -396,12 +396,21 @@ internal func libc_confstr(
 #endif
 
 /// fts(3)
+#if os(Android)
+internal func libc_fts_open(
+    _ path: [UnsafeMutablePointer<CInterop.PlatformChar>],
+    _ options: CInt
+) -> UnsafeMutablePointer<CInterop.FTS> {
+    return fts_open(path, options, nil)!
+}
+#else
 internal func libc_fts_open(
     _ path: [UnsafeMutablePointer<CInterop.PlatformChar>?],
     _ options: CInt
 ) -> UnsafeMutablePointer<CInterop.FTS> {
     return fts_open(path, options, nil)
 }
+#endif
 
 /// fts(3)
 internal func libc_fts_read(

@@ -650,7 +650,7 @@ private struct DirectoryEnumerator: Sendable {
 
 extension UnsafeMutablePointer<CInterop.FTSEnt> {
     fileprivate var path: FilePath {
-        return FilePath(platformString: self.pointee.fts_path)
+        return FilePath(platformString: self.pointee.fts_path!)
     }
 }
 
