@@ -19,7 +19,7 @@ import PackageDescription
 let package = Package(
     name: "AtomicCounter",
     products: [
-        .library(name: "AtomicCounter", targets: ["AtomicCounter"]),
+        .library(name: "AtomicCounter", type: .dynamic, targets: ["AtomicCounter"]),
     ],
     dependencies: [ ],
     targets: [
