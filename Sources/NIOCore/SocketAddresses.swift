@@ -135,9 +135,6 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// A human-readable description of this `SocketAddress`. Mostly useful for logging.
     public var description: String {
-#if os(WASI)
-        return "[UDS]"
-#else
         let addressString: String
         let port: String
         let host: String?
@@ -166,7 +163,6 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         }
 
         return "[\(type)]\(host.map { "\($0)/\(addressString):" } ?? "\(addressString):")\(port)"
-#endif
     }
 
     @available(*, deprecated, renamed: "SocketAddress.protocol")
@@ -176,21 +172,20 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// Returns the protocol family as defined in `man 2 socket` of this `SocketAddress`.
     public var `protocol`: NIOBSDSocket.ProtocolFamily {
-#if os(WASI)
-        return .unix
-#else
         switch self {
         case .v4:
             return .inet
         case .v6:
             return .inet6
         case .unixDomainSocket:
+        #if os(WASI)
+            fatalError("unix domain sockets are currently not supported by WASILibc")
+        #else
             return .unix
+        #endif
         }
-#endif
     }
 
-#if !os(WASI)
     /// Get the IP address as a string
     public var ipAddress: String? {
         switch self {
@@ -206,8 +201,6 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             return nil
         }
     }
-#endif
-
     /// Get and set the port associated with the address, if defined.
     /// When setting to `nil` the port will default to `0` for compatible sockets. The rationale for this is that both `nil` and `0` can
     /// be interpreted as "no preference".
@@ -295,7 +288,6 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         self = .v6(.init(address: addr, host: host))
     }
 
-#if !os(WASI)
     /// Creates a new IPv4 `SocketAddress`.
     ///
     /// - parameters:
@@ -311,7 +303,6 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     public init(_ addr: sockaddr_in6) {
         self = .v6(.init(address: addr, host: addr.addressDescription()))
     }
-#endif
 
     /// Creates a new Unix Domain Socket `SocketAddress`.
     ///
@@ -348,7 +339,6 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         self = .unixDomainSocket(.init(address: addr))
     }
 
-#if !os(WASI)
     /// Create a new `SocketAddress` for an IP address in string form.
     ///
     /// - parameters:
@@ -392,8 +382,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             throw SocketAddressError.failedToParseIPString(ipAddress)
         }
     }
-#endif
-    
+
     /// Create a new `SocketAddress` for an IP address in ByteBuffer form.
     ///
     /// - parameters:
@@ -678,7 +667,6 @@ protocol SockAddrProtocol {
     func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R
 }
 
-#if !os(WASI)
 /// Returns a description for the given address.
 internal func descriptionForAddress(family: NIOBSDSocket.AddressFamily, bytes: UnsafeRawPointer, length byteCount: Int) throws -> String {
     var addressBytes: [Int8] = Array(repeating: 0, count: byteCount)
@@ -691,7 +679,6 @@ internal func descriptionForAddress(family: NIOBSDSocket.AddressFamily, bytes: U
         }
     }
 }
-#endif
 
 extension sockaddr_in: SockAddrProtocol {
     func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
@@ -700,7 +687,6 @@ extension sockaddr_in: SockAddrProtocol {
         }
     }
 
-#if !os(WASI)
     /// Returns a description of the `sockaddr_in`.
     func addressDescription() -> String {
         return withUnsafePointer(to: self.sin_addr) { addrPtr in
@@ -708,7 +694,6 @@ extension sockaddr_in: SockAddrProtocol {
             try! descriptionForAddress(family: .inet, bytes: addrPtr, length: Int(INET_ADDRSTRLEN))
         }
     }
-#endif
 }
 
 extension sockaddr_in6: SockAddrProtocol {
@@ -718,7 +703,6 @@ extension sockaddr_in6: SockAddrProtocol {
         }
     }
 
-#if !os(WASI)
     /// Returns a description of the `sockaddr_in6`.
     func addressDescription() -> String {
         return withUnsafePointer(to: self.sin6_addr) { addrPtr in
@@ -726,7 +710,6 @@ extension sockaddr_in6: SockAddrProtocol {
             try! descriptionForAddress(family: .inet6, bytes: addrPtr, length: Int(INET6_ADDRSTRLEN))
         }
     }
-#endif
 }
 
 extension sockaddr_un: SockAddrProtocol {
@@ -745,7 +728,6 @@ extension sockaddr_storage: SockAddrProtocol {
     }
 }
 
-#if !os(WASI)
 // MARK: Workarounds for SR-14268
 // We need these free functions to expose our extension methods, because otherwise
 // the compiler falls over when we try to access them from test code. As these functions
@@ -757,7 +739,6 @@ func __testOnly_addressDescription(_ addr: sockaddr_in) -> String {
 func __testOnly_addressDescription(_ addr: sockaddr_in6) -> String {
     return addr.addressDescription()
 }
-#endif
 
 func __testOnly_withSockAddr<ReturnType>(
     _ addr: sockaddr_in, _ body: (UnsafePointer<sockaddr>, Int) throws -> ReturnType

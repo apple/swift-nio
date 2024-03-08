@@ -21,6 +21,7 @@ import Glibc
 import Musl
 #elseif canImport(WASILibc)
 import WASILibc
+import CNIOWASI
 #else
 #error("The File Handle module was unable to identify your C library.")
 #endif
@@ -138,19 +139,24 @@ extension NIOFileHandle {
 
 #if os(Windows)
         public static let defaultPermissions = _S_IREAD | _S_IWRITE
+#elseif os(WASI)
+        public static let defaultPermissions = WASILibc.S_IWUSR | WASILibc.S_IRUSR | WASILibc.S_IRGRP | WASILibc.S_IROTH
 #else
         public static let defaultPermissions = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
 #endif
 
-#if !os(WASI)
         /// Allows file creation when opening file for writing. File owner is set to the effective user ID of the process.
         ///
         /// - parameters:
         ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
         public static func allowFileCreation(posixMode: NIOPOSIXFileMode = defaultPermissions) -> Flags {
-            return Flags(posixMode: posixMode, posixFlags: O_CREAT)
+            #if os(WASI)
+            let flags = CNIOWASI_O_CREAT()
+            #else
+            let flags = O_CREAT
+            #endif
+            return Flags(posixMode: posixMode, posixFlags: flags)
         }
-#endif
 
         /// Allows the specification of POSIX flags (e.g. `O_TRUNC`) and mode (e.g. `S_IWUSR`)
         ///

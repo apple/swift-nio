@@ -64,7 +64,6 @@ private extension ifaddrs {
 }
 #endif
 
-#if !os(WASI)
 /// A representation of a single network interface on a system.
 @available(*, deprecated, renamed: "NIONetworkDevice")
 public final class NIONetworkInterface: Sendable {
@@ -96,6 +95,11 @@ public final class NIONetworkInterface: Sendable {
     /// The index of the interface, as provided by `if_nametoindex`.
     public let interfaceIndex: Int
 
+#if os(WASI)
+    @available(*, unavailable)
+    init() { fatalError() }
+#endif
+
 #if os(Windows)
     internal init?(_ pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>,
                    _ pAddress: UnsafeMutablePointer<IP_ADAPTER_UNICAST_ADDRESS>) {
@@ -124,7 +128,7 @@ public final class NIONetworkInterface: Sendable {
         self.pointToPointDestinationAddress = nil
         self.multicastSupported = false
     }
-#else
+#elseif !os(WASI)
     internal init?(_ caddr: ifaddrs) {
         self.name = String(cString: caddr.ifa_name!)
 
@@ -189,7 +193,6 @@ extension NIONetworkInterface: Equatable {
                lhs.interfaceIndex == rhs.interfaceIndex
     }
 }
-#endif
 
 /// A helper extension for working with sockaddr pointers.
 extension UnsafeMutablePointer where Pointee == sockaddr {
@@ -197,12 +200,10 @@ extension UnsafeMutablePointer where Pointee == sockaddr {
     fileprivate func convert() -> SocketAddress? {
         let addressBytes = UnsafeRawPointer(self)
         switch NIOBSDSocket.AddressFamily(rawValue: CInt(pointee.sa_family)) {
-#if !os(WASI)
         case .inet:
             return SocketAddress(addressBytes.load(as: sockaddr_in.self))
         case .inet6:
             return SocketAddress(addressBytes.load(as: sockaddr_in6.self))
-#endif
         case .unix:
             return SocketAddress(addressBytes.load(as: sockaddr_un.self))
         default:

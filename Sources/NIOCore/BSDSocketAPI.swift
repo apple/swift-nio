@@ -82,6 +82,9 @@ private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutable
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 #elseif canImport(WASILibc)
 import WASILibc
+
+private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
+private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 #else
 #error("The BSD Socket module was unable to identify your C library.")
 #endif
@@ -193,11 +196,6 @@ extension NIOBSDSocket.AddressFamily {
 
 // Protocol Family
 extension NIOBSDSocket.ProtocolFamily {
-#if os(WASI)
-    /// UNIX local to the host.
-    public static let unix: NIOBSDSocket.ProtocolFamily =
-            NIOBSDSocket.ProtocolFamily(rawValue: 1)
-#else
     /// IP network 4 protocol.
     public static let inet: NIOBSDSocket.ProtocolFamily =
             NIOBSDSocket.ProtocolFamily(rawValue: PF_INET)
@@ -206,6 +204,7 @@ extension NIOBSDSocket.ProtocolFamily {
     public static let inet6: NIOBSDSocket.ProtocolFamily =
             NIOBSDSocket.ProtocolFamily(rawValue: PF_INET6)
 
+#if !os(WASI)
     /// UNIX local to the host.
     public static let unix: NIOBSDSocket.ProtocolFamily =
             NIOBSDSocket.ProtocolFamily(rawValue: PF_UNIX)
@@ -415,7 +414,6 @@ extension NIOBSDSocket.Option {
 }
 #endif
 
-#if !os(WASI)
 extension NIOBSDSocket {
     // Sadly this was defined on BSDSocket, and we need it for SocketAddress.
     @inline(never)
@@ -455,4 +453,3 @@ extension NIOBSDSocket {
         #endif
     }
 }
-#endif
