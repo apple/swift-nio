@@ -15,7 +15,6 @@
 
 import PackageDescription
 
-
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(
@@ -46,7 +45,7 @@ let package = Package(
         .library(name: "_NIOFileSystemFoundationCompat", targets: ["NIOFileSystemFoundationCompat"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-atomics.git", revision: "1f2007ef4165432f59f28615c473eb79a844a2af"),
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
         .package(url: "https://github.com/apple/swift-system.git", from: "1.2.0"),
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
