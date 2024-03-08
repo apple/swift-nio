@@ -1116,16 +1116,22 @@ extension SystemFileHandle {
         if delayMaterialization {
             // When opening in this mode we can more "atomically" create the file, that is, by not
             // leaving the user with a half written file should e.g. the system crash or throw an
-            // error while writing. On Linux we do this by opening the directory for the path
-            // with `O_TMPFILE` and creating a hard link when closing the file. On other platforms
-            // we generate a dot file with a randomised suffix name and rename it to the
+            // error while writing. On non-Android Linux we do this by opening the directory for
+            // the path with `O_TMPFILE` and creating a hard link when closing the file. On other
+            // platforms we generate a dot file with a randomised suffix name and rename it to the
             // destination.
+            #if os(Android)
+            let temporaryHardLink = false
+            #else
+            let temporaryHardLink = true
+            #endif
             return Self.syncOpenWithMaterialization(
                 atPath: path,
                 mode: mode,
                 options: options,
                 permissions: permissions,
-                executor: executor
+                executor: executor,
+                useTemporaryFileIfPossible: temporaryHardLink
             )
         } else {
             return Self.syncOpen(
