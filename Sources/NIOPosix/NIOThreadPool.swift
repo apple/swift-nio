@@ -73,7 +73,7 @@ public final class NIOThreadPool {
     private let lock = NIOLock()
     private var threads: [NIOThread]? = nil  // protected by `lock`
     private var state: State = .stopped
-    private let numberOfThreads: Int
+    public let numberOfThreads: Int
     private let canBeStopped: Bool
 
     /// Gracefully shutdown this `NIOThreadPool`. All tasks will be run before shutdown will take place.
