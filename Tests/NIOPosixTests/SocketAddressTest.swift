@@ -35,26 +35,26 @@ class SocketAddressTest: XCTestCase {
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
         XCTAssertEqual("[IPv4]foobar.com/0.0.0.0:12345", sa.description)
     }
-    
+
     func testDescriptionWorksWithIPOnly() throws {
         let sa = try! SocketAddress(ipAddress: "10.0.0.2", port: 12345)
         XCTAssertEqual("[IPv4]10.0.0.2:12345", sa.description)
     }
-    
+
     func testDescriptionWorksWithByteBufferIPv4IP() throws {
         let IPv4: [UInt8] = [0x7F, 0x00, 0x00, 0x01]
         let ipv4Address: ByteBuffer = ByteBuffer.init(bytes: IPv4)
         let sa = try! SocketAddress(packedIPAddress: ipv4Address, port: 12345)
         XCTAssertEqual("[IPv4]127.0.0.1:12345", sa.description)
     }
-    
+
     func testDescriptionWorksWithByteBufferIPv6IP() throws {
         let IPv6: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
         let ipv6Address: ByteBuffer = ByteBuffer.init(bytes: IPv6)
         let sa = try! SocketAddress(packedIPAddress: ipv6Address, port: 12345)
         XCTAssertEqual("[IPv6]fe80::5:12345", sa.description)
     }
-    
+
     func testRejectsWrongIPByteBufferLength() {
         let wrongIP: [UInt8] = [0x01, 0x7F, 0x00]
         let ipAddress: ByteBuffer = ByteBuffer.init(bytes: wrongIP)
@@ -67,7 +67,7 @@ class SocketAddressTest: XCTestCase {
             }
         }
     }
-    
+
     func testIn6AddrDescriptionWorks() throws {
         let sampleString = "::1"
         let sampleIn6Addr: [UInt8] = [ // ::1
@@ -93,7 +93,7 @@ class SocketAddressTest: XCTestCase {
         XCTAssertEqual(s, sampleString,
                        "Address description is way below our expectations 😱")
     }
-	
+
     func testIPAddressWorks() throws {
         let sa = try! SocketAddress(ipAddress: "127.0.0.1", port: 12345)
         XCTAssertEqual("127.0.0.1", sa.ipAddress)
@@ -581,11 +581,3 @@ class SocketAddressTest: XCTestCase {
         }
     }
 }
-
-#if swift(<5.8)
-extension UnsafeMutablePointer {
-    func update(from source: UnsafePointer<Pointee>, count: Int) {
-        self.assign(from: source, count: count)
-    }
-}
-#endif
