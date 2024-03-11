@@ -463,8 +463,6 @@ public protocol WritableFileHandleProtocol: FileHandleProtocol {
     ///       filesystem with the expected name, otherwise no file will be created or the original
     ///       file won't be modified (if one existed).
     func close(makeChangesVisible: Bool) async throws
-  
-    func withBufferedWriter<R: Sendable>(execute body: ( BufferedWriter<Self>) async throws -> R) async throws -> R
 }
 
 /// A file handle which is suitable for reading and writing.

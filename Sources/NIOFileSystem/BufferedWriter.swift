@@ -186,6 +186,25 @@ extension WritableFileHandleProtocol {
             capacity: Int(capacity.bytes)
         )
     }
+    
+    /// Convenience function that creates a buffered reader, executes
+    /// the closure that writes the contents into the buffer and calls 'flush()'.
+    ///
+    /// - Parameters:
+    ///   - body: The closure that writes the contents to the buffer created in this method.
+    ///   - Returns: The result of the executed closure.
+    public func withBufferedWriter<R: Sendable>(
+        startingAtAbsoluteOffset initialOffset: Int64 = 0,
+        capacity: ByteCount = .kibibytes(512),
+        execute body: (inout BufferedWriter<Self>) async throws -> R
+    ) async throws -> R {
+        var bufferedWriter = self.bufferedWriter(startingAtAbsoluteOffset: initialOffset, capacity: capacity)
+        return try await withUncancellableTearDown {
+            return try await body(&bufferedWriter)
+        } tearDown: { _ in
+            try await bufferedWriter.flush()
+        }
+    }
 }
 
 #endif
