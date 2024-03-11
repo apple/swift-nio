@@ -121,15 +121,20 @@ final class BufferedWriterTests: XCTestCase {
         let fs = FileSystem.shared
         let path = try await fs.temporaryFilePath()
 
-        try await fs.withFileHandle(
+        let writtenBytes = try await fs.withFileHandle(
             forReadingAndWritingAt: path,
             options: .newFile(replaceExisting: false)
         ) { file in
-            var writer = try await file.withBufferedWriter(capacity: .bytes(1024), execute: { writer in
-                    try await writer.write(contentsOf: Array(repeating: 0, count: 128))
+            try await file.withBufferedWriter(
+                capacity: .bytes(1024),
+                execute: { writer in
+                    try await writer.write(
+                        contentsOf: Array(repeating: 0, count: 128)
+                    )
                 }
             )
         }
+        XCTAssertEqual(writtenBytes, 128)
         
         guard let fileInfo = try await fs.info(forFileAt: path) else {
             XCTFail()
