@@ -203,6 +203,15 @@ public struct WriteFileHandle: WritableFileHandleProtocol, _HasFileHandle {
     public func close(makeChangesVisible: Bool) async throws {
         try await self.fileHandle.systemFileHandle.close(makeChangesVisible: makeChangesVisible)
     }
+    
+    public func withBufferedWriter<R: Sendable>(execute body: ( BufferedWriter<Self>) async throws -> R) async throws -> R {
+        var bufferedWriter = self.bufferedWriter()
+        return try await withUncancellableTearDown {
+            return try await body(bufferedWriter)
+        } tearDown: { _ in
+            try await bufferedWriter.flush()
+        }
+    }
 }
 
 /// Implements ``ReadableAndWritableFileHandleProtocol`` by making system calls to interact with the
@@ -240,6 +249,16 @@ public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFi
         )
     }
 
+    @discardableResult
+    public func withBufferedWriter<R: Sendable>(execute body: ( BufferedWriter<Self>) async throws -> R) async throws -> R {
+        var bufferedWriter = self.bufferedWriter()
+        return try await withUncancellableTearDown {
+            return try await body(bufferedWriter)
+        } tearDown: { _ in
+            try await bufferedWriter.flush()
+        }
+    }
+    
     public func resize(to size: ByteCount) async throws {
         try await self.fileHandle.systemFileHandle.resize(to: size)
     }
