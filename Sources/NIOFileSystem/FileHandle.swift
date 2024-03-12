@@ -239,7 +239,7 @@ public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFi
             toAbsoluteOffset: offset
         )
     }
-    
+
     public func resize(to size: ByteCount) async throws {
         try await self.fileHandle.systemFileHandle.resize(to: size)
     }
