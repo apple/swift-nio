@@ -263,6 +263,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
         }.whenFailure{ error in
+            self.close0(error: error, mode: .all, promise: nil)
             promise?.fail(error)
         }
         executeAndComplete(p) {
