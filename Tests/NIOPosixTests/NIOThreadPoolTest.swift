@@ -157,6 +157,29 @@ class NIOThreadPoolTest: XCTestCase {
         try await pool.shutdownGracefully()
     }
 
+    func testAsyncThreadPoolCancellation() async throws {
+        let pool = NIOThreadPool(numberOfThreads: 1)
+        pool.start()
+
+        await withThrowingTaskGroup(of: Void.self) { group in
+            group.cancelAll()
+            group.addTask {
+                try await pool.runIfActive {
+                    XCTFail("Should be cancelled before executed")
+                }
+            }
+
+            do {
+                try await group.waitForAll()
+                XCTFail("Expected CancellationError to be thrown")
+            } catch {
+                XCTAssert(error is CancellationError)
+            }
+        }
+
+        try await pool.shutdownGracefully()
+    }
+
     func testAsyncShutdownWorks() async throws {
         let threadPool = NIOThreadPool(numberOfThreads: 17)
         let eventLoop = NIOAsyncTestingEventLoop()

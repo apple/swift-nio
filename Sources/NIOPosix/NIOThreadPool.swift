@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
 import DequeModule
 import Dispatch
 import NIOConcurrencyHelpers
@@ -58,13 +59,19 @@ public final class NIOThreadPool {
 
     /// The work that should be done by the `NIOThreadPool`.
     public typealias WorkItem = @Sendable (WorkItemState) -> Void
+
+    private struct IdentifiableWorkItem: Sendable {
+        var workItem: WorkItem
+        var id: Int?
+    }
+
     private enum State {
         /// The `NIOThreadPool` is already stopped.
         case stopped
         /// The `NIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.
         case shuttingDown([Bool])
         /// The `NIOThreadPool` is up and running, the `CircularBuffer` containing the yet unprocessed `WorkItems`.
-        case running(Deque<WorkItem>)
+        case running(Deque<IdentifiableWorkItem>)
         /// Temporary state used when mutating the .running(items). Used to avoid CoW copies.
         /// It should never be "leaked" outside of the lock block.
         case modifying
@@ -73,6 +80,9 @@ public final class NIOThreadPool {
     private let lock = NIOLock()
     private var threads: [NIOThread]? = nil  // protected by `lock`
     private var state: State = .stopped
+    private var cancelledWorkIDs: Set<Int> = []
+    private let nextWorkID = ManagedAtomic(0)
+
     public let numberOfThreads: Int
     private let canBeStopped: Bool
 
@@ -99,7 +109,7 @@ public final class NIOThreadPool {
             case .running(let items):
                 self.state = .modifying
                 queue.async {
-                    items.forEach { $0(.cancelled) }
+                    items.forEach { $0.workItem(.cancelled) }
                 }
                 self.state = .shuttingDown(Array(repeating: true, count: numberOfThreads))
                 (0..<numberOfThreads).forEach { _ in
@@ -134,15 +144,15 @@ public final class NIOThreadPool {
     ///     - body: The `WorkItem` to process by the `NIOThreadPool`.
     @preconcurrency
     public func submit(_ body: @escaping WorkItem) {
-        self._submit(body)
+        self._submit(id: nil, body)
     }
 
-    private func _submit(_ body: @escaping WorkItem) {
+    private func _submit(id: Int?, _ body: @escaping WorkItem) {
         let item = self.lock.withLock { () -> WorkItem? in
             switch self.state {
             case .running(var items):
                 self.state = .modifying
-                items.append(body)
+                items.append(.init(workItem: body, id: id))
                 self.state = .running(items)
                 self.semaphore.signal()
                 return nil
@@ -179,19 +189,37 @@ public final class NIOThreadPool {
     }
 
     private func process(identifier: Int) {
-        var item: WorkItem? = nil
+        var item: (item: IdentifiableWorkItem, isCancelled: Bool)? = nil
+        var lastID: Int?
+
         repeat {
             /* wait until work has become available */
             item = nil  // ensure previous work item is not retained for duration of semaphore wait
             self.semaphore.wait()
 
-            item = self.lock.withLock { () -> (WorkItem)? in
+            item = self.lock.withLock { () -> (IdentifiableWorkItem, Bool)? in
                 switch self.state {
                 case .running(var items):
                     self.state = .modifying
                     let item = items.removeFirst()
+
+                    // There's a timing window between returning the work item from the lock and
+                    // running it where the task could be cancelled resulting in the ID being
+                    // stored indefinitely. To avoid that, check the previous ID as at this point
+                    // the work must have run.
+                    if let lastID = lastID {
+                        self.cancelledWorkIDs.remove(lastID)
+                    }
+
+                    let isCancelled: Bool
+                    if let id = item.id {
+                        isCancelled = self.cancelledWorkIDs.remove(id) != nil
+                    } else {
+                        isCancelled = false
+                    }
+
                     self.state = .running(items)
-                    return item
+                    return (item, isCancelled)
                 case .shuttingDown(var aliveStates):
                     assert(aliveStates[identifier])
                     aliveStates[identifier] = false
@@ -204,7 +232,10 @@ public final class NIOThreadPool {
                 }
             }
             /* if there was a work item popped, run it */
-            item.map { $0(.active) }
+            if let (item, isCancelled) = item {
+                lastID = item.id
+                item.workItem(isCancelled ? .cancelled : .active)
+            }
         } while item != nil
     }
 
@@ -311,17 +342,23 @@ extension NIOThreadPool {
     /// - returns: result of the passed closure.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func runIfActive<T: Sendable>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<T, Error>) in
-            self.submit { shouldRun in
-                guard case shouldRun = NIOThreadPool.WorkItemState.active else {
-                    cont.resume(throwing: NIOThreadPoolError.ThreadPoolInactive())
-                    return
+        let workID = self.nextWorkID.loadThenWrappingIncrement(ordering: .relaxed)
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<T, Error>) in
+                self._submit(id: workID) { shouldRun in
+                    switch shouldRun {
+                    case .active:
+                        let result = Result(catching: body)
+                        cont.resume(with: result)
+                    case .cancelled:
+                        cont.resume(throwing: CancellationError())
+                    }
                 }
-                do {
-                    try cont.resume(returning: body())
-                } catch {
-                    cont.resume(throwing: error)
-                }
+            }
+        } onCancel: {
+            self.lock.withLockVoid {
+                self.cancelledWorkIDs.insert(workID)
             }
         }
     }
