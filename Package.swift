@@ -61,13 +61,22 @@ let package = Package(
                 "_NIODataStructures",
                 swiftCollections,
                 swiftAtomics,
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
-            name: "_NIODataStructures"
+            name: "_NIODataStructures",
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ]
         ),
         .target(
-            name: "_NIOBase64"
+            name: "_NIOBase64",
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ]
         ),
         .target(
             name: "NIOEmbedded",
@@ -77,6 +86,9 @@ let package = Package(
                 "_NIODataStructures",
                 swiftAtomics,
                 swiftCollections,
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
@@ -89,6 +101,9 @@ let package = Package(
                 "NIOCore",
                 "_NIODataStructures",
                 swiftAtomics,
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
@@ -97,6 +112,9 @@ let package = Package(
                 "NIOCore",
                 "NIOEmbedded",
                 "NIOPosix",
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
@@ -104,6 +122,9 @@ let package = Package(
             dependencies: [
                 "NIO",
                 "NIOCore",
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
@@ -111,22 +132,34 @@ let package = Package(
             dependencies: [
                 "NIO",
                 "NIOCore",
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
             name: "CNIOAtomics",
             dependencies: [],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ],
             cSettings: [
                 .define("_GNU_SOURCE"),
             ]
         ),
         .target(
             name: "CNIOSHA1",
-            dependencies: []
+            dependencies: [],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ]
         ),
         .target(
             name: "CNIOLinux",
             dependencies: [],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ],
             cSettings: [
                 .define("_GNU_SOURCE"),
             ]
@@ -134,18 +167,27 @@ let package = Package(
         .target(
             name: "CNIODarwin",
             dependencies: [],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ],
             cSettings: [
                 .define("__APPLE_USE_RFC_3542"),
             ]
         ),
         .target(
             name: "CNIOWindows",
-            dependencies: []
+            dependencies: [],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ]
         ),
         .target(
             name: "NIOConcurrencyHelpers",
             dependencies: [
                 "CNIOAtomics",
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
@@ -156,6 +198,9 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
                 swiftCollections
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
@@ -166,10 +211,16 @@ let package = Package(
                 "NIOHTTP1",
                 "CNIOSHA1",
                 "_NIOBase64"
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
             name: "CNIOLLHTTP",
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ],
             cSettings: [
               .define("_GNU_SOURCE"),
               .define("LLHTTP_STRICT_MODE")
@@ -181,6 +232,9 @@ let package = Package(
                 "NIO",
                 "NIOCore",
                 swiftCollections,
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
@@ -191,6 +245,9 @@ let package = Package(
                 "NIOEmbedded",
                 "NIOHTTP1",
                 swiftAtomics,
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
         .target(
@@ -203,6 +260,9 @@ let package = Package(
                 swiftCollections,
                 swiftSystem,
             ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ],
             swiftSettings: [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
@@ -211,6 +271,9 @@ let package = Package(
             name: "NIOFileSystemFoundationCompat",
             dependencies: [
                 "NIOFileSystem",
+            ],
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
             ]
         ),
 
