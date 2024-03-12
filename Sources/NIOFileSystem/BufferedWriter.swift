@@ -191,8 +191,11 @@ extension WritableFileHandleProtocol {
     /// the closure that writes the contents into the buffer and calls 'flush()'.
     ///
     /// - Parameters:
+    ///   - initialOffset: The offset to begin writing at, defaults to zero.
+    ///   - capacity: The capacity of the buffer in bytes, as a ``ByteCount``. The writer writes the contents of its
+    ///     buffer to the file system when it exceeds this capacity. Defaults to 512 KiB.
     ///   - body: The closure that writes the contents to the buffer created in this method.
-    ///   - Returns: The result of the executed closure.
+    /// - Returns: The result of the executed closure.
     public func withBufferedWriter<R: Sendable>(
         startingAtAbsoluteOffset initialOffset: Int64 = 0,
         capacity: ByteCount = .kibibytes(512),
