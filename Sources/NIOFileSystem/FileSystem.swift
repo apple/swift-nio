@@ -16,6 +16,7 @@
 
 import Atomics
 import NIOCore
+import NIOPosix
 @preconcurrency import SystemPackage
 
 #if canImport(Darwin)
@@ -36,7 +37,7 @@ import Musl
 /// environment variable is set.
 ///
 /// If you require more granular control you can create a ``FileSystem`` with the required number
-/// of threads by calling ``withFileSystem(numberOfThreads:_:)``.
+/// of threads by calling ``withFileSystem(numberOfThreads:_:)`` or by using ``init(threadPool:)``.
 ///
 /// ### Errors
 ///
@@ -53,23 +54,39 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
     /// The file system executes blocking work in a thread pool which defaults to having two
-    /// threads. This can be modified by `fileSystemThreadCountSuggestion` or by
-    /// setting the `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` environment variable.
+    /// threads. This can be modified by `blockingPoolThreadCountSuggestion` or by
+    /// setting the `NIO_SINGLETON_BLOCKING_POOL_THREAD_COUNT` environment variable.
     public static var shared: FileSystem { globalFileSystem }
 
-    private let executor: IOExecutor
+    private let threadPool: NIOThreadPool
+    private let ownsThreadPool: Bool
 
     fileprivate func shutdown() async {
-        await self.executor.drain()
+        if self.ownsThreadPool {
+            try? await self.threadPool.shutdownGracefully()
+        }
     }
 
-    fileprivate init(executor: IOExecutor) {
-        self.executor = executor
+    /// Creates a new ``FileSystem`` using the provided thread pool.
+    ///
+    /// - Parameter threadPool: A started thread pool to execute blocking system calls on. The
+    ///     ``FileSystem`` doesn't take ownership of the thread pool and you remain responsible
+    ///     for shutting it down when necessary.
+    public init(threadPool: NIOThreadPool) {
+        self.init(threadPool: threadPool, ownsThreadPool: false)
+    }
+
+    fileprivate init(threadPool: NIOThreadPool, ownsThreadPool: Bool) {
+        self.threadPool = threadPool
+        self.ownsThreadPool = ownsThreadPool
     }
 
     fileprivate init(numberOfThreads: Int) async {
-        let executor = await IOExecutor.running(numberOfThreads: numberOfThreads)
-        self.init(executor: executor)
+        let threadPool = NIOThreadPool(numberOfThreads: numberOfThreads)
+        threadPool.start()
+        // Wait for the thread pool to start.
+        try? await threadPool.runIfActive { }
+        self.init(threadPool: threadPool, ownsThreadPool: true)
     }
 
     /// Open the file at `path` for reading.
@@ -91,7 +108,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         forReadingAt path: FilePath,
         options: OpenOptions.Read
     ) async throws -> ReadFileHandle {
-        let handle = try await self.executor.execute {
+        let handle = try await self.threadPool.runIfActive {
             let handle = try self._openFile(forReadingAt: path, options: options).get()
             // Okay to transfer: we just created it and are now moving back to the callers task.
             return UnsafeTransfer(handle)
@@ -121,7 +138,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         forWritingAt path: FilePath,
         options: OpenOptions.Write
     ) async throws -> WriteFileHandle {
-        let handle = try await self.executor.execute {
+        let handle = try await self.threadPool.runIfActive {
             let handle = try self._openFile(forWritingAt: path, options: options).get()
             // Okay to transfer: we just created it and are now moving back to the callers task.
             return UnsafeTransfer(handle)
@@ -151,7 +168,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         forReadingAndWritingAt path: FilePath,
         options: OpenOptions.Write
     ) async throws -> ReadWriteFileHandle {
-        let handle = try await self.executor.execute {
+        let handle = try await self.threadPool.runIfActive {
             let handle = try self._openFile(forReadingAndWritingAt: path, options: options).get()
             // Okay to transfer: we just created it and are now moving back to the callers task.
             return UnsafeTransfer(handle)
@@ -177,7 +194,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         atPath path: FilePath,
         options: OpenOptions.Directory
     ) async throws -> DirectoryFileHandle {
-        let handle = try await self.executor.execute {
+        let handle = try await self.threadPool.runIfActive {
             let handle = try self._openDirectory(at: path, options: options).get()
             // Okay to transfer: we just created it and are now moving back to the callers task.
             return UnsafeTransfer(handle)
@@ -216,7 +233,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         withIntermediateDirectories createIntermediateDirectories: Bool,
         permissions: FilePermissions?
     ) async throws {
-        try await self.executor.execute {
+        try await self.threadPool.runIfActive {
             try self._createDirectory(
                 at: path,
                 withIntermediateDirectories: createIntermediateDirectories,
@@ -246,7 +263,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     public func createTemporaryDirectory(
         template: FilePath
     ) async throws -> FilePath {
-        return try await self.executor.execute {
+        return try await self.threadPool.runIfActive {
             try self._createTemporaryDirectory(template: template).get()
         }
     }
@@ -267,7 +284,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         forFileAt path: FilePath,
         infoAboutSymbolicLink: Bool
     ) async throws -> FileInfo? {
-        return try await self.executor.execute {
+        return try await self.threadPool.runIfActive {
             try self._info(forFileAt: path, infoAboutSymbolicLink: infoAboutSymbolicLink).get()
         }
     }
@@ -389,7 +406,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         recursively removeItemRecursively: Bool
     ) async throws -> Int {
         // Try to remove the item: we might just get lucky.
-        let result = try await self.executor.execute { Libc.remove(path) }
+        let result = try await self.threadPool.runIfActive { Libc.remove(path) }
 
         switch result {
         case .success:
@@ -474,7 +491,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///   - sourcePath: The path to the item to move.
     ///   - destinationPath: The path at which to place the item.
     public func moveItem(at sourcePath: FilePath, to destinationPath: FilePath) async throws {
-        let result = try await self.executor.execute {
+        let result = try await self.threadPool.runIfActive {
             try self._moveItem(at: sourcePath, to: destinationPath).get()
         }
 
@@ -547,7 +564,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at linkPath: FilePath,
         withDestination destinationPath: FilePath
     ) async throws {
-        return try await self.executor.execute {
+        return try await self.threadPool.runIfActive {
             try self._createSymbolicLink(at: linkPath, withDestination: destinationPath).get()
         }
     }
@@ -578,7 +595,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     public func destinationOfSymbolicLink(
         at path: FilePath
     ) async throws -> FilePath {
-        return try await self.executor.execute {
+        return try await self.threadPool.runIfActive {
             try self._destinationOfSymbolicLink(at: path).get()
         }
     }
@@ -592,7 +609,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// - Returns: The path to the current working directory.
     public var currentWorkingDirectory: FilePath {
         get async throws {
-            try await self.executor.execute {
+            try await self.threadPool.runIfActive {
                 try Libc.getcwd().mapError { errno in
                     FileSystemError.getcwd(errno: errno, location: .here())
                 }.get()
@@ -614,7 +631,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     public var temporaryDirectory: FilePath {
         get async throws {
             #if canImport(Darwin)
-            return try await self.executor.execute {
+            return try await self.threadPool.runIfActive {
                 return try Libc.constr(_CS_DARWIN_USER_TEMP_DIR).map { path in
                     FilePath(path)
                 }.mapError { errno in
@@ -643,95 +660,12 @@ extension NIOSingletons {
     /// `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` is set or this value was set manually by the user.
     ///
     /// - note: This value must be set _before_ any singletons are used and must only be set once.
+    @available(*, deprecated, renamed: "blockingPoolThreadCountSuggestion")
     public static var fileSystemThreadCountSuggestion: Int {
-        set {
-            Self.userSetSingletonThreadCount(rawStorage: globalRawSuggestedFileSystemThreadCount, userValue: newValue)
-        }
-
-        get {
-            return Self.getTrustworthyThreadCount(
-                rawStorage: globalRawSuggestedFileSystemThreadCount,
-                environmentVariable: "NIO_SINGLETON_FILESYSTEM_THREAD_COUNT"
-            )
-        }
-    }
-
-    // Copied from NIOCore/GlobalSingletons.swift
-    private static func userSetSingletonThreadCount(rawStorage: ManagedAtomic<Int>, userValue: Int) {
-        precondition(userValue > 0, "illegal value: needs to be strictly positive")
-
-        // The user is trying to set it. We can only do this if the value is at 0 and we will set the
-        // negative value. So if the user wants `5`, we will set `-5`. Once it's used (set getter), it'll be upped
-        // to 5.
-        let (exchanged, _) = rawStorage.compareExchange(expected: 0, desired: -userValue, ordering: .relaxed)
-        guard exchanged else {
-            fatalError(
-                """
-                Bug in user code: Global singleton suggested loop/thread count has been changed after \
-                user or has been changed more than once. Either is an error, you must set this value very early \
-                and only once.
-                """
-            )
-        }
-    }
-
-    // Copied from NIOCore/GlobalSingletons.swift
-    private static func validateTrustedThreadCount(_ threadCount: Int) {
-        assert(
-            threadCount > 0,
-            "BUG IN NIO, please report: negative suggested loop/thread count: \(threadCount)"
-        )
-        assert(
-            threadCount <= 1024,
-            "BUG IN NIO, please report: overly big suggested loop/thread count: \(threadCount)"
-        )
-    }
-
-    // Copied from NIOCore/GlobalSingletons.swift
-    private static func getTrustworthyThreadCount(rawStorage: ManagedAtomic<Int>, environmentVariable: String) -> Int {
-        let returnedValueUnchecked: Int
-
-        let rawSuggestion = rawStorage.load(ordering: .relaxed)
-        switch rawSuggestion {
-        case 0:  // == 0
-            // Not set by user, not yet finalised, let's try to get it from the env var and fall back to
-            // `System.coreCount`.
-            let envVarString = getenv(environmentVariable).map { String(cString: $0) }
-            returnedValueUnchecked = envVarString.flatMap(Int.init) ?? System.coreCount
-        case .min..<0:  // < 0
-            // Untrusted and unchecked user value. Let's invert and then sanitise/check.
-            returnedValueUnchecked = -rawSuggestion
-        case 1 ... .max:  // > 0
-            // Trustworthy value that has been evaluated and sanitised before.
-            let returnValue = rawSuggestion
-            Self.validateTrustedThreadCount(returnValue)
-            return returnValue
-        default:
-            // Unreachable
-            preconditionFailure()
-        }
-
-        // Can't have fewer than 1, don't want more than 1024.
-        let returnValue = max(1, min(1024, returnedValueUnchecked))
-        Self.validateTrustedThreadCount(returnValue)
-
-        // Store it for next time.
-        let (exchanged, _) = rawStorage.compareExchange(
-            expected: rawSuggestion,
-            desired: returnValue,
-            ordering: .relaxed
-        )
-        if !exchanged {
-            // We lost the race, this must mean it has been concurrently set correctly so we can safely recurse
-            // and try again.
-            return Self.getTrustworthyThreadCount(rawStorage: rawStorage, environmentVariable: environmentVariable)
-        }
-        return returnValue
+        set { Self.blockingPoolThreadCountSuggestion = newValue }
+        get { Self.blockingPoolThreadCountSuggestion }
     }
 }
-
-// DO NOT TOUCH THIS DIRECTLY, use `userSetSingletonThreadCount` and `getTrustworthyThreadCount`.
-private let globalRawSuggestedFileSystemThreadCount = ManagedAtomic(0)
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 private let globalFileSystem: FileSystem = {
@@ -743,9 +677,7 @@ private let globalFileSystem: FileSystem = {
             """
         )
     }
-
-    let threadCount = NIOSingletons.fileSystemThreadCountSuggestion
-    return FileSystem(executor: .runningAsync(numberOfThreads: threadCount))
+    return FileSystem(threadPool: NIOSingletons.posixBlockingThreadPool, ownsThreadPool: false)
 }()
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -753,7 +685,7 @@ extension NIOSingletons {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
     /// The file system executes blocking work in a thread pool which defaults to having two
-    /// threads. This can be modified by `fileSystemThreadCountSuggestion` or by
+    /// threads. This can be modified by `blockingPoolThreadCountSuggestion` or by
     /// setting the `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` environment variable.
     public static var fileSystem: FileSystem { globalFileSystem }
 }
@@ -793,7 +725,7 @@ extension FileSystem {
             options: options.descriptorOptions,
             permissions: nil,
             transactionalIfPossible: false,
-            executor: self.executor
+            threadPool: self.threadPool
         ).map {
             ReadFileHandle(wrapping: $0)
         }
@@ -810,7 +742,7 @@ extension FileSystem {
             options: options.descriptorOptions,
             permissions: options.permissionsForRegularFile,
             transactionalIfPossible: options.newFile?.transactionalCreation ?? false,
-            executor: self.executor
+            threadPool: self.threadPool
         ).map {
             WriteFileHandle(wrapping: $0)
         }
@@ -827,7 +759,7 @@ extension FileSystem {
             options: options.descriptorOptions,
             permissions: options.permissionsForRegularFile,
             transactionalIfPossible: options.newFile?.transactionalCreation ?? false,
-            executor: self.executor
+            threadPool: self.threadPool
         ).map {
             ReadWriteFileHandle(wrapping: $0)
         }
@@ -844,7 +776,7 @@ extension FileSystem {
             options: options.descriptorOptions,
             permissions: nil,
             transactionalIfPossible: false,
-            executor: self.executor
+            threadPool: self.threadPool
         ).map {
             DirectoryFileHandle(wrapping: $0)
         }
@@ -1056,7 +988,7 @@ extension FileSystem {
         from sourcePath: FilePath,
         to destinationPath: FilePath
     ) async throws {
-        try await self.executor.execute {
+        try await self.threadPool.runIfActive {
             try self._copyRegularFile(from: sourcePath, to: destinationPath).get()
         }
     }
@@ -1198,7 +1130,7 @@ extension FileSystem {
         from sourcePath: FilePath,
         to destinationPath: FilePath
     ) async throws {
-        try await self.executor.execute {
+        try await self.threadPool.runIfActive {
             try self._copySymbolicLink(from: sourcePath, to: destinationPath).get()
         }
     }
@@ -1219,7 +1151,7 @@ extension FileSystem {
         file: String = #fileID,
         line: Int = #line
     ) async throws -> Int {
-        try await self.executor.execute {
+        try await self.threadPool.runIfActive {
             switch Libc.remove(path) {
             case .success:
                 return 1

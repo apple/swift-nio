@@ -15,6 +15,7 @@
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOConcurrencyHelpers
 import NIOCore
+import NIOPosix
 @preconcurrency import SystemPackage
 
 /// An `AsyncSequence` of ordered chunks read from a file.
@@ -140,16 +141,21 @@ private struct FileChunkProducer: Sendable {
     /// source it will either produce more or be scheduled to produce more. Stopping production
     /// is signalled via the stream's 'onTermination' handler.
     func produceMore() {
-        let executor = self.state.withLockedValue { state in
+        let threadPool = self.state.withLockedValue { state in
             state.shouldProduceMore()
         }
 
         // No executor means we're done.
-        guard let executor = executor else { return }
+        guard let threadPool = threadPool else { return }
 
-        executor.execute {
-            try self.readNextChunk()
-        } onCompletion: { result in
+        threadPool.submit {
+            let result: Result<ByteBuffer, Error>
+            switch $0 {
+            case .active:
+                result = Result { try self.readNextChunk() }
+            case .cancelled:
+                result = .failure(CancellationError())
+            }
             self.onReadNextChunkResult(result)
         }
     }
@@ -273,10 +279,10 @@ private struct ProducerState: Sendable {
         }
     }
 
-    mutating func shouldProduceMore() -> IOExecutor? {
+    mutating func shouldProduceMore() -> NIOThreadPool? {
         switch self.state {
         case let .producing(state):
-            return state.handle.executor
+            return state.handle.threadPool
         case .done:
             return nil
         }
