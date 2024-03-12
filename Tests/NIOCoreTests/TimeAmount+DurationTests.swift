@@ -16,7 +16,6 @@ import XCTest
 
 class TimeAmountDurationTests: XCTestCase {
     func testTimeAmountFromDurationConversion() throws {
-#if (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))
         guard #available(macOS 13, iOS 16, tvOS 16, watchOS 9, *) else {
             throw XCTSkip("Required API is not available for this test.")
         }
@@ -68,11 +67,9 @@ class TimeAmountDurationTests: XCTestCase {
             TimeAmount(Duration.nanoseconds(Int64.max) + .nanoseconds(1)),
             .nanoseconds(Int64.max)
         )
-#endif // (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))
     }
 
     func testTimeAmountToDurationLosslessRountTrip() throws {
-#if (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))
         guard #available(macOS 13, iOS 16, tvOS 16, watchOS 9, *) else {
             throw XCTSkip("Required API is not available for this test.")
         }
@@ -87,11 +84,9 @@ class TimeAmountDurationTests: XCTestCase {
         ] {
             XCTAssertEqual(TimeAmount(Duration(amount)), amount)
         }
-#endif // (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))
     }
 
     func testDurationToTimeAmountLossyRoundTrip() throws {
-#if (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))
         guard #available(macOS 13, iOS 16, tvOS 16, watchOS 9, *) else {
             throw XCTSkip("Required API is not available for this test.")
         }
@@ -117,6 +112,5 @@ class TimeAmountDurationTests: XCTestCase {
             let duration_ = Duration(TimeAmount(duration))
             XCTAssertEqual(duration_.nanosecondsClamped, duration.nanosecondsClamped)
         }
-#endif // (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))
     }
 }
