@@ -162,6 +162,24 @@ final class SyscallTests: XCTestCase {
         #endif
     }
 
+    func test_link() throws {
+        let testCases = [
+            MockTestCase(name: "link", .noInterrupt, "src", "dst") { _ in
+                try Syscall.link(from: "src", to: "dst").get()
+            },
+        ]
+        testCases.run()
+    }
+
+    func test_unlink() throws {
+        let testCases = [
+            MockTestCase(name: "unlink", .noInterrupt, "path") { _ in
+                try Syscall.unlink(path: "path").get()
+            },
+        ]
+        testCases.run()
+    }
+
     func test_symlink() throws {
         let testCases = [
             MockTestCase(name: "symlink", .noInterrupt, "one", "two") { _ in

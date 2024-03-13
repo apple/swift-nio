@@ -276,6 +276,10 @@ final class FileSystemErrorTests: XCTestCase {
             .symlink(errno: .badFileDescriptor, link: "link", target: "target", location: here)
         }
 
+        assertCauseIsSyscall("unlink", here) {
+            .unlink(errno: .badFileDescriptor, path: "unlink", location: here)
+        }
+
         assertCauseIsSyscall("readlink", here) {
             .readlink(errno: .badFileDescriptor, path: "link", location: here)
         }
@@ -525,6 +529,19 @@ final class FileSystemErrorTests: XCTestCase {
             ]
         ) { errno in
             .symlink(errno: errno, link: "link", target: "target", location: .fixed)
+        }
+    }
+
+    func testErrnoMapping_unlink() {
+        self.testErrnoToErrorCode(
+            expected: [
+                .permissionDenied: .permissionDenied,
+                .notPermitted: .permissionDenied,
+                .noSuchFileOrDirectory: .notFound,
+                .ioError: .io,
+            ]
+        ) { errno in
+            .unlink(errno: errno, path: "path", location: .fixed)
         }
     }
 

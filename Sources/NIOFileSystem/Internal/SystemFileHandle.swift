@@ -271,7 +271,51 @@ extension SystemFileHandle: FileHandleProtocol {
             switch lifecycle {
             case let .open(descriptor):
                 lifecycle = .detached
-                return descriptor
+
+                // We need to be careful handling files which have delayed materialiszation to avoid
+                // leftover temporary files.
+                //
+                // Where we use the 'link' mode we simply call materialize and return the
+                // descriptor as it will be materialized when closed.
+                //
+                // For the 'rename' mode we create a hard link to the desired file and unlink the
+                // created file.
+                guard let materialization = self.sendableView.materialization else {
+                    // File opened 'normally', just detach and return.
+                    return descriptor
+                }
+
+                switch materialization.mode {
+                #if canImport(Glibc) || canImport(Musl)
+                case .link:
+                    let result = self.sendableView._materializeLink(
+                        descriptor: descriptor,
+                        from: materialization.created,
+                        to: materialization.desired,
+                        exclusive: materialization.exclusive
+                    )
+                    return try result.map { descriptor }.get()
+                #endif
+
+                case .rename:
+                    let result = Syscall.link(
+                        from: materialization.created,
+                        to: materialization.desired
+                    ).mapError { errno in
+                        FileSystemError.link(
+                            errno: errno,
+                            from: materialization.created,
+                            to: materialization.desired,
+                            location: .here()
+                        )
+                    }.flatMap {
+                        Syscall.unlink(path: materialization.created).mapError { errno in
+                            .unlink(errno: errno, path: materialization.created, location: .here())
+                        }
+                    }
+
+                    return try result.map { descriptor }.get()
+                }
 
             case .detached:
                 throw FileSystemError(
@@ -632,7 +676,106 @@ extension SystemFileHandle.SendableView {
         }
     }
 
-    private func _materialize(
+    #if canImport(Glibc) || canImport(Musl)
+    fileprivate func _materializeLink(
+        descriptor: FileDescriptor,
+        from createdPath: FilePath,
+        to desiredPath: FilePath,
+        exclusive: Bool
+    ) -> Result<Void, FileSystemError> {
+        func linkAtEmptyPath() -> Result<Void, Errno> {
+            Syscall.linkAt(
+                from: "",
+                relativeTo: descriptor,
+                to: desiredPath,
+                relativeTo: .currentWorkingDirectory,
+                flags: [.emptyPath]
+            )
+        }
+
+        func linkAtProcFS() -> Result<Void, Errno> {
+            Syscall.linkAt(
+                from: FilePath("/proc/self/fd/\(descriptor.rawValue)"),
+                relativeTo: .currentWorkingDirectory,
+                to: desiredPath,
+                relativeTo: .currentWorkingDirectory,
+                flags: [.followSymbolicLinks]
+            )
+        }
+
+        let result: Result<Void, FileSystemError>
+
+        switch linkAtEmptyPath() {
+        case .success:
+            result = .success(())
+
+        case .failure(.fileExists) where !exclusive:
+            // File exists and materialization _isn't_ exclusive. Remove the existing
+            // file and try again.
+            let removeResult = Libc.remove(desiredPath).mapError { errno in
+                FileSystemError.remove(errno: errno, path: desiredPath, location: .here())
+            }
+
+            let linkAtResult = linkAtEmptyPath().flatMapError { errno in
+                // ENOENT means we likely didn't have the 'CAP_DAC_READ_SEARCH' capability
+                // so try again by linking to the descriptor via procfs.
+                if errno == .noSuchFileOrDirectory {
+                    return linkAtProcFS()
+                } else {
+                    return .failure(errno)
+                }
+            }.mapError { errno in
+                FileSystemError.link(
+                    errno: errno,
+                    from: createdPath,
+                    to: desiredPath,
+                    location: .here()
+                )
+            }
+
+            result = removeResult.flatMap { linkAtResult }
+
+        case .failure(.noSuchFileOrDirectory):
+            result = linkAtProcFS().flatMapError { errno in
+                if errno == .fileExists, !exclusive {
+                    return Libc.remove(desiredPath).mapError { errno in
+                        FileSystemError.remove(
+                            errno: errno,
+                            path: desiredPath,
+                            location: .here()
+                        )
+                    }.flatMap {
+                        return linkAtProcFS().mapError { errno in
+                            FileSystemError.link(
+                                errno: errno,
+                                from: createdPath,
+                                to: desiredPath,
+                                location: .here()
+                            )
+                        }
+                    }
+                } else {
+                    let error = FileSystemError.link(
+                        errno: errno,
+                        from: createdPath,
+                        to: desiredPath,
+                        location: .here()
+                    )
+                    return .failure(error)
+                }
+            }
+
+        case .failure(let errno):
+            result = .failure(
+                .link(errno: errno, from: createdPath, to: desiredPath, location: .here())
+            )
+        }
+
+        return result
+    }
+    #endif
+
+    func _materialize(
         _ materialize: Bool,
         descriptor: FileDescriptor
     ) -> Result<Void, FileSystemError> {
@@ -646,91 +789,12 @@ extension SystemFileHandle.SendableView {
         #if canImport(Glibc) || canImport(Musl)
         case .link:
             if materialize {
-                func linkAtEmptyPath() -> Result<Void, Errno> {
-                    Syscall.linkAt(
-                        from: "",
-                        relativeTo: descriptor,
-                        to: desiredPath,
-                        relativeTo: .currentWorkingDirectory,
-                        flags: [.emptyPath]
-                    )
-                }
-
-                func linkAtProcFS() -> Result<Void, Errno> {
-                    Syscall.linkAt(
-                        from: FilePath("/proc/self/fd/\(descriptor.rawValue)"),
-                        relativeTo: .currentWorkingDirectory,
-                        to: desiredPath,
-                        relativeTo: .currentWorkingDirectory,
-                        flags: [.followSymbolicLinks]
-                    )
-                }
-
-                switch linkAtEmptyPath() {
-                case .success:
-                    result = .success(())
-
-                case .failure(.fileExists) where !materialization.exclusive:
-                    // File exists and materialization _isn't_ exclusive. Remove the existing
-                    // file and try again.
-                    let removeResult = Libc.remove(desiredPath).mapError { errno in
-                        FileSystemError.remove(errno: errno, path: desiredPath, location: .here())
-                    }
-
-                    let linkAtResult = linkAtEmptyPath().flatMapError { errno in
-                        // ENOENT means we likely didn't have the 'CAP_DAC_READ_SEARCH' capability
-                        // so try again by linking to the descriptor via procfs.
-                        if errno == .noSuchFileOrDirectory {
-                            return linkAtProcFS()
-                        } else {
-                            return .failure(errno)
-                        }
-                    }.mapError { errno in
-                        FileSystemError.link(
-                            errno: errno,
-                            from: createdPath,
-                            to: desiredPath,
-                            location: .here()
-                        )
-                    }
-
-                    result = removeResult.flatMap { linkAtResult }
-
-                case .failure(.noSuchFileOrDirectory):
-                    result = linkAtProcFS().flatMapError { errno in
-                        if errno == .fileExists, !materialization.exclusive {
-                            return Libc.remove(desiredPath).mapError { errno in
-                                FileSystemError.remove(
-                                    errno: errno,
-                                    path: desiredPath,
-                                    location: .here()
-                                )
-                            }.flatMap {
-                                return linkAtProcFS().mapError { errno in
-                                    FileSystemError.link(
-                                        errno: errno,
-                                        from: createdPath,
-                                        to: desiredPath,
-                                        location: .here()
-                                    )
-                                }
-                            }
-                        } else {
-                            let error = FileSystemError.link(
-                                errno: errno,
-                                from: createdPath,
-                                to: desiredPath,
-                                location: .here()
-                            )
-                            return .failure(error)
-                        }
-                    }
-
-                case .failure(let errno):
-                    result = .failure(
-                        .link(errno: errno, from: createdPath, to: desiredPath, location: .here())
-                    )
-                }
+                result = self._materializeLink(
+                    descriptor: descriptor,
+                    from: createdPath,
+                    to: desiredPath,
+                    exclusive: materialization.exclusive
+                )
             } else {
                 result = .success(())
             }

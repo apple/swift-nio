@@ -306,6 +306,31 @@ internal func system_linkat(
 }
 #endif
 
+/// link(2): Creates a new link for a file.
+internal func system_link(
+    _ old: UnsafePointer<CInterop.PlatformChar>,
+    _ new: UnsafePointer<CInterop.PlatformChar>
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(old, new)
+    }
+    #endif
+    return link(old, new)
+}
+
+/// unlink(2): Remove a directory entry.
+internal func system_unlink(
+    _ path: UnsafePointer<CInterop.PlatformChar>
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(path)
+    }
+    #endif
+    return unlink(path)
+}
+
 #if canImport(Glibc) || canImport(Musl)
 /// sendfile(2): Transfer data between descriptors
 internal func system_sendfile(

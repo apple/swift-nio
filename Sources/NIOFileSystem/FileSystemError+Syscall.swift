@@ -900,7 +900,7 @@ extension FileSystemError {
         let code: FileSystemError.Code
         let message: String
 
-        // See: 'man 2 close'
+        // See: 'man 2 link'
         switch errno {
         case .fileExists:
             code = .fileAlreadyExists
@@ -920,6 +920,45 @@ extension FileSystemError {
             code: code,
             message: message,
             cause: SystemCallError(systemCall: "linkat", errno: errno),
+            location: location
+        )
+    }
+
+    @_spi(Testing)
+    public static func unlink(
+        errno: Errno,
+        path: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        let code: FileSystemError.Code
+        let message: String
+
+        // See: 'man 2 unlink'
+        switch errno {
+        case .permissionDenied:
+            code = .permissionDenied
+            message = """
+                Search permission denied for a component of the path ('\(path)') or write \
+                permission denied on the directory containing the link to be removed.
+                """
+        case .ioError:
+            code = .io
+            message = "I/O error while unlinking '\(path)'."
+        case .noSuchFileOrDirectory:
+            code = .notFound
+            message = "The named file ('\(path)') doesn't exist."
+        case .notPermitted:
+            code = .permissionDenied
+            message = "Insufficient permissions to unlink '\(path)'."
+        default:
+            code = .unknown
+            message = "Error unlinking '\(path)'."
+        }
+
+        return FileSystemError(
+            code: code,
+            message: message,
+            cause: SystemCallError(systemCall: "unlink", errno: errno),
             location: location
         )
     }

@@ -258,6 +258,29 @@ final class FileSystemTests: XCTestCase {
         }
     }
 
+    func testDetachUnsafeDescriptorForFileOpenedWithMaterialization() async throws {
+        let path = try await self.fs.temporaryFilePath()
+        let descriptor = try await self.fs.withFileHandle(forWritingAt: path) { handle in
+            _ = try await handle.withBufferedWriter { writer in
+                try await writer.write(contentsOf: repeatElement(0, count: 1024))
+            }
+
+            return try handle.detachUnsafeFileDescriptor()
+        }
+
+        try descriptor.writeAll(toAbsoluteOffset: 1024, repeatElement(1, count: 1024))
+
+        var buffer = try await ByteBuffer(
+            contentsOf: path,
+            maximumSizeAllowed: .mebibytes(2),
+            fileSystem: self.fs
+        )
+
+        XCTAssertEqual(buffer.readBytes(length: 1024), Array(repeating: 0, count: 1024))
+        XCTAssertEqual(buffer.readBytes(length: 1024), Array(repeating: 1, count: 1024))
+        XCTAssertEqual(buffer.readableBytes, 0)
+    }
+
     func testOpenFileForReadingAndWriting() async throws {
         let path = try await self.fs.temporaryFilePath()
         try await self.fs.withFileHandle(
