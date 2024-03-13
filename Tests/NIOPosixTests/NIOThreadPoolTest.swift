@@ -152,7 +152,7 @@ class NIOThreadPoolTest: XCTestCase {
             }
             XCTFail("Should not get here as thread pool isn't active")
         } catch {
-            XCTAssertNotNil(error as? NIOThreadPoolError.ThreadPoolInactive, "Error thrown should be of type ThreadPoolError")
+            XCTAssertNotNil(error as? CancellationError, "Error thrown should be of type CancellationError")
         }
         try await pool.shutdownGracefully()
     }
