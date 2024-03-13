@@ -14,7 +14,7 @@
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import Atomics
-@_spi(Testing) import NIOFileSystem
+@_spi(Testing) import _NIOFileSystem
 import XCTest
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
