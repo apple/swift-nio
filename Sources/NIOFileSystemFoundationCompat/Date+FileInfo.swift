@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-import NIOFileSystem
+import _NIOFileSystem
 
 import struct Foundation.Date
 
