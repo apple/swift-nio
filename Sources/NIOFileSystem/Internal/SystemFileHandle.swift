@@ -272,7 +272,7 @@ extension SystemFileHandle: FileHandleProtocol {
             case let .open(descriptor):
                 lifecycle = .detached
 
-                // We need to be careful handling files which have delayed materialiszation to avoid
+                // We need to be careful handling files which have delayed materialization to avoid
                 // leftover temporary files.
                 //
                 // Where we use the 'link' mode we simply call materialize and return the
