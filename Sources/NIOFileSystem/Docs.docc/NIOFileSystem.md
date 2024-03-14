@@ -24,7 +24,7 @@ to a set of protocols for creating other file system implementations.
 The following sample code demonstrates a number of the APIs offered by this module:
 
 ```swift
-import NIOFileSystem
+import _NIOFileSystem
 
 // NIOFileSystem provides access to the local file system via the FileSystem
 // type which is available as a global shared instance.
