@@ -153,7 +153,7 @@ public protocol FileHandleProtocol {
 ///
 /// There are two requirements for implementing this protocol:
 /// 1. ``readChunk(fromAbsoluteOffset:length:)``, and
-/// 2. ``readChunks(in:chunkLength:)-8of2k``
+/// 2. ``readChunks(chunkLength:)
 ///
 /// A number of overloads are provided which provide sensible defaults.
 ///
@@ -193,7 +193,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: ClosedRange<Int64>,
@@ -208,7 +208,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: Range<Int64>,
@@ -223,7 +223,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: PartialRangeFrom<Int64>,
@@ -239,7 +239,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: PartialRangeThrough<Int64>,
@@ -255,7 +255,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: PartialRangeUpTo<Int64>,
@@ -271,7 +271,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: UnboundedRange,
@@ -286,7 +286,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         chunkLength: ByteCount = .kibibytes(128)
