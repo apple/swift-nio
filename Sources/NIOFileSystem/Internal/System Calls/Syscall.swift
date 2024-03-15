@@ -195,6 +195,29 @@ public enum Syscall {
     #endif
 
     @_spi(Testing)
+    public static func link(
+        from source: FilePath,
+        to destination: FilePath
+    ) -> Result<Void, Errno> {
+        return nothingOrErrno(retryOnInterrupt: false) {
+            source.withPlatformString { src in
+                destination.withPlatformString { dst in
+                    system_link(src, dst)
+                }
+            }
+        }
+    }
+
+    @_spi(Testing)
+    public static func unlink(path: FilePath) -> Result<Void, Errno> {
+        return nothingOrErrno(retryOnInterrupt: false) {
+            path.withPlatformString { ptr in
+                system_unlink(ptr)
+            }
+        }
+    }
+
+    @_spi(Testing)
     public static func symlink(
         to destination: FilePath,
         from source: FilePath
