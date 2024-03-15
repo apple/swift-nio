@@ -38,8 +38,8 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "_NIOFileSystem", targets: ["NIOFileSystem"]),
-        .library(name: "_NIOFileSystemFoundationCompat", targets: ["NIOFileSystemFoundationCompat"]),
+        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem"]),
+        .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
@@ -194,7 +194,7 @@ let package = Package(
             ]
         ),
         .target(
-            name: "NIOFileSystem",
+            name: "_NIOFileSystem",
             dependencies: [
                 "NIOCore",
                 "CNIOLinux",
@@ -203,15 +203,17 @@ let package = Package(
                 swiftCollections,
                 swiftSystem,
             ],
+            path: "Sources/NIOFileSystem",
             swiftSettings: [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
         ),
         .target(
-            name: "NIOFileSystemFoundationCompat",
+            name: "_NIOFileSystemFoundationCompat",
             dependencies: [
-                "NIOFileSystem",
-            ]
+                "_NIOFileSystem",
+            ],
+            path: "Sources/NIOFileSystemFoundationCompat"
         ),
 
         // MARK: - Examples
@@ -466,7 +468,7 @@ let package = Package(
             name: "NIOFileSystemTests",
             dependencies: [
                 "NIOCore",
-                "NIOFileSystem",
+                "_NIOFileSystem",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -479,7 +481,7 @@ let package = Package(
             name: "NIOFileSystemIntegrationTests",
             dependencies: [
                 "NIOCore",
-                "NIOFileSystem",
+                "_NIOFileSystem",
                 "NIOFoundationCompat",
             ],
             exclude: [
@@ -492,8 +494,8 @@ let package = Package(
         .testTarget(
             name: "NIOFileSystemFoundationCompatTests",
             dependencies: [
-                "NIOFileSystem",
-                "NIOFileSystemFoundationCompat",
+                "_NIOFileSystem",
+                "_NIOFileSystemFoundationCompat",
             ]
         )
     ]
