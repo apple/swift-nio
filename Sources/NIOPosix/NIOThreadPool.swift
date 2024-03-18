@@ -254,7 +254,25 @@ public final class NIOThreadPool {
             }
         }
 
-        group.wait()
+        // *** BUG FIX ***
+        // This prevents the crash with error message:
+        /*
+         Thread Performance Checker: Thread running at User-interactive quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions
+         PID: 56009, TID: 15177876
+         Backtrace
+         =================================================================
+         3   TheApp                         0x0000000104a91308 $s8NIOPosix13NIOThreadPoolC6_start16threadNamePrefixySS_tF + 1524
+         4   TheApp                         0x0000000104a91fc8 $s8NIOPosix13NIOThreadPoolC5startyyF + 60
+         5   TheApp                         0x0000000104b80c7c $s5Vapor11ApplicationC4CoreV7StorageCAGycfc + 532
+         6   TheApp                         0x0000000104b80a5c $s5Vapor11ApplicationC4CoreV7StorageCAGycfC + 44
+         7   TheApp                         0x0000000104b81198 $s5Vapor11ApplicationC4CoreV10initializeyyF + 84
+         .....
+         */
+        let queue = DispatchQueue(label: "com.swift-nio.myQueue", qos: .userInteractive)
+        queue.async {
+            group.wait()
+        }
+        
         assert(self.lock.withLock { self.threads?.count ?? -1 } == self.numberOfThreads)
     }
 
