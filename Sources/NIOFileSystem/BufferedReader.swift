@@ -117,45 +117,7 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
     public mutating func read(
         while predicate: (UInt8) -> Bool
     ) async throws -> ByteBuffer {
-        // Check if the required bytes are in the buffer already.
-        let view = self.buffer.readableBytesView
-
-        if let index = view.firstIndex(where: { !predicate($0) }) {
-            // Got an index; slice off the front of the buffer.
-            let prefix = view[..<index]
-            let buffer = ByteBuffer(prefix)
-            self.buffer.moveReaderIndex(forwardBy: buffer.readableBytes)
-            return buffer
-        }
-
-        // The predicate holds true for all bytes in the buffer, start consuming chunks from the
-        // iterator.
-        while !self.readEOF {
-            var chunk = try await self.readFromFile(self.capacity)
-            let view = chunk.readableBytesView
-
-            if let index = view.firstIndex(where: { !predicate($0) }) {
-                // Found a byte for which the predicate doesn't hold. Consume the entire buffer and
-                // the front of this slice.
-                let chunkPrefix = view[..<index]
-                self.buffer.writeBytes(chunkPrefix)
-                chunk.moveReaderIndex(forwardBy: chunkPrefix.count)
-
-                let buffer = self.buffer
-                self.buffer = chunk
-
-                // Store the rest of the chunk.
-                return buffer
-            } else {
-                // Predicate holds for all bytes. Continue reading.
-                self.buffer.writeBuffer(&chunk)
-            }
-        }
-
-        // Read end-of-file without hitting the predicate: clear the buffer and return all bytes.
-        let buffer = self.buffer
-        self.buffer = ByteBuffer()
-        return buffer
+        try await self.read(while: predicate).bytes
     }
     
     /// Reads from  the current position in the file until `predicate` returns `false` and returns
