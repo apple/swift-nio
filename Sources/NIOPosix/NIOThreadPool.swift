@@ -93,7 +93,7 @@ public final class NIOThreadPool {
             }
             return
         }
-        let g = DispatchGroup()
+
         let threadsToJoin = self.lock.withLock { () -> [NIOThread] in
             switch self.state {
             case .running(let items):
@@ -117,12 +117,11 @@ public final class NIOThreadPool {
             }
         }
 
-        DispatchQueue(label: "io.swiftnio.NIOThreadPool.shutdownGracefully").async(group: g) {
+        DispatchQueue(label: "io.swiftnio.NIOThreadPool.shutdownGracefully").async {
             threadsToJoin.forEach { $0.join() }
-        }
-
-        g.notify(queue: queue) {
-            callback(nil)
+            queue.async {
+                callback(nil)
+            }
         }
     }
 
@@ -233,7 +232,10 @@ public final class NIOThreadPool {
             return
         }
 
-        let group = DispatchGroup()
+        // We use this condition lock as a tricky kind of semaphore.
+        // This is done to sidestep the thread performance checker warning
+        // that would otherwise be emitted.
+        let cond = ConditionLock(value: 0)
 
         self.lock.withLock {
             assert(self.threads == nil)
@@ -242,19 +244,21 @@ public final class NIOThreadPool {
         }
 
         for id in 0..<self.numberOfThreads {
-            group.enter()
             // We should keep thread names under 16 characters because Linux doesn't allow more.
             NIOThread.spawnAndRun(name: "\(threadNamePrefix)\(id)", detachThread: false) { thread in
                 self.lock.withLock {
                     self.threads!.append(thread)
+                    cond.lock()
+                    cond.unlock(withValue: self.threads!.count)
                 }
-                group.leave()
+
                 self.process(identifier: id)
                 return ()
             }
         }
 
-        group.wait()
+        cond.lock(whenValue: self.numberOfThreads)
+        cond.unlock()
         assert(self.lock.withLock { self.threads?.count ?? -1 } == self.numberOfThreads)
     }
 
