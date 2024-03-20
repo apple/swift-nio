@@ -130,7 +130,7 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
     /// condition doesn't hold true anymore.
     public mutating func read(
         while predicate: (UInt8) -> Bool
-    ) async throws -> (ByteBuffer, Bool) {
+    ) async throws -> (bytes: ByteBuffer, readEOF: Bool) {
         // Check if the required bytes are in the buffer already.
         let view = self.buffer.readableBytesView
 
