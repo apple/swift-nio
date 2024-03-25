@@ -38,7 +38,7 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem"]),
+        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
         .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
     dependencies: [
@@ -207,6 +207,13 @@ let package = Package(
             swiftSettings: [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
+        ),
+        .target(
+            name: "NIOFileSystem",
+            dependencies: [
+                "_NIOFileSystem",
+            ],
+            path: "Sources/_NIOFileSystemExported"
         ),
         .target(
             name: "_NIOFileSystemFoundationCompat",
