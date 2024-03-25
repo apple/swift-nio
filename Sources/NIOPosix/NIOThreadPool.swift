@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
 import DequeModule
 import Dispatch
 import NIOConcurrencyHelpers
@@ -58,13 +59,19 @@ public final class NIOThreadPool {
 
     /// The work that should be done by the `NIOThreadPool`.
     public typealias WorkItem = @Sendable (WorkItemState) -> Void
+
+    private struct IdentifiableWorkItem: Sendable {
+        var workItem: WorkItem
+        var id: Int?
+    }
+
     private enum State {
         /// The `NIOThreadPool` is already stopped.
         case stopped
         /// The `NIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.
         case shuttingDown([Bool])
         /// The `NIOThreadPool` is up and running, the `CircularBuffer` containing the yet unprocessed `WorkItems`.
-        case running(Deque<WorkItem>)
+        case running(Deque<IdentifiableWorkItem>)
         /// Temporary state used when mutating the .running(items). Used to avoid CoW copies.
         /// It should never be "leaked" outside of the lock block.
         case modifying
@@ -73,6 +80,26 @@ public final class NIOThreadPool {
     private let lock = NIOLock()
     private var threads: [NIOThread]? = nil  // protected by `lock`
     private var state: State = .stopped
+
+    // WorkItems don't have a handle so they can't be cancelled directly. Instead an ID is assigned
+    // to each cancellable work item and the IDs of each work item to cancel is stored in this set.
+    // The set is checked when dequeuing work items prior to running them, the presence of an ID
+    // indicates it should be cancelled. This approach makes cancellation cheap, but slow, as the
+    // task isn't cancelled until it's dequeued.
+    //
+    // Possible alternatives:
+    // - Removing items from the work queue on cancellation. This is linear and runs the risk of
+    //   being expensive if a task tree with many enqueued work items is cancelled.
+    // - Storing an atomic 'is cancelled' flag with each work item. This adds an allocation per
+    //   work item.
+    //
+    // If a future version of this thread pool has work items which do have a handle this set should
+    // be removed.
+    //
+    // Note: protected by 'lock'.
+    private var cancelledWorkIDs: Set<Int> = []
+    private let nextWorkID = ManagedAtomic(0)
+
     public let numberOfThreads: Int
     private let canBeStopped: Bool
 
@@ -99,7 +126,7 @@ public final class NIOThreadPool {
             case .running(let items):
                 self.state = .modifying
                 queue.async {
-                    items.forEach { $0(.cancelled) }
+                    items.forEach { $0.workItem(.cancelled) }
                 }
                 self.state = .shuttingDown(Array(repeating: true, count: numberOfThreads))
                 (0..<numberOfThreads).forEach { _ in
@@ -133,15 +160,15 @@ public final class NIOThreadPool {
     ///     - body: The `WorkItem` to process by the `NIOThreadPool`.
     @preconcurrency
     public func submit(_ body: @escaping WorkItem) {
-        self._submit(body)
+        self._submit(id: nil, body)
     }
 
-    private func _submit(_ body: @escaping WorkItem) {
+    private func _submit(id: Int?, _ body: @escaping WorkItem) {
         let item = self.lock.withLock { () -> WorkItem? in
             switch self.state {
             case .running(var items):
                 self.state = .modifying
-                items.append(body)
+                items.append(.init(workItem: body, id: id))
                 self.state = .running(items)
                 self.semaphore.signal()
                 return nil
@@ -178,19 +205,28 @@ public final class NIOThreadPool {
     }
 
     private func process(identifier: Int) {
-        var item: WorkItem? = nil
+        var itemAndState: (item: WorkItem, state: WorkItemState)? = nil
+
         repeat {
             /* wait until work has become available */
-            item = nil  // ensure previous work item is not retained for duration of semaphore wait
+            itemAndState = nil  // ensure previous work item is not retained for duration of semaphore wait
             self.semaphore.wait()
 
-            item = self.lock.withLock { () -> (WorkItem)? in
+            itemAndState = self.lock.withLock { () -> (WorkItem, WorkItemState)? in
                 switch self.state {
                 case .running(var items):
                     self.state = .modifying
-                    let item = items.removeFirst()
+                    let itemAndID = items.removeFirst()
+
+                    let state: WorkItemState
+                    if let id = itemAndID.id, !self.cancelledWorkIDs.isEmpty {
+                        state = self.cancelledWorkIDs.remove(id) == nil ? .active : .cancelled
+                    } else {
+                        state = .active
+                    }
+
                     self.state = .running(items)
-                    return item
+                    return (itemAndID.workItem, state)
                 case .shuttingDown(var aliveStates):
                     assert(aliveStates[identifier])
                     aliveStates[identifier] = false
@@ -203,8 +239,8 @@ public final class NIOThreadPool {
                 }
             }
             /* if there was a work item popped, run it */
-            item.map { $0(.active) }
-        } while item != nil
+            itemAndState.map { item, state in item(state) }
+        } while itemAndState != nil
     }
 
     /// Start the `NIOThreadPool` if not already started.
@@ -315,17 +351,23 @@ extension NIOThreadPool {
     /// - returns: result of the passed closure.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func runIfActive<T: Sendable>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
-        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<T, Error>) in
-            self.submit { shouldRun in
-                guard case shouldRun = NIOThreadPool.WorkItemState.active else {
-                    cont.resume(throwing: NIOThreadPoolError.ThreadPoolInactive())
-                    return
+        let workID = self.nextWorkID.loadThenWrappingIncrement(ordering: .relaxed)
+
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<T, Error>) in
+                self._submit(id: workID) { shouldRun in
+                    switch shouldRun {
+                    case .active:
+                        let result = Result(catching: body)
+                        cont.resume(with: result)
+                    case .cancelled:
+                        cont.resume(throwing: CancellationError())
+                    }
                 }
-                do {
-                    try cont.resume(returning: body())
-                } catch {
-                    cont.resume(throwing: error)
-                }
+            }
+        } onCancel: {
+            self.lock.withLockVoid {
+                self.cancelledWorkIDs.insert(workID)
             }
         }
     }
