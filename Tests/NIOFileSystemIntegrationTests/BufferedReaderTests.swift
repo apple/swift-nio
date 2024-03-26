@@ -119,25 +119,29 @@ final class BufferedReaderTests: XCTestCase {
 
         try await fs.withFileHandle(forReadingAt: path) { handle in
             var reader = handle.bufferedReader()
-            let zeros = try await reader.read { $0 == 0 }
+            let (zeros, isEOFZeros) = try await reader.read { $0 == 0 }
             XCTAssertEqual(zeros, ByteBuffer(bytes: Array(repeating: 0, count: 1024)))
+            XCTAssertFalse(isEOFZeros)
 
-            let onesAndTwos = try await reader.read { $0 < 3 }
+            let (onesAndTwos, isEOFOnesAndTwos) = try await reader.read { $0 < 3 }
             var expectedOnesAndTwos = ByteBuffer()
             expectedOnesAndTwos.writeRepeatingByte(1, count: 1024)
             expectedOnesAndTwos.writeRepeatingByte(2, count: 1024)
 
             XCTAssertEqual(onesAndTwos, expectedOnesAndTwos)
+            XCTAssertFalse(isEOFOnesAndTwos)
 
-            let threesThroughNines = try await reader.read { $0 < 10 }
+            let (threesThroughNines, isEOFThreesThroughNines) = try await reader.read { $0 < 10 }
             var expectedThreesThroughNines = ByteBuffer()
             for byte in UInt8(3)...9 {
                 expectedThreesThroughNines.writeRepeatingByte(byte, count: 1024)
             }
             XCTAssertEqual(threesThroughNines, expectedThreesThroughNines)
+            XCTAssertFalse(isEOFThreesThroughNines)
 
-            let theRest = try await reader.read { _ in true }
+            let (theRest, isEOFTheRest) = try await reader.read { _ in true }
             XCTAssertEqual(theRest.readableBytes, 246 * 1024)
+            XCTAssertTrue(isEOFTheRest)
         }
     }
 
@@ -236,7 +240,7 @@ final class BufferedReaderTests: XCTestCase {
                 // Gobble up whitespace etc..
                 try await reader.drop(while: { !isWordIsh($0) })
                 // Read the next word.
-                var characters = try await reader.read(while: isWordIsh(_:))
+                var (characters, _) = try await reader.read(while: isWordIsh(_:))
 
                 if characters.readableBytes == 0 {
                     break  // Done.

@@ -15,6 +15,7 @@
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOConcurrencyHelpers
 import NIOCore
+import NIOPosix
 @preconcurrency import SystemPackage
 
 #if canImport(Darwin)
@@ -31,7 +32,7 @@ import Musl
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public final class SystemFileHandle {
     /// The executor on which to execute system calls.
-    internal var executor: IOExecutor { self.sendableView.executor }
+    internal var threadPool: NIOThreadPool { self.sendableView.threadPool }
 
     /// The path used to open this handle.
     internal var path: FilePath { self.sendableView.path }
@@ -77,7 +78,7 @@ public final class SystemFileHandle {
         fileprivate let lifecycle: NIOLockedValueBox<Lifecycle>
 
         /// The executor on which to execute system calls.
-        internal let executor: IOExecutor
+        internal let threadPool: NIOThreadPool
 
         /// The path used to open this handle.
         internal let path: FilePath
@@ -87,12 +88,12 @@ public final class SystemFileHandle {
 
         fileprivate init(
             lifecycle: Lifecycle,
-            executor: IOExecutor,
+            threadPool: NIOThreadPool,
             path: FilePath,
             materialization: Materialization?
         ) {
             self.lifecycle = NIOLockedValueBox(lifecycle)
-            self.executor = executor
+            self.threadPool = threadPool
             self.path = path
             self.materialization = materialization
         }
@@ -110,11 +111,11 @@ public final class SystemFileHandle {
         takingOwnershipOf descriptor: FileDescriptor,
         path: FilePath,
         materialization: Materialization? = nil,
-        executor: IOExecutor
+        threadPool: NIOThreadPool
     ) {
         self.sendableView = SendableView(
             lifecycle: .open(descriptor),
-            executor: executor,
+            threadPool: threadPool,
             path: path,
             materialization: materialization
         )
@@ -193,37 +194,37 @@ extension SystemFileHandle: FileHandleProtocol {
     //    currently using.
 
     public func info() async throws -> FileInfo {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._info().get()
         }
     }
 
     public func replacePermissions(_ permissions: FilePermissions) async throws {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._replacePermissions(permissions)
         }
     }
 
     public func addPermissions(_ permissions: FilePermissions) async throws -> FilePermissions {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._addPermissions(permissions)
         }
     }
 
     public func removePermissions(_ permissions: FilePermissions) async throws -> FilePermissions {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._removePermissions(permissions)
         }
     }
 
     public func attributeNames() async throws -> [String] {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._attributeNames()
         }
     }
 
     public func valueForAttribute(_ name: String) async throws -> [UInt8] {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._valueForAttribute(name)
         }
     }
@@ -232,19 +233,19 @@ extension SystemFileHandle: FileHandleProtocol {
         _ bytes: some (Sendable & RandomAccessCollection<UInt8>),
         attribute name: String
     ) async throws {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._updateValueForAttribute(bytes, attribute: name)
         }
     }
 
     public func removeValueForAttribute(_ name: String) async throws {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._removeValueForAttribute(name)
         }
     }
 
     public func synchronize() async throws {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._synchronize()
         }
     }
@@ -252,7 +253,7 @@ extension SystemFileHandle: FileHandleProtocol {
     public func withUnsafeDescriptor<R: Sendable>(
         _ execute: @Sendable @escaping (FileDescriptor) throws -> R
     ) async throws -> R {
-        try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._withUnsafeDescriptor {
                 return try execute($0)
             } onUnavailable: {
@@ -343,13 +344,13 @@ extension SystemFileHandle: FileHandleProtocol {
     }
 
     public func close() async throws {
-        try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._close(materialize: true).get()
         }
     }
 
     public func close(makeChangesVisible: Bool) async throws {
-        try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._close(materialize: makeChangesVisible).get()
         }
     }
@@ -864,7 +865,7 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
         fromAbsoluteOffset offset: Int64,
         length: ByteCount
     ) async throws -> ByteBuffer {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             return try sendableView._withUnsafeDescriptor { descriptor in
                 try descriptor.readChunk(
                     fromAbsoluteOffset: offset,
@@ -930,7 +931,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
         contentsOf bytes: some (Sequence<UInt8> & Sendable),
         toAbsoluteOffset offset: Int64
     ) async throws -> Int64 {
-        return try await self.executor.execute { [sendableView] in
+        return try await self.threadPool.runIfActive { [sendableView] in
             return try sendableView._withUnsafeDescriptor { descriptor in
                 try descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
                     .flatMapError { error in
@@ -979,7 +980,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
     }
 
     public func resize(to size: ByteCount) async throws {
-        try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._resize(to: size).get()
         }
     }
@@ -1022,7 +1023,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         options: OpenOptions.Read
     ) async throws -> SystemFileHandle {
         let opts = options.descriptorOptions.union(.nonBlocking)
-        let handle = try await self.executor.execute { [sendableView] in
+        let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path,
                 mode: .readOnly,
@@ -1041,7 +1042,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     ) async throws -> SystemFileHandle {
         let perms = options.permissionsForRegularFile
         let opts = options.descriptorOptions.union(.nonBlocking)
-        let handle = try await self.executor.execute { [sendableView] in
+        let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path,
                 mode: .readWrite,
@@ -1061,7 +1062,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     ) async throws -> SystemFileHandle {
         let perms = options.permissionsForRegularFile
         let opts = options.descriptorOptions.union(.nonBlocking)
-        let handle = try await self.executor.execute { [sendableView] in
+        let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path,
                 mode: .writeOnly,
@@ -1080,7 +1081,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         options: OpenOptions.Directory
     ) async throws -> SystemFileHandle {
         let opts = options.descriptorOptions.union(.nonBlocking)
-        let handle = try await self.executor.execute { [sendableView] in
+        let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path,
                 mode: .readOnly,
@@ -1112,7 +1113,7 @@ extension SystemFileHandle.SendableView {
                     options: options,
                     permissions: permissions,
                     transactionalIfPossible: transactional,
-                    executor: self.executor
+                    threadPool: self.threadPool
                 )
             } else if self.path.isAbsolute {
                 // The parent path is absolute and the provided path is relative; combine them.
@@ -1122,7 +1123,7 @@ extension SystemFileHandle.SendableView {
                     options: options,
                     permissions: permissions,
                     transactionalIfPossible: transactional,
-                    executor: self.executor
+                    threadPool: self.threadPool
                 )
             }
 
@@ -1143,7 +1144,7 @@ extension SystemFileHandle.SendableView {
                 SystemFileHandle(
                     takingOwnershipOf: newDescriptor,
                     path: self.path.appending(path.components).lexicallyNormalized(),
-                    executor: self.executor
+                    threadPool: self.threadPool
                 )
             }.mapError { errno in
                 .open("openat", error: errno, path: self.path, location: .here())
@@ -1170,7 +1171,7 @@ extension SystemFileHandle {
         options: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
         transactionalIfPossible transactional: Bool,
-        executor: IOExecutor
+        threadPool: NIOThreadPool
     ) -> Result<SystemFileHandle, FileSystemError> {
         let isWritable = (mode == .writeOnly || mode == .readWrite)
         let exclusiveCreate = options.contains(.exclusiveCreate)
@@ -1194,7 +1195,7 @@ extension SystemFileHandle {
                 mode: mode,
                 options: options,
                 permissions: permissions,
-                executor: executor,
+                threadPool: threadPool,
                 useTemporaryFileIfPossible: temporaryHardLink
             )
         } else {
@@ -1203,7 +1204,7 @@ extension SystemFileHandle {
                 mode: mode,
                 options: options,
                 permissions: permissions,
-                executor: executor
+                threadPool: threadPool
             )
         }
     }
@@ -1213,7 +1214,7 @@ extension SystemFileHandle {
         mode: FileDescriptor.AccessMode,
         options: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
-        executor: IOExecutor
+        threadPool: NIOThreadPool
     ) -> Result<SystemFileHandle, FileSystemError> {
         return Result {
             try FileDescriptor.open(
@@ -1226,7 +1227,7 @@ extension SystemFileHandle {
             SystemFileHandle(
                 takingOwnershipOf: descriptor,
                 path: path,
-                executor: executor
+                threadPool: threadPool
             )
         }.mapError { errno in
             FileSystemError.open("open", error: errno, path: path, location: .here())
@@ -1238,7 +1239,7 @@ extension SystemFileHandle {
         mode: FileDescriptor.AccessMode,
         options originalOptions: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
-        executor: IOExecutor,
+        threadPool: NIOThreadPool,
         useTemporaryFileIfPossible: Bool = true
     ) -> Result<SystemFileHandle, FileSystemError> {
         let openedPath: FilePath
@@ -1351,7 +1352,7 @@ extension SystemFileHandle {
                 takingOwnershipOf: descriptor,
                 path: openedPath,
                 materialization: materialization,
-                executor: executor
+                threadPool: threadPool
             )
 
             return .success(handle)
@@ -1365,7 +1366,7 @@ extension SystemFileHandle {
                     mode: mode,
                     options: originalOptions,
                     permissions: permissions,
-                    executor: executor,
+                    threadPool: threadPool,
                     useTemporaryFileIfPossible: false
                 )
             }
