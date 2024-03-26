@@ -44,7 +44,7 @@ Below you can find a list of a few protocol implementations that are done with S
 
 Low-level protocol implementations are often a collection of [`ChannelHandler`][ch]s that implement a protocol but still require the user to have a good understanding of SwiftNIO. Often, low-level protocol implementations will then be wrapped in high-level libraries with a nicer, more user-friendly API.
 
-Protocol | Client | Server | Repository | Module | Comment
+Protocol | Client<br />(Sends requests) | Server<br />(Responds to requests) | Repository | Module | Comment
 --- |  --- | --- | --- | --- | ---
 HTTP/1 | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOHTTP1`][nioh1] | official NIO project
 HTTP/2 | ✅| ✅ | [apple/swift-nio-http2](https://github.com/apple/swift-nio-http2) | [`NIOHTTP2`][nioh2] | official NIO project
@@ -57,7 +57,7 @@ SSH | ✅ | ✅ | [apple/swift-nio-ssh][repo-nio-ssh] | [`NIOSSH`][niossh] | off
 
 High-level implementations are usually libraries that come with an API that doesn't expose SwiftNIO's [`ChannelPipeline`][cp] and can therefore be used with very little (or no) SwiftNIO-specific knowledge. The implementations listed below do still do all of their I/O in SwiftNIO and integrate really well with the SwiftNIO ecosystem.
 
-Protocol | Client | Server | Repository | Module | Comment
+Protocol | Client<br />(Sends requests) | Server<br />(Responds to requests) | Repository | Module | Comment
 --- |  --- | --- | --- | --- | ---
 HTTP | ✅| ❌ | [swift-server/async-http-client](https://github.com/swift-server/async-http-client) | `AsyncHTTPClient` | SSWG community project
 gRPC | ✅| ✅ | [grpc/grpc-swift](https://github.com/grpc/grpc-swift) | `GRPC` | also offers a low-level API; SSWG community project
