@@ -80,11 +80,9 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
     @usableFromInline
     let _code: _Code
 
-    @usableFromInline
-    var file: String
+    public var file: String
 
-    @usableFromInline
-    var line: Int
+    public var line: Int
 
     @inlinable
     init(_code: _Code, file: String, line: Int) {
@@ -111,7 +109,7 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
 
     @inlinable
     public var description: String {
-        "NIOAsyncWriterError.\(self._code.rawValue)"
+        "NIOAsyncWriterError.\(self._code.rawValue): \(self.file):\(self.line)"
     }
 }
 
