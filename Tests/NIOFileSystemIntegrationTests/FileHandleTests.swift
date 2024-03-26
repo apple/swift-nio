@@ -14,6 +14,7 @@
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
+import NIOPosix
 @_spi(Testing) import _NIOFileSystem
 import NIOFoundationCompat
 import XCTest
@@ -83,24 +84,24 @@ final class FileHandleTests: XCTestCase {
             options: options,
             permissions: permissions
         )
-        let executor = await IOExecutor.running(numberOfThreads: 1)
-        let handle = SystemFileHandle(takingOwnershipOf: descriptor, path: path, executor: executor)
+        let handle = SystemFileHandle(
+            takingOwnershipOf: descriptor,
+            path: path,
+            threadPool: .singleton
+        )
 
         do {
             try await execute(handle)
             if autoClose {
                 try? await handle.close()
             }
-            await executor.drain()
         } catch let skip as XCTSkip {
             try? await handle.close()
-            await executor.drain()
             throw skip
         } catch {
             XCTFail("Test threw error: '\(error)'")
             // Always close on error.
             try await handle.close()
-            await executor.drain()
         }
     }
 
