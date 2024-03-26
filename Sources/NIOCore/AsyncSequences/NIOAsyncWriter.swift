@@ -109,7 +109,7 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
 
     @inlinable
     public var description: String {
-      "\(self.file): \(self.line) NIOAsyncWriterError.\(self._code.rawValue)"
+        "NIOAsyncWriterError.\(self._code.rawValue): \(self.file):\(self.line)"
     }
 }
 
