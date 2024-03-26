@@ -197,6 +197,7 @@ let package = Package(
             name: "_NIOFileSystem",
             dependencies: [
                 "NIOCore",
+                "NIOPosix",
                 "CNIOLinux",
                 "CNIODarwin",
                 swiftAtomics,
@@ -488,6 +489,7 @@ let package = Package(
             name: "NIOFileSystemIntegrationTests",
             dependencies: [
                 "NIOCore",
+                "NIOPosix",
                 "_NIOFileSystem",
                 "NIOFoundationCompat",
             ],
