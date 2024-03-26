@@ -99,8 +99,8 @@ class HTTPServerClientTest : XCTestCase {
                 XCTAssertNoThrow(try content.write(to: URL(fileURLWithPath: filePath)))
                 let fh = try! NIOFileHandle(path: filePath)
                 let region = FileRegion(fileHandle: fh,
-                                             readerIndex: 0,
-                                             endIndex: buffer.readableBytes)
+                                        readerIndex: 0,
+                                        endIndex: buffer.readableBytes)
                 return (.body(.fileRegion(region)), { try! fh.close() })
             }
         }

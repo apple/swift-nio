@@ -36,7 +36,7 @@ import Musl
 ///
 /// - note: It is important to manually manage the lifetime of the `NIOFileHandle` used to create a `FileRegion`.
 /// - warning: `FileRegion` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
-public struct FileRegion {
+public struct FileRegion: Sendable {
 
     /// The `NIOFileHandle` that is used by this `FileRegion`.
     public let fileHandle: NIOFileHandle

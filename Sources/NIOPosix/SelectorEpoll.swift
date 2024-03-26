@@ -151,7 +151,7 @@ extension Selector: _SelectorBackendProtocol {
         assert(self.timerFD == -1, "self.timerFD == \(self.timerFD) in deinitAssertions0, forgot close?")
     }
 
-    func register0<S: Selectable>(selectable: S,
+    func register0(selectableFD: CInt,
                                   fileDescriptor: CInt,
                                   interested: SelectorEventSet,
                                   registrationID: SelectorRegistrationID) throws {
@@ -162,7 +162,7 @@ extension Selector: _SelectorBackendProtocol {
         try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: fileDescriptor, event: &ev)
     }
 
-    func reregister0<S: Selectable>(selectable: S,
+    func reregister0(selectableFD: CInt,
                                     fileDescriptor: CInt,
                                     oldInterested: SelectorEventSet,
                                     newInterested: SelectorEventSet,
@@ -174,7 +174,7 @@ extension Selector: _SelectorBackendProtocol {
         _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: fileDescriptor, event: &ev)
     }
 
-    func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
+    func deregister0(selectableFD: CInt, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
         var ev = Epoll.epoll_event()
         _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_DEL, fd: fileDescriptor, event: &ev)
     }
