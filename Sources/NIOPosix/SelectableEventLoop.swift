@@ -51,6 +51,7 @@ public struct NIOEventLoopTickInfo: Sendable, Hashable {
 public protocol NIOEventLoopMetricsDelegate: Sendable {
     /// Called after a tick has run
     /// This function is called after every tick - avoid long-running tasks here
+    /// - Warning: This function is called after every event loop tick and on the event loop thread. Any non-trivial work in this function will block the event loop and cause latency increases and performance degradation.
     /// - Parameter info: Information about the tick, such as how many tasks were executed
     func processedTick(info: NIOEventLoopTickInfo)
 }
