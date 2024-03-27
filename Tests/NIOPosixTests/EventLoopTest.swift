@@ -598,7 +598,7 @@ public final class EventLoopTest : XCTestCase {
         }
         let threads: [ThreadInitializer] = [body, body]
 
-        let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
+        let group = MultiThreadedEventLoopGroup(threadInitializers: threads, metricsDelegate: nil)
 
         XCTAssertEqual(2, counter)
         XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -614,7 +614,7 @@ public final class EventLoopTest : XCTestCase {
             }
             let threads: [ThreadInitializer] = [body, body]
 
-            let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
+            let group = MultiThreadedEventLoopGroup(threadInitializers: threads, metricsDelegate: nil)
 
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         #endif

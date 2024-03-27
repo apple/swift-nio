@@ -610,7 +610,7 @@ extension SALTest {
             }
         }
         self.wakeups = .init(description: "wakeups")
-        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1) {
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1, metricsDelegate: nil) {
             try HookedSelector(userToKernel: self.userToKernelBox,
                                kernelToUser: self.kernelToUserBox,
                                wakeups: self.wakeups)
