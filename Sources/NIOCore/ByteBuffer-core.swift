@@ -704,6 +704,21 @@ public struct ByteBuffer {
         return try body(.init(fastRebase: self._slicedStorageBuffer[range]))
     }
 
+    /// Yields a buffer pointer containing this `ByteBuffer`'s readable bytes to the async closure.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - body: The closure that will accept the yielded bytes.
+    /// - returns: The value returned by `body`.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @inlinable
+    public func withUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) async throws -> T) async rethrows -> T {
+        // This is safe, writerIndex >= readerIndex
+        let range = Range<Int>(uncheckedBounds: (lower: self.readerIndex, upper: self.writerIndex))
+        return try await body(.init(fastRebase: self._slicedStorageBuffer[range]))
+    }
+
     /// Yields a buffer pointer containing this `ByteBuffer`'s readable bytes. You may hold a pointer to those bytes
     /// even after the closure returned iff you model the lifetime of those bytes correctly using the `Unmanaged`
     /// instance. If you don't require the pointer after the closure returns, use `withUnsafeReadableBytes`.
