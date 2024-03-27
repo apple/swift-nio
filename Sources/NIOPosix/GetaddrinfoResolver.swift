@@ -48,54 +48,46 @@ import struct WinSDK.SOCKADDR_IN6
 let offloadQueueTSV = ThreadSpecificVariable<DispatchQueue>()
 
 
-internal class GetaddrinfoResolver: Resolver {
-    private let v4Future: EventLoopPromise<[SocketAddress]>
-    private let v6Future: EventLoopPromise<[SocketAddress]>
+internal class GetaddrinfoResolver: NIOStreamingResolver {
     private let aiSocktype: NIOBSDSocket.SocketType
     private let aiProtocol: NIOBSDSocket.OptionLevel
 
     /// Create a new resolver.
     ///
     /// - parameters:
-    ///     - loop: The `EventLoop` whose thread this resolver will block.
     ///     - aiSocktype: The sock type to use as hint when calling getaddrinfo.
     ///     - aiProtocol: the protocol to use as hint when calling getaddrinfo.
-    init(loop: EventLoop, aiSocktype: NIOBSDSocket.SocketType,
-         aiProtocol: NIOBSDSocket.OptionLevel) {
-        self.v4Future = loop.makePromise()
-        self.v6Future = loop.makePromise()
+    init(aiSocktype: NIOBSDSocket.SocketType, aiProtocol: NIOBSDSocket.OptionLevel) {
         self.aiSocktype = aiSocktype
         self.aiProtocol = aiProtocol
     }
 
-    /// Initiate a DNS A query for a given host.
-    ///
-    /// Due to the nature of `getaddrinfo`, we only actually call the function once, in the AAAA query.
-    /// That means this just returns the future for the A results, which in practice will always have been
-    /// satisfied by the time this function is called.
+    /// Start a name resolution for a given name.
     ///
     /// - parameters:
-    ///     - host: The hostname to do an A lookup on.
-    ///     - port: The port we'll be connecting to.
-    /// - returns: An `EventLoopFuture` that fires with the result of the lookup.
-    func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
-        return v4Future.futureResult
+    ///     - name: The name to resolve.
+    ///     - destinationPort: The port we'll be connecting to.
+    ///     - session: The resolution session object associated with the resolution.
+    func resolve(name: String, destinationPort: Int, session: NIONameResolutionSession) {
+        self.offloadQueue().async {
+            self.resolveBlocking(host: name, port: destinationPort, session: session)
+        }
     }
 
-    /// Initiate a DNS AAAA query for a given host.
+    /// Cancel an outstanding name resolution.
     ///
-    /// Due to the nature of `getaddrinfo`, we only actually call the function once, in this function.
-    /// That means this function call actually blocks: sorry!
+    /// This method is called whenever a name resolution that hasn't completed no longer has its
+    /// results needed. The resolver should, if possible, abort any outstanding queries and clean
+    /// up their state.
+    ///
+    /// This method is not guaranteed to terminate the outstanding queries.
+    ///
+    /// In the getaddrinfo case this is a no-op, as the resolver blocks.
     ///
     /// - parameters:
-    ///     - host: The hostname to do an AAAA lookup on.
-    ///     - port: The port we'll be connecting to.
-    /// - returns: An `EventLoopFuture` that fires with the result of the lookup.
-    func initiateAAAAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
-        self.offloadQueue().async {
-            self.resolveBlocking(host: host, port: port)
-        }
-        return v6Future.futureResult
+    ///     - session: The resolution session object associated with the resolution.
+    func cancel(_ session: NIONameResolutionSession) {
+        return
     }
 
     private func offloadQueue() -> DispatchQueue {
@@ -113,21 +105,13 @@ internal class GetaddrinfoResolver: Resolver {
         }
     }
 
-    /// Cancel all outstanding DNS queries.
-    ///
-    /// This method is called whenever queries that have not completed no longer have their
-    /// results needed. The resolver should, if possible, abort any outstanding queries and
-    /// clean up their state.
-    ///
-    /// In the getaddrinfo case this is a no-op, as the resolver blocks.
-    func cancelQueries() { }
-
     /// Perform the DNS queries and record the result.
     ///
     /// - parameters:
     ///     - host: The hostname to do the DNS queries on.
     ///     - port: The port we'll be connecting to.
-    private func resolveBlocking(host: String, port: Int) {
+    ///     - session: The resolution session object associated with the resolution.
+    private func resolveBlocking(host: String, port: Int, session: NIONameResolutionSession) {
 #if os(Windows)
         host.withCString(encodedAs: UTF16.self) { wszHost in
             String(port).withCString(encodedAs: UTF16.self) { wszPort in
@@ -139,15 +123,15 @@ internal class GetaddrinfoResolver: Resolver {
 
                 let iResult = GetAddrInfoW(wszHost, wszPort, &aiHints, &pResult)
                 guard iResult == 0 else {
-                    self.fail(SocketAddressError.unknown(host: host, port: port))
+                    self.fail(SocketAddressError.unknown(host: host, port: port), session: session)
                     return
                 }
 
                 if let pResult = pResult {
-                    self.parseAndPublishResults(pResult, host: host)
+                    self.parseAndPublishResults(pResult, host: host, session: session)
                     FreeAddrInfoW(pResult)
                 } else {
-                    self.fail(SocketAddressError.unsupported)
+                    self.fail(SocketAddressError.unsupported, session: session)
                 }
             }
         }
@@ -158,16 +142,16 @@ internal class GetaddrinfoResolver: Resolver {
         hint.ai_socktype = self.aiSocktype.rawValue
         hint.ai_protocol = self.aiProtocol.rawValue
         guard getaddrinfo(host, String(port), &hint, &info) == 0 else {
-            self.fail(SocketAddressError.unknown(host: host, port: port))
+            self.fail(SocketAddressError.unknown(host: host, port: port), session: session)
             return
         }
 
         if let info = info {
-            self.parseAndPublishResults(info, host: host)
+            self.parseAndPublishResults(info, host: host, session: session)
             freeaddrinfo(info)
         } else {
             /* this is odd, getaddrinfo returned NULL */
-            self.fail(SocketAddressError.unsupported)
+            self.fail(SocketAddressError.unsupported, session: session)
         }
 #endif
     }
@@ -177,15 +161,15 @@ internal class GetaddrinfoResolver: Resolver {
     /// - parameters:
     ///     - info: The pointer to the first of the `addrinfo` structures in the list.
     ///     - host: The hostname we resolved.
+    ///     - session: The resolution session object associated with the resolution.
 #if os(Windows)
     internal typealias CAddrInfo = ADDRINFOW
 #else
     internal typealias CAddrInfo = addrinfo
 #endif
 
-    private func parseAndPublishResults(_ info: UnsafeMutablePointer<CAddrInfo>, host: String) {
-        var v4Results: [SocketAddress] = []
-        var v6Results: [SocketAddress] = []
+    private func parseAndPublishResults(_ info: UnsafeMutablePointer<CAddrInfo>, host: String, session: NIONameResolutionSession) {
+        var results: [SocketAddress] = []
 
         var info: UnsafeMutablePointer<CAddrInfo> = info
         while true {
@@ -193,12 +177,12 @@ internal class GetaddrinfoResolver: Resolver {
             switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
             case .inet:
                 // Force-unwrap must be safe, or libc did the wrong thing.
-                v4Results.append(.init(addressBytes!.load(as: sockaddr_in.self), host: host))
+                results.append(.init(addressBytes!.load(as: sockaddr_in.self), host: host))
             case .inet6:
                 // Force-unwrap must be safe, or libc did the wrong thing.
-                v6Results.append(.init(addressBytes!.load(as: sockaddr_in6.self), host: host))
+                results.append(.init(addressBytes!.load(as: sockaddr_in6.self), host: host))
             default:
-                self.fail(SocketAddressError.unsupported)
+                self.fail(SocketAddressError.unsupported, session: session)
                 return
             }
 
@@ -209,16 +193,16 @@ internal class GetaddrinfoResolver: Resolver {
             info = nextInfo
         }
 
-        v6Future.succeed(v6Results)
-        v4Future.succeed(v4Results)
+        session.deliverResults(results)
+        session.resolutionComplete(.success(()))
     }
 
     /// Record an error and fail the lookup process.
     ///
     /// - parameters:
     ///     - error: The error encountered during lookup.
-    private func fail(_ error: Error) {
-        self.v6Future.fail(error)
-        self.v4Future.fail(error)
+    ///     - session: The resolution session object associated with the resolution.
+    private func fail(_ error: Error, session: NIONameResolutionSession) {
+        session.resolutionComplete(.failure(error))
     }
 }

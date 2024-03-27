@@ -357,16 +357,13 @@ func resolverDebugInformation(eventLoop: EventLoop, host: String, previouslyRece
             return __testOnly_addressDescription(sa.address)
         }
     }
-    let res = GetaddrinfoResolver(loop: eventLoop, aiSocktype: .stream, aiProtocol: .tcp)
-    let ipv6Results = try assertNoThrowWithValue(res.initiateAAAAQuery(host: host, port: 0).wait()).map(printSocketAddress)
-    let ipv4Results = try assertNoThrowWithValue(res.initiateAQuery(host: host, port: 0).wait()).map(printSocketAddress)
+    let res = GetaddrinfoResolver(aiSocktype: .stream, aiProtocol: .tcp)
+    let results = try assertNoThrowWithValue(res.resolve(name: host, destinationPort: 0, on: eventLoop).wait()).map(printSocketAddress)
 
     return """
     when trying to resolve '\(host)' we've got the following results:
     - previous try: \(printSocketAddress(previouslyReceivedResult))
-    - all results:
-    IPv4: \(ipv4Results)
-    IPv6: \(ipv6Results)
+    - all results: \(results)
     """
 }
 

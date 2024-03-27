@@ -743,7 +743,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     @usableFromInline
     internal var _channelOptions: ChannelOptions.Storage
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
-    private var resolver: Optional<Resolver>
+    private var resolver: Optional<NIOStreamingResolver>
     private var bindTarget: Optional<SocketAddress>
     private var enableMPTCP: Bool
 
@@ -838,12 +838,22 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         return self
     }
 
+    /// Specifies the `NIOStreamingResolver` to use or `nil` if the default should be used.
+    ///
+    /// - parameters:
+    ///     - resolver: The resolver that will be used during the connection attempt.
+    public func resolver(_ resolver: NIOStreamingResolver?) -> Self {
+        self.resolver = resolver
+        return self
+    }
+
     /// Specifies the `Resolver` to use or `nil` if the default should be used.
     ///
     /// - parameters:
     ///     - resolver: The resolver that will be used during the connection attempt.
+    @available(*, deprecated)
     public func resolver(_ resolver: Resolver?) -> Self {
-        self.resolver = resolver
+        self.resolver = resolver.map(NIOResolverToStreamingResolver.init(resolver:))
         return self
     }
 
@@ -897,9 +907,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
         let loop = self.group.next()
-        let resolver = self.resolver ?? GetaddrinfoResolver(loop: loop,
-                                                            aiSocktype: .stream,
-                                                            aiProtocol: .tcp)
+        let resolver = self.resolver ?? GetaddrinfoResolver(aiSocktype: .stream, aiProtocol: .tcp)
         let connector = HappyEyeballsConnector(resolver: resolver,
                                                loop: loop,
                                                host: host,
@@ -1226,7 +1234,6 @@ extension ClientBootstrap {
         postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<PostRegistrationTransformationResult>
     ) async throws -> PostRegistrationTransformationResult {
         let resolver = self.resolver ?? GetaddrinfoResolver(
-            loop: eventLoop,
             aiSocktype: .stream,
             aiProtocol: .tcp
         )
