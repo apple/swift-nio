@@ -48,16 +48,20 @@ final class EventLoopMetricsDelegateTests: XCTestCase {
         XCTAssertEqual(delegate.infos.count, 0)
 
         let promise = el.makePromise(of: Void.self)
-        el.scheduleTask(in: .seconds(1)){
+        el.scheduleTask(in: .seconds(1)) {
             promise.succeed()
         }
         promise.futureResult.whenSuccess {
-            XCTAssertEqual(delegate.infos.count, 1)
-            // 2 tasks: one is the scheduleTask call and one is the whenSuccess call
-            XCTAssertEqual(delegate.infos.first?.numberOfTasks, 2)
-            XCTAssertEqual(delegate.infos.first?.eventLoopID, ObjectIdentifier(el))
-            if let tickStartTime = delegate.infos.first?.startTime {
-                let timeSinceStart = tickStartTime - testStartTime
+            // There are 3 tasks (scheduleTask, whenSuccess, wait) which can trigger a total of 1...3 ticks
+            XCTAssertTrue((1...3).contains(delegate.infos.count), "Expected 1...3 ticks, got \(delegate.infos.count)")
+            // the total number of tasks across these ticks should be either 2 or 3
+            let totalTasks = delegate.infos.map { $0.numberOfTasks }.reduce(0, { $0 + $1 })
+            XCTAssertTrue((2...3).contains(totalTasks), "Expected 2...3 tasks, got \(totalTasks)")
+            for info in delegate.infos {
+                XCTAssertEqual(info.eventLoopID, ObjectIdentifier(el))
+            }
+            if let lastTickStartTime = delegate.infos.last?.startTime {
+                let timeSinceStart = lastTickStartTime - testStartTime
                 XCTAssertLessThan(timeSinceStart.nanoseconds, 100_000_000) // This should be near instant, limiting to 100ms
                 XCTAssertGreaterThan(timeSinceStart.nanoseconds, 0)
             }
