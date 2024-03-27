@@ -912,7 +912,7 @@ private func assertNoSelectorChanges(fd: CInt, selector: NIOPosix.Selector<NIORe
     #else
     let events: UnsafeMutablePointer<URingEvent> = UnsafeMutablePointer.allocate(capacity: 1)
     events.initialize(to: URingEvent())
-    let numberOfEvents = try selector.ring.io_uring_wait_cqe_timeout(events: events, maxevents: 1, timeout: TimeAmount.seconds(0))
+    let numberOfEvents = try selector.ring.waitCQE(events: events, timeout: TimeAmount.seconds(0))
     events.deinitialize(count: 1)
     events.deallocate()
     guard numberOfEvents == 0 else {
