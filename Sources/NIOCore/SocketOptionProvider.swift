@@ -22,6 +22,8 @@ import Musl
 import CNIOLinux
 #elseif os(Windows)
 import WinSDK
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("The Socket Option provider module was unable to identify your C library.")
 #endif
@@ -140,6 +142,7 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
 //
 // You are welcome to add more helper methods here, but each helper method you add must be tested.
 extension SocketOptionProvider {
+#if !os(WASI)
     /// Sets the socket option SO_LINGER to `value`.
     ///
     /// - parameters:
@@ -157,6 +160,7 @@ extension SocketOptionProvider {
     public func getSoLinger() -> EventLoopFuture<linger> {
         return self.unsafeGetSocketOption(level: .socket, name: .so_linger)
     }
+#endif
 
     /// Sets the socket option IP_MULTICAST_IF to `value`.
     ///

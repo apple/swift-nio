@@ -19,6 +19,9 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(WASILibc)
+import WASILibc
+import CNIOWASI
 #else
 #error("The File Handle module was unable to identify your C library.")
 #endif
@@ -54,6 +57,7 @@ public final class NIOFileHandle: FileDescriptor {
         assert(!self.isOpen, "leaked open NIOFileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
     }
 
+#if !os(WASI)
     /// Duplicates this `NIOFileHandle`. This means that a new `NIOFileHandle` object with a new underlying file descriptor
     /// is returned. The caller takes ownership of the returned `NIOFileHandle` and is responsible for closing it.
     ///
@@ -65,6 +69,7 @@ public final class NIOFileHandle: FileDescriptor {
             NIOFileHandle(descriptor: try SystemCalls.dup(descriptor: fd))
         }
     }
+#endif
 
     /// Take the ownership of the underlying file descriptor. This is similar to `close()` but the underlying file
     /// descriptor remains open. The caller is responsible for closing the file descriptor by some other means.
@@ -134,6 +139,8 @@ extension NIOFileHandle {
 
 #if os(Windows)
         public static let defaultPermissions = _S_IREAD | _S_IWRITE
+#elseif os(WASI)
+        public static let defaultPermissions = WASILibc.S_IWUSR | WASILibc.S_IRUSR | WASILibc.S_IRGRP | WASILibc.S_IROTH
 #else
         public static let defaultPermissions = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
 #endif
@@ -143,7 +150,12 @@ extension NIOFileHandle {
         /// - parameters:
         ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
         public static func allowFileCreation(posixMode: NIOPOSIXFileMode = defaultPermissions) -> Flags {
-            return Flags(posixMode: posixMode, posixFlags: O_CREAT)
+            #if os(WASI)
+            let flags = CNIOWASI_O_CREAT()
+            #else
+            let flags = O_CREAT
+            #endif
+            return Flags(posixMode: posixMode, posixFlags: flags)
         }
 
         /// Allows the specification of POSIX flags (e.g. `O_TRUNC`) and mode (e.g. `S_IWUSR`)

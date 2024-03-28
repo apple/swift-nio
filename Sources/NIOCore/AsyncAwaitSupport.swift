@@ -33,6 +33,7 @@ extension EventLoopFuture {
     }
 }
 
+#if !os(WASI)
 extension EventLoopGroup {
     /// Shuts down the event loop gracefully.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
@@ -49,6 +50,7 @@ extension EventLoopGroup {
         }
     }
 }
+#endif
 
 extension EventLoopPromise {
     /// Complete a future with the result (or error) of the `async` function `body`.

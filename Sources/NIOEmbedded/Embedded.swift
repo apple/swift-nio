@@ -14,7 +14,9 @@
 
 import Atomics
 import NIOConcurrencyHelpers
+#if canImport(Dispatch)
 import Dispatch
+#endif
 import _NIODataStructures
 import NIOCore
 import DequeModule
@@ -201,6 +203,7 @@ public final class EmbeddedEventLoop: EventLoop {
         // Nothing to do here
     }
 
+#if canImport(Dispatch)
     /// - see: `EventLoop.shutdownGracefully`
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         run()
@@ -208,6 +211,7 @@ public final class EmbeddedEventLoop: EventLoop {
             callback(nil)
         }
     }
+#endif
 
     public func _preconditionSafeToWait(file: StaticString, line: UInt) {
         // EmbeddedEventLoop always allows a wait, as waiting will essentially always block

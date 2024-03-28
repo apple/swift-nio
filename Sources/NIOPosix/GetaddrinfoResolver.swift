@@ -24,7 +24,9 @@ import NIOCore
 ///
 /// This resolver is a single-use object: it can only be used to perform a single host resolution.
 
+#if canImport(Dispatch)
 import Dispatch
+#endif
 
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux

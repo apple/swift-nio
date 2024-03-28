@@ -23,6 +23,9 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(
   condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
 
+// These platforms require a depdency on `NIOPosix` from `NIOHTTP1` to maintain backward
+// compatibility with previous NIO versions.
+let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
 
 let package = Package(
     name: "swift-nio",
@@ -58,6 +61,7 @@ let package = Package(
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
+                "CNIOWASI",
                 "_NIODataStructures",
                 swiftCollections,
                 swiftAtomics,
@@ -143,6 +147,10 @@ let package = Package(
             dependencies: []
         ),
         .target(
+            name: "CNIOWASI",
+            dependencies: []
+        ),
+        .target(
             name: "NIOConcurrencyHelpers",
             dependencies: [
                 "CNIOAtomics",
@@ -151,7 +159,7 @@ let package = Package(
         .target(
             name: "NIOHTTP1",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
