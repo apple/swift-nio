@@ -21,7 +21,7 @@ import NIOCore
 ///  - `except` corresponds to `EVFILT_EXCEPT`
 ///  - `read` corresponds to `EVFILT_READ`
 ///  - `write` corresponds to `EVFILT_WRITE`
-private struct KQueueEventFilterSet: OptionSet, Equatable {
+struct KQueueEventFilterSet: OptionSet, Equatable {
     typealias RawValue = UInt8
 
     let rawValue: RawValue
@@ -85,6 +85,39 @@ extension KQueueEventFilterSet {
         }
 
         try kevents.withUnsafeBufferPointer(body)
+    }
+
+    /// Calculate the kqueue filter changes that are necessary to transition from `previousKQueueFilterSet` to `self`.
+    /// The `body` closure is then called with the changes necessary expressed as a number of `kevent`.
+    ///
+    /// - parameters:
+    ///    - previousKQueueFilterSet: The previous filter set that is currently registered with kqueue.
+    ///    - fileDescriptor: The file descriptor the `kevent`s should be generated to.
+    ///    - body: The closure that will then apply the change set.
+    func calculateKQueueFilterSetChanges(previousKQueueFilterSet: KQueueEventFilterSet,
+                                         fileDescriptor: CInt,
+                                        registrationID: SelectorRegistrationID,
+                                         selectorFD: CInt,
+                                         _ body: (CInt, UnsafeMutableBufferPointer<kevent>) throws -> Void) rethrows {
+        // we only use three filters (EVFILT_READ, EVFILT_WRITE and EVFILT_EXCEPT) so the number of changes would be 3.
+        var kevents = KeventTriple()
+
+        let differences = previousKQueueFilterSet.symmetricDifference(self) // contains all the events that need a change (either need to be added or removed)
+
+        func calculateKQueueChange(event: KQueueEventFilterSet) -> UInt16? {
+            guard differences.contains(event) else {
+                return nil
+            }
+            return UInt16(self.contains(event) ? EV_ADD : EV_DELETE)
+        }
+
+        for (event, filter) in [(KQueueEventFilterSet.read, EVFILT_READ), (.write, EVFILT_WRITE), (.except, EVFILT_EXCEPT)] {
+            if let flags = calculateKQueueChange(event: event) {
+                kevents.appendEvent(fileDescriptor: fileDescriptor, filter: filter, flags: flags, registrationID: registrationID)
+            }
+        }
+
+        try kevents.withUnsafeBufferPointer({ kevents in try body(selectorFD, kevents) })
     }
 }
 
