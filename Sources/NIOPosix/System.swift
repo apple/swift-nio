@@ -547,6 +547,7 @@ internal enum Posix {
             return true
         } catch let err as IOError {
             if err.errnoCode == EINPROGRESS {
+                print("Connect in progress")
                 return false
             }
             throw err

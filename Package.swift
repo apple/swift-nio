@@ -83,6 +83,10 @@ let package = Package(
                 "NIOCore",
                 "_NIODataStructures",
                 swiftAtomics,
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency=complete"),
+                .unsafeFlags(["-Xfrontend", "-disable-availability-checking"]),
             ]
         ),
         .target(
@@ -317,6 +321,10 @@ let package = Package(
             dependencies: [
                 "NIOPosix",
                 "NIOCore",
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency=complete"),
+                .unsafeFlags(["-Xfrontend", "-disable-availability-checking"]),
             ]
         ),
         .executableTarget(
@@ -396,6 +404,10 @@ let package = Package(
                 "NIOEmbedded",
                 "CNIOLinux",
                 "NIOTLS",
+            ],
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency=complete"),
+                .unsafeFlags(["-Xfrontend", "-disable-availability-checking"]),
             ]
         ),
         .testTarget(
