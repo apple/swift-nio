@@ -49,12 +49,6 @@ let package = Package(
         .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
         .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
-        .package(url: "https://github.com/apple/swift-system.git", from: "1.2.0"),
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
-    ],
     targets: [
         // MARK: - Targets
 
@@ -519,3 +513,18 @@ let package = Package(
         )
     ]
 )
+
+if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
+    package.dependencies += [
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
+        .package(url: "https://github.com/apple/swift-system.git", from: "1.2.0"),
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+    ]
+} else {
+    package.dependencies += [
+        .package(path: "../swift-atomics"),
+        .package(path: "../swift-collections"),
+        .package(path: "../swift-system"),
+    ]
+}
