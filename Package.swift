@@ -23,6 +23,14 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(
   condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
 
+// This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
+// Foundation will be linked. This is, however, strictly better than unconditionally adding the
+// resource.
+#if canImport(Darwin)
+let includePrivacyManifest = true
+#else
+let includePrivacyManifest = false
+#endif
 
 let package = Package(
     name: "swift-nio",
@@ -83,7 +91,8 @@ let package = Package(
                 "NIOCore",
                 "_NIODataStructures",
                 swiftAtomics,
-            ]
+            ],
+            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : []
         ),
         .target(
             name: "NIO",
@@ -199,6 +208,7 @@ let package = Package(
                 swiftSystem,
             ],
             path: "Sources/NIOFileSystem",
+            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
             swiftSettings: [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
