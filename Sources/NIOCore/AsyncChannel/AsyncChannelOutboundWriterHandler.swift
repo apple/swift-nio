@@ -37,6 +37,18 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     @usableFromInline
     var sink: Sink?
 
+    /// The writer of the ``NIOAsyncWriter``.
+    ///
+    /// The reference is retained until `channelActive` is fired. This avoids situations
+    /// where `deinit` is called on the unfinished writer because the `Channel` was never returned
+    /// to the caller (e.g. because a connect failed or or happy-eyeballs created multiple
+    /// channels).
+    ///
+    /// Effectively `channelActive` is used at the point in time at which NIO cedes ownership of
+    /// the writer to the caller.
+    @usableFromInline
+    var writer: Writer?
+
     /// The channel handler context.
     @usableFromInline
     var context: ChannelHandlerContext?
@@ -126,6 +138,14 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     func handlerRemoved(context: ChannelHandlerContext) {
         self.context = nil
         self.sink?.finish()
+        self.writer = nil
+    }
+
+    @inlinable
+    func channelActive(context: ChannelHandlerContext) {
+        // Drop the writer ref, the caller is responsible for it now.
+        self.writer = nil
+        context.fireChannelActive()
     }
 
     @inlinable

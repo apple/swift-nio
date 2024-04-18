@@ -542,9 +542,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 port: channel.channel.localAddress!.port!,
                 proposedALPN: .unknown
             )
-            await XCTAssertThrowsError(
+            await XCTAssertThrowsError {
                 try await failedProtocolNegotiation.get()
-            )
+            }
 
             // Let's check that we can still open a new connection
             let stringNegotiationResult = try await self.makeClientChannelWithProtocolNegotiation(
@@ -572,6 +572,26 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             try await failedInboundChannel.closeFuture.get()
 
             group.cancelAll()
+        }
+    }
+
+    func testClientBootstrap_connectFails() async throws {
+        // Beyond verifying the connect throws, this test allows us to check that 'NIOAsyncChannel'
+        // doesn't crash on deinit when we never return it to the user.
+        await XCTAssertThrowsError {
+            try await ClientBootstrap(
+                group: .singletonMultiThreadedEventLoopGroup
+            ).connect(unixDomainSocketPath: "testClientBootstrapConnectFails") { channel in
+                return channel.eventLoop.makeCompletedFuture {
+                    return try NIOAsyncChannel(
+                        wrappingChannelSynchronously: channel,
+                        configuration: .init(
+                            inboundType: ByteBuffer.self,
+                            outboundType: ByteBuffer.self
+                        )
+                    )
+                }
+            }
         }
     }
 
@@ -659,6 +679,26 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
             default:
                 preconditionFailure()
+            }
+        }
+    }
+
+    func testDatagramBootstrap_connectFails() async throws {
+        // Beyond verifying the connect throws, this test allows us to check that 'NIOAsyncChannel'
+        // doesn't crash on deinit when we never return it to the user.
+        await XCTAssertThrowsError {
+            try await DatagramBootstrap(
+                group: .singletonMultiThreadedEventLoopGroup
+            ).connect(unixDomainSocketPath: "testDatagramBootstrapConnectFails") { channel in
+                return channel.eventLoop.makeCompletedFuture {
+                    return try NIOAsyncChannel(
+                        wrappingChannelSynchronously: channel,
+                        configuration: .init(
+                            inboundType: AddressedEnvelope<ByteBuffer>.self,
+                            outboundType: AddressedEnvelope<ByteBuffer>.self
+                        )
+                    )
+                }
             }
         }
     }
