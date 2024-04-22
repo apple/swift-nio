@@ -671,13 +671,23 @@ class DatagramChannelTests: XCTestCase {
                 return
             }
 
-            let channel1 = try buildChannel(group: self.group, host: "::1")
-            try channel1.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
-            XCTAssertTrue(try channel1.getOption(ChannelOptions.explicitCongestionNotification).wait())
+            do {
+                let channel1 = try buildChannel(group: self.group, host: "::1")
+                try channel1.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
+                XCTAssertTrue(try channel1.getOption(ChannelOptions.explicitCongestionNotification).wait())
 
-            let channel2 = try buildChannel(group: self.group, host: "::1")
-            try channel2.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
-            XCTAssertFalse(try channel2.getOption(ChannelOptions.explicitCongestionNotification).wait())
+                let channel2 = try buildChannel(group: self.group, host: "::1")
+                try channel2.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
+                XCTAssertFalse(try channel2.getOption(ChannelOptions.explicitCongestionNotification).wait())
+            } catch let error as SocketAddressError {
+                switch error {
+                case .unknown:
+                    // IPv6 resolution can fail even if supported.
+                    return
+                case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
+                    throw error
+                }
+            }
         } ())
     }
 
@@ -840,13 +850,23 @@ class DatagramChannelTests: XCTestCase {
                 return
             }
 
-            let channel1 = try buildChannel(group: self.group, host: "::1")
-            try channel1.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
-            XCTAssertTrue(try channel1.getOption(ChannelOptions.receivePacketInfo).wait())
+            do {
+                let channel1 = try buildChannel(group: self.group, host: "::1")
+                try channel1.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
+                XCTAssertTrue(try channel1.getOption(ChannelOptions.receivePacketInfo).wait())
 
-            let channel2 = try buildChannel(group: self.group, host: "::1")
-            try channel2.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
-            XCTAssertFalse(try channel2.getOption(ChannelOptions.receivePacketInfo).wait())
+                let channel2 = try buildChannel(group: self.group, host: "::1")
+                try channel2.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
+                XCTAssertFalse(try channel2.getOption(ChannelOptions.receivePacketInfo).wait())
+            } catch let error as SocketAddressError {
+                switch error {
+                case .unknown:
+                    // IPv6 resolution can fail even if supported.
+                    return
+                case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
+                    throw error
+                }
+            }
         } ())
     }
 
