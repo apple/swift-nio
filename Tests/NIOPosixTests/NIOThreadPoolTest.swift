@@ -190,6 +190,6 @@ class NIOThreadPoolTest: XCTestCase {
         let future = threadPool.runIfActive(eventLoop: eventLoop) {
             XCTFail("This shouldn't run because the pool is shutdown.")
         }
-        await XCTAssertThrowsError(try await future.get())
+        await XCTAssertThrowsError { try await future.get() }
     }
 }

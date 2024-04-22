@@ -97,7 +97,9 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
             finishOnDeinit: closeOnDeinit,
             delegate: .init(handler: handler)
         )
+
         handler.sink = writer.sink
+        handler.writer = writer.writer
 
         try channel.pipeline.syncOperations.addHandler(handler)
 
