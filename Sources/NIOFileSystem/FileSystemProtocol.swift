@@ -274,7 +274,7 @@ extension FileSystemProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R: Sendable>(
+    public func withFileHandle<R>(
         forReadingAt path: FilePath,
         options: OpenOptions.Read = OpenOptions.Read(),
         execute: (_ read: ReadFileHandle) async throws -> R
@@ -301,7 +301,7 @@ extension FileSystemProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R: Sendable>(
+    public func withFileHandle<R>(
         forWritingAt path: FilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute: (_ write: WriteFileHandle) async throws -> R
@@ -354,7 +354,7 @@ extension FileSystemProtocol {
     ///   - execute: A closure which provides access to the directory.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withDirectoryHandle<R: Sendable>(
+    public func withDirectoryHandle<R>(
         atPath path: FilePath,
         options: OpenOptions.Directory = OpenOptions.Directory(),
         execute: (_ directory: DirectoryFileHandle) async throws -> R

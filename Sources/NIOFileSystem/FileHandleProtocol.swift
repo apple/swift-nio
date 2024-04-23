@@ -581,7 +581,7 @@ extension DirectoryFileHandleProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R: Sendable>(
+    public func withFileHandle<R>(
         forReadingAt path: FilePath,
         options: OpenOptions.Read = OpenOptions.Read(),
         execute body: (_ read: ReadFileHandle) async throws -> R
@@ -612,7 +612,7 @@ extension DirectoryFileHandleProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R: Sendable>(
+    public func withFileHandle<R>(
         forWritingAt path: FilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute body: (_ write: WriteFileHandle) async throws -> R
@@ -647,7 +647,7 @@ extension DirectoryFileHandleProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R: Sendable>(
+    public func withFileHandle<R>(
         forReadingAndWritingAt path: FilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute body: (_ readWrite: ReadWriteFileHandle) async throws -> R
@@ -673,7 +673,7 @@ extension DirectoryFileHandleProtocol {
     ///   - body: A closure which provides access to the directory.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withDirectoryHandle<R: Sendable>(
+    public func withDirectoryHandle<R>(
         atPath path: FilePath,
         options: OpenOptions.Directory = OpenOptions.Directory(),
         execute body: (_ directory: Self) async throws -> R

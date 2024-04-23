@@ -700,7 +700,7 @@ extension FileSystemProtocol where Self == FileSystem {
 
 /// Provides temporary scoped access to a ``FileSystem`` with the given number of threads.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public func withFileSystem<R: Sendable>(
+public func withFileSystem<R>(
     numberOfThreads: Int,
     _ body: (FileSystem) async throws -> R
 ) async throws -> R {
