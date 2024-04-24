@@ -31,9 +31,9 @@ public func withoutCancellation<R: Sendable>(
 /// Executes `fn` and then `tearDown`, which cannot be cancelled.
 @_spi(Testing)
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public func withUncancellableTearDown<R: Sendable>(
+public func withUncancellableTearDown<R>(
     _ fn: () async throws -> R,
-    tearDown: @escaping (Result<R, Error>) async throws -> Void
+    tearDown: @escaping (Result<Void, Error>) async throws -> Void
 ) async throws -> R {
     let result: Result<R, Error>
     do {
@@ -42,9 +42,10 @@ public func withUncancellableTearDown<R: Sendable>(
         result = .failure(error)
     }
 
+    let errorOnlyResult: Result<Void, Error> = result.map { _ in return () }
     let tearDownResult: Result<Void, Error> = try await withoutCancellation {
         do {
-            return .success(try await tearDown(result))
+            return .success(try await tearDown(errorOnlyResult))
         } catch {
             return .failure(error)
         }
