@@ -476,6 +476,42 @@ extension FileSystemProtocol {
             permissions: .defaultsForDirectory
         )
     }
+
+    /// Create a temporary directory and removes it once the function returns.
+    ///
+    /// You can use `prefix` to specify the directory in which the temporary directory should
+    /// be created. If `prefix` is `nil` then the value of ``temporaryDirectory`` is used as
+    /// the prefix.
+    ///
+    /// The temporary directory, and all of its contents, is removed once `execute` returns.
+    ///
+    /// - Parameters:
+    ///   - prefix: The prefix to use for the path of the temporary directory.
+    ///   - options: Options used to create the directory.
+    ///   - execute: A closure which provides access to the directory and its path.
+    /// - Returns: The result of `execute`.
+    public func withTemporaryDirectory<ReturnType>(
+        prefix: FilePath? = nil,
+        options: OpenOptions.Directory = OpenOptions.Directory(),
+        execute: (_ directory: DirectoryFileHandle, _ path: FilePath) async throws -> ReturnType
+    ) async throws -> ReturnType {
+        let template: FilePath
+
+        if let prefix = prefix {
+            template = prefix.appending("XXXXXXXX")
+        } else {
+            template = try await self.temporaryDirectory.appending("XXXXXXXX")
+        }
+
+        let directory = try await self.createTemporaryDirectory(template: template)
+        return try await withUncancellableTearDown {
+            try await withDirectoryHandle(atPath: directory, options: options) { handle in
+                try await execute(handle, directory)
+            }
+        } tearDown: { _ in
+            try await self.removeItem(at: directory, recursively: true)
+        }
+    }
 }
 
 #endif

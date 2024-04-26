@@ -1055,6 +1055,55 @@ final class FileSystemTests: XCTestCase {
             XCTAssertEqual(names.sorted(), expected.sorted())
         }
     }
+
+    func testWithTemporaryDirectory() async throws {
+        let fs = FileSystem.shared
+
+        let createdPath = try await fs.withTemporaryDirectory { directory, path in
+            let root = try await fs.temporaryDirectory
+            XCTAssert(path.starts(with: root))
+            return path
+        }
+
+        // Directory shouldn't exist any more.
+        let info = try await fs.info(forFileAt: createdPath)
+        XCTAssertNil(info)
+    }
+
+    func testWithTemporaryDirectoryPrefix() async throws {
+        let fs = FileSystem.shared
+        let prefix = try await fs.currentWorkingDirectory
+
+        let createdPath = try await fs.withTemporaryDirectory(prefix: prefix) { directory, path in
+            XCTAssert(path.starts(with: prefix))
+            return path
+        }
+
+        // Directory shouldn't exist any more.
+        let info = try await fs.info(forFileAt: createdPath)
+        XCTAssertNil(info)
+    }
+
+    func testWithTemporaryDirectoryRemovesContents() async throws {
+        let fs = FileSystem.shared
+        let createdPath = try await fs.withTemporaryDirectory { directory, path in
+            for name in ["foo", "bar", "baz"] {
+                try await directory.withFileHandle(forWritingAt: FilePath(name)) { fh in
+                    _ = try await fh.write(contentsOf: [1, 2, 3], toAbsoluteOffset: 0)
+                }
+            }
+
+            let entries = try await directory.listContents().reduce(into: []) { $0.append($1) }
+            let names = entries.map { $0.name.string }
+            XCTAssertEqual(names.sorted(), ["bar", "baz", "foo"])
+
+            return path
+        }
+
+        // Directory shouldn't exist any more.
+        let info = try await fs.info(forFileAt: createdPath)
+        XCTAssertNil(info)
+    }
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
