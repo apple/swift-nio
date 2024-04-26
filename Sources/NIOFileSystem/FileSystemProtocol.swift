@@ -490,11 +490,11 @@ extension FileSystemProtocol {
     ///   - options: Options used to create the directory.
     ///   - execute: A closure which provides access to the directory and its path.
     /// - Returns: The result of `execute`.
-    public func withTemporaryDirectory<R>(
+    public func withTemporaryDirectory<ReturnType>(
         prefix: FilePath? = nil,
         options: OpenOptions.Directory = OpenOptions.Directory(),
-        execute: (_ directory: DirectoryFileHandle, _ path: FilePath) async throws -> R
-    ) async throws -> R {
+        execute: (_ directory: DirectoryFileHandle, _ path: FilePath) async throws -> ReturnType
+    ) async throws -> ReturnType {
         let template: FilePath
 
         if let prefix = prefix {
