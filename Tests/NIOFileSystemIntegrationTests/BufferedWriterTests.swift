@@ -59,6 +59,89 @@ final class BufferedWriterTests: XCTestCase {
         }
     }
 
+    func testBufferedWriterByteBuffer() async throws {
+        let fs = FileSystem.shared
+        let path = try await fs.temporaryFilePath()
+
+        try await fs.withFileHandle(
+            forReadingAndWritingAt: path,
+            options: .newFile(replaceExisting: false)
+        ) { file in
+            let bufferSize = 8192
+            var writer = file.bufferedWriter(capacity: .bytes(Int64(bufferSize)))
+            XCTAssertEqual(writer.bufferedBytes, 0)
+
+            // Write a full buffers worth of bytes, should be flushed immediately.
+            try await writer.write(contentsOf: ByteBuffer(repeating: 0, count: bufferSize))
+            XCTAssertEqual(writer.bufferedBytes, 0)
+
+            // Write just under a buffer.
+            try await writer.write(contentsOf: ByteBuffer(repeating: 1, count: bufferSize - 1))
+            XCTAssertEqual(writer.bufferedBytes, bufferSize - 1)
+
+            // Try to read the as-yet-unwritten bytes.
+            let emptyChunk = try await file.readChunk(
+                fromAbsoluteOffset: Int64(bufferSize),
+                length: .bytes(Int64(bufferSize - 1))
+            )
+            XCTAssertEqual(emptyChunk.readableBytes, 0)
+
+            // Write one more byte to flush out the buffer.
+            try await writer.write(contentsOf: ByteBuffer(repeating: 1, count: 1))
+            XCTAssertEqual(writer.bufferedBytes, 0)
+
+            // Try to read now that the bytes have been finished.
+            let chunk = try await file.readChunk(
+                fromAbsoluteOffset: Int64(bufferSize),
+                length: .bytes(Int64(bufferSize))
+            )
+            XCTAssertEqual(chunk, ByteBuffer(repeating: 1, count: bufferSize))
+        }
+    }
+
+    func testBufferedWriterAsyncSequenceOfByteBuffer() async throws {
+        let fs = FileSystem.shared
+        let path = try await fs.temporaryFilePath()
+
+        let buffers = AsyncStream<ByteBuffer> { continuation in
+            continuation.yield(ByteBuffer(repeating: 0, count: 1024))
+            continuation.yield(ByteBuffer(repeating: 1, count: 1024))
+            continuation.yield(ByteBuffer(repeating: 2, count: 1024))
+            continuation.finish()
+        }
+
+        try await fs.withFileHandle(
+            forReadingAndWritingAt: path,
+            options: .newFile(replaceExisting: false)
+        ) { file in
+            let bufferSize = 8192
+            var writer = file.bufferedWriter(capacity: .bytes(Int64(bufferSize)))
+            XCTAssertEqual(writer.bufferedBytes, 0)
+
+            // Write the buffers.
+            try await writer.write(contentsOf: buffers)
+            XCTAssertEqual(writer.bufferedBytes, 1024 * 3)
+
+            // Try to read the as-yet-unwritten bytes.
+            let emptyChunk = try await file.readChunk(
+                fromAbsoluteOffset: 0,
+                length: .bytes(Int64(1024 * 3))
+            )
+            XCTAssertEqual(emptyChunk.readableBytes, 0)
+
+            // Flush the buffer.
+            try await writer.flush()
+
+            // Try to read now that the bytes have been finished.
+            var chunk = try await file.readChunk(fromAbsoluteOffset: 0, length: .bytes(1024 * 3))
+            XCTAssertEqual(chunk.readableBytes, 1024 * 3)
+            XCTAssertEqual(chunk.readSlice(length: 1024), ByteBuffer(repeating: 0, count: 1024))
+            XCTAssertEqual(chunk.readSlice(length: 1024), ByteBuffer(repeating: 1, count: 1024))
+            XCTAssertEqual(chunk.readSlice(length: 1024), ByteBuffer(repeating: 2, count: 1024))
+            XCTAssertEqual(chunk.readableBytes, 0)
+        }
+    }
+
     func testBufferedWriterAsyncSequenceOfBytes() async throws {
         let fs = FileSystem.shared
         let path = try await fs.temporaryFilePath()
