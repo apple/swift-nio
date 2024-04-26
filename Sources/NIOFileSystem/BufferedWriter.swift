@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
+import NIOCore
 
 /// A writer which buffers bytes in memory before writing them to the file system.
 ///
@@ -94,6 +95,23 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
         return bytesWritten
     }
 
+    /// Write the contents of the `ByteBuffer` into the buffer.
+    ///
+    /// If the number of bytes in the buffer exceeds the size of the buffer then they're
+    /// automatically written to the file system.
+    ///
+    /// - Remark: The writer reclaims the buffer's memory when it grows to more than twice the
+    ///   configured size.
+    ///
+    /// To manually flush bytes use ``flush()``.
+    ///
+    /// - Parameter bytes: The bytes to write to the buffer.
+    /// - Returns: The number of bytes written into the buffered writer.
+    @discardableResult
+    public mutating func write(contentsOf bytes: ByteBuffer) async throws -> Int64 {
+        try await self.write(contentsOf: bytes.readableBytesView)
+    }
+
     /// Write the contents of the `AsyncSequence` of byte chunks to the buffer.
     ///
     /// If appending a chunk to the buffer causes it to exceed the capacity of the buffer then the
@@ -107,7 +125,6 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     /// - Parameter bytes: The `AsyncSequence` of byte chunks to write to the buffer.
     /// - Returns: The number of bytes written into the buffered writer.
     @discardableResult
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public mutating func write<Chunks: AsyncSequence>(
         contentsOf chunks: Chunks
     ) async throws -> Int64 where Chunks.Element: Sequence<UInt8> {
@@ -131,6 +148,25 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
         return bytesWritten
     }
 
+    /// Write the contents of the `AsyncSequence` of `ByteBuffer`s into the buffer.
+    ///
+    /// If appending a chunk to the buffer causes it to exceed the capacity of the buffer then the
+    /// contents of the buffer are automatically written to the file system.
+    ///
+    /// - Remark: The writer reclaims the buffer's memory when it grows to more than twice the
+    ///   configured size.
+    ///
+    /// To manually flush bytes use ``flush()``.
+    ///
+    /// - Parameter bytes: The `AsyncSequence` of `ByteBuffer`s to write.
+    /// - Returns: The number of bytes written into the buffered writer.
+    @discardableResult
+    public mutating func write<Chunks: AsyncSequence>(
+        contentsOf chunks: Chunks
+    ) async throws -> Int64 where Chunks.Element == ByteBuffer {
+        try await self.write(contentsOf: chunks.map { $0.readableBytesView })
+    }
+
     /// Write the contents of the `AsyncSequence` of bytes the buffer.
     ///
     /// If appending a byte to the buffer causes it to exceed the capacity of the buffer then the
@@ -143,7 +179,6 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     ///
     /// - Parameter bytes: The `AsyncSequence` of bytes to write to the buffer.
     @discardableResult
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public mutating func write<Bytes: AsyncSequence>(
         contentsOf bytes: Bytes
     ) async throws -> Int64 where Bytes.Element == UInt8 {
