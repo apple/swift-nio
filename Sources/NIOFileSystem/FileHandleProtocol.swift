@@ -581,11 +581,11 @@ extension DirectoryFileHandleProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R>(
+    public func withFileHandle<Result>(
         forReadingAt path: FilePath,
         options: OpenOptions.Read = OpenOptions.Read(),
-        execute body: (_ read: ReadFileHandle) async throws -> R
-    ) async throws -> R {
+        execute body: (_ read: ReadFileHandle) async throws -> Result
+    ) async throws -> Result {
         let handle = try await self.openFile(forReadingAt: path, options: options)
 
         return try await withUncancellableTearDown {
@@ -612,11 +612,11 @@ extension DirectoryFileHandleProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R>(
+    public func withFileHandle<Result>(
         forWritingAt path: FilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
-        execute body: (_ write: WriteFileHandle) async throws -> R
-    ) async throws -> R {
+        execute body: (_ write: WriteFileHandle) async throws -> Result
+    ) async throws -> Result {
         let handle = try await self.openFile(forWritingAt: path, options: options)
 
         return try await withUncancellableTearDown {
@@ -647,11 +647,11 @@ extension DirectoryFileHandleProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R>(
+    public func withFileHandle<Result>(
         forReadingAndWritingAt path: FilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
-        execute body: (_ readWrite: ReadWriteFileHandle) async throws -> R
-    ) async throws -> R {
+        execute body: (_ readWrite: ReadWriteFileHandle) async throws -> Result
+    ) async throws -> Result {
         let handle = try await self.openFile(forReadingAndWritingAt: path, options: options)
 
         return try await withUncancellableTearDown {
@@ -673,11 +673,11 @@ extension DirectoryFileHandleProtocol {
     ///   - body: A closure which provides access to the directory.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withDirectoryHandle<R>(
+    public func withDirectoryHandle<Result>(
         atPath path: FilePath,
         options: OpenOptions.Directory = OpenOptions.Directory(),
-        execute body: (_ directory: Self) async throws -> R
-    ) async throws -> R {
+        execute body: (_ directory: Self) async throws -> Result
+    ) async throws -> Result {
         let handle = try await self.openDirectory(atPath: path, options: options)
 
         return try await withUncancellableTearDown {
