@@ -231,11 +231,11 @@ extension WritableFileHandleProtocol {
     ///     buffer to the file system when it exceeds this capacity. Defaults to 512 KiB.
     ///   - body: The closure that writes the contents to the buffer created in this method.
     /// - Returns: The result of the executed closure.
-    public func withBufferedWriter<R>(
+    public func withBufferedWriter<Result>(
         startingAtAbsoluteOffset initialOffset: Int64 = 0,
         capacity: ByteCount = .kibibytes(512),
-        execute body: (inout BufferedWriter<Self>) async throws -> R
-    ) async throws -> R {
+        execute body: (inout BufferedWriter<Self>) async throws -> Result
+    ) async throws -> Result {
         var bufferedWriter = self.bufferedWriter(startingAtAbsoluteOffset: initialOffset, capacity: capacity)
         return try await withUncancellableTearDown {
             return try await body(&bufferedWriter)

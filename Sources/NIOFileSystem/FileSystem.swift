@@ -700,10 +700,10 @@ extension FileSystemProtocol where Self == FileSystem {
 
 /// Provides temporary scoped access to a ``FileSystem`` with the given number of threads.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public func withFileSystem<R>(
+public func withFileSystem<Result>(
     numberOfThreads: Int,
-    _ body: (FileSystem) async throws -> R
-) async throws -> R {
+    _ body: (FileSystem) async throws -> Result
+) async throws -> Result {
     let fileSystem = await FileSystem(numberOfThreads: numberOfThreads)
     return try await withUncancellableTearDown {
         try await body(fileSystem)
