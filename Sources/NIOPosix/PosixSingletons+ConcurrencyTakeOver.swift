@@ -39,7 +39,7 @@ extension NIOSingletons {
     /// - warning: You may only call this method once.
     @discardableResult
     public static func unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor() -> Bool {
-        #if /* minimum supported */ compiler(>=5.9) && /* maximum tested */ swift(<5.11)
+        #if /* minimum supported */ compiler(>=5.9) && /* maximum tested */ compiler(<6.1)
         guard #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) else {
             return false
         }
