@@ -338,9 +338,31 @@ struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSeq
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension EventLoop {
+    @available(*, deprecated, renamed: "makeFutureWithResultOfTask", message: "Prefer makeFutureWithResultOfTask as it will track the original creator of the promise.")
     @inlinable
     public func makeFutureWithTask<Return>(_ body: @Sendable @escaping () async throws -> Return) -> EventLoopFuture<Return> {
         let promise = self.makePromise(of: Return.self)
+        promise.completeWithTask(body)
+        return promise.futureResult
+    }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension EventLoop {
+    /// Make a future whose body runs in an `async` function `body`.
+    ///
+    /// This function can be used to bridge the `async` world into an `EventLoopFuture`.
+    ///
+    /// - parameters:
+    ///   - body: The `async` function to run.
+    /// - returns: A `Future` which completes when `body` finishes running.
+    @inlinable
+    public func makeFutureWithResultOfTask<Return>(
+        file: StaticString = #fileID,
+        line: UInt = #line,
+        _ body: @Sendable @escaping () async throws -> Return
+    ) -> EventLoopFuture<Return> {
+        let promise = self.makePromise(of: Return.self, file: file, line: line)
         promise.completeWithTask(body)
         return promise.futureResult
     }
