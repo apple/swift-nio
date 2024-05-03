@@ -33,11 +33,11 @@ public enum NIOThreadPoolError {
 }
 
 /// A thread pool that should be used if some (kernel thread) blocking work
-/// needs to be performed for which no non-blocking API exists.
+/// needs to be performed for which blocking API exists.
 ///
 /// When using NIO it is crucial not to block any of the `EventLoop`s as that
 /// leads to slow downs or stalls of arbitrary other work. Unfortunately though
-/// there are tasks that applications need to achieve for which no non-blocking
+/// there are tasks that applications need to achieve for which blocking
 /// APIs exist. In those cases `NIOThreadPool` can be used but should be
 /// treated as a last resort.
 ///
