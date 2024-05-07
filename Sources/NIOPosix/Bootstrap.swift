@@ -2281,11 +2281,18 @@ extension NIOPipeBootstrap {
 
             inputFileHandle = input.flatMap { NIOFileHandle(descriptor: $0) }
             outputFileHandle = output.flatMap { NIOFileHandle(descriptor: $0) }
-            channel = try PipeChannel(
-                eventLoop: eventLoop as! SelectableEventLoop,
-                inputPipe: inputFileHandle,
-                outputPipe: outputFileHandle
-            )
+            do {
+                channel = try PipeChannel(
+                    eventLoop: eventLoop as! SelectableEventLoop,
+                    inputPipe: inputFileHandle,
+                    outputPipe: outputFileHandle
+                )
+            } catch {
+                // Release file handles back to the caller in case of failure.
+                _ = try? inputFileHandle?.takeDescriptorOwnership()
+                _ = try? outputFileHandle?.takeDescriptorOwnership()
+                throw error
+            }
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
