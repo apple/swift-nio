@@ -92,6 +92,7 @@ let package = Package(
                 "_NIODataStructures",
                 swiftAtomics,
             ],
+            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : []
         ),
         .target(
@@ -208,6 +209,7 @@ let package = Package(
                 swiftSystem,
             ],
             path: "Sources/NIOFileSystem",
+            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
             swiftSettings: [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
