@@ -69,7 +69,6 @@ services:
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=89
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=6200
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=165050
-      - FORCE_TEST_DISCOVERY=--enable-test-discovery
       - WARN_AS_ERROR_ARG=-Xswiftc -warnings-as-errors
       - IMPORT_CHECK_ARG=--explicit-target-dependency-import-check error
       # - SANITIZER_ARG=--sanitize=thread # TSan broken still

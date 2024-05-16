@@ -28,7 +28,7 @@ services:
 
   unit-tests:
     <<: *common
-    command: /bin/bash -xcl "swift $${SWIFT_TEST_VERB-test} $${FORCE_TEST_DISCOVERY-} $${WARN_AS_ERROR_ARG-} $${IMPORT_CHECK_ARG-}"
+    command: /bin/bash -xcl "swift $${SWIFT_TEST_VERB-test} $${WARN_AS_ERROR_ARG-} $${IMPORT_CHECK_ARG-}"
 
   integration-tests:
     <<: *common
@@ -40,7 +40,7 @@ services:
 
   test:
     <<: *common
-    command: /bin/bash -xcl "uname -a && swift -version && swift $${SWIFT_TEST_VERB-test} $${FORCE_TEST_DISCOVERY-} $${WARN_AS_ERROR_ARG-} $${SANITIZER_ARG-} $${IMPORT_CHECK_ARG-} && ./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-} && cd Benchmarks && swift package benchmark baseline check --check-absolute-path Thresholds/$${SWIFT_VERSION-}/"
+    command: /bin/bash -xcl "uname -a && swift -version && swift $${SWIFT_TEST_VERB-test} $${WARN_AS_ERROR_ARG-} $${SANITIZER_ARG-} $${IMPORT_CHECK_ARG-} && ./scripts/integration_tests.sh $${INTEGRATION_TESTS_ARG-} && cd Benchmarks && swift package benchmark baseline check --check-absolute-path Thresholds/$${SWIFT_VERSION-}/"
 
   performance-test:
     <<: *common

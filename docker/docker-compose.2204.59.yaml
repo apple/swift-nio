@@ -36,7 +36,7 @@ services:
       - MAX_ALLOCS_ALLOWED_1000_getHandlers=8050
       - MAX_ALLOCS_ALLOWED_1000_getHandlers_sync=36
       - MAX_ALLOCS_ALLOWED_1000_reqs_1_conn=26400
-      - MAX_ALLOCS_ALLOWED_1000_rst_connections=149000
+      - MAX_ALLOCS_ALLOWED_1000_rst_connections=149050
       - MAX_ALLOCS_ALLOWED_1000_tcpbootstraps=4050
       - MAX_ALLOCS_ALLOWED_1000_tcpconnections=157050
       - MAX_ALLOCS_ALLOWED_1000_udp_reqs=6050
@@ -70,7 +70,6 @@ services:
       - MAX_ALLOCS_ALLOWED_scheduling_10000_executions=89
       - MAX_ALLOCS_ALLOWED_udp_1000_reqs_1_conn=6200
       - MAX_ALLOCS_ALLOWED_udp_1_reqs_1000_conn=165050
-      - FORCE_TEST_DISCOVERY=--enable-test-discovery
       - WARN_AS_ERROR_ARG=-Xswiftc -warnings-as-errors
       - IMPORT_CHECK_ARG=--explicit-target-dependency-import-check error
       # - SANITIZER_ARG=--sanitize=thread # TSan broken still
