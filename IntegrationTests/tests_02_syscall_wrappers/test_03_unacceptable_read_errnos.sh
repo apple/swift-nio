@@ -31,7 +31,7 @@ mkdir "$tmpdir/syscallwrapper"
 cd "$tmpdir/syscallwrapper"
 swift package init --type=executable
 cat > "$tmpdir/syscallwrapper/Sources/syscallwrapper/main.swift" <<EOF
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 import Darwin
 #else
 import Glibc

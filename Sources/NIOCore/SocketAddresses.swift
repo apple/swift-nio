@@ -24,7 +24,7 @@ import struct WinSDK.ADDRINFOW
 import struct WinSDK.in_addr_t
 
 import typealias WinSDK.u_short
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
 import Darwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 import Glibc

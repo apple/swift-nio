@@ -83,7 +83,7 @@ struct SelectorEventSet: OptionSet, Equatable {
 }
 
 internal let isEarlyEOFDeliveryWorkingOnThisOS: Bool = {
-    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
     return false // rdar://53656794 , once fixed we need to do an OS version check here.
     #else
     return true
@@ -133,7 +133,7 @@ internal class Selector<R: Registration>  {
     var selectorFD: CInt = -1 // -1 == we're closed
 
     // Here we add the stored properties that are used by the specific backends
-    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+    #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
     typealias EventType = kevent
     #elseif os(Linux) || os(Android)
     #if !SWIFTNIO_USE_IO_URING

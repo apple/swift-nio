@@ -14,7 +14,7 @@
 
 import Foundation
 import AtomicCounter
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 import Darwin
 #else
 import Glibc
@@ -52,7 +52,7 @@ func measureAll(_ fn: () -> Int) -> [[String: Int]] {
         AtomicCounter.reset_free_counter()
         AtomicCounter.reset_malloc_counter()
         AtomicCounter.reset_malloc_bytes_counter()
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
         autoreleasepool {
             _ = fn()
         }
