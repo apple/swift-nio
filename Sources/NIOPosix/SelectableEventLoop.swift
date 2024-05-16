@@ -20,7 +20,7 @@ import _NIODataStructures
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
-#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS) || os(visionOS)
     return try autoreleasepool {
         try execute()
     }

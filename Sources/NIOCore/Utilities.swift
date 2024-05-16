@@ -30,7 +30,7 @@ import struct WinSDK.SYSTEM_LOGICAL_PROCESSOR_INFORMATION
 import struct WinSDK.ULONG
 
 import typealias WinSDK.DWORD
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
 import Darwin
 #endif
 

@@ -16,7 +16,7 @@
 import typealias WinSDK.DWORD
 #elseif os(Linux) || os(Android)
 import Glibc
-#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+#elseif os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
 import Darwin
 #endif
 

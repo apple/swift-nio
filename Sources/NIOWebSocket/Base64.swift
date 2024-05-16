@@ -148,7 +148,7 @@ extension String {
 // this declaration on having the 5.3 compiler. This has caused a number of build issues. While updating
 // to newer Xcodes does work, we can save ourselves some hassle and just wait until 5.4 to get this
 // enhancement on Apple platforms.
-#if (compiler(>=5.3) && !(os(macOS) || os(iOS) || os(tvOS) || os(watchOS))) || compiler(>=5.4)
+#if (compiler(>=5.3) && !(os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS))) || compiler(>=5.4)
 extension String {
     
   @inlinable

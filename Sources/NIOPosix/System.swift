@@ -17,7 +17,7 @@
 
 import NIOCore
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 @_exported import Darwin.C
 import CNIODarwin
 internal typealias MMsgHdr = CNIODarwin_mmsghdr
@@ -109,7 +109,7 @@ private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointe
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>, UnsafeMutablePointer<stat>) -> CInt = stat
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>) -> CInt = unlink
-#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(Android)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS) || os(Android)
 private let sysFstat: @convention(c) (CInt, UnsafeMutablePointer<stat>?) -> CInt = fstat
 private let sysStat: @convention(c) (UnsafePointer<CChar>?, UnsafeMutablePointer<stat>?) -> CInt = stat
 private let sysUnlink: @convention(c) (UnsafePointer<CChar>?) -> CInt = unlink
@@ -117,7 +117,7 @@ private let sysUnlink: @convention(c) (UnsafePointer<CChar>?) -> CInt = unlink
 #if os(Linux) || os(Android)
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIOLinux_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIOLinux_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt  = CNIOLinux_recvmmsg
-#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 private let sysKevent = kevent
 private let sysSendMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt) -> CInt = CNIODarwin_sendmmsg
 private let sysRecvMmsg: @convention(c) (CInt, UnsafeMutablePointer<CNIODarwin_mmsghdr>?, CUnsignedInt, CInt, UnsafeMutablePointer<timespec>?) -> CInt = CNIODarwin_recvmmsg
@@ -250,7 +250,7 @@ internal func syscallForbiddingEINVAL<T: FixedWidthInteger>(where function: Stri
 }
 
 internal enum Posix {
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
     static let UIO_MAXIOV: Int = 1024
     static let SHUT_RD: CInt = CInt(Darwin.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
@@ -499,7 +499,7 @@ internal enum Posix {
         var written: off_t = 0
         do {
             _ = try syscall(blocking: false) { () -> ssize_t in
-                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+                #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
                     var w: off_t = off_t(count)
                     let result: CInt = Darwin.sendfile(fd, descriptor, offset, &w, nil, 0)
                     written = w
@@ -635,7 +635,7 @@ internal extension Posix {
 }
 #endif
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 internal enum KQueue {
 
     // TODO: Figure out how to specify a typealias to the kevent struct without run into trouble with the swift compiler

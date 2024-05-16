@@ -60,7 +60,7 @@ import CNIOLinux
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
-#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+#elseif os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 import Darwin
 
 private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
@@ -302,7 +302,7 @@ extension NIOBSDSocket.Option {
 }
 #endif
 
-#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS)
+#if os(iOS) || os(macOS) || os(tvOS) || os(watchOS) || os(visionOS)
 extension NIOBSDSocket.Option {
     /// Get information about the TCP connection.
     public static let tcp_connection_info: NIOBSDSocket.Option =
