@@ -922,7 +922,7 @@ public final class SocketChannelTest : XCTestCase {
                     .wait()
             } catch let error as IOError {
                 // Older Linux kernel versions don't support MPTCP, which is fine.
-                if error.errnoCode != EINVAL && error.errnoCode != EPROTONOSUPPORT {
+                if error.errnoCode != EINVAL && error.errnoCode != EPROTONOSUPPORT && error.errnoCode != ENOPROTOOPT {
                     XCTFail("Unexpected error: \(error)")
                 }
                 return
