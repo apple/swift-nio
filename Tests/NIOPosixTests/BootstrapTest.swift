@@ -699,7 +699,7 @@ class BootstrapTest: XCTestCase {
         }
 
         let bootstrap = NIOPipeBootstrap(validatingGroup: elg, hooks: NIOPipeBootstrapHooksChannelFail())
-            XCTAssertNotNil(bootstrap)
+        XCTAssertNotNil(bootstrap)
 
         let channelFuture = bootstrap?.takingOwnershipOfDescriptor(inputOutput: sock)
         XCTAssertThrowsError(try channelFuture?.wait())

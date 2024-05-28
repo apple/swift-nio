@@ -2352,10 +2352,10 @@ extension NIOPipeBootstrap: Sendable {}
 protocol NIOPipeBootstrapHooks {
     func makePipeChannel(eventLoop: SelectableEventLoop,
                          inputPipe: NIOFileHandle?,
-                         outputPipe: NIOFileHandle?) throws -> PipeChannel;
+                         outputPipe: NIOFileHandle?) throws -> PipeChannel
 }
 
-fileprivate struct DefaultNIOPipeBootstrapHooks : NIOPipeBootstrapHooks {
+fileprivate struct DefaultNIOPipeBootstrapHooks: NIOPipeBootstrapHooks {
     func makePipeChannel(eventLoop: SelectableEventLoop,
                          inputPipe: NIOFileHandle?,
                          outputPipe: NIOFileHandle?) throws -> PipeChannel {
