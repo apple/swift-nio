@@ -689,6 +689,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func rename(
+        _ name: String,
         errno: Errno,
         oldName: FilePath,
         newName: FilePath,
@@ -739,7 +740,7 @@ extension FileSystemError {
         return FileSystemError(
             code: code,
             message: message,
-            systemCall: "rename",
+            systemCall: name,
             errno: errno,
             location: location
         )

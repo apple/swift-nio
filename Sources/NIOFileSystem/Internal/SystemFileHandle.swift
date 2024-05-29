@@ -804,7 +804,9 @@ extension SystemFileHandle.SendableView {
         case .rename:
             if materialize {
                 let renameResult: Result<Void, Errno>
+                let renameFunction: String
                 #if canImport(Darwin)
+                renameFunction = "renamex_np"
                 renameResult = Syscall.rename(
                     from: createdPath,
                     to: desiredPath,
@@ -814,6 +816,7 @@ extension SystemFileHandle.SendableView {
                 // The created and desired paths are absolute, so the relative descriptors are
                 // ignored. However, they must still be provided to 'rename' in order to pass
                 // flags.
+                renameFunction = "renameat2"
                 renameResult = Syscall.rename(
                     from: createdPath,
                     relativeTo: .currentWorkingDirectory,
@@ -831,6 +834,7 @@ extension SystemFileHandle.SendableView {
 
                 result = renameResult.mapError { errno in
                     .rename(
+                        renameFunction,
                         errno: errno,
                         oldName: createdPath,
                         newName: desiredPath,

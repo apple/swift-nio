@@ -1216,6 +1216,7 @@ extension FileSystem {
 
         case let .failure(errno):
             let error = FileSystemError.rename(
+                "rename",
                 errno: errno,
                 oldName: sourcePath,
                 newName: destinationPath,
