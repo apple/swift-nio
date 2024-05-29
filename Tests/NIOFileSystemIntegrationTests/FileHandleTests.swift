@@ -995,6 +995,55 @@ final class FileHandleTests: XCTestCase {
         }
     }
 
+    func testOpenExclusiveCreateForFileWhichExistsWithoutOTMPFILE() async throws {
+        // Takes the path where 'O_TMPFILE' doesn't exist, so materializing the file is done via
+        // creating a temporary file and then renaming it using 'renamex_np'/'renameat2' (Darwin/Linux).
+        let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
+        let path = temporaryDirectory.appending(Self.temporaryFileName().components)
+        let handle = try SystemFileHandle.syncOpenWithMaterialization(
+            atPath: path,
+            mode: .writeOnly,
+            options: [.exclusiveCreate, .create],
+            permissions: .ownerReadWrite,
+            threadPool: .singleton,
+            useTemporaryFileIfPossible: false
+        ).get()
+
+        // Closing shouldn't throw and the file should now be visible.
+        try await handle.close()
+        let info = try await FileSystem.shared.info(forFileAt: path)
+        XCTAssertNotNil(info)
+    }
+
+    func testOpenExclusiveCreateForFileWhichExistsWithoutOTMPFILEOrRenameat2() async throws {
+        // Takes the path where 'O_TMPFILE' doesn't exist, so materializing the file is done via
+        // creating a temporary file and then renaming it using 'renameat2' and then takes a further
+        // fallback path where 'renameat2' returns EINVAL so the 'rename' is used in combination
+        // with 'stat'. This path is only reachable on Linux.
+        #if canImport(Glibc) || canImport(Musl)
+        let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
+        let path = temporaryDirectory.appending(Self.temporaryFileName().components)
+        let handle = try SystemFileHandle.syncOpenWithMaterialization(
+            atPath: path,
+            mode: .writeOnly,
+            options: [.exclusiveCreate, .create],
+            permissions: .ownerReadWrite,
+            threadPool: .singleton,
+            useTemporaryFileIfPossible: false
+        ).get()
+
+        // Close, but take the path where 'renameat2' fails with EINVAL. This shouldn't throw and
+        // the file should be available.
+        let result = handle.sendableView._close(materialize: true, failRenameat2WithEINVAL: true)
+        try result.get()
+
+        let info = try await FileSystem.shared.info(forFileAt: path)
+        XCTAssertNotNil(info)
+        #else
+        throw XCTSkip("This test requires 'renameat2' which isn't supported on this platform")
+        #endif
+    }
+
     func testOpenExclusiveCreateForFileWhichDoesNotExist() async throws {
         try await self.withTestDataDirectory { dir in
             let path = Self.temporaryFileName()

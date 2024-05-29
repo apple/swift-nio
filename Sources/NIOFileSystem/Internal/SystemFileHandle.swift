@@ -650,7 +650,7 @@ extension SystemFileHandle.SendableView {
     }
 
     @_spi(Testing)
-    public func _close(materialize: Bool) -> Result<Void, FileSystemError> {
+    public func _close(materialize: Bool, failRenameat2WithEINVAL: Bool = false) -> Result<Void, FileSystemError> {
         let descriptor: FileDescriptor? = self.lifecycle.withLockedValue { lifecycle in
             switch lifecycle {
             case let .open(descriptor):
@@ -666,7 +666,7 @@ extension SystemFileHandle.SendableView {
         }
 
         // Materialize then close.
-        let materializeResult = self._materialize(materialize, descriptor: descriptor)
+        let materializeResult = self._materialize(materialize, descriptor: descriptor, failRenameat2WithEINVAL: failRenameat2WithEINVAL)
 
         return Result {
             try descriptor.close()
@@ -778,7 +778,8 @@ extension SystemFileHandle.SendableView {
 
     func _materialize(
         _ materialize: Bool,
-        descriptor: FileDescriptor
+        descriptor: FileDescriptor,
+        failRenameat2WithEINVAL: Bool
     ) -> Result<Void, FileSystemError> {
         guard let materialization = self.materialization else { return .success(()) }
 
@@ -803,7 +804,7 @@ extension SystemFileHandle.SendableView {
 
         case .rename:
             if materialize {
-                let renameResult: Result<Void, Errno>
+                var renameResult: Result<Void, Errno>
                 let renameFunction: String
                 #if canImport(Darwin)
                 renameFunction = "renamex_np"
@@ -817,19 +818,76 @@ extension SystemFileHandle.SendableView {
                 // ignored. However, they must still be provided to 'rename' in order to pass
                 // flags.
                 renameFunction = "renameat2"
-                renameResult = Syscall.rename(
-                    from: createdPath,
-                    relativeTo: .currentWorkingDirectory,
-                    to: desiredPath,
-                    relativeTo: .currentWorkingDirectory,
-                    flags: materialization.exclusive ? [.exclusive] : []
-                )
+                if materialization.exclusive, failRenameat2WithEINVAL {
+                    renameResult = .failure(.invalidArgument)
+                } else {
+                    renameResult = Syscall.rename(
+                        from: createdPath,
+                        relativeTo: .currentWorkingDirectory,
+                        to: desiredPath,
+                        relativeTo: .currentWorkingDirectory,
+                        flags: materialization.exclusive ? [.exclusive] : []
+                    )
+                }
                 #endif
 
-                // A file exists at the desired path and the user specified exclusive creation,
-                // clear up by removing the file we did create.
-                if materialization.exclusive, case .failure(.fileExists) = renameResult {
-                    _ = Libc.remove(createdPath)
+                if materialization.exclusive {
+                    switch renameResult {
+                    case .failure(.fileExists):
+                        // A file exists at the desired path and the user specified exclusive
+                        // creation, clear up by removing the file that we did create.
+                        _ = Libc.remove(createdPath)
+
+                    case .failure(.invalidArgument):
+                        // If 'renameat2' failed on Linux with EINVAL then in all likelihood the
+                        // 'RENAME_NOREPLACE' option isn't supported. As we're doing an exclusive
+                        // create, check the desired path doesn't exist then do a regular rename.
+                        #if canImport(Glibc) || canImport(Musl)
+                        switch Syscall.stat(path: desiredPath) {
+                        case .failure(.noSuchFileOrDirectory):
+                            // File doesn't exist, do a 'regular' rename.
+                            renameResult = Syscall.rename(from: createdPath, to: desiredPath)
+
+                        case .success:
+                            // File exists so exclusive create isn't possible. Remove the file
+                            // we did create then throw.
+                            _ = Libc.remove(createdPath)
+                            let error = FileSystemError(
+                                code: .fileAlreadyExists,
+                                message: """
+                                    Couldn't open '\(desiredPath)', it already exists and the \
+                                    file was opened with the 'existingFile' option set to 'none'.
+                                    """,
+                                cause: nil,
+                                location: .here()
+                            )
+                            return .failure(error)
+
+                        case .failure:
+                            // Failed to stat the desired file for reasons unknown. Remove the file
+                            // we did create then throw.
+                            _ = Libc.remove(createdPath)
+                            let error = FileSystemError(
+                                code: .unknown,
+                                message: "Couldn't open '\(desiredPath)'.",
+                                cause: FileSystemError.rename(
+                                    "renameat2",
+                                    errno: .invalidArgument,
+                                    oldName: createdPath,
+                                    newName: desiredPath,
+                                    location: .here()
+                                ),
+                                location: .here()
+                            )
+                            return .failure(error)
+                        }
+                        #else
+                        ()  // Not Linux, use the normal error flow.
+                        #endif
+
+                    case .success, .failure:
+                        ()
+                    }
                 }
 
                 result = renameResult.mapError { errno in
@@ -1238,7 +1296,8 @@ extension SystemFileHandle {
         }
     }
 
-    static func syncOpenWithMaterialization(
+    @_spi(Testing)
+    public static func syncOpenWithMaterialization(
         atPath path: FilePath,
         mode: FileDescriptor.AccessMode,
         options originalOptions: FileDescriptor.OpenOptions,
