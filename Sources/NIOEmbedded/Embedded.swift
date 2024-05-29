@@ -240,6 +240,13 @@ public final class EmbeddedEventLoop: EventLoop {
         fatalError("EmbeddedEventLoop is not thread safe and cannot be used as a SerialExecutor. Use NIOAsyncTestingEventLoop instead.")
     }
     #endif
+
+    #if compiler(>=6.0)
+    @available(macOS 9999.0, iOS 9999.0, watchOS 9999.0, tvOS 9999.0, *)
+    public var taskExecutor: any TaskExecutor {
+        fatalError("EmbeddedEventLoop is not thread safe and cannot be used as a TaskExecutor. Use NIOAsyncTestingEventLoop instead.")
+    }
+    #endif
 }
 
 @usableFromInline

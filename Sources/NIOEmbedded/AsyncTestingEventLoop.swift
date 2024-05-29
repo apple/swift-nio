@@ -355,6 +355,12 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 extension NIOAsyncTestingEventLoop: NIOSerialEventLoopExecutor { }
 #endif
 
+// MARK: TaskExecutor conformance
+#if compiler(>=6.0)
+@available(macOS 9999.0, iOS 9999.0, watchOS 9999.0, tvOS 9999.0, *)
+extension NIOAsyncTestingEventLoop: NIOTaskEventLoopExecutor { }
+#endif
+
 /// This is a thread-safe promise creation store.
 ///
 /// We use this to keep track of where promises come from in the `NIOAsyncTestingEventLoop`.
