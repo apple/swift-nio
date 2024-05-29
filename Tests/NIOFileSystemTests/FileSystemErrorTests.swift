@@ -230,7 +230,7 @@ final class FileSystemErrorTests: XCTestCase {
         }
 
         assertCauseIsSyscall("rename", here) {
-            .rename(errno: .badFileDescriptor, oldName: "old", newName: "new", location: here)
+            .rename("rename", errno: .badFileDescriptor, oldName: "old", newName: "new", location: here)
         }
 
         assertCauseIsSyscall("remove", here) {
@@ -465,7 +465,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .ioError: .io,
             ]
         ) { errno in
-            .rename(errno: errno, oldName: "old", newName: "new", location: .fixed)
+            .rename("rename", errno: errno, oldName: "old", newName: "new", location: .fixed)
         }
     }
 
