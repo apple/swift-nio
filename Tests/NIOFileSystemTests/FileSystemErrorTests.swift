@@ -148,41 +148,6 @@ final class FileSystemErrorTests: XCTestCase {
     }
 
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func testCopyOnWrite() throws {
-        let error1 = FileSystemError(
-            code: .io,
-            message: "a message",
-            cause: nil,
-            location: .init(function: "fn(_:)", file: "file.swift", line: 42)
-        )
-
-        var error2 = error1
-        error2.code = .invalidArgument
-        XCTAssertEqual(error1.code, .io)
-        XCTAssertEqual(error2.code, .invalidArgument)
-
-        var error3 = error1
-        error3.message = "a different message"
-        XCTAssertEqual(error1.message, "a message")
-        XCTAssertEqual(error3.message, "a different message")
-
-        var error4 = error1
-        error4.cause = CancellationError()
-        XCTAssertNil(error1.cause)
-        XCTAssert(error4.cause is CancellationError)
-
-        var error5 = error1
-        error5.location.file = "different-file.swift"
-        XCTAssertEqual(error1.location.function, "fn(_:)")
-        XCTAssertEqual(error1.location.file, "file.swift")
-        XCTAssertEqual(error1.location.line, 42)
-
-        XCTAssertEqual(error5.location.function, "fn(_:)")
-        XCTAssertEqual(error5.location.file, "different-file.swift")
-        XCTAssertEqual(error5.location.line, 42)
-    }
-
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     func testErrorsMapToCorrectSyscallCause() throws {
         let here = FileSystemError.SourceLocation(function: "fn", file: "file", line: 42)
         let path = FilePath("/foo")
@@ -265,7 +230,7 @@ final class FileSystemErrorTests: XCTestCase {
         }
 
         assertCauseIsSyscall("rename", here) {
-            .rename(errno: .badFileDescriptor, oldName: "old", newName: "new", location: here)
+            .rename("rename", errno: .badFileDescriptor, oldName: "old", newName: "new", location: here)
         }
 
         assertCauseIsSyscall("remove", here) {
@@ -500,7 +465,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .ioError: .io,
             ]
         ) { errno in
-            .rename(errno: errno, oldName: "old", newName: "new", location: .fixed)
+            .rename("rename", errno: errno, oldName: "old", newName: "new", location: .fixed)
         }
     }
 

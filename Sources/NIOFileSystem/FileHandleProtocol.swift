@@ -465,6 +465,29 @@ public protocol WritableFileHandleProtocol: FileHandleProtocol {
     func close(makeChangesVisible: Bool) async throws
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension WritableFileHandleProtocol {
+    /// Write the readable bytes of the `ByteBuffer` to the open file.
+    ///
+    /// - Important: This method checks whether the file is seekable or not (i.e., whether it's a socket,
+    /// pipe or FIFO), and will throw ``FileSystemError/Code-swift.struct/unsupported``
+    /// if an offset other than zero is passed.
+    ///
+    /// - Parameters:
+    ///   - buffer: The bytes to write.
+    ///   - offset: The absolute offset into the file to write the bytes.
+    /// - Returns: The number of bytes written.
+    /// - Throws: ``FileSystemError/Code-swift.struct/unsupported`` if file is
+    /// unseekable and `offset` is not 0.
+    @discardableResult
+    public func write(
+        contentsOf buffer: ByteBuffer,
+        toAbsoluteOffset offset: Int64
+    ) async throws -> Int64 {
+        try await self.write(contentsOf: buffer.readableBytesView, toAbsoluteOffset: offset)
+    }
+}
+
 /// A file handle which is suitable for reading and writing.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public typealias ReadableAndWritableFileHandleProtocol = ReadableFileHandleProtocol

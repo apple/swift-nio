@@ -26,75 +26,19 @@ import SystemPackage
 ///
 /// Errors may have a ``FileSystemError/cause``, an underlying error which caused the operation to
 /// fail which may be platform specific.
-public struct FileSystemError: Error, @unchecked Sendable {
-    // Note: @unchecked because we use a backing class for storage.
-
-    private var storage: Storage
-    private mutating func ensureStorageIsUnique() {
-        if !isKnownUniquelyReferenced(&self.storage) {
-            self.storage = self.storage.copy()
-        }
-    }
-
-    private final class Storage {
-        var code: Code
-        var message: String
-        var cause: Error?
-        var location: SourceLocation
-
-        init(code: Code, message: String, cause: Error?, location: SourceLocation) {
-            self.code = code
-            self.message = message
-            self.cause = cause
-            self.location = location
-        }
-
-        func copy() -> Self {
-            return Self(
-                code: self.code,
-                message: self.message,
-                cause: self.cause,
-                location: self.location
-            )
-        }
-    }
-
+public struct FileSystemError: Error, Sendable {
     /// A high-level error code to provide broad a classification.
-    public var code: Code {
-        get { self.storage.code }
-        set {
-            self.ensureStorageIsUnique()
-            self.storage.code = newValue
-        }
-    }
+    public var code: Code
 
     /// A message describing what went wrong and how it may be remedied.
-    public var message: String {
-        get { self.storage.message }
-        set {
-            self.ensureStorageIsUnique()
-            self.storage.message = newValue
-        }
-    }
+    public var message: String
 
     /// An underlying error which caused the operation to fail. This may include additional details
     /// about the root cause of the failure.
-    public var cause: Error? {
-        get { self.storage.cause }
-        set {
-            self.ensureStorageIsUnique()
-            self.storage.cause = newValue
-        }
-    }
+    public var cause: Error?
 
     /// The location from which this error was thrown.
-    public var location: SourceLocation {
-        get { self.storage.location }
-        set {
-            self.ensureStorageIsUnique()
-            self.storage.location = newValue
-        }
-    }
+    public var location: SourceLocation
 
     public init(
         code: Code,
@@ -102,7 +46,10 @@ public struct FileSystemError: Error, @unchecked Sendable {
         cause: Error?,
         location: SourceLocation
     ) {
-        self.storage = Storage(code: code, message: message, cause: cause, location: location)
+        self.code = code
+        self.message = message
+        self.cause = cause
+        self.location = location
     }
 
     /// Creates a ``FileSystemError`` by wrapping the given `cause` and its location and code.

@@ -788,6 +788,30 @@ final class FileHandleTests: XCTestCase {
         }
     }
 
+    func testWriteByteBuffer() async throws {
+        try await withTemporaryFile { handle in
+            let someBytes = ByteBuffer(repeating: 42, count: 1024)
+            try await handle.write(contentsOf: someBytes, toAbsoluteOffset: 0)
+
+            let readSomeBytes = try await handle.readToEnd(maximumSizeAllowed: .bytes(1024))
+            XCTAssertEqual(readSomeBytes, someBytes)
+
+            let moreBytes = ByteBuffer(repeating: 13, count: 1024)
+            try await handle.write(contentsOf: moreBytes, toAbsoluteOffset: 512)
+
+            let readMoreBytes = try await handle.readToEnd(
+                fromAbsoluteOffset: 512,
+                maximumSizeAllowed: .bytes(1024)
+            )
+            XCTAssertEqual(readMoreBytes, moreBytes)
+
+            var allTheBytes = try await handle.readToEnd(maximumSizeAllowed: .bytes(1536))
+            let firstBytes = allTheBytes.readSlice(length: 512)!
+            XCTAssertTrue(firstBytes.readableBytesView.allSatisfy({ $0 == 42 }))
+            XCTAssertTrue(allTheBytes.readableBytesView.allSatisfy({ $0 == 13 }))
+        }
+    }
+
     func testWriteSequenceOfBytes() async throws {
         try await withTemporaryFile { handle in
             let byteSequence = UInt8(0)..<UInt8(64)
