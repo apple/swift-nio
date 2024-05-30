@@ -1926,6 +1926,7 @@ public final class NIOPipeBootstrap {
     private var channelInitializer: Optional<ChannelInitializerCallback>
     @usableFromInline
     internal var _channelOptions: ChannelOptions.Storage
+    private let hooks: any NIOPipeBootstrapHooks
 
     /// Create a `NIOPipeBootstrap` on the `EventLoopGroup` `group`.
     ///
@@ -1956,6 +1957,19 @@ public final class NIOPipeBootstrap {
         self._channelOptions = ChannelOptions.Storage()
         self.group = group
         self.channelInitializer = nil
+        self.hooks = DefaultNIOPipeBootstrapHooks()
+    }
+
+    /// Initialiser for hooked testing
+    init?(validatingGroup group: EventLoopGroup, hooks: any NIOPipeBootstrapHooks) {
+        guard NIOOnSocketsBootstraps.isCompatible(group: group) else {
+            return nil
+        }
+
+        self._channelOptions = ChannelOptions.Storage()
+        self.group = group
+        self.channelInitializer = nil
+        self.hooks = hooks
     }
 
     /// Initialize the connected `PipeChannel` with `initializer`. The most common task in initializer is to add
@@ -2281,11 +2295,18 @@ extension NIOPipeBootstrap {
 
             inputFileHandle = input.flatMap { NIOFileHandle(descriptor: $0) }
             outputFileHandle = output.flatMap { NIOFileHandle(descriptor: $0) }
-            channel = try PipeChannel(
-                eventLoop: eventLoop as! SelectableEventLoop,
-                inputPipe: inputFileHandle,
-                outputPipe: outputFileHandle
-            )
+            do {
+                channel = try self.hooks.makePipeChannel(
+                    eventLoop: eventLoop as! SelectableEventLoop,
+                    inputPipe: inputFileHandle,
+                    outputPipe: outputFileHandle
+                )
+            } catch {
+                // Release file handles back to the caller in case of failure.
+                _ = try? inputFileHandle?.takeDescriptorOwnership()
+                _ = try? outputFileHandle?.takeDescriptorOwnership()
+                throw error
+            }
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
@@ -2327,3 +2348,17 @@ extension NIOPipeBootstrap {
 
 @available(*, unavailable)
 extension NIOPipeBootstrap: Sendable {}
+
+protocol NIOPipeBootstrapHooks {
+    func makePipeChannel(eventLoop: SelectableEventLoop,
+                         inputPipe: NIOFileHandle?,
+                         outputPipe: NIOFileHandle?) throws -> PipeChannel
+}
+
+fileprivate struct DefaultNIOPipeBootstrapHooks: NIOPipeBootstrapHooks {
+    func makePipeChannel(eventLoop: SelectableEventLoop,
+                         inputPipe: NIOFileHandle?,
+                         outputPipe: NIOFileHandle?) throws -> PipeChannel {
+        return try PipeChannel(eventLoop: eventLoop, inputPipe: inputPipe, outputPipe: outputPipe)
+    }
+}
