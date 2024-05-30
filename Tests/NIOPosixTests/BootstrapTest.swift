@@ -689,7 +689,7 @@ class BootstrapTest: XCTestCase {
             }
         }
 
-        let sock = socket(AF_LOCAL, SOCK_STREAM, 0)
+        let sock = socket(NIOBSDSocket.ProtocolFamily.local.rawValue, NIOBSDSocket.SocketType.stream.rawValue, 0)
         defer {
             close(sock)
         }
