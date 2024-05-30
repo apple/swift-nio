@@ -680,6 +680,30 @@ class BootstrapTest: XCTestCase {
                                 .wait())
         }
     }
+
+    // There was a bug where file handle ownership was not released when creating pipe channels failed.
+    func testReleaseFileHandleOnOwningFailure() {
+        struct NIOPipeBootstrapHooksChannelFail: NIOPipeBootstrapHooks {
+            func makePipeChannel(eventLoop: NIOPosix.SelectableEventLoop, inputPipe: NIOCore.NIOFileHandle?, outputPipe: NIOCore.NIOFileHandle?) throws -> NIOPosix.PipeChannel {
+                throw IOError(errnoCode: EBADF, reason: "testing")
+            }
+        }
+
+        let sock = socket(NIOBSDSocket.ProtocolFamily.local.rawValue, NIOBSDSocket.SocketType.stream.rawValue, 0)
+        defer {
+            close(sock)
+        }
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            try! elg.syncShutdownGracefully()
+        }
+
+        let bootstrap = NIOPipeBootstrap(validatingGroup: elg, hooks: NIOPipeBootstrapHooksChannelFail())
+        XCTAssertNotNil(bootstrap)
+
+        let channelFuture = bootstrap?.takingOwnershipOfDescriptor(inputOutput: sock)
+        XCTAssertThrowsError(try channelFuture?.wait())
+    }
 }
 
 private final class WriteStringOnChannelActive: ChannelInboundHandler {
