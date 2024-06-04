@@ -20,17 +20,31 @@ private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,
-        .cpuTotal
+        .cpuTotal,
+        .contextSwitches
     ]
 
     Benchmark(
-        "TCPEcho",
+        "TCPEcho pure NIO 1M times",
         configuration: .init(
             metrics: defaultMetrics,
             scalingFactor: .one
         )
     ) { benchmark in
         try runTCPEcho(
+            numberOfWrites: 1_000_000,
+            eventLoop: eventLoop
+        )
+    }
+
+    Benchmark(
+        "TCPEcho pure async/await NIO 1M times",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .one
+        )
+    ) { benchmark in
+        try await runTCPEchoAsyncChannel(
             numberOfWrites: 1_000_000,
             eventLoop: eventLoop
         )
@@ -67,7 +81,7 @@ let benchmarks = {
     #if compiler(>=6.0)
     if #available(macOS 15.0, *) {
         Benchmark(
-            "TCPEchoAsyncChannel using task executor preference",
+            "TCPEchoAsyncChannel using task executor preference 1M times",
             configuration: .init(
                 metrics: defaultMetrics,
                 scalingFactor: .one
