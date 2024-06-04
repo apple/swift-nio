@@ -20,28 +20,32 @@ private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 
 let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [
-<<<<<<< HEAD
-        .mallocCountTotal
-=======
         .mallocCountTotal,
         .cpuTotal
->>>>>>> 31f491c4 (Code review)
+        .contextSwitches
     ]
 
     Benchmark(
-        "TCPEcho",
+        "TCPEcho pure NIO 1M times",
         configuration: .init(
             metrics: defaultMetrics,
-<<<<<<< HEAD
-            scalingFactor: .mega,
-            maxDuration: .seconds(10_000_000),
-            maxIterations: 5
-=======
             scalingFactor: .one
->>>>>>> 31f491c4 (Code review)
         )
     ) { benchmark in
         try runTCPEcho(
+            numberOfWrites: 1_000_000,
+            eventLoop: eventLoop
+        )
+    }
+
+    Benchmark(
+        "TCPEcho pure async/await NIO 1M times",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .one
+        )
+    ) { benchmark in
+        try await runTCPEchoAsyncChannel(
             numberOfWrites: 1_000_000,
             eventLoop: eventLoop
         )
@@ -54,13 +58,7 @@ let benchmarks = {
         "TCPEchoAsyncChannel using globalHook 1M times",
         configuration: .init(
             metrics: defaultMetrics,
-<<<<<<< HEAD
-            scalingFactor: .mega,
-            maxDuration: .seconds(10_000_000),
-            maxIterations: 5,
-=======
             scalingFactor: .one,
->>>>>>> 31f491c4 (Code review)
             // We are expecting a bit of allocation variance due to an allocation
             // in the Concurrency runtime which happens when resuming a continuation.
             thresholds: [.mallocCountTotal: .init(absolute: [.p90: 2000])],
@@ -81,7 +79,6 @@ let benchmarks = {
     }
     #endif
 
-<<<<<<< HEAD
     Benchmark(
         "MTELG.scheduleTask(in:_:)",
         configuration: Benchmark.Configuration(
@@ -115,11 +112,11 @@ let benchmarks = {
             let handle = try! eventLoop.scheduleCallback(in: .hours(1), handler: timer)
         }
     }
-=======
+
     #if compiler(>=6.0)
     if #available(macOS 15.0, *) {
         Benchmark(
-            "TCPEchoAsyncChannel using task executor preference",
+            "TCPEchoAsyncChannel using task executor preference 1M times",
             configuration: .init(
                 metrics: defaultMetrics,
                 scalingFactor: .one
@@ -137,5 +134,4 @@ let benchmarks = {
         }
     }
     #endif
->>>>>>> 31f491c4 (Code review)
 }
