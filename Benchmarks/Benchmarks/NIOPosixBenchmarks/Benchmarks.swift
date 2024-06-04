@@ -39,7 +39,7 @@ let benchmarks = {
     }
 
     Benchmark(
-        "TCPEcho pure async/await NIO 1M times",
+        "TCPEchoAsyncChannel pure async/await 1M times",
         configuration: .init(
             metrics: defaultMetrics,
             scalingFactor: .one
