@@ -203,6 +203,16 @@ public struct WriteFileHandle: WritableFileHandleProtocol, _HasFileHandle {
     public func close(makeChangesVisible: Bool) async throws {
         try await self.fileHandle.systemFileHandle.close(makeChangesVisible: makeChangesVisible)
     }
+
+    public func setTimes(
+        lastAccessTime: FileInfo.Timespec?,
+        lastDataModificationTime: FileInfo.Timespec?
+    ) async throws {
+        try await self.fileHandle.systemFileHandle.setTimes(
+            lastAccessTime: lastAccessTime,
+            lastDataModificationTime: lastDataModificationTime
+        )
+    }
 }
 
 /// Implements ``ReadableAndWritableFileHandleProtocol`` by making system calls to interact with the
@@ -246,6 +256,16 @@ public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFi
 
     public func close(makeChangesVisible: Bool) async throws {
         try await self.fileHandle.systemFileHandle.close(makeChangesVisible: makeChangesVisible)
+    }
+
+    public func setTimes(
+        lastAccessTime: FileInfo.Timespec?,
+        lastDataModificationTime: FileInfo.Timespec?
+    ) async throws {
+        try await self.fileHandle.systemFileHandle.setTimes(
+            lastAccessTime: lastAccessTime,
+            lastDataModificationTime: lastDataModificationTime
+        )
     }
 }
 

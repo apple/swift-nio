@@ -153,7 +153,7 @@ extension SystemFileHandle.SendableView {
         }
     }
 
-    /// Executes a closure with the file descriptor it it's available otherwise throws the result
+    /// Executes a closure with the file descriptor if it's available otherwise throws the result
     /// of `onUnavailable`.
     internal func _withUnsafeDescriptor<R>(
         _ execute: (FileDescriptor) throws -> R,
@@ -166,8 +166,8 @@ extension SystemFileHandle.SendableView {
         }
     }
 
-    /// Executes a closure with the file descriptor it it's available otherwise throws the result
-    /// of `onUnavailable`.
+    /// Executes a closure with the file descriptor if it's available otherwise returns the result
+    /// of `onUnavailable` as a `Result` Error.
     internal func _withUnsafeDescriptorResult<R>(
         _ execute: (FileDescriptor) -> Result<R, FileSystemError>,
         onUnavailable: () -> FileSystemError
@@ -1044,6 +1044,70 @@ extension SystemFileHandle: WritableFileHandleProtocol {
     public func resize(to size: ByteCount) async throws {
         try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._resize(to: size).get()
+        }
+    }
+
+    public func setTimes(
+        lastAccessTime: FileInfo.Timespec?,
+        lastDataModificationTime: FileInfo.Timespec?
+    ) async throws {
+        try await self.threadPool.runIfActive { [sendableView] in
+            try sendableView._withUnsafeDescriptor { descriptor in
+                if lastAccessTime == nil, lastDataModificationTime == nil {
+                    // If the timespec array is nil, as per the `futimens` docs,
+                    // both the last accessed and last modification times
+                    // will be set to now.
+                    futimens(descriptor.rawValue, nil)
+                } else {
+                    let lastAccessTimespec: timespec
+                    if let lastAccessTime = lastAccessTime {
+                        lastAccessTimespec = timespec(
+                            tv_sec: lastAccessTime.seconds,
+                            tv_nsec: lastAccessTime.nanoseconds
+                        )
+                    } else {
+                        // Don't modify the last access time.
+                        // Note: tv_sec will be ignored.
+                        lastAccessTimespec = timespec(
+                            tv_sec: 0,
+                            tv_nsec: Int(UTIME_OMIT)
+                        )
+                    }
+
+                    let lastDataModificationTimespec: timespec
+                    if let lastDataModificationTime = lastDataModificationTime {
+                        lastDataModificationTimespec = timespec(
+                            tv_sec: lastDataModificationTime.seconds,
+                            tv_nsec: lastDataModificationTime.nanoseconds
+                        )
+                    } else {
+                        // Don't modify the last modification time.
+                        // Note: tv_sec will be ignored.
+                        lastDataModificationTimespec = timespec(
+                            tv_sec: 0,
+                            tv_nsec: Int(UTIME_OMIT)
+                        )
+                    }
+
+                    let result = futimens(descriptor.rawValue, [lastAccessTimespec, lastDataModificationTimespec])
+                    guard result == 0 else {
+                        throw FileSystemError.futimens(
+                            errno: Errno(rawValue: result),
+                            path: self.path,
+                            lastAccessTime: lastAccessTime,
+                            lastDataModificationTime: lastDataModificationTime,
+                            location: .here()
+                        )
+                    }
+                }
+            } onUnavailable: {
+                FileSystemError(
+                    code: .closed,
+                    message: "Couldn't modify file dates, the file '\(sendableView.path)' is closed.",
+                    cause: nil,
+                    location: .here()
+                )
+            }
         }
     }
 }
