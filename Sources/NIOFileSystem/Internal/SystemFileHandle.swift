@@ -22,8 +22,10 @@ import NIOPosix
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+import CNIOLinux
 #elseif canImport(Musl)
 import Musl
+import CNIOLinux
 #endif
 
 /// An implementation of ``FileHandleProtocol`` which is backed by system calls and a file
@@ -1059,6 +1061,12 @@ extension SystemFileHandle: WritableFileHandleProtocol {
                     // will be set to now.
                     futimens(descriptor.rawValue, nil)
                 } else {
+                    #if canImport(Darwin)
+                    let OMIT_TIME_CHANGE = Int(UTIME_OMIT)
+                    #elseif canImport(Glibc) || canImport(Musl)
+                    let OMIT_TIME_CHANGE = Int(CNIOLinux_UTIME_OMIT)
+                    #endif
+
                     let lastAccessTimespec: timespec
                     if let lastAccessTime = lastAccessTime {
                         lastAccessTimespec = timespec(
@@ -1070,7 +1078,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
                         // Note: tv_sec will be ignored.
                         lastAccessTimespec = timespec(
                             tv_sec: 0,
-                            tv_nsec: Int(UTIME_OMIT)
+                            tv_nsec: OMIT_TIME_CHANGE
                         )
                     }
 
@@ -1085,7 +1093,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
                         // Note: tv_sec will be ignored.
                         lastDataModificationTimespec = timespec(
                             tv_sec: 0,
-                            tv_nsec: Int(UTIME_OMIT)
+                            tv_nsec: OMIT_TIME_CHANGE
                         )
                     }
 
