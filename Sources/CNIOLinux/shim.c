@@ -213,5 +213,6 @@ const unsigned int CNIOLinux_RENAME_EXCHANGE = RENAME_EXCHANGE;
 const int CNIOLinux_AT_EMPTY_PATH = AT_EMPTY_PATH;
 
 const unsigned long CNIOLinux_UTIME_OMIT = UTIME_OMIT;
+const unsigned long CNIOLinux_UTIME_NOW = UTIME_NOW;
 
 #endif

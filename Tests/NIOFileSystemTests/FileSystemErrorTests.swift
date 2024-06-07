@@ -558,6 +558,19 @@ final class FileSystemErrorTests: XCTestCase {
         }
     }
 
+    func testErrnoMapping_futimens() {
+        self.testErrnoToErrorCode(
+            expected: [
+                .permissionDenied: .permissionDenied,
+                .notPermitted: .permissionDenied,
+                .readOnlyFileSystem: .unsupported,
+                .badFileDescriptor: .closed,
+            ]
+        ) { errno in
+                .futimens(errno: errno, path: "", lastAccessTime: nil, lastDataModificationTime: nil, location: .fixed)
+        }
+    }
+
     private func testErrnoToErrorCode(
         expected mapping: [Errno: FileSystemError.Code],
         _ makeError: (Errno) -> FileSystemError

@@ -349,6 +349,18 @@ internal func system_sendfile(
 }
 #endif
 
+internal func system_futimens(
+    _ fd: CInt,
+    _ times: UnsafePointer<timespec>?
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(fd, times)
+    }
+    #endif
+    return futimens(fd, times)
+}
+
 // MARK: - libc
 
 /// fdopendir(3): Opens a directory stream for the file descriptor

@@ -1067,6 +1067,7 @@ extension FileSystemError {
         )
     }
 
+    @_spi(Testing)
     public static func futimens(
         errno: Errno,
         path: FilePath,
@@ -1082,16 +1083,9 @@ extension FileSystemError {
             code = .permissionDenied
             message = "Not permited to change last access or last data modification times for \(path)."
 
-        case .invalidArgument:
-            code = .invalidArgument
-            message = """
-                Invalid times value: nanoseconds for both timespecs must be UTIME_NOW, UTIME_OMIT, or a number between 0 and 1000 million
-                (last access time: \(String(describing: lastAccessTime)), last data modification time: \(String(describing: lastDataModificationTime))).
-            """
-
         case .readOnlyFileSystem:
             code = .unsupported
-            message = "Not permited to change last access or last data modification times for \(path): this is a read-only file system."
+            message = "Not permitted to change last access or last data modification times for \(path): this is a read-only file system."
 
         case .badFileDescriptor:
             code = .closed

@@ -357,6 +357,18 @@ extension SystemFileHandle: FileHandleProtocol {
         }
     }
 
+    public func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws {
+        try await self.threadPool.runIfActive { [sendableView] in
+            try sendableView._setTimes(
+                lastAccess: lastAccess,
+                lastDataModification: lastDataModification
+            )
+        }
+    }
+
     @_spi(Testing)
     public enum UpdatePermissionsOperation { case set, add, remove }
 }
@@ -911,6 +923,84 @@ extension SystemFileHandle.SendableView {
 
         return result
     }
+
+    func _setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) throws {
+        try self._withUnsafeDescriptor { descriptor in
+            let syscallResult: Result<Void, Errno>
+            switch (lastAccess, lastDataModification) {
+            case (.none, .none):
+                // If the timespec array is nil, as per the `futimens` docs,
+                // both the last accessed and last modification times
+                // will be set to now.
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: nil
+                )
+
+            case (.some(let lastAccess), .none):
+                // Don't modify the last modification time.
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: [timespec(lastAccess), timespec(.omit)]
+                )
+
+            case (.none, .some(let lastDataModification)):
+                // Don't modify the last access time.
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: [timespec(.omit), timespec(lastDataModification)]
+                )
+
+            case (.some(let lastAccess), .some(let lastDataModification)):
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: [timespec(lastAccess), timespec(lastDataModification)]
+                )
+            }
+
+            try syscallResult.mapError { errno in
+                FileSystemError.futimens(
+                    errno: errno,
+                    path: self.path,
+                    lastAccessTime: lastAccess,
+                    lastDataModificationTime: lastDataModification,
+                    location: .here()
+                )
+            }.get()
+        } onUnavailable: {
+            FileSystemError(
+                code: .closed,
+                message: "Couldn't modify file dates, the file '\(self.path)' is closed.",
+                cause: nil,
+                location: .here()
+            )
+        }
+    }
+}
+
+fileprivate extension timespec {
+    init(_ fileinfoTimespec: FileInfo.Timespec) {
+        // Clamp seconds to be positive
+        let seconds = max(0, fileinfoTimespec.seconds)
+
+        // If nanoseconds are not UTIME_NOW or UTIME_OMIT, clamp to be between
+        // 0 and 1,000 million.
+        let nanoseconds: Int
+        switch fileinfoTimespec {
+        case .now, .omit:
+            nanoseconds = fileinfoTimespec.nanoseconds
+        default:
+            nanoseconds = min(1_000_000_000, max(0, fileinfoTimespec.nanoseconds))
+        }
+
+        self.init(
+            tv_sec: seconds,
+            tv_nsec: nanoseconds
+        )
+    }
 }
 
 // MARK: - Readable File Handle
@@ -1046,76 +1136,6 @@ extension SystemFileHandle: WritableFileHandleProtocol {
     public func resize(to size: ByteCount) async throws {
         try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._resize(to: size).get()
-        }
-    }
-
-    public func setTimes(
-        lastAccessTime: FileInfo.Timespec?,
-        lastDataModificationTime: FileInfo.Timespec?
-    ) async throws {
-        try await self.threadPool.runIfActive { [sendableView] in
-            try sendableView._withUnsafeDescriptor { descriptor in
-                if lastAccessTime == nil, lastDataModificationTime == nil {
-                    // If the timespec array is nil, as per the `futimens` docs,
-                    // both the last accessed and last modification times
-                    // will be set to now.
-                    futimens(descriptor.rawValue, nil)
-                } else {
-                    #if canImport(Darwin)
-                    let OMIT_TIME_CHANGE = Int(UTIME_OMIT)
-                    #elseif canImport(Glibc) || canImport(Musl)
-                    let OMIT_TIME_CHANGE = Int(CNIOLinux_UTIME_OMIT)
-                    #endif
-
-                    let lastAccessTimespec: timespec
-                    if let lastAccessTime = lastAccessTime {
-                        lastAccessTimespec = timespec(
-                            tv_sec: lastAccessTime.seconds,
-                            tv_nsec: lastAccessTime.nanoseconds
-                        )
-                    } else {
-                        // Don't modify the last access time.
-                        // Note: tv_sec will be ignored.
-                        lastAccessTimespec = timespec(
-                            tv_sec: 0,
-                            tv_nsec: OMIT_TIME_CHANGE
-                        )
-                    }
-
-                    let lastDataModificationTimespec: timespec
-                    if let lastDataModificationTime = lastDataModificationTime {
-                        lastDataModificationTimespec = timespec(
-                            tv_sec: lastDataModificationTime.seconds,
-                            tv_nsec: lastDataModificationTime.nanoseconds
-                        )
-                    } else {
-                        // Don't modify the last modification time.
-                        // Note: tv_sec will be ignored.
-                        lastDataModificationTimespec = timespec(
-                            tv_sec: 0,
-                            tv_nsec: OMIT_TIME_CHANGE
-                        )
-                    }
-
-                    let result = futimens(descriptor.rawValue, [lastAccessTimespec, lastDataModificationTimespec])
-                    guard result == 0 else {
-                        throw FileSystemError.futimens(
-                            errno: Errno(rawValue: result),
-                            path: self.path,
-                            lastAccessTime: lastAccessTime,
-                            lastDataModificationTime: lastDataModificationTime,
-                            location: .here()
-                        )
-                    }
-                }
-            } onUnavailable: {
-                FileSystemError(
-                    code: .closed,
-                    message: "Couldn't modify file dates, the file '\(sendableView.path)' is closed.",
-                    cause: nil,
-                    location: .here()
-                )
-            }
         }
     }
 }

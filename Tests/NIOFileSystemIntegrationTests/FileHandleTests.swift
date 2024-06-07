@@ -1185,8 +1185,8 @@ final class FileHandleTests: XCTestCase {
             let originalLastAccessTime = try await handle.info().lastAccessTime
 
             try await handle.setTimes(
-                lastAccessTime: FileInfo.Timespec(seconds: 10, nanoseconds: 5),
-                lastModificationTime: nil
+                lastAccess: FileInfo.Timespec(seconds: 10, nanoseconds: 5),
+                lastDataModification: nil
             )
 
             let actualLastAccessTime = try await handle.info().lastAccessTime
@@ -1204,8 +1204,8 @@ final class FileHandleTests: XCTestCase {
             let originalLastAccessTime = try await handle.info().lastAccessTime
 
             try await handle.setTimes(
-                lastAccessTime: nil,
-                lastModificationTime: FileInfo.Timespec(seconds: 10, nanoseconds: 5)
+                lastAccess: nil,
+                lastDataModification: FileInfo.Timespec(seconds: 10, nanoseconds: 5)
             )
 
             let actualLastDataModificationTime = try await handle.info().lastDataModificationTime
@@ -1223,8 +1223,8 @@ final class FileHandleTests: XCTestCase {
             let originalLastAccessTime = try await handle.info().lastAccessTime
 
             try await handle.setTimes(
-                lastAccessTime: FileInfo.Timespec(seconds: 20, nanoseconds: 25),
-                lastModificationTime: FileInfo.Timespec(seconds: 10, nanoseconds: 5)
+                lastAccess: FileInfo.Timespec(seconds: 20, nanoseconds: 25),
+                lastDataModification: FileInfo.Timespec(seconds: 10, nanoseconds: 5)
             )
 
             let actualLastAccessTime = try await handle.info().lastAccessTime
@@ -1242,8 +1242,8 @@ final class FileHandleTests: XCTestCase {
             // Set some random value for both times, only to be overwritten by the current time
             // right after.
             try await handle.setTimes(
-                lastAccessTime: FileInfo.Timespec(seconds: 1, nanoseconds: 0),
-                lastModificationTime: FileInfo.Timespec(seconds: 1, nanoseconds: 0)
+                lastAccess: FileInfo.Timespec(seconds: 1, nanoseconds: 0),
+                lastDataModification: FileInfo.Timespec(seconds: 1, nanoseconds: 0)
             )
 
             var actualLastAccessTime = try await handle.info().lastAccessTime
@@ -1253,8 +1253,8 @@ final class FileHandleTests: XCTestCase {
             XCTAssertEqual(actualLastDataModificationTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
 
             try await handle.setTimes(
-                lastAccessTime: nil,
-                lastModificationTime: nil
+                lastAccess: nil,
+                lastDataModification: nil
             )
             let estimatedCurrentTime = Date.now.timeIntervalSince1970
 
@@ -1272,8 +1272,8 @@ final class FileHandleTests: XCTestCase {
             // Set some random value for both times, only to be overwritten by the current time
             // right after.
             try await handle.setTimes(
-                lastAccessTime: FileInfo.Timespec(seconds: 1, nanoseconds: 0),
-                lastModificationTime: FileInfo.Timespec(seconds: 1, nanoseconds: 0)
+                lastAccess: FileInfo.Timespec(seconds: 1, nanoseconds: 0),
+                lastDataModification: FileInfo.Timespec(seconds: 1, nanoseconds: 0)
             )
 
             var actualLastAccessTime = try await handle.info().lastAccessTime

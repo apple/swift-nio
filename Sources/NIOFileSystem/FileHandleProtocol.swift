@@ -15,15 +15,6 @@
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
 import SystemPackage
-#if canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-import Glibc
-#elseif canImport(Musl)
-import Musl
-#else
-#error("The File Handle Protocol module was unable to identify your C library.")
-#endif
 
 /// A handle for a file system object.
 ///
@@ -152,6 +143,26 @@ public protocol FileHandleProtocol {
     ///
     /// After closing the handle calls to other functions will throw an appropriate error.
     func close() async throws
+
+    /// Sets the file's last access and last data modification times to the given values.
+    ///
+    /// If **either** time is `nil`, the current value will not be changed.
+    /// If **both** times are `nil`, then both times will be set to the current time.
+    ///
+    /// > Important: Times are only considered valid if their nanoseconds components are one of the following:
+    /// > - `UTIME_NOW` (you can use ``FileInfo/Timespec/now`` to get a Timespec set to this value),
+    /// > - `UTIME_OMIT` (you can use ``FileInfo/Timespec/omit`` to get a Timespec set to this value),,
+    /// > - Greater than zero and no larger than 1000 million
+    ///
+    /// - Parameters:
+    ///   - lastAccessTime: The new value of the file's last access time, as time elapsed since the Epoch.
+    ///   - lastDataModificationTime: The new value of the file's last data modification time, as time elapsed since the Epoch.
+    ///
+    /// - Throws: If there's an error updating the times. If this happens, the original values won't be modified.
+    func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws
 }
 
 // MARK: - Readable
@@ -472,26 +483,6 @@ public protocol WritableFileHandleProtocol: FileHandleProtocol {
     ///       filesystem with the expected name, otherwise no file will be created or the original
     ///       file won't be modified (if one existed).
     func close(makeChangesVisible: Bool) async throws
-    
-    /// Sets the file's last access and last data modification times to the given values.
-    ///
-    /// If **either** time is `nil`, the current value will not be changed.
-    /// If **both** times are `nil`, then both times will be set to the current time.
-    ///
-    /// > Important: Times are only considered valid if their nanoseconds components are one of the following:
-    /// > - `UTIME_NOW`,
-    /// > - `UTIME_OMIT`,
-    /// > - Greater than zero and no larger than 1000 million
-    ///
-    /// - Parameters:
-    ///   - lastAccessTime: The new value of the file's last access time, as time elapsed since the Epoch.
-    ///   - lastDataModificationTime: The new value of the file's last data modification time, as time elapsed since the Epoch.
-    ///
-    /// - Throws: If there's an error updating the times. If this happens, the original values won't be modified.
-    func setTimes(
-        lastAccessTime: FileInfo.Timespec?,
-        lastDataModificationTime: FileInfo.Timespec?
-    ) async throws
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -520,7 +511,7 @@ extension WritableFileHandleProtocol {
     ///
     /// - Throws: If there's an error updating the times. If this happens, the original values won't be modified.
     public func touch() async throws {
-        try await self.setTimes(lastAccessTime: nil, lastDataModificationTime: nil)
+        try await self.setTimes(lastAccess: nil, lastDataModification: nil)
     }
 }
 
