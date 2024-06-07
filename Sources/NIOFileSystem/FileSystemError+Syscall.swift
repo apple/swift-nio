@@ -1081,7 +1081,7 @@ extension FileSystemError {
         switch errno {
         case .permissionDenied, .notPermitted:
             code = .permissionDenied
-            message = "Not permited to change last access or last data modification times for \(path)."
+            message = "Not permitted to change last access or last data modification times for \(path)."
 
         case .readOnlyFileSystem:
             code = .unsupported

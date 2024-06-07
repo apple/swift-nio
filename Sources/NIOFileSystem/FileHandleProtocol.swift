@@ -151,8 +151,9 @@ public protocol FileHandleProtocol {
     ///
     /// > Important: Times are only considered valid if their nanoseconds components are one of the following:
     /// > - `UTIME_NOW` (you can use ``FileInfo/Timespec/now`` to get a Timespec set to this value),
-    /// > - `UTIME_OMIT` (you can use ``FileInfo/Timespec/omit`` to get a Timespec set to this value),,
-    /// > - Greater than zero and no larger than 1000 million
+    /// > - `UTIME_OMIT` (you can use ``FileInfo/Timespec/omit`` to get a Timespec set to this value),
+    /// > - Greater than zero and no larger than 1000 million: if outside of this range, the value will be clamped to the closest valid value.
+    /// > The seconds component must also be positive: if it's not, zero will be used as the value instead.
     ///
     /// - Parameters:
     ///   - lastAccessTime: The new value of the file's last access time, as time elapsed since the Epoch.

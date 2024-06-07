@@ -981,8 +981,8 @@ extension SystemFileHandle.SendableView {
     }
 }
 
-fileprivate extension timespec {
-    init(_ fileinfoTimespec: FileInfo.Timespec) {
+extension timespec {
+    fileprivate init(_ fileinfoTimespec: FileInfo.Timespec) {
         // Clamp seconds to be positive
         let seconds = max(0, fileinfoTimespec.seconds)
 

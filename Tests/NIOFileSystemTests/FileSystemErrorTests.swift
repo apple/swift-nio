@@ -567,7 +567,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .badFileDescriptor: .closed,
             ]
         ) { errno in
-                .futimens(errno: errno, path: "", lastAccessTime: nil, lastDataModificationTime: nil, location: .fixed)
+            .futimens(errno: errno, path: "", lastAccessTime: nil, lastDataModificationTime: nil, location: .fixed)
         }
     }
 
