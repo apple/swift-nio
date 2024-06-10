@@ -507,7 +507,30 @@ extension WritableFileHandleProtocol {
     ) async throws -> Int64 {
         try await self.write(contentsOf: buffer.readableBytesView, toAbsoluteOffset: offset)
     }
-    
+}
+
+// MARK: - File times modifiers
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension FileHandleProtocol {
+    /// Sets the file's last access time to the given time.
+    /// 
+    /// - Parameter time: The time to which the file's last access time should be set.
+    ///
+    /// - Throws: If there's an error updating the time. If this happens, the original value won't be modified.
+    public func setLastAccessTime(to time: FileInfo.Timespec) async throws {
+        try await self.setTimes(lastAccess: time, lastDataModification: nil)
+    }
+
+    /// Sets the file's last data modification time to the given time.
+    ///
+    /// - Parameter time: The time to which the file's last data modification time should be set.
+    ///
+    /// - Throws: If there's an error updating the time. If this happens, the original value won't be modified.
+    public func setLastDataModificationTime(to time: FileInfo.Timespec) async throws {
+        try await self.setTimes(lastAccess: nil, lastDataModification: time)
+    }
+
     /// Sets the file's last access and last data modification times to the current time.
     ///
     /// - Throws: If there's an error updating the times. If this happens, the original values won't be modified.
