@@ -398,6 +398,22 @@ final class SyscallTests: XCTestCase {
         testCases.run()
     }
 
+    func test_futimens() throws {
+        let fd = FileDescriptor(rawValue: 42)
+        let times = timespec(tv_sec: 1, tv_nsec: 1)
+        withUnsafePointer(to: times) { unsafeTimesPointer in
+            let testCases = [
+                MockTestCase(name: "futimens", .noInterrupt, 42, unsafeTimesPointer) { _ in
+                    try Syscall.futimens(
+                        fileDescriptor: fd,
+                        times: unsafeTimesPointer
+                    ).get()
+                }
+            ]
+            testCases.run()
+        }
+    }
+
     func testValueOrErrno() throws {
         let r1: Result<Int, Errno> = valueOrErrno(retryOnInterrupt: false) {
             Errno._current = .addressInUse

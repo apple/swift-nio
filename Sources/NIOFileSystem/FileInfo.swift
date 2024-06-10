@@ -19,8 +19,10 @@ import SystemPackage
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+import CNIOLinux
 #elseif canImport(Musl)
 import Musl
+import CNIOLinux
 #endif
 
 /// Information about a file system object.
@@ -145,6 +147,29 @@ extension FileInfo {
 
     /// A time interval consisting of whole seconds and nanoseconds.
     public struct Timespec: Hashable, Sendable {
+        #if canImport(Darwin)
+        private static let utimeOmit = Int(UTIME_OMIT)
+        private static let utimeNow = Int(UTIME_NOW)
+        #elseif canImport(Glibc) || canImport(Musl)
+        private static let utimeOmit = Int(CNIOLinux_UTIME_OMIT)
+        private static let utimeNow = Int(CNIOLinux_UTIME_NOW)
+        #endif
+
+        /// A timespec where the seconds are set to zero and the nanoseconds set to `UTIME_OMIT`.
+        /// In syscalls such as `futimens`, this means the time component set to this value will be ignored.
+        public static let omit = Self(
+            seconds: 0,
+            nanoseconds: Self.utimeOmit
+        )
+
+        /// A timespec where the seconds are set to zero and the nanoseconds set to `UTIME_NOW`.
+        /// In syscalls such as `futimens`, this means the time component set to this value will be
+        /// be set to the current time or the largest value supported by the platform, whichever is smaller.
+        public static let now = Self(
+            seconds: 0,
+            nanoseconds: Self.utimeNow
+        )
+
         /// The number of seconds.
         public var seconds: Int
 

@@ -33,6 +33,7 @@ void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug(void) {}
 #include <assert.h>
 #include <time.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 
 _Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr),
                "sizes of CNIOLinux_mmsghdr and struct mmsghdr differ");
@@ -210,5 +211,8 @@ const int CNIOLinux_O_TMPFILE = O_TMPFILE;
 const unsigned int CNIOLinux_RENAME_NOREPLACE = RENAME_NOREPLACE;
 const unsigned int CNIOLinux_RENAME_EXCHANGE = RENAME_EXCHANGE;
 const int CNIOLinux_AT_EMPTY_PATH = AT_EMPTY_PATH;
+
+const unsigned long CNIOLinux_UTIME_OMIT = UTIME_OMIT;
+const unsigned long CNIOLinux_UTIME_NOW = UTIME_NOW;
 
 #endif

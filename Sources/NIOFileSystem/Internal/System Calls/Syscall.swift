@@ -266,6 +266,16 @@ public enum Syscall {
         }
     }
     #endif
+
+    @_spi(Testing)
+    public static func futimens(
+        fileDescriptor fd: FileDescriptor,
+        times: UnsafePointer<timespec>?
+    ) -> Result<Void, Errno> {
+        nothingOrErrno(retryOnInterrupt: false) {
+            system_futimens(fd.rawValue, times)
+        }
+    }
 }
 
 @_spi(Testing)

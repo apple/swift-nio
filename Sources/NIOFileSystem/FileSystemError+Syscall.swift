@@ -1066,6 +1066,44 @@ extension FileSystemError {
             location: location
         )
     }
+
+    @_spi(Testing)
+    public static func futimens(
+        errno: Errno,
+        path: FilePath,
+        lastAccessTime: FileInfo.Timespec?,
+        lastDataModificationTime: FileInfo.Timespec?,
+        location: SourceLocation
+    ) -> FileSystemError {
+        let code: FileSystemError.Code
+        let message: String
+
+        switch errno {
+        case .permissionDenied, .notPermitted:
+            code = .permissionDenied
+            message = "Not permitted to change last access or last data modification times for \(path)."
+
+        case .readOnlyFileSystem:
+            code = .unsupported
+            message = "Not permitted to change last access or last data modification times for \(path): this is a read-only file system."
+
+        case .badFileDescriptor:
+            code = .closed
+            message = "Could not change last access or last data modification dates for \(path): file is closed."
+
+        default:
+            code = .unknown
+            message = "Could not change last access or last data modification dates for \(path)."
+        }
+
+        return FileSystemError(
+            code: code,
+            message: message,
+            systemCall: "futimens",
+            errno: errno,
+            location: location
+        )
+    }
 }
 
 #endif

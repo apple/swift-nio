@@ -1178,6 +1178,121 @@ final class FileHandleTests: XCTestCase {
             }
         }
     }
+
+    func testSetLastAccesTime() async throws {
+        try await self.withTemporaryFile { handle in
+            let originalLastDataModificationTime = try await handle.info().lastDataModificationTime
+            let originalLastAccessTime = try await handle.info().lastAccessTime
+
+            try await handle.setTimes(
+                lastAccess: FileInfo.Timespec(seconds: 10, nanoseconds: 5),
+                lastDataModification: nil
+            )
+
+            let actualLastAccessTime = try await handle.info().lastAccessTime
+            XCTAssertEqual(actualLastAccessTime, FileInfo.Timespec(seconds: 10, nanoseconds: 5))
+            XCTAssertNotEqual(actualLastAccessTime, originalLastAccessTime)
+
+            let actualLastDataModificationTime = try await handle.info().lastDataModificationTime
+            XCTAssertEqual(actualLastDataModificationTime, originalLastDataModificationTime)
+        }
+    }
+
+    func testSetLastDataModificationTime() async throws {
+        try await self.withTemporaryFile { handle in
+            let originalLastDataModificationTime = try await handle.info().lastDataModificationTime
+            let originalLastAccessTime = try await handle.info().lastAccessTime
+
+            try await handle.setTimes(
+                lastAccess: nil,
+                lastDataModification: FileInfo.Timespec(seconds: 10, nanoseconds: 5)
+            )
+
+            let actualLastDataModificationTime = try await handle.info().lastDataModificationTime
+            XCTAssertEqual(actualLastDataModificationTime, FileInfo.Timespec(seconds: 10, nanoseconds: 5))
+            XCTAssertNotEqual(actualLastDataModificationTime, originalLastDataModificationTime)
+
+            let actualLastAccessTime = try await handle.info().lastAccessTime
+            XCTAssertEqual(actualLastAccessTime, originalLastAccessTime)
+        }
+    }
+
+    func testSetLastAccessAndLastDataModificationTimes() async throws {
+        try await self.withTemporaryFile { handle in
+            let originalLastDataModificationTime = try await handle.info().lastDataModificationTime
+            let originalLastAccessTime = try await handle.info().lastAccessTime
+
+            try await handle.setTimes(
+                lastAccess: FileInfo.Timespec(seconds: 20, nanoseconds: 25),
+                lastDataModification: FileInfo.Timespec(seconds: 10, nanoseconds: 5)
+            )
+
+            let actualLastAccessTime = try await handle.info().lastAccessTime
+            XCTAssertEqual(actualLastAccessTime, FileInfo.Timespec(seconds: 20, nanoseconds: 25))
+            XCTAssertNotEqual(actualLastAccessTime, originalLastAccessTime)
+
+            let actualLastDataModificationTime = try await handle.info().lastDataModificationTime
+            XCTAssertEqual(actualLastDataModificationTime, FileInfo.Timespec(seconds: 10, nanoseconds: 5))
+            XCTAssertNotEqual(actualLastDataModificationTime, originalLastDataModificationTime)
+        }
+    }
+
+    func testSetLastAccessAndLastDataModificationTimesToNil() async throws {
+        try await self.withTemporaryFile { handle in
+            // Set some random value for both times, only to be overwritten by the current time
+            // right after.
+            try await handle.setTimes(
+                lastAccess: FileInfo.Timespec(seconds: 1, nanoseconds: 0),
+                lastDataModification: FileInfo.Timespec(seconds: 1, nanoseconds: 0)
+            )
+
+            var actualLastAccessTime = try await handle.info().lastAccessTime
+            XCTAssertEqual(actualLastAccessTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
+
+            var actualLastDataModificationTime = try await handle.info().lastDataModificationTime
+            XCTAssertEqual(actualLastDataModificationTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
+
+            try await handle.setTimes(
+                lastAccess: nil,
+                lastDataModification: nil
+            )
+            let estimatedCurrentTime = Date.now.timeIntervalSince1970
+
+            // Assert that the times are equal to the current time, with up to a second difference (to avoid timing flakiness).
+            actualLastAccessTime = try await handle.info().lastAccessTime
+            XCTAssertEqual(Float(actualLastAccessTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+
+            actualLastDataModificationTime = try await handle.info().lastDataModificationTime
+            XCTAssertEqual(Float(actualLastDataModificationTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+        }
+    }
+
+    func testTouchFile() async throws {
+        try await self.withTemporaryFile { handle in
+            // Set some random value for both times, only to be overwritten by the current time
+            // right after.
+            try await handle.setTimes(
+                lastAccess: FileInfo.Timespec(seconds: 1, nanoseconds: 0),
+                lastDataModification: FileInfo.Timespec(seconds: 1, nanoseconds: 0)
+            )
+
+            var actualLastAccessTime = try await handle.info().lastAccessTime
+            XCTAssertEqual(actualLastAccessTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
+
+            var actualLastDataModificationTime = try await handle.info().lastDataModificationTime
+            XCTAssertEqual(actualLastDataModificationTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
+
+            try await handle.touch()
+            let estimatedCurrentTime = Date.now.timeIntervalSince1970
+
+            // Assert that the times are equal to the current time, with up to a second difference (to avoid timing flakiness).
+            actualLastAccessTime = try await handle.info().lastAccessTime
+            XCTAssertEqual(Float(actualLastAccessTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+
+            actualLastDataModificationTime = try await handle.info().lastDataModificationTime
+            XCTAssertEqual(Float(actualLastDataModificationTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+        }
+    }
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)

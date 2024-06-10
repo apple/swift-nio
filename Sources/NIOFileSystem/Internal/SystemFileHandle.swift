@@ -22,8 +22,10 @@ import NIOPosix
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+import CNIOLinux
 #elseif canImport(Musl)
 import Musl
+import CNIOLinux
 #endif
 
 /// An implementation of ``FileHandleProtocol`` which is backed by system calls and a file
@@ -153,7 +155,7 @@ extension SystemFileHandle.SendableView {
         }
     }
 
-    /// Executes a closure with the file descriptor it it's available otherwise throws the result
+    /// Executes a closure with the file descriptor if it's available otherwise throws the result
     /// of `onUnavailable`.
     internal func _withUnsafeDescriptor<R>(
         _ execute: (FileDescriptor) throws -> R,
@@ -166,8 +168,8 @@ extension SystemFileHandle.SendableView {
         }
     }
 
-    /// Executes a closure with the file descriptor it it's available otherwise throws the result
-    /// of `onUnavailable`.
+    /// Executes a closure with the file descriptor if it's available otherwise returns the result
+    /// of `onUnavailable` as a `Result` Error.
     internal func _withUnsafeDescriptorResult<R>(
         _ execute: (FileDescriptor) -> Result<R, FileSystemError>,
         onUnavailable: () -> FileSystemError
@@ -352,6 +354,18 @@ extension SystemFileHandle: FileHandleProtocol {
     public func close(makeChangesVisible: Bool) async throws {
         try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._close(materialize: makeChangesVisible).get()
+        }
+    }
+
+    public func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws {
+        try await self.threadPool.runIfActive { [sendableView] in
+            try sendableView._setTimes(
+                lastAccess: lastAccess,
+                lastDataModification: lastDataModification
+            )
         }
     }
 
@@ -908,6 +922,84 @@ extension SystemFileHandle.SendableView {
         }
 
         return result
+    }
+
+    func _setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) throws {
+        try self._withUnsafeDescriptor { descriptor in
+            let syscallResult: Result<Void, Errno>
+            switch (lastAccess, lastDataModification) {
+            case (.none, .none):
+                // If the timespec array is nil, as per the `futimens` docs,
+                // both the last accessed and last modification times
+                // will be set to now.
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: nil
+                )
+
+            case (.some(let lastAccess), .none):
+                // Don't modify the last modification time.
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: [timespec(lastAccess), timespec(.omit)]
+                )
+
+            case (.none, .some(let lastDataModification)):
+                // Don't modify the last access time.
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: [timespec(.omit), timespec(lastDataModification)]
+                )
+
+            case (.some(let lastAccess), .some(let lastDataModification)):
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: [timespec(lastAccess), timespec(lastDataModification)]
+                )
+            }
+
+            try syscallResult.mapError { errno in
+                FileSystemError.futimens(
+                    errno: errno,
+                    path: self.path,
+                    lastAccessTime: lastAccess,
+                    lastDataModificationTime: lastDataModification,
+                    location: .here()
+                )
+            }.get()
+        } onUnavailable: {
+            FileSystemError(
+                code: .closed,
+                message: "Couldn't modify file dates, the file '\(self.path)' is closed.",
+                cause: nil,
+                location: .here()
+            )
+        }
+    }
+}
+
+extension timespec {
+    fileprivate init(_ fileinfoTimespec: FileInfo.Timespec) {
+        // Clamp seconds to be positive
+        let seconds = max(0, fileinfoTimespec.seconds)
+
+        // If nanoseconds are not UTIME_NOW or UTIME_OMIT, clamp to be between
+        // 0 and 1,000 million.
+        let nanoseconds: Int
+        switch fileinfoTimespec {
+        case .now, .omit:
+            nanoseconds = fileinfoTimespec.nanoseconds
+        default:
+            nanoseconds = min(1_000_000_000, max(0, fileinfoTimespec.nanoseconds))
+        }
+
+        self.init(
+            tv_sec: seconds,
+            tv_nsec: nanoseconds
+        )
     }
 }
 

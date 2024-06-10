@@ -133,5 +133,8 @@ extern const int CNIOLinux_AT_EMPTY_PATH;
 extern const unsigned int CNIOLinux_RENAME_NOREPLACE;
 extern const unsigned int CNIOLinux_RENAME_EXCHANGE;
 
+extern const unsigned long CNIOLinux_UTIME_OMIT;
+extern const unsigned long CNIOLinux_UTIME_NOW;
+
 #endif
 #endif

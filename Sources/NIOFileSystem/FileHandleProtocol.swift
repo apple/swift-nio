@@ -143,6 +143,27 @@ public protocol FileHandleProtocol {
     ///
     /// After closing the handle calls to other functions will throw an appropriate error.
     func close() async throws
+
+    /// Sets the file's last access and last data modification times to the given values.
+    ///
+    /// If **either** time is `nil`, the current value will not be changed.
+    /// If **both** times are `nil`, then both times will be set to the current time.
+    ///
+    /// > Important: Times are only considered valid if their nanoseconds components are one of the following:
+    /// > - `UTIME_NOW` (you can use ``FileInfo/Timespec/now`` to get a Timespec set to this value),
+    /// > - `UTIME_OMIT` (you can use ``FileInfo/Timespec/omit`` to get a Timespec set to this value),
+    /// > - Greater than zero and no larger than 1000 million: if outside of this range, the value will be clamped to the closest valid value.
+    /// > The seconds component must also be positive: if it's not, zero will be used as the value instead.
+    ///
+    /// - Parameters:
+    ///   - lastAccessTime: The new value of the file's last access time, as time elapsed since the Epoch.
+    ///   - lastDataModificationTime: The new value of the file's last data modification time, as time elapsed since the Epoch.
+    ///
+    /// - Throws: If there's an error updating the times. If this happens, the original values won't be modified.
+    func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws
 }
 
 // MARK: - Readable
@@ -485,6 +506,36 @@ extension WritableFileHandleProtocol {
         toAbsoluteOffset offset: Int64
     ) async throws -> Int64 {
         try await self.write(contentsOf: buffer.readableBytesView, toAbsoluteOffset: offset)
+    }
+}
+
+// MARK: - File times modifiers
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension FileHandleProtocol {
+    /// Sets the file's last access time to the given time.
+    /// 
+    /// - Parameter time: The time to which the file's last access time should be set.
+    ///
+    /// - Throws: If there's an error updating the time. If this happens, the original value won't be modified.
+    public func setLastAccessTime(to time: FileInfo.Timespec) async throws {
+        try await self.setTimes(lastAccess: time, lastDataModification: nil)
+    }
+
+    /// Sets the file's last data modification time to the given time.
+    ///
+    /// - Parameter time: The time to which the file's last data modification time should be set.
+    ///
+    /// - Throws: If there's an error updating the time. If this happens, the original value won't be modified.
+    public func setLastDataModificationTime(to time: FileInfo.Timespec) async throws {
+        try await self.setTimes(lastAccess: nil, lastDataModification: time)
+    }
+
+    /// Sets the file's last access and last data modification times to the current time.
+    ///
+    /// - Throws: If there's an error updating the times. If this happens, the original values won't be modified.
+    public func touch() async throws {
+        try await self.setTimes(lastAccess: nil, lastDataModification: nil)
     }
 }
 
