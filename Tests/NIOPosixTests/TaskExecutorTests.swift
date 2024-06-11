@@ -19,7 +19,7 @@ import XCTest
 final class TaskExecutorTests: XCTestCase {
 
     #if compiler(>=6.0)
-    @available(macOS 9999.0, iOS 9999.0, watchOS 9999.0, tvOS 9999.0, *)
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
     func _runTests(loop1: some EventLoop, loop2: some EventLoop) async {
         await withTaskGroup(of: Void.self) { taskGroup in
             taskGroup.addTask(executorPreference: loop1.taskExecutor) {
@@ -57,7 +57,7 @@ final class TaskExecutorTests: XCTestCase {
     }
     #endif
 
-    @available(macOS 9999.0, iOS 9999.0, watchOS 9999.0, tvOS 9999.0, *)
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
     func testSelectableEventLoopAsTaskExecutor() async throws {
         #if compiler(>=6.0)
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
@@ -72,7 +72,7 @@ final class TaskExecutorTests: XCTestCase {
         #endif
     }
 
-    @available(macOS 9999.0, iOS 9999.0, watchOS 9999.0, tvOS 9999.0, *)
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
     func testAsyncTestingEventLoopAsTaskExecutor() async throws {
         #if compiler(>=6.0)
         let loop1 = NIOAsyncTestingEventLoop()

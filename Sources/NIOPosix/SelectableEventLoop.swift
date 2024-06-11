@@ -886,6 +886,6 @@ internal func assertExpression(_ body: () -> Bool) {
 
 // MARK: TaskExecutor conformance
 #if compiler(>=6.0)
-@available(macOS 9999.0, iOS 9999.0, watchOS 9999.0, tvOS 9999.0, *)
+@available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, *)
 extension SelectableEventLoop: NIOTaskEventLoopExecutor { }
 #endif
