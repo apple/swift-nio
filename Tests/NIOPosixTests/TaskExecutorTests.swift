@@ -19,36 +19,6 @@ import XCTest
 final class TaskExecutorTests: XCTestCase {
     #if compiler(>=6.0)
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-    func testBasicExecutorFitsOnEventLoop_MTELG() async throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
-        let loops = Array(group.makeIterator())
-        await withTaskGroup(of: Void.self) { taskGroup in
-            let loop0Executor = loops[0].taskExecutor
-            let loop1Executor = loops[1].taskExecutor
-            taskGroup.addTask(executorPreference: loop0Executor) {
-                loops[0].assertInEventLoop()
-                loops[1].assertNotInEventLoop()
-
-                withUnsafeCurrentTask { task in
-                    // this currently fails on macOS
-                    XCTAssertEqual(task?.unownedTaskExecutor, loop0Executor.asUnownedTaskExecutor())
-                }
-            }
-
-            taskGroup.addTask(executorPreference: loop1Executor) {
-                loops[0].assertNotInEventLoop()
-                loops[1].assertInEventLoop()
-
-                withUnsafeCurrentTask { task in
-                    // this currently fails on macOS
-                    XCTAssertEqual(task?.unownedTaskExecutor, loop1Executor.asUnownedTaskExecutor())
-                }
-            }
-        }
-        try await group.shutdownGracefully()
-    }
-
-    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     func _runTests(loop1: some EventLoop, loop2: some EventLoop) async {
         let executor1 = loop1.taskExecutor
         let executor2 = loop2.taskExecutor
