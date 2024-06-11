@@ -19,7 +19,7 @@ import NIOPosix
 import NIOFoundationCompat
 import XCTest
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
 final class FileHandleTests: XCTestCase {
     static let thisFile = FilePath(#filePath)
     static let testData = FilePath(#filePath)
