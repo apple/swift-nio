@@ -117,6 +117,12 @@ class HTTPResponseEncoderTests: XCTestCase {
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n")
     }
 
+    func testNoContentLengthHeadersFor304() throws {
+        let headers = HTTPHeaders([("content-length", "0")])
+        let writtenData = sendResponse(withStatus: .notModified, andHeaders: headers)
+        writtenData.assertContainsOnly("HTTP/1.1 304 Not Modified\r\n\r\n")
+    }
+
     func testNoTransferEncodingHeadersFor101() throws {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
         let writtenData = sendResponse(withStatus: .switchingProtocols, andHeaders: headers)
@@ -151,6 +157,12 @@ class HTTPResponseEncoderTests: XCTestCase {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
         let writtenData = sendResponse(withStatus: .noContent, andHeaders: headers, configuration: .noFramingTransformation)
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\ntransfer-encoding: chunked\r\n\r\n")
+    }
+
+    func testNoTransferEncodingHeadersFor304() throws {
+        let headers = HTTPHeaders([("transfer-encoding", "chunked")])
+        let writtenData = sendResponse(withStatus: .notModified, andHeaders: headers)
+        writtenData.assertContainsOnly("HTTP/1.1 304 Not Modified\r\n\r\n")
     }
 
     func testNoChunkedEncodingForHTTP10() throws {
