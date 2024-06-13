@@ -31,12 +31,19 @@
 #include <pthread.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
-#include "liburing_nio.h"
 #include <linux/vm_sockets.h>
 #include <fcntl.h>
 #include <fts.h>
 #include <stdio.h>
 #include <dirent.h>
+#endif
+
+// We need to include this outside the `#ifdef` so macOS builds don't warn about the missing include,
+// but we also need to make sure the system includes come before it on Linux, so we put it down here
+// between an `#endif/#ifdef` pair rather than at the top.
+#include "liburing_nio.h"
+
+#ifdef __linux__
 
 #if __has_include(<linux/mptcp.h>)
 #include <linux/mptcp.h>
