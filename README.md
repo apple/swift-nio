@@ -34,6 +34,7 @@ Within this repository we have a number of products that provide different funct
 - `NIOHTTP1`. This provides a low-level HTTP/1.1 protocol implementation.
 - `NIOWebSocket`. This provides a low-level WebSocket protocol implementation.
 - `NIOTestUtils`. This provides a number of helpers for testing projects that use SwiftNIO.
+- `NIOFileSystem`. This provides `async` APIs for interacting with the file system.
 
 ### Protocol Implementations
 
@@ -43,7 +44,7 @@ Below you can find a list of a few protocol implementations that are done with S
 
 Low-level protocol implementations are often a collection of [`ChannelHandler`][ch]s that implement a protocol but still require the user to have a good understanding of SwiftNIO. Often, low-level protocol implementations will then be wrapped in high-level libraries with a nicer, more user-friendly API.
 
-Protocol | Client | Server | Repository | Module | Comment
+Protocol | Client<br />(Sends requests) | Server<br />(Responds to requests) | Repository | Module | Comment
 --- |  --- | --- | --- | --- | ---
 HTTP/1 | ✅| ✅ | [apple/swift-nio](https://github.com/apple/swift-nio) | [`NIOHTTP1`][nioh1] | official NIO project
 HTTP/2 | ✅| ✅ | [apple/swift-nio-http2](https://github.com/apple/swift-nio-http2) | [`NIOHTTP2`][nioh2] | official NIO project
@@ -56,7 +57,7 @@ SSH | ✅ | ✅ | [apple/swift-nio-ssh][repo-nio-ssh] | [`NIOSSH`][niossh] | off
 
 High-level implementations are usually libraries that come with an API that doesn't expose SwiftNIO's [`ChannelPipeline`][cp] and can therefore be used with very little (or no) SwiftNIO-specific knowledge. The implementations listed below do still do all of their I/O in SwiftNIO and integrate really well with the SwiftNIO ecosystem.
 
-Protocol | Client | Server | Repository | Module | Comment
+Protocol | Client<br />(Sends requests) | Server<br />(Responds to requests) | Repository | Module | Comment
 --- |  --- | --- | --- | --- | ---
 HTTP | ✅| ❌ | [swift-server/async-http-client](https://github.com/swift-server/async-http-client) | `AsyncHTTPClient` | SSWG community project
 gRPC | ✅| ✅ | [grpc/grpc-swift](https://github.com/grpc/grpc-swift) | `GRPC` | also offers a low-level API; SSWG community project
@@ -79,7 +80,8 @@ SwiftNIO            | Minimum Swift Version
 `2.40.0 ..< 2.43.0` | 5.4
 `2.43.0 ..< 2.51.0` | 5.5.2
 `2.51.0 ..< 2.60.0` | 5.6
-`2.60.0 ...`        | 5.7
+`2.60.0 ..< 2.65.0` | 5.7
+`2.65.0 ...`        | 5.8
 
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.
@@ -354,16 +356,16 @@ dnf install swift-lang /usr/bin/nc /usr/bin/lsof /usr/bin/shasum
 
 ### Benchmarks
 
-Benchmarks for `swift-nio` are in a separate Swift Package in the `Benchmarks` subfolder of this repository. 
+Benchmarks for `swift-nio` are in a separate Swift Package in the `Benchmarks` subfolder of this repository.
 They use the [`package-benchmark`](https://github.com/ordo-one/package-benchmark) plugin.
 Benchmarks depends on the [`jemalloc`](https://jemalloc.net) memory allocation library, which is used by `package-benchmark` to capture memory allocation statistics.
-An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`. 
+An installation guide can be found in the [Getting Started article](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark/gettingstarted#Installing-Prerequisites-and-Platform-Support) of `package-benchmark`.
 Afterwards you can run the benchmarks from CLI by going to the `Benchmarks` subfolder (e.g. `cd Benchmarks`) and invoking:
 ```
 swift package benchmark
 ```
 
-For more information please refer to `swift package benchmark --help` or the [documentation of `package-benchmark`](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark). 
+For more information please refer to `swift package benchmark --help` or the [documentation of `package-benchmark`](https://swiftpackageindex.com/ordo-one/package-benchmark/documentation/benchmark).
 
 [ch]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channelhandler
 [c]: https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/channel

@@ -45,6 +45,9 @@ let benchmarks = {
             metrics: defaultMetrics,
             timeUnits: .milliseconds,
             scalingFactor: .mega,
+            // We are expecting a bit of allocation variance due to an allocation
+            // in the Concurrency runtime which happens when resuming a continuation.
+            thresholds: [.mallocCountTotal: .init(absolute: [.p90: 2000])],
             setup: {
                 swiftTaskEnqueueGlobalHook = { job, _ in
                     eventLoop.executor.enqueue(job)

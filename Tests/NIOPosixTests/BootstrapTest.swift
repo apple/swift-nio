@@ -448,7 +448,7 @@ class BootstrapTest: XCTestCase {
         }
 
         // But now, it should be there.
-        XCTAssertNoThrow(_ = try server.pipeline.context(name: "AcceptHandler").wait())
+        XCTAssertNoThrow(_ = try server.pipeline.containsHandler(name: "AcceptHandler").wait())
         XCTAssertNoThrow(try server.close().wait())
     }
 
@@ -562,21 +562,21 @@ class BootstrapTest: XCTestCase {
     func testConvenienceOptionsAreEquivalentUniversalClient() throws {
         func setAndGetOption<Option>(option: Option, _ applyOptions : (NIOClientTCPBootstrap) -> NIOClientTCPBootstrap) throws
             -> Option.Value where Option : ChannelOption {
-            var optionRead : EventLoopFuture<Option.Value>?
+            let optionPromise = self.group.next().makePromise(of: Option.Value.self)
             XCTAssertNoThrow(try withTCPServerChannel(group: self.group) { server in
                 var channel: Channel? = nil
                 XCTAssertNoThrow(channel = try applyOptions(NIOClientTCPBootstrap(
                     ClientBootstrap(group: self.group), tls: NIOInsecureNoTLS()))
-                    .channelInitializer { channel in optionRead = channel.getOption(option)
+                    .channelInitializer { channel in
+                        channel.getOption(option).cascade(to: optionPromise)
                         return channel.eventLoop.makeSucceededFuture(())
                     }
                 .connect(to: server.localAddress!)
                 .wait())
-                XCTAssertNotNil(optionRead)
                 XCTAssertNotNil(channel)
                 XCTAssertNoThrow(try channel?.close().wait())
             })
-            return try optionRead!.wait()
+            return try optionPromise.futureResult.wait()
         }
         
         func checkOptionEquivalence<Option>(longOption: Option, setValue: Option.Value,
@@ -679,6 +679,30 @@ class BootstrapTest: XCTestCase {
                                 .close()
                                 .wait())
         }
+    }
+
+    // There was a bug where file handle ownership was not released when creating pipe channels failed.
+    func testReleaseFileHandleOnOwningFailure() {
+        struct NIOPipeBootstrapHooksChannelFail: NIOPipeBootstrapHooks {
+            func makePipeChannel(eventLoop: NIOPosix.SelectableEventLoop, inputPipe: NIOCore.NIOFileHandle?, outputPipe: NIOCore.NIOFileHandle?) throws -> NIOPosix.PipeChannel {
+                throw IOError(errnoCode: EBADF, reason: "testing")
+            }
+        }
+
+        let sock = socket(NIOBSDSocket.ProtocolFamily.local.rawValue, NIOBSDSocket.SocketType.stream.rawValue, 0)
+        defer {
+            close(sock)
+        }
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            try! elg.syncShutdownGracefully()
+        }
+
+        let bootstrap = NIOPipeBootstrap(validatingGroup: elg, hooks: NIOPipeBootstrapHooksChannelFail())
+        XCTAssertNotNil(bootstrap)
+
+        let channelFuture = bootstrap?.takingOwnershipOfDescriptor(inputOutput: sock)
+        XCTAssertThrowsError(try channelFuture?.wait())
     }
 }
 

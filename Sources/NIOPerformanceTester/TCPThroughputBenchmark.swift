@@ -38,10 +38,16 @@ final class TCPThroughputBenchmark: Benchmark {
         public typealias InboundIn = ByteBuffer
         public typealias OutboundOut = ByteBuffer
 
+        private let connectionEstablishedPromise: EventLoopPromise<EventLoop>
         private var context: ChannelHandlerContext!
+
+        init(_ connectionEstablishedPromise: EventLoopPromise<EventLoop>) {
+            self.connectionEstablishedPromise = connectionEstablishedPromise
+        }
 
         public func channelActive(context: ChannelHandlerContext) {
             self.context = context
+            connectionEstablishedPromise.succeed(context.eventLoop)
         }
 
         public func send(_ message: ByteBuffer, times count: Int) {
@@ -106,12 +112,11 @@ final class TCPThroughputBenchmark: Benchmark {
     func setUp() throws {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 4)
 
-        let connectionEstablished: EventLoopPromise<EventLoop> = self.group.next().makePromise()
+        let connectionEstablishedPromise: EventLoopPromise<EventLoop> = self.group.next().makePromise()
 
         self.serverChannel = try ServerBootstrap(group: self.group)
             .childChannelInitializer { channel in
-                self.serverHandler = ServerHandler()
-                connectionEstablished.succeed(channel.eventLoop)
+                self.serverHandler = ServerHandler(connectionEstablishedPromise)
                 return channel.pipeline.addHandler(self.serverHandler)
             }
             .bind(host: "127.0.0.1", port: 0)
@@ -119,8 +124,9 @@ final class TCPThroughputBenchmark: Benchmark {
 
         self.clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
-                channel.pipeline.addHandler(ByteToMessageHandler(StreamDecoder())).flatMap { _ in
-                    channel.pipeline.addHandler(ClientHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(StreamDecoder()))
+                    try channel.pipeline.syncOperations.addHandler(ClientHandler())
                 }
             }
             .connect(to: serverChannel.localAddress!)
@@ -133,7 +139,7 @@ final class TCPThroughputBenchmark: Benchmark {
         }
         self.message = message
 
-        self.serverEventLoop = try connectionEstablished.futureResult.wait()
+        self.serverEventLoop = try connectionEstablishedPromise.futureResult.wait()
     }
 
     func tearDown() {

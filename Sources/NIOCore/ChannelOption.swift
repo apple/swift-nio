@@ -15,7 +15,7 @@
 /// A configuration option that can be set on a `Channel` to configure different behaviour.
 public protocol ChannelOption: Equatable, _NIOPreconcurrencySendable {
     /// The type of the `ChannelOption`'s value.
-    associatedtype Value
+    associatedtype Value: Sendable
 }
 
 public typealias SocketOptionName = Int32
@@ -291,25 +291,25 @@ extension ChannelOptions {
 }
 
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
-public struct ChannelOptions {
+public struct ChannelOptions: Sendable {
     #if !os(Windows)
-        public static let socket = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
+        public static let socket: @Sendable (SocketOptionLevel, SocketOptionName) -> ChannelOptions.Types.SocketOption = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
             .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
         }
     #endif
 
     /// - seealso: `SocketOption`.
-    public static let socketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+    public static let socketOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .socket, name: name)
     }
 
     /// - seealso: `SocketOption`.
-    public static let ipOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+    public static let ipOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .ip, name: name)
     }
 
     /// - seealso: `SocketOption`.
-    public static let tcpOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+    public static let tcpOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .tcp, name: name)
     }
 
@@ -359,9 +359,9 @@ public struct ChannelOptions {
 extension ChannelOptions {
     /// A type-safe storage facility for `ChannelOption`s. You will only ever need this if you implement your own
     /// `Channel` that needs to store `ChannelOption`s.
-    public struct Storage {
+    public struct Storage: Sendable {
         @usableFromInline
-        internal var _storage: [(Any, (Any, (Channel) -> (Any, Any) -> EventLoopFuture<Void>))]
+        internal var _storage: [(any ChannelOption, (any Sendable, @Sendable (Channel) -> (any ChannelOption, any Sendable) -> EventLoopFuture<Void>))]
 
         public init() {
             self._storage = []
@@ -375,7 +375,8 @@ extension ChannelOptions {
         ///    - value: the value for the option
         @inlinable
         public mutating func append<Option: ChannelOption>(key newKey: Option, value newValue: Option.Value) {
-            func applier(_ t: Channel) -> (Any, Any) -> EventLoopFuture<Void> {
+            @Sendable
+            func applier(_ t: Channel) -> (any ChannelOption, any Sendable) -> EventLoopFuture<Void> {
                 return { (option, value) in
                     return t.setOption(option as! Option, value: value as! Option.Value)
                 }
@@ -403,20 +404,25 @@ extension ChannelOptions {
         ///    - An `EventLoopFuture` that is fulfilled when all `ChannelOption`s have been applied to the `Channel`.
         public func applyAllChannelOptions(to channel: Channel) -> EventLoopFuture<Void> {
             let applyPromise = channel.eventLoop.makePromise(of: Void.self)
-            var it = self._storage.makeIterator()
+            let it = self._storage.makeIterator()
 
-            func applyNext() {
-                guard let (key, (value, applier)) = it.next() else {
+            @Sendable
+            func applyNext(iterator: IndexingIterator<[(any ChannelOption, (any Sendable, @Sendable (any Channel) -> (any ChannelOption, any Sendable) -> EventLoopFuture<Void>))]>) {
+                var iterator = iterator
+                guard let (key, (value, applier)) = iterator.next() else {
                     // If we reached the end, everything is applied.
                     applyPromise.succeed(())
                     return
                 }
+                let it = iterator
 
                 applier(channel)(key, value).map {
-                    applyNext()
+                    applyNext(
+                        iterator: it
+                    )
                 }.cascadeFailure(to: applyPromise)
             }
-            applyNext()
+            applyNext(iterator: it)
 
             return applyPromise.futureResult
         }
@@ -436,5 +442,3 @@ extension ChannelOptions {
         }
     }
 }
-
-extension ChannelOptions.Storage: @unchecked Sendable {}

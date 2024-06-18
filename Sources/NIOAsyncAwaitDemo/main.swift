@@ -18,10 +18,16 @@ import Dispatch
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
-    let channel = try await ClientBootstrap(group: group).connect(host: host, port: port).get()
-    try await channel.pipeline.addHTTPClientHandlers().get()
-    try await channel.pipeline.addHandler(NIOHTTPClientResponseAggregator(maxContentLength: 1_000_000))
-    try await channel.pipeline.addHandler(MakeFullRequestHandler())
+    let channel = try await ClientBootstrap(group: group)
+        .channelInitializer { channel in
+            channel.eventLoop.makeCompletedFuture {
+                try channel.pipeline.syncOperations.addHTTPClientHandlers()
+                try channel.pipeline.syncOperations.addHandler(NIOHTTPClientResponseAggregator(maxContentLength: 1_000_000))
+                try channel.pipeline.syncOperations.addHandler(MakeFullRequestHandler())
+            }
+        }
+        .connect(host: host, port: port).get()
+
     return try await AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull>(channel).start()
 }
 

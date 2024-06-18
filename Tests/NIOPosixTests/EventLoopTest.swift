@@ -598,7 +598,7 @@ public final class EventLoopTest : XCTestCase {
         }
         let threads: [ThreadInitializer] = [body, body]
 
-        let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
+        let group = MultiThreadedEventLoopGroup(threadInitializers: threads, metricsDelegate: nil)
 
         XCTAssertEqual(2, counter)
         XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -614,7 +614,7 @@ public final class EventLoopTest : XCTestCase {
             }
             let threads: [ThreadInitializer] = [body, body]
 
-            let group = MultiThreadedEventLoopGroup(threadInitializers: threads)
+            let group = MultiThreadedEventLoopGroup(threadInitializers: threads, metricsDelegate: nil)
 
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         #endif
@@ -1659,6 +1659,180 @@ public final class EventLoopTest : XCTestCase {
         }.wait()) { error in
             XCTAssert(error is DummyError)
         }
+    }
+    
+    // Test for possible starvation discussed here: https://github.com/apple/swift-nio/pull/2645#discussion_r1486747118
+    func testNonStarvation() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let eventLoop = group.next()
+        var stop = false  // no additional synchronisation needed, since only one thread is used
+        var reExecuteTask: (() -> Void)!
+        reExecuteTask = {
+            if !stop {
+                eventLoop.execute(reExecuteTask)
+            }
+        }
+        eventLoop.execute {
+            // SelectableEventLoop runs batches of up to 4096.
+            // Submit significantly over that for good measure.
+            (0..<10000).forEach { _ in
+                eventLoop.execute(reExecuteTask)
+            }
+        }
+        let stopTask = eventLoop.scheduleTask(in: .microseconds(10)) {
+            stop = true
+        }
+        try stopTask.futureResult.wait()
+    }
+
+    func testMixedImmediateAndScheduledTasks() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let eventLoop = group.next()
+        let scheduledTaskMagic = 17
+        let scheduledTask = eventLoop.scheduleTask(in: .microseconds(10)) {
+            return scheduledTaskMagic
+        }
+
+        let immediateTaskMagic = 18
+        let immediateTask = eventLoop.submit {
+            return immediateTaskMagic
+        }
+
+        let scheduledTaskMagicOut = try scheduledTask.futureResult.wait()
+        XCTAssertEqual(scheduledTaskMagicOut, scheduledTaskMagic)
+
+        let immediateTaskMagicOut = try immediateTask.wait()
+        XCTAssertEqual(immediateTaskMagicOut, immediateTaskMagic)
+    }
+
+    func testLotsOfMixedImmediateAndScheduledTasks() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let eventLoop = group.next()
+        struct Counter {
+            var submitCount: Int = 0
+            var scheduleCount: Int = 0
+        }
+
+        var achieved = Counter()
+        var immediateTasks = [EventLoopFuture<Void>]()
+        var scheduledTasks = [Scheduled<Void>]()
+        (0..<100_000).forEach { _ in
+            if Bool.random() {
+                let task = eventLoop.submit {
+                    achieved.submitCount += 1
+                }
+                immediateTasks.append(task)
+            }
+            if Bool.random() {
+                let task = eventLoop.scheduleTask(in: .microseconds(10)) {
+                    achieved.scheduleCount += 1
+                }
+                scheduledTasks.append(task)
+            }
+        }
+
+        let submitCount = try EventLoopFuture.whenAllSucceed(immediateTasks, on: eventLoop).map ({ _ in
+            return achieved.submitCount
+        }).wait()
+        XCTAssertEqual(submitCount, achieved.submitCount)
+
+        let scheduleCount = try EventLoopFuture.whenAllSucceed(scheduledTasks.map { $0.futureResult }, on: eventLoop).map({ _ in
+            return achieved.scheduleCount
+        }).wait()
+        XCTAssertEqual(scheduleCount, scheduledTasks.count)
+    }
+
+    func testLotsOfMixedImmediateAndScheduledTasksFromEventLoop() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let eventLoop = group.next()
+        struct Counter {
+            var submitCount: Int = 0
+            var scheduleCount: Int = 0
+        }
+
+        var achieved = Counter()
+        let (immediateTasks, scheduledTasks) = try eventLoop.submit {
+            var immediateTasks = [EventLoopFuture<Void>]()
+            var scheduledTasks = [Scheduled<Void>]()
+            (0..<100_000).forEach { _ in
+                if Bool.random() {
+                    let task = eventLoop.submit {
+                        achieved.submitCount += 1
+                    }
+                    immediateTasks.append(task)
+                }
+                if Bool.random() {
+                    let task = eventLoop.scheduleTask(in: .microseconds(10)) {
+                        achieved.scheduleCount += 1
+                    }
+                    scheduledTasks.append(task)
+                }
+            }
+            return (immediateTasks, scheduledTasks)
+        }.wait()
+
+        let submitCount = try EventLoopFuture.whenAllSucceed(immediateTasks, on: eventLoop).map ({ _ in
+            return achieved.submitCount
+        }).wait()
+        XCTAssertEqual(submitCount, achieved.submitCount)
+
+        let scheduleCount = try EventLoopFuture.whenAllSucceed(scheduledTasks.map { $0.futureResult }, on: eventLoop).map({ _ in
+            return achieved.scheduleCount
+        }).wait()
+        XCTAssertEqual(scheduleCount, scheduledTasks.count)
+    }
+
+    func testImmediateTasksDontGetStuck() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let eventLoop = group.next()
+        let testEventLoop = MultiThreadedEventLoopGroup.singleton.any()
+
+        let longWait = TimeAmount.seconds(60)
+        let failDeadline = NIODeadline.now() + longWait
+        let (immediateTasks, scheduledTask) = try eventLoop.submit {
+            // Submit over the 4096 immediate tasks, and some scheduled tasks
+            // with expiry deadline in (nearish) future.
+            // We want to make sure immediate tasks, even those that don't fit
+            // in the first batch, don't get stuck waiting for scheduled task
+            // expiry
+            let immediateTasks = (0..<5000).map { _ in
+                return eventLoop.submit {
+                }.hop(to: testEventLoop)
+            }
+            let scheduledTask = eventLoop.scheduleTask(in: longWait) {
+            }
+
+            return (immediateTasks, scheduledTask)
+        }.wait()
+
+        // The immediate tasks should all succeed ~immediately.
+        // We're testing for a case where the EventLoop gets confused
+        // into waiting for the scheduled task expiry to complete
+        // some immediate tasks.
+        _ = try EventLoopFuture.whenAllSucceed(immediateTasks, on: testEventLoop).wait()
+        XCTAssertLessThan(.now(), failDeadline)
+
+        scheduledTask.cancel()
     }
 }
 

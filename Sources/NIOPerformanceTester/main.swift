@@ -1046,11 +1046,6 @@ try measureAndPrint(
 )
 
 try measureAndPrint(
-    desc: "schedule_100k_tasks",
-    benchmark: SchedulingBenchmark(numTasks: 100_000)
-)
-
-try measureAndPrint(
     desc: "schedule_and_run_100k_tasks",
     benchmark: SchedulingAndRunningBenchmark(numTasks: 100_000)
 )
@@ -1058,6 +1053,16 @@ try measureAndPrint(
 try measureAndPrint(
     desc: "execute_100k_tasks",
     benchmark: ExecuteBenchmark(numTasks: 100_000)
+)
+
+try measureAndPrint(
+    desc: "runIfActive_1_thread_100k_tasks",
+    benchmark: RunIfActiveBenchmark(numThreads: 1, numTasks: 100_000)
+)
+
+try measureAndPrint(
+    desc: "runIfActive_8_threads_100k_tasks",
+    benchmark: RunIfActiveBenchmark(numThreads: 8, numTasks: 100_000)
 )
 
 try measureAndPrint(

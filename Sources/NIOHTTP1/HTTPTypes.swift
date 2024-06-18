@@ -1159,6 +1159,7 @@ public enum HTTPResponseStatus: Sendable {
              .switchingProtocols,
              .processing,
              .noContent,
+             .notModified,
              .custom where (code < 200) && (code >= 100):
             return false
         default:

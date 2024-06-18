@@ -11,7 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
 #if !canImport(Darwin) || os(macOS)
+import Dispatch
 import NIOCore
 import NIOPosix
 
@@ -177,5 +179,34 @@ struct EventLoopCrashTests {
     ) {
         NIOSingletons.groupLoopCountSuggestion = -1
     }
+
+    #if compiler(>=5.9) && swift(<5.11) // We only support Concurrency executor take-over on 5.9-5.10, as versions greater than 5.10 have not been properly tested.
+    let testInstallingSingletonMTELGAsConcurrencyExecutorWorksButOnlyOnce = CrashTest(
+        regex: #"Fatal error: Must be called only once"#
+    ) {
+        guard NIOSingletons.unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor() else {
+            print("Installation failed, that's unexpected -> let's not crash")
+            return
+        }
+
+        // Yes, this pattern is bad abuse but this is a crash test, we don't mind.
+        let semaphoreAbuse = DispatchSemaphore(value: 0)
+        if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
+            Task {
+                precondition(MultiThreadedEventLoopGroup.currentEventLoop != nil)
+                try await Task.sleep(nanoseconds: 123)
+                precondition(MultiThreadedEventLoopGroup.currentEventLoop != nil)
+                semaphoreAbuse.signal()
+            }
+        } else {
+            semaphoreAbuse.signal()
+        }
+        semaphoreAbuse.wait()
+        print("Okay, worked")
+
+        // This should crash
+        _ = NIOSingletons.unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor()
+    }
+    #endif // compiler(>=5.9) && swift(<5.11)
 }
-#endif
+#endif // !canImport(Darwin) || os(macOS)

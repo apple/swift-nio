@@ -1541,4 +1541,33 @@ class EventLoopFutureTest : XCTestCase {
         }
     }
 
+    func testSetOrCascadeReplacesNil() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        var promise: EventLoopPromise<Void>? = nil
+        let other = eventLoop.makePromise(of: Void.self)
+        promise.setOrCascade(to: other)
+        XCTAssertNotNil(promise)
+        promise?.succeed()
+        try other.futureResult.wait()
+    }
+
+    func testSetOrCascadeCascadesToExisting() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        var promise: EventLoopPromise<Void>? = eventLoop.makePromise(of: Void.self)
+        let other = eventLoop.makePromise(of: Void.self)
+        promise.setOrCascade(to: other)
+        promise?.succeed()
+        try other.futureResult.wait()
+    }
+
+    func testSetOrCascadeNoOpOnNil() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        var promise: EventLoopPromise<Void>? = eventLoop.makePromise(of: Void.self)
+        promise.setOrCascade(to: nil)
+        XCTAssertNotNil(promise)
+        promise?.succeed()
+    }
 }

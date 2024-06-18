@@ -1,4 +1,4 @@
-// swift-tools-version:5.7
+// swift-tools-version:5.8
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -17,7 +17,20 @@ import PackageDescription
 
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
+let swiftSystem: PackageDescription.Target.Dependency = .product(
+  name: "SystemPackage",
+  package: "swift-system",
+  condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
+)
 
+// This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
+// Foundation will be linked. This is, however, strictly better than unconditionally adding the
+// resource.
+#if canImport(Darwin)
+let includePrivacyManifest = true
+#else
+let includePrivacyManifest = false
+#endif
 
 let package = Package(
     name: "swift-nio",
@@ -33,11 +46,8 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-    ],
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
+        .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
     targets: [
         // MARK: - Targets
@@ -81,7 +91,9 @@ let package = Package(
                 "NIOCore",
                 "_NIODataStructures",
                 swiftAtomics,
-            ]
+            ],
+            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
+            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : []
         ),
         .target(
             name: "NIO",
@@ -107,7 +119,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOAtomics",
-            dependencies: []
+            dependencies: [],
+            cSettings: [
+                .define("_GNU_SOURCE"),
+            ]
         ),
         .target(
             name: "CNIOSHA1",
@@ -159,7 +174,10 @@ let package = Package(
         ),
         .target(
             name: "CNIOLLHTTP",
-            cSettings: [.define("LLHTTP_STRICT_MODE")]
+            cSettings: [
+              .define("_GNU_SOURCE"),
+              .define("LLHTTP_STRICT_MODE")
+            ]
         ),
         .target(
             name: "NIOTLS",
@@ -178,6 +196,38 @@ let package = Package(
                 "NIOHTTP1",
                 swiftAtomics,
             ]
+        ),
+        .target(
+            name: "_NIOFileSystem",
+            dependencies: [
+                "NIOCore",
+                "NIOPosix",
+                "CNIOLinux",
+                "CNIODarwin",
+                swiftAtomics,
+                swiftCollections,
+                swiftSystem,
+            ],
+            path: "Sources/NIOFileSystem",
+            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
+            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
+            swiftSettings: [
+                .define("ENABLE_MOCKING", .when(configuration: .debug))
+            ]
+        ),
+        .target(
+            name: "NIOFileSystem",
+            dependencies: [
+                "_NIOFileSystem",
+            ],
+            path: "Sources/_NIOFileSystemExported"
+        ),
+        .target(
+            name: "_NIOFileSystemFoundationCompat",
+            dependencies: [
+                "_NIOFileSystem",
+            ],
+            path: "Sources/NIOFileSystemFoundationCompat"
         ),
 
         // MARK: - Examples
@@ -428,5 +478,55 @@ let package = Package(
             name: "NIOSingletonsTests",
             dependencies: ["NIOCore", "NIOPosix"]
         ),
+        .testTarget(
+            name: "NIOFileSystemTests",
+            dependencies: [
+                "NIOCore",
+                "_NIOFileSystem",
+                swiftAtomics,
+                swiftCollections,
+                swiftSystem,
+            ],
+            swiftSettings: [
+                .define("ENABLE_MOCKING", .when(configuration: .debug))
+            ]
+        ),
+        .testTarget(
+            name: "NIOFileSystemIntegrationTests",
+            dependencies: [
+                "NIOCore",
+                "NIOPosix",
+                "_NIOFileSystem",
+                "NIOFoundationCompat",
+            ],
+            exclude: [
+                // Contains known files and directory structures used
+                // for the integration tests. Exclude the whole tree from
+                // the build.
+                "Test Data",
+            ]
+        ),
+        .testTarget(
+            name: "NIOFileSystemFoundationCompatTests",
+            dependencies: [
+                "_NIOFileSystem",
+                "_NIOFileSystemFoundationCompat",
+            ]
+        )
     ]
 )
+
+if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
+    package.dependencies += [
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
+        .package(url: "https://github.com/apple/swift-system.git", from: "1.2.0"),
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+    ]
+} else {
+    package.dependencies += [
+        .package(path: "../swift-atomics"),
+        .package(path: "../swift-collections"),
+        .package(path: "../swift-system"),
+    ]
+}

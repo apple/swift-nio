@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import DequeModule
 import Dispatch
 import NIOCore
 import NIOConcurrencyHelpers
@@ -28,6 +29,31 @@ internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
 #else
     return try execute()
 #endif
+}
+
+/// Information about an EventLoop tick
+public struct NIOEventLoopTickInfo: Sendable, Hashable {
+    /// The eventloop which ticked
+    public var eventLoopID: ObjectIdentifier
+    /// The number of tasks which were executed in this tick
+    public var numberOfTasks: Int
+    /// The time at which the tick began
+    public var startTime: NIODeadline
+
+    internal init(eventLoopID: ObjectIdentifier, numberOfTasks: Int, startTime: NIODeadline) {
+        self.eventLoopID = eventLoopID
+        self.numberOfTasks = numberOfTasks
+        self.startTime = startTime
+    }
+}
+
+/// Implement this delegate to receive information about the EventLoop, such as each tick
+public protocol NIOEventLoopMetricsDelegate: Sendable {
+    /// Called after a tick has run
+    /// This function is called after every tick - avoid long-running tasks here
+    /// - Warning: This function is called after every event loop tick and on the event loop thread. Any non-trivial work in this function will block the event loop and cause latency increases and performance degradation.
+    /// - Parameter info: Information about the tick, such as how many tasks were executed
+    func processedTick(info: NIOEventLoopTickInfo)
 }
 
 /// `EventLoop` implementation that uses a `Selector` to get notified once there is more I/O or tasks to process.
@@ -77,10 +103,16 @@ internal final class SelectableEventLoop: EventLoop {
     internal var scheduledTaskCounter = ManagedAtomic<UInt64>(0)
     @usableFromInline
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
+    @usableFromInline
+    internal var _immediateTasks = Deque<UnderlyingTask>()
 
     // We only need the ScheduledTask's task closure. However, an `Array<() -> Void>` allocates
     // for every appended closure. https://bugs.swift.org/browse/SR-15872
-    private var tasksCopy = ContiguousArray<ScheduledTask>()
+    private var tasksCopy = ContiguousArray<UnderlyingTask>()
+    private static var tasksCopyBatchSize: Int {
+        return 4096
+    }
+
     @usableFromInline
     internal var _succeededVoidFuture: Optional<EventLoopFuture<Void>> = nil {
         didSet {
@@ -113,6 +145,8 @@ internal final class SelectableEventLoop: EventLoop {
 
     private let promiseCreationStoreLock = NIOLock()
     private var _promiseCreationStore: [_NIOEventLoopFutureIdentifier: (file: StaticString, line: UInt)] = [:]
+
+    private let metricsDelegate: (any NIOEventLoopMetricsDelegate)?
 
     @usableFromInline
     internal func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
@@ -176,14 +210,15 @@ Further information:
     internal init(thread: NIOThread,
                   parentGroup: MultiThreadedEventLoopGroup?, /* nil iff thread take-over */
                   selector: NIOPosix.Selector<NIORegistration>,
-                  canBeShutdownIndividually: Bool) {
+                  canBeShutdownIndividually: Bool,
+                  metricsDelegate: NIOEventLoopMetricsDelegate?) {
+        self.metricsDelegate = metricsDelegate
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
         self.bufferPool = Pool<PooledBuffer>(maxSize: 16)
         self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
-        // We will process 4096 tasks per while loop.
-        self.tasksCopy.reserveCapacity(4096)
+        self.tasksCopy.reserveCapacity(Self.tasksCopyBatchSize)
         self.canBeShutdownIndividually = canBeShutdownIndividually
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
         // note: We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
@@ -276,7 +311,7 @@ Further information:
         })
 
         do {
-            try self._schedule0(task)
+            try self._schedule0(.scheduled(task))
         } catch {
             promise.fail(error)
         }
@@ -294,34 +329,33 @@ Further information:
     @inlinable
     internal func execute(_ task: @escaping () -> Void) {
         // nothing we can do if we fail enqueuing here.
-        try? self._schedule0(ScheduledTask(id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed), task, { error in
-            // do nothing
-        }, .now()))
+        try? self._schedule0(.immediate(.function(task)))
     }
 
-    #if swift(>=5.9)
+    #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     @usableFromInline
     func enqueue(_ job: consuming ExecutorJob) {
-        let scheduledTask = ScheduledTask(
-            id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed),
-            job: job,
-            readyTime: .now()
-        )
         // nothing we can do if we fail enqueuing here.
-        try? self._schedule0(scheduledTask)
+        let erasedJob = ErasedUnownedJob(job: UnownedJob(job))
+        try? self._schedule0(.immediate(.unownedJob(erasedJob)))
     }
     #endif
 
     /// Add the `ScheduledTask` to be executed.
     @usableFromInline
-    internal func _schedule0(_ task: ScheduledTask) throws {
+    internal func _schedule0(_ task: LoopTask) throws {
         if self.inEventLoop {
             precondition(self._validInternalStateToScheduleTasks,
                          "BUG IN NIO (please report): EventLoop is shutdown, yet we're on the EventLoop.")
 
             self._tasksLock.withLock { () -> Void in
-                self._scheduledTasks.push(task)
+                switch task {
+                case .scheduled(let task):
+                    self._scheduledTasks.push(task)
+                case .immediate(let task):
+                    self._immediateTasks.append(task)
+                }
             }
         } else {
             let shouldWakeSelector: Bool = self.externalStateLock.withLock {
@@ -340,7 +374,12 @@ Further information:
                 }
 
                 return self._tasksLock.withLock {
-                    self._scheduledTasks.push(task)
+                    switch task {
+                    case .scheduled(let task):
+                        self._scheduledTasks.push(task)
+                    case .immediate(let task):
+                        self._immediateTasks.append(task)
+                    }
 
                     if self._pendingTaskPop == false {
                         // Our job to wake the selector.
@@ -421,16 +460,188 @@ Further information:
         }
     }
 
+    private func run(_ task: UnderlyingTask) {
+        /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
+        withAutoReleasePool {
+            switch task {
+            case .function(let function):
+                function()
+            #if compiler(>=5.9)
+            case .unownedJob(let erasedUnownedJob):
+                if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
+                    erasedUnownedJob.unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
+                } else {
+                    fatalError("Tried to run an UnownedJob without runtime support")
+                }
+            #endif
+            }
+        }
+    }
+
+    private static func _popTasksLockedAssertInvariants(
+        immediateTasks: Deque<UnderlyingTask>,
+        scheduledTasks: PriorityQueue<ScheduledTask>,
+        tasksCopy: ContiguousArray<UnderlyingTask>,
+        tasksCopyBatchSize: Int,
+        now: NIODeadline,
+        nextDeadline: NIODeadline) {
+        assert(tasksCopy.count <= tasksCopyBatchSize)
+        // When we exit the loop, we would expect to
+        // * have taskCopy full, or:
+        // * to have completely drained task queues
+        //     * that means all immediateTasks, and:
+        //     * all scheduledTasks that are ready
+        assertExpression {
+            if tasksCopy.count == tasksCopyBatchSize {
+                return true
+            }
+
+            if !immediateTasks.isEmpty {
+                return false
+            }
+
+            guard let nextScheduledTask = scheduledTasks.peek() else {
+                return true
+            }
+
+            return nextScheduledTask.readyTime.readyIn(now) > .nanoseconds(0)
+        }
+
+        //  nextDeadline must be set to now if there are more immediate tasks left
+        assertExpression {
+            if immediateTasks.count == 0 {
+                return true
+            }
+
+            return nextDeadline == now
+        }
+
+        // nextDeadline should be set to != now, iff there are more
+        // scheduled tasks, and they are all scheduled for the future
+        // Moreover, nextDeadline must equal the expiry time for the
+        // "top-most" scheduled task
+        assertExpression {
+            if nextDeadline == now {
+                return true
+            }
+
+            guard let topMostScheduledTask = scheduledTasks.peek() else {
+                return false
+            }
+
+            return topMostScheduledTask.readyTime == nextDeadline
+        }
+    }
+
+    private static func _popTasksLocked(
+        immediateTasks: inout Deque<UnderlyingTask>,
+        scheduledTasks: inout PriorityQueue<ScheduledTask>,
+        tasksCopy: inout ContiguousArray<UnderlyingTask>,
+        tasksCopyBatchSize: Int) -> NIODeadline? {
+        // We expect empty tasksCopy, to put a new batch of tasks into
+        assert(tasksCopy.isEmpty)
+
+        var moreImmediateTasksToConsider = !immediateTasks.isEmpty
+        var moreScheduledTasksToConsider = !scheduledTasks.isEmpty
+
+        guard moreImmediateTasksToConsider || moreScheduledTasksToConsider else {
+            // Reset nextReadyDeadline to nil which means we will do a blocking select.
+            return nil
+        }
+
+        // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
+        let now: NIODeadline = .now()
+        var nextScheduledTaskDeadline = now
+
+        while moreImmediateTasksToConsider || moreScheduledTasksToConsider {
+            // We pick one item from immediateTasks & scheduledTask per iteration of the loop.
+            // This prevents one task queue starving the other.
+            if moreImmediateTasksToConsider, tasksCopy.count < tasksCopyBatchSize, let task = immediateTasks.popFirst() {
+                tasksCopy.append(task)
+            } else {
+                moreImmediateTasksToConsider = false
+            }
+
+            if moreScheduledTasksToConsider, tasksCopy.count < tasksCopyBatchSize, let task = scheduledTasks.peek() {
+                if task.readyTime.readyIn(now) <= .nanoseconds(0) {
+                    scheduledTasks.pop()
+                    tasksCopy.append(.function(task.task))
+                } else {
+                    nextScheduledTaskDeadline = task.readyTime
+                    moreScheduledTasksToConsider = false
+                }
+            } else {
+                moreScheduledTasksToConsider = false
+            }
+        }
+
+        let nextDeadline = immediateTasks.count > 0 ? now : nextScheduledTaskDeadline
+        debugOnly {
+            // The asserts are spun off to a separate functions to aid code clarity
+            // and to remove mutable access to certain structures, e.g. `immediateTasks`.
+            Self._popTasksLockedAssertInvariants(
+                immediateTasks: immediateTasks,
+                scheduledTasks: scheduledTasks,
+                tasksCopy: tasksCopy,
+                tasksCopyBatchSize: tasksCopyBatchSize,
+                now: now,
+                nextDeadline: nextDeadline)
+        }
+
+        return nextDeadline
+    }
+
+    private func runLoop(selfIdentifier: ObjectIdentifier) -> NIODeadline? {
+        let tickStartTime: NIODeadline = .now()
+        var tasksProcessedInTick = 0
+        defer {
+            let tickInfo = NIOEventLoopTickInfo(eventLoopID: selfIdentifier, numberOfTasks: tasksProcessedInTick, startTime: tickStartTime)
+            self.metricsDelegate?.processedTick(info: tickInfo)
+        }
+        while true {
+            let nextReadyDeadline = self._tasksLock.withLock { () -> NIODeadline? in
+                let deadline = Self._popTasksLocked(
+                    immediateTasks: &self._immediateTasks,
+                    scheduledTasks: &self._scheduledTasks,
+                    tasksCopy: &self.tasksCopy,
+                    tasksCopyBatchSize: Self.tasksCopyBatchSize)
+                if self.tasksCopy.isEmpty {
+                    // Rare, but it's possible to find no tasks to execute if all scheduled tasks are expiring in the future.
+                    self._pendingTaskPop = false
+                }
+                return deadline
+            }
+
+           // all pending tasks are set to occur in the future, so we can stop looping.
+            if self.tasksCopy.isEmpty {
+                return nextReadyDeadline
+            }
+
+            // Execute all the tasks that were submitted
+            let (partialTotal, totalOverflowed) = tasksProcessedInTick.addingReportingOverflow(self.tasksCopy.count)
+            if totalOverflowed {
+                tasksProcessedInTick = Int.max
+            } else {
+                tasksProcessedInTick = partialTotal
+            }
+            for task in self.tasksCopy {
+                self.run(task)
+            }
+            // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
+            self.tasksCopy.removeAll(keepingCapacity: true)
+        }
+    }
+
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
     internal func run() throws {
         self.preconditionInEventLoop()
         defer {
-            var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
             var iterations = 0
+            var drained = false
+            var scheduledTasksCopy = ContiguousArray<ScheduledTask>()
+            var immediateTasksCopy = Deque<UnderlyingTask>()
             repeat { // We may need to do multiple rounds of this because failing tasks may lead to more work.
-                scheduledTasksCopy.removeAll(keepingCapacity: true)
-
-                self._tasksLock.withLock { () -> Void in
+                self._tasksLock.withLock {
                     // In this state we never want the selector to be woken again, so we pretend we're permanently running.
                     self._pendingTaskPop = true
 
@@ -439,30 +650,44 @@ Further information:
                     while let sched = self._scheduledTasks.pop() {
                         scheduledTasksCopy.append(sched)
                     }
+                    swap(&immediateTasksCopy, &self._immediateTasks)
                 }
 
+                // Run all the immediate tasks. They're all "expired" and don't have failFn,
+                // therefore the best course of action is to run them.
+                for task in immediateTasksCopy {
+                    self.run(task)
+                }
                 // Fail all the scheduled tasks.
                 for task in scheduledTasksCopy {
                     task.fail(EventLoopError.shutdown)
                 }
+
                 iterations += 1
-            } while scheduledTasksCopy.count > 0 && iterations < 1000
-            precondition(scheduledTasksCopy.count == 0, "EventLoop \(self) didn't quiesce after 1000 ticks.")
+                drained = immediateTasksCopy.count == 0 && scheduledTasksCopy.count == 0
+                immediateTasksCopy.removeAll(keepingCapacity: true)
+                scheduledTasksCopy.removeAll(keepingCapacity: true)
+            } while !drained && iterations < 1000
+            precondition(drained, "EventLoop \(self) didn't quiesce after 1000 ticks.")
 
             assert(self.internalState == .noLongerRunning, "illegal state: \(self.internalState)")
             self.internalState = .exitingThread
         }
         var nextReadyDeadline: NIODeadline? = nil
         self._tasksLock.withLock {
-            if let firstTask = self._scheduledTasks.peek() {
+            if let firstScheduledTask = self._scheduledTasks.peek() {
                 // The reason this is necessary is a very interesting race:
                 // In theory (and with `makeEventLoopFromCallingThread` even in practise), we could publish an
                 // `EventLoop` reference _before_ the EL thread has entered the `run` function.
                 // If that is the case, we need to schedule the first wakeup at the ready time for this task that was
                 // enqueued really early on, so let's do that :).
-                nextReadyDeadline = firstTask.readyTime
+                nextReadyDeadline = firstScheduledTask.readyTime
+            }
+            if !self._immediateTasks.isEmpty {
+                nextReadyDeadline =  NIODeadline.now()
             }
         }
+        let selfIdentifier = ObjectIdentifier(self)
         while self.internalState != .noLongerRunning && self.internalState != .exitingThread {
             // Block until there are events to handle or the selector was woken up
             /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
@@ -490,63 +715,7 @@ Further information:
                     }
                 }
             }
-
-            // We need to ensure we process all tasks, even if a task added another task again
-            while true {
-                // TODO: Better locking
-                self._tasksLock.withLock { () -> Void in
-                    if !self._scheduledTasks.isEmpty {
-                        // We only fetch the time one time as this may be expensive and is generally good enough as if we miss anything we will just do a non-blocking select again anyway.
-                        let now: NIODeadline = .now()
-
-                        // Make a copy of the tasks so we can execute these while not holding the lock anymore
-                        while tasksCopy.count < tasksCopy.capacity, let task = self._scheduledTasks.peek() {
-                            if task.readyTime.readyIn(now) <= .nanoseconds(0) {
-                                self._scheduledTasks.pop()
-                                self.tasksCopy.append(task)
-                            } else {
-                                nextReadyDeadline = task.readyTime
-                                break
-                            }
-                        }
-                    } else {
-                        // Reset nextreadyDeadline to nil which means we will do a blocking select.
-                        nextReadyDeadline = nil
-                    }
-
-                    if self.tasksCopy.isEmpty {
-                        // We will not continue to loop here. We need to be woken if a new task is enqueued.
-                        self._pendingTaskPop = false
-                    }
-                }
-
-                // all pending tasks are set to occur in the future, so we can stop looping.
-                if self.tasksCopy.isEmpty {
-                    break
-                }
-
-                // Execute all the tasks that were submitted
-                for task in self.tasksCopy {
-                    /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
-                    withAutoReleasePool {
-                        switch task.task {
-                        case .function(let function):
-                            function()
-
-                        #if swift(>=5.9)
-                        case .unownedJob(let erasedUnownedJob):
-                            if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
-                                erasedUnownedJob.unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
-                            } else {
-                                fatalError("Tried to run an UnownedJob without runtime support")
-                            }
-                        #endif
-                        }
-                    }
-                }
-                // Drop everything (but keep the capacity) so we can fill it again on the next iteration.
-                self.tasksCopy.removeAll(keepingCapacity: true)
-            }
+            nextReadyDeadline = runLoop(selfIdentifier: selfIdentifier)
         }
 
         // This EventLoop was closed so also close the underlying selector.
@@ -693,3 +862,24 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
 extension SelectableEventLoop: NIOSerialEventLoopExecutor { }
 #endif
+
+@usableFromInline
+enum UnderlyingTask {
+    case function(() -> Void)
+    #if compiler(>=5.9)
+    case unownedJob(ErasedUnownedJob)
+    #endif
+}
+
+@usableFromInline
+internal enum LoopTask {
+    case scheduled(ScheduledTask)
+    case immediate(UnderlyingTask)
+}
+
+@inlinable
+internal func assertExpression(_ body: () -> Bool) {
+    assert({
+        return body()
+    }())
+}

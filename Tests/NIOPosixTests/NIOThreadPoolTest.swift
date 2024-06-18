@@ -19,6 +19,7 @@ import Dispatch
 import NIOConcurrencyHelpers
 import NIOEmbedded
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class NIOThreadPoolTest: XCTestCase {
     func testThreadNamesAreSetUp() {
         let numberOfThreads = 11
@@ -112,7 +113,6 @@ class NIOThreadPoolTest: XCTestCase {
     }
 
     func testAsyncThreadPool() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let numberOfThreads = 1
         let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
         pool.start()
@@ -127,7 +127,6 @@ class NIOThreadPoolTest: XCTestCase {
     }
 
     func testAsyncThreadPoolErrorPropagation() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         struct ThreadPoolError: Error {}
         let numberOfThreads = 1
         let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
@@ -144,7 +143,6 @@ class NIOThreadPoolTest: XCTestCase {
     }
 
     func testAsyncThreadPoolNotActiveError() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         struct ThreadPoolError: Error {}
         let numberOfThreads = 1
         let pool = NIOThreadPool(numberOfThreads: numberOfThreads)
@@ -154,13 +152,35 @@ class NIOThreadPoolTest: XCTestCase {
             }
             XCTFail("Should not get here as thread pool isn't active")
         } catch {
-            XCTAssertNotNil(error as? NIOThreadPoolError.ThreadPoolInactive, "Error thrown should be of type ThreadPoolError")
+            XCTAssertNotNil(error as? CancellationError, "Error thrown should be of type CancellationError")
         }
         try await pool.shutdownGracefully()
     }
 
+    func testAsyncThreadPoolCancellation() async throws {
+        let pool = NIOThreadPool(numberOfThreads: 1)
+        pool.start()
+
+        await withThrowingTaskGroup(of: Void.self) { group in
+            group.cancelAll()
+            group.addTask {
+                try await pool.runIfActive {
+                    XCTFail("Should be cancelled before executed")
+                }
+            }
+
+            do {
+                try await group.waitForAll()
+                XCTFail("Expected CancellationError to be thrown")
+            } catch {
+                XCTAssert(error is CancellationError)
+            }
+        }
+
+        try await pool.shutdownGracefully()
+    }
+
     func testAsyncShutdownWorks() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let threadPool = NIOThreadPool(numberOfThreads: 17)
         let eventLoop = NIOAsyncTestingEventLoop()
 
@@ -170,6 +190,6 @@ class NIOThreadPoolTest: XCTestCase {
         let future = threadPool.runIfActive(eventLoop: eventLoop) {
             XCTFail("This shouldn't run because the pool is shutdown.")
         }
-        await XCTAssertThrowsError(try await future.get())
+        await XCTAssertThrowsError { try await future.get() }
     }
 }

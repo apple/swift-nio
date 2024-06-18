@@ -17,9 +17,9 @@ import Atomics
 import NIOCore
 @testable import NIOEmbedded
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class AsyncTestingChannelTests: XCTestCase {
     func testSingleHandlerInit() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         class Handler: ChannelInboundHandler {
             typealias InboundIn = Never
         }
@@ -29,7 +29,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testEmptyInit() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
 
         class Handler: ChannelInboundHandler {
             typealias InboundIn = Never
@@ -43,7 +42,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testMultipleHandlerInit() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         class Handler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
             let identifier: String
@@ -67,7 +65,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWaitForInboundWrite() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         let task = Task {
             try await XCTAsyncAssertEqual(try await channel.waitForInboundWrite(), 1)
@@ -82,7 +79,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWaitForMultipleInboundWritesInParallel() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         let task = Task {
             let task1 = Task { try await channel.waitForInboundWrite(as: Int.self) }
@@ -102,7 +98,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWaitForOutboundWrite() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         let task = Task {
             try await XCTAsyncAssertEqual(try await channel.waitForOutboundWrite(), 1)
@@ -117,7 +112,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWaitForMultipleOutboundWritesInParallel() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         let task = Task {
             let task1 = Task { try await channel.waitForOutboundWrite(as: Int.self) }
@@ -137,7 +131,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteOutboundByteBuffer() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
@@ -158,7 +151,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteOutboundByteBufferMultipleTimes() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
@@ -179,7 +171,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteInboundByteBuffer() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
@@ -192,7 +183,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteInboundByteBufferMultipleTimes() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
@@ -213,7 +203,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteInboundByteBufferReThrow() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         XCTAssertNoThrow(try channel.pipeline.addHandler(ExceptionThrowingInboundHandler()).wait())
         await XCTAsyncAssertThrowsError(try await channel.writeInbound("msg")) { error in
@@ -223,7 +212,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteOutboundByteBufferReThrow() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         XCTAssertNoThrow(try channel.pipeline.addHandler(ExceptionThrowingOutboundHandler()).wait())
         await XCTAsyncAssertThrowsError(try await channel.writeOutbound("msg")) { error in
@@ -233,7 +221,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testReadOutboundWrongTypeThrows() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         try await XCTAsyncAssertTrue(await channel.writeOutbound("hello").isFull)
         do {
@@ -248,7 +235,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testReadInboundWrongTypeThrows() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         try await XCTAsyncAssertTrue(await channel.writeInbound("hello").isFull)
         do {
@@ -263,7 +249,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWrongTypesWithFastpathTypes() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
 
         let buffer = channel.allocator.buffer(capacity: 0)
@@ -312,7 +297,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testCloseMultipleTimesThrows() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         try await XCTAsyncAssertTrue(await channel.finish().isClean)
 
@@ -326,7 +310,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testCloseOnInactiveIsOk() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         let inactiveHandler = CloseInChannelInactiveHandler()
         XCTAssertNoThrow(try channel.pipeline.addHandler(inactiveHandler).wait())
@@ -337,7 +320,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testEmbeddedLifecycle() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let handler = ChannelLifecycleHandler()
         XCTAssertEqual(handler.currentState, .unregistered)
 
@@ -383,7 +365,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testEmbeddedChannelAndPipelineAndChannelCoreShareTheEventLoop() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         let pipelineEventLoop = channel.pipeline.eventLoop
         XCTAssert(pipelineEventLoop === channel.eventLoop)
@@ -392,7 +373,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSendingAnythingOnEmbeddedChannel() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         let buffer = ByteBufferAllocator().buffer(capacity: 5)
         let socketAddress = try SocketAddress(unixDomainSocketPath: "path")
@@ -411,7 +391,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testActiveWhenConnectPromiseFiresAndInactiveWhenClosePromiseFires() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         XCTAssertFalse(channel.isActive)
         let connectPromise = channel.eventLoop.makePromise(of: Void.self)
@@ -431,7 +410,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testWriteWithoutFlushDoesNotWrite() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
 
         let buf = ByteBuffer(bytes: [1])
@@ -445,7 +423,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSetLocalAddressAfterSuccessfulBind() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
 
         let channel = NIOAsyncTestingChannel()
         let bindPromise = channel.eventLoop.makePromise(of: Void.self)
@@ -459,7 +436,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSetRemoteAddressAfterSuccessfulConnect() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
 
         let channel = NIOAsyncTestingChannel()
         let connectPromise = channel.eventLoop.makePromise(of: Void.self)
@@ -473,7 +449,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testUnprocessedOutboundUserEventFailsOnEmbeddedChannel() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
 
         let channel = NIOAsyncTestingChannel()
         XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
@@ -487,7 +462,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testEmbeddedChannelWritabilityIsWritable() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
 
         let channel = NIOAsyncTestingChannel()
         let opaqueChannel: Channel = channel
@@ -500,7 +474,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testFinishWithRecursivelyScheduledTasks() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
             let channel = NIOAsyncTestingChannel()
             let invocations = AtomicCounter()
 
@@ -518,7 +491,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSyncOptionsAreSupported() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         try channel.testingEventLoop.submit {
             let options = channel.syncOptions
@@ -530,7 +502,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testGetChannelOptionAutoReadIsSupported() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         try channel.testingEventLoop.submit {
             let options = channel.syncOptions
@@ -541,7 +512,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSetGetChannelOptionAllowRemoteHalfClosureIsSupported() throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         try channel.testingEventLoop.submit {
             let options = channel.syncOptions
@@ -559,7 +529,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSecondFinishThrows() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { throw XCTSkip() }
         let channel = NIOAsyncTestingChannel()
         _ = try await channel.finish()
         await XCTAsyncAssertThrowsError(try await channel.finish())

@@ -409,7 +409,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
                                           expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"]))
 
         // Put a frame encoder in the client pipeline.
-        XCTAssertNoThrow(try client.pipeline.addHandler(WebSocketFrameEncoder()).wait())
+        XCTAssertNoThrow(try client.pipeline.syncOperations.addHandler(WebSocketFrameEncoder()))
 
         var data = client.allocator.buffer(capacity: 12)
         data.writeString("hello, world")
@@ -445,7 +445,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
                                           expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
                                           expectedResponseHeaders: ["Upgrade: websocket", "Sec-WebSocket-Accept: OfS0wDaT5NoxF2gqm7Zj2YtetzM=", "Connection: upgrade"]))
 
-        let decoder = ((try server.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self).wait()).handler as! ByteToMessageHandler<WebSocketFrameDecoder>).decoder
+        let decoder = ((try server.pipeline.syncOperations.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self)).handler as! ByteToMessageHandler<WebSocketFrameDecoder>).decoder
         XCTAssertEqual(16, decoder?.maxFrameSize)
     }
 

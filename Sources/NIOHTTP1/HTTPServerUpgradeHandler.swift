@@ -235,7 +235,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                 self.removeExtraHandlers(context: context).flatMap {
                     self.sendUpgradeResponse(context: context, upgradeRequest: request, responseHeaders: finalResponseHeaders)
                 }.flatMap {
-                    context.pipeline.removeHandler(self.httpEncoder)
+                    context.pipeline.syncOperations.removeHandler(self.httpEncoder)
                 }.flatMap { () -> EventLoopFuture<Void> in
                     self.upgradeCompletionHandler(context)
                     return upgrader.upgrade(context: context, upgradeRequest: request)

@@ -42,7 +42,7 @@ class HTTPResponseEncoderTests: XCTestCase {
             XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder(configuration: configuration)).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(HTTPResponseEncoder(configuration: configuration)))
         var switchingResponse = HTTPResponseHead(version: .http1_1, status: status)
         switchingResponse.headers = headers
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(switchingResponse)))
@@ -117,6 +117,12 @@ class HTTPResponseEncoderTests: XCTestCase {
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\ncontent-length: 0\r\n\r\n")
     }
 
+    func testNoContentLengthHeadersFor304() throws {
+        let headers = HTTPHeaders([("content-length", "0")])
+        let writtenData = sendResponse(withStatus: .notModified, andHeaders: headers)
+        writtenData.assertContainsOnly("HTTP/1.1 304 Not Modified\r\n\r\n")
+    }
+
     func testNoTransferEncodingHeadersFor101() throws {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
         let writtenData = sendResponse(withStatus: .switchingProtocols, andHeaders: headers)
@@ -153,13 +159,19 @@ class HTTPResponseEncoderTests: XCTestCase {
         writtenData.assertContainsOnly("HTTP/1.1 204 No Content\r\ntransfer-encoding: chunked\r\n\r\n")
     }
 
+    func testNoTransferEncodingHeadersFor304() throws {
+        let headers = HTTPHeaders([("transfer-encoding", "chunked")])
+        let writtenData = sendResponse(withStatus: .notModified, andHeaders: headers)
+        writtenData.assertContainsOnly("HTTP/1.1 304 Not Modified\r\n\r\n")
+    }
+
     func testNoChunkedEncodingForHTTP10() throws {
         let channel = EmbeddedChannel()
         defer {
             XCTAssertEqual(true, try? channel.finish().isClean)
         }
 
-        XCTAssertNoThrow(try channel.pipeline.addHandler(HTTPResponseEncoder()).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(HTTPResponseEncoder()))
 
         // This response contains neither Transfer-Encoding: chunked or Content-Length.
         let response = HTTPResponseHead(version: .http1_0, status: .ok)

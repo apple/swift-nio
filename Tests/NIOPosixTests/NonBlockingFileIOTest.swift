@@ -1121,7 +1121,7 @@ extension NonBlockingFileIOTest {
         }
     }
 
-    func testAsyncGettingErrorWhenEventLoopGroupIsShutdown() async throws {
+    func testAsyncGettingErrorWhenThreadPoolIsShutdown() async throws {
         try await self.threadPool.shutdownGracefully()
 
         try await withPipe { readFH, writeFH in
@@ -1130,9 +1130,9 @@ extension NonBlockingFileIOTest {
                     fileHandle: readFH,
                     byteCount: 1,
                     allocator: self.allocator)
-                XCTFail("testAsyncGettingErrorWhenEventLoopGroupIsShutdown: fileIO.read should throw an error")
+                XCTFail("testAsyncGettingErrorWhenThreadPoolIsShutdown: fileIO.read should throw an error")
             } catch {
-                XCTAssertTrue(error is NIOThreadPoolError.ThreadPoolInactive)
+                XCTAssertTrue(error is CancellationError)
             }
             return [readFH, writeFH]
         }

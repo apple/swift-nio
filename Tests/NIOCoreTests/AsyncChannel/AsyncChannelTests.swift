@@ -17,9 +17,9 @@ import NIOConcurrencyHelpers
 import NIOEmbedded
 import XCTest
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncChannelTests: XCTestCase {
     func testAsyncChannelCloseOnWrite() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         final class CloseOnWriteHandler: ChannelOutboundHandler {
             typealias OutboundIn = String
 
@@ -39,7 +39,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testAsyncChannelBasicFunctionality() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
             try NIOAsyncChannel<String, Never>(wrappingChannelSynchronously: channel)
@@ -65,7 +64,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testAsyncChannelBasicWrites() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
             try NIOAsyncChannel<Never, String>(wrappingChannelSynchronously: channel)
@@ -84,7 +82,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testFinishingTheWriterClosesTheWriteSideOfTheChannel() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let closeRecorder = CloseRecorder()
         try await channel.pipeline.addHandler(closeRecorder)
@@ -116,7 +113,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testDroppingEverythingDoesntCloseTheChannel() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let closeRecorder = CloseRecorder()
         try await channel.pipeline.addHandler(CloseSuppressor())
@@ -148,7 +144,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testReadsArePropagated() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
             try NIOAsyncChannel<String, Never>(wrappingChannelSynchronously: channel)
@@ -167,7 +162,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testErrorsArePropagatedButAfterReads() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
             try NIOAsyncChannel<String, Never>(wrappingChannelSynchronously: channel)
@@ -190,7 +184,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testChannelBecomingNonWritableDelaysWriters() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
             try NIOAsyncChannel<Never, String>(wrappingChannelSynchronously: channel)
@@ -227,7 +220,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testBufferDropsReadsIfTheReaderIsGone() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         try await channel.pipeline.addHandler(CloseSuppressor()).get()
         do {
@@ -252,7 +244,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testManagingBackPressure() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let readCounter = ReadCounter()
         try await channel.pipeline.addHandler(readCounter)
@@ -367,7 +358,6 @@ final class AsyncChannelTests: XCTestCase {
     }
 
     func testCanWrapAChannelSynchronously() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
             try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)

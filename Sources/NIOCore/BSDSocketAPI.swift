@@ -373,28 +373,25 @@ extension NIOBSDSocket.Option {
 // Socket Options
 extension NIOBSDSocket.Option {
     /// Get the error status and clear.
-    public static let so_error: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_ERROR)
+    public static let so_error = Self(rawValue: SO_ERROR)
 
     /// Use keep-alives.
-    public static let so_keepalive: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_KEEPALIVE)
+    public static let so_keepalive = Self(rawValue: SO_KEEPALIVE)
 
     /// Linger on close if unsent data is present.
-    public static let so_linger: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_LINGER)
+    public static let so_linger = Self(rawValue: SO_LINGER)
 
     /// Specifies the total per-socket buffer space reserved for receives.
-    public static let so_rcvbuf: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_RCVBUF)
+    public static let so_rcvbuf = Self(rawValue: SO_RCVBUF)
 
     /// Specifies the receive timeout.
-    public static let so_rcvtimeo: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_RCVTIMEO)
+    public static let so_rcvtimeo = Self(rawValue: SO_RCVTIMEO)
 
     /// Allows the socket to be bound to an address that is already in use.
-    public static let so_reuseaddr: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: SO_REUSEADDR)
+    public static let so_reuseaddr = Self(rawValue: SO_REUSEADDR)
+
+    /// Allows the socket to send broadcast messages.
+    public static let so_broadcast = Self(rawValue: SO_BROADCAST)
 }
 
 #if !os(Windows)

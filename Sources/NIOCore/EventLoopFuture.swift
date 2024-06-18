@@ -1840,3 +1840,23 @@ extension EventLoopPromise where Value == Void {
         succeed(Void())
     }
 }
+
+extension Optional {
+    /// Sets or cascades the future result of self to the provided promise, if present.
+    ///
+    /// If `promise` is `nil` then this function is a no-op. Otherwise, if `self` is `nil` then
+    /// `self` is set to `promise`. If `self` isn't `nil` then its `futureResult` will be cascaded
+    /// to `promise`.
+    ///
+    /// - Parameter promise: The promise to set or cascade to.
+    public mutating func setOrCascade<Value>(to promise: EventLoopPromise<Value>?) where Wrapped == EventLoopPromise<Value> {
+        guard let promise = promise else { return }
+
+        switch self {
+        case .none:
+            self = .some(promise)
+        case .some(let existing):
+            existing.futureResult.cascade(to: promise)
+        }
+    }
+}

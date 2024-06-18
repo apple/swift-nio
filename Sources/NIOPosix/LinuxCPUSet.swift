@@ -90,7 +90,7 @@ import CNIOLinux
                     t.affinity = set
                 }
             }
-            self.init(threadInitializers: initializers)
+            self.init(threadInitializers: initializers, metricsDelegate: nil)
         }
     }
 #endif

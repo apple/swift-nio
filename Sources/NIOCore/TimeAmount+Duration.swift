@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))
 extension TimeAmount {
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     /// Creates a new `TimeAmount` for the given `Duration`, truncating and clamping if necessary.
@@ -53,4 +52,3 @@ internal extension Swift.Duration {
         return combinedNanos.partialValue
     }
 }
-#endif // (os(macOS) && swift(>=5.7.1)) || (!os(macOS) && swift(>=5.7))
