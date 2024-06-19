@@ -1842,7 +1842,7 @@ class ByteBufferTest: XCTestCase {
         let maxBufferCapacityToBeRetained = 1024
         var buffer = self.allocator.buffer(capacity: 512)
         let moreThan1024ByteString = String(repeating: "x", count: maxBufferCapacityToBeRetained + 1)
-        let oneKiloByteString = String(repeating: "x", count: maxBufferCapacityToBeRetained)
+        let maxSizeString = String(repeating: "x", count: maxBufferCapacityToBeRetained)
 
         
         // For a small item below the maximum specified buffer capacity it should not clamp buffer capacity
@@ -1853,7 +1853,7 @@ class ByteBufferTest: XCTestCase {
 
         // For an item equal to the maximum specified buffer capacity it should not clamp buffer capacity
         buffer.clear()
-        buffer.writeString(oneKiloByteString)
+        buffer.writeString(maxSizeString)
         XCTAssertFalse(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
         // Whilst the capacity is equal to maximum buffer size to be retained, it was not as a result of restoring the buffer capacity
         XCTAssertEqual(buffer.capacity, 1024)
