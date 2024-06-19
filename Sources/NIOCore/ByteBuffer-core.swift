@@ -324,6 +324,12 @@ public struct ByteBuffer {
             self.bytes = ptr
             self.capacity = newCapacity
         }
+        
+        @inlinable
+        func clampStorage(to capacity: Int) {
+            self.bytes.copyMemory(from: self.bytes, byteCount: capacity)
+            self.capacity = _toCapacity(capacity)
+        }
 
         private func deallocate() {
             self.allocator.free(self.bytes)
@@ -822,6 +828,24 @@ public struct ByteBuffer {
             self._moveWriterIndex(to: self._writerIndex - indexShift)
         } else {
             self._copyStorageAndRebase(extraCapacity: 0, resetIndices: true)
+        }
+        return true
+    }
+    
+    /// Reset capacity of the buffer to the specified amount.
+    ///
+    /// - returns: `true` if one or more bytes have been discarded, `false` if there are no bytes to discard.
+    @inlinable
+    @discardableResult public mutating func clampBufferCapacity(to maxRetainedCapacity: Int) -> Bool {
+        guard storageCapacity > maxRetainedCapacity else {
+            return false
+        }
+        
+        if isKnownUniquelyReferenced(&self._storage) {
+            self._storage.clampStorage(to: maxRetainedCapacity)
+            self._slice = self._storage.fullSlice
+        } else {
+            self._copyStorageAndRebase(capacity: _toCapacity(maxRetainedCapacity), resetIndices: false)
         }
         return true
     }

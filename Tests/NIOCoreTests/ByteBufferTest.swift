@@ -1837,6 +1837,43 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0xaa, buffer.getInteger(at: 0, as: UInt8.self))
         XCTAssertEqual(0, buffer2.readableBytes)
     }
+    
+    func testRestoreBufferCapacity() {
+        let maxBufferCapacityToBeRetained = 1024
+        var buffer = self.allocator.buffer(capacity: 512)
+        let moreThan1024ByteString = String(repeating: "x", count: maxBufferCapacityToBeRetained + 1)
+        let oneKiloByteString = String(repeating: "x", count: maxBufferCapacityToBeRetained)
+
+        
+        // For a small item below the maximum specified buffer capacity it should not clamp buffer capacity
+        buffer.writeString("Small item")
+        XCTAssertFalse(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
+        XCTAssertEqual(buffer.capacity, 512) // Keeps original capacity of the buffer
+        print(buffer._storage.dumpBytes(slice: buffer._slice, offset: 0, length: buffer.capacity))
+
+        // For an item equal to the maximum specified buffer capacity it should not clamp buffer capacity
+        buffer.clear()
+        buffer.writeString(oneKiloByteString)
+        XCTAssertFalse(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
+        // Whilst the capacity is equal to maximum buffer size to be retained, it was not as a result of restoring the buffer capacity
+        XCTAssertEqual(buffer.capacity, 1024)
+        print(buffer._storage.dumpBytes(slice: buffer._slice, offset: 0, length: buffer.capacity))
+        
+        // For an item above the maximum specified buffer capacity it should clamp buffer capacity
+        buffer.clear()
+        buffer.writeString(moreThan1024ByteString)
+        XCTAssertTrue(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
+        XCTAssertEqual(buffer.capacity, maxBufferCapacityToBeRetained)
+        print(buffer._storage.dumpBytes(slice: buffer._slice, offset: 0, length: buffer.capacity))
+
+        // For a small item it should not clamp buffer capacity and keep original buffer capacity before write
+        buffer.clear()
+        buffer.writeString("Small item")
+        XCTAssertFalse(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
+        XCTAssertEqual(buffer.capacity, maxBufferCapacityToBeRetained) // Keeps original capacity of the buffer
+        print(buffer._storage.dumpBytes(slice: buffer._slice, offset: 0, length: buffer.capacity))
+
+    }
 
     func testDumpBytesFormat() throws {
         self.buf.clear()
