@@ -1,5 +1,6 @@
 // snippet.hide
 import _NIOFileSystem
+import NIOCore
 // snippet.show
 
 // NIOFileSystem provides access to the local file system via the FileSystem
@@ -22,7 +23,7 @@ do {
     contentsOf: "/Users/hal9000/demise-of-dave.txt",
     maximumSizeAllowed: .mebibytes(1)
   )
-  print("Plan for Dave's demise:", String(decoding: plan, as: UTF8.self))
+  print("Plan for Dave's demise:", String(decoding: plan.readableBytesView, as: UTF8.self))
 } catch let error as FileSystemError where error.code == .notFound {
   // All errors thrown by the module have type FileSystemError (or
   // Swift.CancellationError). It looks like the file doesn't exist. Let's
