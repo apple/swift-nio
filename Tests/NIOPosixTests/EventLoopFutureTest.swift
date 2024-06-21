@@ -1570,4 +1570,47 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssertNotNil(promise)
         promise?.succeed()
     }
+
+    func testPromiseEquatable() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise1 = eventLoop.makePromise(of: Void.self)
+        let promise2 = eventLoop.makePromise(of: Void.self)
+        let promise3 = promise1
+        XCTAssertEqual(promise1, promise3)
+        XCTAssertNotEqual(promise1, promise2)
+        XCTAssertNotEqual(promise3, promise2)
+
+        promise1.succeed()
+        promise2.succeed()
+    }
+
+    func testPromiseEquatable_WhenSucceeded() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise1 = eventLoop.makePromise(of: Void.self)
+        let promise2 = eventLoop.makePromise(of: Void.self)
+        let promise3 = promise1
+
+        promise1.succeed()
+        promise2.succeed()
+        XCTAssertEqual(promise1, promise3)
+        XCTAssertNotEqual(promise1, promise2)
+        XCTAssertNotEqual(promise3, promise2)
+    }
+
+    func testPromiseEquatable_WhenFailed() {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise1 = eventLoop.makePromise(of: Void.self)
+        let promise2 = eventLoop.makePromise(of: Void.self)
+        let promise3 = promise1
+
+        promise1.fail(E())
+        promise2.fail(E())
+        XCTAssertEqual(promise1, promise3)
+        XCTAssertNotEqual(promise1, promise2)
+        XCTAssertNotEqual(promise3, promise2)
+    }
 }
