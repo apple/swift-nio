@@ -81,6 +81,24 @@ final class AsyncChannelTests: XCTestCase {
         }
     }
 
+    func testAsyncChannelThrowsWhenChannelClosed() async throws {
+        let channel = NIOAsyncTestingChannel()
+        let wrapped = try await channel.testingEventLoop.executeInContext {
+            return try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
+        }
+
+        try await channel.close(mode: .all)
+
+        do {
+            try await wrapped.executeThenClose { _, outbound in
+                try await outbound.write("Test")
+            }
+            XCTFail("Expected an error to be thrown")
+        } catch {
+            XCTAssertEqual(error as? ChannelError, ChannelError.ioOnClosedChannel)
+        }
+    }
+
     func testFinishingTheWriterClosesTheWriteSideOfTheChannel() async throws {
         let channel = NIOAsyncTestingChannel()
         let closeRecorder = CloseRecorder()
