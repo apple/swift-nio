@@ -768,11 +768,16 @@ public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelO
     private var state: State = .notInChannelYet
     private let encoder: Encoder
     private var buffer: ByteBuffer? = nil
-    private let maxBufferCapacity: Int
+    private let maxBufferCapacity: Int?
 
-    public init(_ encoder: Encoder, maxBufferCapacity: Int = 2048) {
+    public init(_ encoder: Encoder, maxBufferCapacity: Int) {
         self.encoder = encoder
-        self.maxBufferCapacity = maxBufferCapacity
+        self.maxBufferCapacity = maxBufferCapacity.nextPowerOf2()
+    }
+    
+    public init(_ encoder: Encoder) {
+        self.encoder = encoder
+        self.maxBufferCapacity = nil
     }
 }
 
@@ -813,7 +818,9 @@ extension MessageToByteHandler {
             self.buffer!.clear()
             try self.encoder.encode(data: data, out: &self.buffer!)
             context.write(self.wrapOutboundOut(self.buffer!), promise: promise)
-            self.buffer?.clampBufferCapacity(to: maxBufferCapacity)
+            if let maxBufferCapacity {
+                self.buffer?.clampBufferCapacity(to: maxBufferCapacity)
+            }
         } catch {
             self.state = .error(error)
             promise?.fail(error)

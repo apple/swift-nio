@@ -1841,38 +1841,37 @@ class ByteBufferTest: XCTestCase {
     func testRestoreBufferCapacity() {
         let maxBufferCapacityToBeRetained = 1024
         var buffer = self.allocator.buffer(capacity: 512)
-        let moreThan1024ByteString = String(repeating: "x", count: maxBufferCapacityToBeRetained + 1)
-        let maxSizeString = String(repeating: "x", count: maxBufferCapacityToBeRetained)
-
-        
-        // For a small item below the maximum specified buffer capacity it should not clamp buffer capacity
-        buffer.writeString("Small item")
-        XCTAssertFalse(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
-        XCTAssertEqual(buffer.capacity, 512) // Keeps original capacity of the buffer
-        print(buffer._storage.dumpBytes(slice: buffer._slice, offset: 0, length: buffer.capacity))
 
         // For an item equal to the maximum specified buffer capacity it should not clamp buffer capacity
         buffer.clear()
-        buffer.writeString(maxSizeString)
+        buffer.writeString(String(repeating: "x", count: maxBufferCapacityToBeRetained))
         XCTAssertFalse(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
-        // Whilst the capacity is equal to maximum buffer size to be retained, it was not as a result of restoring the buffer capacity
         XCTAssertEqual(buffer.capacity, 1024)
-        print(buffer._storage.dumpBytes(slice: buffer._slice, offset: 0, length: buffer.capacity))
         
-        // For an item above the maximum specified buffer capacity it should clamp buffer capacity
+        // For an item with readable bytes above the maximum specified buffer capacity it should not clamp
         buffer.clear()
-        buffer.writeString(moreThan1024ByteString)
+        buffer.writeString(String(repeating: "x", count: maxBufferCapacityToBeRetained + 1))
+        XCTAssertFalse(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
+        XCTAssertEqual(buffer.capacity, 2048)
+        
+        // For a subsequent item smaller than buffer capacity it should clamp if the maximum specified buffer capacity is equal to, or less than readable bytes
+        buffer.clear()
+        buffer.writeString(String(repeating: "x", count: maxBufferCapacityToBeRetained))
         XCTAssertTrue(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
-        XCTAssertEqual(buffer.capacity, maxBufferCapacityToBeRetained)
-        print(buffer._storage.dumpBytes(slice: buffer._slice, offset: 0, length: buffer.capacity))
+        XCTAssertEqual(buffer.capacity, 1024)
 
-        // For a small item it should not clamp buffer capacity and keep original buffer capacity before write
+        // For a small item smaller than maxBufferCapacityToBeRetained, it should not clamp further.
+        // This is to avoid flip-flopping between clamping and expansion during buffer lifecycle
         buffer.clear()
         buffer.writeString("Small item")
         XCTAssertFalse(buffer.clampBufferCapacity(to: maxBufferCapacityToBeRetained))
-        XCTAssertEqual(buffer.capacity, maxBufferCapacityToBeRetained) // Keeps original capacity of the buffer
-        print(buffer._storage.dumpBytes(slice: buffer._slice, offset: 0, length: buffer.capacity))
-
+        XCTAssertEqual(buffer.capacity, 1024)
+        
+        // For any item, it should not clamp buffer capacity to a value larger than the current buffer capacity
+        buffer.clear()
+        buffer.writeString("Any item")
+        XCTAssertFalse(buffer.clampBufferCapacity(to: 2048))
+        XCTAssertEqual(buffer.capacity, 1024)
     }
 
     func testDumpBytesFormat() throws {

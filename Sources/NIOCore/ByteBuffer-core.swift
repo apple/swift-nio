@@ -837,7 +837,7 @@ public struct ByteBuffer {
     /// - returns: `true` if one or more bytes have been discarded, `false` if there are no bytes to discard.
     @inlinable
     @discardableResult public mutating func clampBufferCapacity(to maxRetainedCapacity: Int) -> Bool {
-        guard storageCapacity > maxRetainedCapacity else {
+        guard maxRetainedCapacity >= readableBytes && maxRetainedCapacity < capacity else {
             return false
         }
         
