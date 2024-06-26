@@ -107,9 +107,9 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         return .init(_value: nil, uncheckedEventLoop: eventLoop)
     }
 
-    /// Initialise a ``NIOLoopBoundBox`` by sending a ``Sendable`` value, validly callable off `eventLoop`.
+    /// Initialise a ``NIOLoopBoundBox`` by sending a `Sendable` value, validly callable off `eventLoop`.
     ///
-    /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because we know that `value` is ``Sendable``.
+    /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because we know that `value` is `Sendable`.
     /// So we don't need to protect `value` itself, we just need to protect the ``NIOLoopBoundBox`` against mutations which we do because the ``value``
     /// accessors are checking that we're on `eventLoop`.
     public static func makeBoxSendingValue(
