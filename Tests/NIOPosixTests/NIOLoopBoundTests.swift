@@ -49,6 +49,25 @@ final class NIOLoopBoundTests: XCTestCase {
         }.wait())
     }
 
+    func testLoopBoundBoxCanBeInitialisedWithSendableValueOffLoopAndLaterSetToValue() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let loop = group.any()
+
+        let sendableBox = NIOLoopBoundBox.makeBoxSendingValue(15, as: Int.self, eventLoop: loop)
+        for _ in 0..<(100 - 15) {
+            loop.execute {
+                sendableBox.value += 1
+            }
+        }
+        XCTAssertEqual(100, try loop.submit {
+            sendableBox.value
+        }.wait())
+    }
+
     // MARK: - Helpers
     func sendableBlackhole<S: Sendable>(_ sendableThing: S) {}
 

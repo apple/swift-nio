@@ -107,6 +107,26 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         return .init(_value: nil, uncheckedEventLoop: eventLoop)
     }
 
+    /// Initialise a ``NIOLoopBoundBox`` by sending a `Sendable` value, validly callable off `eventLoop`.
+    ///
+    /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because we know that `value` is `Sendable`.
+    /// So we don't need to protect `value` itself, we just need to protect the ``NIOLoopBoundBox`` against mutations which we do because the ``value``
+    /// accessors are checking that we're on `eventLoop`.
+    public static func makeBoxSendingValue(
+        _ value: Value,
+        as: Value.Type = Value.self,
+        eventLoop: EventLoop
+    ) -> NIOLoopBoundBox<Value> where Value: Sendable {
+        // Here, we -- possibly surprisingly -- do not precondition being on the EventLoop. This is okay for a few
+        // reasons:
+        // - This function only works with `Sendable` values, so we don't need to worry about somebody
+        //   still holding a reference to this.
+        // - Because of Swift's Definitive Initialisation (DI), we know that we did write `self._value` before `init`
+        //   returns.
+        // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
+        return .init(_value: value, uncheckedEventLoop: eventLoop)
+    }
+
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///
     /// - note: ``NIOLoopBoundBox`` itself is reference-typed, so any writes will affect anybody sharing this reference.
