@@ -474,6 +474,8 @@ Further information:
                     fatalError("Tried to run an UnownedJob without runtime support")
                 }
             #endif
+            case .timer(let handler):
+                handler.timerFired(loop: self)
             }
         }
     }
@@ -565,7 +567,10 @@ Further information:
             if moreScheduledTasksToConsider, tasksCopy.count < tasksCopyBatchSize, let task = scheduledTasks.peek() {
                 if task.readyTime.readyIn(now) <= .nanoseconds(0) {
                     scheduledTasks.pop()
-                    tasksCopy.append(.function(task.task))
+                    switch task.kind {
+                    case .task(let task, _): tasksCopy.append(.function(task))
+                    case .timer(let handler): tasksCopy.append(.timer(handler))
+                    }
                 } else {
                     nextScheduledTaskDeadline = task.readyTime
                     moreScheduledTasksToConsider = false
@@ -658,9 +663,14 @@ Further information:
                 for task in immediateTasksCopy {
                     self.run(task)
                 }
-                // Fail all the scheduled tasks.
+                // Fail all the scheduled tasks (timers have no failFn and can just be dropped).
                 for task in scheduledTasksCopy {
-                    task.fail(EventLoopError.shutdown)
+                    switch task.kind {
+                    case .task(_, let failFn):
+                        failFn(EventLoopError.shutdown)
+                    case .timer:
+                        break
+                    }
                 }
 
                 iterations += 1
@@ -869,6 +879,7 @@ enum UnderlyingTask {
     #if compiler(>=5.9)
     case unownedJob(ErasedUnownedJob)
     #endif
+    case timer(any NIOTimerHandler)
 }
 
 @usableFromInline

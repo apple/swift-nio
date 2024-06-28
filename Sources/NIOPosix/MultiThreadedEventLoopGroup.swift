@@ -460,21 +460,32 @@ internal struct ScheduledTask {
     ///     This means, the ids need to be unique for a given ``SelectableEventLoop`` and they need to be in ascending order.
     @usableFromInline
     let id: UInt64
-    let task: () -> Void
-    private let failFn: (Error) -> Void
+
     @usableFromInline
     internal let readyTime: NIODeadline
 
     @usableFromInline
-    init(id: UInt64, _ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
-        self.id = id
-        self.task = task
-        self.failFn = failFn
-        self.readyTime = time
+    enum Kind {
+        case task(task: () -> Void, failFn: (Error) -> Void)
+        case timer(any NIOTimerHandler)
     }
 
-    func fail(_ error: Error) {
-        failFn(error)
+    @usableFromInline
+    let kind: Kind
+
+    // TODO: Should these be .init() or should they be static functions?
+    @usableFromInline
+    init(id: UInt64, _ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
+        self.id = id
+        self.readyTime = time
+        self.kind = .task(task: task, failFn: failFn)
+    }
+
+    @usableFromInline
+    init(id: UInt64, _ handler: any NIOTimerHandler, _ time: NIODeadline) {
+        self.id = id
+        self.readyTime = time
+        self.kind = .timer(handler)
     }
 }
 

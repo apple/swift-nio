@@ -356,6 +356,14 @@ public protocol EventLoop: EventLoopGroup {
     /// It is valid for an `EventLoop` not to implement any of the two `_promise` functions. If either of them are implemented,
     /// however, both of them should be implemented.
     func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
+
+    /// Set a timer that will call a handler at the given time.
+    @discardableResult
+    func setTimer(for deadline: NIODeadline, _ handler: any NIOTimerHandler) -> NIOTimer
+
+    /// Set a timer that will call a handler after a given amount of time.
+    @discardableResult
+    func setTimer(for duration: TimeAmount, _ handler: any NIOTimerHandler) -> NIOTimer
 }
 
 extension EventLoop {
