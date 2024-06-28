@@ -894,3 +894,20 @@ internal func assertExpression(_ body: () -> Bool) {
         return body()
     }())
 }
+
+extension SelectableEventLoop: NIOCustomTimerImplementation {
+    @inlinable
+    internal func setTimer(for deadline: NIODeadline, _ handler: any NIOTimerHandler) -> UInt64 {
+        let taskId = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
+        let task = ScheduledTask(id: taskId, handler, deadline)
+        try! self._schedule0(.scheduled(task))
+        return taskId
+    }
+
+    @inlinable
+    internal func cancelTimer(_ id: UInt64) {
+        self._tasksLock.withLock {
+            self._scheduledTasks.removeFirst(where: { $0.id == id })
+        }
+    }
+}
