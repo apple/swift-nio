@@ -157,8 +157,14 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case let evt as ChannelEvent where evt == ChannelEvent.inputClosed:
-            // The remote peer half-closed the channel during the upgrade so we should close
-            context.close(promise: nil)
+            // The remote peer half-closed the channel during the upgrade. Should we close the other side
+            switch self.stateMachine.closeInbound() {
+            case .close:
+                self.upgradeResultPromise.fail(ChannelError.ioOnClosedChannel)
+                context.close(promise: nil)
+            case .continue:
+                break
+            }
 
         default:
             context.fireUserInboundEventTriggered(event)
