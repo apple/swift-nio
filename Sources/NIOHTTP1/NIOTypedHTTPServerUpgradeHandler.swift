@@ -160,7 +160,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
             // The remote peer half-closed the channel during the upgrade. Should we close the other side
             switch self.stateMachine.closeInbound() {
             case .close:
-                self.upgradeResultPromise.fail(ChannelError.ioOnClosedChannel)
+                self.upgradeResultPromise.fail(ChannelError.inputClosed)
                 context.close(promise: nil)
             case .continue:
                 break
