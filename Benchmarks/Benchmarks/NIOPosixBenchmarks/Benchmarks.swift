@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Benchmark
-import NIOPosix
 import NIOCore
+import NIOPosix
 
 private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 
@@ -80,6 +80,29 @@ let benchmarks = {
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {
             loop.scheduleTask(in: .hours(1), {})
+        }
+        benchmark.stopMeasurement()
+    }
+
+    Benchmark(
+        "MTELG.setTimer(for:_:)",
+        configuration: Benchmark.Configuration(
+            metrics: [.mallocCountTotal, .cpuTotal],
+            scalingFactor: .kilo
+        )
+    ) { benchmark in
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { try! group.syncShutdownGracefully() }
+        let loop = group.next()
+
+        final class Timer: NIOTimerHandler {
+            func timerFired(loop: any EventLoop) {}
+        }
+        let timer = Timer()
+
+        benchmark.startMeasurement()
+        for _ in benchmark.scaledIterations {
+            let handle = loop.setTimer(for: .hours(1), timer)
         }
         benchmark.stopMeasurement()
     }
