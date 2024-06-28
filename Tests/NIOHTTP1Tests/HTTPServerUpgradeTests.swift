@@ -489,6 +489,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         upgraders: [any TypedAndUntypedHTTPServerProtocolUpgrader],
         extraHandlers: [ChannelHandler],
         notUpgradingHandler: (@Sendable (Channel) -> EventLoopFuture<Bool>)? = nil,
+        upgradeErrorHandler: (@Sendable (Error) -> Void)? = nil,
         _ upgradeCompletionHandler: @escaping UpgradeCompletionHandler
     ) throws -> (Channel, Channel, Channel) {
         let (serverChannel, connectedServerChannelFuture) = try serverHTTPChannelWithAutoremoval(
@@ -1770,11 +1771,13 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         upgraders: [any TypedAndUntypedHTTPServerProtocolUpgrader],
         extraHandlers: [ChannelHandler],
         notUpgradingHandler: (@Sendable (Channel) -> EventLoopFuture<Bool>)? = nil,
+        upgradeErrorHandler: (@Sendable (Error) -> Void)? = nil,
         _ upgradeCompletionHandler: @escaping UpgradeCompletionHandler
     ) throws -> (Channel, Channel, Channel) {
         let connectionChannelPromise = Self.eventLoop.makePromise(of: Channel.self)
         let serverChannelFuture = ServerBootstrap(group: Self.eventLoop)
-            .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .childChannelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
                     connectionChannelPromise.succeed(channel)
@@ -1799,6 +1802,10 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
                         } else {
                             return channel.eventLoop.makeSucceededVoidFuture()
                         }
+                    }
+                    .flatMapErrorThrowing { error in
+                        upgradeErrorHandler?(error)
+                        throw error
                     }
                 }
                 .flatMap { _ in
@@ -2313,5 +2320,31 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         // We also want to confirm that the upgrade handler is no longer in the pipeline.
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
     }
+
+    func testHalfClosure() throws {
+        let errorCaught = UnsafeMutableTransferBox<Bool>(false)
+
+        let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"]) { req in
+            XCTFail("Upgrade cannot be successful if we don't send any data to server")
+        }
+        let (_, client, connectedServer) = try setUpTestWithAutoremoval(
+            upgraders: [upgrader],
+            extraHandlers: [],
+            upgradeErrorHandler: { error in
+                switch error {
+                case ChannelError.inputClosed:
+                    errorCaught.wrappedValue = true
+                default:
+                    break
+                }
+            }
+        ) { (context) in
+        }
+
+        try client.close().wait()
+        try connectedServer.closeFuture.wait()
+        XCTAssertEqual(errorCaught.wrappedValue, true)
+    }
+
 }
 #endif
