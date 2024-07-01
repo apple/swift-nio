@@ -416,6 +416,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     private func unbuffer(context: ChannelHandlerContext) {
         while true {
             switch self.stateMachine.unbuffer() {
+            case .close:
+                context.close(promise: nil)
             case .fireChannelRead(let data):
                 context.fireChannelRead(data)
 

@@ -22,10 +22,15 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
         /// The state before we received a TLSUserEvent. We are just forwarding any read at this point.
         case initial
 
+        enum BufferedState {
+            case data(NIOAny)
+            case inputClosed
+        }
+
         @usableFromInline
         struct AwaitingUpgrader {
             var seenFirstRequest: Bool
-            var buffer: Deque<NIOAny>
+            var buffer: Deque<BufferedState>
         }
 
         /// The request head has been received. We're currently running the future chain awaiting an upgrader.
@@ -37,7 +42,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
             var requestHead: HTTPRequestHead
             var responseHeaders: HTTPHeaders
             var proto: String
-            var buffer: Deque<NIOAny>
+            var buffer: Deque<BufferedState>
         }
 
         /// We have an upgrader, which means we can begin upgrade we are just waiting for the request end.
@@ -45,14 +50,14 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
 
         @usableFromInline
         struct Upgrading {
-            var buffer: Deque<NIOAny>
+            var buffer: Deque<BufferedState>
         }
         /// We are either running the upgrading handler.
         case upgrading(Upgrading)
 
         @usableFromInline
         struct Unbuffering {
-            var buffer: Deque<NIOAny>
+            var buffer: Deque<BufferedState>
         }
         case unbuffering(Unbuffering)
 
@@ -99,7 +104,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
             if awaitingUpgrader.seenFirstRequest {
                 // We should buffer the data since we have seen the full request.
                 self.state = .modifying
-                awaitingUpgrader.buffer.append(data)
+                awaitingUpgrader.buffer.append(.data(data))
                 self.state = .awaitingUpgrader(awaitingUpgrader)
                 return nil
             } else {
@@ -114,7 +119,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
 
         case .unbuffering(var unbuffering):
             self.state = .modifying
-            unbuffering.buffer.append(data)
+            unbuffering.buffer.append(.data(data))
             self.state = .unbuffering(unbuffering)
             return nil
 
@@ -125,7 +130,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
             // We got a read while running ugprading.
             // We have to buffer the read to unbuffer it afterwards
             self.state = .modifying
-            upgrading.buffer.append(data)
+            upgrading.buffer.append(.data(data))
             self.state = .upgrading(upgrading)
             return nil
 
@@ -167,8 +172,8 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
             guard requestedProtocols.count > 0 else {
                 // We have to buffer now since we got the request head but are not upgrading.
                 // The user is configuring the HTTP pipeline now.
-                var buffer = Deque<NIOAny>()
-                buffer.append(NIOAny(requestPart))
+                var buffer = Deque<State.BufferedState>()
+                buffer.append(.data(NIOAny(requestPart)))
                 self.state = .upgrading(.init(buffer: buffer))
                 return .runNotUpgradingInitializer
             }
@@ -364,6 +369,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
 
     @usableFromInline
     enum UnbufferAction {
+        case close
         case fireChannelRead(NIOAny)
         case fireChannelReadCompleteAndRemoveHandler
     }
@@ -379,8 +385,12 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
 
             if let element = unbuffering.buffer.popFirst() {
                 self.state = .unbuffering(unbuffering)
-
-                return .fireChannelRead(element)
+                switch element {
+                case .data(let data):
+                    return .fireChannelRead(data)
+                case .inputClosed:
+                    return .close
+                }
             } else {
                 self.state = .finished
 
@@ -402,11 +412,37 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
     @inlinable
     mutating func closeInbound() -> CloseInboundAction {
         switch self.state {
-        case .initial, .awaitingUpgrader:
+        case .initial:
             self.state = .finished
             return .close
 
-        default:
+        case .awaitingUpgrader(var awaitingUpgrader):
+            if awaitingUpgrader.seenFirstRequest {
+                // We should buffer the input close since we have seen the full request.
+                awaitingUpgrader.buffer.append(.inputClosed)
+                self.state = .awaitingUpgrader(awaitingUpgrader)
+                return .continue
+            } else {
+                // We shouldn't buffer. This means we are still expecting HTTP parts.
+                return .close
+            }
+
+        case .upgrading(var upgrading):
+            upgrading.buffer.append(.inputClosed)
+            self.state = .upgrading(upgrading)
+            return .continue
+
+        case .upgraderReady(var upgraderReady):
+            upgraderReady.buffer.append(.inputClosed)
+            self.state = .upgraderReady(upgraderReady)
+            return .continue
+
+        case .unbuffering(var unbuffering):
+            unbuffering.buffer.append(.inputClosed)
+            self.state = .unbuffering(unbuffering)
+            return .continue
+
+        case .modifying, .finished:
             return .continue
         }
     }
