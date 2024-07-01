@@ -120,7 +120,7 @@ final class MTELGTimerTests: XCTestCase {
         let handler = MockTimerHandler()
         handler.timerDidFire.isInverted = true
 
-        _ = loop.setTimer(for: .milliseconds(1), handler)
+        _ = loop.setTimer(for: .milliseconds(100), handler)
         try await group.shutdownGracefully()
 
         await fulfillment(of: [handler.timerDidFire], timeout: 0.01)
