@@ -55,11 +55,16 @@ public struct NIOConnectionError: Error {
     /// The port SwiftNIO was trying to connect to.
     public let port: Int
 
+    /// The error we encountered doing the name resolution, if any.
+    public fileprivate(set) var resolutionError: Error? = nil
+
     /// The error we encountered doing the DNS A lookup, if any.
-    public fileprivate(set) var dnsAError: Error? = nil
+    @available(*, deprecated, renamed: "resolutionError")
+    public var dnsAError: Error? { resolutionError }
 
     /// The error we encountered doing the DNS AAAA lookup, if any.
-    public fileprivate(set) var dnsAAAAError: Error? = nil
+    @available(*, deprecated, renamed: "resolutionError")
+    public var dnsAAAAError: Error? { resolutionError }
 
     /// The errors we encountered during the connection attempts.
     public fileprivate(set) var connectionErrors: [SingleConnectionFailure] = []
@@ -72,7 +77,7 @@ public struct NIOConnectionError: Error {
 
 /// A simple iterator that manages iterating over the possible targets.
 ///
-/// This iterator knows how to merge together the A and AAAA records in a sensible way:
+/// This iterator knows how to merge together IPv4 and IPv6 addresses in a sensible way:
 /// specifically, it keeps track of what the last address family it emitted was, and emits the
 /// address of the opposite family next.
 private struct TargetIterator: IteratorProtocol {
@@ -84,39 +89,44 @@ private struct TargetIterator: IteratorProtocol {
     }
 
     private var previousAddressFamily: AddressFamily = .v4
-    private var aQueryResults: [SocketAddress] = []
-    private var aaaaQueryResults: [SocketAddress] = []
+    private var v4Results: [SocketAddress] = []
+    private var v6Results: [SocketAddress] = []
 
-    mutating func aResultsAvailable(_ results: [SocketAddress]) {
-        aQueryResults.append(contentsOf: results)
-    }
-
-    mutating func aaaaResultsAvailable(_ results: [SocketAddress]) {
-        aaaaQueryResults.append(contentsOf: results)
+    mutating func resultsAvailable(_ results: [SocketAddress]) {
+        for result in results {
+            switch result.protocol {
+            case .inet:
+                v4Results.append(result)
+            case .inet6:
+                v6Results.append(result)
+            default:
+                break
+            }
+        }
     }
 
     mutating func next() -> Element? {
         switch previousAddressFamily {
         case .v4:
-            return popAAAA() ?? popA()
+            return popV6() ?? popV4()
         case .v6:
-            return popA() ?? popAAAA()
+            return popV4() ?? popV6()
         }
     }
 
-    private mutating func popA() -> SocketAddress? {
-        if aQueryResults.count > 0 {
+    private mutating func popV4() -> SocketAddress? {
+        if v4Results.count > 0 {
             previousAddressFamily = .v4
-            return aQueryResults.removeFirst()
+            return v4Results.removeFirst()
         }
 
         return nil
     }
 
-    private mutating func popAAAA() -> SocketAddress? {
-        if aaaaQueryResults.count > 0 {
+    private mutating func popV6() -> SocketAddress? {
+        if v6Results.count > 0 {
             previousAddressFamily = .v6
-            return aaaaQueryResults.removeFirst()
+            return v6Results.removeFirst()
         }
 
         return nil
@@ -150,21 +160,17 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         /// Initial state. No work outstanding.
         case idle
 
-        /// All name queries are currently outstanding.
+        /// No results have been returned yet.
         case resolving
 
-        /// The A query has resolved, but the AAAA query is outstanding and the
+        /// The resolver has returned IPv4 results, but no IPv6 results yet, and the
         /// resolution delay has not yet elapsed.
-        case aResolvedWaiting
+        case resolvedWaiting
 
-        /// The A query has resolved and the resolution delay has elapsed. We can
-        /// begin connecting immediately, but should not give up if we run out of
-        /// targets until the AAAA result returns.
-        case aResolvedConnecting
-
-        /// The AAAA query has resolved. We can begin connecting immediately, but
-        /// should not give up if we run out of targets until the AAAA result returns.
-        case aaaaResolved
+        /// The resolver has returned IPv6 results, or the resolution delay has elapsed.
+        /// We can begin connecting immediately, but should not give up if we run out of
+        /// targets until the resolver completes.
+        case resolvedConnecting
 
         /// All DNS results are in. We can make connection attempts until we run out
         /// of targets.
@@ -179,13 +185,16 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         /// Begin DNS resolution.
         case resolve
 
-        /// The A record lookup completed.
-        case resolverACompleted
+        /// The resolver received IPv4 results.
+        case resolverIPv4ResultsAvailable
 
-        /// The AAAA record lookup completed.
-        case resolverAAAACompleted
+        /// The resolver received IPv6 results.
+        case resolverIPv6ResultsAvailable
 
-        /// The delay between the A result and the AAAA result has elapsed.
+        /// The name resolution completed.
+        case resolverCompleted
+
+        /// The delay between the IPv4 result and the IPv6 result has elapsed.
         case resolutionDelayElapsed
 
         /// The delay between starting one connection and the next has elapsed.
@@ -206,7 +215,7 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     }
 
     /// The DNS resolver provided by the user.
-    private let resolver: Resolver
+    private let resolver: NIOStreamingResolver
 
     /// The event loop this connector will run on.
     private let loop: EventLoop
@@ -228,12 +237,14 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     /// The channel builder callback takes an event loop and a protocol family as arguments.
     private let channelBuilderCallback: (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<(Channel, ChannelBuilderResult)>
 
-    /// The amount of time to wait for an AAAA response to come in after a A response is
+    /// The amount of time to wait for an IPv6 response to come in after a IPv4 response is
     /// received. By default this is 50ms.
     private let resolutionDelay: TimeAmount
+    
+    private var resolutionSession: Optional<NIONameResolutionSession>
 
     /// A reference to the task that will execute after the resolution delay expires, if
-    /// one is scheduled. This is held to ensure that we can cancel this task if the AAAA
+    /// one is scheduled. This is held to ensure that we can cancel this task if the IPv6
     /// response comes in before the resolution delay expires.
     private var resolutionTask: Optional<Scheduled<Void>>
 
@@ -268,17 +279,11 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     /// and throw away all pending connection attempts that are no longer needed.
     private var pendingConnections: [EventLoopFuture<(Channel, ChannelBuilderResult)>] = []
 
-    /// The number of DNS resolutions that have returned.
-    ///
-    /// This is used to keep track of whether we need to cancel the outstanding resolutions
-    /// during cleanup.
-    private var dnsResolutions: Int = 0
-
     /// An object that holds any errors we encountered.
     private var error: NIOConnectionError
 
     @inlinable
-    init(resolver: Resolver,
+    init(resolver: NIOStreamingResolver,
          loop: EventLoop,
          host: String,
          port: Int,
@@ -292,6 +297,7 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         self.port = port
         self.connectTimeout = connectTimeout
         self.channelBuilderCallback = channelBuilderCallback
+        self.resolutionSession = nil
         self.resolutionTask = nil
         self.connectionTask = nil
         self.timeoutTask = nil
@@ -309,7 +315,7 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
 
     @inlinable
     convenience init(
-        resolver: Resolver,
+        resolver: NIOStreamingResolver,
         loop: EventLoop,
         host: String,
         port: Int,
@@ -360,71 +366,64 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         // Only one valid transition from idle: to start resolving.
         case (.idle, .resolve):
             state = .resolving
-            beginDNSResolution()
+            beginResolutionSession()
 
-        // In the resolving state, we can exit three ways: either the A query returns,
-        // the AAAA does, or the overall connect timeout fires.
-        case (.resolving, .resolverACompleted):
-            state = .aResolvedWaiting
+        // In the resolving state, we can exit four ways: either IPv4 results are available, IPv6
+        // results are available, the resoler completes, or the overall connect timeout fires.
+        case (.resolving, .resolverIPv4ResultsAvailable):
+            state = .resolvedWaiting
             beginResolutionDelay()
-        case (.resolving, .resolverAAAACompleted):
-            state = .aaaaResolved
+        case (.resolving, .resolverIPv6ResultsAvailable):
+            state = .resolvedConnecting
+            beginConnecting()
+        case (.resolving, .resolverCompleted):
+            state = .allResolved
             beginConnecting()
         case (.resolving, .connectTimeoutElapsed):
             state = .complete
             timedOut()
 
-        // In the aResolvedWaiting state, we can exit three ways: the AAAA query returns,
-        // the resolution delay elapses, or the overall connect timeout fires.
-        case (.aResolvedWaiting, .resolverAAAACompleted):
-            state = .allResolved
-            beginConnecting()
-        case (.aResolvedWaiting, .resolutionDelayElapsed):
-            state = .aResolvedConnecting
-            beginConnecting()
-        case (.aResolvedWaiting, .connectTimeoutElapsed):
-            state = .complete
-            timedOut()
-
-        // In the aResolvedConnecting state, a number of inputs are valid: the AAAA result can
-        // return, the connectionDelay can elapse, the overall connection timeout can fire,
-        // a connection can succeed, a connection can fail, and we can run out of targets.
-        case (.aResolvedConnecting, .resolverAAAACompleted):
-            state = .allResolved
-            connectToNewTargets()
-        case (.aResolvedConnecting, .connectDelayElapsed):
-            connectionDelayElapsed()
-        case (.aResolvedConnecting, .connectTimeoutElapsed):
-            state = .complete
-            timedOut()
-        case (.aResolvedConnecting, .connectSuccess):
-            state = .complete
-            connectSuccess()
-        case (.aResolvedConnecting, .connectFailed):
-            connectFailed()
-        case (.aResolvedConnecting, .noTargetsRemaining):
-            // We are still waiting for the AAAA query, so we
-            // do nothing.
+        // In the resolvedWaiting state, a number of inputs are valid: More IPv4 results can be
+        // available, IPv6 results can be available, the resolver can complete, the resolution
+        // delay can elapse, and the overall connect timeout can fire.
+        case (.resolvedWaiting, .resolverIPv4ResultsAvailable):
             break
-
-        // In the aaaaResolved state, a number of inputs are valid: the A result can return,
-        // the connectionDelay can elapse, the overall connection timeout can fire, a connection
-        // can succeed, a connection can fail, and we can run out of targets.
-        case (.aaaaResolved, .resolverACompleted):
+        case (.resolvedWaiting, .resolverIPv6ResultsAvailable):
+            state = .resolvedConnecting
+            beginConnecting()
+        case (.resolvedWaiting, .resolverCompleted):
             state = .allResolved
-            connectToNewTargets()
-        case (.aaaaResolved, .connectDelayElapsed):
-            connectionDelayElapsed()
-        case (.aaaaResolved, .connectTimeoutElapsed):
+            beginConnecting()
+        case (.resolvedWaiting, .resolutionDelayElapsed):
+            state = .resolvedConnecting
+            beginConnecting()
+        case (.resolvedWaiting, .connectTimeoutElapsed):
             state = .complete
             timedOut()
-        case (.aaaaResolved, .connectSuccess):
+
+        // In the resolvedConnecting state, a number of inputs are valid: More IPv4 or IPv6 results
+        // can be available, the resolver can complete, the connectionDelay can elapse, the overall
+        // connection timeout can fire, a connection can succeed, a connection can fail, and we can
+        // run out of targets.
+        case (.resolvedConnecting, .resolverIPv4ResultsAvailable):
+            connectToNewTargets()
+        case (.resolvedConnecting, .resolverIPv6ResultsAvailable):
+            connectToNewTargets()
+        case (.resolvedConnecting, .resolverCompleted):
+            state = .allResolved
+            connectToNewTargets()
+        case (.resolvedConnecting, .connectDelayElapsed):
+            connectionDelayElapsed()
+        case (.resolvedConnecting, .connectTimeoutElapsed):
+            state = .complete
+            timedOut()
+        case (.resolvedConnecting, .connectSuccess):
             state = .complete
             connectSuccess()
-        case (.aaaaResolved, .connectFailed):
+        case (.resolvedConnecting, .connectFailed):
             connectFailed()
-        case (.aaaaResolved, .noTargetsRemaining):
-            // We are still waiting for the A query, so we
+        case (.resolvedConnecting, .noTargetsRemaining):
+            // We are still waiting for the IPv6 results, so we
             // do nothing.
             break
 
@@ -450,8 +449,9 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         // notifications, and can also get late scheduled task callbacks. We want to just quietly
         // ignore these, as our transition into the complete state should have already sent
         // cleanup messages to all of these things.
-        case (.complete, .resolverACompleted),
-             (.complete, .resolverAAAACompleted),
+        case (.complete, .resolverIPv4ResultsAvailable),
+             (.complete, .resolverIPv6ResultsAvailable),
+             (.complete, .resolverCompleted),
              (.complete, .connectSuccess),
              (.complete, .connectFailed),
              (.complete, .connectDelayElapsed),
@@ -464,26 +464,35 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     }
 
     /// Fire off a pair of DNS queries.
-    private func beginDNSResolution() {
-        // Per RFC 8305 Section 3, we need to send A and AAAA queries.
-        // The two queries SHOULD be made as soon after one another as possible,
-        // with the AAAA query made first and immediately followed by the A
-        // query.
-        //
-        // We hop back to `self.loop` because there's no guarantee the resolver runs
-        // on our event loop.
-        let aaaaLookup = self.resolver.initiateAAAAQuery(host: self.host, port: self.port).hop(to: self.loop)
-        self.whenAAAALookupComplete(future: aaaaLookup)
-
-        let aLookup = self.resolver.initiateAQuery(host: self.host, port: self.port).hop(to: self.loop)
-        self.whenALookupComplete(future: aLookup)
+    private func beginResolutionSession() {
+        let resolutionSession = NIONameResolutionSession(
+            resultsHandler: { [self] results in
+                if self.loop.inEventLoop {
+                    self.resolverDeliverResults(results)
+                } else {
+                    self.loop.execute {
+                        self.resolverDeliverResults(results)
+                    }
+                }
+            }, completionHandler: { result in
+                if self.loop.inEventLoop {
+                    self.resolutionComplete(result: result)
+                } else {
+                    self.loop.execute {
+                        self.resolutionComplete(result: result)
+                    }
+                }
+            }, cancelledBy: self.resolutionPromise.futureResult
+        )
+        self.resolutionSession = resolutionSession
+        resolver.resolve(name: self.host, destinationPort: self.port, session: resolutionSession)
     }
-
-    /// Called when the A query has completed before the AAAA query.
+    
+    /// Called when IPv4 results are available before IPv6 results.
     ///
     /// Happy Eyeballs 2 prefers to connect over IPv6 if it's possible to do so. This means that
-    /// if the A lookup completes first we want to wait a small amount of time before we begin our
-    /// connection attempts, in the hope that the AAAA lookup will complete.
+    /// if only IPv4 results are available we want to wait a small amount of time before we begin
+    /// our connection attempts, in the hope that IPv6 results will be returned.
     ///
     /// This method sets off a scheduled task for the resolution delay.
     private func beginResolutionDelay() {
@@ -621,8 +630,9 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     private func cleanUp() {
         assert(self.state == .complete, "Clean up in invalid state \(self.state)")
 
-        if dnsResolutions < 2 {
-            resolver.cancelQueries()
+        if let resolutionSession = self.resolutionSession {
+            self.resolver.cancel(resolutionSession)
+            self.resolutionSession = nil
         }
 
         if let resolutionTask = self.resolutionTask {
@@ -646,35 +656,32 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
             connection.whenSuccess { (channel, _) in channel.close(promise: nil) }
         }
     }
-
-    /// A future callback that fires when a DNS A lookup completes.
-    private func whenALookupComplete(future: EventLoopFuture<[SocketAddress]>) {
-        future.map { results in
-            self.targets.aResultsAvailable(results)
-        }.recover { err in
-            self.error.dnsAError = err
-        }.whenComplete { (_: Result<Void, Error>) in
-            self.dnsResolutions += 1
-            self.processInput(.resolverACompleted)
-        }
-    }
-
-    /// A future callback that fires when a DNS AAAA lookup completes.
-    private func whenAAAALookupComplete(future: EventLoopFuture<[SocketAddress]>) {
-        future.map { results in
-            self.targets.aaaaResultsAvailable(results)
-        }.recover { err in
-            self.error.dnsAAAAError = err
-        }.whenComplete { (_: Result<Void, Error>) in
-            // It's possible that we were waiting to time out here, so if we were we should
-            // cancel that.
+    
+    private func resolverDeliverResults(_ results: [SocketAddress]) {
+        self.targets.resultsAvailable(results)
+        
+        let protocols = results.map(\.protocol)
+        if protocols.contains(.inet6) {
             self.resolutionTask?.cancel()
             self.resolutionTask = nil
 
-            self.dnsResolutions += 1
-
-            self.processInput(.resolverAAAACompleted)
+            self.processInput(.resolverIPv6ResultsAvailable)
+        } else if protocols.contains(.inet) {
+            self.processInput(.resolverIPv4ResultsAvailable)
         }
+    }
+    
+    private func resolutionComplete(result: Result<Void, Error>) {
+        if case .failure(let error) = result {
+            self.error.resolutionError = error
+        }
+
+        self.resolutionSession = nil
+
+        self.resolutionTask?.cancel()
+        self.resolutionTask = nil
+
+        self.processInput(.resolverCompleted)
     }
 
     /// A future callback that fires when the resolution delay completes.
