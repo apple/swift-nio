@@ -129,7 +129,7 @@ extension Selector: _SelectorBackendProtocol {
         assert(self.eventFD == -1, "self.eventFD == \(self.eventFD) on deinitAssertions0 deinit, forgot close?")
     }
 
-    func register0<S: Selectable>(selectable: S,
+    func register0(selectableFD: CInt,
                                   fileDescriptor: CInt,
                                   interested: SelectorEventSet,
                                   registrationID: SelectorRegistrationID) throws {
@@ -142,7 +142,7 @@ extension Selector: _SelectorBackendProtocol {
                                     multishot: multishot)
     }
 
-    func reregister0<S: Selectable>(selectable: S,
+    func reregister0(selectableFD: CInt,
                                     fileDescriptor: CInt,
                                     oldInterested: SelectorEventSet,
                                     newInterested: SelectorEventSet,
@@ -172,7 +172,7 @@ extension Selector: _SelectorBackendProtocol {
         }
     }
 
-    func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
+    func deregister0(selectableFD: CInt, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
         _debugPrint("deregister interested \(selectable) reg.interested.uringEventSet [\(oldInterested.uringEventSet)]")
 
         self.deferredReregistrationsPending = true

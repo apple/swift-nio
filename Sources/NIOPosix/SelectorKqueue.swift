@@ -149,19 +149,17 @@ extension Selector: _SelectorBackendProtocol {
         }
     }
 
-    private func kqueueUpdateEventNotifications<S: Selectable>(selectable: S, interested: SelectorEventSet, oldInterested: SelectorEventSet?, registrationID: SelectorRegistrationID) throws {
+    private func kqueueUpdateEventNotifications(selectableFD: CInt, interested: SelectorEventSet, oldInterested: SelectorEventSet?, registrationID: SelectorRegistrationID) throws {
         assert(self.myThread == NIOThread.current)
         let oldKQueueFilters = KQueueEventFilterSet(selectorEventSet: oldInterested ?? ._none)
         let newKQueueFilters = KQueueEventFilterSet(selectorEventSet: interested)
         assert(interested.contains(.reset))
         assert(oldInterested?.contains(.reset) ?? true)
 
-        try selectable.withUnsafeHandle {
             try newKQueueFilters.calculateKQueueFilterSetChanges(previousKQueueFilterSet: oldKQueueFilters,
-                                                                 fileDescriptor: $0,
+                                                                 fileDescriptor: selectableFD,
                                                                  registrationID: registrationID,
                                                                  kqueueApplyEventChangeSet)
-        }
     }
     
     func initialiseState0() throws {
@@ -184,16 +182,16 @@ extension Selector: _SelectorBackendProtocol {
     func deinitAssertions0() {
     }
     
-    func register0<S: Selectable>(selectable: S, fileDescriptor: CInt, interested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-        try kqueueUpdateEventNotifications(selectable: selectable, interested: interested, oldInterested: nil, registrationID: registrationID)
+    func register0(selectableFD: CInt, fileDescriptor: CInt, interested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
+        try kqueueUpdateEventNotifications(selectableFD: selectableFD, interested: interested, oldInterested: nil, registrationID: registrationID)
     }
 
-    func reregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-        try kqueueUpdateEventNotifications(selectable: selectable, interested: newInterested, oldInterested: oldInterested, registrationID: registrationID)
+    func reregister0(selectableFD: CInt, fileDescriptor: CInt, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
+        try kqueueUpdateEventNotifications(selectableFD: selectableFD, interested: newInterested, oldInterested: oldInterested, registrationID: registrationID)
     }
     
-    func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
-        try kqueueUpdateEventNotifications(selectable: selectable, interested: .reset, oldInterested: oldInterested, registrationID: registrationID)
+    func deregister0(selectableFD: CInt, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
+        try kqueueUpdateEventNotifications(selectableFD: selectableFD, interested: .reset, oldInterested: oldInterested, registrationID: registrationID)
     }
 
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).

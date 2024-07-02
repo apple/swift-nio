@@ -11,6 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+import Atomics
 #if os(Windows)
 import ucrt
 #elseif canImport(Darwin)
@@ -29,6 +31,60 @@ public typealias NIOPOSIXFileMode = CInt
 public typealias NIOPOSIXFileMode = mode_t
 #endif
 
+internal struct FileDescriptorState {
+    private static let closedValue: UInt = 0xdead
+    private static let inUseValue: UInt = 0xbeef
+    private static let openValue: UInt = 0xcafe
+    internal var rawValue: DoubleWord
+
+    internal init(rawValue: DoubleWord) {
+        self.rawValue = rawValue
+    }
+
+    internal init(descriptor: CInt) {
+        self.rawValue = DoubleWord(
+            first: UInt(truncatingIfNeeded: CUnsignedInt(bitPattern: descriptor)),
+            second: Self.openValue
+        )
+    }
+
+    internal var descriptor: CInt {
+        get {
+            return CInt(bitPattern: UInt32(truncatingIfNeeded: self.rawValue.first))
+        }
+        set {
+            self.rawValue.first = UInt(truncatingIfNeeded: CUnsignedInt(bitPattern: newValue))
+        }
+    }
+
+    internal var isOpen: Bool {
+        return self.rawValue.second == Self.openValue
+    }
+
+    internal var isInUse: Bool {
+        return self.rawValue.second == Self.inUseValue
+    }
+
+    internal var isClosed: Bool {
+        return self.rawValue.second == Self.closedValue
+    }
+
+    mutating func close() {
+        assert(self.isOpen)
+        self.rawValue.second = Self.closedValue
+    }
+
+    mutating func markInUse() {
+        assert(self.isOpen)
+        self.rawValue.second = Self.inUseValue
+    }
+
+    mutating func markNotInUse() {
+        assert(self.rawValue.second == Self.inUseValue)
+        self.rawValue.second = Self.openValue
+    }
+}
+
 /// A `NIOFileHandle` is a handle to an open file.
 ///
 /// When creating a `NIOFileHandle` it takes ownership of the underlying file descriptor. When a `NIOFileHandle` is no longer
@@ -39,19 +95,51 @@ public typealias NIOPOSIXFileMode = mode_t
 /// - warning: Failing to manage the lifetime of a `NIOFileHandle` correctly will result in undefined behaviour.
 ///
 /// - warning: `NIOFileHandle` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
-public final class NIOFileHandle: FileDescriptor {
-    public private(set) var isOpen: Bool
-    private let descriptor: CInt
+public final class NIOFileHandle: FileDescriptor & Sendable {
+    private static let descriptorClosed: CInt = CInt.min
+    private let descriptor: UnsafeAtomic<DoubleWord>
+
+    public var isOpen: Bool {
+        return FileDescriptorState(
+            rawValue: self.descriptor.load(ordering: .sequentiallyConsistent)
+        ).isOpen
+    }
+
+    private static func interpretDescriptorValueThrowIfNotOpen(
+        _ descriptor: DoubleWord,
+        applyCloseInUseException: Bool
+    ) throws -> FileDescriptorState {
+        let descriptorState = FileDescriptorState(rawValue: descriptor)
+        if descriptorState.isOpen {
+            return descriptorState
+        } else if descriptorState.isClosed {
+            throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
+        } else {
+            if applyCloseInUseException {
+                return descriptorState
+            } else {
+                throw IOError(errnoCode: EBUSY, reason: "file descriptor currently in use")
+            }
+        }
+    }
+
+    private func peekAtDescriptorIfOpen(applyCloseInUseException: Bool) throws -> FileDescriptorState {
+        let descriptor = self.descriptor.load(ordering: .relaxed)
+        return try Self.interpretDescriptorValueThrowIfNotOpen(
+            descriptor,
+            applyCloseInUseException: applyCloseInUseException
+        )
+    }
 
     /// Create a `NIOFileHandle` taking ownership of `descriptor`. You must call `NIOFileHandle.close` or `NIOFileHandle.takeDescriptorOwnership` before
     /// this object can be safely released.
     public init(descriptor: CInt) {
-        self.descriptor = descriptor
-        self.isOpen = true
+        self.descriptor = UnsafeAtomic.create(FileDescriptorState(descriptor: descriptor).rawValue)
     }
 
     deinit {
         assert(!self.isOpen, "leaked open NIOFileHandle(descriptor: \(self.descriptor)). Call `close()` to close or `takeDescriptorOwnership()` to take ownership and close by some other means.")
+        self.descriptor.destroy()
     }
 
     /// Duplicates this `NIOFileHandle`. This means that a new `NIOFileHandle` object with a new underlying file descriptor
@@ -66,6 +154,59 @@ public final class NIOFileHandle: FileDescriptor {
         }
     }
 
+    private func activateDescriptor(as descriptor: CInt) {
+        let desired = FileDescriptorState(descriptor: descriptor)
+        var expected = desired
+        expected.markInUse()
+        let (exchanged, original) = self.descriptor.compareExchange(
+            expected: expected.rawValue,
+            desired: desired.rawValue,
+            ordering: .sequentiallyConsistent
+        )
+        guard exchanged || FileDescriptorState(rawValue: original).isClosed else {
+            fatalError("bug in NIO (please report): NIOFileDescritor activate failed \(original)")
+        }
+    }
+
+    private func deactivateDescriptor(toClosed: Bool) throws -> CInt {
+        let peekedDescriptor = try self.peekAtDescriptorIfOpen(applyCloseInUseException: toClosed)
+        assert(peekedDescriptor.isOpen || peekedDescriptor.isInUse)
+        var desired = peekedDescriptor
+        if toClosed {
+            if desired.isInUse {
+                desired.markNotInUse()
+            }
+            desired.close()
+        } else {
+            desired.markInUse()
+        }
+        let (exchanged, originalDescriptor) = self.descriptor.compareExchange(
+            expected: peekedDescriptor.rawValue,
+            desired: desired.rawValue,
+            ordering: .sequentiallyConsistent
+        )
+
+        if exchanged {
+            assert(peekedDescriptor.rawValue == originalDescriptor)
+            return peekedDescriptor.descriptor
+        } else {
+            let fauxDescriptor = try Self.interpretDescriptorValueThrowIfNotOpen(
+                originalDescriptor,
+                applyCloseInUseException: toClosed
+            )
+            // This is impossible, because there are only 4 options in which the exchange above can fail
+            // 1. Descriptor already closed (would've thrown above)
+            // 2. Descriptor in use (would've thrown above)
+            // 3. Descriptor at illegal negative value (would've crashed above)
+            // 4. Descriptor a different, positive value (this is where we're at) --> memory corruption, let's crash
+            fatalError("""
+                       bug in NIO (please report): \
+                       NIOFileDescriptor illegal state \
+                       (\(peekedDescriptor), \(originalDescriptor), \(fauxDescriptor))")
+                       """)
+        }
+    }
+
     /// Take the ownership of the underlying file descriptor. This is similar to `close()` but the underlying file
     /// descriptor remains open. The caller is responsible for closing the file descriptor by some other means.
     ///
@@ -73,27 +214,20 @@ public final class NIOFileHandle: FileDescriptor {
     ///
     /// - returns: The underlying file descriptor, now owned by the caller.
     public func takeDescriptorOwnership() throws -> CInt {
-        guard self.isOpen else {
-            throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
-        }
-
-        self.isOpen = false
-        return self.descriptor
+        return try self.deactivateDescriptor(toClosed: true)
     }
 
     public func close() throws {
-        try withUnsafeFileDescriptor { fd in
-            try SystemCalls.close(descriptor: fd)
-        }
-
-        self.isOpen = false
+        let descriptor = try self.deactivateDescriptor(toClosed: true)
+        try SystemCalls.close(descriptor: descriptor)
     }
 
     public func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T {
-        guard self.isOpen else {
-            throw IOError(errnoCode: EBADF, reason: "file descriptor already closed!")
+        let descriptor = try self.deactivateDescriptor(toClosed: false)
+        defer {
+            self.activateDescriptor(as: descriptor)
         }
-        return try body(self.descriptor)
+        return try body(descriptor)
     }
 }
 
@@ -186,6 +320,6 @@ extension NIOFileHandle {
 
 extension NIOFileHandle: CustomStringConvertible {
     public var description: String {
-        return "FileHandle { descriptor: \(self.descriptor) }"
+        return "FileHandle { descriptor: \(FileDescriptorState(rawValue: self.descriptor.load(ordering: .relaxed)).descriptor) }"
     }
 }

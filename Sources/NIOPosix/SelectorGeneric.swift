@@ -101,9 +101,9 @@ protocol _SelectorBackendProtocol {
     associatedtype R: Registration
     func initialiseState0() throws
     func deinitAssertions0() // allows actual implementation to run some assertions as part of the class deinit
-    func register0<S: Selectable>(selectable: S, fileDescriptor: CInt, interested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
-    func reregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
-    func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
+    func register0(selectableFD: CInt, fileDescriptor: CInt, interested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
+    func reregister0(selectableFD: CInt, fileDescriptor: CInt, oldInterested: SelectorEventSet, newInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
+    func deregister0(selectableFD: CInt, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws
     /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
     func wakeup0() throws
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
@@ -223,7 +223,7 @@ internal class Selector<R: Registration>  {
 
         try selectable.withUnsafeHandle { fd in
             assert(registrations[Int(fd)] == nil)
-            try self.register0(selectable: selectable,
+            try self.register0(selectableFD: fd,
                                fileDescriptor: fd,
                                interested: interested,
                                registrationID: self.registrationID)
@@ -245,7 +245,7 @@ internal class Selector<R: Registration>  {
         assert(interested.contains(.reset), "must register for at least .reset but tried registering for \(interested)")
         try selectable.withUnsafeHandle { fd in
             var reg = registrations[Int(fd)]!
-            try self.reregister0(selectable: selectable,
+            try self.reregister0(selectableFD: fd,
                                  fileDescriptor: fd,
                                  oldInterested: reg.interested,
                                  newInterested: interested,
@@ -271,7 +271,7 @@ internal class Selector<R: Registration>  {
             guard let reg = registrations.removeValue(forKey: Int(fd)) else {
                 return
             }
-            try self.deregister0(selectable: selectable,
+            try self.deregister0(selectableFD: fd,
                                  fileDescriptor: fd,
                                  oldInterested: reg.interested,
                                  registrationID: reg.registrationID)
