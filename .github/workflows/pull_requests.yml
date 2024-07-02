@@ -16,9 +16,9 @@ jobs:
       fail-fast: false
       matrix:
         swift:
-        - image: swift5.8-jammy
-        - image: swift5.9-jammy
-        - image: swift5.10-noble
+        - image: swift:5.8-jammy
+        - image: swift:5.9-jammy
+        - image: swift:5.10-noble
         - image: swiftlang/swift:nightly-6.0-jammy
         - image: swiftlang/swift:nightly-main-jammy
     container:
