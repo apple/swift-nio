@@ -1,0 +1,31 @@
+name: Pull Request
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+## We are cancelling previously triggered workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.ref }}
+  cancel-in-progress: true
+ 
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        swift:
+        - image: swift5.8-jammy
+        - image: swift5.9-jammy
+        - image: swift5.10-noble
+        - image: swiftlang/swift:nightly-6.0-jammy
+        - image: swiftlang/swift:nightly-main-jammy
+    container:
+      image: ${{ matrix.swift.image }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Run tests
+      run: swift test
+      timeout-minutes: 20
