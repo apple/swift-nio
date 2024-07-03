@@ -277,7 +277,7 @@ extension NIOBSDSocket {
                             option_value: &segmentSize,
                             option_len: socklen_t(MemoryLayout<CInt>.size))
         #else
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
         #endif
     }
 
@@ -294,7 +294,7 @@ extension NIOBSDSocket {
         }
         return segmentSize
         #else
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
         #endif
     }
 
@@ -307,7 +307,7 @@ extension NIOBSDSocket {
                             option_value: &isEnabled,
                             option_len: socklen_t(MemoryLayout<CInt>.size))
         #else
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
         #endif
     }
 
@@ -324,7 +324,7 @@ extension NIOBSDSocket {
         }
         return enabled != 0
         #else
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
         #endif
     }
 }

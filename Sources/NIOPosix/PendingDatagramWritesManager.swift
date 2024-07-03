@@ -547,11 +547,11 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     private func handleError(_ error: Error) throws -> OneWriteOperationResult {
         switch error {
         case let e as IOError where e.errnoCode == EMSGSIZE:
-            let (promise, result) = self.state.recoverableError(ChannelError.writeMessageTooLarge)
+            let (promise, result) = self.state.recoverableError(ChannelError._writeMessageTooLarge)
             self.fulfillPromise(promise)
             return result
         case let e as IOError where e.errnoCode == EHOSTUNREACH:
-            let (promise, result) = self.state.recoverableError(ChannelError.writeHostUnreachable)
+            let (promise, result) = self.state.recoverableError(ChannelError._writeHostUnreachable)
             self.fulfillPromise(promise)
             return result
         default:

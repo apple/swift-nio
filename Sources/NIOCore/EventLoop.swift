@@ -26,7 +26,7 @@ public struct Scheduled<T> {
     @usableFromInline typealias CancelationCallback = @Sendable () -> Void
     /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
     /* private but usableFromInline */ @usableFromInline let _cancellationTask: CancelationCallback
-    
+
     @inlinable
     @preconcurrency
     public init(promise: EventLoopPromise<T>, cancellationTask: @escaping @Sendable () -> Void) {
@@ -40,7 +40,7 @@ public struct Scheduled<T> {
     ///  This means that cancellation is not guaranteed.
     @inlinable
     public func cancel() {
-        self._promise.fail(EventLoopError.cancelled)
+        self._promise.fail(EventLoopError._cancelled)
         self._cancellationTask()
     }
 
@@ -1217,6 +1217,11 @@ public enum EventLoopError: Error {
 
     /// Shutting down the `EventLoop` failed.
     case shutdownFailed
+}
+
+extension EventLoopError {
+    @usableFromInline
+    static let _cancelled: any Error = EventLoopError.cancelled
 }
 
 extension EventLoopError: CustomStringConvertible {

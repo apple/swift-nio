@@ -47,7 +47,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -66,7 +66,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -112,7 +112,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         var result = ReadResult.none
         for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen && !self.inputShutdown else {
-                throw ChannelError.eof
+                throw ChannelError._eof
             }
 
             let (buffer, readResult) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer in
@@ -148,7 +148,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                         return result
                     }
                     // end-of-file
-                    throw ChannelError.eof
+                    throw ChannelError._eof
                 }
             case .wouldBlock(let bytesRead):
                 assert(bytesRead == 0)
@@ -180,7 +180,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
             switch mode {
             case .output:
                 if self.outputShutdown {
-                    promise?.fail(ChannelError.outputClosed)
+                    promise?.fail(ChannelError._outputClosed)
                     return
                 }
                 if self.inputShutdown {
@@ -197,7 +197,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
             case .input:
                 if self.inputShutdown {
-                    promise?.fail(ChannelError.inputClosed)
+                    promise?.fail(ChannelError._inputClosed)
                     return
                 }
                 if self.outputShutdown {
@@ -261,7 +261,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
 
     final override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if self.outputShutdown {
-            promise?.fail(ChannelError.outputClosed)
+            promise?.fail(ChannelError._outputClosed)
             return
         }
 

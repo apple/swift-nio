@@ -54,7 +54,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
             guard let subtype = NIOBSDSocket.ProtocolSubtype.mptcp else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             protocolSubtype = subtype
         }
@@ -75,7 +75,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -90,7 +90,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -178,7 +178,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
             guard let subtype = NIOBSDSocket.ProtocolSubtype.mptcp else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             protocolSubtype = subtype
         }
@@ -212,7 +212,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -227,7 +227,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -249,12 +249,12 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError._ioOnClosedChannel)
             return
         }
 
         guard self.isRegistered else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError._inappropriateOperationForState)
             return
         }
 
@@ -282,18 +282,18 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func finishConnectSocket() throws {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func readFromSocket() throws -> ReadResult {
         var result = ReadResult.none
         for _ in 1...maxMessagesPerRead {
             guard self.isOpen else {
-                throw ChannelError.eof
+                throw ChannelError._eof
             }
             if let accepted = try self.socket.accept(setNonBlocking: true) {
                 readPending = false
@@ -352,7 +352,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         ch.eventLoop.execute {
             ch.register().flatMapThrowing {
                 guard ch.isOpen else {
-                    throw ChannelError.ioOnClosedChannel
+                    throw ChannelError._ioOnClosedChannel
                 }
                 ch.becomeActive0(promise: nil)
             }.whenFailure { error in
@@ -366,7 +366,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.operationUnsupported)
+        promise?.fail(ChannelError._operationUnsupported)
     }
 
     override func markFlushPoint() {
@@ -397,7 +397,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         case let event as VsockChannelEvents.BindToAddress:
             self.bind0(to: .vsockAddress(event.address), promise: promise)
         default:
-            promise?.fail(ChannelError.operationUnsupported)
+            promise?.fail(ChannelError._operationUnsupported)
         }
     }
 }
@@ -493,7 +493,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -523,7 +523,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                           value: valueAsInt)
             default:
                 // Explicit congestion notification is only supported for IP
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
             let valueAsInt: CInt = value as! Bool ? 1 : 0
@@ -540,17 +540,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                           value: valueAsInt)
             default:
                 // Receiving packet info is only supported for IP
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.DatagramSegmentSize:
             guard System.supportsUDPSegmentationOffload else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             let segmentSize = value as! ChannelOptions.Types.DatagramSegmentSize.Value
             try self.socket.setUDPSegmentSize(segmentSize)
         case _ as ChannelOptions.Types.DatagramReceiveOffload:
             guard System.supportsUDPReceiveOffload else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             let enable = value as! ChannelOptions.Types.DatagramReceiveOffload.Value
             try self.socket.setUDPReceiveOffload(enable)
@@ -563,7 +563,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -583,7 +583,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                   name: .ipv6_recv_tclass) != 0) as! Option.Value
             default:
                 // Explicit congestion notification is only supported for IP
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
             switch self.localAddress?.protocol {
@@ -595,16 +595,16 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                                                   name: .ipv6_recv_pktinfo) != 0) as! Option.Value
             default:
                 // Receiving packet info is only supported for IP
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.DatagramSegmentSize:
             guard System.supportsUDPSegmentationOffload else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             return try self.socket.getUDPSegmentSize() as! Option.Value
         case _ as ChannelOptions.Types.DatagramReceiveOffload:
             guard System.supportsUDPReceiveOffload else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             return try self.socket.getUDPReceiveOffload() as! Option.Value
         default:
@@ -636,12 +636,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func connectSocket(to address: VsockAddress) throws -> Bool {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func finishConnectSocket() throws {
         // This is not required for connected datagram channels connect is a synchronous operation.
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func readFromSocket() throws -> ReadResult {
@@ -665,7 +665,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
-                throw ChannelError.eof
+                throw ChannelError._eof
             }
 
             var controlBytes = UnsafeReceivedControlBytes(controlBytesBuffer: controlBytesBuffer)
@@ -715,7 +715,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         readLoop: for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
-                throw ChannelError.eof
+                throw ChannelError._eof
             }
             guard let vectorReadManager = self.vectorReadManager else {
                 // The vector read manager went away. This happens if users unset the vector read manager
@@ -868,7 +868,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
         guard self.isRegistered else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError._inappropriateOperationForState)
             return
         }
         do {
@@ -1002,7 +1002,7 @@ extension DatagramChannel: MulticastChannel {
         self.eventLoop.assertInEventLoop()
 
         guard self.isActive else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError._inappropriateOperationForState)
             return
         }
 
@@ -1017,12 +1017,12 @@ extension DatagramChannel: MulticastChannel {
         // We need to check that we have the appropriate address types in all cases. They all need to overlap with
         // the address type of this channel, or this cannot work.
         guard let localAddress = self.localAddress else {
-            promise?.fail(ChannelError.unknownLocalAddress)
+            promise?.fail(ChannelError._unknownLocalAddress)
             return
         }
 
         guard localAddress.protocol == group.protocol else {
-            promise?.fail(ChannelError.badMulticastGroupAddressFamily)
+            promise?.fail(ChannelError._badMulticastGroupAddressFamily)
             return
         }
 
@@ -1055,7 +1055,7 @@ extension DatagramChannel: MulticastChannel {
                 try self.socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)
             case (.v4, .some(.v6)), (.v6, .some(.v4)), (.v4, .some(.unixDomainSocket)), (.v6, .some(.unixDomainSocket)):
                 // Mismatched group and interface address: this is an error.
-                throw ChannelError.badInterfaceAddressFamily
+                throw ChannelError._badInterfaceAddressFamily
             }
 
             promise?.succeed(())
