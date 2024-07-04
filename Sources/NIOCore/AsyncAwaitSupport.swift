@@ -225,7 +225,7 @@ public struct NIOTooManyBytesError: Error, Hashable {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension AsyncSequence where Element: RandomAccessCollection, Element.Element == UInt8 {
-    /// Accumulates an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single `accumulationBuffer`.
+    /// Accumulates an `AsyncSequence` of `RandomAccessCollection`s into a single `accumulationBuffer`.
     /// - Parameters:
     ///   - accumulationBuffer: buffer to write all the elements of `self` into
     ///   - maxBytes: The maximum number of bytes this method is allowed to write into `accumulationBuffer`
@@ -247,7 +247,7 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
         }
     }
     
-    /// Accumulates an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single ``ByteBuffer``.
+    /// Accumulates an `AsyncSequence` of `RandomAccessCollection`s into a single ``ByteBuffer``.
     /// - Parameters:
     ///   - maxBytes: The maximum number of bytes this method is allowed to accumulate
     ///   - allocator: Allocator used for allocating the result `ByteBuffer`

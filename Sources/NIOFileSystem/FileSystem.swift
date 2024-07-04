@@ -656,7 +656,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 extension NIOSingletons {
     /// A suggestion of how many threads the global singleton ``FileSystem`` uses for blocking I/O.
     ///
-    /// The thread count is ``System/coreCount`` unless the environment variable
+    /// The thread count is the system's available core count unless the environment variable
     /// `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` is set or this value was set manually by the user.
     ///
     /// - note: This value must be set _before_ any singletons are used and must only be set once.
