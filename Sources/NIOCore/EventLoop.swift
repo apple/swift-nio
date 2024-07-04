@@ -314,7 +314,7 @@ public protocol EventLoop: EventLoopGroup {
     /// This executor can be used to isolate an actor to a given ``EventLoop``. Implementers are encouraged to customise
     /// this implementation by conforming their ``EventLoop`` to ``NIOSerialEventLoopExecutor`` which will provide an
     /// optimised implementation of this method, and will conform their type to `SerialExecutor`. The default
-    /// implementation returns a ``NIODefaultSerialEventLoopExecutor`` instead, which provides suboptimal performance.
+    /// implementation provides suboptimal performance.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     var executor: any SerialExecutor { get }
 

@@ -26,7 +26,7 @@
 /// does not expose the following functionality:
 ///
 /// - user events
-/// - traditional NIO back pressure such as writability signals and the ``Channel/read()`` call
+/// - traditional NIO back pressure such as writability signals and the channel's read call
 ///
 /// Users are encouraged to separate their ``ChannelHandler``s into those that implement
 /// protocol-specific logic (such as parsers and encoders) and those that implement business
