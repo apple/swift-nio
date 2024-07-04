@@ -34,5 +34,5 @@ extension ChannelError {
 
 extension EventLoopError {
     static let _shutdown: any Error = EventLoopError.shutdown
-    static let _unsupportedOperation: any Error = EventLoopError._unsupportedOperation
+    static let _unsupportedOperation: any Error = EventLoopError.unsupportedOperation
 }
