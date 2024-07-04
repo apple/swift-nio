@@ -6,7 +6,7 @@ on:
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
  
 jobs:
@@ -23,9 +23,26 @@ jobs:
         - image: swiftlang/swift:nightly-main-jammy
     container:
       image: ${{ matrix.swift.image }}
+    timeout-minutes: 20
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
     - name: Run tests
       run: swift test
-      timeout-minutes: 20
+
+  api-breakage:
+    runs-on: ubuntu-latest
+    container:
+      image: swift:5.10-noble
+    timeout-minutes: 20
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # We need to fetch everything otherwise only the head commit will be fetched.
+        fetch-depth: 0
+    - name: Mark the workspace as safe
+      # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+    - name: Run API breakage check
+      run: swift package diagnose-api-breaking-changes origin/main
