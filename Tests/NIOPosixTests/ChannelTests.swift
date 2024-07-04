@@ -2991,7 +2991,7 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
 
     func channelActive(context: ChannelHandlerContext) {
         // We want to enqueue at least two pending writes before flushing. Neither of which
-        // should cause writability to change. However, we'll hang a callback off the first
+        // should cause writability to change. However, we'll chain a callback off the first
         // write which will make the channel unwritable and a writability change to be
         // emitted. The flush for that write should result in the writability flipping back
         // again.

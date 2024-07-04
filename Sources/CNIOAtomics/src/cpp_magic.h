@@ -1,5 +1,5 @@
 //
-// this is https://github.com/18sg/uSHET/blob/master/lib/cpp_magic.h
+// this is https://github.com/18sg/uSHET/blob/c09e0acafd86720efe42dc15c63e0cc228244c32/lib/cpp_magic.h
 // LICENSE: MIT
 //
 //
