@@ -49,4 +49,10 @@ internal protocol SelectableChannel: Channel {
     func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws
 
     func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws
+
+    func writeAsync(selector: Selector<NIORegistration>, pointer: UnsafeRawBufferPointer) throws
+
+    func writeAsync(selector: Selector<NIORegistration>, iovecs: UnsafeBufferPointer<IOVector>) throws
+
+    func sendFileAsync(selector: Selector<NIORegistration>, src: CInt, offset: Int64, count: UInt32) throws
 }

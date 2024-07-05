@@ -182,6 +182,124 @@ private struct PendingStreamWritesState {
         self.pendingWrites.mark()
     }
 
+    mutating func didAsyncWrite(_ written: Int, _ buffer: PooledBuffer?) -> (EventLoopPromise<Void>?, Bool) {
+        var promise0: EventLoopPromise<Void>?
+        var unaccountedWrites = written
+        var idx: Int = 0
+
+        while unaccountedWrites > 0 {
+            let pw = self.pendingWrites.first!
+            let headItemReadableBytes = pw.data.readableBytes
+
+            if headItemReadableBytes > 0 {
+                if unaccountedWrites < headItemReadableBytes {
+                    self.partiallyWrittenFirst(bytes: unaccountedWrites)
+                    return (promise0, self.pendingWrites.hasMark)
+                }
+                unaccountedWrites -= headItemReadableBytes
+
+                if case .byteBuffer = pw.data {
+                    buffer!.withUnsafePointers { _, storageRefs in
+                        storageRefs[idx].release()
+                    }
+                    idx += 1
+                }
+            }
+
+            if let promise = self.fullyWrittenFirst() {
+                if let p = promise0 {
+                    p.futureResult.cascade(to: promise)
+                }
+                else {
+                    promise0 = promise
+                }
+            }
+        }
+
+        return removeEmptyFlushedChunks(promise0)
+    }
+
+    mutating func removeEmptyFlushedChunks(_ promise0: EventLoopPromise<Void>?) -> (EventLoopPromise<Void>?, Bool) {
+        let flushedChunks = self.flushedChunks
+        var promise0 = promise0
+        for _ in 0..<flushedChunks {
+            let pw = self.pendingWrites.first!
+            let headItemReadableBytes = pw.data.readableBytes
+            if headItemReadableBytes > 0 {
+                break
+            }
+
+            if let promise = self.fullyWrittenFirst() {
+                if let p = promise0 {
+                    p.futureResult.cascade(to: promise)
+                }
+                else {
+                    promise0 = promise
+                }
+            }
+        }
+        return (promise0, self.pendingWrites.hasMark)
+    }
+
+    func releaseData(_ buffer: PooledBuffer) {
+        buffer.withUnsafePointers { iovecs, storageRefs in
+            let count = min(iovecs.count, storageRefs.count)
+            for idx in 0..<count {
+                if iovecs[idx].iov_len == 0 {
+                    break
+                }
+                storageRefs[idx].release()
+            }
+        }
+    }
+
+    func prepareIOVectors(to buffer: inout PooledBuffer) -> UnsafeBufferPointer<IOVector> {
+        buffer.withUnsafePointers { iovecs, storageRefs in
+            var count = min(Socket.writevLimitIOVectors, iovecs.count)
+            count = min(count, storageRefs.count)
+            count = min(count, self.flushedChunks)
+
+            // the numbers of storage refs that we need to decrease later.
+            var numberOfUsedSlots = 0
+            var toWrite: Int = 0
+
+            loop: for idx in 0..<count {
+                let p = self[idx]
+                switch p.data {
+                case .byteBuffer(let buffer):
+                    // Must not write more than Int32.max in one go.
+                    /* FIXME: probably worth to split that buffer
+                    guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes) else {
+                        break loop
+                    }
+                    */
+                    let toWriteForThisBuffer = min(Socket.writevLimitBytes, buffer.readableBytes)
+                    if toWriteForThisBuffer > 0 {
+                        toWrite += numericCast(toWriteForThisBuffer)
+                        buffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                            iovecs[numberOfUsedSlots] = IOVector(
+                                iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!),
+                                iov_len: numericCast(toWriteForThisBuffer))
+                            storageRefs[numberOfUsedSlots] = storageRef.retain()
+                        }
+                        numberOfUsedSlots += 1
+                    }
+                case .fileRegion:
+                    assert(numberOfUsedSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
+                    // We found a FileRegion so stop collecting
+                    break loop
+                }
+            }
+
+            count = min(iovecs.count, storageRefs.count)
+            if numberOfUsedSlots < count {
+                iovecs[numberOfUsedSlots].iov_len = 0
+            }
+
+            return UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedSlots)
+        }
+    }
+
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `writev`).
     ///
     /// - warning: The promises will be returned in order. If one of those promises does for example close the `Channel` we might see subsequent writes fail out of order. Example: Imagine the user issues three writes: `A`, `B` and `C`. Imagine that `A` and `B` both get successfully written in one write operation but the user closes the `Channel` in `A`'s callback. Then overall the promises will be fulfilled in this order: 1) `A`: success 2) `C`: error 3) `B`: success. Note how `B` and `C` get fulfilled out of order.
@@ -191,7 +309,7 @@ private struct PendingStreamWritesState {
     /// - returns: A tuple of a promise and a `OneWriteResult`. The promise is the first promise that needs to be notified of the write result.
     ///            This promise will cascade the result to all other promises that need notifying. If no promises need to be notified, will be `nil`.
     ///            The write result will indicate whether we were able to write everything or not.
-    public mutating func didWrite(itemCount: Int, result writeResult: IOResult<Int>) -> (EventLoopPromise<Void>?, OneWriteOperationResult) {
+    mutating func didWrite(itemCount: Int, result writeResult: IOResult<Int>) -> (EventLoopPromise<Void>?, OneWriteOperationResult) {
         switch writeResult {
         case .wouldBlock(0):
             return (nil, .wouldBlock)
@@ -282,6 +400,7 @@ private struct PendingStreamWritesState {
 final class PendingStreamWritesManager: PendingWritesManager {
     private var state = PendingStreamWritesState()
     private let bufferPool: Pool<PooledBuffer>
+    private var buffer: PooledBuffer?
 
     internal var waterMark: ChannelOptions.Types.WriteBufferWaterMark = ChannelOptions.Types.WriteBufferWaterMark(low: 32 * 1024, high: 64 * 1024)
     internal let channelWritabilityFlag = ManagedAtomic(true)
@@ -328,6 +447,90 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
         return self.state.currentBestWriteMechanism
+    }
+
+    /// To be used with asynch IO, like URing
+    func triggerAppropriateAsyncWriteOperations(scalarBufferAsyncWriteOperation: (UnsafeRawBufferPointer) throws -> Void,
+                                                vectorBufferAsyncWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> Void,
+                                                scalarFileAsyncWriteOperation: (CInt, Int, Int) throws -> Void) throws {
+        let writeMechanism = self.currentBestWriteMechanism
+        switch writeMechanism {
+        case .scalarBufferWrite:
+            switch self.state[0].data {
+            case .byteBuffer(let byteBuffer):
+                let toWrite = min(Socket.writevLimitBytes, byteBuffer.readableBytes)
+                if toWrite > 0 {
+                    assert(self.buffer == nil)
+                    self.buffer = self.bufferPool.get()
+                    try self.buffer!.withUnsafePointers { _ , storageRefs in 
+                        try byteBuffer.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                            storageRefs[0] = storageRef.retain()
+                            try scalarBufferAsyncWriteOperation(ptr)
+                        }
+                    }
+                }
+                else {
+                    // can happen if empty buffer sent
+                    let (promise, flushAgain) = self.state.removeEmptyFlushedChunks(nil)
+                    assert(!flushAgain)
+                    promise?.succeed(())
+                }
+            case .fileRegion:
+                preconditionFailure("called \(#function) but first item to write was a FileRegion")
+            }
+        case .vectorBufferWrite:
+            assert(self.buffer == nil)
+            self.buffer = self.bufferPool.get()
+            let iovecs = self.state.prepareIOVectors(to: &self.buffer!)
+            try vectorBufferAsyncWriteOperation(iovecs)
+        case .scalarFileWrite:
+            switch self.state[0].data {
+            case .byteBuffer:
+                preconditionFailure("called \(#function) but first item to write was a FileRegion")
+            case .fileRegion(let file):
+                let toWrite = min(Socket.writevLimitBytes, file.readableBytes)
+                if toWrite > 0 {
+                    let readerIndex = file.readerIndex
+                    let endIndex = file.endIndex
+                    try file.fileHandle.withUnsafeFileDescriptor { fd in
+                        try scalarFileAsyncWriteOperation(fd, readerIndex, endIndex)
+                    }
+                }
+                else {
+                    let (promise, flushAgain) = self.state.removeEmptyFlushedChunks(nil)
+                    assert(!flushAgain)
+                    promise?.succeed(())
+                }
+            }
+        case .nothingToBeWritten:
+            // can happen,
+            // if for example writeAndFlush() has been called for the closed channel
+            break
+        }
+    }
+
+    func didAsyncWrite(written: Int) -> (Bool, Bool) {
+        let (promise, flushAgain) = self.state.didAsyncWrite(written, self.buffer)
+        if let buffer = self.buffer {
+            self.bufferPool.put(buffer)
+            self.buffer = nil
+        }
+
+        var writabilityChange = false
+        if self.state.bytes < waterMark.low {
+            if self.channelWritabilityFlag.compareExchange(expected: false, desired: true, ordering: .relaxed).exchanged {
+                writabilityChange = true
+            }
+        }
+
+        promise?.succeed(())
+        return (writabilityChange, flushAgain)
+    }
+
+    func releaseData() {
+        self.state.releaseData(self.buffer!)
+        self.bufferPool.put(self.buffer!)
+        self.buffer = nil
     }
 
     /// Triggers the appropriate write operation. This is a fancy way of saying trigger either `write`, `writev` or
@@ -434,10 +637,17 @@ final class PendingStreamWritesManager: PendingWritesManager {
         assert(self.state.isEmpty)
     }
 
-    /// Initialize with a pre-allocated array of IO vectors and storage references. We pass in these pre-allocated
+    func flushedChunks() -> Int {
+        return self.state.flushedChunks
+    }
+
+    /// Initialize with a pre-allocated array of IO vectors and storage references.
+    /// With default demultiplexor (like epoll) we pass in these pre-allocated
     /// objects to save allocations. They can be safely be re-used for all `Channel`s on a given `EventLoop` as an
     /// `EventLoop` always runs on one and the same thread. That means that there can't be any writes of more than
     /// one `Channel` on the same `EventLoop` at the same time.
+    /// With URing the data stored in the 'iovecs' and 'storageRefs' is required while the write operation
+    /// will not complete, so each PendingWritesManager has own vector becoming an owner of the provided.
     ///
     /// - parameters:
     ///     - bufferPool: Pool of buffers to be used for iovecs and storage references

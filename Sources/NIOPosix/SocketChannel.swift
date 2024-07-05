@@ -145,7 +145,6 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         try self.socket.finishConnect()
     }
 
-
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.register(selectable: self.socket,
                               interested: interested,
@@ -159,6 +158,18 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
 
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
         try selector.reregister(selectable: self.socket, interested: interested)
+    }
+
+    override func writeAsync(selector: Selector<NIORegistration>, pointer: UnsafeRawBufferPointer) throws {
+        try selector.writeAsync(selectable: self.socket, pointer: pointer)
+    }
+
+    override func writeAsync(selector: Selector<NIORegistration>, iovecs: UnsafeBufferPointer<IOVector>) throws {
+        try selector.writeAsync(selectable: self.socket, iovecs: iovecs)
+    }
+
+    override func sendFileAsync(selector: Selector<NIORegistration>, src: CInt, offset: Int64, count: UInt32) throws {
+        try selector.sendFileAsync(selectable: self.socket, src: src, offset: offset, count: count)
     }
 }
 
@@ -373,6 +384,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         // We do nothing here: flushes are no-ops.
     }
 
+    override func flushNowAsync() {
+        // We do nothing here
+    }
+
     override func flushNow() -> IONotificationState {
         return IONotificationState.unregister
     }
@@ -476,6 +491,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         self.vectorReadManager = nil
         try socket.setNonBlocking()
+
         self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
                                                           msgBufferPool: eventLoop.msgBufferPool)
         try super.init(
@@ -839,6 +855,31 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     /// writes.
     override func cancelWritesOnClose(error: Error) {
         self.pendingWrites.failAll(error: error, close: true)
+    }
+
+    override func writeToSocketAsync() throws {
+        try self.pendingWrites.triggerAsnycWriteOperation { msghdr in
+            try self.selectableEventLoop.sendmsgAsync(channel: self, msghdr: msghdr)
+        }
+    }
+
+    func sendmsgAsync(selector: Selector<NIORegistration>, msghdr: UnsafePointer<msghdr>) throws {
+        try selector.sendmsgAsync(selectable: self.socket, msghdr: msghdr)
+    }
+
+    func didAsyncWrite(result: Int32) {
+        do {
+            let (writabilityChange, flushAgain) = try self.pendingWrites.didAsyncWrite(written: result)
+            if writabilityChange {
+                self.pipeline.syncOperations.fireChannelWritabilityChanged()
+            }
+            if flushAgain {
+                self.flushNowAsync()
+            }
+        }
+        catch {
+            self.close0(error: error, mode: .all, promise: nil)
+        }
     }
 
     override func writeToSocket() throws -> OverallWriteResult {

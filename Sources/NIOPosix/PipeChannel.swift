@@ -129,6 +129,14 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
         }
         try super.shutdownSocket(mode: mode)
     }
+
+    override func writeAsync(selector: Selector<NIORegistration>, pointer: UnsafeRawBufferPointer) throws {
+        try selector.writeAsync(selectable: self.pipePair.outputFD, pointer: pointer)
+    }
+
+    override func writeAsync(selector: Selector<NIORegistration>, iovecs: UnsafeBufferPointer<IOVector>) throws {
+        try selector.writeAsync(selectable: self.pipePair.outputFD, iovecs: iovecs)
+    }
 }
 
 extension PipeChannel: CustomStringConvertible {

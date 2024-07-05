@@ -302,7 +302,11 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testSimpleGetFileRegion() throws {
+#if SWIFTNIO_USE_IO_URING
+        throw XCTSkip("File send not supported with URing")
+#else
         try testSimpleGet(.fileRegion)
+#endif
     }
 
     private class HTTPClientResponsePartAssertHandler: ArrayAccumulationHandler<HTTPClientResponsePart> {
@@ -398,7 +402,11 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testSimpleGetChunkedEncodingFileRegion() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("File send not supported with URing")
+#else
         try testSimpleGetChunkedEncoding(.fileRegion)
+#endif
     }
 
     private func testSimpleGetChunkedEncoding(_ mode: SendMode) throws {
@@ -454,7 +462,11 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testSimpleGetTrailersFileRegion() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("File send not supported with URing")
+#else
         try testSimpleGetTrailers(.fileRegion)
+#endif
     }
     
     func testSimpleGetChunkedEncodingWithZeroLengthBodyPart() throws {
@@ -558,7 +570,11 @@ class HTTPServerClientTest : XCTestCase {
     }
 
     func testMassiveResponseFileRegion() throws {
+#if SWIFTNIO_USE_IO_URING && os(Linux)
+        throw XCTSkip("File send not supported with URing")
+#else
         try testMassiveResponse(.fileRegion)
+#endif
     }
 
     func testMassiveResponse(_ mode: SendMode) throws {

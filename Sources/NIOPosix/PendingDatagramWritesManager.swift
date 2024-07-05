@@ -36,7 +36,8 @@ private struct PendingDatagramWrite {
             preconditionFailure("copySocketAddress called on write that has no address")
         case .v4(let innerAddress):
             erased.storeBytes(of: innerAddress.address, as: sockaddr_in.self)
-            return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
+            //return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
+            return socklen_t(MemoryLayout<sockaddr_in>.size)
         case .v6(let innerAddress):
             erased.storeBytes(of: innerAddress.address, as: sockaddr_in6.self)
             return socklen_t(MemoryLayout.size(ofValue: innerAddress.address))
@@ -256,7 +257,6 @@ private struct PendingDatagramWritesState {
         // send it again.
         let promiseFiller = self.wroteFirst(error: error)
         let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
-
         return (promiseFiller, result)
     }
 
@@ -299,7 +299,7 @@ private struct PendingDatagramWritesState {
     ///     - written: The number of bytes successfully written.
     /// - returns: All the promises that must be fired, and a `WriteResult` that indicates if we could write
     ///     everything or not.
-    private mutating func didScalarWrite(written: Int) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
+    internal mutating func didScalarWrite(written: Int) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
         precondition(written <= self.pendingWrites.first!.data.readableBytes,
                      "Appeared to write more bytes (\(written)) than the datagram contained (\(self.pendingWrites.first!.data.readableBytes))")
         let writeFiller = self.wroteFirst()
@@ -382,8 +382,15 @@ extension PendingDatagramWritesState {
 /// the availability of the functions.
 final class PendingDatagramWritesManager: PendingWritesManager {
 
-    private let bufferPool: Pool<PooledBuffer>
-    private let msgBufferPool: Pool<PooledMsgBuffer>
+    /// storage for IOVector and the references to the buffers used when we perform gathering writes. Only present
+    /// on Linux because Darwin does not support gathering datagram writes.
+    private var bufferPool: Pool<PooledBuffer>
+    private var buffer: PooledBuffer?
+
+    /// Storage for mmsghdr and sockaddr structures.
+    /// Only present on Linux because Darwin does not support gathering datagram writes.
+    private var msgBufferPool: Pool<PooledMsgBuffer>
+    private var msgBuffer: PooledMsgBuffer?
 
     private var state = PendingDatagramWritesState()
 
@@ -484,6 +491,91 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// Returns the best mechanism to write pending data at the current point in time.
     var currentBestWriteMechanism: WriteMechanism {
         return self.state.currentBestWriteMechanism
+    }
+
+    func triggerAsnycWriteOperation(asyncWriteOperation: (UnsafePointer<msghdr>) throws -> Void) throws -> Void {
+        let pdw = self.state.nextWrite
+        if let pdw = pdw {
+            self.buffer = self.bufferPool.get()
+            self.msgBuffer = self.msgBufferPool.get()
+            try self.buffer!.withUnsafePointers { iovecs, storageRefs in
+                try self.msgBuffer!.withUnsafePointers { msgs, addresses, controlMessageStorage in
+                    try pdw.data.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
+                        storageRefs[0] = storageRef.retain()
+
+                        let address: UnsafeMutablePointer<sockaddr_storage>?
+                        let addressLen: socklen_t
+                        let protocolFamily: NIOBSDSocket.ProtocolFamily
+                        if let envelopeAddress = pdw.address {
+                            precondition(self.state.remoteAddress == nil, "Pending write with address on connected socket.")
+                            address = addresses.baseAddress
+                            addressLen = pdw.copySocketAddress(address!)
+                            protocolFamily = envelopeAddress.protocol
+                        }
+                        else {
+                            guard let connectedRemoteAddress = self.state.remoteAddress else {
+                                preconditionFailure("Pending write without address on unconnected socket.")
+                            }
+                            address = nil
+                            addressLen = 0
+                            protocolFamily = connectedRemoteAddress.protocol
+                        }
+
+                        iovecs[0] = iovec(iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!), iov_len: ptr.count)
+
+                        var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[0])
+                        controlBytes.appendExplicitCongestionState(metadata: pdw.metadata, protocolFamily: protocolFamily)
+                        let controlMessageBytePointer = controlBytes.validControlBytes
+
+                        let msg = msghdr(msg_name: address,
+                                                 msg_namelen: addressLen,
+                                                 msg_iov: iovecs.baseAddress,
+                                                 msg_iovlen: 1,
+                                                 msg_control: controlMessageBytePointer.baseAddress,
+                                                 msg_controllen: .init(controlMessageBytePointer.count),
+                                                 msg_flags: 0)
+                        msgs[0] = MMsgHdr(msg_hdr: msg, msg_len: 0)
+
+                        // Uring has no analogue to sendmmsg(), so we can send only single message at once
+                        var ptr = UnsafeRawBufferPointer(msgs).baseAddress!
+                        ptr += MemoryLayout<MMsgHdr>.offset(of: \MMsgHdr.msg_hdr)!
+                        try asyncWriteOperation(ptr.bindMemory(to: msghdr.self, capacity: 1))
+                    }
+                }
+            }
+        }
+    }
+
+    func didAsyncWrite(written: Int32) throws -> (Bool, Bool) {
+        self.buffer!.withUnsafePointers { _, storageRefs in
+            storageRefs[0].release()
+        }
+        self.bufferPool.put(self.buffer!)
+        self.buffer = nil
+
+        self.msgBufferPool.put(self.msgBuffer!)
+        self.msgBuffer = nil
+
+        if (written >= 0) {
+            let (writeFiller, result) = self.state.didScalarWrite(written: Int(written))
+
+            var writabilityChange = false
+            if self.state.bytes < waterMark.low {
+                if self.channelWritabilityFlag.compareExchange(expected: false, desired: true, ordering: .relaxed).exchanged {
+                    writabilityChange = true
+                }
+            }
+
+            self.fulfillPromise(writeFiller)
+
+            let flushAgain = (result == .writtenPartially)
+            return (writabilityChange, flushAgain)
+        }
+        else {
+            let errnoCode = -written
+            let result = try self.handleError(IOError(errnoCode: errnoCode, reason:"async write failed"))
+            return (false, (result == .writtenPartially))
+        }
     }
 
     /// Triggers the appropriate write operation. This is a fancy way of saying trigger either `sendto` or `sendmmsg`.

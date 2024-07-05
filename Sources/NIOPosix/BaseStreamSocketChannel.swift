@@ -158,6 +158,42 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         return result
     }
 
+    override func writeToSocketAsync() throws {
+        try self.pendingWrites.triggerAppropriateAsyncWriteOperations(
+            scalarBufferAsyncWriteOperation: { ptr in
+                try self.selectableEventLoop.writeAsync(channel: self, pointer: ptr)
+            },
+            vectorBufferAsyncWriteOperation: { iovecs in
+                try self.selectableEventLoop.writeAsync(channel: self, iovecs: iovecs)
+            },
+            scalarFileAsyncWriteOperation: { descriptor, index, endIndex in
+                let count = (endIndex - index)
+                try self.selectableEventLoop.sendFileAsync(channel: self, src: descriptor, offset: Int64(index), count: UInt32(count))
+            })
+    }
+
+    func didAsyncWrite(result: Int32) {
+        if (result > 0) {
+            let (writabilityChange, flushAgain) = self.pendingWrites.didAsyncWrite(written: Int(result))
+            if writabilityChange {
+                self.pipeline.syncOperations.fireChannelWritabilityChanged()
+            }
+            if flushAgain {
+                self.flushNowAsync()
+            }
+        }
+        else {
+            self.pendingWrites.releaseData()
+            let errnoCode = -result
+            if errnoCode == EAGAIN {
+                self.flushNowAsync()
+            }
+            else {
+                assert(false)
+            }
+        }
+    }
+
     final override func writeToSocket() throws -> OverallWriteResult {
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
             guard ptr.count > 0 else {
