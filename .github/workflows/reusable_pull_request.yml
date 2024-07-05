@@ -1,8 +1,20 @@
 name: Pull Request
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_call:
+    inputs:
+      enable_unit_tests:
+        type: boolean
+        description: "Boolean to enable the unit tests job. Defaults to true."
+        default: true
+      enable_api_breakage_check:
+        type: boolean
+        description: "Boolean to enable the API breakage check job. Defaults to true."
+        default: true
+      enable_docs_check:
+        type: boolean
+        description: "Boolean to enable the docs check job. Defaults to true."
+        default: true
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -12,6 +24,7 @@ concurrency:
 jobs:
   unit-tests:
     name: Unit tests
+    if: ${{ inputs.enable_unit_tests }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -31,8 +44,9 @@ jobs:
     - name: Run tests
       run: swift test
 
-  api-breakage:
+  api-breakage-check:
     name: API breakage check
+    if: ${{ inputs.enable_api_breakage_check }}
     runs-on: ubuntu-latest
     container:
       image: swift:5.10-noble
@@ -51,6 +65,7 @@ jobs:
 
   docs-check:
     name: Documentation check
+    if: ${{ inputs.enable_docs_check }}
     runs-on: ubuntu-latest
     container:
       image: swift:5.10-noble
