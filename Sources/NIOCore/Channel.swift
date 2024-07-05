@@ -377,6 +377,7 @@ extension ChannelError {
     // 'any Error' is unconditionally boxed, avoid allocating per use by statically boxing them.
     static let _alreadyClosed: any Error = ChannelError.alreadyClosed
     static let _inputClosed: any Error = ChannelError.inputClosed
+    @usableFromInline
     static let _ioOnClosedChannel: any Error = ChannelError.ioOnClosedChannel
     static let _operationUnsupported: any Error = ChannelError.operationUnsupported
     static let _outputClosed: any Error = ChannelError.outputClosed

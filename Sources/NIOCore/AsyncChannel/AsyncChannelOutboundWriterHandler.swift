@@ -137,7 +137,7 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
     @inlinable
     func handlerRemoved(context: ChannelHandlerContext) {
         self.context = nil
-        self.sink?.finish(error: ChannelError.ioOnClosedChannel)
+        self.sink?.finish(error: ChannelError._ioOnClosedChannel)
         self.writer = nil
     }
 
@@ -150,7 +150,7 @@ internal final class NIOAsyncChannelOutboundWriterHandler<OutboundOut: Sendable>
 
     @inlinable
     func channelInactive(context: ChannelHandlerContext) {
-        self.sink?.finish(error: ChannelError.ioOnClosedChannel)
+        self.sink?.finish(error: ChannelError._ioOnClosedChannel)
         context.fireChannelInactive()
     }
 
