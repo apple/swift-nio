@@ -515,7 +515,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     public final func localAddress0() throws -> SocketAddress {
         self.eventLoop.assertInEventLoop()
         guard self.isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
         return try self.socket.localAddress()
     }
@@ -523,7 +523,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     public final func remoteAddress0() throws -> SocketAddress {
         self.eventLoop.assertInEventLoop()
         guard self.isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
         return try self.socket.remoteAddress()
     }
@@ -610,7 +610,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -658,7 +658,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -697,7 +697,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError._ioOnClosedChannel)
             return
         }
 
@@ -712,7 +712,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
         guard self.isOpen else {
             // Channel was already closed, fail the promise and not even queue it.
-            promise?.fail(ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError._ioOnClosedChannel)
             return
         }
 
@@ -834,12 +834,12 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(ChannelError.alreadyClosed)
+            promise?.fail(ChannelError._alreadyClosed)
             return
         }
 
         guard mode == .all else {
-            promise?.fail(ChannelError.operationUnsupported)
+            promise?.fail(ChannelError._operationUnsupported)
             return
         }
 
@@ -906,17 +906,17 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError._ioOnClosedChannel)
             return
         }
 
         guard !self.lifecycleManager.isPreRegistered else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError._inappropriateOperationForState)
             return
         }
 
         guard self.selectableEventLoop.isOpen else {
-            let error = EventLoopError.shutdown
+            let error = EventLoopError._shutdown
             self.pipeline.syncOperations.fireErrorCaught(error)
             // `close0`'s error is about the result of the `close` operation, ...
             self.close0(error: error, mode: .all, promise: nil)
@@ -956,7 +956,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         case let event as VsockChannelEvents.ConnectToAddress:
             self.connect0(to: .vsockAddress(event.address), promise: promise)
         default:
-            promise?.fail(ChannelError.operationUnsupported)
+            promise?.fail(ChannelError._operationUnsupported)
         }
     }
 
@@ -1210,17 +1210,17 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError._ioOnClosedChannel)
             return
         }
 
         guard pendingConnect == nil else {
-            promise?.fail(ChannelError.connectPending)
+            promise?.fail(ChannelError._connectPending)
             return
         }
 
         guard self.lifecycleManager.isPreRegistered else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError._inappropriateOperationForState)
             return
         }
 
@@ -1289,7 +1289,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         assert(!self.lifecycleManager.isRegisteredFully)
 
         guard self.isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         self.interestedEvent = interested
