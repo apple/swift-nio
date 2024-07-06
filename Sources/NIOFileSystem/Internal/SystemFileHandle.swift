@@ -1069,7 +1069,7 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
     }
 
     public func readChunks(
-        in range: Range<Int64>,
+        in range: Range<Int64>?,
         chunkLength size: ByteCount
     ) -> FileChunks {
         return FileChunks(handle: self, chunkLength: size, range: range)

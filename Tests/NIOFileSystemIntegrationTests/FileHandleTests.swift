@@ -61,8 +61,11 @@ final class FileHandleTests: XCTestCase {
             self.bytes.getSlice(at: Int(offset), length: Int(min(length.bytes, self.chunkSize.bytes))) ?? .init()
         }
 
-        func readChunks(in range: Range<Int64>, chunkLength: ByteCount) -> FileChunks {
-            .init(wrapping: ChunkedByteBufferSequence(buffer: self.bytes, range: range, chunkLength: chunkLength))
+        func readChunks(in range: Range<Int64>?, chunkLength: ByteCount) -> FileChunks {
+            guard let range else {
+                preconditionFailure("Reading from the current offset is not implemented for MockFileHandle")
+            }
+            return .init(wrapping: ChunkedByteBufferSequence(buffer: self.bytes, range: range, chunkLength: chunkLength))
         }
 
         func info() async throws -> FileInfo {
@@ -436,10 +439,11 @@ final class FileHandleTests: XCTestCase {
         try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
             handle in
             let someBytes = ByteBuffer(repeating: 42, count: 1546)
+
             try await handle.write(contentsOf: someBytes.readableBytesView, toAbsoluteOffset: 0)
 
-            let readSomeBytes = try await handle.readToEnd(maximumSizeAllowed: .bytes(1546))
-            XCTAssertEqual(readSomeBytes, someBytes)
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1546))
+            XCTAssertEqual(contents, someBytes, "Data read back from the fifo should match what was written")
         }
     }
 
