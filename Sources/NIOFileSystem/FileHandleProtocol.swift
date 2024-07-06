@@ -376,33 +376,31 @@ extension ReadableFileHandleProtocol {
                 forceChunkedRead = true
             }
 
-            if !forceChunkedRead, readSize <= singleShotReadLimit {
-                return try await self.readChunk(
-                    fromAbsoluteOffset: offset,
-                    length: .bytes(Int64(readSize))
-                )
+            let chunkLength: ByteCount = if !forceChunkedRead, readSize <= singleShotReadLimit {
+                .bytes(Int64(readSize))
             } else {
-                var accumulator = ByteBuffer()
-                accumulator.reserveCapacity(readSize)
-
-                for try await chunk in self.readChunks(in: offset..., chunkLength: .mebibytes(8)) {
-                    accumulator.writeImmutableBuffer(chunk)
-                    if accumulator.readableBytes > maximumSizeAllowed.bytes {
-                        throw FileSystemError(
-                            code: .resourceExhausted,
-                            message: """
-                                There are more bytes to read than the maximum size allowed \
-                                (\(maximumSizeAllowed)). Read the file in chunks or increase the maximum size \
-                                allowed.
-                                """,
-                            cause: nil,
-                            location: .here()
-                        )
-                    }
-                }
-
-                return accumulator
+                .mebibytes(8)
             }
+            var accumulator = ByteBuffer()
+            accumulator.reserveCapacity(readSize)
+
+            for try await chunk in self.readChunks(in: offset..., chunkLength: chunkLength) {
+                accumulator.writeImmutableBuffer(chunk)
+                if accumulator.readableBytes > maximumSizeAllowed.bytes {
+                    throw FileSystemError(
+                        code: .resourceExhausted,
+                        message: """
+                            There are more bytes to read than the maximum size allowed \
+                            (\(maximumSizeAllowed)). Read the file in chunks or increase the maximum size \
+                            allowed.
+                            """,
+                        cause: nil,
+                        location: .here()
+                    )
+                }
+            }
+
+            return accumulator
         } else {
             guard offset == 0 else {
                 throw FileSystemError(
