@@ -30,20 +30,25 @@ public struct NIOTimer: Sendable {
         /// A task created using `EventLoop.scheduleTask(deadline:_:)`, used by default for `EventLoop` implementations.
         case scheduledTask(Scheduled<Void>)
         /// An identifier for a timer, used by `EventLoop` implementations that conform to `CustomTimerImplementation`.
-        case custom(eventLoop: any NIOCustomTimerImplementation, id: UInt64)
+        case custom(eventLoop: any NIOCustomTimerImplementation, onCancel: @Sendable () -> Void)
     }
 
     @usableFromInline
     var backing: Backing
 
+    @inlinable
+    init(_ backing: Backing) {
+        self.backing = backing
+    }
+
     fileprivate init(_ scheduled: Scheduled<Void>) {
         self.backing = .scheduledTask(scheduled)
     }
 
-    @inlinable
-    init(_ eventLoop: any NIOCustomTimerImplementation, id: UInt64) {
-        self.backing = .custom(eventLoop: eventLoop, id: id)
-    }
+//    @inlinable
+//    init(_ eventLoop: any NIOCustomTimerImplementation, onCancel: @Sendable @escaping () -> Void) {
+//        self.backing = .custom(eventLoop: eventLoop, onCancel: onCancel)
+//    }
 
     /// Cancel the timer associated with this handle.
     @inlinable
@@ -51,8 +56,8 @@ public struct NIOTimer: Sendable {
         switch self.backing {
         case .scheduledTask(let scheduled):
             scheduled.cancel()
-        case .custom(let eventLoop, let id):
-            eventLoop.cancelTimer(id)
+        case .custom(let eventLoop, let onCancel):
+            onCancel()
         }
     }
 }
@@ -93,6 +98,7 @@ public protocol NIOCustomTimerImplementation: EventLoop {
 extension EventLoop where Self: NIOCustomTimerImplementation {
     @inlinable
     public func setTimer(for deadline: NIODeadline, _ handler: any NIOTimerHandler) -> NIOTimer {
-        NIOTimer(self, id: self.setTimer(for: deadline, handler))
+        let id = self.setTimer(for: deadline, handler)
+        return NIOTimer(.custom(eventLoop: self, onCancel: { self.cancelTimer(id) }))
     }
 }
