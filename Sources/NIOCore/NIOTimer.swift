@@ -12,18 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// A type that handles timer callbacks scheduled with ``EventLoop/setTimer(for:_:)-5e37g``.
+/// A type that handles timer callbacks scheduled with `EventLoop.setTimer(for:_:)`.
 ///
-/// - Seealso: ``EventLoop/setTimer(for:_:)-5e37g``.
+/// - Seealso: `EventLoop.setTimer(for:_:)`.
 public protocol NIOTimerHandler {
     func timerFired(eventLoop: some EventLoop)
 }
 
 /// An opaque handle that can be used to cancel a timer.
 ///
-/// Users cannot create an instance of this type; it is returned by ``EventLoop/setTimer(for:_:)-5e37g``.
+/// Users cannot create an instance of this type; it is returned by `EventLoop.setTimer(for:_:)`.
 ///
-/// - Seealso: ``EventLoop/setTimer(for:_:)-5e37g``.
+/// - Seealso: `EventLoop.setTimer(for:_:)`.
 public struct NIOTimer: Sendable {
     @usableFromInline
     enum Backing: Sendable {
@@ -45,9 +45,9 @@ public struct NIOTimer: Sendable {
         self.backing = .default(task)
     }
 
-    /// This initializer is for event loop implementations. End users should use ``EventLoop/setTimer(for:_:)-5e37g``.
+    /// This initializer is for event loop implementations. End users should use `EventLoop.setTimer(for:_:)`.
     ///
-    /// - Seealso: ``EventLoop/setTimer(for:_:)-5e37g``.
+    /// - Seealso: `EventLoop.setTimer(for:_:)`.
     @inlinable
     public init(_ eventLoop: any EventLoop, id: UInt64) {
         self.eventLoop = eventLoop
