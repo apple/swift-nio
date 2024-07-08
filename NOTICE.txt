@@ -58,7 +58,7 @@ This product contains "sha1.c" and "sha1.h" from FreeBSD (Copyright (C) 1995, 19
   * LICENSE (BSD-3):
     * https://opensource.org/licenses/BSD-3-Clause
   * HOMEPAGE:
-    * https://github.com/freebsd/freebsd-src/tree/adf1fc7dd99ad514455f3dd17d289cc59cbae217/sys/crypto
+    * https://github.com/freebsd/freebsd-src
 
 ---
 
