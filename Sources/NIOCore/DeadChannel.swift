@@ -17,31 +17,31 @@
 /// all operations.
 private final class DeadChannelCore: ChannelCore {
     func localAddress0() throws -> SocketAddress {
-        throw ChannelError.ioOnClosedChannel
+        throw ChannelError._ioOnClosedChannel
     }
 
     func remoteAddress0() throws -> SocketAddress {
-        throw ChannelError.ioOnClosedChannel
+        throw ChannelError._ioOnClosedChannel
     }
 
     func register0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError._ioOnClosedChannel)
     }
 
     func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError._ioOnClosedChannel)
     }
 
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError._ioOnClosedChannel)
     }
 
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError._ioOnClosedChannel)
     }
 
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError._ioOnClosedChannel)
     }
 
     func flush0() {
@@ -51,11 +51,11 @@ private final class DeadChannelCore: ChannelCore {
     }
 
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.alreadyClosed)
+        promise?.fail(ChannelError._alreadyClosed)
     }
 
     func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.ioOnClosedChannel)
+        promise?.fail(ChannelError._ioOnClosedChannel)
     }
 
     func channelRead0(_ data: NIOAny) {
@@ -104,11 +104,11 @@ internal final class DeadChannel: Channel, @unchecked Sendable {
     let parent: Channel? = nil
 
     func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        return self.pipeline.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
+        return self.pipeline.eventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
     }
 
     func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
-        return eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
+        return eventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
     }
 
     let isWritable = false

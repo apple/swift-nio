@@ -162,7 +162,7 @@ internal class Selector<R: Registration>  {
         assert(self.myThread != NIOThread.current)
         return try self.externalSelectorFDLock.withLock {
             guard self.selectorFD != -1 else {
-                throw EventLoopError.shutdown
+                throw EventLoopError._shutdown
             }
             return try body(self.selectorFD)
         }

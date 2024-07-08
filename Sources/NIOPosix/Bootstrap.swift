@@ -322,7 +322,7 @@ public final class ServerBootstrap {
     public func withBoundSocket(_ socket: NIOBSDSocket.Handle) -> EventLoopFuture<Channel> {
         func makeChannel(_ eventLoop: SelectableEventLoop, _ childEventLoopGroup: EventLoopGroup, _ enableMPTCP: Bool) throws -> ServerSocketChannel {
             if enableMPTCP {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             return try ServerSocketChannel(socket: socket, eventLoop: eventLoop, group: childEventLoopGroup)
         }
@@ -429,7 +429,7 @@ public final class ServerBootstrap {
                 future.flatMap { (_) -> EventLoopFuture<Void> in
                     ctxEventLoop.assertInEventLoop()
                     guard context.channel.isActive else {
-                        return context.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
+                        return context.eventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
                     }
                     context.fireChannelRead(data)
                     return context.eventLoop.makeSucceededFuture(())
@@ -604,7 +604,7 @@ extension ServerBootstrap {
         return try await bind0(
             makeServerChannel: { eventLoop, childEventLoopGroup, enableMPTCP in
                 if enableMPTCP {
-                    throw ChannelError.operationUnsupported
+                    throw ChannelError._operationUnsupported
                 }
                 return try ServerSocketChannel(
                     socket: socket,
@@ -2014,7 +2014,7 @@ public final class NIOPipeBootstrap {
         case DWORD(FILE_TYPE_PIPE):
             break
         default:
-            throw ChannelError.operationUnsupported
+            throw ChannelError._operationUnsupported
         }
 #else
         var s: stat = .init()
@@ -2023,7 +2023,7 @@ public final class NIOPipeBootstrap {
         }
         switch s.st_mode & S_IFMT {
         case S_IFREG, S_IFDIR, S_IFLNK, S_IFBLK:
-            throw ChannelError.operationUnsupported
+            throw ChannelError._operationUnsupported
         default:
             () // Let's default to ok
         }
