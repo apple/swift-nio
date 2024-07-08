@@ -15,13 +15,13 @@ on:
         type: boolean
         description: "Boolean to enable the docs check job. Defaults to true."
         default: true
-      acceptable_language_check_enabled:
+      unacceptable_language_check_enabled:
         type: boolean
         description: "Boolean to enable the acceptable language check job. Defaults to true."
         default: true
-      acceptable_language_check_word_list:
+      unacceptable_language_check_word_list:
         type: string
-        description: "List of unacceptable words. Defaults to a sensitive list of words."
+        description: "List of unacceptable words. Defaults to a sensible list of words."
         default: "blacklist whitelist slave master sane sanity insane insanity kill killed killing hang hung hanged hanging" #ignore-unacceptable-language
 
 ## We are cancelling previously triggered workflow runs
@@ -93,15 +93,15 @@ jobs:
           swift package plugin generate-documentation --target "$target" --warnings-as-errors --analyze --level detailed
         done
 
-  acceptable-language-check:
-    name: Acceptable language check
-    if: ${{ inputs.acceptable_language_check_enabled }}
+  unacceptable-language-check:
+    name: Unacceptable language check
+    if: ${{ inputs.unacceptable_language_check_enabled }}
     runs-on: ubuntu-latest
     timeout-minutes: 1
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    - name: Run acceptable language check
+    - name: Run unacceptable language check
       env:
-        UNACCEPTABLE_LANGUAGE_PATTERNS: ${{ inputs.acceptable_language_check_word_list}}
-      run: ./scripts/acceptable_language_check.sh
+        UNACCEPTABLE_WORD_LIST: ${{ inputs.unacceptable_language_check_word_list}}
+      run: ./scripts/unacceptable_language_check.sh

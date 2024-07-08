@@ -19,13 +19,13 @@ log() { printf -- "** %s\n" "$*" >&2; }
 error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
-test -n "${UNACCEPTABLE_LANGUAGE_PATTERNS:-}" || fatal "UNACCEPTABLE_LANGUAGE_PATTERNS unset"
+test -n "${UNACCEPTABLE_WORD_LIST:-}" || fatal "UNACCEPTABLE_WORD_LIST unset"
 
 log "Checking for unacceptable language..."
 unacceptable_language_lines=$(git grep \
   -i -I -w \
   -H -n --column \
-  -E "${UNACCEPTABLE_LANGUAGE_PATTERNS// /|}" | grep -v "ignore-unacceptable-language"
+  -E "${UNACCEPTABLE_WORD_LIST// /|}" | grep -v "ignore-unacceptable-language"
 ) || true | /usr/bin/paste -s -d " " -
 
 if [ -n "${unacceptable_language_lines}" ]; then

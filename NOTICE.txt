@@ -35,16 +35,6 @@ This product is heavily influenced by Netty.
 
 ---
 
-This product contains a derivation of the Tony Stone's 'process_test_files.rb'.
-
-  * LICENSE (Apache License 2.0):
-    * https://www.apache.org/licenses/LICENSE-2.0
-  * HOMEPAGE:
-    * https://github.com/tonystone/build-tools/commit/6c417b7569df24597a48a9aa7b505b636e8f73a1
-    * https://github.com/tonystone/build-tools/blob/cf3440f43bde2053430285b4ed0709c865892eb5/source/xctest_tool.rb
-
----
-
 This product contains NodeJS's llhttp.
 
   * LICENSE (MIT):

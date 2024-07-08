@@ -141,9 +141,10 @@ function stop_server() {
         do_netstat "$token_type"
         assert_number_of_open_fds_for_pid_equals "$token_pid" "$token_open_fds"
     fi
-    kill -0 "$token_pid" # assert server is still running ignore-unacceptable-language
-    ###kill -INT "$token_pid" # tell server to shut down gracefully ignore-unacceptable-language
-    kill "$token_pid" # tell server to shut down gracefully ignore-unacceptable-language
+    # assert server is still running
+    kill -0 "$token_pid" # ignore-unacceptable-language
+    # tell server to shut down gracefully
+    kill "$token_pid" # ignore-unacceptable-language
     for f in $(seq 20); do
         if ! kill -0 "$token_pid" 2> /dev/null; then # ignore-unacceptable-language
             break # good, dead
