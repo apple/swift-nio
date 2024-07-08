@@ -482,7 +482,7 @@ internal struct ScheduledTask {
     }
 
     @usableFromInline
-    init(id: UInt64, _ handler: any NIOTimerHandler, _ time: NIODeadline) {
+    init(id: UInt64, _ handler: some NIOTimerHandler, _ time: NIODeadline) {
         self.id = id
         self.readyTime = time
         self.kind = .timer(handler)
