@@ -47,9 +47,9 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
             self._eventLoop.preconditionInEventLoop()
             return self._value
         }
-        set {
+        _modify {
             self._eventLoop.preconditionInEventLoop()
-            self._value = newValue
+            yield &self._value
         }
     }
 }
@@ -136,9 +136,9 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
             self._eventLoop.preconditionInEventLoop()
             return self._value
         }
-        set {
+        _modify {
             self._eventLoop.preconditionInEventLoop()
-            self._value = newValue
+            yield &self._value
         }
     }
 }
