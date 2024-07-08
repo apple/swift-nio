@@ -132,7 +132,7 @@ fileprivate final class MockTimerHandler: NIOTimerHandler {
     var firedCount = 0
     var timerDidFire = XCTestExpectation(description: "Timer fired")
 
-    func timerFired(loop: any EventLoop) {
+    func timerFired(eventLoop: any EventLoop) {
         self.firedCount += 1
         self.timerDidFire.fulfill()
     }

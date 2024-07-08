@@ -475,7 +475,7 @@ Further information:
                 }
             #endif
             case .timer(let handler):
-                handler.timerFired(loop: self)
+                handler.timerFired(eventLoop: self)
             }
         }
     }

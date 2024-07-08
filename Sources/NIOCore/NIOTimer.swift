@@ -16,7 +16,7 @@
 ///
 /// - Seealso: ``EventLoop/setTimer(for:_:)-5e37g``.
 public protocol NIOTimerHandler {
-    func timerFired(loop: any EventLoop)
+    func timerFired(eventLoop: any EventLoop)
 }
 
 /// An opaque handle that can be used to cancel a timer.
@@ -61,7 +61,7 @@ public struct NIOTimer: Sendable {
 extension EventLoop {
     @discardableResult
     public func setTimer(for deadline: NIODeadline, _ handler: any NIOTimerHandler) -> NIOTimer {
-        NIOTimer(self.scheduleTask(deadline: deadline) { handler.timerFired(loop: self) })
+        NIOTimer(self.scheduleTask(deadline: deadline) { handler.timerFired(eventLoop: self) })
     }
 }
 
