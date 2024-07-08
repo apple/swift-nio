@@ -364,6 +364,9 @@ public protocol EventLoop: EventLoopGroup {
     /// Set a timer that will call a handler after a given amount of time.
     @discardableResult
     func setTimer(for duration: TimeAmount, _ handler: any NIOTimerHandler) -> NIOTimer
+
+    /// Cancel a timer.
+    func cancelTimer(_ timer: NIOTimer)
 }
 
 extension EventLoop {

@@ -27,72 +27,70 @@ public protocol NIOTimerHandler {
 public struct NIOTimer: Sendable {
     @usableFromInline
     enum Backing: Sendable {
-        /// A task created using `EventLoop.scheduleTask(deadline:_:)`, used by default for `EventLoop` implementations.
-        case scheduledTask(Scheduled<Void>)
-        /// An identifier for a timer, used by `EventLoop` implementations that conform to `CustomTimerImplementation`.
-        case custom(eventLoop: any NIOCustomTimerImplementation, id: UInt64)
+        /// A task created using `EventLoop.scheduleTask(deadline:_:)` by the default event loop timer implementation.
+        case `default`(_ task: Scheduled<Void>)
+        /// A custom timer identifier, used by event loops that want to provide a custom timer implementation.
+        case custom(id: UInt64)
     }
+
+    @usableFromInline
+    var eventLoop: any EventLoop
 
     @usableFromInline
     var backing: Backing
 
-    fileprivate init(_ scheduled: Scheduled<Void>) {
-        self.backing = .scheduledTask(scheduled)
+    /// This initializer is only for the default implementations and is fileprivate to avoid tempting EL implementations.
+    fileprivate init(_ eventLoop: any EventLoop, _ task: Scheduled<Void>) {
+        self.eventLoop = eventLoop
+        self.backing = .default(task)
     }
 
+    /// This initializer is for event loop implementations. End users should use ``EventLoop/setTimer(for:_:)-5e37g``.
+    ///
+    /// - Seealso: ``EventLoop/setTimer(for:_:)-5e37g``.
     @inlinable
-    init(_ eventLoop: any NIOCustomTimerImplementation, id: UInt64) {
-        self.backing = .custom(eventLoop: eventLoop, id: id)
+    public init(_ eventLoop: any EventLoop, id: UInt64) {
+        self.eventLoop = eventLoop
+        self.backing = .custom(id: id)
     }
 
     /// Cancel the timer associated with this handle.
     @inlinable
     public func cancel() {
-        switch self.backing {
-        case .scheduledTask(let scheduled):
-            scheduled.cancel()
-        case .custom(let eventLoop, let id):
-            eventLoop.cancelTimer(id)
-        }
+        self.eventLoop.cancelTimer(self)
+    }
+
+    /// The custom timer identifier, if this timer uses a custom timer implementation; nil otherwise.
+    @inlinable
+    public var customTimerID: UInt64? {
+        guard case .custom(let id) = backing else { return nil }
+        return id
     }
 }
 
-/// Default implementation of `setSimpleTimer(for deadline:_:)`, backed by `EventLoop.scheduleTask`.
 extension EventLoop {
+    /// Default implementation of `setTimer(for deadline:_:)`, backed by `EventLoop.scheduleTask`.
     @discardableResult
     public func setTimer(for deadline: NIODeadline, _ handler: any NIOTimerHandler) -> NIOTimer {
-        NIOTimer(self.scheduleTask(deadline: deadline) { handler.timerFired(eventLoop: self) })
+        let task = self.scheduleTask(deadline: deadline) { handler.timerFired(eventLoop: self) }
+        return NIOTimer(self, task)
     }
-}
 
-/// Default implementation of `setSimpleTimer(for duration:_:)`, delegating to `setSimpleTimer(for deadline:_:)`.
-extension EventLoop {
+    /// Default implementation of `setTimer(for duration:_:)`, delegating to `setTimer(for deadline:_:)`.
     @discardableResult
     @inlinable
     public func setTimer(for duration: TimeAmount, _ handler: any NIOTimerHandler) -> NIOTimer {
         self.setTimer(for: .now() + duration, handler)
     }
-}
 
-/// Extension point for `EventLoop` implementations implement a custom timer.
-public protocol NIOCustomTimerImplementation: EventLoop {
-    /// Set a timer that calls handler at the given time.
-    ///
-    /// Implementations must return an integer identifier that uniquely identifies the timer.
-    ///
-    /// Implementations should tolerate this call being made off the event loop.
-    func setTimer(for deadline: NIODeadline, _ handler: any NIOTimerHandler) -> UInt64
-
-    /// Cancel a timer with a given timer identifier.
-    ///
-    /// Implementations should tolerate this call being made off the event loop.
-    func cancelTimer(_ id: UInt64)
-}
-
-/// Default implementation of `setSimpleTimer(for deadline:_:)` for `EventLoop` types that opted in to `CustomeTimerImplementation`.
-extension EventLoop where Self: NIOCustomTimerImplementation {
+    /// Default implementation of `cancelTimer(_:)`, for cancelling timers set with the default timer implementation.
     @inlinable
-    public func setTimer(for deadline: NIODeadline, _ handler: any NIOTimerHandler) -> NIOTimer {
-        NIOTimer(self, id: self.setTimer(for: deadline, handler))
+    public func cancelTimer(_ timer: NIOTimer) {
+        switch timer.backing {
+        case .default(let task):
+            task.cancel()
+        case .custom:
+            preconditionFailure("EventLoop missing custom implementation of cancelTimer(_:)")
+        }
     }
 }
