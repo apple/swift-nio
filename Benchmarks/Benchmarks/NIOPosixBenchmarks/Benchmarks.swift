@@ -96,7 +96,7 @@ let benchmarks = {
         let loop = group.next()
 
         final class Timer: NIOTimerHandler {
-            func timerFired(eventLoop: any EventLoop) {}
+            func timerFired(eventLoop: some EventLoop) {}
         }
         let timer = Timer()
 

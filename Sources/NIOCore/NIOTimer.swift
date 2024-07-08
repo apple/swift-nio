@@ -16,7 +16,7 @@
 ///
 /// - Seealso: ``EventLoop/setTimer(for:_:)-5e37g``.
 public protocol NIOTimerHandler {
-    func timerFired(eventLoop: any EventLoop)
+    func timerFired(eventLoop: some EventLoop)
 }
 
 /// An opaque handle that can be used to cancel a timer.
