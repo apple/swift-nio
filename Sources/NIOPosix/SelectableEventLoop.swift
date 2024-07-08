@@ -897,7 +897,7 @@ internal func assertExpression(_ body: () -> Bool) {
 
 extension SelectableEventLoop {
     @inlinable
-    func setTimer(for deadline: NIODeadline, handler: some NIOTimerHandler) -> NIOTimer {
+    func setTimer(at deadline: NIODeadline, handler: some NIOTimerHandler) -> NIOTimer {
         let taskId = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
         let task = ScheduledTask(id: taskId, handler, deadline)
         try! self._schedule0(.scheduled(task))

@@ -132,7 +132,7 @@ public final class EmbeddedEventLoop: EventLoop {
         /// Even though this type does not conform to `CustomTimerImplemenation`, it has a manual clock so we cannot
         /// rely on the default implemntation of `setTimer(for duration:_:)`, which computes the deadline for
         /// `setTimer(for deadline:_:)` naively using `NIODeadline.now`, but we must use `self._now`.
-        self.setTimer(for: self._now + duration, handler: handler)
+        self.setTimer(at: self._now + duration, handler: handler)
     }
 
     /// On an `EmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that

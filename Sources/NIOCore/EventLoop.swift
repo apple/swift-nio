@@ -359,7 +359,7 @@ public protocol EventLoop: EventLoopGroup {
 
     /// Set a timer that will call a handler at the given time.
     @discardableResult
-    func setTimer(for deadline: NIODeadline, handler: some NIOTimerHandler) -> NIOTimer
+    func setTimer(at deadline: NIODeadline, handler: some NIOTimerHandler) -> NIOTimer
 
     /// Set a timer that will call a handler after a given amount of time.
     @discardableResult

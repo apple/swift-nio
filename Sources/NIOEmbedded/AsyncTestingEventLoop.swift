@@ -176,7 +176,7 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
         /// Even though this type does not conform to `CustomTimerImplemenation`, it has a manual clock so we cannot
         /// rely on the default implemntation of `setTimer(for duration:_:)`, which computes the deadline for
         /// `setTimer(for deadline:_:)` naively using `NIODeadline.now`, but we must use `self.now`.
-        self.setTimer(for: self.now + duration, handler: handler)
+        self.setTimer(at: self.now + duration, handler: handler)
     }
 
     /// On an `NIOAsyncTestingEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. Unlike with the other operations, this will
