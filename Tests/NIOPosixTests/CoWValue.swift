@@ -19,8 +19,8 @@ struct CoWValue: @unchecked Sendable {
     /// This reference is "copied" if not uniquely referenced
     private var uniquenessIndicator = UniquenessIndicator()
 
-    /// mutates `self` and returns a boolean weather in was mutated in place
-    /// - Returns: true if mutations happened in-place, false if Copy on Write (CoW) was triggered
+    /// mutates `self` and returns a boolean whether it was mutated in place or not
+    /// - Returns: true if mutation happened in-place, false if Copy on Write (CoW) was triggered
     mutating func mutateInPlace() -> Bool {
         guard isKnownUniquelyReferenced(&self.uniquenessIndicator) else {
             self.uniquenessIndicator = UniquenessIndicator()
