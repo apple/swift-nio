@@ -16,6 +16,9 @@
 ///
 /// - Seealso: `EventLoop.setTimer(for:_:)`.
 public protocol NIOTimerHandler {
+    /// Called when the timer expires, unless the timer is cancelled.
+    ///
+    /// - Parameter eventLoop: The event loop associated with the timer, on which this function will be called.
     func timerFired(eventLoop: some EventLoop)
 }
 
