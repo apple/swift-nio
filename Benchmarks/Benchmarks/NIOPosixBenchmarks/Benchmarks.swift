@@ -102,7 +102,7 @@ let benchmarks = {
 
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {
-            let handle = loop.setTimer(for: .hours(1), timer)
+            let handle = loop.setTimer(for: .hours(1), handler: timer)
         }
         benchmark.stopMeasurement()
     }

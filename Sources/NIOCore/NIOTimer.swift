@@ -71,7 +71,7 @@ public struct NIOTimer: Sendable {
 extension EventLoop {
     /// Default implementation of `setTimer(for deadline:_:)`, backed by `EventLoop.scheduleTask`.
     @discardableResult
-    public func setTimer(for deadline: NIODeadline, _ handler: some NIOTimerHandler) -> NIOTimer {
+    public func setTimer(for deadline: NIODeadline, handler: some NIOTimerHandler) -> NIOTimer {
         let task = self.scheduleTask(deadline: deadline) { handler.timerFired(eventLoop: self) }
         return NIOTimer(self, task)
     }
@@ -79,8 +79,8 @@ extension EventLoop {
     /// Default implementation of `setTimer(for duration:_:)`, delegating to `setTimer(for deadline:_:)`.
     @discardableResult
     @inlinable
-    public func setTimer(for duration: TimeAmount, _ handler: some NIOTimerHandler) -> NIOTimer {
-        self.setTimer(for: .now() + duration, handler)
+    public func setTimer(for duration: TimeAmount, handler: some NIOTimerHandler) -> NIOTimer {
+        self.setTimer(for: .now() + duration, handler: handler)
     }
 
     /// Default implementation of `cancelTimer(_:)`, for cancelling timers set with the default timer implementation.

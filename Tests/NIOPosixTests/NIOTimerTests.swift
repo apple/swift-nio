@@ -25,7 +25,7 @@ final class EmbeddedTimerTests: XCTestCase {
         let handler = MockTimerHandler()
         XCTAssertEqual(handler.firedCount, 0)
 
-        _ = loop.setTimer(for: .milliseconds(42), handler)
+        _ = loop.setTimer(for: .milliseconds(42), handler: handler)
         XCTAssertEqual(handler.firedCount, 0)
 
         loop.advanceTime(by: .milliseconds(41))
@@ -41,7 +41,7 @@ final class EmbeddedTimerTests: XCTestCase {
     func testCancelled() async {
         let loop = EmbeddedEventLoop()
         let handler = MockTimerHandler()
-        let handle = loop.setTimer(for: .milliseconds(42), handler)
+        let handle = loop.setTimer(for: .milliseconds(42), handler: handler)
 
         handle.cancel()
         XCTAssertEqual(handler.firedCount, 0)
@@ -59,7 +59,7 @@ final class NIOAsyncTestingEventLoopTimerTests: XCTestCase {
         let handler = MockTimerHandler()
         XCTAssertEqual(handler.firedCount, 0)
 
-        _ = loop.setTimer(for: .milliseconds(42), handler)
+        _ = loop.setTimer(for: .milliseconds(42), handler: handler)
         XCTAssertEqual(handler.firedCount, 0)
 
         await loop.advanceTime(by: .milliseconds(41))
@@ -75,7 +75,7 @@ final class NIOAsyncTestingEventLoopTimerTests: XCTestCase {
     func testCancelled() async {
         let loop = NIOAsyncTestingEventLoop()
         let handler = MockTimerHandler()
-        let handle = loop.setTimer(for: .milliseconds(42), handler)
+        let handle = loop.setTimer(for: .milliseconds(42), handler: handler)
 
         handle.cancel()
         XCTAssertEqual(handler.firedCount, 0)
@@ -93,7 +93,7 @@ final class MTELGTimerTests: XCTestCase {
         let handler = MockTimerHandler()
         XCTAssertEqual(handler.firedCount, 0)
 
-        _ = loop.setTimer(for: .milliseconds(1), handler)
+        _ = loop.setTimer(for: .milliseconds(1), handler: handler)
 
         await fulfillment(of: [handler.timerDidFire], timeout: 0.01)
         XCTAssertEqual(handler.firedCount, 1)
@@ -105,7 +105,7 @@ final class MTELGTimerTests: XCTestCase {
         let handler = MockTimerHandler()
         handler.timerDidFire.isInverted = true
 
-        let handle = loop.setTimer(for: .milliseconds(1), handler)
+        let handle = loop.setTimer(for: .milliseconds(1), handler: handler)
         handle.cancel()
 
         await fulfillment(of: [handler.timerDidFire], timeout: 0.01)
@@ -120,7 +120,7 @@ final class MTELGTimerTests: XCTestCase {
         let handler = MockTimerHandler()
         handler.timerDidFire.isInverted = true
 
-        _ = loop.setTimer(for: .milliseconds(100), handler)
+        _ = loop.setTimer(for: .milliseconds(100), handler: handler)
         try await group.shutdownGracefully()
 
         await fulfillment(of: [handler.timerDidFire], timeout: 0.01)
