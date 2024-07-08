@@ -474,8 +474,8 @@ Further information:
                     fatalError("Tried to run an UnownedJob without runtime support")
                 }
             #endif
-            case .timer(let handler):
-                handler.timerFired(eventLoop: self)
+            case .callback(let handler):
+                handler.onSchedule(eventLoop: self)
             }
         }
     }
@@ -569,7 +569,7 @@ Further information:
                     scheduledTasks.pop()
                     switch task.kind {
                     case .task(let task, _): tasksCopy.append(.function(task))
-                    case .timer(let handler): tasksCopy.append(.timer(handler))
+                    case .callback(let handler): tasksCopy.append(.callback(handler))
                     }
                 } else {
                     nextScheduledTaskDeadline = task.readyTime
@@ -663,12 +663,12 @@ Further information:
                 for task in immediateTasksCopy {
                     self.run(task)
                 }
-                // Fail all the scheduled tasks (timers have no failFn and can just be dropped).
+                // Fail all the scheduled tasks (callbacks have no failFn and can just be dropped).
                 for task in scheduledTasksCopy {
                     switch task.kind {
                     case .task(_, let failFn):
                         failFn(EventLoopError.shutdown)
-                    case .timer:
+                    case .callback:
                         break
                     }
                 }
@@ -879,7 +879,7 @@ enum UnderlyingTask {
     #if compiler(>=5.9)
     case unownedJob(ErasedUnownedJob)
     #endif
-    case timer(any NIOTimerHandler)
+    case callback(any NIOScheduledCallbackHandler)
 }
 
 @usableFromInline
@@ -897,17 +897,17 @@ internal func assertExpression(_ body: () -> Bool) {
 
 extension SelectableEventLoop {
     @inlinable
-    func setTimer(at deadline: NIODeadline, handler: some NIOTimerHandler) -> NIOTimer {
+    func scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
         let taskId = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
         let task = ScheduledTask(id: taskId, handler, deadline)
         try! self._schedule0(.scheduled(task))
-        return NIOTimer(self, id: taskId)
+        return NIOScheduledCallback(self, id: taskId)
     }
 
     @inlinable
-    func cancelTimer(_ timer: NIOTimer) {
-        guard let id = timer.customTimerID else {
-            preconditionFailure("No custom ID for timer")
+    func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback) {
+        guard let id = scheduledCallback.customCallbackID else {
+            preconditionFailure("No custom ID for callback")
         }
         self._tasksLock.withLock {
             self._scheduledTasks.removeFirst(where: { $0.id == id })

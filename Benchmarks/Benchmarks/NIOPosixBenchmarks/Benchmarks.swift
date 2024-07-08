@@ -85,7 +85,7 @@ let benchmarks = {
     }
 
     Benchmark(
-        "MTELG.setTimer(for:_:)",
+        "MTELG.scheduleCallback(in:_:)",
         configuration: Benchmark.Configuration(
             metrics: [.mallocCountTotal, .cpuTotal],
             scalingFactor: .kilo
@@ -95,14 +95,14 @@ let benchmarks = {
         defer { try! group.syncShutdownGracefully() }
         let loop = group.next()
 
-        final class Timer: NIOTimerHandler {
-            func timerFired(eventLoop: some EventLoop) {}
+        final class Timer: NIOScheduledCallbackHandler {
+            func onSchedule(eventLoop: some EventLoop) {}
         }
         let timer = Timer()
 
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {
-            let handle = loop.setTimer(for: .hours(1), handler: timer)
+            let handle = loop.scheduleCallback(in: .hours(1), handler: timer)
         }
         benchmark.stopMeasurement()
     }

@@ -467,7 +467,7 @@ internal struct ScheduledTask {
     @usableFromInline
     enum Kind {
         case task(task: () -> Void, failFn: (Error) -> Void)
-        case timer(any NIOTimerHandler)
+        case callback(any NIOScheduledCallbackHandler)
     }
 
     @usableFromInline
@@ -482,10 +482,10 @@ internal struct ScheduledTask {
     }
 
     @usableFromInline
-    init(id: UInt64, _ handler: some NIOTimerHandler, _ time: NIODeadline) {
+    init(id: UInt64, _ handler: any NIOScheduledCallbackHandler, _ time: NIODeadline) {
         self.id = id
         self.readyTime = time
-        self.kind = .timer(handler)
+        self.kind = .callback(handler)
     }
 }
 

@@ -128,11 +128,12 @@ public final class EmbeddedEventLoop: EventLoop {
     }
 
     @discardableResult
-    public func setTimer(for duration: TimeAmount, handler: some NIOTimerHandler) -> NIOTimer {
+    public func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
+        // TODO: docs
         /// Even though this type does not conform to `CustomTimerImplemenation`, it has a manual clock so we cannot
         /// rely on the default implemntation of `setTimer(for duration:_:)`, which computes the deadline for
         /// `setTimer(for deadline:_:)` naively using `NIODeadline.now`, but we must use `self._now`.
-        self.setTimer(at: self._now + duration, handler: handler)
+        self.scheduleCallback(at: self._now + amount, handler: handler)
     }
 
     /// On an `EmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that

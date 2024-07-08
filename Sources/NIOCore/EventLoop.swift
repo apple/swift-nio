@@ -357,16 +357,28 @@ public protocol EventLoop: EventLoopGroup {
     /// however, both of them should be implemented.
     func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
 
-    /// Set a timer that will call a handler at the given time.
+    /// Schedule a callback at a given time.
+    ///
+    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** implement _both_
+    ///         `sheduleCallback(at deadline:handler:)` _and_ `cancelScheduledCallback(_:)`. Failure to do so will
+    ///         result in a runtime error.
     @discardableResult
-    func setTimer(at deadline: NIODeadline, handler: some NIOTimerHandler) -> NIOTimer
+    func scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback
 
-    /// Set a timer that will call a handler after a given amount of time.
+    /// Schedule a callback after given time.
+    ///
+    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** implement _both_
+    ///         `sheduleCallback(at deadline:handler:)` _and_ `cancelScheduledCallback(_:)`. Failure to do so will
+    ///         result in a runtime error.
     @discardableResult
-    func setTimer(for duration: TimeAmount, handler: some NIOTimerHandler) -> NIOTimer
+    func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback
 
-    /// Cancel a timer.
-    func cancelTimer(_ timer: NIOTimer)
+    /// Cancel a scheduled callback.
+    ///
+    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** implement _both_
+    ///         `sheduleCallback(at deadline:handler:)` _and_ `cancelScheduledCallback(_:)`. Failure to do so will
+    ///         result in a runtime error.
+    func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback)
 }
 
 extension EventLoop {
