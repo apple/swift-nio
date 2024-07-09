@@ -20,18 +20,32 @@ private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,
+        .cpuTotal,
+        .contextSwitches
     ]
 
     Benchmark(
-        "TCPEcho",
+        "TCPEcho pure NIO 1M times",
         configuration: .init(
             metrics: defaultMetrics,
-            timeUnits: .milliseconds,
-            scalingFactor: .mega
+            scalingFactor: .one
         )
     ) { benchmark in
         try runTCPEcho(
-            numberOfWrites: benchmark.scaledIterations.upperBound,
+            numberOfWrites: 1_000_000,
+            eventLoop: eventLoop
+        )
+    }
+
+    Benchmark(
+        "TCPEchoAsyncChannel pure async/await 1M times",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .one
+        )
+    ) { benchmark in
+        try await runTCPEchoAsyncChannel(
+            numberOfWrites: 1_000_000,
             eventLoop: eventLoop
         )
     }
@@ -40,11 +54,10 @@ let benchmarks = {
     // to serial executor is also gated behind 5.9.
     #if compiler(>=5.9)
     Benchmark(
-        "TCPEchoAsyncChannel",
+        "TCPEchoAsyncChannel using globalHook 1M times",
         configuration: .init(
             metrics: defaultMetrics,
-            timeUnits: .milliseconds,
-            scalingFactor: .mega,
+            scalingFactor: .one,
             // We are expecting a bit of allocation variance due to an allocation
             // in the Concurrency runtime which happens when resuming a continuation.
             thresholds: [.mallocCountTotal: .init(absolute: [.p90: 2000])],
@@ -59,9 +72,31 @@ let benchmarks = {
         )
     ) { benchmark in
         try await runTCPEchoAsyncChannel(
-            numberOfWrites: benchmark.scaledIterations.upperBound,
+            numberOfWrites: 1_000_000,
             eventLoop: eventLoop
         )
+    }
+    #endif
+
+    #if compiler(>=6.0)
+    if #available(macOS 15.0, *) {
+        Benchmark(
+            "TCPEchoAsyncChannel using task executor preference 1M times",
+            configuration: .init(
+                metrics: defaultMetrics,
+                scalingFactor: .one
+                // We are expecting a bit of allocation variance due to an allocation
+                // in the Concurrency runtime which happens when resuming a continuation.
+//                thresholds: [.mallocCountTotal: .init(absolute: [.p90: 2000])]
+            )
+        ) { benchmark in
+            try await withTaskExecutorPreference(eventLoop.taskExecutor) {
+                try await runTCPEchoAsyncChannel(
+                    numberOfWrites: 1_000_000,
+                    eventLoop: eventLoop
+                )
+            }
+        }
     }
     #endif
 }

@@ -383,7 +383,7 @@ extension EventLoop {
     #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public var executor: any SerialExecutor {
-        NIODefaultSerialEventLoopExecutor(self)
+        NIODefaultEventLoopExecutor(self)
     }
 
     @inlinable
@@ -396,6 +396,13 @@ extension EventLoop {
         self.execute {
             unownedJob.runSynchronously(on: self.executor.asUnownedSerialExecutor())
         }
+    }
+    #endif
+
+    #if compiler(>=6.0)
+    @available(macOS 15.0, iOS 9999.0, watchOS 9999.0, tvOS 9999.0, *)
+    public var taskExecutor: any TaskExecutor {
+        NIODefaultEventLoopExecutor(self)
     }
     #endif
 }
