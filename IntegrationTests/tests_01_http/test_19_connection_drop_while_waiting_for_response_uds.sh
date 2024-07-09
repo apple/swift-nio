@@ -20,7 +20,7 @@ start_server --disable-half-closure "$token"
 server_pid=$(get_server_pid "$token")
 socket=$(get_socket "$token")
 
-kill -0 "$server_pid"
+kill -0 "$server_pid" # ignore-unacceptable-language
 echo -e 'GET /dynamic/write-delay/10000 HTTP/1.1\r\n\r\n' | do_nc -w1 -U "$socket"
 sleep 0.2
 

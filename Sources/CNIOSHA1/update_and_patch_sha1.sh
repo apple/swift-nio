@@ -35,7 +35,7 @@ for f in sha1.c sha1.h; do
       echo "    - use welcoming language (soundness check)"
       echo "    - ensure BYTE_ORDER is defined"
       echo "*/"
-      curl -Ls "https://raw.githubusercontent.com/freebsd/freebsd/master/sys/crypto/$f"
+      curl -Ls "https://raw.githubusercontent.com/freebsd/freebsd/master/sys/crypto/$f" # ignore-unacceptable-language
     ) > "$here/c_nio_$f"
 
     for func in sha1_init sha1_pad sha1_loop sha1_result; do

@@ -143,9 +143,9 @@ fi
 
 # report
 if [[ $cnt_fail > 0 ]]; then
-    # kill leftovers (the whole process group)
+    # terminate leftovers (the whole process group)
     trap '' TERM
-    kill 0
+    kill 0 # ignore-unacceptable-language
 
     plugins_do summary_fail "$cnt_ok" "$cnt_fail"
 else

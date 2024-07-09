@@ -21,7 +21,7 @@ htdocs=$(get_htdocs "$token")
 server_pid=$(get_server_pid "$token")
 socket=$(get_socket "$token")
 
-kill -0 $server_pid
+kill -0 $server_pid # ignore-unacceptable-language
 
 echo -e 'GET /dynamic/count-to-ten HTTP/1.1\r\nConnection: close\r\n\r\n' | \
     do_nc -U "$socket" > "$tmp/actual"
