@@ -1072,7 +1072,13 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
         in range: Range<Int64>,
         chunkLength size: ByteCount
     ) -> FileChunks {
-        return FileChunks(handle: self, chunkLength: size, range: range)
+        return FileChunks(handle: self, chunkLength: size, range: .range(range))
+    }
+
+    public func readChunksFromFilePointer(
+        chunkLength size: ByteCount
+    ) -> FileChunks {
+        return FileChunks(handle: self, chunkLength: size, range: .filePointerToEnd)
     }
 }
 

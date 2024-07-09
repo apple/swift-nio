@@ -610,6 +610,32 @@ final class FileHandleTests: XCTestCase {
         }
     }
 
+    func testUnboundedRangeAfterRead() async throws {
+        // Reading chunks from an UnboundedRange after the file position has been moved to non-zero.
+        try await self.withHandle(forFileAtPath: Self.thisFile) { handle in
+            // trigger an initial read of the entire file to attempt to move the file pointer
+            var firstRead = ByteBuffer()
+            for try await chunk in handle.readChunks(in: ..., chunkLength: .bytes(128)) {
+                XCTAssertLessThanOrEqual(chunk.readableBytes, 128)
+                firstRead.writeImmutableBuffer(chunk)
+            }
+            var secondRead = ByteBuffer()
+            for try await chunk in handle.readChunks(in: ..., chunkLength: .bytes(128)) {
+                XCTAssertLessThanOrEqual(chunk.readableBytes, 128)
+                secondRead.writeImmutableBuffer(chunk)
+            }
+            // We should read bytes until EOF.
+            XCTAssertEqual(
+                secondRead.readableBytes,
+                firstRead.readableBytes,
+                """
+                Read \(secondRead.readableBytes) which were different to the \(firstRead.readableBytes) \
+                expected bytes.
+                """
+            )
+        }
+    }
+
     func testReadPartialRange() async throws {
         // Reading chunks of bytes from a PartialRangeThrough with the upper bound inside the file.
         try await self.withHandle(forFileAtPath: Self.thisFile) { handle in

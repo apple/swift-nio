@@ -202,6 +202,13 @@ public protocol ReadableFileHandleProtocol: FileHandleProtocol {
     ///   - chunkLength: The maximum length of the chunk to read as a ``ByteCount``.
     /// - Returns: A sequence of chunks read from the file.
     func readChunks(in range: Range<Int64>, chunkLength: ByteCount) -> FileChunks
+
+    /// Returns an asynchronous sequence of chunks read from the file starting from the current file pointer.
+    ///
+    /// - Parameters:
+    ///   - size: The maximum length of the chunk to read as a ``ByteCount``.
+    /// - Returns: A sequence of chunks read from the file.
+    func readChunksFromFilePointer(chunkLength size: ByteCount) -> FileChunks
 }
 
 // MARK: - Read chunks with default chunk length
@@ -415,7 +422,7 @@ extension ReadableFileHandleProtocol {
             var accumulator = ByteBuffer()
             accumulator.reserveCapacity(readSize)
 
-            for try await chunk in self.readChunks(in: ..., chunkLength: .mebibytes(8)) {
+            for try await chunk in self.readChunksFromFilePointer(chunkLength: .mebibytes(8)) {
                 accumulator.writeImmutableBuffer(chunk)
                 if accumulator.readableBytes > maximumSizeAllowed.bytes {
                     throw FileSystemError(
