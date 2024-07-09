@@ -3,18 +3,26 @@ name: Pull Request
 on:
   workflow_call:
     inputs:
-      enable_unit_tests:
+      unit_tests_enabled:
         type: boolean
         description: "Boolean to enable the unit tests job. Defaults to true."
         default: true
-      enable_api_breakage_check:
+      api_breakage_check_enabled:
         type: boolean
         description: "Boolean to enable the API breakage check job. Defaults to true."
         default: true
-      enable_docs_check:
+      docs_check_enabled:
         type: boolean
         description: "Boolean to enable the docs check job. Defaults to true."
         default: true
+      unacceptable_language_check_enabled:
+        type: boolean
+        description: "Boolean to enable the acceptable language check job. Defaults to true."
+        default: true
+      unacceptable_language_check_word_list:
+        type: string
+        description: "List of unacceptable words. Defaults to a sensible list of words."
+        default: "blacklist whitelist slave master sane sanity insane insanity kill killed killing hang hung hanged hanging" #ignore-unacceptable-language
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -24,7 +32,7 @@ concurrency:
 jobs:
   unit-tests:
     name: Unit tests
-    if: ${{ inputs.enable_unit_tests }}
+    if: ${{ inputs.unit_tests_enabled }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -46,7 +54,7 @@ jobs:
 
   api-breakage-check:
     name: API breakage check
-    if: ${{ inputs.enable_api_breakage_check }}
+    if: ${{ inputs.api_breakage_check_enabled }}
     runs-on: ubuntu-latest
     container:
       image: swift:5.10-noble
@@ -65,7 +73,7 @@ jobs:
 
   docs-check:
     name: Documentation check
-    if: ${{ inputs.enable_docs_check }}
+    if: ${{ inputs.docs_check_enabled }}
     runs-on: ubuntu-latest
     container:
       image: swift:5.10-noble
@@ -84,3 +92,16 @@ jobs:
         for target in "${targets[@]}"; do
           swift package plugin generate-documentation --target "$target" --warnings-as-errors --analyze --level detailed
         done
+
+  unacceptable-language-check:
+    name: Unacceptable language check
+    if: ${{ inputs.unacceptable_language_check_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Run unacceptable language check
+      env:
+        UNACCEPTABLE_WORD_LIST: ${{ inputs.unacceptable_language_check_word_list}}
+      run: ./scripts/unacceptable_language_check.sh

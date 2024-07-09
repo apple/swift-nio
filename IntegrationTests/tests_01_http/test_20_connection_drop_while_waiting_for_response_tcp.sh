@@ -22,7 +22,7 @@ server_pid=$(get_server_pid "$token")
 ip=$(get_server_ip "$token")
 port=$(get_server_port "$token")
 
-kill -0 $server_pid
+kill -0 $server_pid # ignore-unacceptable-language
 echo -e 'GET /dynamic/write-delay/10000 HTTP/1.1\r\n\r\n' | do_nc -w1 "$ip" "$port"
 sleep 0.2
 stop_server "$token"

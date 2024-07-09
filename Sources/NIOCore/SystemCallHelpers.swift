@@ -122,7 +122,7 @@ enum SystemCalls {
             let err = errno
 #endif
 
-            // There is really nothing "sane" we can do when EINTR was reported on close.
+            // There is really nothing "good" we can do when EINTR was reported on close.
             // So just ignore it and "assume" everything is fine == we closed the file descriptor.
             //
             // For more details see:
