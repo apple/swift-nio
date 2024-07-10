@@ -30,19 +30,14 @@ concurrency:
   cancel-in-progress: true
  
 jobs:
-  unit-tests:
-    name: Unit tests
+  unit-tests-ubuntu:
+    name: Unit tests (Ubuntu)
     if: ${{ inputs.unit_tests_enabled }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        swift:
-        - image: swift:5.8-jammy
-        - image: swift:5.9-jammy
-        - image: swift:5.10-noble
-        - image: swiftlang/swift:nightly-6.0-jammy
-        - image: swiftlang/swift:nightly-main-jammy
+        swift: ["swift:5.8-jammy", "swift:5.9-jammy", "swift:5.10-noble", "swiftlang/swift:nightly-6.0-jammy", "swiftlang/swift:nightly-main-jammy"]
     container:
       image: ${{ matrix.swift.image }}
     timeout-minutes: 20
@@ -51,6 +46,23 @@ jobs:
       uses: actions/checkout@v4
     - name: Run tests
       run: swift test
+
+  unit-tests-windows:
+    name: Unit tests (Windows)
+    if: ${{ inputs.unit_tests_enabled }}
+    strategy:
+      matrix:
+        swift: ["5.8", "5.9", "5.10"]
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: compnerd/gha-setup-swift@main
+        with:
+          branch: swift-${{ matrix.swift }}-release
+          tag: ${{ matrix.swift }}-RELEASE
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: swift test
 
   api-breakage-check:
     name: API breakage check
