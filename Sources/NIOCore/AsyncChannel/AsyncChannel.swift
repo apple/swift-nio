@@ -315,16 +315,27 @@ extension Channel {
     ) throws -> (NIOAsyncChannelInboundStream<Inbound>, NIOAsyncChannelOutboundWriter<Outbound>) {
         self.eventLoop.assertInEventLoop()
 
-        let inboundStream = try NIOAsyncChannelInboundStream<Inbound>.makeWrappingHandler(
-            channel: self,
+        let handler = NIOAsyncChannelHandler<Inbound, Inbound, Outbound>(
+            eventLoop: self.eventLoop,
+            transformation: .syncWrapping { $0 },
+            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
+        )
+
+        let inboundStream = try NIOAsyncChannelInboundStream(
+            eventLoop: self.eventLoop,
+            handler: handler,
             backPressureStrategy: backPressureStrategy,
             closeOnDeinit: closeOnDeinit
         )
+
         let writer = try NIOAsyncChannelOutboundWriter<Outbound>(
-            channel: self,
+            eventLoop: self.eventLoop,
+            handler: handler,
             isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
             closeOnDeinit: closeOnDeinit
         )
+
+        try self.pipeline.syncOperations.addHandler(handler)
         return (inboundStream, writer)
     }
 
@@ -338,17 +349,27 @@ extension Channel {
     ) throws -> (NIOAsyncChannelInboundStream<ChannelReadResult>, NIOAsyncChannelOutboundWriter<Never>) {
         self.eventLoop.assertInEventLoop()
 
-        let inboundStream = try NIOAsyncChannelInboundStream<ChannelReadResult>.makeTransformationHandler(
-            channel: self,
-            backPressureStrategy: backPressureStrategy,
-            closeOnDeinit: closeOnDeinit,
-            channelReadTransformation: channelReadTransformation
+        let handler = NIOAsyncChannelHandler<Channel, ChannelReadResult, Never>(
+            eventLoop: self.eventLoop,
+            transformation: .transformation(channelReadTransformation: channelReadTransformation),
+            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
         )
+
+        let inboundStream = try NIOAsyncChannelInboundStream(
+            eventLoop: self.eventLoop,
+            handler: handler,
+            backPressureStrategy: backPressureStrategy,
+            closeOnDeinit: closeOnDeinit
+        )
+
         let writer = try NIOAsyncChannelOutboundWriter<Never>(
-            channel: self,
+            eventLoop: self.eventLoop,
+            handler: handler,
             isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled,
             closeOnDeinit: closeOnDeinit
         )
+
+        try self.pipeline.syncOperations.addHandler(handler)
         return (inboundStream, writer)
     }
 }
