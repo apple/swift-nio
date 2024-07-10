@@ -96,7 +96,7 @@ let benchmarks = {
         let loop = group.next()
 
         final class Timer: NIOScheduledCallbackHandler {
-            func onSchedule(eventLoop: some EventLoop) {}
+            func handleScheduledCallback(eventLoop: some EventLoop) {}
         }
         let timer = Timer()
 

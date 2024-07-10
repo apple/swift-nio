@@ -475,7 +475,7 @@ Further information:
                 }
             #endif
             case .callback(let handler):
-                handler.onSchedule(eventLoop: self)
+                handler.handleScheduledCallback(eventLoop: self)
             }
         }
     }

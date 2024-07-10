@@ -19,7 +19,7 @@ public protocol NIOScheduledCallbackHandler {
     /// This function is called at the scheduled time, unless the scheduled callback is cancelled.
     ///
     /// - Parameter eventLoop: The event loop on which the callback was scheduled.
-    func onSchedule(eventLoop: some EventLoop)
+    func handleScheduledCallback(eventLoop: some EventLoop)
 }
 
 /// An opaque handle that can be used to cancel a scheduled callback.
@@ -79,7 +79,7 @@ extension EventLoop {
     /// Default implementation of `scheduleCallback(at deadline:handler:)`: backed by `EventLoop.scheduleTask`.
     @discardableResult
     public func scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
-        let task = self.scheduleTask(deadline: deadline) { handler.onSchedule(eventLoop: self) }
+        let task = self.scheduleTask(deadline: deadline) { handler.handleScheduledCallback(eventLoop: self) }
         return NIOScheduledCallback(self, task)
     }
 

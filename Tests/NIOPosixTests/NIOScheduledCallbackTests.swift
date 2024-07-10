@@ -132,7 +132,7 @@ fileprivate final class MockTimerHandler: NIOScheduledCallbackHandler {
     var firedCount = 0
     var timerDidFire = XCTestExpectation(description: "Timer fired")
 
-    func onSchedule(eventLoop: some EventLoop) {
+    func handleScheduledCallback(eventLoop: some EventLoop) {
         self.firedCount += 1
         self.timerDidFire.fulfill()
     }
