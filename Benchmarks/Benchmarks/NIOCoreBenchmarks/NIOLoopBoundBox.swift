@@ -19,9 +19,11 @@ func runNIOLoopBoundBoxInPlaceMutation() {
     let embeddedEventLoop = EmbeddedEventLoop()
     let boundBox = NIOLoopBoundBox([Int](), eventLoop: embeddedEventLoop)
     boundBox.value.reserveCapacity(1000)
+
     for i in 0..<1000 {
         boundBox.value.append(i)
     }
+    
     precondition(boundBox.value.count == 1000)
     precondition(boundBox.value.reduce(0, +) == 499500)
 }
