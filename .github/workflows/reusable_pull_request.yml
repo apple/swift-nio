@@ -39,7 +39,7 @@ jobs:
       matrix:
         swift: ["swift:5.8-jammy", "swift:5.9-jammy", "swift:5.10-noble", "swiftlang/swift:nightly-6.0-jammy", "swiftlang/swift:nightly-main-jammy"]
     container:
-      image: ${{ matrix.swift.image }}
+      image: ${{ matrix.swift }}
     timeout-minutes: 20
     steps:
     - name: Checkout repository
