@@ -24,6 +24,21 @@ jobs:
     - name: Run tests
       run: swift test
 
+  unit-tests-macos:
+    name: Unit tests (macOS)
+    strategy:
+      matrix:
+        swift: ["5.8", "5.9", "5.10"]
+    runs-on: macos-14
+    timeout-minutes: 20
+    steps:
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ matrix.swift }}
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: swift test
+
   unit-tests-windows:
     name: Unit tests (Windows)
     strategy:
@@ -87,4 +102,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     - name: Run unacceptable language check
+      env:
+        UNACCEPTABLE_WORD_LIST: "blacklist whitelist slave master sane sanity insane insanity kill killed killing hang hung hanged hanging"
       run: ./scripts/unacceptable_language_check.sh
