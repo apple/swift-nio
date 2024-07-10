@@ -832,9 +832,10 @@ public struct ByteBuffer {
         return true
     }
     
-    /// Clamps the buffers capacity to either the maximum of the `desiredCapacity` or the buffer's `readableBytes`.
+    /// Clamps the buffers capacity to the larger of two values, the `desiredCapacity` or the buffer's `readableBytes`.
     ///
-    /// - returns: A boolean indicating if the capacity of the buffer has changed.
+    /// - Parameter desiredCapacity: The desired capacity for the buffers capacity to be clamped to
+    /// - returns: `true` if one or more bytes have been discarded, `false` if there are no bytes to discard.
     @inlinable
     @discardableResult public mutating func clampBufferCapacity(to desiredCapacity: Int) -> Bool {
         let maxRetainedCapacity = max(self.readableBytes, desiredCapacity)
