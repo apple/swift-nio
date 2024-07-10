@@ -30,10 +30,18 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     @usableFromInline
     /* private */ var _value: Value
 
-    /// Initialise a ``NIOLoopBound`` to `value` with the precondition that the code is running on `eventLoop`.
+    /// Initialize a ``NIOLoopBound`` to `value` with the precondition that the code is running on `eventLoop`.
     @inlinable
     public init(_ value: Value, eventLoop: EventLoop) {
         eventLoop.preconditionInEventLoop()
+        self.init(value, uncheckedEventLoop: eventLoop)
+    }
+
+    @inlinable
+    /// Initialize a ``NIOLoopBound`` to `value` with _an assertion_ that the code is running on `uncheckedEventLoop`.
+    /// Unlike a precondition check,  ``EventLoop/assertInEventLoop(file:line:)`` only performs the check in debug configuration, so the check is free in release configuration.
+    public init(_ value: Value, uncheckedEventLoop eventLoop: EventLoop) {
+        eventLoop.assertInEventLoop()
         self._eventLoop = eventLoop
         self._value = value
     }
@@ -50,6 +58,23 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
         _modify {
             self._eventLoop.preconditionInEventLoop()
             yield &self._value
+        }
+    }
+
+    /// Access the `value` with the assertion that the code is running on `eventLoop`.
+    ///
+    /// Unlike ``NIOLoopBound/value``, this performs the assertion in debug configuration only, so it's
+    /// cheaper, and still performs the precondition check in debug mode.
+    /// - note: ``NIOLoopBound`` itself is value-typed, so any writes will only affect the current value.
+    @inlinable
+    public var uncheckedValue: Value {
+        get {
+            self._eventLoop.assertInEventLoop()
+            return self._value
+        }
+        set {
+            self._eventLoop.assertInEventLoop()
+            self._value = newValue
         }
     }
 }
@@ -77,19 +102,29 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     @usableFromInline
     /* private */var _value: Value
 
+    /// Initialize a ``NIOLoopBoundBox`` to `value` with the an assertion that the code is running on `eventLoop`.
+    ///
+    /// - note: Unlike ``NIOLoopBoundBox/init(_:eventLoop:)``, this performs ``EventLoop/assertInEventLoop(file:line:)`` instead of a precondition check, which is free in release mode.
     @inlinable
-    internal init(_value value: Value, uncheckedEventLoop eventLoop: EventLoop) {
+    public init(_ value: Value, uncheckedEventLoop eventLoop: EventLoop) {
+        eventLoop.assertInEventLoop()
         self._eventLoop = eventLoop
         self._value = value
     }
 
-    /// Initialise a ``NIOLoopBoundBox`` to `value` with the precondition that the code is running on `eventLoop`.
+    @inlinable
+    internal init(_ value: Value, notVerifyingEventLoop eventLoop: EventLoop) {
+        self._eventLoop = eventLoop
+        self._value = value
+    }
+
+    /// Initialize a ``NIOLoopBoundBox`` to `value` with the precondition that the code is running on `eventLoop`.
     @inlinable
     public convenience init(_ value: Value, eventLoop: EventLoop) {
         // This precondition is absolutely required. If not, it were possible to take a non-Sendable `Value` from
         // _off_ the ``EventLoop`` and transport it _to_ the ``EventLoop``. That would be illegal.
         eventLoop.preconditionInEventLoop()
-        self.init(_value: value, uncheckedEventLoop: eventLoop)
+        self.init(value, uncheckedEventLoop: eventLoop)
     }
 
     /// Initialise a ``NIOLoopBoundBox`` that is empty (contains `nil`), this does _not_ require you to be running on `eventLoop`.
@@ -104,7 +139,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         // - Because of Swift's Definitive Initialisation (DI), we know that we did write `self._value` before `init`
         //   returns.
         // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
-        return .init(_value: nil, uncheckedEventLoop: eventLoop)
+        return .init(nil, notVerifyingEventLoop: eventLoop)
     }
 
     /// Initialise a ``NIOLoopBoundBox`` by sending a `Sendable` value, validly callable off `eventLoop`.
@@ -141,5 +176,22 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
             yield &self._value
         }
     }
+
+    /// Access the `value` with the assertion that the code is running on `eventLoop`.
+    ///
+    /// - note: ``NIOLoopBoundBox`` itself is reference-typed, so any writes will affect anybody sharing this reference.
+    @inlinable
+    public var uncheckedValue: Value {
+        get {
+            self._eventLoop.assertInEventLoop()
+            return self._value
+        }
+        set {
+            self._eventLoop.assertInEventLoop()
+            self._value = newValue
+        }
+    }
+
+  
 }
 
