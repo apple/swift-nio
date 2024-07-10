@@ -103,5 +103,5 @@ jobs:
       uses: actions/checkout@v4
     - name: Run unacceptable language check
       env:
-        UNACCEPTABLE_WORD_LIST: "blacklist whitelist slave master sane sanity insane insanity kill killed killing hang hung hanged hanging"
+        UNACCEPTABLE_WORD_LIST: "blacklist whitelist slave master sane sanity insane insanity kill killed killing hang hung hanged hanging" #ignore-unacceptable-language
       run: ./scripts/unacceptable_language_check.sh
