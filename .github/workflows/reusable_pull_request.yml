@@ -3,9 +3,9 @@ name: Pull Request
 on:
   workflow_call:
     inputs:
-      unit_tests_enabled:
+      unit_tests_linux_enabled:
         type: boolean
-        description: "Boolean to enable the unit tests job. Defaults to true."
+        description: "Boolean to enable the unit tests linux job. Defaults to true."
         default: true
       api_breakage_check_enabled:
         type: boolean
@@ -30,9 +30,9 @@ concurrency:
   cancel-in-progress: true
  
 jobs:
-  unit-tests:
+  unit-tests-linux:
     name: Unit tests
-    if: ${{ inputs.unit_tests_enabled }}
+    if: ${{ inputs.unit_tests_linux_enabled }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -82,16 +82,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     - name: Run documentation check
-      shell: bash
-      run: |
-        set -eu
-
-        raw_targets=$(sed -E -n -e 's/^.* - documentation_targets: \[(.*)\].*$/\1/p' .spi.yml)
-        targets=(${raw_targets//,/ })
-
-        for target in "${targets[@]}"; do
-          swift package plugin generate-documentation --target "$target" --warnings-as-errors --analyze --level detailed
-        done
+      run: ./scripts/check-docs.sh
 
   unacceptable-language-check:
     name: Unacceptable language check
@@ -104,4 +95,4 @@ jobs:
     - name: Run unacceptable language check
       env:
         UNACCEPTABLE_WORD_LIST: ${{ inputs.unacceptable_language_check_word_list}}
-      run: ./scripts/unacceptable_language_check.sh
+      run: ./scripts/check-unacceptable-language.sh
