@@ -8,3 +8,5 @@ jobs:
   call-reusable-pull-request-workflow:
     name: Checks
     uses: ./.github/workflows/reusable_pull_request.yml
+    with:
+      benchmarks_linux_package_path: "Benchmarks"
