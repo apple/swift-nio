@@ -14,16 +14,24 @@
 
 import NIOCore
 import NIOEmbedded
+import Benchmark
 
-func runNIOLoopBoundBoxInPlaceMutation() {
+func runNIOLoopBoundBoxInPlaceMutation(benchmark: Benchmark) {
     let embeddedEventLoop = EmbeddedEventLoop()
     let boundBox = NIOLoopBoundBox([Int](), eventLoop: embeddedEventLoop)
     boundBox.value.reserveCapacity(1000)
 
-    for i in 0..<1000 {
-        boundBox.value.append(i)
+    benchmark.startMeasurement()
+
+    for _ in benchmark.scaledIterations {
+        boundBox.value.removeAll(keepingCapacity: true)
+        for i in 0..<1000 {
+            boundBox.value.append(i)
+        }
     }
-    
+
+    benchmark.stopMeasurement()
+
     precondition(boundBox.value.count == 1000)
     precondition(boundBox.value.reduce(0, +) == 499500)
 }

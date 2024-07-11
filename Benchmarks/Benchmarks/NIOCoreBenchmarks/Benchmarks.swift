@@ -44,8 +44,8 @@ let benchmarks = {
 
     Benchmark(
         "NIOLoopBoundBox.value",
-        configuration: .init(metrics: defaultMetrics)
-    ) { _ in
-        runNIOLoopBoundBoxInPlaceMutation()
+        configuration: .init(metrics: defaultMetrics, scalingFactor: .kilo)
+    ) { benchmark in
+        runNIOLoopBoundBoxInPlaceMutation(benchmark: benchmark)
     }
 }
