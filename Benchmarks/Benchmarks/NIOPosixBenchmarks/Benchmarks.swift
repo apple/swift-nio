@@ -81,7 +81,6 @@ let benchmarks = {
         for _ in benchmark.scaledIterations {
             loop.scheduleTask(in: .hours(1), {})
         }
-        benchmark.stopMeasurement()
     }
 
     Benchmark(
@@ -104,6 +103,5 @@ let benchmarks = {
         for _ in benchmark.scaledIterations {
             let handle = loop.scheduleCallback(in: .hours(1), handler: timer)
         }
-        benchmark.stopMeasurement()
     }
 }
