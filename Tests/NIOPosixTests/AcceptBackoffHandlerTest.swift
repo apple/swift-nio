@@ -14,6 +14,8 @@
 
 import Atomics
 import NIOCore
+import NIOEmbedded
+import NIOTestUtils
 import XCTest
 
 @testable import NIOPosix
@@ -298,6 +300,18 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
 
         XCTAssertEqual(2, backoffProviderCalled.load(ordering: .relaxed))
+    }
+
+    func testNotForwardingIOError() throws {
+        let loop = EmbeddedEventLoop()
+        let acceptBackOffHandler = AcceptBackoffHandler(shouldForwardIOErrorCaught: false)
+        let eventCounterHandler = EventCounterHandler()
+        let channel = EmbeddedChannel(handlers: [acceptBackOffHandler, eventCounterHandler], loop: loop)
+
+        channel.pipeline.fireErrorCaught(IOError(errnoCode: 1, reason: "test"))
+        XCTAssertEqual(eventCounterHandler.errorCaughtCalls, 0)
+        channel.pipeline.fireErrorCaught(ChannelError.alreadyClosed)
+        XCTAssertEqual(eventCounterHandler.errorCaughtCalls, 1)
     }
 
     private final class ReadCountHandler: ChannelOutboundHandler {
