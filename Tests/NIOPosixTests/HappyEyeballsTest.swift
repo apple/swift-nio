@@ -22,6 +22,8 @@ import XCTest
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Bionic)
+import Bionic
 #else
 #error("The Happy Eyeballs test module was unable to identify your C library.")
 #endif

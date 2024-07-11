@@ -23,6 +23,8 @@ import WinSDK
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
 #else
 #error("Unsupported C library")
 #endif

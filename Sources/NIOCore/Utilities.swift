@@ -17,6 +17,8 @@ import CNIOLinux
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Android)
+import Android
 #endif
 #elseif os(Windows)
 import let WinSDK.RelationProcessorCore

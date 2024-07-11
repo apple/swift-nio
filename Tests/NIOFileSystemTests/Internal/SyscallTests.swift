@@ -132,7 +132,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_linkat() throws {
-        #if canImport(Glibc)
+        #if canImport(Glibc) || canImport(Bionic)
         let fd1 = FileDescriptor(rawValue: 13)
         let fd2 = FileDescriptor(rawValue: 42)
 
@@ -306,7 +306,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_renameat2() throws {
-        #if canImport(Glibc)
+        #if canImport(Glibc) || canImport(Bionic)
         let fd1 = FileDescriptor(rawValue: 13)
         let fd2 = FileDescriptor(rawValue: 42)
 
@@ -355,7 +355,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_sendfile() throws {
-        #if canImport(Glibc)
+        #if canImport(Glibc) || canImport(Bionic)
         let input = FileDescriptor(rawValue: 42)
         let output = FileDescriptor(rawValue: 1)
 

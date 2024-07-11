@@ -30,6 +30,8 @@ private func sys_sched_yield() {
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
 #else
 #error("The concurrency atomics module was unable to identify your C library.")
 #endif

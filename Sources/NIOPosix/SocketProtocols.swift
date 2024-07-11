@@ -81,6 +81,8 @@ private let globallyIgnoredSIGPIPE: Bool = {
     _ = Glibc.signal(SIGPIPE, SIG_IGN)
     #elseif canImport(Musl)
     _ = Musl.signal(SIGPIPE, SIG_IGN)
+    #elseif canImport(Android)
+    _ = Android.signal(SIGPIPE, SIG_IGN)
     #else
     #error("Don't know which stdlib to use")
     #endif

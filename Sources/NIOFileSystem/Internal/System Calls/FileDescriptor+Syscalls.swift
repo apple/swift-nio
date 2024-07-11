@@ -24,6 +24,9 @@ import CNIOLinux
 #elseif canImport(Musl)
 import Musl
 import CNIOLinux
+#elseif canImport(Bionic)
+import Bionic
+import CNIOLinux
 #endif
 
 extension FileDescriptor {
@@ -309,7 +312,7 @@ extension FileDescriptor {
     }
 }
 
-#if canImport(Glibc) || canImport(Musl)
+#if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
 extension FileDescriptor.OpenOptions {
     static var temporaryFile: Self {
         Self(rawValue: CNIOLinux_O_TMPFILE)
