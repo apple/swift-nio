@@ -473,7 +473,6 @@ internal struct ScheduledTask {
     @usableFromInline
     let kind: Kind
 
-    // TODO: Should these be .init() or should they be static functions?
     @usableFromInline
     init(id: UInt64, _ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
         self.id = id
