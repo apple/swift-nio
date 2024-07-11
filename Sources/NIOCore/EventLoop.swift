@@ -363,7 +363,7 @@ public protocol EventLoop: EventLoopGroup {
     ///         ``scheduleCallback(at:handler:)-5ryox`` and ``cancelScheduledCallback(_:)-1lfz0``. Failure to do so will
     ///         result in a runtime error.
     @discardableResult
-    func scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback
+    func scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) throws -> NIOScheduledCallback
 
     /// Schedule a callback after given time.
     ///
@@ -371,7 +371,7 @@ public protocol EventLoop: EventLoopGroup {
     ///         ``scheduleCallback(at:handler:)-5ryox`` and ``cancelScheduledCallback(_:)-1lfz0``. Failure to do so will
     ///         result in a runtime error.
     @discardableResult
-    func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback
+    func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) throws -> NIOScheduledCallback
 
     /// Cancel a scheduled callback.
     ///

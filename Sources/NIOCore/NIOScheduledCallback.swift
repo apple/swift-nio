@@ -86,8 +86,8 @@ extension EventLoop {
     /// Default implementation of `scheduleCallback(in amount:handler:)`: calls `scheduleCallback(at deadline:handler:)`.
     @discardableResult
     @inlinable
-    public func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
-        self.scheduleCallback(at: .now() + amount, handler: handler)
+    public func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) throws -> NIOScheduledCallback {
+        try self.scheduleCallback(at: .now() + amount, handler: handler)
     }
 
     /// Default implementation of `cancelScheduledCallback(_:)`: only cancels callbacks scheduled by the default implementation of `scheduleCallback`.
