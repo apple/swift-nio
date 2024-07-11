@@ -649,6 +649,10 @@ extension ServerBootstrap {
             }.flatMap { (_) -> EventLoopFuture<NIOAsyncChannel<ChannelInitializerResult, Never>> in
                 do {
                     try serverChannel.pipeline.syncOperations.addHandler(
+                        AcceptBackoffHandler(),
+                        name: "AcceptBackOffHandler"
+                    )
+                    try serverChannel.pipeline.syncOperations.addHandler(
                         AcceptHandler(childChannelInitializer: childChannelInit, childChannelOptions: childChannelOptions),
                         name: "AcceptHandler"
                     )

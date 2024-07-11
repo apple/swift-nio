@@ -68,8 +68,9 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
                     scheduleRead(at: self.nextReadDeadlineNS!, context: context)
                 }
             }
+        } else {
+            context.fireErrorCaught(error)
         }
-        context.fireErrorCaught(error)
     }
 
     public func channelInactive(context: ChannelHandlerContext) {
