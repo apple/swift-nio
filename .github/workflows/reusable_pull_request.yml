@@ -31,6 +31,14 @@ on:
         type: string
         description: "List of unacceptable words. Defaults to a sensible list of words."
         default: "blacklist whitelist slave master sane sanity insane insanity kill killed killing hang hung hanged hanging" #ignore-unacceptable-language
+      license_header_check_enabled:
+        type: boolean
+        description: "Boolean to enable the license header check job. Defaults to true."
+        default: true
+      license_header_check_project_name:
+        type: string
+        description: "Name of the project called out in the license header."
+        required: true
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -138,3 +146,16 @@ jobs:
       env:
         UNACCEPTABLE_WORD_LIST: ${{ inputs.unacceptable_language_check_word_list}}
       run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-unacceptable-language.sh | bash
+
+  license-header-check:
+    name: License headers check
+    if: ${{ inputs.license_header_check_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Run license header check
+      env:
+        PROJECT_NAME: ${{ inputs.license_header_check_project_name}}
+      run: ./scripts/check-license-header.sh
