@@ -70,7 +70,7 @@ public struct NIOScheduledCallback: Sendable {
     /// - NOTE: This property is for event loop implementors only.
     @inlinable
     public var customCallbackID: UInt64? {
-        guard case .custom(let id) = backing else { return nil }
+        guard case .custom(let id) = self.backing else { return nil }
         return id
     }
 }
