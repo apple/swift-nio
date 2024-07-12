@@ -47,6 +47,10 @@ on:
         type: boolean
         description: "Boolean to enable the format check job. Defaults to true."
         default: true
+      cxx_interoperability_check_enabled:
+        type: boolean
+        description: "Boolean to enable the Cxx interoperability check job. Defaults to true."
+        default: true
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -191,3 +195,18 @@ jobs:
       uses: actions/checkout@v4
     - name: Run format check
       run: swift format lint --parallel --recursive --strict
+
+  cxx-interoperability-check:
+    name: Cxx interoperability check
+    if: ${{ inputs.cxx_interoperability_check_enabled }}
+    runs-on: ubuntu-latest
+    container:
+      image: swift:5.10-noble
+    timeout-minutes: 5
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Run Cxx interoperability build
+      run:  |
+        apt-get -qq update && apt-get -qq -y install curl
+        curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-cxx-interop-compatibility.sh | bash
