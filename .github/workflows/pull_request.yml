@@ -24,5 +24,18 @@ jobs:
     uses: ./.github/workflows/pull_request_swift_matrix.yml
     with:
       name: "Benchmarks"
-      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev && swift package --package-path Benchmarks/ --disable-sandbox benchmark baseline check --check-absolute-path Benchmarks/Thresholds/${SWIFT_VERSION}/
-"
+      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev && swift package --package-path Benchmarks/ --disable-sandbox benchmark baseline check --check-absolute-path Benchmarks/Thresholds/${SWIFT_VERSION}/"
+
+  call-pull-request-cxx-interop-workflow:
+    name: Cxx interop
+    uses: ./.github/workflows/pull_request_swift_matrix.yml
+    with:
+      name: "Cxx interop"
+      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q jq && ./scripts/check-cxx-interop-compatibility.sh"
+
+  call-pull-request-integration-tests-workflow:
+    name: Integration tests
+    uses: ./.github/workflows/pull_request_swift_matrix.yml
+    with:
+      name: "Integration tests"
+      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"
