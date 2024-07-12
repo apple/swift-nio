@@ -122,7 +122,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     - name: Run documentation check
-      run: ./scripts/check-docs.sh
+      run: |
+        apt-get -qq update && apt-get -qq -y install curl
+        curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-docs.sh | bash
 
   unacceptable-language-check:
     name: Unacceptable language check
@@ -135,4 +137,4 @@ jobs:
     - name: Run unacceptable language check
       env:
         UNACCEPTABLE_WORD_LIST: ${{ inputs.unacceptable_language_check_word_list}}
-      run: ./scripts/check-unacceptable-language.sh
+      run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-unacceptable-language.sh | bash
