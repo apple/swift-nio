@@ -20,7 +20,10 @@
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @usableFromInline
-    typealias _Writer = NIOAsyncChannelOutboundWriterHandler<OutboundOut>.Writer
+    typealias _Writer = NIOAsyncWriter<
+        OutboundOut,
+        NIOAsyncChannelHandlerWriterDelegate<OutboundOut>
+    >
 
     /// An `AsyncSequence` backing a ``NIOAsyncChannelOutboundWriter`` for testing purposes.
     public struct TestSink: AsyncSequence {
@@ -82,15 +85,13 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     }
 
     @inlinable
-    init(
-        channel: Channel,
+    init<InboundIn, ProducerElement>(
+        eventLoop: any EventLoop,
+        handler: NIOAsyncChannelHandler<InboundIn, ProducerElement, OutboundOut>,
         isOutboundHalfClosureEnabled: Bool,
         closeOnDeinit: Bool
     ) throws {
-        let handler = NIOAsyncChannelOutboundWriterHandler<OutboundOut>(
-            eventLoop: channel.eventLoop,
-            isOutboundHalfClosureEnabled: isOutboundHalfClosureEnabled
-        )
+        eventLoop.preconditionInEventLoop()
         let writer = _Writer.makeWriter(
             elementType: OutboundOut.self,
             isWritable: true,
@@ -100,8 +101,6 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
 
         handler.sink = writer.sink
         handler.writer = writer.writer
-
-        try channel.pipeline.syncOperations.addHandler(handler)
 
         self._backing = .writer(writer.writer)
     }
