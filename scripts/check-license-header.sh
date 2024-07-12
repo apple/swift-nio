@@ -48,10 +48,13 @@ file_paths=$(git ls-files \
   ":(exclude).github/*" \
   ":(exclude)*.md" \
   ":(exclude)*.txt" \
+  ":(exclude)*.yml" \
   ":(exclude)*.yaml" \
   ":(exclude)*.json" \
   ":(exclude)Package.swift" \
   ":(exclude)**/Package.swift" \
+  ":(exclude)Package@-*.swift" \
+  ":(exclude)**/Package@-*.swift" \
   ":(exclude)Package.resolved" \
   ":(exclude)**/Package.resolved" \
   ":(exclude)Makefile" \
@@ -76,7 +79,6 @@ while IFS= read -r file_path; do
     swift) expected_file_header=$(sed -e 's|@@|//|g' <<<"${expected_file_header_template}") ;;
     h) expected_file_header=$(sed -e 's|@@|//|g' <<<"${expected_file_header_template}") ;;
     c) expected_file_header=$(sed -e 's|@@|//|g' <<<"${expected_file_header_template}") ;;
-    yml) expected_file_header=$(sed -e 's|@@|##|g' <<<"${expected_file_header_template}") ;;
     sh) expected_file_header=$(cat <(echo '#!/bin/bash') <(sed -e 's|@@|##|g' <<<"${expected_file_header_template}")) ;;
     py) expected_file_header=$(cat <(echo '#!/usr/bin/env python3') <(sed -e 's|@@|##|g' <<<"${expected_file_header_template}")) ;;
     rb) expected_file_header=$(cat <(echo '#!/usr/bin/env ruby') <(sed -e 's|@@|##|g' <<<"${expected_file_header_template}")) ;;
