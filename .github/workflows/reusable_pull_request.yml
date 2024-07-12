@@ -158,6 +158,4 @@ jobs:
     - name: Run license header check
       env:
         PROJECT_NAME: ${{ inputs.license_header_check_project_name }}
-      run: |
-        apt-get -qq update && apt-get -qq -y install curl
-        curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-license-header.sh | bash
+      run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-license-header.sh | bash
