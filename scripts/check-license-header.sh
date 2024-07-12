@@ -39,7 +39,6 @@ paths_with_missing_license=( )
 file_paths=$(git ls-files $(cat .licenseignore | xargs -I% printf ":(exclude)% "))
 
 while IFS= read -r file_path; do
-  echo "$file_path" 
   file_basename=$(basename -- "${file_path}")
   file_extension="${file_basename##*.}"
 
