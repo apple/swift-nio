@@ -39,6 +39,14 @@ on:
         type: string
         description: "Name of the project called out in the license header."
         required: true
+      broken_symlink_check_enabled:
+        type: boolean
+        description: "Boolean to enable the broken symlink check job. Defaults to true."
+        default: true
+      format_check_enabled:
+        type: boolean
+        description: "Boolean to enable the format check job. Defaults to true."
+        default: true
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -159,3 +167,27 @@ jobs:
       env:
         PROJECT_NAME: ${{ inputs.license_header_check_project_name }}
       run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-license-header.sh | bash
+
+  broken-symlink-check:
+    name: Broken symlinks check
+    if: ${{ inputs.broken_symlink_check_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Run broken symlinks check
+      run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-broken-symlinks.sh | bash
+
+  format-check:
+    name: Format check
+    if: ${{ inputs.format_check_enabled }}
+    runs-on: ubuntu-latest
+    container:
+      image: swiftlang/swift:nightly-6.0-jammy
+    timeout-minutes: 5
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Run format check
+      run: swift format lint --parallel --recursive --strict
