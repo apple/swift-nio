@@ -287,7 +287,7 @@ extension Selector: _SelectorBackendProtocol {
         assert(NIOThread.current != self.myThread)
         try self.externalSelectorFDLock.withLock {
                 guard self.selectorFD >= 0 else {
-                    throw EventLoopError.shutdown
+                    throw EventLoopError._shutdown
                 }
                 var event = kevent()
                 event.ident = 0

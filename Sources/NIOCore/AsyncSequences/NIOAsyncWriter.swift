@@ -17,6 +17,9 @@ import DequeModule
 import NIOConcurrencyHelpers
 import _NIODataStructures
 
+@usableFromInline
+let _asyncWriterYieldIDCounter = ManagedAtomic<UInt64>(0)
+
 /// The delegate of the ``NIOAsyncWriter``. It is the consumer of the yielded writes to the ``NIOAsyncWriter``.
 /// Furthermore, the delegate gets informed when the ``NIOAsyncWriter`` terminated.
 ///
@@ -434,14 +437,11 @@ extension NIOAsyncWriter {
                 }
             }
 
-            @usableFromInline
-            /* private */ internal let _yieldIDCounter = ManagedAtomic<UInt64>(0)
-
             @inlinable
             func generateUniqueYieldID() -> YieldID {
                 // Using relaxed is fine here since we do not need any strict ordering just a
                 // unique ID for every yield.
-                .init(value: self._yieldIDCounter.loadThenWrappingIncrement(ordering: .relaxed))
+                .init(value: _asyncWriterYieldIDCounter.loadThenWrappingIncrement(ordering: .relaxed))
             }
         }
 

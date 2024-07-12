@@ -253,7 +253,7 @@ Further information:
 
         // Don't allow registration when we're closed.
         guard self.isOpen else {
-            throw EventLoopError.shutdown
+            throw EventLoopError._shutdown
         }
 
         try channel.register(selector: self._selector, interested: channel.interestedEvent)
@@ -667,7 +667,7 @@ Further information:
                 for task in scheduledTasksCopy {
                     switch task.kind {
                     case .task(_, let failFn):
-                        failFn(EventLoopError.shutdown)
+                        failFn(EventLoopError._shutdown)
                     case .callback:
                         break
                     }
@@ -777,7 +777,7 @@ Further information:
             }
             guard goAhead else {
                 queue.async {
-                    completionHandler(Result.failure(EventLoopError.shutdown))
+                    completionHandler(Result.failure(EventLoopError._shutdown))
                 }
                 return
             }
@@ -829,7 +829,7 @@ Further information:
             // This function is never called legally because the only possibly owner of an `SelectableEventLoop` is
             // `MultiThreadedEventLoopGroup` which calls `initiateClose` followed by `syncFinaliseClose`.
             queue.async {
-                callback(EventLoopError.unsupportedOperation)
+                callback(EventLoopError._unsupportedOperation)
             }
         }
     }

@@ -304,7 +304,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private func _shutdownGracefully(queue: DispatchQueue, _ handler: @escaping ShutdownGracefullyCallback) {
         guard self.canBeShutDown else {
             queue.async {
-                handler(EventLoopError.unsupportedOperation)
+                handler(EventLoopError._unsupportedOperation)
             }
             return
         }

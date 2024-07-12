@@ -65,11 +65,11 @@ final class PipePair: SocketProtocol {
     }
 
     func connect(to address: SocketAddress) throws -> Bool {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func finishConnect() throws {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
@@ -103,26 +103,26 @@ final class PipePair: SocketProtocol {
                  storage: inout sockaddr_storage,
                  storageLen: inout socklen_t,
                  controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int> {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
-    
+
     func sendmsg(pointer: UnsafeRawBufferPointer,
                  destinationPtr: UnsafePointer<sockaddr>?,
                  destinationSize: socklen_t,
                  controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func sendFile(fd: CInt, offset: Int, count: Int) throws -> IOResult<Int> {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func sendmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func shutdown(how: Shutdown) throws {
@@ -142,7 +142,7 @@ final class PipePair: SocketProtocol {
 
     func close() throws {
         guard self.isOpen else {
-            throw ChannelError.alreadyClosed
+            throw ChannelError._alreadyClosed
         }
         let r1 = Result {
             if let inputFD = self.inputFD, inputFD.isOpen {
@@ -159,22 +159,22 @@ final class PipePair: SocketProtocol {
     }
 
     func bind(to address: SocketAddress) throws {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func localAddress() throws -> SocketAddress {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func remoteAddress() throws -> SocketAddress {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 }

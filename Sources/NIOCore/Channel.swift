@@ -202,7 +202,7 @@ extension Channel {
     }
 
     public func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.operationUnsupported)
+        promise?.fail(ChannelError._operationUnsupported)
     }
 
     public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
@@ -371,6 +371,17 @@ public enum ChannelError: Error {
 
     /// An attempt was made to remove a ChannelHandler that is not removable.
     case unremovableHandler
+}
+
+extension ChannelError {
+    // 'any Error' is unconditionally boxed, avoid allocating per use by statically boxing them.
+    static let _alreadyClosed: any Error = ChannelError.alreadyClosed
+    static let _inputClosed: any Error = ChannelError.inputClosed
+    @usableFromInline
+    static let _ioOnClosedChannel: any Error = ChannelError.ioOnClosedChannel
+    static let _operationUnsupported: any Error = ChannelError.operationUnsupported
+    static let _outputClosed: any Error = ChannelError.outputClosed
+    static let _unremovableHandler: any Error = ChannelError.unremovableHandler
 }
 
 extension ChannelError: Equatable { }

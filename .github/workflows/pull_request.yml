@@ -1,0 +1,14 @@
+name: Pull Request
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+ 
+jobs:
+  call-reusable-pull-request-workflow:
+    name: Checks
+    uses: ./.github/workflows/reusable_pull_request.yml
+    with:
+      benchmarks_linux_package_path: "Benchmarks"
+      license_header_check_project_name: "SwiftNIO"
+      format_check_enabled: false

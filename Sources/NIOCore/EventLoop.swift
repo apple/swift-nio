@@ -26,7 +26,7 @@ public struct Scheduled<T> {
     @usableFromInline typealias CancelationCallback = @Sendable () -> Void
     /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
     /* private but usableFromInline */ @usableFromInline let _cancellationTask: CancelationCallback
-    
+
     @inlinable
     @preconcurrency
     public init(promise: EventLoopPromise<T>, cancellationTask: @escaping @Sendable () -> Void) {
@@ -40,7 +40,7 @@ public struct Scheduled<T> {
     ///  This means that cancellation is not guaranteed.
     @inlinable
     public func cancel() {
-        self._promise.fail(EventLoopError.cancelled)
+        self._promise.fail(EventLoopError._cancelled)
         self._cancellationTask()
     }
 
@@ -314,7 +314,7 @@ public protocol EventLoop: EventLoopGroup {
     /// This executor can be used to isolate an actor to a given ``EventLoop``. Implementers are encouraged to customise
     /// this implementation by conforming their ``EventLoop`` to ``NIOSerialEventLoopExecutor`` which will provide an
     /// optimised implementation of this method, and will conform their type to `SerialExecutor`. The default
-    /// implementation returns a ``NIODefaultSerialEventLoopExecutor`` instead, which provides suboptimal performance.
+    /// implementation provides suboptimal performance.
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     var executor: any SerialExecutor { get }
 
@@ -1240,6 +1240,11 @@ public enum EventLoopError: Error {
 
     /// Shutting down the `EventLoop` failed.
     case shutdownFailed
+}
+
+extension EventLoopError {
+    @usableFromInline
+    static let _cancelled: any Error = EventLoopError.cancelled
 }
 
 extension EventLoopError: CustomStringConvertible {

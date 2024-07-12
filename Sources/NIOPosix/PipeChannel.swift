@@ -48,15 +48,15 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func connectSocket(to address: VsockAddress) throws -> Bool {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func finishConnectSocket() throws {
-        throw ChannelError.inappropriateOperationForState
+        throw ChannelError._inappropriateOperationForState
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {

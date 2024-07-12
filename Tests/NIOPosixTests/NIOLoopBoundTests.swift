@@ -68,6 +68,14 @@ final class NIOLoopBoundTests: XCTestCase {
         }.wait())
     }
 
+    func testInPlaceMutation() {
+        var loopBound = NIOLoopBound(CoWValue(), eventLoop: loop)
+        XCTAssertTrue(loopBound.value.mutateInPlace())
+
+        let loopBoundBox = NIOLoopBoundBox(CoWValue(), eventLoop: loop)
+        XCTAssertTrue(loopBoundBox.value.mutateInPlace())
+    }
+
     // MARK: - Helpers
     func sendableBlackhole<S: Sendable>(_ sendableThing: S) {}
 
