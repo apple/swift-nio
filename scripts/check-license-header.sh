@@ -36,42 +36,10 @@ expected_file_header_template="@@===--------------------------------------------
 
 paths_with_missing_license=( )
 
-file_paths=$(git ls-files \
-  ":(exclude).gitignore" \
-  ":(exclude)**/.gitignore" \
-  ":(exclude).licenseignore" \
-  ":(exclude).gitattributes" \
-  ":(exclude).mailfilter" \
-  ":(exclude).mailmap" \
-  ":(exclude).spi.yml" \
-  ":(exclude).swift-format" \
-  ":(exclude).github/*" \
-  ":(exclude)*.md" \
-  ":(exclude)*.txt" \
-  ":(exclude)*.yml" \
-  ":(exclude)*.yaml" \
-  ":(exclude)*.json" \
-  ":(exclude)Package.swift" \
-  ":(exclude)**/Package.swift" \
-  ":(exclude)Package@-*.swift" \
-  ":(exclude)**/Package@-*.swift" \
-  ":(exclude)Package.resolved" \
-  ":(exclude)**/Package.resolved" \
-  ":(exclude)Makefile" \
-  ":(exclude)*.modulemap" \
-  ":(exclude)**/*.modulemap" \
-  ":(exclude)**/*.docc/*" \
-  ":(exclude)*.xcprivacy" \
-  ":(exclude)**/*.xcprivacy" \
-  ":(exclude)*.symlink" \
-  ":(exclude)**/*.symlink" \
-  ":(exclude)Dockerfile" \
-  ":(exclude)**/Dockerfile" \
-  ":(exclude)Snippets/*" \
-  $(printf ":(exclude)%s " $(cat .licenseignore))
-)
+file_paths=$(git ls-files $(cat .licenseignore | xargs -I% printf ":(exclude)% "))
 
 while IFS= read -r file_path; do
+  echo "$file_path" 
   file_basename=$(basename -- "${file_path}")
   file_extension="${file_basename##*.}"
 
