@@ -359,25 +359,21 @@ public protocol EventLoop: EventLoopGroup {
 
     /// Schedule a callback at a given time.
     ///
-    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** implement _both_
-    ///         ``scheduleCallback(at:handler:)-5ryox`` and ``cancelScheduledCallback(_:)-1lfz0``. Failure to do so will
-    ///         result in a runtime error.
+    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** also implement
+    ///         `cancelScheduledCallback`. Failure to do so will result in a runtime error.
     @discardableResult
     func scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) throws -> NIOScheduledCallback
 
     /// Schedule a callback after given time.
     ///
-    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** implement _both_
-    ///         ``scheduleCallback(at:handler:)-5ryox`` and ``cancelScheduledCallback(_:)-1lfz0``. Failure to do so will
-    ///         result in a runtime error.
+    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** also implement
+    ///         `cancelScheduledCallback`. Failure to do so will result in a runtime error.
     @discardableResult
     func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) throws -> NIOScheduledCallback
 
     /// Cancel a scheduled callback.
     ///
-    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** implement _both_
-    ///         ``scheduleCallback(at:handler:)-5ryox`` and ``cancelScheduledCallback(_:)-1lfz0``. Failure to do so will
-    ///         result in a runtime error.
+    /// - NOTE: Event loops only need to implemented this if they provide a custom scheduled callback implementation.
     func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback)
 }
 

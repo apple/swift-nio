@@ -93,7 +93,7 @@ final class MTELGScheduledCallbackTests: XCTestCase {
         let handler = MockTimerHandler()
         XCTAssertEqual(handler.firedCount, 0)
 
-        _ = loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        _ = try loop.scheduleCallback(in: .milliseconds(1), handler: handler)
 
         await fulfillment(of: [handler.timerDidFire], timeout: 0.01)
         XCTAssertEqual(handler.firedCount, 1)
@@ -105,7 +105,7 @@ final class MTELGScheduledCallbackTests: XCTestCase {
         let handler = MockTimerHandler()
         handler.timerDidFire.isInverted = true
 
-        let handle = loop.scheduleCallback(in: .milliseconds(1), handler: handler)
+        let handle = try loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         handle.cancel()
 
         await fulfillment(of: [handler.timerDidFire], timeout: 0.01)
@@ -115,12 +115,12 @@ final class MTELGScheduledCallbackTests: XCTestCase {
     func testShutdown() async throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let loop = group.next()
-        defer { try! group.syncShutdownGracefully() }
+        defer { group.shutdownGracefully { error in XCTAssertNil(error) } }
 
         let handler = MockTimerHandler()
         handler.timerDidFire.isInverted = true
 
-        _ = loop.scheduleCallback(in: .milliseconds(100), handler: handler)
+        _ = try loop.scheduleCallback(in: .milliseconds(100), handler: handler)
         try await group.shutdownGracefully()
 
         await fulfillment(of: [handler.timerDidFire], timeout: 0.01)
