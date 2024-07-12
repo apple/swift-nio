@@ -125,15 +125,30 @@ public struct HTTPRequestHead: Equatable {
 
 extension HTTPRequestHead: @unchecked Sendable {}
 
-/// The parts of a complete HTTP message, either request or response.
-///
-/// A HTTP message is made up of a request or status line with several headers,
-/// encoded by `.head`, zero or more body parts, and optionally some trailers. To
-/// indicate that a complete HTTP message has been sent or received, we use `.end`,
-/// which may also contain any trailers that make up the message.
+/// The parts of a complete HTTP message, representing either a request or a response.
+/// 
+/// An HTTP message is made up of:
+/// - a request or status line with several headers, encoded by a single ``HTTPPart/head(_:)`` part,
+/// - zero or more ``HTTPPart/body(_:)`` parts,
+/// - and some optional trailers (represented as headers) in a single ``HTTPPart/end(_:)`` part.
+/// 
+/// To indicate that a complete HTTP message has been sent or received,
+/// an ``HTTPPart/end(_:)`` part must be used, even when no trailers are included.
 public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
+    /// The headers of an HTTP request or response.
+    ///
+    /// A single part is always used to encode all headers.
     case head(HeadT)
+    
+    /// A part of an HTTP request or response's body.
+    ///
+    /// Zero or more body parts can be sent or received. The stream is finished when
+    /// an ``HTTPPart/end(_:)`` part is received.
     case body(BodyT)
+    
+    /// The end of an HTTP request or response, optionally containing trailers.
+    ///
+    /// A single part is always used to encode all trailers.
     case end(HTTPHeaders?)
 }
 
