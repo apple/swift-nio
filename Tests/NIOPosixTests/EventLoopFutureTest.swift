@@ -17,6 +17,7 @@ import Dispatch
 @testable import NIOCore
 import NIOEmbedded
 import NIOPosix
+import NIOConcurrencyHelpers
 
 enum EventLoopFutureTestError : Error {
     case example
@@ -1380,18 +1381,19 @@ class EventLoopFutureTest : XCTestCase {
     func testWhenSuccessBlocking() {
         let eventLoop = EmbeddedEventLoop()
         let sem = DispatchSemaphore(value: 0)
-        var nonBlockingRan = false
+        let nonBlockingRan = NIOLockedValueBox(false)
         let p = eventLoop.makePromise(of: String.self)
         p.futureResult.whenSuccessBlocking(onto: DispatchQueue.global()) {
             sem.wait() // Block in callback
             XCTAssertEqual($0, "hello")
-            XCTAssertTrue(nonBlockingRan)
+            nonBlockingRan.withLockedValue { XCTAssertTrue($0) }
+
         }
         p.succeed("hello")
     
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
-            nonBlockingRan = true
+            nonBlockingRan.withLockedValue { $0 = true }
         }
         p2.succeed(true)
 
