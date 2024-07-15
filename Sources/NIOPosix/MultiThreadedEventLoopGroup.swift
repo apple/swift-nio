@@ -453,6 +453,15 @@ struct ErasedUnownedJob {
 
 @usableFromInline
 internal struct ScheduledTask {
+    @usableFromInline
+    enum Kind {
+        case task(task: () -> Void, failFn: (Error) -> Void)
+        case callback(any NIOScheduledCallbackHandler)
+    }
+
+    @usableFromInline
+    let kind: Kind
+
     /// The id of the scheduled task.
     ///
     /// - Important: This id has two purposes. First, it is used to give this struct an identity so that we can implement ``Equatable``
@@ -463,15 +472,6 @@ internal struct ScheduledTask {
 
     @usableFromInline
     internal let readyTime: NIODeadline
-
-    @usableFromInline
-    enum Kind {
-        case task(task: () -> Void, failFn: (Error) -> Void)
-        case callback(any NIOScheduledCallbackHandler)
-    }
-
-    @usableFromInline
-    let kind: Kind
 
     @usableFromInline
     init(id: UInt64, _ task: @escaping () -> Void, _ failFn: @escaping (Error) -> Void, _ time: NIODeadline) {
