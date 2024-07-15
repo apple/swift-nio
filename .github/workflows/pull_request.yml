@@ -5,10 +5,24 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
  
 jobs:
-  call-reusable-pull-request-workflow:
-    name: Checks
-    uses: ./.github/workflows/reusable_pull_request.yml
+  call-pull-request-soundness-workflow:
+    name: Soundness
+    uses: ./.github/workflows/pull_request_soundness.yml
     with:
-      benchmarks_linux_package_path: "Benchmarks"
       license_header_check_project_name: "SwiftNIO"
       format_check_enabled: false
+
+  call-pull-request-unit-tests-workflow:
+    name: Unit tests
+    uses: ./.github/workflows/pull_request_swift_matrix.yml
+    with:
+      name: "Unit tests"
+      matrix_linux_command: "swift test -Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+
+  call-pull-request-benchmark-workflow:
+    name: Benchmarks
+    uses: ./.github/workflows/pull_request_swift_matrix.yml
+    with:
+      name: "Benchmarks"
+      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev && swift package --package-path Benchmarks/ --disable-sandbox benchmark baseline check --check-absolute-path Benchmarks/Thresholds/${SWIFT_VERSION}/
+"
