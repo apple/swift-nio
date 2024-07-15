@@ -41,4 +41,11 @@ let benchmarks = {
             blackHole(asyncChanel)
         }
     }
+
+    Benchmark(
+        "NIOLoopBoundBox.value",
+        configuration: .init(metrics: defaultMetrics, scalingFactor: .kilo)
+    ) { benchmark in
+        runNIOLoopBoundBoxInPlaceMutation(benchmark: benchmark)
+    }
 }
