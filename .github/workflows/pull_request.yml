@@ -10,3 +10,5 @@ jobs:
     uses: ./.github/workflows/reusable_pull_request.yml
     with:
       benchmarks_linux_package_path: "Benchmarks"
+      license_header_check_project_name: "SwiftNIO"
+      format_check_enabled: false
