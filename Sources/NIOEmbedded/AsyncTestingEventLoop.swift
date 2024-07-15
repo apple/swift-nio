@@ -173,9 +173,9 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 
     @discardableResult
     public func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
-        /// Even though this type does not implement a custom `scheduleCallback(at:handler)`, it has a manual clock so
-        /// we cannot rely on the default implemntation of `setTimer(for:handler:)`, which computes the deadline as an
-        /// offset from `NIODeadline.now`. This event loop needs the deadline to be offset from `self.now`.
+        /// Even though this type does not implement a custom `scheduleCallback(at:handler)`, it uses a manual clock so
+        /// it cannot rely on the default implementation of `scheduleCallback(in:handler:)`, which computes the deadline
+        /// as an offset from `NIODeadline.now`. This event loop needs the deadline to be offset from `self.now`.
         self.scheduleCallback(at: self.now + amount, handler: handler)
     }
 
