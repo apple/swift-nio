@@ -1,0 +1,96 @@
+name: Pull Request
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        description: "The name of the workflow used for the concurrency group."
+        required: true
+      matrix_linux_command:
+        type: string
+        description: "The command of the current Swift version linux matrix job to execute."
+        required: true
+      matrix_linux_5_8_enabled:
+        type: boolean
+        description: "Boolean to enable the 5.8 Swift version matrix job. Defaults to true."
+        default: true
+      matrix_linux_5_8_command_override:
+        type: string
+        description: "The command of the 5.8 Swift version linux matrix job to execute."
+      matrix_linux_5_9_enabled:
+        type: boolean
+        description: "Boolean to enable the 5.9 Swift version matrix job. Defaults to true."
+        default: true
+      matrix_linux_5_9_command_override:
+        type: string
+        description: "The command of the 5.9 Swift version linux matrix job to execute."
+      matrix_linux_5_10_enabled:
+        type: boolean
+        description: "Boolean to enable the 5.10 Swift version matrix job. Defaults to true."
+        default: true
+      matrix_linux_5_10_command_override:
+        type: string
+        description: "The command of the 5.10 Swift version linux matrix job to execute."
+      matrix_linux_nightly_6_0_enabled:
+        type: boolean
+        description: "Boolean to enable the nightly 6.0 Swift version matrix job. Defaults to true."
+        default: true
+      matrix_linux_nightly_6_0_command_override:
+        type: string
+        description: "The command of the nightly 6.0 Swift version linux matrix job to execute."
+      matrix_linux_nightly_main_enabled:
+        type: boolean
+        description: "Boolean to enable the nightly main Swift version matrix job. Defaults to true."
+        default: true
+      matrix_linux_nightly_main_command_override:
+        type: string
+        description: "The command of the nightly main Swift version linux matrix job to execute."
+
+## We are cancelling previously triggered workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
+  cancel-in-progress: true
+ 
+jobs:
+  linux:
+    name: ${{ matrix.swift.swift_version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # We are specifying only the major and minor of the docker images to automatically pick up the latest patch release
+        swift:
+        - image: swift:5.8-jammy
+          swift_version: "5.8"
+          enabled: ${{ inputs.matrix_linux_5_8_enabled }}
+        - image: swift:5.9-jammy
+          swift_version: "5.9"
+          enabled: ${{ inputs.matrix_linux_5_9_enabled }}
+        - image: swift:5.10-jammy
+          swift_version: "5.10"
+          enabled: ${{ inputs.matrix_linux_5_10_enabled }}
+        - image: swiftlang/swift:nightly-6.0-jammy
+          swift_version: "nightly-6.0"
+          enabled: ${{ inputs.matrix_linux_nightly_6_0_enabled }}
+        - image: swiftlang/swift:nightly-main-jammy
+          swift_version: "nightly-main"
+          enabled: ${{ inputs.matrix_linux_nightly_main_enabled }}
+    container:
+      image: ${{ matrix.swift.image }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Run matrix job
+      if: ${{ matrix.swift.enabled }}
+      env:
+        SWIFT_VERSION: ${{ matrix.swift.swift_version }}
+        COMMAND: ${{ inputs.matrix_linux_command }}
+        COMMAND_OVERRIDE_5_8: ${{ inputs.matrix_linux_5_8_command_override }}
+        COMMAND_OVERRIDE_5_9: ${{ inputs.matrix_linux_5_9_command_override }}
+        COMMAND_OVERRIDE_5_10: ${{ inputs.matrix_linux_5_10_command_override }}
+        COMMAND_OVERRIDE_NIGHTLY_6_0: ${{ inputs.matrix_linux_nightly_6_0_command_override }}
+        COMMAND_OVERRIDE_NIGHTLY_MAIN: ${{ inputs.matrix_linux_nightly_main_command_override }}
+      run: |
+        apt-get -qq update && apt-get -qq -y install curl
+        curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
