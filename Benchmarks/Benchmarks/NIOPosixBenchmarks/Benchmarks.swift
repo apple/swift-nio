@@ -69,7 +69,7 @@ let benchmarks = {
     Benchmark(
         "MTELG.scheduleTask(in:_:)",
         configuration: Benchmark.Configuration(
-            metrics: [.mallocCountTotal, .cpuTotal],
+            metrics: [.mallocCountTotal, .instructions],
             scalingFactor: .kilo
         )
     ) { benchmark in
@@ -86,7 +86,7 @@ let benchmarks = {
     Benchmark(
         "MTELG.scheduleCallback(in:_:)",
         configuration: Benchmark.Configuration(
-            metrics: [.mallocCountTotal, .cpuTotal],
+            metrics: [.mallocCountTotal, .instructions],
             scalingFactor: .kilo
         )
     ) { benchmark in
