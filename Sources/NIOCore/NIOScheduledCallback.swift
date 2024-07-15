@@ -101,7 +101,7 @@ extension EventLoop {
         case .default(let task):
             task.cancel()
         case .custom:
-            preconditionFailure("EventLoop missing custom implementation of cancelTimer(_:)")
+            preconditionFailure("EventLoop missing custom implementation of cancelScheduledCallback(_:)")
         }
     }
 }
