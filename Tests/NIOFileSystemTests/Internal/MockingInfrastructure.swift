@@ -158,7 +158,7 @@ internal struct MockTestCase: TestCase {
     var expected: Trace.Entry
     var interruptBehavior: InterruptBehavior
 
-    var interruptable: Bool { return interruptBehavior == .interruptable }
+    var interruptable: Bool { interruptBehavior == .interruptable }
 
     internal enum InterruptBehavior {
         // Retry the syscall on EINTR

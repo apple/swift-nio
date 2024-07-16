@@ -106,11 +106,13 @@ extension NIOSingletons {
             ) { enqueueOnNIOPtr in
                 // Unsafe 4: We just pretend that we're the only ones in the world pulling this trick (or at least
                 // that the others also use a `compareExchange`)...
-                guard concurrencyEnqueueGlobalHookAtomic.compareExchange(
-                    expected: nil,
-                    desired: enqueueOnNIOPtr.pointee,
-                    ordering: .relaxed
-                ).exchanged else {
+                guard
+                    concurrencyEnqueueGlobalHookAtomic.compareExchange(
+                        expected: nil,
+                        desired: enqueueOnNIOPtr.pointee,
+                        ordering: .relaxed
+                    ).exchanged
+                else {
                     return false
                 }
 

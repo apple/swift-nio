@@ -18,9 +18,9 @@ import PackageDescription
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(
-  name: "SystemPackage",
-  package: "swift-system",
-  condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
+    name: "SystemPackage",
+    package: "swift-system",
+    condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
 
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
@@ -121,7 +121,7 @@ let package = Package(
             name: "CNIOAtomics",
             dependencies: [],
             cSettings: [
-                .define("_GNU_SOURCE"),
+                .define("_GNU_SOURCE")
             ]
         ),
         .target(
@@ -132,14 +132,14 @@ let package = Package(
             name: "CNIOLinux",
             dependencies: [],
             cSettings: [
-                .define("_GNU_SOURCE"),
+                .define("_GNU_SOURCE")
             ]
         ),
         .target(
             name: "CNIODarwin",
             dependencies: [],
             cSettings: [
-                .define("__APPLE_USE_RFC_3542"),
+                .define("__APPLE_USE_RFC_3542")
             ]
         ),
         .target(
@@ -149,7 +149,7 @@ let package = Package(
         .target(
             name: "NIOConcurrencyHelpers",
             dependencies: [
-                "CNIOAtomics",
+                "CNIOAtomics"
             ]
         ),
         .target(
@@ -159,7 +159,7 @@ let package = Package(
                 "NIOCore",
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
-                swiftCollections
+                swiftCollections,
             ]
         ),
         .target(
@@ -169,14 +169,14 @@ let package = Package(
                 "NIOCore",
                 "NIOHTTP1",
                 "CNIOSHA1",
-                "_NIOBase64"
+                "_NIOBase64",
             ]
         ),
         .target(
             name: "CNIOLLHTTP",
             cSettings: [
-              .define("_GNU_SOURCE"),
-              .define("LLHTTP_STRICT_MODE")
+                .define("_GNU_SOURCE"),
+                .define("LLHTTP_STRICT_MODE"),
             ]
         ),
         .target(
@@ -218,14 +218,14 @@ let package = Package(
         .target(
             name: "NIOFileSystem",
             dependencies: [
-                "_NIOFileSystem",
+                "_NIOFileSystem"
             ],
             path: "Sources/_NIOFileSystemExported"
         ),
         .target(
             name: "_NIOFileSystemFoundationCompat",
             dependencies: [
-                "_NIOFileSystem",
+                "_NIOFileSystem"
             ],
             path: "Sources/NIOFileSystemFoundationCompat"
         ),
@@ -503,7 +503,7 @@ let package = Package(
                 // Contains known files and directory structures used
                 // for the integration tests. Exclude the whole tree from
                 // the build.
-                "Test Data",
+                "Test Data"
             ]
         ),
         .testTarget(
@@ -512,7 +512,7 @@ let package = Package(
                 "_NIOFileSystem",
                 "_NIOFileSystemFoundationCompat",
             ]
-        )
+        ),
     ]
 )
 

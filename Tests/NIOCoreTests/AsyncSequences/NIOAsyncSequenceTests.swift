@@ -16,7 +16,8 @@
 import XCTest
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-final class MockNIOElementStreamBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy, @unchecked Sendable {
+final class MockNIOElementStreamBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy, @unchecked Sendable
+{
     enum Event {
         case didYield
         case didNext
@@ -26,7 +27,7 @@ final class MockNIOElementStreamBackPressureStrategy: NIOAsyncSequenceProducerBa
 
     init() {
         var eventsContinuation: AsyncStream<Event>.Continuation!
-        self.events = .init() { eventsContinuation = $0 }
+        self.events = .init { eventsContinuation = $0 }
         self.eventsContinuation = eventsContinuation!
     }
 
@@ -60,7 +61,7 @@ final class MockNIOBackPressuredStreamSourceDelegate: NIOAsyncSequenceProducerDe
 
     init() {
         var eventsContinuation: AsyncStream<Event>.Continuation!
-        self.events = .init() { eventsContinuation = $0 }
+        self.events = .init { eventsContinuation = $0 }
         self.eventsContinuation = eventsContinuation!
     }
 
@@ -85,16 +86,18 @@ final class MockNIOBackPressuredStreamSourceDelegate: NIOAsyncSequenceProducerDe
 final class NIOAsyncSequenceProducerTests: XCTestCase {
     private var backPressureStrategy: MockNIOElementStreamBackPressureStrategy!
     private var delegate: MockNIOBackPressuredStreamSourceDelegate!
-    private var sequence: NIOAsyncSequenceProducer<
-        Int,
-        MockNIOElementStreamBackPressureStrategy,
-        MockNIOBackPressuredStreamSourceDelegate
-    >!
-    private var source: NIOAsyncSequenceProducer<
-        Int,
-        MockNIOElementStreamBackPressureStrategy,
-        MockNIOBackPressuredStreamSourceDelegate
-    >.Source!
+    private var sequence:
+        NIOAsyncSequenceProducer<
+            Int,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >!
+    private var source:
+        NIOAsyncSequenceProducer<
+            Int,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.Source!
 
     override func setUp() {
         super.setUp()
@@ -237,7 +240,10 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let result = self.source.yield(contentsOf: [1])
 
         XCTAssertEqual(result, .stopProducing)
-        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didYield])
+        XCTAssertEqualWithoutAutoclosure(
+            await self.backPressureStrategy.events.prefix(2).collect(),
+            [.didYield, .didYield]
+        )
     }
 
     func testYield_whenStreaming_andNotSuspended_andDemandMore() async throws {
@@ -248,7 +254,10 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let result = self.source.yield(contentsOf: [1])
 
         XCTAssertEqual(result, .produceMore)
-        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didYield])
+        XCTAssertEqualWithoutAutoclosure(
+            await self.backPressureStrategy.events.prefix(2).collect(),
+            [.didYield, .didYield]
+        )
     }
 
     func testYield_whenSourceFinished() async throws {
@@ -315,16 +324,17 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     // MARK: - Source Deinited
 
     func testSourceDeinited_whenInitial() async {
-        var newSequence: NIOAsyncSequenceProducer<
-            Int,
-            MockNIOElementStreamBackPressureStrategy,
-            MockNIOBackPressuredStreamSourceDelegate
-        >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
-            elementType: Int.self,
-            backPressureStrategy: self.backPressureStrategy,
-            finishOnDeinit: true,
-            delegate: self.delegate
-        )
+        var newSequence:
+            NIOAsyncSequenceProducer<
+                Int,
+                MockNIOElementStreamBackPressureStrategy,
+                MockNIOBackPressuredStreamSourceDelegate
+            >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
+                elementType: Int.self,
+                backPressureStrategy: self.backPressureStrategy,
+                finishOnDeinit: true,
+                delegate: self.delegate
+            )
         let sequence = newSequence?.sequence
         var source = newSequence?.source
         newSequence = nil
@@ -335,16 +345,17 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testSourceDeinited_whenStreaming_andSuspended() async throws {
-        var newSequence: NIOAsyncSequenceProducer<
-            Int,
-            MockNIOElementStreamBackPressureStrategy,
-            MockNIOBackPressuredStreamSourceDelegate
-        >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
-            elementType: Int.self,
-            backPressureStrategy: self.backPressureStrategy,
-            finishOnDeinit: true,
-            delegate: self.delegate
-        )
+        var newSequence:
+            NIOAsyncSequenceProducer<
+                Int,
+                MockNIOElementStreamBackPressureStrategy,
+                MockNIOBackPressuredStreamSourceDelegate
+            >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
+                elementType: Int.self,
+                backPressureStrategy: self.backPressureStrategy,
+                finishOnDeinit: true,
+                delegate: self.delegate
+            )
         let sequence = newSequence?.sequence
         var source = newSequence?.source
         newSequence = nil
@@ -371,16 +382,17 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
-        var newSequence: NIOAsyncSequenceProducer<
-            Int,
-            MockNIOElementStreamBackPressureStrategy,
-            MockNIOBackPressuredStreamSourceDelegate
-        >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
-            elementType: Int.self,
-            backPressureStrategy: self.backPressureStrategy,
-            finishOnDeinit: true,
-            delegate: self.delegate
-        )
+        var newSequence:
+            NIOAsyncSequenceProducer<
+                Int,
+                MockNIOElementStreamBackPressureStrategy,
+                MockNIOBackPressuredStreamSourceDelegate
+            >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
+                elementType: Int.self,
+                backPressureStrategy: self.backPressureStrategy,
+                finishOnDeinit: true,
+                delegate: self.delegate
+            )
         let sequence = newSequence?.sequence
         var source = newSequence?.source
         newSequence = nil
@@ -402,16 +414,17 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
-        var newSequence: NIOAsyncSequenceProducer<
-            Int,
-            MockNIOElementStreamBackPressureStrategy,
-            MockNIOBackPressuredStreamSourceDelegate
-        >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
-            elementType: Int.self,
-            backPressureStrategy: self.backPressureStrategy,
-            finishOnDeinit: true,
-            delegate: self.delegate
-        )
+        var newSequence:
+            NIOAsyncSequenceProducer<
+                Int,
+                MockNIOElementStreamBackPressureStrategy,
+                MockNIOBackPressuredStreamSourceDelegate
+            >.NewSequence? = NIOAsyncSequenceProducer.makeSequence(
+                elementType: Int.self,
+                backPressureStrategy: self.backPressureStrategy,
+                finishOnDeinit: true,
+                delegate: self.delegate
+            )
         let sequence = newSequence?.sequence
         var source = newSequence?.source
         newSequence = nil
@@ -440,7 +453,6 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         let suspended = expectation(description: "task suspended")
         sequence._throwingSequence._storage._didSuspend = { suspended.fulfill() }
-
 
         let task: Task<Int?, Never> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -567,7 +579,10 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
             _ = await sequence.first { _ in true }
         }
 
-        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didNext])
+        XCTAssertEqualWithoutAutoclosure(
+            await self.backPressureStrategy.events.prefix(2).collect(),
+            [.didYield, .didNext]
+        )
         XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.produceMore])
     }
 
@@ -583,7 +598,10 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
             _ = await sequence.first { _ in true }
         }
 
-        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didNext])
+        XCTAssertEqualWithoutAutoclosure(
+            await self.backPressureStrategy.events.prefix(2).collect(),
+            [.didYield, .didNext]
+        )
     }
 
     func testNext_whenStreaming_whenNotEmptyBuffer_whenNoDemand() async throws {
@@ -593,7 +611,10 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let element = await self.sequence.first { _ in true }
 
         XCTAssertEqual(element, 1)
-        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didNext])
+        XCTAssertEqualWithoutAutoclosure(
+            await self.backPressureStrategy.events.prefix(2).collect(),
+            [.didYield, .didNext]
+        )
     }
 
     func testNext_whenStreaming_whenNotEmptyBuffer_whenNewDemand() async throws {
@@ -603,7 +624,10 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let element = await self.sequence.first { _ in true }
 
         XCTAssertEqual(element, 1)
-        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didNext])
+        XCTAssertEqualWithoutAutoclosure(
+            await self.backPressureStrategy.events.prefix(2).collect(),
+            [.didYield, .didNext]
+        )
         XCTAssertEqualWithoutAutoclosure(await self.delegate.events.prefix(1).collect(), [.produceMore])
     }
 
@@ -616,7 +640,10 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let element = await self.sequence.first { _ in true }
 
         XCTAssertEqual(element, 1)
-        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didNext])
+        XCTAssertEqualWithoutAutoclosure(
+            await self.backPressureStrategy.events.prefix(2).collect(),
+            [.didYield, .didNext]
+        )
     }
 
     func testNext_whenSourceFinished() async throws {
@@ -685,7 +712,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 }
 
 // This is needed until async let is supported to be used in autoclosures
-fileprivate func XCTAssertEqualWithoutAutoclosure<T>(
+private func XCTAssertEqualWithoutAutoclosure<T>(
     _ expression1: T,
     _ expression2: T,
     _ message: @autoclosure () -> String = "",

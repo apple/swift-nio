@@ -24,7 +24,7 @@ import Glibc
 
 func waitForThreadsToQuiesce(shouldReachZero: Bool) {
     func getUnfreed() -> Int {
-        return AtomicCounter.read_malloc_counter() - AtomicCounter.read_free_counter()
+        AtomicCounter.read_malloc_counter() - AtomicCounter.read_free_counter()
     }
 
     var oldNumberOfUnfreed = getUnfreed()
@@ -35,7 +35,7 @@ func waitForThreadsToQuiesce(shouldReachZero: Bool) {
             return
         }
         count += 1
-        usleep(shouldReachZero ? 50_000 : 200_000) // allocs/frees happen on multiple threads, allow some cool down time
+        usleep(shouldReachZero ? 50_000 : 200_000)  // allocs/frees happen on multiple threads, allow some cool down time
         let newNumberOfUnfreed = getUnfreed()
         if oldNumberOfUnfreed == newNumberOfUnfreed && (!shouldReachZero || newNumberOfUnfreed <= 0) {
             // nothing happened in the last 100ms, let's assume everything's
@@ -57,7 +57,11 @@ struct Measurement {
 }
 
 extension Array where Element == Measurement {
-    private func printIntegerMetric(_ keyPath: KeyPath<Measurement, Int>, description desc: String, metricName k: String) {
+    private func printIntegerMetric(
+        _ keyPath: KeyPath<Measurement, Int>,
+        description desc: String,
+        metricName k: String
+    ) {
         let vs = self.map { $0[keyPath: keyPath] }
         print("\(desc).\(k): \(vs.min() ?? -1)")
     }
@@ -90,13 +94,13 @@ func measureAll(trackFDs: Bool, _ fn: () -> Int) -> [Measurement] {
             AtomicCounter.begin_tracking_fds()
         }
 
-#if canImport(Darwin)
+        #if canImport(Darwin)
         autoreleasepool {
             _ = fn()
         }
-#else
+        #else
         _ = fn()
-#endif
+        #endif
         waitForThreadsToQuiesce(shouldReachZero: !throwAway)
         let frees = AtomicCounter.read_free_counter()
         let mallocs = AtomicCounter.read_malloc_counter()
@@ -132,19 +136,19 @@ func measureAll(trackFDs: Bool, _ fn: () -> Int) -> [Measurement] {
     return measurements
 }
 
-func measureAndPrint(desc: String, trackFDs: Bool, fn: () -> Int) -> Void {
+func measureAndPrint(desc: String, trackFDs: Bool, fn: () -> Int) {
     let measurements = measureAll(trackFDs: trackFDs, fn)
     measurements.printTotalAllocations(description: desc)
     measurements.printRemainingAllocations(description: desc)
     measurements.printTotalAllocatedBytes(description: desc)
     measurements.printLeakedFDs(description: desc)
-    
+
     print("DEBUG: \(measurements)")
 }
 
 public func measure(identifier: String, trackFDs: Bool = false, _ body: () -> Int) {
     measureAndPrint(desc: identifier, trackFDs: trackFDs) {
-        return body()
+        body()
     }
 }
 
@@ -160,7 +164,7 @@ func measureAll(trackFDs: Bool, _ fn: @escaping () async -> Int) -> [Measurement
             }
             group.wait()
         }
-        
+
         if trackFDs {
             AtomicCounter.begin_tracking_fds()
         }
@@ -169,13 +173,13 @@ func measureAll(trackFDs: Bool, _ fn: @escaping () async -> Int) -> [Measurement
         AtomicCounter.reset_malloc_counter()
         AtomicCounter.reset_malloc_bytes_counter()
 
-#if canImport(Darwin)
+        #if canImport(Darwin)
         autoreleasepool {
             run(fn)
         }
-#else
+        #else
         run(fn)
-#endif
+        #endif
         waitForThreadsToQuiesce(shouldReachZero: !throwAway)
         let frees = AtomicCounter.read_free_counter()
         let mallocs = AtomicCounter.read_malloc_counter()
@@ -212,7 +216,7 @@ func measureAll(trackFDs: Bool, _ fn: @escaping () async -> Int) -> [Measurement
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-func measureAndPrint(desc: String, trackFDs: Bool, fn: @escaping () async -> Int) -> Void {
+func measureAndPrint(desc: String, trackFDs: Bool, fn: @escaping () async -> Int) {
     let measurements = measureAll(trackFDs: trackFDs, fn)
     measurements.printTotalAllocations(description: desc)
     measurements.printRemainingAllocations(description: desc)

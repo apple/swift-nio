@@ -74,7 +74,7 @@ final class SALEventLoopTests: XCTestCase, SALTest {
                 // Now we can unblock the semaphore.
                 semaphore.signal()
             }
-            
+
             return promise.futureResult
         }.salWait()
     }

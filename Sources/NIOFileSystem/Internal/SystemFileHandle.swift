@@ -145,7 +145,7 @@ public final class SystemFileHandle {
 extension SystemFileHandle.SendableView {
     /// Returns the file descriptor if it's available; `nil` otherwise.
     internal func descriptorIfAvailable() -> FileDescriptor? {
-        return self.lifecycle.withLockedValue {
+        self.lifecycle.withLockedValue {
             switch $0 {
             case let .open(descriptor):
                 return descriptor
@@ -196,37 +196,37 @@ extension SystemFileHandle: FileHandleProtocol {
     //    currently using.
 
     public func info() async throws -> FileInfo {
-        return try await self.threadPool.runIfActive { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._info().get()
         }
     }
 
     public func replacePermissions(_ permissions: FilePermissions) async throws {
-        return try await self.threadPool.runIfActive { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._replacePermissions(permissions)
         }
     }
 
     public func addPermissions(_ permissions: FilePermissions) async throws -> FilePermissions {
-        return try await self.threadPool.runIfActive { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._addPermissions(permissions)
         }
     }
 
     public func removePermissions(_ permissions: FilePermissions) async throws -> FilePermissions {
-        return try await self.threadPool.runIfActive { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._removePermissions(permissions)
         }
     }
 
     public func attributeNames() async throws -> [String] {
-        return try await self.threadPool.runIfActive { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._attributeNames()
         }
     }
 
     public func valueForAttribute(_ name: String) async throws -> [UInt8] {
-        return try await self.threadPool.runIfActive { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._valueForAttribute(name)
         }
     }
@@ -235,19 +235,19 @@ extension SystemFileHandle: FileHandleProtocol {
         _ bytes: some (Sendable & RandomAccessCollection<UInt8>),
         attribute name: String
     ) async throws {
-        return try await self.threadPool.runIfActive { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._updateValueForAttribute(bytes, attribute: name)
         }
     }
 
     public func removeValueForAttribute(_ name: String) async throws {
-        return try await self.threadPool.runIfActive { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._removeValueForAttribute(name)
         }
     }
 
     public func synchronize() async throws {
-        return try await self.threadPool.runIfActive { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._synchronize()
         }
     }
@@ -257,7 +257,7 @@ extension SystemFileHandle: FileHandleProtocol {
     ) async throws -> R {
         try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._withUnsafeDescriptor {
-                return try execute($0)
+                try execute($0)
             } onUnavailable: {
                 FileSystemError(
                     code: .closed,
@@ -270,7 +270,7 @@ extension SystemFileHandle: FileHandleProtocol {
     }
 
     public func detachUnsafeFileDescriptor() throws -> FileDescriptor {
-        return try self.sendableView.lifecycle.withLockedValue { lifecycle in
+        try self.sendableView.lifecycle.withLockedValue { lifecycle in
             switch lifecycle {
             case let .open(descriptor):
                 lifecycle = .detached
@@ -377,18 +377,18 @@ extension SystemFileHandle: FileHandleProtocol {
 extension SystemFileHandle.SendableView {
     /// Returns a string in the format: "{message}, the file '{path}' is closed."
     private func fileIsClosed(_ message: String) -> String {
-        return "\(message), the file '\(self.path)' is closed."
+        "\(message), the file '\(self.path)' is closed."
     }
 
     /// Returns a string in the format: "{message} for '{path}'."
     private func unknown(_ message: String) -> String {
-        return "\(message) for '\(self.path)'."
+        "\(message) for '\(self.path)'."
     }
 
     @_spi(Testing)
     public func _info() -> Result<FileInfo, FileSystemError> {
         self._withUnsafeDescriptorResult { descriptor in
-            return descriptor.status().map { stat in
+            descriptor.status().map { stat in
                 FileInfo(platformSpecificStatus: stat)
             }.mapError { errno in
                 .stat("fstat", errno: errno, path: self.path, location: .here())
@@ -507,7 +507,7 @@ extension SystemFileHandle.SendableView {
         operand: FilePermissions,
         descriptor: FileDescriptor
     ) throws {
-        return try descriptor.changeMode(permissions).mapError { errno in
+        try descriptor.changeMode(permissions).mapError { errno in
             FileSystemError.fchmod(
                 operation: operation,
                 operand: operand,
@@ -521,8 +521,8 @@ extension SystemFileHandle.SendableView {
 
     @_spi(Testing)
     public func _attributeNames() throws -> [String] {
-        return try self._withUnsafeDescriptor { descriptor in
-            return try descriptor.listExtendedAttributes().mapError { errno in
+        try self._withUnsafeDescriptor { descriptor in
+            try descriptor.listExtendedAttributes().mapError { errno in
                 FileSystemError.flistxattr(errno: errno, path: self.path, location: .here())
             }.get()
         } onUnavailable: {
@@ -537,8 +537,8 @@ extension SystemFileHandle.SendableView {
 
     @_spi(Testing)
     public func _valueForAttribute(_ name: String) throws -> [UInt8] {
-        return try self._withUnsafeDescriptor { descriptor in
-            return try descriptor.readExtendedAttribute(
+        try self._withUnsafeDescriptor { descriptor in
+            try descriptor.readExtendedAttribute(
                 named: name
             ).flatMapError { errno -> Result<[UInt8], FileSystemError> in
                 switch errno {
@@ -577,7 +577,7 @@ extension SystemFileHandle.SendableView {
         _ bytes: some RandomAccessCollection<UInt8>,
         attribute name: String
     ) throws {
-        return try self._withUnsafeDescriptor { descriptor in
+        try self._withUnsafeDescriptor { descriptor in
             func withUnsafeBufferPointer(_ body: (UnsafeBufferPointer<UInt8>) throws -> Void) throws {
                 try bytes.withContiguousStorageIfAvailable(body)
                     ?? Array(bytes).withUnsafeBufferPointer(body)
@@ -611,7 +611,7 @@ extension SystemFileHandle.SendableView {
 
     @_spi(Testing)
     public func _removeValueForAttribute(_ name: String) throws {
-        return try self._withUnsafeDescriptor { descriptor in
+        try self._withUnsafeDescriptor { descriptor in
             try descriptor.removeExtendedAttribute(name).mapError { errno in
                 FileSystemError.fremovexattr(
                     attribute: name,
@@ -647,7 +647,7 @@ extension SystemFileHandle.SendableView {
     }
 
     internal func _duplicate() -> Result<FileDescriptor, FileSystemError> {
-        return self._withUnsafeDescriptorResult { descriptor in
+        self._withUnsafeDescriptorResult { descriptor in
             Result {
                 try descriptor.duplicate()
             }.mapError { error in
@@ -680,7 +680,11 @@ extension SystemFileHandle.SendableView {
         }
 
         // Materialize then close.
-        let materializeResult = self._materialize(materialize, descriptor: descriptor, failRenameat2WithEINVAL: failRenameat2WithEINVAL)
+        let materializeResult = self._materialize(
+            materialize,
+            descriptor: descriptor,
+            failRenameat2WithEINVAL: failRenameat2WithEINVAL
+        )
 
         return Result {
             try descriptor.close()
@@ -760,7 +764,7 @@ extension SystemFileHandle.SendableView {
                             location: .here()
                         )
                     }.flatMap {
-                        return linkAtProcFS().mapError { errno in
+                        linkAtProcFS().mapError { errno in
                             FileSystemError.link(
                                 errno: errno,
                                 from: createdPath,
@@ -1019,8 +1023,8 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
         fromAbsoluteOffset offset: Int64,
         length: ByteCount
     ) async throws -> ByteBuffer {
-        return try await self.threadPool.runIfActive { [sendableView] in
-            return try sendableView._withUnsafeDescriptor { descriptor in
+        try await self.threadPool.runIfActive { [sendableView] in
+            try sendableView._withUnsafeDescriptor { descriptor in
                 try descriptor.readChunk(
                     fromAbsoluteOffset: offset,
                     length: length.bytes
@@ -1072,7 +1076,7 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
         in range: Range<Int64>,
         chunkLength size: ByteCount
     ) -> FileChunks {
-        return FileChunks(handle: self, chunkLength: size, range: range)
+        FileChunks(handle: self, chunkLength: size, range: range)
     }
 }
 
@@ -1085,8 +1089,8 @@ extension SystemFileHandle: WritableFileHandleProtocol {
         contentsOf bytes: some (Sequence<UInt8> & Sendable),
         toAbsoluteOffset offset: Int64
     ) async throws -> Int64 {
-        return try await self.threadPool.runIfActive { [sendableView] in
-            return try sendableView._withUnsafeDescriptor { descriptor in
+        try await self.threadPool.runIfActive { [sendableView] in
+            try sendableView._withUnsafeDescriptor { descriptor in
                 try descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
                     .flatMapError { error in
                         if let errno = error as? Errno, errno == .illegalSeek {
@@ -1143,7 +1147,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension SystemFileHandle.SendableView {
     func _resize(to size: ByteCount) -> Result<(), FileSystemError> {
-        return self._withUnsafeDescriptorResult { descriptor in
+        self._withUnsafeDescriptorResult { descriptor in
             Result {
                 try descriptor.resize(to: size.bytes, retryOnInterrupt: true)
             }.mapError { error in
@@ -1169,7 +1173,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     public typealias ReadWriteFileHandle = SystemFileHandle
 
     public func listContents(recursive: Bool) -> DirectoryEntries {
-        return DirectoryEntries(handle: self, recursive: recursive)
+        DirectoryEntries(handle: self, recursive: recursive)
     }
 
     public func openFile(
@@ -1370,7 +1374,7 @@ extension SystemFileHandle {
         permissions: FilePermissions?,
         threadPool: NIOThreadPool
     ) -> Result<SystemFileHandle, FileSystemError> {
-        return Result {
+        Result {
             try FileDescriptor.open(
                 path,
                 mode,
@@ -1512,7 +1516,7 @@ extension SystemFileHandle {
 
             return .success(handle)
         } catch {
-          #if canImport(Glibc) || canImport(Musl)
+            #if canImport(Glibc) || canImport(Musl)
             // 'O_TMPFILE' isn't supported for the current file system, try again but using
             // rename instead.
             if useTemporaryFileIfPossible, let errno = error as? Errno, errno == .notSupported {

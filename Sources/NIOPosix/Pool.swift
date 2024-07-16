@@ -35,17 +35,15 @@ class Pool<Element: PoolElement> {
     func get() -> Element {
         if elements.isEmpty {
             return Element()
-        }
-        else {
+        } else {
             return elements.removeLast()
         }
     }
 
     func put(_ e: Element) {
-        if (elements.count == maxSize) {
+        if elements.count == maxSize {
             e.evictedFromPool()
-        }
-        else {
+        } else {
             elements.append(e)
         }
     }
@@ -58,7 +56,7 @@ class Pool<Element: PoolElement> {
 /// be bound to a single thread, and ensures that the allocation it stores does not
 /// get freed before the buffer is out of use.
 struct PooledBuffer: PoolElement {
-    private static let sentinelValue = MemorySentinel(0xdeadbeef)
+    private static let sentinelValue = MemorySentinel(0xdead_beef)
 
     private let storage: BackingStorage
 
@@ -72,7 +70,8 @@ struct PooledBuffer: PoolElement {
     }
 
     func withUnsafePointers<ReturnValue>(
-        _ body: (UnsafeMutableBufferPointer<IOVector>, UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) throws -> ReturnValue
+        _ body: (UnsafeMutableBufferPointer<IOVector>, UnsafeMutableBufferPointer<Unmanaged<AnyObject>>) throws ->
+            ReturnValue
     ) rethrows -> ReturnValue {
         defer {
             self.validateSentinel()
@@ -94,7 +93,9 @@ struct PooledBuffer: PoolElement {
     ///     - body: The closure that will accept the yielded pointers and the `storageManagement`.
     /// - returns: The value returned by `body`.
     func withUnsafePointersWithStorageManagement<ReturnValue>(
-            _ body: (UnsafeMutableBufferPointer<IOVector>, UnsafeMutableBufferPointer<Unmanaged<AnyObject>>, Unmanaged<AnyObject>) throws -> ReturnValue
+        _ body: (
+            UnsafeMutableBufferPointer<IOVector>, UnsafeMutableBufferPointer<Unmanaged<AnyObject>>, Unmanaged<AnyObject>
+        ) throws -> ReturnValue
     ) rethrows -> ReturnValue {
         let storageRef: Unmanaged<AnyObject> = Unmanaged.passUnretained(self.storage)
         return try self.storage.withUnsafeMutableTypedPointers { iovecPointer, ownerPointer, _ in
@@ -165,27 +166,44 @@ extension PooledBuffer {
             // Here we set up our memory bindings.
             let storage = unsafeDowncast(baseStorage, to: Self.self)
             storage.withUnsafeMutablePointers { headPointer, tailPointer in
-                UnsafeRawPointer(tailPointer + headPointer.pointee.iovectorOffset).bindMemory(to: IOVector.self, capacity: iovectorCount)
-                UnsafeRawPointer(tailPointer + headPointer.pointee.bufferOwnersOffset).bindMemory(to: Unmanaged<AnyObject>.self, capacity: iovectorCount)
-                UnsafeRawPointer(tailPointer + headPointer.pointee.memorySentinelOffset).bindMemory(to: MemorySentinel.self, capacity: 1)
+                UnsafeRawPointer(tailPointer + headPointer.pointee.iovectorOffset).bindMemory(
+                    to: IOVector.self,
+                    capacity: iovectorCount
+                )
+                UnsafeRawPointer(tailPointer + headPointer.pointee.bufferOwnersOffset).bindMemory(
+                    to: Unmanaged<AnyObject>.self,
+                    capacity: iovectorCount
+                )
+                UnsafeRawPointer(tailPointer + headPointer.pointee.memorySentinelOffset).bindMemory(
+                    to: MemorySentinel.self,
+                    capacity: 1
+                )
             }
 
             return storage
         }
 
         func withUnsafeMutableTypedPointers<ReturnType>(
-            _ body: (UnsafeMutableBufferPointer<IOVector>, UnsafeMutableBufferPointer<Unmanaged<AnyObject>>, UnsafeMutablePointer<MemorySentinel>) throws -> ReturnType
+            _ body: (
+                UnsafeMutableBufferPointer<IOVector>, UnsafeMutableBufferPointer<Unmanaged<AnyObject>>,
+                UnsafeMutablePointer<MemorySentinel>
+            ) throws -> ReturnType
         ) rethrows -> ReturnType {
-            return try self.withUnsafeMutablePointers { headPointer, tailPointer in
-                let iovecPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.iovectorOffset).assumingMemoryBound(to: IOVector.self)
-                let ownersPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.bufferOwnersOffset).assumingMemoryBound(to: Unmanaged<AnyObject>.self)
-                let sentinelPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.memorySentinelOffset).assumingMemoryBound(to: MemorySentinel.self)
+            try self.withUnsafeMutablePointers { headPointer, tailPointer in
+                let iovecPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.iovectorOffset)
+                    .assumingMemoryBound(to: IOVector.self)
+                let ownersPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.bufferOwnersOffset)
+                    .assumingMemoryBound(to: Unmanaged<AnyObject>.self)
+                let sentinelPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.memorySentinelOffset)
+                    .assumingMemoryBound(to: MemorySentinel.self)
 
                 let iovecBufferPointer = UnsafeMutableBufferPointer(
-                    start: iovecPointer, count: headPointer.pointee.iovectorCount
+                    start: iovecPointer,
+                    count: headPointer.pointee.iovectorCount
                 )
                 let ownersBufferPointer = UnsafeMutableBufferPointer(
-                    start: ownersPointer, count: headPointer.pointee.iovectorCount
+                    start: ownersPointer,
+                    count: headPointer.pointee.iovectorCount
                 )
                 return try body(iovecBufferPointer, ownersBufferPointer, sentinelPointer)
             }
@@ -206,7 +224,7 @@ extension Int {
 struct PooledMsgBuffer: PoolElement {
 
     private typealias MemorySentinel = UInt32
-    private static let sentinelValue = MemorySentinel(0xdeadbeef)
+    private static let sentinelValue = MemorySentinel(0xdead_beef)
 
     private struct PooledMsgBufferHead {
         let count: Int
@@ -247,7 +265,7 @@ struct PooledMsgBuffer: PoolElement {
         }
 
         var memorySentinelOffset: Int {
-            return self.spaceForMsgHdrs + self.spaceForAddresses + self.spaceForControlData
+            self.spaceForMsgHdrs + self.spaceForAddresses + self.spaceForControlData
         }
     }
 
@@ -261,33 +279,54 @@ struct PooledMsgBuffer: PoolElement {
 
             let storage = unsafeDowncast(baseStorage, to: Self.self)
             storage.withUnsafeMutablePointers { headPointer, tailPointer in
-                UnsafeRawPointer(tailPointer + headPointer.pointee.msgHdrsOffset).bindMemory(to: MMsgHdr.self, capacity: count)
-                UnsafeRawPointer(tailPointer + headPointer.pointee.addressesOffset).bindMemory(to: sockaddr_storage.self, capacity: count)
+                UnsafeRawPointer(tailPointer + headPointer.pointee.msgHdrsOffset).bindMemory(
+                    to: MMsgHdr.self,
+                    capacity: count
+                )
+                UnsafeRawPointer(tailPointer + headPointer.pointee.addressesOffset).bindMemory(
+                    to: sockaddr_storage.self,
+                    capacity: count
+                )
                 // space for control message data not needed to be bound
-                UnsafeRawPointer(tailPointer + headPointer.pointee.memorySentinelOffset).bindMemory(to: MemorySentinel.self, capacity: 1)
+                UnsafeRawPointer(tailPointer + headPointer.pointee.memorySentinelOffset).bindMemory(
+                    to: MemorySentinel.self,
+                    capacity: 1
+                )
             }
 
             return storage
         }
 
         func withUnsafeMutableTypedPointers<ReturnType>(
-            _ body: (UnsafeMutableBufferPointer<MMsgHdr>, UnsafeMutableBufferPointer<sockaddr_storage>, UnsafeControlMessageStorage, UnsafeMutablePointer<MemorySentinel>) throws -> ReturnType
+            _ body: (
+                UnsafeMutableBufferPointer<MMsgHdr>, UnsafeMutableBufferPointer<sockaddr_storage>,
+                UnsafeControlMessageStorage, UnsafeMutablePointer<MemorySentinel>
+            ) throws -> ReturnType
         ) rethrows -> ReturnType {
-            return try self.withUnsafeMutablePointers { headPointer, tailPointer in
-                let msgHdrsPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.msgHdrsOffset).assumingMemoryBound(to: MMsgHdr.self)
-                let addressesPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.addressesOffset).assumingMemoryBound(to: sockaddr_storage.self)
-                let controlDataPointer = UnsafeMutableRawBufferPointer(start: tailPointer + headPointer.pointee.controlDataOffset, count: headPointer.pointee.spaceForControlData)
-                let sentinelPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.memorySentinelOffset).assumingMemoryBound(to: MemorySentinel.self)
+            try self.withUnsafeMutablePointers { headPointer, tailPointer in
+                let msgHdrsPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.msgHdrsOffset)
+                    .assumingMemoryBound(to: MMsgHdr.self)
+                let addressesPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.addressesOffset)
+                    .assumingMemoryBound(to: sockaddr_storage.self)
+                let controlDataPointer = UnsafeMutableRawBufferPointer(
+                    start: tailPointer + headPointer.pointee.controlDataOffset,
+                    count: headPointer.pointee.spaceForControlData
+                )
+                let sentinelPointer = UnsafeMutableRawPointer(tailPointer + headPointer.pointee.memorySentinelOffset)
+                    .assumingMemoryBound(to: MemorySentinel.self)
 
                 let msgHdrsBufferPointer = UnsafeMutableBufferPointer(
-                    start: msgHdrsPointer, count: headPointer.pointee.count
+                    start: msgHdrsPointer,
+                    count: headPointer.pointee.count
                 )
                 let addressesBufferPointer = UnsafeMutableBufferPointer(
-                    start: addressesPointer, count: headPointer.pointee.count
+                    start: addressesPointer,
+                    count: headPointer.pointee.count
                 )
                 let controlMessageStorage = UnsafeControlMessageStorage.makeNotOwning(
                     bytesPerMessage: UnsafeControlMessageStorage.bytesPerMessage,
-                    buffer: controlDataPointer)
+                    buffer: controlDataPointer
+                )
                 return try body(msgHdrsBufferPointer, addressesBufferPointer, controlMessageStorage, sentinelPointer)
             }
         }
@@ -313,18 +352,24 @@ struct PooledMsgBuffer: PoolElement {
     }
 
     func withUnsafePointers<ReturnValue>(
-        _ body: (UnsafeMutableBufferPointer<MMsgHdr>, UnsafeMutableBufferPointer<sockaddr_storage>, UnsafeControlMessageStorage) throws -> ReturnValue
+        _ body: (
+            UnsafeMutableBufferPointer<MMsgHdr>, UnsafeMutableBufferPointer<sockaddr_storage>,
+            UnsafeControlMessageStorage
+        ) throws -> ReturnValue
     ) rethrows -> ReturnValue {
         defer {
             self.validateSentinel()
         }
         return try self.storage.withUnsafeMutableTypedPointers { msgs, addresses, controlMessageStorage, _ in
-            return try body(msgs, addresses, controlMessageStorage)
+            try body(msgs, addresses, controlMessageStorage)
         }
     }
 
     func withUnsafePointersWithStorageManagement<ReturnValue>(
-            _ body: (UnsafeMutableBufferPointer<MMsgHdr>, UnsafeMutableBufferPointer<sockaddr_storage>, UnsafeControlMessageStorage, Unmanaged<AnyObject>) throws -> ReturnValue
+        _ body: (
+            UnsafeMutableBufferPointer<MMsgHdr>, UnsafeMutableBufferPointer<sockaddr_storage>,
+            UnsafeControlMessageStorage, Unmanaged<AnyObject>
+        ) throws -> ReturnValue
     ) rethrows -> ReturnValue {
         let storageRef: Unmanaged<AnyObject> = Unmanaged.passUnretained(self.storage)
         return try self.storage.withUnsafeMutableTypedPointers { msgs, addresses, controlMessageStorage, _ in

@@ -98,7 +98,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     // MARK: BaseSocketChannel's must override API that cannot be further refined by subclasses
     // This is `Channel` API so must be thread-safe.
     final override public var isWritable: Bool {
-        return self.pendingWrites.isWritable
+        self.pendingWrites.isWritable
     }
 
     final override var isOpen: Bool {
@@ -159,19 +159,23 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func writeToSocket() throws -> OverallWriteResult {
-        let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
-            guard ptr.count > 0 else {
-                // No need to call write if the buffer is empty.
-                return .processed(0)
+        let result = try self.pendingWrites.triggerAppropriateWriteOperations(
+            scalarBufferWriteOperation: { ptr in
+                guard ptr.count > 0 else {
+                    // No need to call write if the buffer is empty.
+                    return .processed(0)
+                }
+                // normal write
+                return try self.socket.write(pointer: ptr)
+            },
+            vectorBufferWriteOperation: { ptrs in
+                // Gathering write
+                try self.socket.writev(iovecs: ptrs)
+            },
+            scalarFileWriteOperation: { descriptor, index, endIndex in
+                try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
             }
-            // normal write
-            return try self.socket.write(pointer: ptr)
-        }, vectorBufferWriteOperation: { ptrs in
-            // Gathering write
-            try self.socket.writev(iovecs: ptrs)
-        }, scalarFileWriteOperation: { descriptor, index, endIndex in
-            try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
-        })
+        )
         return result
     }
 
@@ -231,7 +235,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func hasFlushedPendingWrites() -> Bool {
-        return self.pendingWrites.isFlushPending
+        self.pendingWrites.isFlushPending
     }
 
     final override func markFlushPoint() {

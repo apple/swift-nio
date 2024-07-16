@@ -95,7 +95,6 @@ struct Server {
     }
 }
 
-
 /// A simple newline based encoder and decoder.
 private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncoder {
     typealias InboundIn = ByteBuffer

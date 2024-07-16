@@ -30,7 +30,7 @@ import CNIOLinux
 public enum Syscall {
     @_spi(Testing)
     public static func stat(path: FilePath) -> Result<CInterop.Stat, Errno> {
-        return path.withPlatformString { platformPath in
+        path.withPlatformString { platformPath in
             var status = CInterop.Stat()
             return valueOrErrno(retryOnInterrupt: false) {
                 system_stat(platformPath, &status)
@@ -42,7 +42,7 @@ public enum Syscall {
 
     @_spi(Testing)
     public static func lstat(path: FilePath) -> Result<CInterop.Stat, Errno> {
-        return path.withPlatformString { platformPath in
+        path.withPlatformString { platformPath in
             var status = CInterop.Stat()
             return valueOrErrno(retryOnInterrupt: false) {
                 system_lstat(platformPath, &status)
@@ -54,7 +54,7 @@ public enum Syscall {
 
     @_spi(Testing)
     public static func mkdir(at path: FilePath, permissions: FilePermissions) -> Result<Void, Errno> {
-        return nothingOrErrno(retryOnInterrupt: false) {
+        nothingOrErrno(retryOnInterrupt: false) {
             path.withPlatformString { p in
                 system_mkdir(p, permissions.rawValue)
             }
@@ -63,7 +63,7 @@ public enum Syscall {
 
     @_spi(Testing)
     public static func rename(from old: FilePath, to new: FilePath) -> Result<Void, Errno> {
-        return nothingOrErrno(retryOnInterrupt: false) {
+        nothingOrErrno(retryOnInterrupt: false) {
             old.withPlatformString { oldPath in
                 new.withPlatformString { newPath in
                     system_rename(oldPath, newPath)
@@ -79,7 +79,7 @@ public enum Syscall {
         to new: FilePath,
         options: RenameOptions
     ) -> Result<Void, Errno> {
-        return nothingOrErrno(retryOnInterrupt: false) {
+        nothingOrErrno(retryOnInterrupt: false) {
             old.withPlatformString { oldPath in
                 new.withPlatformString { newPath in
                     system_renamex_np(oldPath, newPath, options.rawValue)
@@ -97,11 +97,11 @@ public enum Syscall {
         }
 
         public static var exclusive: Self {
-            return Self(rawValue: UInt32(bitPattern: RENAME_EXCL))
+            Self(rawValue: UInt32(bitPattern: RENAME_EXCL))
         }
 
         public static var swap: Self {
-            return Self(rawValue: UInt32(bitPattern: RENAME_SWAP))
+            Self(rawValue: UInt32(bitPattern: RENAME_SWAP))
         }
     }
     #endif
@@ -115,7 +115,7 @@ public enum Syscall {
         relativeTo newFD: FileDescriptor,
         flags: RenameAtFlags
     ) -> Result<Void, Errno> {
-        return nothingOrErrno(retryOnInterrupt: false) {
+        nothingOrErrno(retryOnInterrupt: false) {
             old.withPlatformString { oldPath in
                 new.withPlatformString { newPath in
                     system_renameat2(
@@ -139,11 +139,11 @@ public enum Syscall {
         }
 
         public static var exclusive: Self {
-            return Self(rawValue: CNIOLinux_RENAME_NOREPLACE)
+            Self(rawValue: CNIOLinux_RENAME_NOREPLACE)
         }
 
         public static var swap: Self {
-            return Self(rawValue: CNIOLinux_RENAME_EXCHANGE)
+            Self(rawValue: CNIOLinux_RENAME_EXCHANGE)
         }
     }
     #endif
@@ -178,7 +178,7 @@ public enum Syscall {
         relativeTo destinationFD: FileDescriptor,
         flags: LinkAtFlags
     ) -> Result<Void, Errno> {
-        return nothingOrErrno(retryOnInterrupt: false) {
+        nothingOrErrno(retryOnInterrupt: false) {
             source.withPlatformString { src in
                 destination.withPlatformString { dst in
                     system_linkat(
@@ -199,7 +199,7 @@ public enum Syscall {
         from source: FilePath,
         to destination: FilePath
     ) -> Result<Void, Errno> {
-        return nothingOrErrno(retryOnInterrupt: false) {
+        nothingOrErrno(retryOnInterrupt: false) {
             source.withPlatformString { src in
                 destination.withPlatformString { dst in
                     system_link(src, dst)
@@ -210,7 +210,7 @@ public enum Syscall {
 
     @_spi(Testing)
     public static func unlink(path: FilePath) -> Result<Void, Errno> {
-        return nothingOrErrno(retryOnInterrupt: false) {
+        nothingOrErrno(retryOnInterrupt: false) {
             path.withPlatformString { ptr in
                 system_unlink(ptr)
             }
@@ -222,7 +222,7 @@ public enum Syscall {
         to destination: FilePath,
         from source: FilePath
     ) -> Result<Void, Errno> {
-        return nothingOrErrno(retryOnInterrupt: false) {
+        nothingOrErrno(retryOnInterrupt: false) {
             source.withPlatformString { src in
                 destination.withPlatformString { dst in
                     system_symlink(dst, src)
@@ -381,7 +381,10 @@ public enum Libc {
             pathBytes.withUnsafeMutableBufferPointer { pointer in
                 // The array must be terminated with a nil.
                 #if os(Android)
-                libc_fts_open([pointer.baseAddress!, unsafeBitCast(0, to: UnsafeMutablePointer<CInterop.PlatformChar>.self)], options.rawValue)
+                libc_fts_open(
+                    [pointer.baseAddress!, unsafeBitCast(0, to: UnsafeMutablePointer<CInterop.PlatformChar>.self)],
+                    options.rawValue
+                )
                 #else
                 libc_fts_open([pointer.baseAddress, nil], options.rawValue)
                 #endif

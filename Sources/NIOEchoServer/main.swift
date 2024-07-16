@@ -78,10 +78,12 @@ let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (_, .some(let cid), .some(let port)):
     /* we got two arguments (Int, Int), let's interpret that as vsock cid and port */
-    bindTarget = .vsock(VsockAddress(
-        cid: VsockAddress.ContextID(cid),
-        port: VsockAddress.Port(port)
-    ))
+    bindTarget = .vsock(
+        VsockAddress(
+            cid: VsockAddress.ContextID(cid),
+            port: VsockAddress.Port(port)
+        )
+    )
 case (.some(let h), _, .some(let p)):
     /* we got two arguments (String, Int), let's interpret that as host and port */
     bindTarget = .ip(host: h, port: p)

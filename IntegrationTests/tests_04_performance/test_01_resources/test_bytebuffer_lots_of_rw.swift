@@ -34,7 +34,7 @@ func run(identifier: String) {
             buffer.writeInteger(0x41, as: UInt8.self)
 
             /* those down here should be one allocation each (on Linux) */
-            buffer.writeBytes(dispatchData) // see https://bugs.swift.org/browse/SR-9597
+            buffer.writeBytes(dispatchData)  // see https://bugs.swift.org/browse/SR-9597
 
             /* these here are one allocation on all platforms */
             buffer.writeSubstring(substring)
@@ -57,7 +57,7 @@ func run(identifier: String) {
             let str = buffer.readString(length: 1)
             precondition("A" == str, "\(str!)")
         }
-        for _ in 0..<1000  {
+        for _ in 0..<1000 {
             doWrites(buffer: &buffer, dispatchData: dispatchData, substring: substring)
             doReads(buffer: &buffer)
         }

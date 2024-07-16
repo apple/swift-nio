@@ -115,7 +115,7 @@ class PriorityQueueTest: XCTestCase {
         XCTAssertEqual(clearlyTheLargest, pq.pop()!)
         XCTAssert(pq.isEmpty)
     }
-    
+
     func testDescription() {
         let pq1 = PriorityQueue<Int>()
         var pq2 = PriorityQueue<Int>()
@@ -129,12 +129,12 @@ class PriorityQueueTest: XCTestCase {
 
 /// This data type is only partially ordered. Ie. from `a < b` and `a != b` we can't imply `a > b`.
 struct SomePartiallyOrderedDataType: Comparable, CustomStringConvertible {
-    public static func <(lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
-        return lhs.width < rhs.width && lhs.height < rhs.height
+    public static func < (lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
+        lhs.width < rhs.width && lhs.height < rhs.height
     }
 
-    public static func ==(lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
-        return lhs.width == rhs.width && lhs.height == rhs.height
+    public static func == (lhs: SomePartiallyOrderedDataType, rhs: SomePartiallyOrderedDataType) -> Bool {
+        lhs.width == rhs.width && lhs.height == rhs.height
     }
 
     private let width: Int
@@ -145,6 +145,6 @@ struct SomePartiallyOrderedDataType: Comparable, CustomStringConvertible {
     }
 
     public var description: String {
-        return "(w: \(self.width), h: \(self.height))"
+        "(w: \(self.width), h: \(self.height))"
     }
 }

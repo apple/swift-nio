@@ -118,7 +118,7 @@ extension FileSystemError {
     ///
     /// - Returns: A multi-line description of the error.
     public func detailedDescription() -> String {
-        return self.detailedDescriptionLines().joined(separator: "\n")
+        self.detailedDescriptionLines().joined(separator: "\n")
     }
 }
 
@@ -256,7 +256,7 @@ extension FileSystemError {
             file: String = #fileID,
             line: Int = #line
         ) -> Self {
-            return SourceLocation(function: function, file: file, line: line)
+            SourceLocation(function: function, file: file, line: line)
         }
     }
 }

@@ -17,7 +17,7 @@ import NIOEmbedded
 
 func run(identifier: String) {
     measure(identifier: identifier) {
-        struct MyError: Error { }
+        struct MyError: Error {}
         @inline(never)
         func doThenAndFriends(loop: EventLoop) {
             let p = loop.makePromise(of: Int.self)
@@ -65,10 +65,10 @@ func run(identifier: String) {
             // and(result:) allocate two.
 
             let f = p1.futureResult
-                        .and(p2.futureResult)
-                        .and(p3.futureResult)
-                        .and(value: 1)
-                        .and(value: 1)
+                .and(p2.futureResult)
+                .and(p3.futureResult)
+                .and(value: 1)
+                .and(value: 1)
 
             p1.succeed(1)
             p2.succeed(1)
@@ -76,7 +76,7 @@ func run(identifier: String) {
             _ = try! f.wait()
         }
         let el = EmbeddedEventLoop()
-        for _ in 0..<1000  {
+        for _ in 0..<1000 {
             doThenAndFriends(loop: el)
             doAnd(loop: el)
         }

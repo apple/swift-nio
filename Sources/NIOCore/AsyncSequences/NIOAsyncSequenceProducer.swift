@@ -122,12 +122,13 @@ public struct NIOAsyncSequenceProducer<
     }
 
     @usableFromInline
-    /* private */ internal let _throwingSequence: NIOThrowingAsyncSequenceProducer<
-        Element,
-        Never,
-        Strategy,
-        Delegate
-    >
+    /* private */ internal let _throwingSequence:
+        NIOThrowingAsyncSequenceProducer<
+            Element,
+            Never,
+            Strategy,
+            Delegate
+        >
 
     /// Initializes a new ``NIOAsyncSequenceProducer`` and a ``NIOAsyncSequenceProducer/Source``.
     ///
@@ -175,7 +176,12 @@ public struct NIOAsyncSequenceProducer<
     ///   - delegate: The delegate of the sequence
     /// - Returns: A ``NIOAsyncSequenceProducer/Source`` and a ``NIOAsyncSequenceProducer``.
     @inlinable
-    @available(*, deprecated, renamed: "makeSequence(elementType:backPressureStrategy:finishOnDeinit:delegate:)", message: "This method has been deprecated since it defaults to deinit based resource teardown")
+    @available(
+        *,
+        deprecated,
+        renamed: "makeSequence(elementType:backPressureStrategy:finishOnDeinit:delegate:)",
+        message: "This method has been deprecated since it defaults to deinit based resource teardown"
+    )
     public static func makeSequence(
         elementType: Element.Type = Element.self,
         backPressureStrategy: Strategy,
@@ -212,12 +218,13 @@ extension NIOAsyncSequenceProducer: AsyncSequence {
 extension NIOAsyncSequenceProducer {
     public struct AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline
-        /* private */ internal let _throwingIterator: NIOThrowingAsyncSequenceProducer<
-            Element,
-            Never,
-            Strategy,
-            Delegate
-        >.AsyncIterator
+        /* private */ internal let _throwingIterator:
+            NIOThrowingAsyncSequenceProducer<
+                Element,
+                Never,
+                Strategy,
+                Delegate
+            >.AsyncIterator
 
         fileprivate init(
             throwingIterator: NIOThrowingAsyncSequenceProducer<
@@ -233,7 +240,7 @@ extension NIOAsyncSequenceProducer {
         @inlinable
         public func next() async -> Element? {
             // this call will only throw if cancelled and we want to just return nil in that case
-            return try? await self._throwingIterator.next()
+            try? await self._throwingIterator.next()
         }
     }
 }

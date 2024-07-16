@@ -62,8 +62,10 @@ enum Linux {
 
     /// Get the available core count according to cgroup1 restrictions.
     /// Round up to the next whole number.
-    static func coreCountCgroup1Restriction(quota quotaPath: String = Linux.cfsQuotaPath,
-                                            period periodPath: String = Linux.cfsPeriodPath) -> Int? {
+    static func coreCountCgroup1Restriction(
+        quota quotaPath: String = Linux.cfsQuotaPath,
+        period periodPath: String = Linux.cfsPeriodPath
+    ) -> Int? {
         guard
             let quota = try? Int(firstLineOfFile(path: quotaPath)),
             quota > 0
@@ -72,18 +74,18 @@ enum Linux {
             let period = try? Int(firstLineOfFile(path: periodPath)),
             period > 0
         else { return nil }
-        return (quota - 1 + period) / period // always round up if fractional CPU quota requested
+        return (quota - 1 + period) / period  // always round up if fractional CPU quota requested
     }
 
     /// Get the available core count according to cgroup2 restrictions.
     /// Round up to the next whole number.
     static func coreCountCgroup2Restriction(cpuMaxPath: String = Linux.cfsCpuMaxPath) -> Int? {
         guard let maxDetails = try? firstLineOfFile(path: cpuMaxPath),
-              let spaceIndex = maxDetails.firstIndex(of: " "),
-              let quota = Int(maxDetails[maxDetails.startIndex ..< spaceIndex]),
-              let period = Int(maxDetails[maxDetails.index(after: spaceIndex) ..< maxDetails.endIndex])
+            let spaceIndex = maxDetails.firstIndex(of: " "),
+            let quota = Int(maxDetails[maxDetails.startIndex..<spaceIndex]),
+            let period = Int(maxDetails[maxDetails.index(after: spaceIndex)..<maxDetails.endIndex])
         else { return nil }
-        return (quota - 1 + period) / period // always round up if fractional CPU quota requested
+        return (quota - 1 + period) / period  // always round up if fractional CPU quota requested
     }
 }
 #endif

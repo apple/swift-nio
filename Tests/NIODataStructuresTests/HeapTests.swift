@@ -16,7 +16,7 @@ import XCTest
 @testable import _NIODataStructures
 
 public func getRandomNumbers(count: Int) -> [UInt8] {
-    return (0..<count).map { _ in
+    (0..<count).map { _ in
         UInt8.random(in: .min ... .max)
     }
 }
@@ -76,7 +76,7 @@ class HeapTests: XCTestCase {
             XCTAssertEqual(Array(minHeap.sorted()), Array(minHeap))
         }
 
-        for _ in 0..<N/2 {
+        for _ in 0..<N / 2 {
             let value = minHeap.removeRoot()!
             XCTAssertGreaterThanOrEqual(value, minHeapLast)
             minHeapLast = value
@@ -93,7 +93,7 @@ class HeapTests: XCTestCase {
             XCTAssertTrue(minHeap.checkHeapProperty(), minHeap.debugDescription)
         }
 
-        for _ in 0..<N/2+N {
+        for _ in 0..<N / 2 + N {
             let value = minHeap.removeRoot()!
             XCTAssertGreaterThanOrEqual(value, minHeapLast)
             minHeapLast = value

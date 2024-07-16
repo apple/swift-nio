@@ -18,7 +18,7 @@ import XCTest
 
 class IOErrorTest: XCTestCase {
     func testMemoryLayoutBelowThreshold() {
-       XCTAssert(MemoryLayout<IOError>.size <= 24)
+        XCTAssert(MemoryLayout<IOError>.size <= 24)
     }
 
     @available(*, deprecated, message: "deprecated because it tests deprecated functionality")

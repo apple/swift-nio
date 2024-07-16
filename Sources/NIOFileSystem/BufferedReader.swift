@@ -44,7 +44,7 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
 
     /// The number of bytes currently in the buffer.
     public var count: Int {
-        return self.buffer.readableBytes
+        self.buffer.readableBytes
     }
 
     internal init(wrapping readableHandle: Handle, initialOffset: Int64, capacity: Int) {
@@ -119,7 +119,7 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
     ) async throws -> ByteBuffer {
         try await self.read(while: predicate).bytes
     }
-    
+
     /// Reads from  the current position in the file until `predicate` returns `false` and returns
     /// the read bytes.
     ///
@@ -139,7 +139,7 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
             let prefix = view[..<index]
             let buffer = ByteBuffer(prefix)
             self.buffer.moveReaderIndex(forwardBy: buffer.readableBytes)
-            
+
             // If we reached this codepath, it's because at least one element
             // in the buffer makes the predicate false. This means that we have
             // stopped reading because the condition doesn't hold true anymore.
@@ -233,7 +233,7 @@ extension ReadableFileHandleProtocol {
         startingAtAbsoluteOffset initialOffset: Int64 = 0,
         capacity: ByteCount = .kibibytes(512)
     ) -> BufferedReader<Self> {
-        return BufferedReader(wrapping: self, initialOffset: initialOffset, capacity: Int(capacity.bytes))
+        BufferedReader(wrapping: self, initialOffset: initialOffset, capacity: Int(capacity.bytes))
     }
 }
 

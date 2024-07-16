@@ -22,7 +22,7 @@ public struct ByteCount: Hashable, Sendable {
     /// Returns a ``ByteCount`` with a given number of bytes
     /// - Parameter count: The number of bytes
     public static func bytes(_ count: Int64) -> ByteCount {
-        return ByteCount(bytes: count)
+        ByteCount(bytes: count)
     }
 
     /// Returns a ``ByteCount`` with a given number of kilobytes
@@ -31,7 +31,7 @@ public struct ByteCount: Hashable, Sendable {
     ///
     /// - Parameter count: The number of kilobytes
     public static func kilobytes(_ count: Int64) -> ByteCount {
-        return ByteCount(bytes: 1000 * count)
+        ByteCount(bytes: 1000 * count)
     }
 
     /// Returns a ``ByteCount`` with a given number of megabytes
@@ -40,7 +40,7 @@ public struct ByteCount: Hashable, Sendable {
     ///
     /// - Parameter count: The number of megabytes
     public static func megabytes(_ count: Int64) -> ByteCount {
-        return ByteCount(bytes: 1000 * 1000 * count)
+        ByteCount(bytes: 1000 * 1000 * count)
     }
 
     /// Returns a ``ByteCount`` with a given number of gigabytes
@@ -49,7 +49,7 @@ public struct ByteCount: Hashable, Sendable {
     ///
     /// - Parameter count: The number of gigabytes
     public static func gigabytes(_ count: Int64) -> ByteCount {
-        return ByteCount(bytes: 1000 * 1000 * 1000 * count)
+        ByteCount(bytes: 1000 * 1000 * 1000 * count)
     }
 
     /// Returns a ``ByteCount`` with a given number of kibibytes
@@ -58,7 +58,7 @@ public struct ByteCount: Hashable, Sendable {
     ///
     /// - Parameter count: The number of kibibytes
     public static func kibibytes(_ count: Int64) -> ByteCount {
-        return ByteCount(bytes: 1024 * count)
+        ByteCount(bytes: 1024 * count)
     }
 
     /// Returns a ``ByteCount`` with a given number of mebibytes
@@ -67,7 +67,7 @@ public struct ByteCount: Hashable, Sendable {
     ///
     /// - Parameter count: The number of mebibytes
     public static func mebibytes(_ count: Int64) -> ByteCount {
-        return ByteCount(bytes: 1024 * 1024 * count)
+        ByteCount(bytes: 1024 * 1024 * count)
     }
 
     /// Returns a ``ByteCount`` with a given number of gibibytes
@@ -76,7 +76,7 @@ public struct ByteCount: Hashable, Sendable {
     ///
     /// - Parameter count: The number of gibibytes
     public static func gibibytes(_ count: Int64) -> ByteCount {
-        return ByteCount(bytes: 1024 * 1024 * 1024 * count)
+        ByteCount(bytes: 1024 * 1024 * 1024 * count)
     }
 }
 

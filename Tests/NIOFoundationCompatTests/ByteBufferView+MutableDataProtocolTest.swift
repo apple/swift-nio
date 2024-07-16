@@ -32,7 +32,7 @@ class ByteBufferViewDataProtocolTests: XCTestCase {
         view.resetBytes(in: 2...4)
         XCTAssertTrue(view.elementsEqual([0, 0, 0, 0, 0]))
     }
-    
+
     func testCreateDataFromBuffer() {
         let testString = "some sample bytes"
         let buffer = ByteBuffer(ByteBufferView(testString.utf8))

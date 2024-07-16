@@ -22,10 +22,10 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias OutboundOut = ByteBuffer
     private var sendBytes = 0
     private var receiveBuffer: ByteBuffer = ByteBuffer()
-    
+
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress?.description ?? "unknown")")
-        
+
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
         let buffer = context.channel.allocator.buffer(string: line)
         self.sendBytes = buffer.readableBytes
@@ -36,7 +36,7 @@ private final class EchoHandler: ChannelInboundHandler {
         var unwrappedInboundData = self.unwrapInboundIn(data)
         self.sendBytes -= unwrappedInboundData.readableBytes
         receiveBuffer.writeBuffer(&unwrappedInboundData)
-        
+
         if self.sendBytes == 0 {
             let string = String(buffer: receiveBuffer)
             print("Received: '\(string)' back from the server, closing channel.")
@@ -82,10 +82,12 @@ let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (_, .some(let cid), .some(let port)):
     /* we got two arguments (Int, Int), let's interpret that as vsock cid and port */
-    connectTarget = .vsock(VsockAddress(
-        cid: VsockAddress.ContextID(cid),
-        port: VsockAddress.Port(port)
-    ))
+    connectTarget = .vsock(
+        VsockAddress(
+            cid: VsockAddress.ContextID(cid),
+            port: VsockAddress.Port(port)
+        )
+    )
 case (.some(let h), .none, .some(let p)):
     /* we got two arguments (String, Int), let's interpret that as host and port */
     connectTarget = .ip(host: h, port: p)

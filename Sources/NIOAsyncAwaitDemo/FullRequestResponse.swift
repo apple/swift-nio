@@ -63,7 +63,6 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
     private var state: State = .operational
     private var promiseBuffer: CircularBuffer<EventLoopPromise<Response>>
 
-
     /// Create a new `RequestResponseHandler`.
     ///
     /// - parameters:

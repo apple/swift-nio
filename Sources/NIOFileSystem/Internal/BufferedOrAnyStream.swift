@@ -74,7 +74,7 @@ internal struct AnyAsyncSequence<Element>: AsyncSequence {
     }
 
     internal func makeAsyncIterator() -> AsyncIterator {
-        return self._makeAsyncIterator()
+        self._makeAsyncIterator()
     }
 
     internal struct AsyncIterator: AsyncIteratorProtocol {
@@ -85,7 +85,7 @@ internal struct AnyAsyncSequence<Element>: AsyncSequence {
         }
 
         internal mutating func next() async throws -> Element? {
-            return try await self.iterator.next() as? Element
+            try await self.iterator.next() as? Element
         }
     }
 }

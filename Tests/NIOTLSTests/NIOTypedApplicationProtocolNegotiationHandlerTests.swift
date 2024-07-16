@@ -214,7 +214,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         continuePromise.succeed(.failed)
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
         XCTAssertNoThrow(XCTAssertEqual(try channel.readInbound()!, "a write"))
-        
+
         XCTAssertEqual(eventCounterHandler.channelReadCompleteCalls, 3)
 
         XCTAssertTrue(try channel.finish().isClean)

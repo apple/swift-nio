@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 /// A simplified version of `ByteToMessageDecoder` that can generate zero or one messages for each invocation of `decode` or `decodeLast`.
 /// Having `decode` and `decodeLast` return an optional message avoids re-entrancy problems, since the functions relinquish exclusive access
 /// to the `ByteBuffer` when returning. This allows for greatly simplified processing.
@@ -51,7 +50,6 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut?
 }
 
-
 // MARK: NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder
 extension NIOSingleStepByteToMessageDecoder {
     public mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
@@ -63,7 +61,11 @@ extension NIOSingleStepByteToMessageDecoder {
         }
     }
 
-    public mutating func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+    public mutating func decodeLast(
+        context: ChannelHandlerContext,
+        buffer: inout ByteBuffer,
+        seenEOF: Bool
+    ) throws -> DecodingState {
         if let message = try self.decodeLast(buffer: &buffer, seenEOF: seenEOF) {
             context.fireChannelRead(self.wrapInboundOut(message))
             return .continue
@@ -72,7 +74,6 @@ extension NIOSingleStepByteToMessageDecoder {
         }
     }
 }
-
 
 /// `NIOSingleStepByteToMessageProcessor` uses a `NIOSingleStepByteToMessageDecoder` to produce messages
 /// from a stream of incoming bytes. It works like `ByteToMessageHandler` but may be used outside of the channel pipeline. This allows
@@ -238,7 +239,11 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
     }
 
     @inlinable
-    func _decodeLoop(decodeMode: DecodeMode, seenEOF: Bool = false, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
+    func _decodeLoop(
+        decodeMode: DecodeMode,
+        seenEOF: Bool = false,
+        _ messageReceiver: (Decoder.InboundOut) throws -> Void
+    ) throws {
         // we want to call decodeLast once with an empty buffer if we have nothing
         if decodeMode == .last && (self._buffer == nil || self._buffer!.readableBytes == 0) {
             var emptyBuffer = self._buffer == nil ? ByteBuffer() : self._buffer!

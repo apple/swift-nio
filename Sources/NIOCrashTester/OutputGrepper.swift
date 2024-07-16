@@ -31,8 +31,10 @@ internal struct OutputGrepper {
             .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
             .channelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
-                    try channel.pipeline.syncOperations.addHandlers([ByteToMessageHandler(NewlineFramer()),
-                                                                 GrepHandler(promise: outputPromise)])
+                    try channel.pipeline.syncOperations.addHandlers([
+                        ByteToMessageHandler(NewlineFramer()),
+                        GrepHandler(promise: outputPromise),
+                    ])
                 }
             }
             .takingOwnershipOfDescriptor(input: dup(processToChannel.fileHandleForReading.fileDescriptor))
@@ -40,8 +42,10 @@ internal struct OutputGrepper {
         processToChannel.fileHandleForReading.closeFile()
         processToChannel.fileHandleForWriting.closeFile()
         channelFuture.cascadeFailure(to: outputPromise)
-        return OutputGrepper(result: outputPromise.futureResult,
-                             processOutputPipe: processOutputPipe)
+        return OutputGrepper(
+            result: outputPromise.futureResult,
+            processOutputPipe: processOutputPipe
+        )
     }
 }
 
@@ -63,9 +67,9 @@ private final class GrepHandler: ChannelInboundHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let line = self.unwrapInboundIn(data)
-        if line.lowercased().contains("fatal error") ||
-            line.lowercased().contains("precondition failed") ||
-            line.lowercased().contains("assertion failed") {
+        if line.lowercased().contains("fatal error") || line.lowercased().contains("precondition failed")
+            || line.lowercased().contains("assertion failed")
+        {
             self.promise.succeed(line)
             context.close(promise: nil)
         }

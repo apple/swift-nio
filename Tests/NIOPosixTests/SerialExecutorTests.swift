@@ -70,4 +70,3 @@ final class SerialExecutorTests: XCTestCase {
         try await self._testBasicExecutorFitsOnEventLoop(loop1: loop1, loop2: loop2)
     }
 }
-

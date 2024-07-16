@@ -96,7 +96,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
             XCTAssertNil(error)
             allDone.signal()
         }
-        blockOneThreadSem.signal() // that'll unblock the thread in the pool
+        blockOneThreadSem.signal()  // that'll unblock the thread in the pool
         allDone.wait()
     }
 

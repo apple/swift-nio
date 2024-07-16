@@ -48,7 +48,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     /// for a mask key.
     private static let maximumFrameHeaderLength: Int = (2 + 4 + 8)
 
-    public init() { }
+    public init() {}
 
     public func handlerAdded(context: ChannelHandlerContext) {
         self.headerBuffer = context.channel.allocator.buffer(capacity: WebSocketFrameEncoder.maximumFrameHeaderLength)
@@ -63,7 +63,11 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
 
         // First, we explode the frame structure and apply the mask.
         let frameHeader = FrameHeader(frame: data)
-        var (extensionData, applicationData) = self.mask(key: frameHeader.maskKey, extensionData: data.extensionData, applicationData: data.data)
+        var (extensionData, applicationData) = self.mask(
+            key: frameHeader.maskKey,
+            extensionData: data.extensionData,
+            applicationData: data.data
+        )
 
         // Now we attempt to prepend the frame header to the first buffer. If we can't, we'll write to the header buffer. If we have
         // an extension data buffer, that's the first buffer, and we'll also write it here.
@@ -83,7 +87,11 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     }
 
     /// Applies the websocket masking operation based on the passed byte buffers.
-    private func mask(key: WebSocketMaskingKey?, extensionData: ByteBuffer?, applicationData: ByteBuffer) -> (ByteBuffer?, ByteBuffer) {
+    private func mask(
+        key: WebSocketMaskingKey?,
+        extensionData: ByteBuffer?,
+        applicationData: ByteBuffer
+    ) -> (ByteBuffer?, ByteBuffer) {
         guard let key = key else {
             return (extensionData, applicationData)
         }
@@ -181,9 +189,8 @@ extension ByteBuffer {
     }
 }
 
-
 /// A helper object that holds only a websocket frame header. Used to avoid accidentally CoWing on some paths.
-fileprivate struct FrameHeader {
+private struct FrameHeader {
     var length: Int
     var maskKey: WebSocketMaskingKey?
     var firstByte: UInt8 = 0
@@ -213,7 +220,6 @@ fileprivate struct FrameHeader {
         if maskKey != nil {
             size += 4  // Masking key
         }
-
 
         return size
     }

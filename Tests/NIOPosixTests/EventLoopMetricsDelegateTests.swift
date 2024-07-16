@@ -22,7 +22,7 @@ final class RecorderDelegate: NIOEventLoopMetricsDelegate, Sendable {
     private let _infos: NIOLockedValueBox<[NIOEventLoopTickInfo]> = .init([])
 
     var infos: [NIOEventLoopTickInfo] {
-        _infos.withLockedValue {$0 }
+        _infos.withLockedValue { $0 }
     }
 
     func processedTick(info: NIOPosix.NIOEventLoopTickInfo) {
@@ -62,7 +62,7 @@ final class EventLoopMetricsDelegateTests: XCTestCase {
             }
             if let lastTickStartTime = delegate.infos.last?.startTime {
                 let timeSinceStart = lastTickStartTime - testStartTime
-                XCTAssertLessThan(timeSinceStart.nanoseconds, 100_000_000) // This should be near instant, limiting to 100ms
+                XCTAssertLessThan(timeSinceStart.nanoseconds, 100_000_000)  // This should be near instant, limiting to 100ms
                 XCTAssertGreaterThan(timeSinceStart.nanoseconds, 0)
             }
         }

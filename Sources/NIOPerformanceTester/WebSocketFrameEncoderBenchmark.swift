@@ -25,7 +25,13 @@ final class WebSocketFrameEncoderBenchmark {
     private var maskingKey: Optional<WebSocketMaskingKey>
     private var frame: Optional<WebSocketFrame>
 
-    init(dataSize: Int, runCount: Int, dataStrategy: DataStrategy, cowStrategy: CoWStrategy, maskingKeyStrategy: MaskingKeyStrategy) {
+    init(
+        dataSize: Int,
+        runCount: Int,
+        dataStrategy: DataStrategy,
+        cowStrategy: CoWStrategy,
+        maskingKeyStrategy: MaskingKeyStrategy
+    ) {
         self.frame = nil
         self.channel = EmbeddedChannel()
         self.dataSize = dataSize
@@ -37,14 +43,12 @@ final class WebSocketFrameEncoderBenchmark {
     }
 }
 
-
 extension WebSocketFrameEncoderBenchmark {
     enum DataStrategy {
         case spaceAtFront
         case noSpaceAtFront
     }
 }
-
 
 extension WebSocketFrameEncoderBenchmark {
     enum CoWStrategy {
@@ -53,14 +57,12 @@ extension WebSocketFrameEncoderBenchmark {
     }
 }
 
-
 extension WebSocketFrameEncoderBenchmark {
     enum MaskingKeyStrategy {
         case always
         case never
     }
 }
-
 
 extension WebSocketFrameEncoderBenchmark: Benchmark {
     func setUp() throws {
@@ -106,7 +108,6 @@ extension WebSocketFrameEncoderBenchmark: Benchmark {
     }
 }
 
-
 extension ByteBufferAllocator {
     fileprivate func buffer(size: Int, dataStrategy: WebSocketFrameEncoderBenchmark.DataStrategy) -> ByteBuffer {
         var data: ByteBuffer
@@ -125,13 +126,12 @@ extension ByteBufferAllocator {
     }
 }
 
-fileprivate final class NoOpOutboundHandler: ChannelOutboundHandler {
+private final class NoOpOutboundHandler: ChannelOutboundHandler {
     typealias OutboundIn = Any
     typealias OutboundOut = Any
 }
 
-
-fileprivate final class WriteConsumingHandler: ChannelOutboundHandler {
+private final class WriteConsumingHandler: ChannelOutboundHandler {
     typealias OutboundIn = Any
     typealias OutboundOut = Never
 

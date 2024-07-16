@@ -108,7 +108,7 @@ extension FileDescriptor {
     public func listExtendedAttributes(
         _ buffer: UnsafeMutableBufferPointer<CChar>?
     ) -> Result<Int, Errno> {
-        return valueOrErrno(retryOnInterrupt: false) {
+        valueOrErrno(retryOnInterrupt: false) {
             system_flistxattr(self.rawValue, buffer?.baseAddress, buffer?.count ?? 0)
         }
     }
@@ -128,7 +128,7 @@ extension FileDescriptor {
         named name: String,
         buffer: UnsafeMutableRawBufferPointer?
     ) -> Result<Int, Errno> {
-        return valueOrErrno(retryOnInterrupt: false) {
+        valueOrErrno(retryOnInterrupt: false) {
             name.withPlatformString {
                 system_fgetxattr(self.rawValue, $0, buffer?.baseAddress, buffer?.count ?? 0)
             }
@@ -198,7 +198,7 @@ extension FileDescriptor {
 extension FileDescriptor {
     func listExtendedAttributes() -> Result<[String], Errno> {
         // Required capacity is returned if a no buffer is passed to flistxattr.
-        return self.listExtendedAttributes(nil).flatMap { capacity in
+        self.listExtendedAttributes(nil).flatMap { capacity in
             guard capacity > 0 else {
                 // Required capacity is zero: no attributes to read.
                 return .success([])
@@ -226,7 +226,7 @@ extension FileDescriptor {
 
     func readExtendedAttribute(named name: String) -> Result<[UInt8], Errno> {
         // Required capacity is returned if a no buffer is passed to fgetxattr.
-        return self.getExtendedAttribute(named: name, buffer: nil).flatMap { capacity in
+        self.getExtendedAttribute(named: name, buffer: nil).flatMap { capacity in
             guard capacity > 0 else {
                 // Required capacity is zero: no values to read.
                 return .success([])
@@ -263,7 +263,7 @@ extension FileDescriptor {
         // factor here. However we should investigate whether it's possible to have a pool of
         // buffers which we can reuse. This would need to be at least as large as the high watermark
         // of the chunked file for it to be useful.
-        return Result {
+        Result {
             var buffer = ByteBuffer()
             try buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: Int(length)) { buffer in
                 let bufferPointer: UnsafeMutableRawBufferPointer
@@ -295,7 +295,7 @@ extension FileDescriptor {
         contentsOf bytes: some Sequence<UInt8>,
         toAbsoluteOffset offset: Int64
     ) -> Result<Int64, Error> {
-        return Result {
+        Result {
             Int64(try self.writeAll(toAbsoluteOffset: offset, bytes))
         }
     }
@@ -303,7 +303,7 @@ extension FileDescriptor {
     func write(
         contentsOf bytes: some Sequence<UInt8>
     ) -> Result<Int64, Error> {
-        return Result {
+        Result {
             Int64(try self.writeAll(bytes))
         }
     }

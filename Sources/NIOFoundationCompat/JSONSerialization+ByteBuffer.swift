@@ -16,7 +16,7 @@ import NIOCore
 import Foundation
 
 extension JSONSerialization {
-    
+
     /// Attempts to derive a Foundation object from a ByteBuffer and return it as `T`.
     ///
     /// - parameters:
@@ -24,8 +24,10 @@ extension JSONSerialization {
     ///    - options: The reading option used when the parser derives the Foundation type from the ByteBuffer.
     /// - returns: The Foundation value if successful or `nil` if there was an issue creating the Foundation type.
     @inlinable
-    public static func jsonObject(with buffer: ByteBuffer,
-                                  options opt: JSONSerialization.ReadingOptions = []) throws -> Any {
-        return try JSONSerialization.jsonObject(with: Data(buffer: buffer), options: opt)
+    public static func jsonObject(
+        with buffer: ByteBuffer,
+        options opt: JSONSerialization.ReadingOptions = []
+    ) throws -> Any {
+        try JSONSerialization.jsonObject(with: Data(buffer: buffer), options: opt)
     }
 }

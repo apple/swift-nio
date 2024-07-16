@@ -22,8 +22,8 @@ func run(identifier: String) {
     }
 
     let server = try! ServerBootstrap(group: group)
-      .bind(host: "127.0.0.1", port: 0)
-      .wait()
+        .bind(host: "127.0.0.1", port: 0)
+        .wait()
     defer {
         try! server.close().wait()
     }

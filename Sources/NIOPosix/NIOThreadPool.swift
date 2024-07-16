@@ -301,7 +301,8 @@ public final class NIOThreadPool {
     deinit {
         assert(
             self.canBeStopped,
-            "Perpetual NIOThreadPool has been deinited, you must make sure that perpetual pools don't deinit")
+            "Perpetual NIOThreadPool has been deinited, you must make sure that perpetual pools don't deinit"
+        )
         switch self.state {
         case .stopped, .shuttingDown:
             ()
@@ -383,7 +384,7 @@ extension NIOThreadPool {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func shutdownGracefully() async throws {
-        return try await withCheckedThrowingContinuation { cont in
+        try await withCheckedThrowingContinuation { cont in
             self.shutdownGracefully { error in
                 if let error = error {
                     cont.resume(throwing: error)
