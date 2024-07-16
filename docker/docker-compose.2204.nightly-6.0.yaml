@@ -20,7 +20,7 @@ services:
   test:
     image: swift-nio:22.04-next
     environment:
-      - SWIFT_VERSION=nightly-next
+      - SWIFT_VERSION=nightly-6.0
       - MAX_ALLOCS_ALLOWED_10000000_asyncsequenceproducer=21
       - MAX_ALLOCS_ALLOWED_1000000_asyncwriter=1000050
       - MAX_ALLOCS_ALLOWED_1000_addHandlers=45050
@@ -79,7 +79,7 @@ services:
   update-benchmark-baseline:
     image: swift-nio:22.04-next
     environment:
-      - SWIFT_VERSION=nightly-next
+      - SWIFT_VERSION=nightly-6.0
 
   shell:
     image: swift-nio:22.04-next
