@@ -653,11 +653,11 @@ extension SALTest {
         file: StaticString = #filePath,
         line: UInt = #line
     ) throws -> SocketChannel {
-        let channel = try eventLoop.runSAL(syscallAssertions: {
+        let channel = try eventLoop.runSAL {
             try self.assertdisableSIGPIPE(expectedFD: .max, result: .success(()))
             try self.assertLocalAddress(address: nil)
             try self.assertRemoteAddress(address: nil)
-        }) {
+        } _: {
             try SocketChannel(
                 socket: HookedSocket(
                     userToKernel: self.userToKernelBox,
@@ -677,11 +677,11 @@ extension SALTest {
         file: StaticString = #filePath,
         line: UInt = #line
     ) throws -> ServerSocketChannel {
-        let channel = try eventLoop.runSAL(syscallAssertions: {
+        let channel = try eventLoop.runSAL {
             try self.assertdisableSIGPIPE(expectedFD: .max, result: .success(()))
             try self.assertLocalAddress(address: nil)
             try self.assertRemoteAddress(address: nil)
-        }) {
+        } _: {
             try ServerSocketChannel(
                 serverSocket: HookedServerSocket(
                     userToKernel: self.userToKernelBox,
@@ -692,12 +692,13 @@ extension SALTest {
                 group: group
             )
         }
+
         try self.assertParkedRightNow()
         return channel
     }
 
     func makeSocketChannelInjectingFailures(disableSIGPIPEFailure: IOError?) throws -> SocketChannel {
-        let channel = try self.loop.runSAL(syscallAssertions: {
+        let channel = try self.loop.runSAL {
             try self.assertdisableSIGPIPE(
                 expectedFD: .max,
                 result: disableSIGPIPEFailure.map {
@@ -710,7 +711,7 @@ extension SALTest {
             }
             try self.assertLocalAddress(address: nil)
             try self.assertRemoteAddress(address: nil)
-        }) {
+        } _: {
             try SocketChannel(
                 socket: HookedSocket(
                     userToKernel: self.userToKernelBox,
@@ -739,7 +740,7 @@ extension SALTest {
         line: UInt = #line
     ) throws -> SocketChannel {
         let channel = try self.makeSocketChannel(eventLoop: self.loop)
-        let connectFuture = try channel.eventLoop.runSAL(syscallAssertions: {
+        let connectFuture = try channel.eventLoop.runSAL {
             try self.assertConnect(expectedAddress: remoteAddress, result: true)
             try self.assertLocalAddress(address: localAddress)
             try self.assertRemoteAddress(address: remoteAddress)
@@ -766,7 +767,7 @@ extension SALTest {
                 XCTAssertEqual([.reset, .readEOF, .read], eventSet)
                 return true
             }
-        }) {
+        } _: {
             channel.register().flatMap {
                 channel.connect(to: remoteAddress)
             }
@@ -781,7 +782,7 @@ extension SALTest {
         line: UInt = #line
     ) throws -> ServerSocketChannel {
         let channel = try self.makeServerSocketChannel(eventLoop: self.loop, group: self.group)
-        let bindFuture = try channel.eventLoop.runSAL(syscallAssertions: {
+        let bindFuture = try channel.eventLoop.runSAL {
             try self.assertBind(expectedAddress: localAddress)
             try self.assertLocalAddress(address: localAddress)
             try self.assertListen(expectedFD: .max, expectedBacklog: 128)
@@ -808,7 +809,7 @@ extension SALTest {
                 XCTAssertEqual([.reset, .readEOF, .read], eventSet)
                 return true
             }
-        }) {
+        } _: {
             channel.register().flatMap {
                 channel.bind(to: localAddress)
             }
@@ -818,9 +819,9 @@ extension SALTest {
     }
 
     func makeSocket() throws -> HookedSocket {
-        try self.loop.runSAL(syscallAssertions: {
+        try self.loop.runSAL {
             try self.assertdisableSIGPIPE(expectedFD: .max, result: .success(()))
-        }) {
+        } _: {
             try HookedSocket(userToKernel: self.userToKernelBox, kernelToUser: self.kernelToUserBox, socket: .max)
         }
     }

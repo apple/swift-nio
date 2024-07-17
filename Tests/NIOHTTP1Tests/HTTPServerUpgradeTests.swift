@@ -1566,15 +1566,13 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         defer {
             XCTAssertNoThrow(try otherELG.syncShutdownGracefully())
         }
-
         let upgrader = SuccessfulUpgrader(
             forProtocol: "myproto",
-            requiringHeaders: ["kafkaesque"],
-            buildUpgradeResponseFuture: {
-                // this is the wrong EL
-                otherELG.next().makeSucceededFuture($1)
-            }
-        ) { req in
+            requiringHeaders: ["kafkaesque"]
+        ) {
+            // this is the wrong EL
+            otherELG.next().makeSucceededFuture($1)
+        } onUpgradeComplete: { req in
             upgradeRequest.wrappedValue = req
             XCTAssert(upgradeHandlerCbFired.wrappedValue)
             upgraderCbFired.wrappedValue = true
@@ -1821,14 +1819,14 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
 
         let (_, client, connectedServer) = try setUpTestWithAutoremoval(
             upgraders: [upgrader],
-            extraHandlers: [],
-            notUpgradingHandler: { channel in
-                notUpgraderCbFired.wrappedValue = true
-                // We're closing the connection now.
-                channel.close(promise: nil)
-                return channel.eventLoop.makeSucceededFuture(true)
-            }
-        ) { _ in }
+            extraHandlers: []
+        ) { channel in
+            notUpgraderCbFired.wrappedValue = true
+            // We're closing the connection now.
+            channel.close(promise: nil)
+            return channel.eventLoop.makeSucceededFuture(true)
+        } _: { _ in
+        }
 
         let completePromise = Self.eventLoop.makePromise(of: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
@@ -2203,12 +2201,11 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
 
         let upgrader = SuccessfulUpgrader(
             forProtocol: "myproto",
-            requiringHeaders: ["kafkaesque"],
-            buildUpgradeResponseFuture: {
-                // this is the wrong EL
-                otherELG.next().makeSucceededFuture($1)
-            }
-        ) { req in
+            requiringHeaders: ["kafkaesque"]
+        ) {
+            // this is the wrong EL
+            otherELG.next().makeSucceededFuture($1)
+        } onUpgradeComplete: { req in
             upgradeRequest.wrappedValue = req
             XCTAssertFalse(upgradeHandlerCbFired.wrappedValue)
             upgraderCbFired.wrappedValue = true

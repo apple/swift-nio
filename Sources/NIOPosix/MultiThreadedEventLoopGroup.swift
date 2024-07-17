@@ -455,11 +455,12 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             canEventLoopBeShutdownIndividually: true,
             selectorFactory: NIOPosix.Selector<NIORegistration>.init,
             initializer: { _ in },
-            metricsDelegate: nil
-        ) { loop in
-            loop.assertInEventLoop()
-            callback(loop)
-        }
+            metricsDelegate: nil,
+            { loop in
+                loop.assertInEventLoop()
+                callback(loop)
+            }
+        )
     }
 
     public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {

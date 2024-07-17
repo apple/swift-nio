@@ -96,7 +96,8 @@ class SelectorTest: XCTestCase {
         )
 
         var readyCount = 0
-        try selector.whenReady(strategy: .block, onLoopBegin: {}) { ev in
+        try selector.whenReady(strategy: .block) {
+        } _: { ev in
             readyCount += 1
             if socket1 === ev.registration.socket {
                 try selector.deregister(selectable: socket2)
@@ -112,6 +113,7 @@ class SelectorTest: XCTestCase {
                 XCTFail("ev.registration.socket was neither \(socket1) or \(socket2) but \(ev.registration.socket)")
             }
         }
+
         XCTAssertEqual(1, readyCount)
     }
 
