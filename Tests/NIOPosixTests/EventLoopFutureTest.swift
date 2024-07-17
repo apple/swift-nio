@@ -784,7 +784,7 @@ class EventLoopFutureTest: XCTestCase {
 
         let p = el.makePromise(of: Int.self)
         let f = p.futureResult.flatMapResult { (_: Int) in
-            return Result<String, Never>.success("hello world")
+            Result<String, Never>.success("hello world")
         }
         p.succeed(1)
         XCTAssertNoThrow(XCTAssertEqual("hello world", try f.wait()))
@@ -799,7 +799,7 @@ class EventLoopFutureTest: XCTestCase {
 
         let p = el.makePromise(of: Int.self)
         let f = p.futureResult.flatMapResult { (_: Int) in
-            return Result<Int, Error>.failure(DummyError())
+            Result<Int, Error>.failure(DummyError())
         }
         p.succeed(1)
         XCTAssertThrowsError(try f.wait()) { error in

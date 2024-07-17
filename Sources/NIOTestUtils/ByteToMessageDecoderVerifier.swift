@@ -25,7 +25,7 @@ public enum ByteToMessageDecoderVerifier {
         let alloc = ByteBufferAllocator()
         let ioPairs = stringInputOutputPairs.map {
             (ioPair: (String, [Decoder.InboundOut])) -> (ByteBuffer, [Decoder.InboundOut]) in
-            return (alloc.buffer(string: ioPair.0), ioPair.1)
+            (alloc.buffer(string: ioPair.0), ioPair.1)
         }
 
         try ByteToMessageDecoderVerifier.verifyDecoder(inputOutputPairs: ioPairs, decoderFactory: decoderFactory)

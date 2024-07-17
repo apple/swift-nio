@@ -208,7 +208,7 @@ internal final class SelectableEventLoop: EventLoop {
 
     internal var testsOnly_validExternalStateToScheduleTasks: Bool {
         self.externalStateLock.withLock {
-            return self.validExternalStateToScheduleTasks
+            self.validExternalStateToScheduleTasks
         }
     }
 
@@ -882,8 +882,7 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
     @usableFromInline
     var debugDescription: String {
         self._tasksLock.withLock {
-            return
-                "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
+            "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
         }
     }
 }

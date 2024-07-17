@@ -1050,7 +1050,7 @@ extension NonBlockingFileIO {
         _ body: (NIOFileHandle) async throws -> Result
     ) async throws -> Result {
         let fileHandle = try await self.threadPool.runIfActive {
-            return try UnsafeTransfer(NIOFileHandle(path: path, mode: mode, flags: flags))
+            try UnsafeTransfer(NIOFileHandle(path: path, mode: mode, flags: flags))
         }
         let result: Result
         do {

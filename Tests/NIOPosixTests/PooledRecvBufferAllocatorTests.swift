@@ -60,7 +60,7 @@ internal final class PooledRecvBufferAllocatorTests: XCTestCase {
         )
 
         let (_, storageID) = pool.buffer(allocator: allocator) { buffer in
-            return buffer.storagePointerIntegerValue()
+            buffer.storagePointerIntegerValue()
         }
 
         XCTAssertEqual(pool.count, 1)

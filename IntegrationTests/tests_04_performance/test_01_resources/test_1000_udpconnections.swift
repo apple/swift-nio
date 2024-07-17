@@ -49,7 +49,7 @@ func run(identifier: String) {
     let serverChannel = try! DatagramBootstrap(group: group)
         // Set the handlers that are applied to the bound channel
         .channelInitializer { channel in
-            return channel.pipeline.addHandler(serverHandler)
+            channel.pipeline.addHandler(serverHandler)
         }
         .bind(to: localhostPickPort).wait()
     defer {

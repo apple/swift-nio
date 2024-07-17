@@ -577,7 +577,7 @@ internal enum Posix {
         len: UnsafeMutablePointer<socklen_t>?
     ) throws -> CInt? {
         let result: IOResult<CInt> = try syscall(blocking: true) {
-            return sysAccept(descriptor, addr, len)
+            sysAccept(descriptor, addr, len)
         }
 
         if case .processed(let fd) = result {

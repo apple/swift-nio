@@ -403,7 +403,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return await sequence!.first { _ in true }
+                await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -435,7 +435,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return await sequence!.first { _ in true }
+                await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil

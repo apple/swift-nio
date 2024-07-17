@@ -982,7 +982,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
             port: port,
             connectTimeout: self.connectTimeout
         ) { eventLoop, protocolFamily in
-            return self.initializeAndRegisterNewChannel(eventLoop: eventLoop, protocolFamily: protocolFamily) {
+            self.initializeAndRegisterNewChannel(eventLoop: eventLoop, protocolFamily: protocolFamily) {
                 $0.eventLoop.makeSucceededFuture(())
             }
         }
@@ -1329,7 +1329,7 @@ extension ClientBootstrap {
             port: port,
             connectTimeout: self.connectTimeout
         ) { eventLoop, protocolFamily in
-            return self.initializeAndRegisterNewChannel(
+            self.initializeAndRegisterNewChannel(
                 eventLoop: eventLoop,
                 protocolFamily: protocolFamily,
                 channelInitializer: channelInitializer,
@@ -1400,7 +1400,7 @@ extension ClientBootstrap {
         >
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let channelInitializer = { channel in
-            return self.channelInitializer(channel)
+            self.channelInitializer(channel)
                 .flatMap { channelInitializer(channel) }
         }
         let channelOptions = self._channelOptions

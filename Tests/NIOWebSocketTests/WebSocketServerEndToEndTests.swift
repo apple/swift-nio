@@ -519,7 +519,7 @@ class WebSocketServerEndToEndTests: XCTestCase {
             maxFrameSize: 16,
             shouldUpgrade: { (channel, head) in channel.eventLoop.makeSucceededFuture(HTTPHeaders()) },
             upgradePipelineHandler: { (channel, req) in
-                return channel.eventLoop.makeSucceededFuture(())
+                channel.eventLoop.makeSucceededFuture(())
             }
         )
         let (loop, server, client) = self.createTestFixtures(upgraders: [basicUpgrader])

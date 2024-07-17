@@ -281,7 +281,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence.first { _ in true }
+                try await sequence.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -299,7 +299,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence.first { _ in true }
+                try await sequence.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -499,7 +499,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence!.first { _ in true }
+                try await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -532,7 +532,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence!.first { _ in true }
+                try await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil

@@ -24,15 +24,15 @@ func run(identifier: String) {
             let f = p.futureResult.flatMap { (r: Int) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and
                 // so does flatMap(), so this is two Futures.
-                return loop.makeSucceededFuture(r + 1)
+                loop.makeSucceededFuture(r + 1)
             }.flatMapThrowing { (r: Int) -> Int in
                 // flatMapThrowing allocates a new Future, and calls `flatMap`
                 // which also allocates, so this is two.
-                return r + 2
+                r + 2
             }.map { (r: Int) -> Int in
                 // map allocates a new future, and calls `flatMap` which
                 // also allocates, so this is two.
-                return r + 2
+                r + 2
             }.flatMapThrowing { (r: Int) -> Int in
                 // flatMapThrowing allocates a future on the error path and
                 // calls `flatMap`, which also allocates, so this is two.
@@ -40,7 +40,7 @@ func run(identifier: String) {
             }.flatMapError { (err: Error) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and so does flatMapError,
                 // so this is two Futures.
-                return loop.makeFailedFuture(err)
+                loop.makeFailedFuture(err)
             }.flatMapErrorThrowing { (err: Error) -> Int in
                 // flatMapError allocates a new Future, and calls flatMapError,
                 // so this is two Futures
@@ -48,7 +48,7 @@ func run(identifier: String) {
             }.recover { (err: Error) -> Int in
                 // recover allocates a future, and calls flatMapError, so
                 // this is two Futures.
-                return 1
+                1
             }
             p.succeed(0)
 

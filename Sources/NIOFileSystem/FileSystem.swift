@@ -632,7 +632,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         get async throws {
             #if canImport(Darwin)
             return try await self.threadPool.runIfActive {
-                return try Libc.constr(_CS_DARWIN_USER_TEMP_DIR).map { path in
+                try Libc.constr(_CS_DARWIN_USER_TEMP_DIR).map { path in
                     FilePath(path)
                 }.mapError { errno in
                     FileSystemError.confstr(

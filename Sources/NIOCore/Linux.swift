@@ -30,7 +30,7 @@ enum Linux {
         var buf = ByteBufferAllocator().buffer(capacity: 1024)
         try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: buf.capacity) { ptr in
             let res = try fh.withUnsafeFileDescriptor { fd -> CoreIOResult<ssize_t> in
-                return try SystemCalls.read(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
+                try SystemCalls.read(descriptor: fd, pointer: ptr.baseAddress!, size: ptr.count)
             }
             switch res {
             case .processed(let n):

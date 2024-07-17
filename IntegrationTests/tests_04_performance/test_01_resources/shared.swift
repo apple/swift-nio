@@ -228,7 +228,7 @@ enum UDPShared {
         let serverChannel = try DatagramBootstrap(group: group)
             // Set the handlers that are applied to the bound channel
             .channelInitializer { channel in
-                return channel.pipeline.addHandler(EchoHandler())
+                channel.pipeline.addHandler(EchoHandler())
             }
             .bind(to: localhostPickPort).wait()
 

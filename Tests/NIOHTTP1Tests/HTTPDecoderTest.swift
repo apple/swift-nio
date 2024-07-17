@@ -621,7 +621,7 @@ class HTTPDecoderTest: XCTestCase {
         ]
 
         let expectedInOutsBB: [(ByteBuffer, [HTTPServerRequestPart])] = expectedInOuts.map { io in
-            return (ByteBuffer(string: io.0), io.1)
+            (ByteBuffer(string: io.0), io.1)
         }
         XCTAssertNoThrow(
             try ByteToMessageDecoderVerifier.verifyDecoder(

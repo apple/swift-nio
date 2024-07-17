@@ -51,7 +51,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
         let serverChannel = try setupChannel(
             group: group,
             readCountHandler: readCountHandler,
-            backoffProvider: { _ in return .milliseconds(100) },
+            backoffProvider: { _ in .milliseconds(100) },
             errors: [error]
         )
         XCTAssertEqual(
@@ -102,7 +102,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
             group: group,
             readCountHandler: readCountHandler,
             backoffProvider: { err in
-                return .hours(1)
+                .hours(1)
             },
             errors: [ENFILE]
         )
@@ -150,7 +150,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
             group: group,
             readCountHandler: readCountHandler,
             backoffProvider: { err in
-                return .milliseconds(10)
+                .milliseconds(10)
             },
             errors: [ENFILE]
         )
@@ -214,7 +214,7 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
             group: group,
             readCountHandler: readCountHandler,
             backoffProvider: { err in
-                return .milliseconds(10)
+                .milliseconds(10)
             },
             errors: [ENFILE]
         )

@@ -269,7 +269,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 return self._addressCache
             } else {
                 return self._offEventLoopLock.withLock {
-                    return self._addressCache
+                    self._addressCache
                 }
             }
         }
@@ -288,7 +288,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 return self._bufferAllocatorCache
             } else {
                 return self._offEventLoopLock.withLock {
-                    return self._bufferAllocatorCache
+                    self._bufferAllocatorCache
                 }
             }
         }

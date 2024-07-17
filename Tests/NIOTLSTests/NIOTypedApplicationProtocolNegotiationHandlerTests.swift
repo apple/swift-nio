@@ -31,7 +31,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let channel = EmbeddedChannel()
 
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result, channel in
-            return channel.eventLoop.makeSucceededFuture(.negotiated(result))
+            channel.eventLoop.makeSucceededFuture(.negotiated(result))
         }
         try channel.pipeline.syncOperations.addHandler(handler)
         try channel.pipeline.syncOperations.removeHandler(handler).wait()
@@ -104,7 +104,7 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let continuePromise = loop.makePromise(of: NegotiationResult.self)
 
         let handler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> { result in
-            return continuePromise.futureResult
+            continuePromise.futureResult
         }
 
         try channel.pipeline.syncOperations.addHandler(handler)

@@ -1988,7 +1988,7 @@ extension ChannelPipeline: CustomDebugStringConvertible {
             .max() ?? 0
 
         func whitespace(count: Int) -> String {
-            return String(repeating: " ", count: count)
+            String(repeating: " ", count: count)
         }
 
         if debugInfos.isEmpty {

@@ -299,8 +299,8 @@ class Socket: BaseSocket, SocketProtocol {
                 #endif
 
                 let result = try withUnsafeMutablePointer(to: &messageHeader) { messageHeader in
-                    return try withUnsafeHandle { fd in
-                        return try NIOBSDSocket.recvmsg(socket: fd, msgHdr: messageHeader, flags: 0)
+                    try withUnsafeHandle { fd in
+                        try NIOBSDSocket.recvmsg(socket: fd, msgHdr: messageHeader, flags: 0)
                     }
                 }
 

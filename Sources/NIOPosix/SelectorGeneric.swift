@@ -341,7 +341,7 @@ internal class Selector<R: Registration> {
 extension Selector: CustomStringConvertible {
     var description: String {
         func makeDescription() -> String {
-            return "Selector { descriptor = \(self.selectorFD) }"
+            "Selector { descriptor = \(self.selectorFD) }"
         }
 
         if NIOThread.current == self.myThread {

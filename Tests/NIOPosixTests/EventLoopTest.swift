@@ -1798,12 +1798,12 @@ public final class EventLoopTest: XCTestCase {
         let eventLoop = group.next()
         let scheduledTaskMagic = 17
         let scheduledTask = eventLoop.scheduleTask(in: .microseconds(10)) {
-            return scheduledTaskMagic
+            scheduledTaskMagic
         }
 
         let immediateTaskMagic = 18
         let immediateTask = eventLoop.submit {
-            return immediateTaskMagic
+            immediateTaskMagic
         }
 
         let scheduledTaskMagicOut = try scheduledTask.futureResult.wait()
@@ -1844,13 +1844,13 @@ public final class EventLoopTest: XCTestCase {
         }
 
         let submitCount = try EventLoopFuture.whenAllSucceed(immediateTasks, on: eventLoop).map({ _ in
-            return achieved.submitCount
+            achieved.submitCount
         }).wait()
         XCTAssertEqual(submitCount, achieved.submitCount)
 
         let scheduleCount = try EventLoopFuture.whenAllSucceed(scheduledTasks.map { $0.futureResult }, on: eventLoop)
             .map({ _ in
-                return achieved.scheduleCount
+                achieved.scheduleCount
             }).wait()
         XCTAssertEqual(scheduleCount, scheduledTasks.count)
     }
@@ -1889,13 +1889,13 @@ public final class EventLoopTest: XCTestCase {
         }.wait()
 
         let submitCount = try EventLoopFuture.whenAllSucceed(immediateTasks, on: eventLoop).map({ _ in
-            return achieved.submitCount
+            achieved.submitCount
         }).wait()
         XCTAssertEqual(submitCount, achieved.submitCount)
 
         let scheduleCount = try EventLoopFuture.whenAllSucceed(scheduledTasks.map { $0.futureResult }, on: eventLoop)
             .map({ _ in
-                return achieved.scheduleCount
+                achieved.scheduleCount
             }).wait()
         XCTAssertEqual(scheduleCount, scheduledTasks.count)
     }
@@ -1918,8 +1918,7 @@ public final class EventLoopTest: XCTestCase {
             // in the first batch, don't get stuck waiting for scheduled task
             // expiry
             let immediateTasks = (0..<5000).map { _ in
-                return eventLoop.submit {
-                }.hop(to: testEventLoop)
+                eventLoop.submit {}.hop(to: testEventLoop)
             }
             let scheduledTask = eventLoop.scheduleTask(in: longWait) {
             }

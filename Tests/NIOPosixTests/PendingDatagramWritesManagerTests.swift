@@ -545,8 +545,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
     func testPendingWritesNoMoreThanWritevLimitIsWritten() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator(
-            hookedMalloc: { _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedRealloc: { _, _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
             hookedFree: { _ in },
             hookedMemcpy: { _, _, _ in }
         )
@@ -586,8 +586,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let el = EmbeddedEventLoop()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 65535)
         let alloc = ByteBufferAllocator(
-            hookedMalloc: { _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-            hookedRealloc: { _, _ in return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
             hookedFree: { _ in },
             hookedMemcpy: { _, _, _ in }
         )

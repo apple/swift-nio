@@ -656,7 +656,7 @@ extension BufferedStream {
             contentsOf sequence: some Sequence<Element>
         ) throws -> Source.WriteResult {
             let action = self._stateMachine.withCriticalRegion {
-                return $0.write(sequence)
+                $0.write(sequence)
             }
 
             switch action {

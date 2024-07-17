@@ -95,7 +95,7 @@ func run(identifier: String) {
         .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
         // Set the handlers that are applied to the bound channel
         .channelInitializer { channel in
-            return channel.pipeline.addHandler(ServerEchoHandler())
+            channel.pipeline.addHandler(ServerEchoHandler())
         }
         .bind(to: localhostPickPort).wait()
     defer {

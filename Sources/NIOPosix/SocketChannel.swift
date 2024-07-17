@@ -746,7 +746,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             var controlBytes = UnsafeReceivedControlBytes(controlBytesBuffer: controlBytesBuffer)
 
             let (buffer, result) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer in
-                return try buffer.withMutableWritePointer { pointer in
+                try buffer.withMutableWritePointer { pointer in
                     try self.socket.recvmsg(
                         pointer: pointer,
                         storage: &rawAddress,
@@ -947,7 +947,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 }
             },
             vectorWriteOperation: { msgs in
-                return try self.socket.sendmmsg(msgs: msgs)
+                try self.socket.sendmmsg(msgs: msgs)
             }
         )
         return result

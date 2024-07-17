@@ -48,7 +48,7 @@ final class CancellationTests: XCTestCase {
                 let ranTearDown = ManagedAtomic(false)
 
                 let isCancelled = try await withUncancellableTearDown {
-                    return Task.isCancelled
+                    Task.isCancelled
                 } tearDown: { _ in
                     ranTearDown.store(true, ordering: .releasing)
                 }

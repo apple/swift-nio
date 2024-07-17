@@ -223,7 +223,7 @@ final class FileHandleTests: XCTestCase {
         try await self.withTemporaryFile { handle in
             // Check we can successfully return a value.
             let value = try await handle.withUnsafeDescriptor { descriptor in
-                return 42
+                42
             }
             XCTAssertEqual(value, 42)
         }

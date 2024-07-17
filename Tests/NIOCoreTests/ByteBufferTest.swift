@@ -137,11 +137,11 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(1, slice.capacity)
         XCTAssertEqual(16, slice.storageCapacity)
         let oldStorageBegin = slice.withUnsafeReadableBytes { ptr in
-            return UInt(bitPattern: ptr.baseAddress!)
+            UInt(bitPattern: ptr.baseAddress!)
         }
         slice.setInteger(1, at: 0, as: UInt8.self)
         let newStorageBegin = slice.withUnsafeReadableBytes { ptr in
-            return UInt(bitPattern: ptr.baseAddress!)
+            UInt(bitPattern: ptr.baseAddress!)
         }
         XCTAssertEqual(oldStorageBegin, newStorageBegin)
     }
@@ -318,7 +318,7 @@ class ByteBufferTest: XCTestCase {
 
         let bytesConsumed = buf.readWithUnsafeReadableBytes { dst in
             // Pretend we did some operation which made use of entire 11 byte string
-            return 11
+            11
         }
         XCTAssertEqual(11, bytesConsumed)
         XCTAssertEqual(11, buf.readerIndex)

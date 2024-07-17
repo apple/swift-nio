@@ -126,7 +126,7 @@ final class LockStorage<Value>: ManagedBuffer<Value, LockPrimitive> {
     @inlinable
     static func create(value: Value) -> Self {
         let buffer = Self.create(minimumCapacity: 1) { _ in
-            return value
+            value
         }
         let storage = unsafeDowncast(buffer, to: Self.self)
 

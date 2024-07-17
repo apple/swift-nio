@@ -2133,7 +2133,7 @@ public final class ChannelTests: XCTestCase {
 
             func remove(_ channel: Channel) {
                 let removed: Channel? = self.q.sync {
-                    return self.channels.removeValue(forKey: ObjectIdentifier(channel))
+                    self.channels.removeValue(forKey: ObjectIdentifier(channel))
                 }
                 XCTAssertTrue(removed != nil)
             }
@@ -2183,7 +2183,7 @@ public final class ChannelTests: XCTestCase {
             let collector = ChannelCollector()
             let serverBoot = ServerBootstrap(group: group)
                 .childChannelInitializer { channel in
-                    return channel.pipeline.addHandler(CheckActiveHandler(channelCollector: collector))
+                    channel.pipeline.addHandler(CheckActiveHandler(channelCollector: collector))
                 }
             let listeningChannel = try serverBoot.bind(host: "127.0.0.1", port: 0).wait()
             let clientBoot = ClientBootstrap(group: group)
@@ -3308,7 +3308,7 @@ public final class ChannelTests: XCTestCase {
         let serverFuture = ServerBootstrap(group: group)
             .childChannelOption(ChannelOptions.writeBufferWaterMark, value: handler.watermark)
             .childChannelInitializer { channel in
-                return channel.pipeline.addHandler(handler)
+                channel.pipeline.addHandler(handler)
             }
             .bind(host: "localhost", port: 0)
 

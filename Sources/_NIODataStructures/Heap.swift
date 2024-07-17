@@ -200,7 +200,7 @@ extension Heap: CustomDebugStringConvertible {
             all += String(repeating: " ", count: rightWidth)
 
             func height(index: Int) -> Int {
-                return Int(log2(Double(index + 1)))
+                Int(log2(Double(index + 1)))
             }
             let myHeight = height(index: index)
             let nextHeight = height(index: index + 1)

@@ -84,7 +84,7 @@ final class AsyncChannelTests: XCTestCase {
     func testAsyncChannelThrowsWhenChannelClosed() async throws {
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            return try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
+            try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
         }
 
         try await channel.close(mode: .all)

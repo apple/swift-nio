@@ -254,7 +254,7 @@ func openTemporaryFile() -> (CInt, String) {
     let fd = templateBytes.withUnsafeMutableBufferPointer { ptr in
         ptr.baseAddress!.withMemoryRebound(to: Int8.self, capacity: templateBytesCount) {
             (ptr: UnsafeMutablePointer<Int8>) in
-            return mkstemp(ptr)
+            mkstemp(ptr)
         }
     }
     templateBytes.removeLast()
