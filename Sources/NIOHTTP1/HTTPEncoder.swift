@@ -30,7 +30,7 @@ private func writeChunk(
         let (mW1, mW2, mW3): (EventLoopPromise<Void>?, EventLoopPromise<Void>?, EventLoopPromise<Void>?)
 
         if let p = promise {
-            /* chunked encoding and the user's interested: we need three promises and need to cascade into the users promise */
+            // chunked encoding and the user's interested: we need three promises and need to cascade into the users promise
             let (w1, w2, w3) = (
                 context.eventLoop.makePromise() as EventLoopPromise<Void>,
                 context.eventLoop.makePromise() as EventLoopPromise<Void>,
@@ -39,7 +39,7 @@ private func writeChunk(
             w1.futureResult.and(w2.futureResult).and(w3.futureResult).map { (_: ((((), ()), ()))) in }.cascade(to: p)
             (mW1, mW2, mW3) = (w1, w2, w3)
         } else {
-            /* user isn't interested, let's not bother even allocating promises */
+            // user isn't interested, let's not bother even allocating promises
             (mW1, mW2, mW3) = (nil, nil, nil)
         }
 

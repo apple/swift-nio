@@ -201,7 +201,7 @@ public final class NIOAsyncTestingChannel: Channel {
     // This is only written once, from a single thread, and never written again, so it's _technically_ thread-safe. Most methods cannot safely
     // be used from multiple threads, but `isActive`, `isOpen`, `eventLoop`, and `closeFuture` can all safely be used from any thread. Just.
     @usableFromInline
-    /*private but usableFromInline */ var channelcore: EmbeddedChannelCore!
+    var channelcore: EmbeddedChannelCore!
 
     /// Guards any of the getters/setters that can be accessed from any thread.
     private let stateLock: NIOLock = NIOLock()

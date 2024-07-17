@@ -1114,9 +1114,12 @@ class DatagramChannelTests: XCTestCase {
             }
 
             // Echo response has type 0, code 0, unpredictable checksum and identifier, same sequence number we sent.
-            XCTAssertEqual(header.0 /* type */, 0)
-            XCTAssertEqual(header.1 /* code */, 0)
-            XCTAssertEqual(header.4 /* sequence number */, 0)
+            // type
+            XCTAssertEqual(header.0, 0)
+            // code
+            XCTAssertEqual(header.1, 0)
+            // sequence number
+            XCTAssertEqual(header.4, 0)
 
             // Remaining payload should have been our string.
             XCTAssertEqual(String(buffer: response), "Hello from NIO")

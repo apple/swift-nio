@@ -485,7 +485,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         #else
         var info: UnsafeMutablePointer<addrinfo>?
 
-        /* FIXME: this is blocking! */
+        // FIXME: this is blocking!
         if getaddrinfo(host, String(port), nil, &info) != 0 {
             throw SocketAddressError.unknown(host: host, port: port)
         }
@@ -507,7 +507,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
                 throw SocketAddressError.unsupported
             }
         } else {
-            /* this is odd, getaddrinfo returned NULL */
+            // this is odd, getaddrinfo returned NULL
             throw SocketAddressError.unsupported
         }
         #endif

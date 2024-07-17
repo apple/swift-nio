@@ -136,7 +136,7 @@ class HTTPTest: XCTestCase {
             }
         }
 
-        /* send all bytes in one go */
+        // send all bytes in one go
         let bd1 = try sendAndCheckRequests(
             expecteds,
             body: body,
@@ -150,7 +150,7 @@ class HTTPTest: XCTestCase {
             }
         )
 
-        /* send the bytes one by one */
+        // send the bytes one by one
         let bd2 = try sendAndCheckRequests(
             expecteds,
             body: body,

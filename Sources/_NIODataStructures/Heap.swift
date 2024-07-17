@@ -58,7 +58,7 @@ internal struct Heap<Element: Comparable> {
     }
 
     // named `MAX-HEAPIFY` in CLRS
-    /* private but */ @inlinable
+    @inlinable
     mutating func _heapify(_ index: Int) {
         let left = self.leftIndex(index)
         let right = self.rightIndex(index)
@@ -81,7 +81,7 @@ internal struct Heap<Element: Comparable> {
     }
 
     // named `HEAP-INCREASE-KEY` in CRLS
-    /* private but */ @inlinable
+    @inlinable
     mutating func _heapRootify(index: Int, key: Element) {
         var index = index
         if self.comparator(storage[index], key) {
@@ -136,7 +136,7 @@ internal struct Heap<Element: Comparable> {
     }
 
     @discardableResult
-    /* private but */ @inlinable
+    @inlinable
     mutating func _remove(index: Int) -> Element? {
         guard self.storage.count > 0 else {
             return nil
@@ -217,7 +217,7 @@ extension Heap: CustomDebugStringConvertible {
 
 @usableFromInline
 struct HeapIterator<Element: Comparable>: IteratorProtocol {
-    /* private but */ @usableFromInline
+    @usableFromInline
     var _heap: Heap<Element>
 
     @inlinable

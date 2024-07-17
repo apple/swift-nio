@@ -81,7 +81,7 @@ enum ConnectTo {
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (_, .some(let cid), .some(let port)):
-    /* we got two arguments (Int, Int), let's interpret that as vsock cid and port */
+    // we got two arguments (Int, Int), let's interpret that as vsock cid and port
     connectTarget = .vsock(
         VsockAddress(
             cid: VsockAddress.ContextID(cid),
@@ -89,13 +89,13 @@ case (_, .some(let cid), .some(let port)):
         )
     )
 case (.some(let h), .none, .some(let p)):
-    /* we got two arguments (String, Int), let's interpret that as host and port */
+    // we got two arguments (String, Int), let's interpret that as host and port
     connectTarget = .ip(host: h, port: p)
 case (.some(let portString), .none, .none):
-    /* we got one argument (String), let's interpret that as unix domain socket path */
+    // we got one argument (String), let's interpret that as unix domain socket path
     connectTarget = .unixDomainSocket(path: portString)
 case (_, .some(let p), _):
-    /* we got one argument (Int), let's interpret that as port on default host */
+    // we got one argument (Int), let's interpret that as port on default host
     connectTarget = .ip(host: defaultHost, port: p)
 default:
     connectTarget = .ip(host: defaultHost, port: defaultPort)

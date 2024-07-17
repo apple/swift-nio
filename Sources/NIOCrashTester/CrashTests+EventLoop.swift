@@ -82,9 +82,9 @@ struct EventLoopCrashTests {
                 exit(2)
             }
             func f() {
-                el.scheduleTask(in: .nanoseconds(0)) { [f /* to make 5.1 compiler not crash */] in
+                el.scheduleTask(in: .nanoseconds(0)) { [f] in
                     f()
-                }.futureResult.whenFailure { [f /* to make 5.1 compiler not crash */] error in
+                }.futureResult.whenFailure { [f] error in
                     guard case .some(.shutdown) = error as? EventLoopError else {
                         exit(3)
                     }

@@ -266,7 +266,7 @@ extension Channel {
         do {
             try self.close().wait()
         } catch ChannelError.alreadyClosed {
-            /* we're happy with this one */
+            // we're happy with this one
         } catch let e {
             throw e
         }

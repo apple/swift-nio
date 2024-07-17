@@ -76,7 +76,7 @@ protocol SocketProtocol: BaseSocketProtocol {
 #if os(Linux) || os(Android)
 // This is a lazily initialised global variable that when read for the first time, will ignore SIGPIPE.
 private let globallyIgnoredSIGPIPE: Bool = {
-    /* no F_SETNOSIGPIPE on Linux :( */
+    // no F_SETNOSIGPIPE on Linux :(
     #if canImport(Glibc)
     _ = Glibc.signal(SIGPIPE, SIG_IGN)
     #elseif canImport(Musl)

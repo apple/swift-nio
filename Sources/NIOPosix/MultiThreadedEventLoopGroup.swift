@@ -73,7 +73,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static func runTheLoop(
         thread: NIOThread,
-        parentGroup: MultiThreadedEventLoopGroup? /* nil iff thread take-over */,
+        parentGroup: MultiThreadedEventLoopGroup?,  // nil iff thread take-over
         canEventLoopBeShutdownIndividually: Bool,
         selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
         initializer: @escaping ThreadInitializer,
@@ -113,7 +113,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ) -> SelectableEventLoop {
         let lock = ConditionLock(value: 0)
 
-        /* synchronised by `lock` */
+        // synchronised by `lock`
         var _loop: SelectableEventLoop! = nil
 
         NIOThread.spawnAndRun(name: name, detachThread: false) { t in

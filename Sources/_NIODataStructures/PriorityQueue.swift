@@ -68,10 +68,10 @@ extension PriorityQueue: Equatable {
 extension PriorityQueue: Sequence {
     public struct Iterator: IteratorProtocol {
 
-        /* private but */ @usableFromInline
+        @usableFromInline
         var _queue: PriorityQueue<Element>
 
-        /* fileprivate but */ @inlinable
+        @inlinable
         public init(queue: PriorityQueue<Element>) {
             self._queue = queue
         }

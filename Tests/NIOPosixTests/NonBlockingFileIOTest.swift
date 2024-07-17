@@ -710,7 +710,7 @@ class NonBlockingFileIOTest: XCTestCase {
                     try! fileHandle.close()
                 }
                 XCTAssertEqual(
-                    -1 /* read must fail */,
+                    -1,  // read must fail
                     try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                         var data: UInt8 = 0
                         return withUnsafeMutableBytes(of: &data) { ptr in
@@ -735,7 +735,7 @@ class NonBlockingFileIOTest: XCTestCase {
                     try! fileHandle.close()
                 }
                 XCTAssertEqual(
-                    0 /* read should read EOF */,
+                    0,  // read should read EOF
                     try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                         var data: UInt8 = 0
                         return withUnsafeMutableBytes(of: &data) { ptr in
@@ -793,7 +793,7 @@ class NonBlockingFileIOTest: XCTestCase {
                         )
                     }
                     XCTAssertEqual(
-                        2 /* both bytes */,
+                        2,  // both bytes
                         try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                             var data: UInt16 = 0
                             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
@@ -858,7 +858,7 @@ class NonBlockingFileIOTest: XCTestCase {
                         )
                     }
                     XCTAssertEqual(
-                        1 /* read should read just one byte because we truncated the file */,
+                        1,  // read should read just one byte because we truncated the file
                         try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                             var data: UInt16 = 0
                             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
@@ -1618,7 +1618,7 @@ extension NonBlockingFileIOTest {
                 flags: .allowFileCreation()
             ) { fileHandle in
                 XCTAssertEqual(
-                    -1 /* read must fail */,
+                    -1,  // read must fail
                     try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                         var data: UInt8 = 0
                         return withUnsafeMutableBytes(of: &data) { ptr in
@@ -1638,7 +1638,7 @@ extension NonBlockingFileIOTest {
                 flags: .allowFileCreation()
             ) { fileHandle in
                 XCTAssertEqual(
-                    0 /* read should read EOF */,
+                    0,  // read should read EOF
                     try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                         var data: UInt8 = 0
                         return withUnsafeMutableBytes(of: &data) { ptr in
@@ -1689,7 +1689,7 @@ extension NonBlockingFileIOTest {
                         )
                     }
                     XCTAssertEqual(
-                        2 /* both bytes */,
+                        2,  // both bytes
                         try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                             var data: UInt16 = 0
                             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)
@@ -1746,7 +1746,7 @@ extension NonBlockingFileIOTest {
                         )
                     }
                     XCTAssertEqual(
-                        1 /* read should read just one byte because we truncated the file */,
+                        1,  // read should read just one byte because we truncated the file
                         try fileHandle.withUnsafeFileDescriptor { fd -> ssize_t in
                             var data: UInt16 = 0
                             try Posix.lseek(descriptor: fd, offset: 0, whence: SEEK_SET)

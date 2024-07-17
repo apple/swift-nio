@@ -112,7 +112,7 @@ public struct NIOAsyncSequenceProducer<
         public let sequence: NIOAsyncSequenceProducer
 
         @usableFromInline
-        /* fileprivate */ internal init(
+        internal init(
             source: Source,
             sequence: NIOAsyncSequenceProducer
         ) {
@@ -122,7 +122,7 @@ public struct NIOAsyncSequenceProducer<
     }
 
     @usableFromInline
-    /* private */ internal let _throwingSequence:
+    internal let _throwingSequence:
         NIOThrowingAsyncSequenceProducer<
             Element,
             Never,
@@ -200,7 +200,7 @@ public struct NIOAsyncSequenceProducer<
     }
 
     @inlinable
-    /* private */ internal init(
+    internal init(
         throwingSequence: NIOThrowingAsyncSequenceProducer<Element, Never, Strategy, Delegate>
     ) {
         self._throwingSequence = throwingSequence
@@ -218,7 +218,7 @@ extension NIOAsyncSequenceProducer: AsyncSequence {
 extension NIOAsyncSequenceProducer {
     public struct AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline
-        /* private */ internal let _throwingIterator:
+        internal let _throwingIterator:
             NIOThrowingAsyncSequenceProducer<
                 Element,
                 Never,
@@ -260,10 +260,10 @@ extension NIOAsyncSequenceProducer {
         >.Source
 
         @usableFromInline
-        /* private */ internal var _throwingSource: ThrowingSource
+        internal var _throwingSource: ThrowingSource
 
         @usableFromInline
-        /* fileprivate */ internal init(throwingSource: ThrowingSource) {
+        internal init(throwingSource: ThrowingSource) {
             self._throwingSource = throwingSource
         }
 

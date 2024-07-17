@@ -211,7 +211,7 @@ class BaseSocket: BaseSocketProtocol {
                     _ = try? NIOBSDSocket.close(socket: sock)
                     throw e
                 }
-                /* we couldn't enable dual IP4/6 support, that's okay too. */
+                // we couldn't enable dual IP4/6 support, that's okay too.
             } catch let e {
                 fatalError("Unexpected error type \(e)")
             }

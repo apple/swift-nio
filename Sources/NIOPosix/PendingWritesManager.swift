@@ -75,7 +75,7 @@ private func doPendingWriteVectorOperation(
             }
         }
         let result = try body(UnsafeBufferPointer(start: iovecs.baseAddress!, count: numberOfUsedStorageSlots))
-        /* if we hit a limit, we really wanted to write more than we have so the caller should retry us */
+        // if we hit a limit, we really wanted to write more than we have so the caller should retry us
         return (numberOfUsedStorageSlots, result)
     }
 }
@@ -212,7 +212,7 @@ private struct PendingStreamWritesState {
                 let headItemReadableBytes = self.pendingWrites.first!.data.readableBytes
                 if unaccountedWrites >= headItemReadableBytes {
                     unaccountedWrites -= headItemReadableBytes
-                    /* we wrote at least the whole head item, so drop it and succeed the promise */
+                    // we wrote at least the whole head item, so drop it and succeed the promise
                     if let promise = self.fullyWrittenFirst() {
                         if let p = promise0 {
                             p.futureResult.cascade(to: promise)
@@ -221,7 +221,7 @@ private struct PendingStreamWritesState {
                         }
                     }
                 } else {
-                    /* we could only write a part of the head item, so don't drop it but remember what we wrote */
+                    // we could only write a part of the head item, so don't drop it but remember what we wrote
                     self.partiallyWrittenFirst(bytes: unaccountedWrites)
 
                     // may try again depending on the writeSpinCount
@@ -549,7 +549,6 @@ extension PendingWritesManager {
 extension PendingStreamWritesManager: CustomStringConvertible {
     var description: String {
         "PendingStreamWritesManager { isFlushPending: \(self.isFlushPending), "
-            /*  */
-        + "writabilityFlag: \(self.channelWritabilityFlag.load(ordering: .relaxed))), state: \(self.state) }"
+            + "writabilityFlag: \(self.channelWritabilityFlag.load(ordering: .relaxed))), state: \(self.state) }"
     }
 }

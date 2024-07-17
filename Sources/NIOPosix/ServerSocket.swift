@@ -15,7 +15,7 @@
 import NIOCore
 
 /// A server socket that can accept new connections.
-/* final but tests */ class ServerSocket: BaseSocket, ServerSocketProtocol {
+class ServerSocket: BaseSocket, ServerSocketProtocol {
     typealias SocketType = ServerSocket
     private let cleanupOnClose: Bool
 

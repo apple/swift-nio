@@ -571,34 +571,33 @@ class StreamChannelTest: XCTestCase {
     func testWriteAndFlushFromReentrantFlushNowTriggeredOutOfWritabilityWhereOuterSaysAllWrittenAndInnerDoesNot() {
         // regression test for rdar://58571521, harder version
 
-        /*
-         What we're doing here is to enter exactly the following scenario which used to be an issue.
+        //
+        // What we're doing here is to enter exactly the following scenario which used to be an issue.
 
-         1: writable()
-         2: --> flushNow (result: .writtenCompletely)
-         3:     --> writabilityChanged callout
-         4:         --> flushNow because user calls writeAndFlush (result: .couldNotWriteEverything)
-         5:         --> registerForWritable (because line 4 could not write everything and flushNow returned .register)
-         6: --> unregisterForWritable (because line 2 wrote everything and flushNow returned .unregister)
-
-         line 6 undoes the registration in line 5. The fix makes sure that flushNow never re-enters and therefore the
-         problem described above cannot happen anymore.
-
-         Our match plan is the following:
-         - receiver: switch off autoRead
-         - sender: send 1k chunks of "0"s until we get a writabilityChange to false, then write a "1" sentinel
-         - sender: should now be registered for writes
-         - receiver: allocate a buffer big enough for the "0....1" and read it out as soon as possible
-         - sender: the kernel should now call us with the `writable()` notification
-         - sender: the remaining "0...1" should now go out of the door together, which means that `flushNow` decides
-                   to `.unregister`
-         - sender: because we now `.unregister` and also fall below the low watermark, we will send a writabilityChange
-                   notification from which we will send a large 100MB chunk which certainly requires a new `writable()`
-                   registration (which was previously lost)
-         - receiver: just read off all the bytes
-         - test: wait until the 100MB write completes which means that we didn't lost that `writable()` registration and
-                 everybody should be happy :)
-         */
+        // 1: writable()
+        // 2: --> flushNow (result: .writtenCompletely)
+        // 3:     --> writabilityChanged callout
+        // 4:         --> flushNow because user calls writeAndFlush (result: .couldNotWriteEverything)
+        // 5:         --> registerForWritable (because line 4 could not write everything and flushNow returned .register)
+        // 6: --> unregisterForWritable (because line 2 wrote everything and flushNow returned .unregister)
+        //
+        // line 6 undoes the registration in line 5. The fix makes sure that flushNow never re-enters and therefore the
+        // problem described above cannot happen anymore.
+        //
+        // Our match plan is the following:
+        // - receiver: switch off autoRead
+        // - sender: send 1k chunks of "0"s until we get a writabilityChange to false, then write a "1" sentinel
+        // - sender: should now be registered for writes
+        // - receiver: allocate a buffer big enough for the "0....1" and read it out as soon as possible
+        // - sender: the kernel should now call us with the `writable()` notification
+        // - sender: the remaining "0...1" should now go out of the door together, which means that `flushNow` decides
+        //           to `.unregister`
+        // - sender: because we now `.unregister` and also fall below the low watermark, we will send a writabilityChange
+        //           notification from which we will send a large 100MB chunk which certainly requires a new `writable()`
+        //           registration (which was previously lost)
+        // - receiver: just read off all the bytes
+        // - test: wait until the 100MB write completes which means that we didn't lost that `writable()` registration and
+        //         everybody should be happy :)
 
         final class WriteUntilWriteDoesNotCompletelyInstantlyHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = ByteBuffer

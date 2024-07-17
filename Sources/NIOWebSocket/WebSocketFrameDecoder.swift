@@ -230,7 +230,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     public typealias OutboundOut = WebSocketFrame
 
     /// The maximum frame size the decoder is willing to tolerate from the remote peer.
-    /* private but tests */ let maxFrameSize: Int
+    let maxFrameSize: Int
 
     /// Our parser state.
     private var parser = WSParser()

@@ -410,17 +410,17 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(testDecoder)))
 
         var inputBuffer = channel.allocator.buffer(capacity: 4)
-        /* 1 */
+        // 1
         inputBuffer.writeStaticString("1")
         XCTAssertTrue(try channel.writeInbound(inputBuffer).isFull)
         inputBuffer.clear()
 
-        /* 2 */
+        // 2
         inputBuffer.writeStaticString("2")
         XCTAssertTrue(try channel.writeInbound(inputBuffer).isFull)
         inputBuffer.clear()
 
-        /* 3 */
+        // 3
         inputBuffer.writeStaticString("5")
         XCTAssertTrue(try channel.writeInbound(inputBuffer).isFull)
         inputBuffer.clear()
@@ -959,7 +959,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                 context.fireChannelRead(
                     self.wrapInboundOut(
                         String(
-                            decoding: buffer.readBytes(length: 4) ?? [ /* "no bytes" */
+                            decoding: buffer.readBytes(length: 4) ?? [  // "no bytes"
                                 0x6e, 0x6f, 0x20,
                                 0x62, 0x79, 0x74, 0x65, 0x73,
                             ],

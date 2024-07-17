@@ -300,11 +300,11 @@ class ThreadTest: XCTestCase {
                 XCTAssertNotNil(weakTSV)
             }()
         }
-        t2Sem.wait() /* wait on the other thread's `some` deallocation */
+        t2Sem.wait()  // wait on the other thread's `some` deallocation
         assert(weakSome1 == nil, within: .seconds(1))
         assert(weakTSV == nil, within: .seconds(1))
 
-        t1Sem.wait() /* wait on the other thread's `some` deallocation */
+        t1Sem.wait()  // wait on the other thread's `some` deallocation
         assert(weakSome2 == nil, within: .seconds(1))
         assert(weakTSV == nil, within: .seconds(1))
     }

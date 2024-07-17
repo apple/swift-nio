@@ -298,7 +298,7 @@ public struct ByteBuffer {
         @inlinable
         static func _allocateAndPrepareRawMemory(bytes: _Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
             let ptr = allocator.malloc(size_t(bytes))!
-            /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
+            // bind the memory so we can assume it elsewhere to be bound to UInt8
             ptr.bindMemory(to: UInt8.self, capacity: Int(bytes))
             return ptr
         }
@@ -330,7 +330,7 @@ public struct ByteBuffer {
         func reallocStorage(capacity minimumNeededCapacity: _Capacity) {
             let newCapacity = minimumNeededCapacity.nextPowerOf2ClampedToMax()
             let ptr = self.allocator.realloc(self.bytes, size_t(newCapacity))!
-            /* bind the memory so we can assume it elsewhere to be bound to UInt8 */
+            // bind the memory so we can assume it elsewhere to be bound to UInt8
             ptr.bindMemory(to: UInt8.self, capacity: Int(newCapacity))
             self.bytes = ptr
             self.capacity = newCapacity
@@ -989,7 +989,7 @@ extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
     }
 }
 
-/* change types to the user visible `Int` */
+// change types to the user visible `Int`
 extension ByteBuffer {
     /// Copy the collection of `bytes` into the `ByteBuffer` at `index`. Does not move the writer index.
     @discardableResult

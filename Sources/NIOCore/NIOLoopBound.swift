@@ -28,7 +28,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     public let _eventLoop: EventLoop
 
     @usableFromInline
-    /* private */ var _value: Value
+    var _value: Value
 
     /// Initialise a ``NIOLoopBound`` to `value` with the precondition that the code is running on `eventLoop`.
     @inlinable
@@ -75,7 +75,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     public let _eventLoop: EventLoop
 
     @usableFromInline
-    /* private */var _value: Value
+    var _value: Value
 
     @inlinable
     internal init(_value value: Value, uncheckedEventLoop eventLoop: EventLoop) {

@@ -38,7 +38,7 @@ extension EventLoopGroup {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func shutdownGracefully() async throws {
-        try await withCheckedThrowingContinuation { cont in
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             self.shutdownGracefully { error in
                 if let error = error {
                     cont.resume(throwing: error)

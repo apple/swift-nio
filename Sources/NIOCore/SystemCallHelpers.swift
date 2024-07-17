@@ -71,11 +71,9 @@ private func preconditionIsNotUnacceptableErrno(err: CInt, where function: Strin
     )
 }
 
-/*
- * Sorry, we really try hard to not use underscored attributes. In this case
- * however we seem to break the inlining threshold which makes a system call
- * take twice the time, ie. we need this exception.
- */
+// Sorry, we really try hard to not use underscored attributes. In this case
+// however we seem to break the inlining threshold which makes a system call
+// take twice the time, ie. we need this exception.
 @inline(__always)
 @discardableResult
 internal func syscall<T: FixedWidthInteger>(

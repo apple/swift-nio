@@ -62,7 +62,7 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
 }
 
 class HTTPServerClientTest: XCTestCase {
-    /* needs to be something reasonably large and odd so it has good odds producing incomplete writes even on the loopback interface */
+    // needs to be something reasonably large and odd so it has good odds producing incomplete writes even on the loopback interface
     private static let massiveResponseLength = 1 * 1024 * 1024 + 7
     private static let massiveResponseBytes: [UInt8] = {
         return Array(repeating: 0xff, count: HTTPServerClientTest.massiveResponseLength)

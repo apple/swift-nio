@@ -49,7 +49,7 @@ public struct NIOThrowingAsyncSequenceProducer<
         public let sequence: NIOThrowingAsyncSequenceProducer
 
         @usableFromInline
-        /* fileprivate */ internal init(
+        internal init(
             source: Source,
             sequence: NIOThrowingAsyncSequenceProducer
         ) {
@@ -62,7 +62,7 @@ public struct NIOThrowingAsyncSequenceProducer<
     ///
     /// If we get move-only types we should be able to drop this class and use the `deinit` of the ``AsyncIterator`` struct itself.
     @usableFromInline
-    /* fileprivate */ internal final class InternalClass: Sendable {
+    internal final class InternalClass: Sendable {
         @usableFromInline
         internal let _storage: Storage
 
@@ -78,10 +78,10 @@ public struct NIOThrowingAsyncSequenceProducer<
     }
 
     @usableFromInline
-    /* private */ internal let _internalClass: InternalClass
+    internal let _internalClass: InternalClass
 
     @usableFromInline
-    /* private */ internal var _storage: Storage {
+    internal var _storage: Storage {
         self._internalClass._storage
     }
 
@@ -204,7 +204,7 @@ public struct NIOThrowingAsyncSequenceProducer<
     }
 
     @inlinable
-    /* private */ internal init(
+    internal init(
         backPressureStrategy: Strategy,
         delegate: Delegate
     ) {
@@ -230,9 +230,9 @@ extension NIOThrowingAsyncSequenceProducer {
         ///
         /// If we get move-only types we should be able to drop this class and use the `deinit` of the ``AsyncIterator`` struct itself.
         @usableFromInline
-        /* private */ internal final class InternalClass: Sendable {
+        internal final class InternalClass: Sendable {
             @usableFromInline
-            /* private */ internal let _storage: Storage
+            internal let _storage: Storage
 
             fileprivate init(storage: Storage) {
                 self._storage = storage
@@ -245,13 +245,13 @@ extension NIOThrowingAsyncSequenceProducer {
             }
 
             @inlinable
-            /* fileprivate */ internal func next() async throws -> Element? {
+            internal func next() async throws -> Element? {
                 try await self._storage.next()
             }
         }
 
         @usableFromInline
-        /* private */ internal let _internalClass: InternalClass
+        internal let _internalClass: InternalClass
 
         fileprivate init(storage: Storage) {
             self._internalClass = InternalClass(storage: storage)
@@ -277,7 +277,7 @@ extension NIOThrowingAsyncSequenceProducer {
         ///
         /// - Important: This is safe to be unchecked ``Sendable`` since the `storage` is ``Sendable`` and `immutable`.
         @usableFromInline
-        /* fileprivate */ internal final class InternalClass: Sendable {
+        internal final class InternalClass: Sendable {
             @usableFromInline
             internal let _storage: Storage
 
@@ -302,15 +302,15 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @usableFromInline
-        /* private */ internal let _internalClass: InternalClass
+        internal let _internalClass: InternalClass
 
         @usableFromInline
-        /* private */ internal var _storage: Storage {
+        internal var _storage: Storage {
             self._internalClass._storage
         }
 
         @usableFromInline
-        /* fileprivate */ internal init(storage: Storage, finishOnDeinit: Bool) {
+        internal init(storage: Storage, finishOnDeinit: Bool) {
             self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
         }
 
@@ -397,16 +397,16 @@ extension NIOThrowingAsyncSequenceProducer {
 extension NIOThrowingAsyncSequenceProducer {
     /// This is the underlying storage of the sequence. The goal of this is to synchronize the access to all state.
     @usableFromInline
-    /* fileprivate */ internal final class Storage: @unchecked Sendable {
+    internal final class Storage: @unchecked Sendable {
         /// The lock that protects our state.
         @usableFromInline
-        /* private */ internal let _lock = NIOLock()
+        internal let _lock = NIOLock()
         /// The state machine.
         @usableFromInline
-        /* private */ internal var _stateMachine: StateMachine
+        internal var _stateMachine: StateMachine
         /// The delegate.
         @usableFromInline
-        /* private */ internal var _delegate: Delegate?
+        internal var _delegate: Delegate?
         /// Hook used in testing.
         @usableFromInline
         internal var _didSuspend: (() -> Void)?
@@ -417,7 +417,7 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @usableFromInline
-        /* fileprivate */ internal init(
+        internal init(
             backPressureStrategy: Strategy,
             delegate: Delegate
         ) {
@@ -426,7 +426,7 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @inlinable
-        /* fileprivate */ internal func sequenceDeinitialized() {
+        internal func sequenceDeinitialized() {
             let delegate: Delegate? = self._lock.withLock {
                 let action = self._stateMachine.sequenceDeinitialized()
 
@@ -445,14 +445,14 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @inlinable
-        /* fileprivate */ internal func iteratorInitialized() {
+        internal func iteratorInitialized() {
             self._lock.withLock {
                 self._stateMachine.iteratorInitialized()
             }
         }
 
         @inlinable
-        /* fileprivate */ internal func iteratorDeinitialized() {
+        internal func iteratorDeinitialized() {
             let delegate: Delegate? = self._lock.withLock {
                 let action = self._stateMachine.iteratorDeinitialized()
 
@@ -472,7 +472,7 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @inlinable
-        /* fileprivate */ internal func yield<S: Sequence>(_ sequence: S) -> Source.YieldResult
+        internal func yield<S: Sequence>(_ sequence: S) -> Source.YieldResult
         where S.Element == Element {
             // We must not resume the continuation while holding the lock
             // because it can deadlock in combination with the underlying ulock
@@ -504,7 +504,7 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @inlinable
-        /* fileprivate */ internal func finish(_ failure: Failure?) {
+        internal func finish(_ failure: Failure?) {
             // We must not resume the continuation while holding the lock
             // because it can deadlock in combination with the underlying ulock
             // in cases where we race with a cancellation handler
@@ -540,7 +540,7 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         @inlinable
-        /* fileprivate */ internal func next() async throws -> Element? {
+        internal func next() async throws -> Element? {
             try await withTaskCancellationHandler {
                 self._lock.lock()
 
@@ -670,9 +670,9 @@ extension NIOThrowingAsyncSequenceProducer {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOThrowingAsyncSequenceProducer {
     @usableFromInline
-    /* private */ internal struct StateMachine {
+    internal struct StateMachine {
         @usableFromInline
-        /* private */ internal enum State {
+        internal enum State {
             /// The initial state before either a call to `yield()` or a call to `next()` happened
             case initial(
                 backPressureStrategy: Strategy,
@@ -709,7 +709,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// The state machine's current state.
         @usableFromInline
-        /* private */ internal var _state: State
+        internal var _state: State
 
         @inlinable
         var isFinished: Bool {

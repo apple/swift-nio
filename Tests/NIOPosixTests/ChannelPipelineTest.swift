@@ -410,7 +410,7 @@ class ChannelPipelineTest: XCTestCase {
         loop.run()
         XCTAssertNoThrow(XCTAssertEqual([2, 6], try channel.readInbound()!))
 
-        /* the first thing, we should receive is `[-2]` as it shouldn't hit any `MarkingOutboundHandler`s (`4`) */
+        // the first thing, we should receive is `[-2]` as it shouldn't hit any `MarkingOutboundHandler`s (`4`)
         var outbound = try channel.readOutbound(as: ByteBuffer.self)
         if var buf = outbound {
             XCTAssertEqual("[-2]", buf.readString(length: buf.readableBytes))
@@ -418,7 +418,7 @@ class ChannelPipelineTest: XCTestCase {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
-        /* the next thing we should receive is `[-2, 4]` as the first `WriteOnReadHandler` (receiving `[2]`) is behind the `MarkingOutboundHandler` (`4`) */
+        // the next thing we should receive is `[-2, 4]` as the first `WriteOnReadHandler` (receiving `[2]`) is behind the `MarkingOutboundHandler` (`4`)
         outbound = try channel.readOutbound()
         if var buf = outbound {
             XCTAssertEqual("[-2, 4]", buf.readString(length: buf.readableBytes))
@@ -426,7 +426,7 @@ class ChannelPipelineTest: XCTestCase {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
-        /* and finally, we're waiting for `[-2, -6, 4]` as the second `WriteOnReadHandler`s (receiving `[2, 4]`) is behind the `MarkingOutboundHandler` (`4`) */
+        // and finally, we're waiting for `[-2, -6, 4]` as the second `WriteOnReadHandler`s (receiving `[2, 4]`) is behind the `MarkingOutboundHandler` (`4`)
         outbound = try channel.readOutbound()
         if var buf = outbound {
             XCTAssertEqual("[-2, -6, 4]", buf.readString(length: buf.readableBytes))
@@ -463,7 +463,7 @@ class ChannelPipelineTest: XCTestCase {
             weak var weakHandlerContext1: ChannelHandlerContext?
             weak var weakHandlerContext2: ChannelHandlerContext?
 
-            () /* needed because Swift's grammar is so ambiguous that you can't remove this :\ */
+            ()  // needed because Swift's grammar is so ambiguous that you can't remove this :\
 
             try {
                 let handler1 = SomeHandler { context in

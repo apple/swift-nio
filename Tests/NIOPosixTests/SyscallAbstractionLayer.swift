@@ -907,7 +907,6 @@ extension SALTest {
         try self.selector.assertSyscallAndReturn(
             address.map {
                 .returnSocketAddress($0)
-                /*                                */
             } ?? .error(IOError(errnoCode: EOPNOTSUPP, reason: "nil passed")),
             file: (file),
             line: line
@@ -923,8 +922,7 @@ extension SALTest {
     func assertRemoteAddress(address: SocketAddress?, file: StaticString = #filePath, line: UInt = #line) throws {
         SAL.printIfDebug("\(#function)")
         try self.selector.assertSyscallAndReturn(
-            address.map { .returnSocketAddress($0) }
-                /*                                */ ?? .error(IOError(errnoCode: EOPNOTSUPP, reason: "nil passed")),
+            address.map { .returnSocketAddress($0) } ?? .error(IOError(errnoCode: EOPNOTSUPP, reason: "nil passed")),
             file: (file),
             line: line
         ) { syscall in

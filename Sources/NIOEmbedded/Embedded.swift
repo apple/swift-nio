@@ -78,7 +78,7 @@ extension EmbeddedScheduledTask: Comparable {
 ///     unsynchronized fashion.
 public final class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
-    /* private but tests */ internal var _now: NIODeadline = .uptimeNanoseconds(0)
+    internal var _now: NIODeadline = .uptimeNanoseconds(0)
 
     private var scheduledTaskCounter: UInt64 = 0
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>()
@@ -604,7 +604,7 @@ public final class EmbeddedChannel: Channel {
     public var closeFuture: EventLoopFuture<Void> { channelcore.closePromise.futureResult }
 
     @usableFromInline
-    /*private but usableFromInline */ lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(
+    lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(
         pipeline: self._pipeline,
         eventLoop: self.eventLoop
     )

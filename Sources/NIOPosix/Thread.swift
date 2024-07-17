@@ -146,7 +146,7 @@ extension NIOThread: CustomStringConvertible {
 /// `ThreadSpecificVariable` is thread-safe so it can be used with multiple threads at the same time but the value
 /// returned by `currentValue` is defined per thread.
 public final class ThreadSpecificVariable<Value: AnyObject> {
-    /* the actual type in there is `Box<(ThreadSpecificVariable<T>, T)>` but we can't use that as C functions can't capture (even types) */
+    // the actual type in there is `Box<(ThreadSpecificVariable<T>, T)>` but we can't use that as C functions can't capture (even types)
     private typealias BoxedType = Box<(AnyObject, AnyObject)>
 
     internal class Key {

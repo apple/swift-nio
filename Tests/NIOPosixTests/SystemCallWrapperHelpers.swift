@@ -82,7 +82,7 @@ func runSystemCallWrapperPerformanceTest(
     let pointer = UnsafePointer<UInt8>(bitPattern: 0xdeadbee)!
 
     let directCallTime = try measureRunTime { () -> Int in
-        /* imitate what the system call wrappers do to have a fair comparison */
+        // imitate what the system call wrappers do to have a fair comparison
         var preventCompilerOptimisation: Int = 0
         for _ in 0..<iterations {
             while true {

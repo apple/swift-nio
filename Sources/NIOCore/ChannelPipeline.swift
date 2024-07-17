@@ -1375,7 +1375,7 @@ extension ChannelPipeline {
 extension ChannelPipeline.Position: Sendable {}
 
 /// Special `ChannelHandler` that forwards all events to the `Channel.Unsafe` implementation.
-/* private but tests */ final class HeadChannelHandler: _ChannelOutboundHandler {
+final class HeadChannelHandler: _ChannelOutboundHandler {
 
     static let name = "head"
     static let sharedInstance = HeadChannelHandler()
@@ -1431,7 +1431,7 @@ extension CloseMode {
 }
 
 /// Special `ChannelInboundHandler` which will consume all inbound events.
-/* private but tests */ final class TailChannelHandler: _ChannelInboundHandler {
+final class TailChannelHandler: _ChannelInboundHandler {
 
     static let name = "tail"
     static let sharedInstance = TailChannelHandler()

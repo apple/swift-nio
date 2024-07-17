@@ -120,7 +120,7 @@ protocol _SelectorBackendProtocol {
         oldInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws
-    /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
+    // attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`)
     func wakeup0() throws
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///
@@ -140,7 +140,7 @@ protocol _SelectorBackendProtocol {
 /// This implementation offers an consistent API over epoll/liburing (for linux) and kqueue (for Darwin, BSD).
 /// There are specific subclasses  per API type with a shared common superclass providing overall scaffolding.
 
-/* this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly */
+// this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly
 internal class Selector<R: Registration> {
     var lifecycleState: SelectorLifecycleState
     var registrations = [Int: R]()
@@ -332,7 +332,7 @@ internal class Selector<R: Registration> {
         self.registrations.removeAll()
     }
 
-    /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
+    // attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`)
     func wakeup() throws {
         try self.wakeup0()
     }

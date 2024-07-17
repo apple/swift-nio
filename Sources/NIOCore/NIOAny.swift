@@ -44,7 +44,7 @@
 ///     }
 public struct NIOAny {
     @usableFromInline
-    /* private but _versioned */ let _storage: _NIOAny
+    let _storage: _NIOAny
 
     /// Wrap a value in a `NIOAny`. In most cases you should not create a `NIOAny` directly using this constructor.
     /// The abstraction that accepts values of type `NIOAny` must also provide a mechanism to do the wrapping. An

@@ -59,7 +59,7 @@ class PriorityQueueTest: XCTestCase {
             let randoms = getRandomNumbers(count: size)
             randoms.forEach { pq.push($0) }
 
-            /* remove one random member, add it back and assert we're still the same */
+            // remove one random member, add it back and assert we're still the same
             randoms.forEach { random in
                 var pq2 = pq
                 pq2.remove(random)
@@ -69,7 +69,7 @@ class PriorityQueueTest: XCTestCase {
                 XCTAssertEqual(pq, pq2)
             }
 
-            /* remove up to `n` members and add them back at the end and check that the priority queues are still the same */
+            // remove up to `n` members and add them back at the end and check that the priority queues are still the same
             for n in 1...5 where n <= size {
                 var pq2 = pq
                 let deleted = randoms.prefix(n).map { (random: UInt8) -> UInt8 in
@@ -89,15 +89,13 @@ class PriorityQueueTest: XCTestCase {
         let clearlyTheLargest = SomePartiallyOrderedDataType(width: 100, height: 100)
         let inTheMiddles = zip(1...99, (1...99).reversed()).map { SomePartiallyOrderedDataType(width: $0, height: $1) }
 
-        /*
-         the four values are only partially ordered (from small (top) to large (bottom)):
+        // the four values are only partially ordered (from small (top) to large (bottom)):
 
-                           clearlyTheSmallest
-                          /         |        \
-                   inTheMiddle[0]   |    inTheMiddle[1...]
-                          \         |        /
-                            clearlyTheLargest
-         */
+        //                   clearlyTheSmallest
+        //                  /         |        \
+        //           inTheMiddle[0]   |    inTheMiddle[1...]
+        //                  \         |        /
+        //                    clearlyTheLargest
 
         var pq = PriorityQueue<SomePartiallyOrderedDataType>()
         pq.push(clearlyTheLargest)

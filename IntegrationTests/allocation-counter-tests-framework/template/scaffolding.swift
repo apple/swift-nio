@@ -125,7 +125,7 @@ func measureAll(trackFDs: Bool, _ fn: () -> Int) -> [Measurement] {
         )
     }
 
-    _ = measureOne(throwAway: true, trackFDs: trackFDs, fn) /* pre-heat and throw away */
+    _ = measureOne(throwAway: true, trackFDs: trackFDs, fn)  // pre-heat and throw away
 
     var measurements: [Measurement] = []
     for _ in 0..<10 {
@@ -204,7 +204,7 @@ func measureAll(trackFDs: Bool, _ fn: @escaping () async -> Int) -> [Measurement
         )
     }
 
-    _ = measureOne(throwAway: true, trackFDs: trackFDs, fn) /* pre-heat and throw away */
+    _ = measureOne(throwAway: true, trackFDs: trackFDs, fn)  // pre-heat and throw away
 
     var measurements: [Measurement] = []
     for _ in 0..<10 {

@@ -102,14 +102,14 @@ let connectTarget: ConnectTo
 
 switch (arg1, arg1.flatMap(Int.init), arg2, arg2.flatMap(Int.init), arg3.flatMap(Int.init)) {
 case (.some(let h), .none, _, .some(let sp), .some(let lp)):
-    /* We received three arguments (String Int Int), let's interpret that as a server host with a server port and a local listening port */
+    // We received three arguments (String Int Int), let's interpret that as a server host with a server port and a local listening port
     connectTarget = .ip(host: h, sendPort: sp, listeningPort: lp)
 case (.some(let sp), .none, .some(let lp), .none, _):
-    /* We received two arguments (String String), let's interpret that as sending socket path and listening socket path  */
+    // We received two arguments (String String), let's interpret that as sending socket path and listening socket path
     assert(sp != lp, "The sending and listening sockets should differ.")
     connectTarget = .unixDomainSocket(sendPath: sp, listeningPath: lp)
 case (_, .some(let sp), _, .some(let lp), _):
-    /* We received two argument (Int Int), let's interpret that as the server port and a listening port on the default host. */
+    // We received two argument (Int Int), let's interpret that as the server port and a listening port on the default host.
     connectTarget = .ip(host: defaultHost, sendPort: sp, listeningPort: lp)
 default:
     connectTarget = .ip(host: defaultHost, sendPort: defaultServerPort, listeningPort: defaultListeningPort)

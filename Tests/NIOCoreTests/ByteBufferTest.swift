@@ -542,7 +542,7 @@ class ByteBufferTest: XCTestCase {
         testAssumptionOriginalBuffer(&buffer)
 
         var buffer10Missing = buffer
-        let first10Bytes = buffer10Missing.readData(length: 10) /* make the first 10 bytes disappear */
+        let first10Bytes = buffer10Missing.readData(length: 10)  // make the first 10 bytes disappear
         let otherBuffer10Missing = buffer10Missing
         XCTAssertEqual("0123456789".data(using: .utf8)!, first10Bytes)
         testAssumptionOriginalBuffer(&buffer)
@@ -702,13 +702,13 @@ class ByteBufferTest: XCTestCase {
 
             let tooMany = (byteCount + 1) / MemoryLayout<T>.size
             for _ in 1..<tooMany {
-                /* read just enough ones that we should be able to read in one go */
+                // read just enough ones that we should be able to read in one go
                 XCTAssertNotNil(buf.getInteger(at: buf.readerIndex) as T?)
                 let actual: T? = buf.readInteger()
                 XCTAssertNotNil(actual)
                 XCTAssertEqual(0, actual)
             }
-            /* now see that trying to read one more fails */
+            // now see that trying to read one more fails
             let actual: T? = buf.readInteger()
             XCTAssertNil(actual)
 
@@ -727,8 +727,8 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(cap, written)
         XCTAssertEqual(cap, buf.capacity)
 
-        XCTAssertNil(buf.readData(length: cap + 1)) /* too many */
-        XCTAssertEqual(expected, buf.readData(length: cap)) /* to make sure it can work */
+        XCTAssertNil(buf.readData(length: cap + 1))  // too many
+        XCTAssertEqual(expected, buf.readData(length: cap))  // to make sure it can work
     }
 
     func testSlicesThatAreOutOfBands() throws {
@@ -836,10 +836,10 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testReadDataNotEnoughAvailable() throws {
-        /* write some bytes */
+        // write some bytes
         self.buf.writeBytes(Data([0, 1, 2, 3]))
 
-        /* make more available in the buffer that should not be readable */
+        // make more available in the buffer that should not be readable
         self.buf.setBytes(Data([4, 5, 6, 7]), at: 4)
 
         let actualNil = buf.readData(length: 5)
@@ -855,10 +855,10 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testReadSliceNotEnoughAvailable() throws {
-        /* write some bytes */
+        // write some bytes
         self.buf.writeBytes(Data([0, 1, 2, 3]))
 
-        /* make more available in the buffer that should not be readable */
+        // make more available in the buffer that should not be readable
         self.buf.setBytes(Data([4, 5, 6, 7]), at: 4)
 
         let actualNil = self.buf.readSlice(length: 5)
@@ -878,7 +878,7 @@ class ByteBufferTest: XCTestCase {
 
         self.buf.setBuffer(src, at: 1)
 
-        /* Should bit increase the writerIndex of the src buffer */
+        // Should bit increase the writerIndex of the src buffer
         XCTAssertEqual(4, src.readableBytes)
         XCTAssertEqual(0, self.buf.readableBytes)
 
@@ -893,7 +893,7 @@ class ByteBufferTest: XCTestCase {
 
         buf.writeBuffer(&src)
 
-        /* Should increase the writerIndex of the src buffer */
+        // Should increase the writerIndex of the src buffer
         XCTAssertEqual(0, src.readableBytes)
         XCTAssertEqual(4, buf.readableBytes)
         XCTAssertEqual(Data([0, 1, 2, 3]), buf.readData(length: 4))
@@ -908,13 +908,13 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(Data([1]), actual)
 
         buf.withUnsafeReadableBytes { ptr in
-            /* make sure pointer is actually misaligned for an integer */
+            // make sure pointer is actually misaligned for an integer
             let pointerBitPattern = UInt(bitPattern: ptr.baseAddress!)
             let lastBit = pointerBitPattern & 0x1
             XCTAssertEqual(
                 1,
                 lastBit
-            ) /* having a 1 as the last bit makes that pointer clearly misaligned for UInt64 */
+            )  // having a 1 as the last bit makes that pointer clearly misaligned for UInt64
         }
 
         XCTAssertEqual(value, buf.readInteger())
@@ -923,15 +923,15 @@ class ByteBufferTest: XCTestCase {
     func testSetAndWriteBytes() throws {
         let str = "hello world!"
         let hwData = str.data(using: .utf8)!
-        /* write once, ... */
+        // write once, ...
         buf.writeString(str)
         var written1: Int = -1
         var written2: Int = -1
         hwData.withUnsafeBytes { ptr in
-            /* ... write a second time and ...*/
+            // ... write a second time and ...
             written1 = buf.setBytes(ptr, at: buf.writerIndex)
             buf.moveWriterIndex(forwardBy: written1)
-            /* ... a lucky third time! */
+            // ... a lucky third time!
             written2 = buf.writeBytes(ptr)
         }
         XCTAssertEqual(written1, written2)
@@ -1264,7 +1264,7 @@ class ByteBufferTest: XCTestCase {
         }
         more = Array("2345".utf8)
         written += more.withUnsafeMutableBytes { ptr in
-            buf.writeBytes(ptr.dropFirst(0)) + buf.writeBytes(ptr.dropFirst(4 /* drop all of them */))
+            buf.writeBytes(ptr.dropFirst(0)) + buf.writeBytes(ptr.dropFirst(4))  // drop all of them
         }
 
         let expected = Array(1...16) + Array("EFGHIJKLMNOPQRSTUVWXYZ012345".utf8)
@@ -1362,7 +1362,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertGreaterThanOrEqual(buf.capacity, reallyBigSize)
 
         buf.setBytes([1], at: 0)
-        /* now make it expand (will trigger realloc) */
+        // now make it expand (will trigger realloc)
         buf.setBytes([1], at: buf.capacity)
 
         XCTAssertEqual(AllocationExpectationState.reallocDone, testAllocationOfReallyBigByteBuffer_state)
@@ -1575,7 +1575,7 @@ class ByteBufferTest: XCTestCase {
             }
 
             public subscript(position: Index) -> Element {
-                /* this is wrong but we need to check that we don't access this */
+                // this is wrong but we need to check that we don't access this
                 XCTFail("shouldn't have been called")
                 return 0xff
             }
@@ -2404,12 +2404,14 @@ class ByteBufferTest: XCTestCase {
         var buf = self.buf!
         buf.writeString("ABCD")
 
-        /* deliberately not ignoring the result */ buf.readWithUnsafeReadableBytes { buffer in
+        // deliberately not ignoring the result
+        buf.readWithUnsafeReadableBytes { buffer in
             XCTAssertEqual(4, buffer.count)
             return 2
         }
 
-        /* deliberately not ignoring the result */ buf.readWithUnsafeMutableReadableBytes { buffer in
+        // deliberately not ignoring the result
+        buf.readWithUnsafeMutableReadableBytes { buffer in
             XCTAssertEqual(2, buffer.count)
             return 2
         }
@@ -3206,14 +3208,14 @@ private var testAllocationOfReallyBigByteBuffer_state = AllocationExpectationSta
 private func testAllocationOfReallyBigByteBuffer_freeHook(_ ptr: UnsafeMutableRawPointer?) {
     precondition(AllocationExpectationState.reallocDone == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .freeDone
-    /* free the pointer initially produced by malloc and then rebased by realloc offsetting it back */
+    // free the pointer initially produced by malloc and then rebased by realloc offsetting it back
     free(ptr!.advanced(by: Int(Int32.max)))
 }
 
 private func testAllocationOfReallyBigByteBuffer_mallocHook(_ size: Int) -> UnsafeMutableRawPointer? {
     precondition(AllocationExpectationState.begin == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .mallocDone
-    /* return a 16 byte pointer here, good enough to write an integer in there */
+    // return a 16 byte pointer here, good enough to write an integer in there
     return malloc(16)
 }
 
@@ -3223,7 +3225,7 @@ private func testAllocationOfReallyBigByteBuffer_reallocHook(
 ) -> UnsafeMutableRawPointer? {
     precondition(AllocationExpectationState.mallocDone == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .reallocDone
-    /* rebase this pointer by -Int32.max so that the byte copy extending the ByteBuffer below will land at actual index 0 into this buffer ;) */
+    // rebase this pointer by -Int32.max so that the byte copy extending the ByteBuffer below will land at actual index 0 into this buffer ;)
     return ptr!.advanced(by: -Int(Int32.max))
 }
 
@@ -3232,7 +3234,7 @@ private func testAllocationOfReallyBigByteBuffer_memcpyHook(
     _ src: UnsafeRawPointer,
     _ count: Int
 ) {
-    /* not actually doing any copies */
+    // not actually doing any copies
 }
 
 private var testReserveCapacityLarger_reallocCount = 0

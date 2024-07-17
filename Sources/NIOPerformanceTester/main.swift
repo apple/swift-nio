@@ -43,7 +43,7 @@ public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
         return Double(end - start) / Double(TimeAmount.seconds(1).nanoseconds)
     }
 
-    _ = try measureOne(fn) /* pre-heat and throw away */
+    _ = try measureOne(fn)  // pre-heat and throw away
     var measurements = Array(repeating: 0.0, count: 10)
     for i in 0..<10 {
         measurements[i] = try measureOne(fn)
@@ -73,7 +73,7 @@ public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
         return Double(end - start) / Double(TimeAmount.seconds(1).nanoseconds)
     }
 
-    _ = try await measureOne(fn) /* pre-heat and throw away */
+    _ = try await measureOne(fn)  // pre-heat and throw away
     var measurements = Array(repeating: 0.0, count: 10)
     for i in 0..<10 {
         measurements[i] = try await measureOne(fn)
@@ -364,7 +364,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
     let substring = Substring("A")
     @inline(never)
     func doWrites(buffer: inout ByteBuffer, dispatchData: DispatchData, substring: Substring) {
-        /* all of those should be 0 allocations */
+        // all of those should be 0 allocations
 
         // buffer.writeBytes(foundationData) // see SR-7542
         buffer.writeBytes([0x41])
@@ -377,7 +377,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
     }
     @inline(never)
     func doReads(buffer: inout ByteBuffer) {
-        /* these ones are zero allocations */
+        // these ones are zero allocations
         let val = buffer.readInteger(as: UInt8.self)
         precondition(0x41 == val, "\(val!)")
         var slice = buffer.readSlice(length: 1)
@@ -387,7 +387,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
             precondition(ptr[0] == 0x41)
         }
 
-        /* those down here should be one allocation each */
+        // those down here should be one allocation each
         let arr = buffer.readBytes(length: 1)
         precondition([0x41] == arr!, "\(arr!)")
         let str = buffer.readString(length: 1)

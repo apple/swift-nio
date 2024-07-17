@@ -33,14 +33,14 @@ struct CrashTest {
 extension Process {
     var binaryPath: String? {
         get {
-            if #available(macOS 10.13, /* Linux */ *) {
+            if #available(macOS 10.13, *) {
                 return self.executableURL?.path
             } else {
                 return self.launchPath
             }
         }
         set {
-            if #available(macOS 10.13, /* Linux */ *) {
+            if #available(macOS 10.13, *) {
                 self.executableURL = newValue.map { URL(fileURLWithPath: $0) }
             } else {
                 self.launchPath = newValue

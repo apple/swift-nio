@@ -721,10 +721,10 @@ class EchoServerClientTest: XCTestCase {
 
         try countingHandler.assertReceived(buffer: buffer)
 
-        /* close the client channel so that the second write should fail */
+        // close the client channel so that the second write should fail
         try clientChannel.close().wait()
 
-        dpGroup.wait() /* make sure we stick around until the second write has happened */
+        dpGroup.wait()  // make sure we stick around until the second write has happened
     }
 
     func testPendingReadProcessedAfterWriteError() throws {
@@ -898,15 +898,15 @@ class EchoServerClientTest: XCTestCase {
                     }.bind(host: host, port: 0).wait()
             } catch let e as SocketAddressError {
                 if case .unknown(host, port: 0) = e {
-                    /* this can happen if the system isn't configured for both IPv4 and IPv6 */
+                    // this can happen if the system isn't configured for both IPv4 and IPv6
                     continue
                 } else {
-                    /* nope, that's a different socket error */
+                    // nope, that's a different socket error
                     XCTFail("unexpected SocketAddressError: \(e)")
                     break
                 }
             } catch {
-                /* other unknown error */
+                // other unknown error
                 XCTFail("unexpected error: \(error)")
                 break
             }

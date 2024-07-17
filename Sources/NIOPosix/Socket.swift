@@ -18,7 +18,7 @@ import NIOCore
 typealias IOVector = iovec
 
 // TODO: scattering support
-/* final but tests */ class Socket: BaseSocket, SocketProtocol {
+class Socket: BaseSocket, SocketProtocol {
     typealias SocketType = Socket
 
     /// The maximum number of bytes to write per `writev` call.

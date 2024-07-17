@@ -1315,7 +1315,7 @@ public final class EventLoopTest: XCTestCase {
         let task = el.scheduleTask(in: .milliseconds(10)) {}
         task.cancel()
         // sleep for 10ms which should have the above scheduled (and cancelled) task have caused an unnecessary wakeup.
-        Thread.sleep(forTimeInterval: 0.015 /* 15 ms */)
+        Thread.sleep(forTimeInterval: 0.015)  // 15 ms
     }
 
     func testSchedulingTaskOnTheEventLoopWithinTheEventLoopsOnlyScheduledTask() {
@@ -1327,7 +1327,7 @@ public final class EventLoopTest: XCTestCase {
         let el = elg.next()
         let g = DispatchGroup()
         g.enter()
-        el.scheduleTask(in: .nanoseconds(10) /* something non-0 */) {
+        el.scheduleTask(in: .nanoseconds(10)) {  // something non-0
             el.execute {
                 g.leave()
             }

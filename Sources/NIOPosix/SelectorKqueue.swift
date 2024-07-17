@@ -103,7 +103,7 @@ extension SelectorRegistrationID {
     }
 }
 
-/* this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly */
+// this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly
 extension Selector: _SelectorBackendProtocol {
     private static func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
         switch strategy {
@@ -349,7 +349,7 @@ extension Selector: _SelectorBackendProtocol {
         }
     }
 
-    /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
+    // attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`)
     func wakeup0() throws {
         assert(NIOThread.current != self.myThread)
         try self.externalSelectorFDLock.withLock {

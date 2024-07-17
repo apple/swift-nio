@@ -242,7 +242,7 @@ public final class ConditionLock<T: Equatable> {
         #else
         let nsecPerSec: Int64 = 1_000_000_000
         self.lock()
-        /* the timeout as a (seconds, nano seconds) pair */
+        // the timeout as a (seconds, nano seconds) pair
         let timeoutNS = Int64(timeoutSeconds * Double(nsecPerSec))
 
         var curTime = timeval()

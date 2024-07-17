@@ -649,13 +649,13 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             l.lock()
             l.unlock(withValue: 1)
 
-            doneSem.wait() /* job on 'q1' is done */
+            doneSem.wait()  // job on 'q1' is done
 
             XCTAssertEqual(1, l.value)
             l.lock()
             l.unlock(withValue: 2)
 
-            doneSem.wait() /* job on 'q2' is done */
+            doneSem.wait()  // job on 'q2' is done
         }
     }
 

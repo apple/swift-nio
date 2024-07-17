@@ -24,8 +24,8 @@ import CNIOLinux
 /// will be notified once the execution is complete.
 public struct Scheduled<T> {
     @usableFromInline typealias CancelationCallback = @Sendable () -> Void
-    /* private but usableFromInline */ @usableFromInline let _promise: EventLoopPromise<T>
-    /* private but usableFromInline */ @usableFromInline let _cancellationTask: CancelationCallback
+    @usableFromInline let _promise: EventLoopPromise<T>
+    @usableFromInline let _cancellationTask: CancelationCallback
 
     @inlinable
     @preconcurrency
@@ -417,7 +417,7 @@ public struct TimeAmount: Hashable, Sendable {
     /// The nanoseconds representation of the `TimeAmount`.
     public let nanoseconds: Int64
 
-    /* private but */ @inlinable
+    @inlinable
     init(_ nanoseconds: Int64) {
         self.nanoseconds = nanoseconds
     }
@@ -576,7 +576,7 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
     public typealias Value = UInt64
 
     // This really should be an UInt63 but we model it as Int64 with >=0 assert
-    /* private but */ @usableFromInline var _uptimeNanoseconds: Int64 {
+    @usableFromInline var _uptimeNanoseconds: Int64 {
         didSet {
             assert(self._uptimeNanoseconds >= 0)
         }
@@ -591,7 +591,7 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
     public static let distantPast = NIODeadline(0)
     public static let distantFuture = NIODeadline(.init(Int64.max))
 
-    /* private but */ @inlinable init(_ nanoseconds: Int64) {
+    @inlinable init(_ nanoseconds: Int64) {
         precondition(nanoseconds >= 0)
         self._uptimeNanoseconds = nanoseconds
     }

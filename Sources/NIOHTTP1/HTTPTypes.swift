@@ -791,7 +791,7 @@ extension HTTPParserError: CustomDebugStringConvertible {
 public enum HTTPParserError: Error {
     case invalidCharactersUsed
     case trailingGarbage
-    /* from CHTTPParser */
+    // from CHTTPParser
     case invalidEOFState
     case headerOverflow
     case closedConnection
@@ -1090,11 +1090,11 @@ extension HTTPResponseStatus {
 
 /// A HTTP response status code.
 public enum HTTPResponseStatus: Sendable {
-    /* use custom if you want to use a non-standard response code or
-     have it available in a (UInt, String) pair from a higher-level web framework. */
+    // use custom if you want to use a non-standard response code or
+    // have it available in a (UInt, String) pair from a higher-level web framework.
     case custom(code: UInt, reasonPhrase: String)
 
-    /* all the codes from http://www.iana.org/assignments/http-status-codes */
+    // all the codes from http://www.iana.org/assignments/http-status-codes
 
     // 1xx
     case `continue`

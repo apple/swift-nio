@@ -93,7 +93,7 @@ internal final class SelectableEventLoop: EventLoop {
         case exitingThread
     }
 
-    /* private but tests */ internal let _selector: NIOPosix.Selector<NIORegistration>
+    internal let _selector: NIOPosix.Selector<NIORegistration>
     private let thread: NIOThread
     @usableFromInline
     // _pendingTaskPop is set to `true` if the event loop is about to pop tasks off the task queue.
@@ -214,7 +214,7 @@ internal final class SelectableEventLoop: EventLoop {
 
     internal init(
         thread: NIOThread,
-        parentGroup: MultiThreadedEventLoopGroup?, /* nil iff thread take-over */
+        parentGroup: MultiThreadedEventLoopGroup?,  // nil iff thread take-over
         selector: NIOPosix.Selector<NIORegistration>,
         canBeShutdownIndividually: Bool,
         metricsDelegate: NIOEventLoopMetricsDelegate?
@@ -482,7 +482,7 @@ internal final class SelectableEventLoop: EventLoop {
     }
 
     private func run(_ task: UnderlyingTask) {
-        /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
+        // for macOS: in case any calls we make to Foundation put objects into an autoreleasepool
         withAutoReleasePool {
             switch task {
             case .function(let function):
@@ -720,7 +720,7 @@ internal final class SelectableEventLoop: EventLoop {
         let selfIdentifier = ObjectIdentifier(self)
         while self.internalState != .noLongerRunning && self.internalState != .exitingThread {
             // Block until there are events to handle or the selector was woken up
-            /* for macOS: in case any calls we make to Foundation put objects into an autoreleasepool */
+            // for macOS: in case any calls we make to Foundation put objects into an autoreleasepool
             try withAutoReleasePool {
                 try self._selector.whenReady(
                     strategy: currentSelectorStrategy(nextReadyDeadline: nextReadyDeadline),

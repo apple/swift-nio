@@ -691,7 +691,7 @@ extension CircularBuffer: RangeReplaceableCollection {
             self.removeSubrange(subrange)
         } else {
             var newBuffer: ContiguousArray<Element?> = []
-            let neededNewCapacity = self.count + newElements.count - subrangeCount + 1 /* always one spare */
+            let neededNewCapacity = self.count + newElements.count - subrangeCount + 1  // always one spare
             let newCapacity = Swift.max(self.capacity, neededNewCapacity.nextPowerOf2())
             newBuffer.reserveCapacity(newCapacity)
 

@@ -484,9 +484,9 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
             pwm.markFlushCheckpoint()
 
-            /* below, we'll write 1 datagram at a time. So the number of datagrams offered should decrease by one.
-             The write operation should be repeated until we did it 1 + spin count times and then return `.couldNotWriteEverything`.
-             After that, one datagram will remain */
+            // below, we'll write 1 datagram at a time. So the number of datagrams offered should decrease by one.
+            // The write operation should be repeated until we did it 1 + spin count times and then return `.couldNotWriteEverything`.
+            // After that, one datagram will remain
             var result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
                 promises: ps,
@@ -497,7 +497,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
 
-            /* we'll now write the one last datagram and assert that all the writes are complete */
+            // we'll now write the one last datagram and assert that all the writes are complete
             result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
                 promises: ps,
@@ -550,7 +550,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             hookedFree: { _ in },
             hookedMemcpy: { _, _, _ in }
         )
-        /* each buffer is half the writev limit */
+        // each buffer is half the writev limit
         let halfTheWriteVLimit = Socket.writevLimitBytes / 2
         var buffer = alloc.buffer(capacity: halfTheWriteVLimit)
         buffer.moveReaderIndex(to: 0)
@@ -559,7 +559,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
-            /* add 1.5x the writev limit */
+            // add 1.5x the writev limit
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[2])
@@ -599,7 +599,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
-            /* add 1.5x the writev limit */
+            // add 1.5x the writev limit
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[0])
             buffer.moveReaderIndex(to: 100)
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])

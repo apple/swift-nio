@@ -453,22 +453,22 @@ class CircularBufferTests: XCTestCase {
         for idx in 0..<4 {
             ring.append(idx)
         }
-        /* the underlying buffer should now be filled from 0 to max */
+        // the underlying buffer should now be filled from 0 to max
         for idx in 0..<4 {
             XCTAssertEqual(idx, ring[ring.index(ring.startIndex, offsetBy: idx)])
         }
         XCTAssertEqual(0, ring.removeFirst())
-        /* now the first element is gone, ie. the ring starts at index 1 now */
+        // now the first element is gone, ie. the ring starts at index 1 now
         for idx in 0..<3 {
             XCTAssertEqual(idx + 1, ring[ring.index(ring.startIndex, offsetBy: idx)])
         }
         ring.append(4)
         XCTAssertEqual(1, ring.first!)
-        /* now the last element should be at ring position 0 */
+        // now the last element should be at ring position 0
         for idx in 0..<4 {
             XCTAssertEqual(idx + 1, ring[ring.index(ring.startIndex, offsetBy: idx)])
         }
-        /* and now we'll make it expand */
+        // and now we'll make it expand
         ring.append(5)
         for idx in 0..<5 {
             XCTAssertEqual(idx + 1, ring[ring.index(ring.startIndex, offsetBy: idx)])

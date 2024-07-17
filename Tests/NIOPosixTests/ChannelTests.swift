@@ -642,7 +642,9 @@ public final class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             let numberOfBytes = Int(
-                1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */
+                1  // first write
+                    + pwm.writeSpinCount  // the spins
+                    + 1  // so one byte remains at the end
             )
             buffer.clear()
             buffer.writeBytes([UInt8](repeating: 0xff, count: numberOfBytes))
@@ -650,9 +652,9 @@ public final class ChannelTests: XCTestCase {
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             pwm.markFlushCheckpoint()
 
-            /* below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
-               The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
-               After that, one byte will remain */
+            // below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
+            // The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
+            // After that, one byte will remain
             var result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
                 promises: ps,
@@ -664,7 +666,7 @@ public final class ChannelTests: XCTestCase {
             )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
 
-            /* we'll now write the one last byte and assert that all the writes are complete */
+            // we'll now write the one last byte and assert that all the writes are complete
             result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
                 promises: ps,
@@ -686,7 +688,9 @@ public final class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             let numberOfBytes = Int(
-                1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */
+                1  // first write
+                    + pwm.writeSpinCount  // the spins
+                    + 1  // so one byte remains at the end
             )
             buffer.clear()
             buffer.writeBytes([0xff] as [UInt8])
@@ -697,23 +701,21 @@ public final class ChannelTests: XCTestCase {
             }
             pwm.markFlushCheckpoint()
 
-            /* this will create an `Array` like this (for `numberOfBytes == 4`)
-             `[[1, 1, 1, 1], [1, 1, 1], [1, 1], [1]]`
-             */
+            // this will create an `Array` like this (for `numberOfBytes == 4`)
+            // `[[1, 1, 1, 1], [1, 1, 1], [1, 1], [1]]`
             let expectedVectorWrites = Array((2...numberOfBytes).reversed()).map { n in
                 Array(repeating: 1, count: n)
             }
 
-            /* this will create an `Array` like this (for `numberOfBytes == 4`)
-               `[[true, false, false, false], [true, true, false, false], [true, true, true, false]`
-            */
+            // this will create an `Array` like this (for `numberOfBytes == 4`)
+            // `[[true, false, false, false], [true, true, false, false], [true, true, true, false]`
             let expectedPromiseStates = Array((2...numberOfBytes).reversed()).map { n in
                 Array(repeating: true, count: numberOfBytes - n + 1) + Array(repeating: false, count: n - 1)
             }
 
-            /* below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
-             The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
-             After that, one byte will remain */
+            // below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
+            // The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
+            // After that, one byte will remain */
             var result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
                 promises: ps,
@@ -725,7 +727,7 @@ public final class ChannelTests: XCTestCase {
             )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
 
-            /* we'll now write the one last byte and assert that all the writes are complete */
+            // we'll now write the one last byte and assert that all the writes are complete
             result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
                 promises: ps,
@@ -747,13 +749,15 @@ public final class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             let numberOfWrites = Int(
-                1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */
+                1  // first write
+                    + pwm.writeSpinCount  // the spins
+                    + 1  // so one byte remains at the end
             )
             buffer.clear()
             buffer.writeBytes([UInt8](repeating: 0xff, count: 1))
             let handle = NIOFileHandle(descriptor: -1)
             defer {
-                /* fake file handle, so don't actually close */
+                // fake file handle, so don't actually close
                 XCTAssertNoThrow(try handle.takeDescriptorOwnership())
             }
             let fileRegion = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 1)
@@ -766,9 +770,9 @@ public final class ChannelTests: XCTestCase {
             let expectedPromiseStates = Array((1...numberOfWrites).reversed()).map { n in
                 Array(repeating: true, count: numberOfWrites - n + 1) + Array(repeating: false, count: n - 1)
             }
-            /* below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
-             The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
-             After that, one byte will remain */
+            // below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
+            // The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
+            // After that, one byte will remain
             let result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
                 promises: ps,
@@ -823,7 +827,7 @@ public final class ChannelTests: XCTestCase {
             hookedFree: { _ in },
             hookedMemcpy: { _, _, _ in }
         )
-        /* each buffer is half the writev limit */
+        // each buffer is half the writev limit
         let halfTheWriteVLimit = Socket.writevLimitBytes / 2
         var buffer = alloc.buffer(capacity: halfTheWriteVLimit)
         buffer.moveReaderIndex(to: 0)
@@ -831,7 +835,7 @@ public final class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
-            /* add 1.5x the writev limit */
+            // add 1.5x the writev limit
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[2])
@@ -871,7 +875,7 @@ public final class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
-            /* add 1.5x the writev limit */
+            // add 1.5x the writev limit
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             buffer.moveWriterIndex(to: 100)
@@ -892,15 +896,21 @@ public final class ChannelTests: XCTestCase {
                 expectedFileWritabilities: nil,
                 returns: [
                     .processed(Socket.writevLimitBytes),
-                    /*Xcode*/ .processed(23),
-                    /*needs*/ .processed(Socket.writevLimitBytes),
-                    /*help */ .processed(23 + 100),
+                    // Xcode
+                    .processed(23),
+                    // needs
+                    .processed(Socket.writevLimitBytes),
+                    // help
+                    .processed(23 + 100),
                 ],
                 promiseStates: [
                     [false, false, false],
-                    /*  Xcode   */ [true, false, false],
-                    /*  needs   */ [true, false, false],
-                    /*  help    */ [true, true, true],
+                    // Xcode
+                    [true, false, false],
+                    // needs
+                    [true, false, false],
+                    // help
+                    [true, true, true],
                 ]
             )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
@@ -1066,7 +1076,7 @@ public final class ChannelTests: XCTestCase {
 
             pwm.markFlushCheckpoint()
 
-            /* let's start with no writes and just a flush */
+            // let's start with no writes and just a flush
             var result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
                 promises: ps,
@@ -1077,7 +1087,7 @@ public final class ChannelTests: XCTestCase {
                 promiseStates: [[false, false, false]]
             )
 
-            /* let's add a few writes but still without any promises */
+            // let's add a few writes but still without any promises
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
 
@@ -2351,9 +2361,9 @@ public final class ChannelTests: XCTestCase {
                         (skipDatagram
                             ? []
                             : [try DatagramChannel(eventLoop: el, protocolFamily: .inet, protocolSubtype: .default)])
-                        /* Xcode need help */
+                        // Xcode need help
                         + (skipStream ? [] : [try SocketChannel(eventLoop: el, protocolFamily: .inet)])
-                        /* Xcode need help */
+                        // Xcode need help
                         + (skipServerSocket
                             ? [] : [try ServerSocketChannel(eventLoop: el, group: elg, protocolFamily: .inet)])
                     for channel in channels {
@@ -3330,7 +3340,7 @@ private final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler
     }
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        /* for extra nastiness, let's delay close. This makes sure the ChannelPipeline correctly retains the Channel */
+        // for extra nastiness, let's delay close. This makes sure the ChannelPipeline correctly retains the Channel
         _ = context.eventLoop.scheduleTask(in: .milliseconds(10)) {
             context.close(mode: mode, promise: promise)
         }
