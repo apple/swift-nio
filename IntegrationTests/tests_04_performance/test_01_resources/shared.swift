@@ -51,14 +51,14 @@ final class RepeatedRequests: ChannelInboundHandler {
 	}
 
 	func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-		let respPart = self.unwrapInboundIn(data)
+		let respPart = Self.unwrapInboundIn(data)
 		if case .end(nil) = respPart {
 			if self.remainingNumberOfRequests <= 0 {
 				context.channel.close().map { self.numberOfRequests - self.remainingNumberOfRequests }.cascade(to: self.isDonePromise)
 			} else {
 				self.remainingNumberOfRequests -= 1
-				context.write(self.wrapOutboundOut(.head(RepeatedRequests.requestHead)), promise: nil)
-				context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+				context.write(Self.wrapOutboundOut(.head(RepeatedRequests.requestHead)), promise: nil)
+				context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
 			}
 		}
 	}
@@ -94,10 +94,10 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        if case .head(let req) = self.unwrapInboundIn(data), req.uri == "/allocation-test-1" {
-            context.write(self.wrapOutboundOut(.head(self.responseHead)), promise: nil)
-            context.write(self.wrapOutboundOut(.body(.byteBuffer(self.responseBody(allocator: context.channel.allocator)))), promise: nil)
-            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+        if case .head(let req) = Self.unwrapInboundIn(data), req.uri == "/allocation-test-1" {
+            context.write(Self.wrapOutboundOut(.head(self.responseHead)), promise: nil)
+            context.write(Self.wrapOutboundOut(.body(.byteBuffer(self.responseBody(allocator: context.channel.allocator)))), promise: nil)
+            context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
         }
     }
 }
@@ -200,7 +200,7 @@ enum UDPShared {
                 // Forward the data.
                 let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
                 
-                context.writeAndFlush(self.wrapOutboundOut(envolope), promise: nil)
+                context.writeAndFlush(Self.wrapOutboundOut(envolope), promise: nil)
             } else {
                 // We're all done - hurrah!
                 context.close(promise: nil)

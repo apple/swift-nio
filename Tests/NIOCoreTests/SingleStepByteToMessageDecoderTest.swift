@@ -404,14 +404,14 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
                     self.processor = NIOSingleStepByteToMessageProcessor(OneByteStringDecoder())
                 }
                 do {
-                    try self.processor!.process(buffer: self.unwrapInboundIn(data)) { message in
+                    try self.processor!.process(buffer: Self.unwrapInboundIn(data)) { message in
                         self.produced += 1
                         // Produce an extra write the first time we are called to test reentrancy
                         if self.produced == 1 {
                             let buf = ByteBuffer(string: "X")
                             XCTAssertNoThrow(try (context.channel as! EmbeddedChannel).writeInbound(buf))
                         }
-                        context.fireChannelRead(self.wrapInboundOut(message))
+                        context.fireChannelRead(Self.wrapInboundOut(message))
                     }
                 } catch {
                     context.fireErrorCaught(error)

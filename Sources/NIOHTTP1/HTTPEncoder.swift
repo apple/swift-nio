@@ -177,7 +177,7 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
 
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(var request):
             assert(!(request.headers.contains(name: "content-length") &&
                         request.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
@@ -189,13 +189,13 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
                 self.isChunked = messageIsChunked(headers: request.headers, version: request.version)
             }
 
-            writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
+            writeHead(wrapOutboundOut: Self.wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(request: request)
             }, context: context, headers: request.headers, promise: promise)
         case .body(let bodyPart):
-            writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
+            writeChunk(wrapOutboundOut: Self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
         case .end(let trailers):
-            writeTrailers(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
+            writeTrailers(wrapOutboundOut: Self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
         }
     }
 }
@@ -243,7 +243,7 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(var response):
             assert(!(response.headers.contains(name: "content-length") &&
                         response.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
@@ -256,13 +256,13 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
                 self.isChunked = messageIsChunked(headers: response.headers, version: response.version)
             }
 
-            writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
+            writeHead(wrapOutboundOut: Self.wrapOutboundOut, writeStartLine: { buffer in
                 buffer.write(response: response)
             }, context: context, headers: response.headers, promise: promise)
         case .body(let bodyPart):
-            writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
+            writeChunk(wrapOutboundOut: Self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
         case .end(let trailers):
-            writeTrailers(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
+            writeTrailers(wrapOutboundOut: Self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
         }
     }
 }

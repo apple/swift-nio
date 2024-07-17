@@ -71,7 +71,7 @@ class IdleStateHandlerTest : XCTestCase {
                 if writeToChannel {
                     var buffer = context.channel.allocator.buffer(capacity: 4)
                     buffer.writeStaticString("test")
-                    context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+                    context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: nil)
                 }
             }
         }

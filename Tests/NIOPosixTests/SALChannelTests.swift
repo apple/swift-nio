@@ -101,7 +101,7 @@ final class SALChannelTest: XCTestCase, SALTest {
 
                     // We expect another channelWritabilityChanged notification
                     XCTAssertTrue(self.writableNotificationStepExpectation.compareExchange(expected: 2, desired: 3, ordering: .relaxed).exchanged)
-                    context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+                    context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: nil)
                 case 3:
                     // Next, we should go to false because we never send all the bytes.
                     XCTAssertFalse(context.channel.isWritable)
@@ -208,7 +208,7 @@ final class SALChannelTest: XCTestCase, SALTest {
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 self.numberOfCalls += 1
                 XCTAssertEqual("hello",
-                               String(decoding: self.unwrapInboundIn(data).readableBytesView, as: Unicode.UTF8.self))
+                               String(decoding: Self.unwrapInboundIn(data).readableBytesView, as: Unicode.UTF8.self))
                 if self.numberOfCalls == 1 {
                     self.group.leave()
                 }

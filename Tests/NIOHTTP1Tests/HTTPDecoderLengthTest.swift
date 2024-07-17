@@ -25,7 +25,7 @@ private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboun
     var seenHead = false
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        switch self.unwrapInboundIn(data) {
+        switch Self.unwrapInboundIn(data) {
         case .head:
             XCTAssertFalse(self.seenHead)
             self.seenHead = true
@@ -84,7 +84,7 @@ class HTTPDecoderLengthTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                switch self.unwrapInboundIn(data) {
+                switch Self.unwrapInboundIn(data) {
                 case .head(let h):
                     self.response = h
                 case .end:
