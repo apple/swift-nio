@@ -1333,7 +1333,7 @@ class EventLoopFutureTest: XCTestCase {
         let result: Result<Int?, Error> = .success(nil)
         promise.completeWith(result)
 
-        XCTAssertThrowsError(try _ = promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait()) {
+        XCTAssertThrowsError(try promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait()) {
             (error) -> Void in
             XCTAssertEqual(error as! EventLoopFutureTestError, EventLoopFutureTestError.example)
         }
