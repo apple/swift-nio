@@ -66,15 +66,15 @@ private final class WebServerHandler: ChannelDuplexHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.webServer.pushChannelRead(self.unwrapInboundIn(data))
+        self.webServer.pushChannelRead(Self.unwrapInboundIn(data))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(var head):
             head.headers.replaceOrAdd(name: "connection", value: "close")
             head.headers.remove(name: "keep-alive")
-            context.write(self.wrapOutboundOut(.head(head)), promise: promise)
+            context.write(Self.wrapOutboundOut(.head(head)), promise: promise)
         case .body:
             context.write(data, promise: promise)
         case .end:
@@ -92,14 +92,14 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
     var receivedSoFar: ByteBuffer? = nil
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        switch self.unwrapInboundIn(data) {
+        switch Self.unwrapInboundIn(data) {
         case .head:
             context.fireChannelRead(data)
         case .body(var buffer):
             self.receivedSoFar.setOrWriteBuffer(&buffer)
         case .end:
             if let receivedSoFar = self.receivedSoFar {
-                context.fireChannelRead(self.wrapInboundOut(.body(receivedSoFar)))
+                context.fireChannelRead(Self.wrapInboundOut(.body(receivedSoFar)))
             }
             context.fireChannelRead(data)
         }

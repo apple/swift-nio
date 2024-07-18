@@ -32,15 +32,15 @@ private final class IndexWritingHandler: ChannelDuplexHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buf = self.unwrapInboundIn(data)
+        var buf = Self.unwrapInboundIn(data)
         buf.writeInteger(UInt8(self.index))
-        context.fireChannelRead(self.wrapInboundOut(buf))
+        context.fireChannelRead(Self.wrapInboundOut(buf))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        var buf = self.unwrapOutboundIn(data)
+        var buf = Self.unwrapOutboundIn(data)
         buf.writeInteger(UInt8(self.index))
-        context.write(self.wrapOutboundOut(buf), promise: promise)
+        context.write(Self.wrapOutboundOut(buf), promise: promise)
     }
 }
 
@@ -241,7 +241,7 @@ class ChannelPipelineTest: XCTestCase {
 
         public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             do {
-                context.write(self.wrapOutboundOut(try body(self.unwrapOutboundIn(data))), promise: promise)
+                context.write(Self.wrapOutboundOut(try body(Self.unwrapOutboundIn(data))), promise: promise)
             } catch let err {
                 promise!.fail(err)
             }
@@ -266,7 +266,7 @@ class ChannelPipelineTest: XCTestCase {
         typealias InboundOut = Int
 
         public func handlerRemoved(context: ChannelHandlerContext) {
-            context.fireChannelRead(self.wrapInboundOut(1))
+            context.fireChannelRead(Self.wrapInboundOut(1))
         }
     }
 
@@ -328,8 +328,8 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let data = self.unwrapInboundIn(data)
-                context.fireChannelRead(self.wrapInboundOut(data + [self.no]))
+                let data = Self.unwrapInboundIn(data)
+                context.fireChannelRead(Self.wrapInboundOut(data + [self.no]))
             }
         }
 
@@ -345,8 +345,8 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-                let data = self.unwrapOutboundIn(data)
-                context.write(self.wrapOutboundOut(data + [self.no]), promise: promise)
+                let data = Self.unwrapOutboundIn(data)
+                context.write(Self.wrapOutboundOut(data + [self.no]), promise: promise)
             }
         }
 
@@ -357,9 +357,9 @@ class ChannelPipelineTest: XCTestCase {
             typealias OutboundOut = [Int]
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let data = self.unwrapInboundIn(data)
-                context.writeAndFlush(self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
-                context.fireChannelRead(self.wrapInboundOut(data))
+                let data = Self.unwrapInboundIn(data)
+                context.writeAndFlush(Self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
+                context.fireChannelRead(Self.wrapInboundOut(data))
             }
         }
 
@@ -369,10 +369,10 @@ class ChannelPipelineTest: XCTestCase {
             typealias OutboundOut = ByteBuffer
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-                let data = self.unwrapOutboundIn(data)
+                let data = Self.unwrapOutboundIn(data)
                 var buf = context.channel.allocator.buffer(capacity: 123)
                 buf.writeString(String(describing: data))
-                context.write(self.wrapOutboundOut(buf), promise: promise)
+                context.write(Self.wrapOutboundOut(buf), promise: promise)
             }
         }
 
@@ -503,7 +503,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if let dataString = data.tryAs(type: String.self) {
-                    context.fireChannelRead(self.wrapInboundOut(dataString.count))
+                    context.fireChannelRead(Self.wrapInboundOut(dataString.count))
                 }
             }
         }
@@ -514,7 +514,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if var buffer = data.tryAs(type: ByteBuffer.self) {
-                    context.fireChannelRead(self.wrapInboundOut(buffer.readString(length: buffer.readableBytes)!))
+                    context.fireChannelRead(Self.wrapInboundOut(buffer.readString(length: buffer.readableBytes)!))
                 }
             }
         }
@@ -944,7 +944,7 @@ class ChannelPipelineTest: XCTestCase {
             typealias InboundOut = ()
 
             func channelInactive(context: ChannelHandlerContext) {
-                context.fireChannelRead(self.wrapInboundOut(()))
+                context.fireChannelRead(Self.wrapInboundOut(()))
             }
         }
         let handler = FireWhenInactiveHandler()
@@ -1191,12 +1191,12 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let step = self.unwrapInboundIn(data)
+                let step = Self.unwrapInboundIn(data)
                 self.state.next()
                 XCTAssertEqual(self.state, step)
 
                 // just to communicate to the outside where we are in our state machine
-                context.fireChannelRead(self.wrapInboundOut(self.state))
+                context.fireChannelRead(Self.wrapInboundOut(self.state))
 
                 switch step {
                 case .triggerEventRead:
@@ -1231,7 +1231,7 @@ class ChannelPipelineTest: XCTestCase {
                 XCTAssertEqual(.handlerRemovedCalled, self.state)
 
                 // just to communicate to the outside where we are in our state machine
-                context.fireChannelRead(self.wrapInboundOut(self.state))
+                context.fireChannelRead(Self.wrapInboundOut(self.state))
 
                 // Step 4: This happens when the pipeline is being torn down, so let's now also finish the manual
                 // removal process.

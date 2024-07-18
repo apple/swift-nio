@@ -110,7 +110,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
             return
         }
 
-        let requestPart = unwrapInboundIn(data)
+        let requestPart = Self.unwrapInboundIn(data)
 
         switch self.upgradeState {
         case .idle:
@@ -289,14 +289,14 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
             // We haven't seen the first request .end. That means we're not buffering anything, and we can
             // just deliver data.
             assert(self.receivedMessages.isEmpty)
-            context.fireChannelRead(self.wrapInboundOut(data))
+            context.fireChannelRead(Self.wrapInboundOut(data))
         } else {
             // This is trickier. We've seen the first request .end, so we now need to deliver the .head we
             // got passed, as well as the .end we swallowed, and any buffered parts. While we're doing this
             // we may be re-entrantly called, which will cause us to buffer new parts. To make that safe, we
             // must ensure we aren't holding the buffer mutably, so no for loop for us.
-            context.fireChannelRead(self.wrapInboundOut(data))
-            context.fireChannelRead(self.wrapInboundOut(.end(nil)))
+            context.fireChannelRead(Self.wrapInboundOut(data))
+            context.fireChannelRead(Self.wrapInboundOut(.end(nil)))
         }
 
         context.fireChannelReadComplete()

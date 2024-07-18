@@ -102,7 +102,7 @@ private class WebSocketRecorderHandler: ChannelInboundHandler {
     fileprivate var errors: [Error] = []
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let frame = self.unwrapInboundIn(data)
+        let frame = Self.unwrapInboundIn(data)
         self.frames.append(frame)
     }
 

@@ -19,7 +19,7 @@ private final class ChatMessageDecoder: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let envelope = self.unwrapInboundIn(data)
+        let envelope = Self.unwrapInboundIn(data)
         var buffer = envelope.data
 
         // To begin with, the chat messages are simply whole datagrams, no other length.
@@ -38,9 +38,9 @@ private final class ChatMessageEncoder: ChannelOutboundHandler {
     public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let message = self.unwrapOutboundIn(data)
+        let message = Self.unwrapOutboundIn(data)
         let buffer = context.channel.allocator.buffer(string: message.data)
-        context.write(self.wrapOutboundOut(AddressedEnvelope(remoteAddress: message.remoteAddress, data: buffer)), promise: promise)
+        context.write(Self.wrapOutboundOut(AddressedEnvelope(remoteAddress: message.remoteAddress, data: buffer)), promise: promise)
     }
 }
 

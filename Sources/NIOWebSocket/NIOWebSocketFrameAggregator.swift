@@ -53,10 +53,10 @@ public final class NIOWebSocketFrameAggregator: ChannelInboundHandler {
         self.maxAccumulatedFrameCount = maxAccumulatedFrameCount
         self.maxAccumulatedFrameSize = maxAccumulatedFrameSize
     }
-    
-    
+
+
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let frame = unwrapInboundIn(data)
+        let frame = Self.unwrapInboundIn(data)
         do {
             switch frame.opcode {
             case .continuation:

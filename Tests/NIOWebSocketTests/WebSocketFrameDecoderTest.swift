@@ -43,7 +43,7 @@ private final class SynchronousCloser: ChannelInboundHandler {
     private var closeFrame: WebSocketFrame?
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let frame = self.unwrapInboundIn(data)
+        let frame = Self.unwrapInboundIn(data)
         guard case .connectionClose = frame.opcode else {
             context.fireChannelRead(data)
             return

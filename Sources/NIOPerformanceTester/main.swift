@@ -124,14 +124,14 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        if case .head(let req) = self.unwrapInboundIn(data) {
+        if case .head(let req) = Self.unwrapInboundIn(data) {
             switch req.uri {
             case "/perf-test-1":
                 var buffer = context.channel.allocator.buffer(capacity: self.cachedBody.count)
                 buffer.writeBytes(self.cachedBody)
-                context.write(self.wrapOutboundOut(.head(self.cachedHead)), promise: nil)
-                context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(Self.wrapOutboundOut(.head(self.cachedHead)), promise: nil)
+                context.write(Self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+                context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             case "/perf-test-2":
                 var req = HTTPResponseHead(version: .http1_1, status: .ok)
@@ -139,8 +139,8 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
                     req.headers.add(name: "X-ResponseHeader-\(i)", value: "foo")
                 }
                 req.headers.add(name: "content-length", value: "0")
-                context.write(self.wrapOutboundOut(.head(req)), promise: nil)
-                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(Self.wrapOutboundOut(.head(req)), promise: nil)
+                context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             default:
                 fatalError("unknown uri \(req.uri)")
@@ -197,7 +197,7 @@ final class RepeatedRequests: ChannelInboundHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let reqPart = self.unwrapInboundIn(data)
+        let reqPart = Self.unwrapInboundIn(data)
         if case .end(nil) = reqPart {
             if self.remainingNumberOfRequests <= 0 {
                 context.channel.close().map { self.doneRequests }.cascade(to: self.isDonePromise)
@@ -205,8 +205,8 @@ final class RepeatedRequests: ChannelInboundHandler {
                 self.doneRequests += 1
                 self.remainingNumberOfRequests -= 1
 
-                context.write(self.wrapOutboundOut(.head(head)), promise: nil)
-                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(Self.wrapOutboundOut(.head(head)), promise: nil)
+                context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
             }
         }
     }
@@ -597,7 +597,7 @@ try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
         }
 
         func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-            var buf = self.unwrapOutboundIn(data)
+            var buf = Self.unwrapOutboundIn(data)
             if self.expectedResponseBuffer == nil {
                 self.expectedResponseBuffer = buf
             }

@@ -258,7 +258,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         while true {
             switch parser.parseStep(&buffer) {
             case .result(let frame):
-                context.fireChannelRead(self.wrapInboundOut(frame))
+                context.fireChannelRead(Self.wrapInboundOut(frame))
                 return .continue
             case .continueParsing:
                 try self.parser.validateState(maxFrameSize: self.maxFrameSize)
