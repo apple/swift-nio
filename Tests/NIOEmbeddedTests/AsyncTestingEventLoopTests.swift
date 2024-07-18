@@ -11,11 +11,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOCore
-@testable import NIOEmbedded
-import XCTest
-import NIOConcurrencyHelpers
+
 import Atomics
+import NIOConcurrencyHelpers
+import NIOCore
+import XCTest
+
+@testable import NIOEmbedded
 
 private class EmbeddedTestError: Error {}
 

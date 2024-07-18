@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import AtomicCounter
+import Foundation
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)

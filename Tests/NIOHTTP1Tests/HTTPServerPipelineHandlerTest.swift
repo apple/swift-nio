@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
+import XCTest
+
 @testable import NIOHTTP1
 
 private final class ReadRecorder: ChannelInboundHandler {

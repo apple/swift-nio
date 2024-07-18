@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
 
 class MarkedCircularBufferTests: XCTestCase {
     func testEmptyMark() throws {

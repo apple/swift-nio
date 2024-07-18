@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Foundation
 import NIOCore
-@testable import NIOPosix
 import NIOTestUtils
+import XCTest
+
+@testable import NIOPosix
 
 final class PipeChannelTest: XCTestCase {
     var group: MultiThreadedEventLoopGroup! = nil

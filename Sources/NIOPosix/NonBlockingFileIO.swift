@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 
 /// ``NonBlockingFileIO`` is a helper that allows you to read files without blocking the calling thread.
 ///

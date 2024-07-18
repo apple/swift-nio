@@ -11,11 +11,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import XCTest
-@testable import NIOCore
+
 import NIOEmbedded
 import NIOFoundationCompat
 import NIOTLS
+import XCTest
+
+@testable import NIOCore
 
 private let libressl227HelloNoSNI = """
     FgMBATkBAAE1AwNqcHrXsRJKtLx2HC1BXLt+kAk7SnCMk8qK

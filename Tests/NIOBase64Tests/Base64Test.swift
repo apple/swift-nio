@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 @testable import _NIOBase64
 
 class Base64Test: XCTestCase {

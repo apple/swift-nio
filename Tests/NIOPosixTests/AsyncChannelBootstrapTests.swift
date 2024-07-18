@@ -13,10 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 import NIOConcurrencyHelpers
+import NIOTLS
+import XCTest
+
 @testable import NIOCore
 @testable import NIOPosix
-import XCTest
-import NIOTLS
 
 private final class IPHeaderRemoverHandler: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 @testable import NIOCore
 
 public final class IntegerTypesTest: XCTestCase {

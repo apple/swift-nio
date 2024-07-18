@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOTLS
 import NIOCore
 import NIOEmbedded
-import XCTest
+import NIOTLS
 import NIOTestUtils
+import XCTest
 
 final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
     enum NegotiationResult: Equatable {

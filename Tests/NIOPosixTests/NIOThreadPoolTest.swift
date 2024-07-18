@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIOPosix
 import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
 import NIOEmbedded
+import XCTest
+
+@testable import NIOPosix
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class NIOThreadPoolTest: XCTestCase {

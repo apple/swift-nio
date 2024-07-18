@@ -14,8 +14,10 @@
 
 import NIOConcurrencyHelpers
 import NIOCore
-@testable import NIOPosix
 import XCTest
+
+@testable import NIOPosix
+
 #if os(Linux)
 import CNIOLinux
 #endif

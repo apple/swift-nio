@@ -1,3 +1,9 @@
+import Dispatch
+import NIOCore
+import XCTest
+
+@testable import NIOConcurrencyHelpers
+
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -18,10 +24,6 @@ import Glibc
 #else
 #error("The Concurrency helpers test module was unable to identify your C library.")
 #endif
-import Dispatch
-import XCTest
-import NIOCore
-@testable import NIOConcurrencyHelpers
 
 class NIOConcurrencyHelpersTests: XCTestCase {
     private func sumOfIntegers(until n: UInt64) -> UInt64 {

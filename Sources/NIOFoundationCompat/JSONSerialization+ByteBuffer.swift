@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 import Foundation
+import NIOCore
 
 extension JSONSerialization {
 

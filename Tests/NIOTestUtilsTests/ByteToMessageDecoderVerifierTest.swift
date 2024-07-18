@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIOCore
 import NIOPosix
 import NIOTestUtils
 import XCTest
+
+@testable import NIOCore
 
 typealias VerificationError = ByteToMessageDecoderVerifier.VerificationError<String>
 

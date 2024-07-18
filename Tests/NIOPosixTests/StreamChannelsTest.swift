@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIOCore
-@testable import NIOPosix
-import NIOTestUtils
 import Atomics
+import NIOCore
+import NIOTestUtils
+import XCTest
+
+@testable import NIOPosix
 
 class StreamChannelTest: XCTestCase {
     var buffer: ByteBuffer! = nil

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOConcurrencyHelpers
 import Dispatch
+import NIOConcurrencyHelpers
 
 /// Internal list of callbacks.
 ///

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+
 #if canImport(Darwin)
 import CNIODarwin
 #elseif os(Linux) || os(Android)

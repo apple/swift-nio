@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+
 #if canImport(Darwin)
 import Darwin
 #elseif os(Windows)

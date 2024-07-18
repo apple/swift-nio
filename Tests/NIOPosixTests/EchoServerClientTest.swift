@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Atomics
 import Dispatch
 import NIOCore
+import XCTest
+
 @testable import NIOPosix
 
 class EchoServerClientTest: XCTestCase {

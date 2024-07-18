@@ -12,6 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOEmbedded
+import XCTest
+
+@testable import NIOCore
+@testable import NIOPosix
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -19,10 +25,6 @@ import Glibc
 #else
 #error("The Happy Eyeballs test module was unable to identify your C library.")
 #endif
-import XCTest
-@testable import NIOCore
-import NIOEmbedded
-@testable import NIOPosix
 
 private let CONNECT_RECORDER = "connectRecorder"
 private let CONNECT_DELAYER = "connectDelayer"

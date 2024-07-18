@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOWebSocket
+import XCTest
 
 private class CloseSwallower: ChannelOutboundHandler, RemovableChannelHandler {
     typealias OutboundIn = Any

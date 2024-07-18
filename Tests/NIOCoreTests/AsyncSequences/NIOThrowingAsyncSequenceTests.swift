@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIOCore
 import XCTest
+
+@testable import NIOCore
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {

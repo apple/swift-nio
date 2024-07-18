@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 import Atomics
 import Foundation
-import XCTest
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
+import XCTest
 
 // FIXME: Duplicated with NIO
 func assert(

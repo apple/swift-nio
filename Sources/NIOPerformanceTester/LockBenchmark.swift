@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-import NIOPosix
 import Dispatch
 import NIOConcurrencyHelpers
+import NIOCore
+import NIOPosix
 
 final class NIOLockBenchmark: Benchmark {
     private let numberOfThreads: Int

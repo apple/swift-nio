@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIOPosix
 import NIOHTTP1
+import NIOPosix
 
 extension String {
     func chopPrefix(_ prefix: String) -> String? {

@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIOCore
 import NIOEmbedded
-@testable import NIOPosix
 import XCTest
+
+@testable import NIOCore
+@testable import NIOPosix
 
 extension SocketAddress {
     fileprivate init(_ addr: UnsafePointer<sockaddr>) {

@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIOPosix
 import Dispatch
 import Foundation
+import NIOPosix
+import XCTest
 
 class BlockingIOThreadPoolTest: XCTestCase {
     func testDoubleShutdownWorks() throws {

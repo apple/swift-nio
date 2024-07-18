@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOEmbedded
 import NIOCore
+import NIOEmbedded
 import NIOTestUtils
 import XCTest
 

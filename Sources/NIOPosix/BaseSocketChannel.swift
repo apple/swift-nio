@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-import NIOConcurrencyHelpers
 import Atomics
+import NIOConcurrencyHelpers
+import NIOCore
 
 private struct SocketChannelLifecycleManager {
     // MARK: Types

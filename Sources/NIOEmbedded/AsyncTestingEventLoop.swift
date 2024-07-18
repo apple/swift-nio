@@ -14,9 +14,9 @@
 
 import Atomics
 import Dispatch
-import _NIODataStructures
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
+import _NIODataStructures
 
 /// An `EventLoop` that is thread safe and whose execution is fully controlled
 /// by the user.

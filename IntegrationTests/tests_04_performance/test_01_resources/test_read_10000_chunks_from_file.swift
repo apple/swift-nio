@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import Dispatch
+import Foundation
+import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
-import NIOConcurrencyHelpers
 
 func run(identifier: String) {
     let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)

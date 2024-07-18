@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
 import XCTest
+
 @testable import NIOCore
 @testable import NIOPosix
-import NIOConcurrencyHelpers
 
 extension System {
     static var supportsIPv6: Bool {

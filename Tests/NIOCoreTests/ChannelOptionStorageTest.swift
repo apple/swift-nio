@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
+import XCTest
 
 class ChannelOptionStorageTest: XCTestCase {
     func testWeStartWithNoOptions() throws {

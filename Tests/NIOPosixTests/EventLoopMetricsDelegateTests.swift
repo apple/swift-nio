@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIOPosix
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 import XCTest
+
+@testable import NIOPosix
 
 final class RecorderDelegate: NIOEventLoopMetricsDelegate, Sendable {
 

@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIOCore
-@testable import NIOPosix
 import Atomics
+import NIOCore
+import XCTest
+
+@testable import NIOPosix
 
 class SelectorTest: XCTestCase {
 

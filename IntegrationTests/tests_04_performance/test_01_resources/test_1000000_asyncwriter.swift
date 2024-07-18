@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 import DequeModule
+import NIOCore
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 private struct Delegate: NIOAsyncWriterSinkDelegate, Sendable {

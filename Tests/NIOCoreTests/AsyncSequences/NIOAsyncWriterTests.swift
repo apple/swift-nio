@@ -13,9 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import DequeModule
-@testable import NIOCore
-import XCTest
 import NIOConcurrencyHelpers
+import XCTest
+
+@testable import NIOCore
 
 private struct SomeError: Error, Hashable {}
 

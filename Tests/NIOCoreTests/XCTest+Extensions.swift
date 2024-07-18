@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
 
 func assert(
     _ condition: @autoclosure () -> Bool,

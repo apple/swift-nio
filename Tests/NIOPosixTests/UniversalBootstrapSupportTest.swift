@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOPosix
 import NIOTestUtils
+import XCTest
 
 class UniversalBootstrapSupportTest: XCTestCase {
 

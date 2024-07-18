@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOWebSocket
+import XCTest
 
 /// a mock random number generator which will return the given `numbers` in order
 private struct TestRandomNumberGenerator: RandomNumberGenerator {

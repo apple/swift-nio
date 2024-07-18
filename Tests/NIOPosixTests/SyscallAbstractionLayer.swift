@@ -15,10 +15,11 @@
 // This file contains a syscall abstraction layer (SAL) which hooks the Selector and the Socket in a way that we can
 // play the kernel whilst NIO thinks it's running on a real OS.
 
-import NIOCore
-@testable import NIOPosix
 import NIOConcurrencyHelpers
+import NIOCore
 import XCTest
+
+@testable import NIOPosix
 
 internal enum SAL {
     fileprivate static let defaultTimeout: Double = 5

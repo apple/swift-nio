@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIOPosix
+import Dispatch
 import NIOConcurrencyHelpers
 import XCTest
-import Dispatch
+
+@testable import NIOPosix
 
 class ThreadTest: XCTestCase {
     func testCurrentThreadWorks() throws {

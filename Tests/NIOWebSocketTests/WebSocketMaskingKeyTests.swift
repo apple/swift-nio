@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOWebSocket
+import XCTest
 
 final class WebSocketMaskingKeyTests: XCTestCase {
     var generator = SystemRandomNumberGenerator()

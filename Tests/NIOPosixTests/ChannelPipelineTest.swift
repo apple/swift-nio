@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Atomics
-@testable import NIOCore
 import NIOEmbedded
 import NIOPosix
 import NIOTestUtils
+import XCTest
+
+@testable import NIOCore
 
 private final class IndexWritingHandler: ChannelDuplexHandler {
     typealias InboundIn = ByteBuffer

@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-@testable import NIOEmbedded
-import XCTest
 import NIOConcurrencyHelpers
+import NIOCore
+import XCTest
+
+@testable import NIOEmbedded
 
 private class EmbeddedTestError: Error {}
 

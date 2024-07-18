@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
 import NIOCore
 import NIOEmbedded
-@testable import NIOPosix
-import NIOConcurrencyHelpers
 import XCTest
+
+@testable import NIOPosix
 
 class BootstrapTest: XCTestCase {
     var group: MultiThreadedEventLoopGroup!

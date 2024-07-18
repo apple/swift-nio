@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
+
 @testable import NIOHTTP1
 
 private enum DummyError: Error {

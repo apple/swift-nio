@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
+import XCTest
 
 final class ContentLengthTests: XCTestCase {
 

@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIOPosix
 import NIOCore
 import XCTest
+
+@testable import NIOPosix
 
 internal final class PooledRecvBufferAllocatorTests: XCTestCase {
     func testPoolFillsToCapacity() {

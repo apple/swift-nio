@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOConcurrencyHelpers
 import Dispatch
+import NIOConcurrencyHelpers
+
 #if os(Linux)
 import CNIOLinux
 #endif  // os(Linux)

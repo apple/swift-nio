@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-import NIOPosix
 import NIOEmbedded
+import NIOPosix
 import XCTest
 
 final class NIOLoopBoundTests: XCTestCase {

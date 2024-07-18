@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-import NIOPosix
 import NIOHTTP1
+import NIOPosix
 import NIOTestUtils
 import XCTest
 

@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIOCore
 import NIOEmbedded
 import NIOHTTP1
+import XCTest
+
+@testable import NIOCore
 @testable import NIOWebSocket
 
 extension EmbeddedChannel {

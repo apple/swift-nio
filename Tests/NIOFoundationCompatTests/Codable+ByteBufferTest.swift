@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import XCTest
 import NIOCore
 import NIOFoundationCompat
+import XCTest
 
 class CodableByteBufferTest: XCTestCase {
     var buffer: ByteBuffer!

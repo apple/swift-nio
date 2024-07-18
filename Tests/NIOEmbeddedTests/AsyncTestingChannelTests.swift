@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Atomics
 import NIOCore
+import XCTest
+
 @testable import NIOEmbedded
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)

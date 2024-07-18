@@ -11,9 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import XCTest
-@testable import NIOCore
+
 import NIOEmbedded
+import XCTest
+
+@testable import NIOCore
 @testable import NIOHTTP1
 
 extension ByteBuffer {

@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOWebSocket
+import XCTest
 
 extension EmbeddedChannel {
     func readAllOutboundBuffers() throws -> ByteBuffer {

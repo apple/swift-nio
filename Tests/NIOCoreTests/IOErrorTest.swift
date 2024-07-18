@@ -14,6 +14,7 @@
 
 //
 import XCTest
+
 @testable import NIOCore
 
 class IOErrorTest: XCTestCase {

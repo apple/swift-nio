@@ -13,9 +13,10 @@
 //===----------------------------------------------------------------------===//
 import Atomics
 import NIOConcurrencyHelpers
-@testable import NIOCore
 import NIOEmbedded
 import XCTest
+
+@testable import NIOCore
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncChannelTests: XCTestCase {

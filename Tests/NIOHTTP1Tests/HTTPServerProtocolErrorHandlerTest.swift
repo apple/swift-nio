@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
+import XCTest
 
 class HTTPServerProtocolErrorHandlerTest: XCTestCase {
     func testHandlesBasicErrors() throws {

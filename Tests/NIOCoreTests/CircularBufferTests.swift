@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 @testable import NIOCore
 
 class CircularBufferTests: XCTestCase {

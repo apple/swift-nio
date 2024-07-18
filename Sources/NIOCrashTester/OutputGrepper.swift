@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIOPosix
 import NIOFoundationCompat
+import NIOPosix
+
 import class Foundation.Pipe
 
 internal struct OutputGrepper {

@@ -12,13 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIOCore
-import NIOEmbedded
-@testable import NIOPosix
-import NIOConcurrencyHelpers
-import NIOTestUtils
 import Dispatch
+import NIOConcurrencyHelpers
+import NIOEmbedded
+import NIOTestUtils
+import XCTest
+
+@testable import NIOCore
+@testable import NIOPosix
 
 class ChannelLifecycleHandler: ChannelInboundHandler {
     public typealias InboundIn = Any

@@ -11,12 +11,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOCore
-import NIOPosix
-import NIOEmbedded
-import NIOHTTP1
-import NIOFoundationCompat
+
 import Dispatch
+import NIOCore
+import NIOEmbedded
+import NIOFoundationCompat
+import NIOHTTP1
+import NIOPosix
 import NIOWebSocket
 
 // Use unbuffered stdout to help detect exactly which test was running in the event of a crash.

@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 import Foundation
+import NIOCore
 
 extension ByteBuffer {
     /// Attempts to decode the `length` bytes from `index` using the `JSONDecoder` `decoder` as `T`.

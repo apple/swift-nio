@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 @testable import NIOPosix
 
 final class IntegerBitPackingTests: XCTestCase {

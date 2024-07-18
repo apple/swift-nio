@@ -11,6 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+import Dispatch
 import NIOCore
 
 /// A DNS resolver built on top of the libc `getaddrinfo` function.
@@ -23,8 +25,6 @@ import NIOCore
 /// needed to implement it.
 ///
 /// This resolver is a single-use object: it can only be used to perform a single host resolution.
-
-import Dispatch
 
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux

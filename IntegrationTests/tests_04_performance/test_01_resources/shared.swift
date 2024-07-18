@@ -14,8 +14,8 @@
 
 import Foundation
 import NIOCore
-import NIOPosix
 import NIOHTTP1
+import NIOPosix
 
 let localhostPickPort = try! SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0)
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)

@@ -11,10 +11,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOCore
-import NIOPosix
-import NIOHTTP1
+
 import NIOConcurrencyHelpers
+import NIOCore
+import NIOHTTP1
+import NIOPosix
 
 private final class BlockingQueue<Element> {
     private let condition = ConditionLock(value: false)

@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
+
 @testable import NIOEmbedded
 
 class ChannelLifecycleHandler: ChannelInboundHandler {

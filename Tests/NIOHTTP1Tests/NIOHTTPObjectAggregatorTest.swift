@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
 import NIOTestUtils
+import XCTest
 
 private final class ReadRecorder<T: Equatable>: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = T

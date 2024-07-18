@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
 import DequeModule
 import Dispatch
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 import _NIODataStructures
-import Atomics
 
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable

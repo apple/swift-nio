@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Dispatch
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
+import XCTest
 
 final class HTTPHeaderValidationTests: XCTestCase {
     func testEncodingInvalidHeaderFieldNamesInRequests() throws {

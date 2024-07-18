@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
+import XCTest
 
 private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboundHandler {
     typealias InboundIn = HTTPPart<Head, Body>

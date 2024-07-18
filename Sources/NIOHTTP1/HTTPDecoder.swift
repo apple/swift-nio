@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 @_implementationOnly import CNIOLLHTTP
+import NIOCore
 
 extension UnsafeMutablePointer where Pointee == llhttp_t {
     /// Returns the `KeepAliveState` for the current message that is parsed.

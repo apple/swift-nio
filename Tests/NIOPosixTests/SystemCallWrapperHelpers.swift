@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+
 #if !RUNNING_INTEGRATION_TESTS
 @testable import NIOPosix
 #endif

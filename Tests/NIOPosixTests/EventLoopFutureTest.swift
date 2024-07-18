@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Dispatch
-@testable import NIOCore
 import NIOEmbedded
 import NIOPosix
+import XCTest
+
+@testable import NIOCore
 
 enum EventLoopFutureTestError: Error {
     case example

@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
-@testable import NIOPosix
+import XCTest
+
 @testable import NIOHTTP1
+@testable import NIOPosix
 
 extension ChannelPipeline {
     fileprivate func assertDoesNotContainUpgrader() throws {

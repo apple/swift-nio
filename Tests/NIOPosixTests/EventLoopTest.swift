@@ -11,13 +11,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import XCTest
-@testable import NIOCore
-import NIOEmbedded
-@testable import NIOPosix
+
 import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
+import NIOEmbedded
+import XCTest
+
+@testable import NIOCore
+@testable import NIOPosix
 
 public final class EventLoopTest: XCTestCase {
 

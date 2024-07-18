@@ -13,11 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
-import NIOConcurrencyHelpers
-import Dispatch
-import _NIODataStructures
-import NIOCore
 import DequeModule
+import Dispatch
+import NIOConcurrencyHelpers
+import NIOCore
+import _NIODataStructures
 
 internal struct EmbeddedScheduledTask {
     let id: UInt64

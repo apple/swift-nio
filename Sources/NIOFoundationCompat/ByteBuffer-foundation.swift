@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 import Foundation
+import NIOCore
 
 /// Errors that may be thrown by ByteBuffer methods that call into Foundation.
 public enum ByteBufferFoundationError: Error {

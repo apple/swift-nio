@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-import NIOConcurrencyHelpers
-import Dispatch
 import Atomics
+import Dispatch
+import NIOConcurrencyHelpers
+import NIOCore
 
 struct NIORegistration: Registration {
     enum ChannelType {

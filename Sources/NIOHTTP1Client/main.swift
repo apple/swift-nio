@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIOPosix
 import NIOHTTP1
+import NIOPosix
 
 print("Please enter line to send to the server")
 let line = readLine(strippingNewline: true)!

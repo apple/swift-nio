@@ -11,8 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOCore
+
 import Atomics
+import NIOCore
 
 private struct PendingDatagramWrite {
     var data: ByteBuffer

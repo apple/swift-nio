@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
+import XCTest
 
 final class DummyFailingHandler1: ChannelInboundHandler {
     typealias InboundIn = NIOAny

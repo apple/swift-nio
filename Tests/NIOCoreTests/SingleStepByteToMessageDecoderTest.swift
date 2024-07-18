@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIOCore
 import NIOEmbedded
+import XCTest
+
+@testable import NIOCore
 
 public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
     private final class ByteToInt32Decoder: NIOSingleStepByteToMessageDecoder {

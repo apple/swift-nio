@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
 import NIOTestUtils
+import XCTest
 
 class HTTPDecoderTest: XCTestCase {
     private var channel: EmbeddedChannel!

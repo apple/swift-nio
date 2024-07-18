@@ -11,9 +11,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+import Dispatch
 import NIOCore
 import NIOPosix
-import Dispatch
 
 private let newLine = "\n".utf8.first!
 

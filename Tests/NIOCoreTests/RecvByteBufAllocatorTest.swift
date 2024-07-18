@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
 
 final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
