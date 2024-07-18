@@ -124,4 +124,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
     - name: Run format check
-      run: swift format lint --strict --recursive --parallel .
+      run: |
+        swift format lint --strict --recursive --parallel .
+        swift format format --parallel --recursive --in-place .
+        git diff-index --quiet HEAD
