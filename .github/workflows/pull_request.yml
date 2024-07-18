@@ -2,8 +2,8 @@ name: Pull Request
 
 on:
   pull_request:
-    types: [opened, reopened, synchronize, ready_for_review]
- 
+    types: [opened, reopened, synchronize]
+
 jobs:
   call-pull-request-soundness-workflow:
     name: Soundness
@@ -18,6 +18,9 @@ jobs:
     with:
       name: "Unit tests"
       matrix_linux_command: "swift test -Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+      # Disable warnings as errors: Swift 6 emits sendability warnings that haven't been dealt with yet.
+      matrix_linux_nightly_main_command_override: "swift test --explicit-target-dependency-import-check error"
+      matrix_linux_nightly_6_0_command_override: "swift test --explicit-target-dependency-import-check error"
 
   call-pull-request-benchmark-workflow:
     name: Benchmarks
