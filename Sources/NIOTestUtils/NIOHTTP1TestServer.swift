@@ -274,8 +274,8 @@ extension NIOHTTP1TestServer {
             switch self.state {
             case .channelsAvailable(let channels):
                 self.state = .stopped
-                channels.forEach {
-                    $0.close(promise: nil)
+                for channel in channels {
+                    channel.close(promise: nil)
                 }
             case .waitingForChannel(let promise):
                 self.state = .stopped

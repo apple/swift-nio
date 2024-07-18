@@ -40,11 +40,9 @@ class BootstrapTest: XCTestCase {
                     XCTFail()
                     return
                 }
-                XCTAssertNoThrow(
-                    try groupBag.forEach {
-                        XCTAssertNoThrow(try $0.syncShutdownGracefully())
-                    }
-                )
+                for group in groupBag {
+                    XCTAssertNoThrow(try group.syncShutdownGracefully())
+                }
                 self.groupBag = nil
                 XCTAssertNotNil(self.group)
             }

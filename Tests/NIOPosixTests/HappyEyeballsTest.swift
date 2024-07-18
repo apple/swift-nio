@@ -35,9 +35,9 @@ private let MANY_IPv4_RESULTS = (1...10).map { SocketAddress(host: "example.com"
 
 extension Array where Element == Channel {
     fileprivate func finishAll() {
-        self.forEach {
+        for element in self {
             do {
-                _ = try ($0 as! EmbeddedChannel).finish()
+                _ = try (element as! EmbeddedChannel).finish()
                 // We're happy with no error
             } catch ChannelError.alreadyClosed {
                 return  // as well as already closed.

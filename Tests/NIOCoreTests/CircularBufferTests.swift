@@ -741,21 +741,33 @@ class CircularBufferTests: XCTestCase {
         for shouldKeepCapacity in [false, true] {
             var ring = CircularBuffer<Int>(initialCapacity: 4)
 
-            (0..<16).forEach { ring.append($0) }
+            for i in (0..<16) {
+                ring.append(i)
+            }
             XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
-            (0..<4).forEach { _ in _ = ring.removeFirst() }
+            for _ in (0..<4) {
+                _ = ring.removeFirst()
+            }
             XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
-            (16..<20).forEach { ring.append($0) }
+            for i in (16..<20) {
+                ring.append(i)
+            }
             XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
             XCTAssertEqual(Array(4..<20), Array(ring))
 
             ring.removeAll(keepingCapacity: shouldKeepCapacity)
 
-            (0..<8).forEach { ring.append($0) }
+            for i in (0..<8) {
+                ring.append(i)
+            }
             XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
-            (0..<4).forEach { _ in _ = ring.removeFirst() }
+            for _ in (0..<4) {
+                _ = ring.removeFirst()
+            }
             XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
-            (8..<64).forEach { ring.append($0) }
+            for i in (8..<64) {
+                ring.append(i)
+            }
             XCTAssertTrue(ring.testOnly_verifyInvariantsForNonSlices())
 
             XCTAssertEqual(Array(4..<64), Array(ring))

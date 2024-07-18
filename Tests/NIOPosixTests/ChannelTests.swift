@@ -763,7 +763,7 @@ public final class ChannelTests: XCTestCase {
             }
             let fileRegion = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 1)
             let ps: [EventLoopPromise<Void>] = (0..<numberOfWrites).map { _ in el.makePromise() }
-            (0..<numberOfWrites).forEach { i in
+            for i in (0..<numberOfWrites) {
                 _ = pwm.add(data: i % 2 == 0 ? .byteBuffer(buffer) : .fileRegion(fileRegion), promise: ps[i])
             }
             pwm.markFlushCheckpoint()
@@ -1201,7 +1201,7 @@ public final class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
-            ps.forEach { p in
+            for p in ps {
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
             }
             pwm.markFlushCheckpoint()
@@ -2193,9 +2193,9 @@ public final class ChannelTests: XCTestCase {
             // a stray client
             XCTAssertNoThrow(try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait())
             XCTAssertNoThrow(try listeningChannel.close().wait())
-            closeFutures.forEach {
+            for future in closeFutures {
                 do {
-                    try $0.wait()
+                    try future.wait()
                     // No error is okay,
                 } catch ChannelError.alreadyClosed {
                     // as well as already closed.

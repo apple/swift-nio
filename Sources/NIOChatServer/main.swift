@@ -114,7 +114,9 @@ final class ChatHandler: ChannelInboundHandler {
     }
 
     private func writeToAll(channels: [ObjectIdentifier: Channel], buffer: ByteBuffer) {
-        channels.forEach { $0.value.writeAndFlush(buffer, promise: nil) }
+        for channel in channels {
+            channel.value.writeAndFlush(buffer, promise: nil)
+        }
     }
 }
 

@@ -1113,9 +1113,9 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.removeHandler(allHandlers[1]).wait())
         XCTAssertNoThrow(try channel.pipeline.removeHandler(context: lastContext).wait())
 
-        allHandlers.forEach {
-            XCTAssertTrue($0.removeHandlerCalled)
-            XCTAssertFalse($0.withinRemoveHandler)
+        for handler in allHandlers {
+            XCTAssertTrue(handler.removeHandlerCalled)
+            XCTAssertFalse(handler.withinRemoveHandler)
         }
     }
 

@@ -883,8 +883,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         self.cancelWritesOnClose(error: error)
 
         // this should be a no-op as we shouldn't have any
-        errorCallouts.forEach {
-            $0(self.pipeline)
+        for callout in errorCallouts {
+            callout(self.pipeline)
         }
 
         if let connectPromise = self.pendingConnect {

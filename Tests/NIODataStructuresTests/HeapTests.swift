@@ -35,14 +35,14 @@ class HeapTests: XCTestCase {
     func testSortedDesc() throws {
         var minHeap = Heap<Int>()
 
-        let input = [16, 14, 10, 9, 8, 7, 4, 3, 2, 1]
-        input.forEach {
-            minHeap.append($0)
+        let inputs = [16, 14, 10, 9, 8, 7, 4, 3, 2, 1]
+        for input in inputs {
+            minHeap.append(input)
             XCTAssertTrue(minHeap.checkHeapProperty())
         }
-        var minHeapInputPtr = input.count - 1
+        var minHeapInputPtr = inputs.count - 1
         while let minE = minHeap.removeRoot() {
-            XCTAssertEqual(minE, input[minHeapInputPtr])
+            XCTAssertEqual(minE, inputs[minHeapInputPtr])
             minHeapInputPtr -= 1
             XCTAssertTrue(minHeap.checkHeapProperty(), "\(minHeap.debugDescription)")
         }
@@ -52,16 +52,16 @@ class HeapTests: XCTestCase {
     func testSortedAsc() throws {
         var minHeap = Heap<Int>()
 
-        let input = Array([16, 14, 10, 9, 8, 7, 4, 3, 2, 1].reversed())
-        input.forEach {
-            minHeap.append($0)
+        let inputs = Array([16, 14, 10, 9, 8, 7, 4, 3, 2, 1].reversed())
+        for input in inputs {
+            minHeap.append(input)
         }
         var minHeapInputPtr = 0
         while let minE = minHeap.removeRoot() {
-            XCTAssertEqual(minE, input[minHeapInputPtr])
+            XCTAssertEqual(minE, inputs[minHeapInputPtr])
             minHeapInputPtr += 1
         }
-        XCTAssertEqual(input.count, minHeapInputPtr)
+        XCTAssertEqual(inputs.count, minHeapInputPtr)
     }
 
     func testAddAndRemoveRandomNumbers() throws {

@@ -364,8 +364,8 @@ class SelectorTest: XCTestCase {
                         SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse,
                         numberOfConnectedChannels.value
                     )
-                    self.allServerChannels.value.forEach { c in
-                        c.close(promise: nil)
+                    for channel in self.allServerChannels.value {
+                        channel.close(promise: nil)
                     }
                 }
             }
@@ -390,30 +390,32 @@ class SelectorTest: XCTestCase {
                     .wait()
 
                 let everythingWasReadPromise = el.makePromise(of: Void.self)
-                XCTAssertNoThrow(
-                    try el.submit { () -> [EventLoopFuture<Channel>] in
-                        (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map
-                        { (_: Int) in
-                            ClientBootstrap(group: el)
-                                .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-                                .channelInitializer { channel in
-                                    channel.pipeline.addHandler(
-                                        CloseEveryOtherAndOpenNewOnesHandler(
-                                            allChannels: allChannels,
-                                            hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
-                                            serverAddress: secondServerChannel.localAddress!,
-                                            everythingWasReadPromise: everythingWasReadPromise
-                                        )
+                let futures = try el.submit { () -> [EventLoopFuture<Channel>] in
+                    (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map {
+                        (_: Int) in
+                        ClientBootstrap(group: el)
+                            .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+                            .channelInitializer { channel in
+                                channel.pipeline.addHandler(
+                                    CloseEveryOtherAndOpenNewOnesHandler(
+                                        allChannels: allChannels,
+                                        hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
+                                        serverAddress: secondServerChannel.localAddress!,
+                                        everythingWasReadPromise: everythingWasReadPromise
                                     )
-                                }
-                                .connect(to: secondServerChannel.localAddress!)
-                                .map { channel in
-                                    numberOfConnectedChannels.value += 1
-                                    return channel
-                                }
-                        }
-                    }.wait().forEach { XCTAssertNoThrow(try $0.wait()) } as Void
-                )
+                                )
+                            }
+                            .connect(to: secondServerChannel.localAddress!)
+                            .map { channel in
+                                numberOfConnectedChannels.value += 1
+                                return channel
+                            }
+                    }
+                }.wait()
+                for future in futures {
+                    XCTAssertNoThrow(try future.wait())
+                }
+
                 XCTAssertNoThrow(try everythingWasReadPromise.futureResult.wait())
             }
         )

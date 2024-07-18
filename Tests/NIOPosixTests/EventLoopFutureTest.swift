@@ -536,7 +536,7 @@ class EventLoopFutureTest: XCTestCase {
         let n = 20
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         var prev: EventLoopFuture<Int> = elg.next().makeSucceededFuture(0)
-        (1..<20).forEach { (i: Int) in
+        for i in (1..<20) {
             let p = elg.next().makePromise(of: Int.self)
             prev.flatMap { (i2: Int) -> EventLoopFuture<Int> in
                 XCTAssertEqual(i - 1, i2)
@@ -558,7 +558,7 @@ class EventLoopFutureTest: XCTestCase {
         let n = 20
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         var prev: EventLoopFuture<Int> = elg.next().makeSucceededFuture(0)
-        (1..<n).forEach { (i: Int) in
+        for i in (1..<n) {
             let p = elg.next().makePromise(of: Int.self)
             prev.flatMap { (i2: Int) -> EventLoopFuture<Int> in
                 XCTAssertEqual(i - 1, i2)
@@ -589,9 +589,9 @@ class EventLoopFutureTest: XCTestCase {
             elg.next().makePromise()
         }
         let allOfEm = EventLoopFuture.andAllSucceed(ps.map { $0.futureResult }, on: elg.next())
-        ps.reversed().forEach { p in
+        for promise in ps.reversed() {
             DispatchQueue.global().async {
-                p.succeed(())
+                promise.succeed(())
             }
         }
         try allOfEm.wait()
@@ -607,12 +607,12 @@ class EventLoopFutureTest: XCTestCase {
             elg.next().makePromise()
         }
         let allOfEm = EventLoopFuture.andAllSucceed(ps.map { $0.futureResult }, on: fireBackEl.next())
-        ps.reversed().enumerated().forEach { idx, p in
+        for (index, promise) in ps.reversed().enumerated() {
             DispatchQueue.global().async {
-                if idx == n / 2 {
-                    p.fail(DummyError.dummy)
+                if index == n / 2 {
+                    promise.fail(DummyError.dummy)
                 } else {
-                    p.succeed(())
+                    promise.succeed(())
                 }
             }
         }

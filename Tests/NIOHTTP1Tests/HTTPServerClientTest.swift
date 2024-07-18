@@ -25,7 +25,7 @@ extension Array where Array.Element == ByteBuffer {
     public func allAsBytes() -> [UInt8] {
         var out: [UInt8] = []
         out.reserveCapacity(self.reduce(0, { $0 + $1.readableBytes }))
-        self.forEach { bb in
+        for bb in self {
             bb.withUnsafeReadableBytes { ptr in
                 out.append(contentsOf: ptr)
             }

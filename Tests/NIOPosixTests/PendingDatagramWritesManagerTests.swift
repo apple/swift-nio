@@ -474,7 +474,9 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0...pwm.writeSpinCount + 1).map { (_: UInt) in el.makePromise() }
-            ps.forEach { _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: $0) }
+            for promise in ps {
+                _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: promise)
+            }
             let maxVectorWritabilities = ps.map { (_: EventLoopPromise<Void>) in (buffer.readableBytes, address) }
             let actualVectorWritabilities = maxVectorWritabilities.indices.dropLast().map {
                 Array(maxVectorWritabilities[$0...])
@@ -719,8 +721,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
 
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
-            ps.forEach { p in
-                _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: p)
+            for promise in ps {
+                _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: promise)
             }
             pwm.markFlushCheckpoint()
 

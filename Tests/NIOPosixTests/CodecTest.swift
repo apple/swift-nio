@@ -984,7 +984,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         channel.embeddedEventLoop.run()
         XCTAssertEqual(1, handler.decoder?.callsToDecode)
         XCTAssertEqual(2, handler.decoder?.callsToDecodeLast)
-        ["0", "1234#1", "5678#2"].forEach { expected in
+        for expected in ["0", "1234#1", "5678#2"] {
             func workaroundSR9815() {
                 XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readInbound()))
             }

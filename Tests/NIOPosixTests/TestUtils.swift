@@ -61,8 +61,8 @@ func withPipe(_ body: (NIOCore.NIOFileHandle, NIOCore.NIOFileHandle) throws -> [
     } catch let err {
         error = err
     }
-    try toClose.forEach { fh in
-        XCTAssertNoThrow(try fh.close())
+    for fileHandle in toClose {
+        XCTAssertNoThrow(try fileHandle.close())
     }
     if let error = error {
         throw error
@@ -86,8 +86,8 @@ func withPipe(
     } catch let err {
         error = err
     }
-    try toClose.forEach { fh in
-        XCTAssertNoThrow(try fh.close())
+    for fileHandle in toClose {
+        try fileHandle.close()
     }
     if let error = error {
         throw error

@@ -57,10 +57,12 @@ class PriorityQueueTest: XCTestCase {
         for size in 0...33 {
             var pq = PriorityQueue<UInt8>()
             let randoms = getRandomNumbers(count: size)
-            randoms.forEach { pq.push($0) }
+            for number in randoms {
+                pq.push(number)
+            }
 
             // remove one random member, add it back and assert we're still the same
-            randoms.forEach { random in
+            for random in randoms {
                 var pq2 = pq
                 pq2.remove(random)
                 XCTAssertEqual(pq.count - 1, pq2.count)
@@ -78,7 +80,9 @@ class PriorityQueueTest: XCTestCase {
                 }
                 XCTAssertEqual(pq.count - n, pq2.count)
                 XCTAssertNotEqual(pq, pq2)
-                deleted.reversed().forEach { pq2.push($0) }
+                for number in deleted.reversed() {
+                    pq2.push(number)
+                }
                 XCTAssertEqual(pq, pq2, "pq: \(pq), pq2: \(pq2), deleted: \(deleted)")
             }
         }
@@ -101,8 +105,8 @@ class PriorityQueueTest: XCTestCase {
         pq.push(clearlyTheLargest)
         pq.push(inTheMiddles[0])
         pq.push(clearlyTheSmallest)
-        inTheMiddles[1...].forEach {
-            pq.push($0)
+        for number in inTheMiddles[1...] {
+            pq.push(number)
         }
         let pop1 = pq.pop()
         XCTAssertEqual(clearlyTheSmallest, pop1)

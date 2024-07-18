@@ -46,7 +46,7 @@ final class RunIfActiveBenchmark: Benchmark {
             }
         }
 
-        (0..<self.numTasks).forEach { _ in
+        for _ in (0..<self.numTasks) {
             semaphore.signal()
         }
 

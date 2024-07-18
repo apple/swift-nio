@@ -126,10 +126,12 @@ public final class NIOThreadPool {
             case .running(let items):
                 self.state = .modifying
                 queue.async {
-                    items.forEach { $0.workItem(.cancelled) }
+                    for item in items {
+                        item.workItem(.cancelled)
+                    }
                 }
                 self.state = .shuttingDown(Array(repeating: true, count: numberOfThreads))
-                (0..<numberOfThreads).forEach { _ in
+                for _ in (0..<numberOfThreads) {
                     self.semaphore.signal()
                 }
                 let threads = self.threads!
@@ -145,7 +147,9 @@ public final class NIOThreadPool {
         }
 
         DispatchQueue(label: "io.swiftnio.NIOThreadPool.shutdownGracefully").async {
-            threadsToJoin.forEach { $0.join() }
+            for thread in threadsToJoin {
+                thread.join()
+            }
             queue.async {
                 callback(nil)
             }

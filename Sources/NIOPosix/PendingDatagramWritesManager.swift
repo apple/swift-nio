@@ -345,7 +345,9 @@ private struct PendingDatagramWritesState {
             w.promise.map { promises.append($0) }
         }
 
-        promises.forEach { $0.fail(error) }
+        for promise in promises {
+            promise.fail(error)
+        }
     }
 
     /// Returns the best mechanism to write pending data at the current point in time.

@@ -444,9 +444,9 @@ public final class EventLoopTest: XCTestCase {
 
         var counter = 0
         var innerCounter = 0
-        eventLoopGroup.makeIterator().forEach { loop in
+        for loop in eventLoopGroup.makeIterator() {
             counter += 1
-            loop.makeIterator().forEach { _ in
+            for _ in loop.makeIterator() {
                 innerCounter += 1
             }
         }
@@ -463,7 +463,7 @@ public final class EventLoopTest: XCTestCase {
         }
 
         var counter = 0
-        iterator.forEach { loop in
+        for loop in iterator {
             XCTAssertTrue(loop === eventLoop)
             counter += 1
         }
@@ -619,7 +619,9 @@ public final class EventLoopTest: XCTestCase {
 
         // Now let it close.
         promiseQueue.sync {
-            promises.forEach { $0.succeed(()) }
+            for promise in promises {
+                promise.succeed(())
+            }
         }
         XCTAssertNoThrow(g.wait())
     }
@@ -1680,7 +1682,7 @@ public final class EventLoopTest: XCTestCase {
             let el2 = group.any()
             XCTAssert(el1 !== el2)  // our group doesn't support `any()` and will fall back to `next()`.
         }
-        group.makeIterator().forEach { el in
+        for el in group.makeIterator() {
             (el as! EmbeddedEventLoop).run()
         }
         XCTAssertNoThrow(try submitDone.wait())
@@ -1781,7 +1783,7 @@ public final class EventLoopTest: XCTestCase {
         eventLoop.execute {
             // SelectableEventLoop runs batches of up to 4096.
             // Submit significantly over that for good measure.
-            (0..<10000).forEach { _ in
+            for _ in (0..<10000) {
                 eventLoop.execute(reExecuteTask)
             }
         }
@@ -1830,7 +1832,7 @@ public final class EventLoopTest: XCTestCase {
         var achieved = Counter()
         var immediateTasks = [EventLoopFuture<Void>]()
         var scheduledTasks = [Scheduled<Void>]()
-        (0..<100_000).forEach { _ in
+        for _ in (0..<100_000) {
             if Bool.random() {
                 let task = eventLoop.submit {
                     achieved.submitCount += 1
@@ -1873,7 +1875,7 @@ public final class EventLoopTest: XCTestCase {
         let (immediateTasks, scheduledTasks) = try eventLoop.submit {
             var immediateTasks = [EventLoopFuture<Void>]()
             var scheduledTasks = [Scheduled<Void>]()
-            (0..<100_000).forEach { _ in
+            for _ in (0..<100_000) {
                 if Bool.random() {
                     let task = eventLoop.submit {
                         achieved.submitCount += 1
@@ -2039,7 +2041,7 @@ final class EventLoopGroupOf3WithoutAnAnyImplementation: EventLoopGroup {
     func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         let g = DispatchGroup()
 
-        self.eventloops.forEach { el in
+        for el in self.eventloops {
             g.enter()
             el.shutdownGracefully(queue: queue) { error in
                 XCTAssertNil(error)

@@ -698,8 +698,8 @@ class HTTPDecoderTest: XCTestCase {
             channel.pipeline.syncOperations.removeHandler(decoder),
         ]
         channel.embeddedEventLoop.run()
-        try removalFutures.forEach {
-            XCTAssertNoThrow(try $0.wait())
+        for future in try removalFutures {
+            XCTAssertNoThrow(try future.wait())
         }
         XCTAssertNoThrow(
             XCTAssertEqual(
@@ -743,8 +743,8 @@ class HTTPDecoderTest: XCTestCase {
             channel.pipeline.syncOperations.removeHandler(decoder),
         ]
         channel.embeddedEventLoop.run()
-        try removalFutures.forEach {
-            XCTAssertNoThrow(try $0.wait())
+        for future in removalFutures {
+            XCTAssertNoThrow(try future.wait())
         }
         XCTAssertThrowsError(try channel.throwIfErrorCaught()) { error in
             switch error as? ByteToMessageDecoderError {
@@ -790,8 +790,8 @@ class HTTPDecoderTest: XCTestCase {
             channel.pipeline.syncOperations.removeHandler(decoder),
         ]
         channel.embeddedEventLoop.run()
-        try removalFutures.forEach {
-            XCTAssertNoThrow(try $0.wait())
+        for future in removalFutures {
+            XCTAssertNoThrow(try future.wait())
         }
         XCTAssertNoThrow(XCTAssert(try channel.finish().isClean))
     }

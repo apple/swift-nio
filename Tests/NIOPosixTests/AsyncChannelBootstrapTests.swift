@@ -742,7 +742,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
             throw error
         }
 
@@ -756,7 +758,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe1WriteFD, pipe2ReadFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe1WriteFD, pipe2ReadFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
             throw error
         }
 
@@ -770,7 +774,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe2ReadFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe2ReadFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
             throw error
         }
 
@@ -810,7 +816,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe1ReadFD, pipe1WriteFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe1ReadFD, pipe1WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
             throw error
         }
 
@@ -824,7 +832,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe1WriteFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe1WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
             throw error
         }
 
@@ -861,7 +871,10 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe1ReadFD, pipe1WriteFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe1ReadFD, pipe1WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
+
             throw error
         }
 
@@ -875,7 +888,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe1WriteFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe1WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
             throw error
         }
 
@@ -915,7 +930,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
             throw error
         }
 
@@ -929,7 +946,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe1WriteFD, pipe2ReadFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe1WriteFD, pipe2ReadFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
             throw error
         }
 
@@ -943,7 +962,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     }
                 }
         } catch {
-            try [pipe2ReadFD].forEach { try SystemCalls.close(descriptor: $0) }
+            for fileDescriptor in [pipe2ReadFD] {
+                try SystemCalls.close(descriptor: fileDescriptor)
+            }
             throw error
         }
 
@@ -965,7 +986,9 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                             XCTAssertEqual(response, expectedResponse)
                         } catch {
                             // We only got to close the FDs that are not owned by the PipeChannel
-                            [pipe1WriteFD, pipe2ReadFD].forEach { try? SystemCalls.close(descriptor: $0) }
+                            for fileDescriptor in [pipe1WriteFD, pipe2ReadFD] {
+                                try? SystemCalls.close(descriptor: fileDescriptor)
+                            }
                             throw error
                         }
                     }

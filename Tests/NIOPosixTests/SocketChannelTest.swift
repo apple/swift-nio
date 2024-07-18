@@ -22,7 +22,7 @@ import XCTest
 extension Array {
     /// A helper function that asserts that a predicate is true for all elements.
     fileprivate func assertAll(_ predicate: (Element) -> Bool) {
-        self.enumerated().forEach { (index: Int, element: Element) in
+        for (index, element) in self.enumerated() {
             if !predicate(element) {
                 XCTFail("Entry \(index) failed predicate, contents: \(element)")
             }

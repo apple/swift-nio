@@ -114,7 +114,9 @@ class FileRegionTest: XCTestCase {
                 futures.append(clientChannel.write(NIOAny(fr)))
             }
             try clientChannel.writeAndFlush(NIOAny(fr)).wait()
-            try futures.forEach { try $0.wait() }
+            for future in futures {
+                try future.wait()
+            }
         }
     }
 

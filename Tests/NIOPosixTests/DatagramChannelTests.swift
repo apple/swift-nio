@@ -242,13 +242,11 @@ class DatagramChannelTests: XCTestCase {
         }.wait()
         XCTAssertTrue(fulfilled)
 
-        XCTAssertNoThrow(
-            try promises.forEach {
-                XCTAssertThrowsError(try $0.wait()) { error in
-                    XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
-                }
+        for promise in promises {
+            XCTAssertThrowsError(try promise.wait()) { error in
+                XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
             }
-        )
+        }
     }
 
     func testManyManyDatagramWrites() throws {

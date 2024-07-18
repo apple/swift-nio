@@ -71,7 +71,9 @@ extension NIOThread {
             CNIOLinux_CPU_ZERO(&cpuset)
 
             // Mark the CPU we want to run on.
-            cpuSet.cpuIds.forEach { CNIOLinux_CPU_SET(CInt($0), &cpuset) }
+            for cpuID in cpuSet.cpuIds {
+                CNIOLinux_CPU_SET(CInt(cpuID), &cpuset)
+            }
             let res = self.withUnsafeThreadHandle { p in
                 CNIOLinux_pthread_setaffinity_np(p, MemoryLayout.size(ofValue: cpuset), &cpuset)
             }
