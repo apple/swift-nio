@@ -46,7 +46,7 @@ internal struct Base64 {
         // In Base64, 3 bytes become 4 output characters, and we pad to the
         // nearest multiple of four.
         let base64StringLength = ((bytes.count + 2) / 3) * 4
-        let alphabet = Base64.encodeBase64
+        let alphabet = Base64.encodingTable
 
         return String(customUnsafeUninitializedCapacity: base64StringLength) { backingStorage in
             var input = bytes.makeIterator()
@@ -85,8 +85,8 @@ internal struct Base64 {
         // Go over the encoded string in groups of 4 characters,
         // and build groups of 3 bytes from them.
         for i in stride(from: 0, to: bytes.count, by: 4) {
-            guard let byte0Index = Base64.encodeBase64.firstIndex(of: bytes[i]),
-                let byte1Index = Base64.encodeBase64.firstIndex(of: bytes[i + 1])
+            guard let byte0Index = Base64.encodingTable.firstIndex(of: bytes[i]),
+                let byte1Index = Base64.encodingTable.firstIndex(of: bytes[i + 1])
             else {
                 throw Base64Error.invalidCharacter
             }
@@ -96,7 +96,7 @@ internal struct Base64 {
 
             // Check if the 3rd char is not a padding character, and decode the 2nd byte
             if bytes[i + 2] != Base64.encodePaddingCharacter {
-                guard let byte2Index = Base64.encodeBase64.firstIndex(of: bytes[i + 2]) else {
+                guard let byte2Index = Base64.encodingTable.firstIndex(of: bytes[i + 2]) else {
                     throw Base64Error.invalidCharacter
                 }
 
@@ -106,8 +106,8 @@ internal struct Base64 {
 
             // Check if the 4th character is not a padding, and decode the 3rd byte
             if bytes[i + 3] != Base64.encodePaddingCharacter {
-                guard let byte3Index = Base64.encodeBase64.firstIndex(of: bytes[i + 3]),
-                    let byte2Index = Base64.encodeBase64.firstIndex(of: bytes[i + 2])
+                guard let byte3Index = Base64.encodingTable.firstIndex(of: bytes[i + 3]),
+                    let byte2Index = Base64.encodingTable.firstIndex(of: bytes[i + 2])
                 else {
                     throw Base64Error.invalidCharacter
                 }
@@ -122,7 +122,7 @@ internal struct Base64 {
 
     // The base64 unicode table.
     @usableFromInline
-    static let encodeBase64: [UInt8] = [
+    static let encodingTable: [UInt8] = [
         UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"),
         UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"),
         UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"),

@@ -54,6 +54,7 @@ extension MultiThreadedEventLoopGroup {
     }
 }
 
+// swift-format-ignore: DontRepeatTypeInStaticProperties
 extension EventLoopGroup where Self == MultiThreadedEventLoopGroup {
     /// A globally shared, singleton ``MultiThreadedEventLoopGroup``.
     ///
