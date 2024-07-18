@@ -46,5 +46,5 @@
     "schedule_and_run_10000_tasks": 50050,
     "scheduling_10000_executions": 89,
     "udp_1000_reqs_1_conn": 6200,
-    "udp_1_reqs_1000_conn": 165050
+    "udp_1_reqs_1000_conn": 162050
 }
