@@ -251,7 +251,8 @@ public final class EventLoopTest: XCTestCase {
     public func testScheduleRepeatedTaskCancelFromDifferentThread() throws {
         let nanos: NIODeadline = .now()
         let initialDelay: TimeAmount = .milliseconds(5)
-        let delay: TimeAmount = .milliseconds(0)  // this will actually force the race from issue #554 to happen frequently
+        // this will actually force the race from issue #554 to happen frequently
+        let delay: TimeAmount = .milliseconds(0)
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try eventLoopGroup.syncShutdownGracefully())
@@ -1680,7 +1681,8 @@ public final class EventLoopTest: XCTestCase {
         let submitDone = group.any().submit {
             let el1 = group.any()
             let el2 = group.any()
-            XCTAssert(el1 !== el2)  // our group doesn't support `any()` and will fall back to `next()`.
+            // our group doesn't support `any()` and will fall back to `next()`.
+            XCTAssert(el1 !== el2)
         }
         for el in group.makeIterator() {
             (el as! EmbeddedEventLoop).run()
@@ -1703,10 +1705,14 @@ public final class EventLoopTest: XCTestCase {
                 let el2_1 = group2.any()
                 let el2_2 = group2.any()
 
-                XCTAssert(el1_1 === el1_2)  // MTELG _does_ supprt `any()` so all these `EventLoop`s should be the same.
-                XCTAssert(el2_1 !== el2_2)  // MTELG _does_ supprt `any()` but this `any()` call went across `group`s.
-                XCTAssert(el1_1 !== el2_1)  // different groups...
-                XCTAssert(el1_1 !== el2_2)  // different groups...
+                // MTELG _does_ supprt `any()` so all these `EventLoop`s should be the same.
+                XCTAssert(el1_1 === el1_2)
+                // MTELG _does_ supprt `any()` but this `any()` call went across `group`s.
+                XCTAssert(el2_1 !== el2_2)
+                // different groups...
+                XCTAssert(el1_1 !== el2_1)
+                // different groups...
+                XCTAssert(el1_1 !== el2_2)
 
                 XCTAssert(el1_1 === MultiThreadedEventLoopGroup.currentEventLoop!)
             }.wait()

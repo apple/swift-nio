@@ -1408,7 +1408,8 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         }
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
-        XCTAssertNoThrow(try channel.writeInbound(buffer))  // this will go through because the decoder is already 'done'
+        // this will go through because the decoder is already 'done'
+        XCTAssertNoThrow(try channel.writeInbound(buffer))
     }
 
     func testBasicLifecycle() {

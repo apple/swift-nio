@@ -71,7 +71,8 @@ extension KQueueEventFilterSet {
         // we only use three filters (EVFILT_READ, EVFILT_WRITE and EVFILT_EXCEPT) so the number of changes would be 3.
         var kevents = KeventTriple()
 
-        let differences = previousKQueueFilterSet.symmetricDifference(self)  // contains all the events that need a change (either need to be added or removed)
+        // contains all the events that need a change (either need to be added or removed)
+        let differences = previousKQueueFilterSet.symmetricDifference(self)
 
         func calculateKQueueChange(event: KQueueEventFilterSet) -> UInt16? {
             guard differences.contains(event) else {

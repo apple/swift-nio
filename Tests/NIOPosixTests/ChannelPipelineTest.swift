@@ -1533,20 +1533,24 @@ class ChannelPipelineTest: XCTestCase {
         // And now close
         operations.close(promise: nil)
 
+        // EmbeddedChannel itself does one, we did the other.
         XCTAssertEqual(eventCounter.bindCalls, 1)
         XCTAssertEqual(eventCounter.channelActiveCalls, 2)
-        XCTAssertEqual(eventCounter.channelInactiveCalls, 2)  // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.channelInactiveCalls, 2)
         XCTAssertEqual(eventCounter.channelReadCalls, 1)
         XCTAssertEqual(eventCounter.channelReadCompleteCalls, 1)
-        XCTAssertEqual(eventCounter.channelRegisteredCalls, 3)  // EmbeddedChannel itself does one, we did the other two.
-        XCTAssertEqual(eventCounter.channelUnregisteredCalls, 2)  // EmbeddedChannel itself does one, we did the other.
+        // EmbeddedChannel itself does one, we did the other two.
+        XCTAssertEqual(eventCounter.channelRegisteredCalls, 3)
+        // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.channelUnregisteredCalls, 2)
         XCTAssertEqual(eventCounter.channelWritabilityChangedCalls, 1)
         XCTAssertEqual(eventCounter.closeCalls, 1)
         XCTAssertEqual(eventCounter.connectCalls, 1)
         XCTAssertEqual(eventCounter.errorCaughtCalls, 1)
         XCTAssertEqual(eventCounter.flushCalls, 2)  // flush, and writeAndFlush
         XCTAssertEqual(eventCounter.readCalls, 1)
-        XCTAssertEqual(eventCounter.registerCalls, 2)  // EmbeddedChannel itself does one, we did the other.
+        // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.registerCalls, 2)
         XCTAssertEqual(eventCounter.triggerUserOutboundEventCalls, 1)
         XCTAssertEqual(eventCounter.userInboundEventTriggeredCalls, 1)
         XCTAssertEqual(eventCounter.writeCalls, 2)  // write, and writeAndFlush

@@ -480,7 +480,8 @@ extension ByteBuffer {
     /// - returns: A `ByteBuffer` sharing storage containing the readable bytes only.
     @inlinable
     public func slice() -> ByteBuffer {
-        self.getSlice(at: self.readerIndex, length: self.readableBytes)!  // must work, bytes definitely in the buffer// must work, bytes definitely in the buffer
+        // must work, bytes definitely in the buffer// must work, bytes definitely in the buffer
+        self.getSlice(at: self.readerIndex, length: self.readableBytes)!
     }
 
     /// Slice `length` bytes off this `ByteBuffer` and move the reader index forward by `length`.

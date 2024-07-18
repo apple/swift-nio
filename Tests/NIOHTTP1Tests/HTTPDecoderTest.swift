@@ -209,8 +209,9 @@ class HTTPDecoderTest: XCTestCase {
             "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\nXXXX"
         )
 
+        // allow the event loop to run (removal is not synchronous here)
         XCTAssertNoThrow(try channel.writeInbound(buffer))
-        (channel.eventLoop as! EmbeddedEventLoop).run()  // allow the event loop to run (removal is not synchronous here)
+        (channel.eventLoop as! EmbeddedEventLoop).run()
         XCTAssertNoThrow(
             try channel.pipeline.assertDoesNotContain(handlerType: ByteToMessageHandler<HTTPRequestDecoder>.self)
         )
@@ -267,7 +268,8 @@ class HTTPDecoderTest: XCTestCase {
         )
         XCTAssertNoThrow(try channel.pipeline.addHandler(Receiver()).wait())
 
-        // This connect call is semantically wrong, but it's how you active embedded channels properly right now.
+        // This connect call is semantically wrong, but it's how you
+        // active embedded channels properly right now.
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 8888)).wait())
 
         var buffer = channel.allocator.buffer(capacity: 64)
@@ -276,7 +278,8 @@ class HTTPDecoderTest: XCTestCase {
         )
 
         XCTAssertNoThrow(try channel.writeInbound(buffer))
-        (channel.eventLoop as! EmbeddedEventLoop).run()  // allow the event loop to run (removal is not synchrnous here)
+        // allow the event loop to run (removal is not synchrnous here)
+        (channel.eventLoop as! EmbeddedEventLoop).run()
         XCTAssertNoThrow(
             try channel.pipeline.assertDoesNotContain(handlerType: ByteToMessageHandler<HTTPRequestDecoder>.self)
         )
@@ -348,7 +351,8 @@ class HTTPDecoderTest: XCTestCase {
         )
 
         XCTAssertNoThrow(try channel.writeInbound(buffer))
-        (channel.eventLoop as! EmbeddedEventLoop).run()  // allow the event loop to run (removal is not synchrnous here)
+        // allow the event loop to run (removal is not synchronous here)
+        (channel.eventLoop as! EmbeddedEventLoop).run()
         XCTAssertNoThrow(
             try channel.pipeline.assertDoesNotContain(handlerType: ByteToMessageHandler<HTTPRequestDecoder>.self)
         )

@@ -767,7 +767,8 @@ extension EventLoopFuture {
 
     /// Add a callback.  If there's already a value, run as much of the chain as we can.
     @inlinable
-    @preconcurrency  // TODO: We want to remove @preconcurrency but it results in more allocations in 1000_udpconnections
+    // TODO: We want to remove @preconcurrency but it results in more allocations in 1000_udpconnections
+    @preconcurrency
     internal func _whenComplete(_ callback: @escaping @Sendable () -> CallbackList) {
         self._internalWhenComplete(callback)
     }

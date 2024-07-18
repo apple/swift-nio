@@ -169,7 +169,9 @@ public final class SNIHandler: ByteToMessageDecoder {
         //
         // From this point onwards if we don't have enough data to satisfy a read, this is an error and
         // we will fall back to let the upper layers handle it.
-        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))!  // length check above
+
+        // length check above
+        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))!
 
         // Now parse the handshake header. If the length of the handshake message is not exactly the
         // length of this record, something has gone wrong and we should give up.

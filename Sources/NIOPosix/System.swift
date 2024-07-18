@@ -96,7 +96,8 @@ func sysRecvFrom_wrapper(
     src_addr: UnsafeMutablePointer<sockaddr>,
     addrlen: UnsafeMutablePointer<socklen_t>
 ) -> CLong {
-    recvfrom(sockfd, buf, len, flags, src_addr, addrlen)  // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
+    // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
+    recvfrom(sockfd, buf, len, flags, src_addr, addrlen)
     // src_addr is 'UnsafeMutablePointer', but it need to be 'UnsafePointer'
 }
 func sysWritev_wrapper(fd: CInt, iov: UnsafePointer<iovec>?, iovcnt: CInt) -> CLong {

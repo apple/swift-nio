@@ -247,7 +247,8 @@ class BaseSocket: BaseSocketProtocol {
         do {
             try self.ignoreSIGPIPE()
         } catch {
-            self.descriptor = NIOBSDSocket.invalidHandle  // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
+            // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
+            self.descriptor = NIOBSDSocket.invalidHandle
             throw error
         }
     }

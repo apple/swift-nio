@@ -44,7 +44,8 @@ extension TimeAmount {
 // for the type of event issued (poll/modify/delete).
 @usableFromInline struct URingUserData {
     @usableFromInline var fileDescriptor: CInt
-    @usableFromInline var registrationID: UInt16  // SelectorRegistrationID truncated, only have room for bottom 16 bits (could be expanded to 24 if required)
+    // SelectorRegistrationID truncated, only have room for bottom 16 bits (could be expanded to 24 if required)
+    @usableFromInline var registrationID: UInt16
     @usableFromInline var eventType: CQEEventType
     @usableFromInline var padding: Int8  // reserved for future use
 
@@ -112,7 +113,8 @@ final internal class URing {
     internal static let POLLERR: CUnsignedInt = numericCast(CNIOLinux.POLLERR)
     internal static let POLLRDHUP: CUnsignedInt = CNIOLinux_POLLRDHUP()  // numericCast(CNIOLinux.POLLRDHUP)
     internal static let POLLHUP: CUnsignedInt = numericCast(CNIOLinux.POLLHUP)
-    internal static let POLLCANCEL: CUnsignedInt = 0xF000_0000  // Poll cancelled, need to reregister for singleshot polls
+    // Poll cancelled, need to reregister for singleshot polls
+    internal static let POLLCANCEL: CUnsignedInt = 0xF000_0000
 
     private var ring = io_uring()
     private let ringEntries: CUnsignedInt = 8192
@@ -276,10 +278,12 @@ final internal class URing {
 
         self.withSQE { sqe in
             CNIOLinux.io_uring_prep_poll_add(sqe, fileDescriptor, pollMask)
-            CNIOLinux.io_uring_sqe_set_data(sqe, bitpatternAsPointer)  // must be done after prep_poll_add, otherwise zeroed out.
+            // must be done after prep_poll_add, otherwise zeroed out.
+            CNIOLinux.io_uring_sqe_set_data(sqe, bitpatternAsPointer)
 
             if multishot {
-                sqe!.pointee.len |= IORING_POLL_ADD_MULTI  // turn on multishots, set through environment variable
+                // turn on multishots, set through environment variable
+                sqe!.pointee.len |= IORING_POLL_ADD_MULTI
             }
         }
 
@@ -316,7 +320,8 @@ final internal class URing {
 
         self.withSQE { sqe in
             CNIOLinux.io_uring_prep_poll_remove(sqe, .init(userData: bitPattern))
-            CNIOLinux.io_uring_sqe_set_data(sqe, .init(userData: userbitPattern))  // must be done after prep_poll_add, otherwise zeroed out.
+            // must be done after prep_poll_add, otherwise zeroed out.
+            CNIOLinux.io_uring_sqe_set_data(sqe, .init(userData: userbitPattern))
 
             if link {
                 CNIOLinux_io_uring_set_link_flag(sqe)

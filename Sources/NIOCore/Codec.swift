@@ -332,7 +332,8 @@ extension B2MDBuffer {
         } else {
             buffer.discardReadBytes()
             buffer.writeBuffers(self.buffers)
-            self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16)  // don't grow too much
+            // don't grow too much
+            self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16)
             self.buffers.append(buffer)
         }
     }
@@ -458,12 +459,15 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
         }
     }
 
-    internal private(set) var decoder: Decoder?  // only `nil` if we're already decoding (ie. we're re-entered)
+    // only `nil` if we're already decoding (ie. we're re-entered)
+    internal private(set) var decoder: Decoder?
     private let maximumBufferSize: Int?
-    private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1)  // queues writes received whilst we're already decoding (re-entrant write)
+    // queues writes received whilst we're already decoding (re-entrant write)
+    private var queuedWrites = CircularBuffer<NIOAny>(initialCapacity: 1)
     private var state: State = .active {
         willSet {
-            assert(!self.state.isFinalState, "illegal state on state set: \(self.state)")  // we can never leave final states
+            // we can never leave final states
+            assert(!self.state.isFinalState, "illegal state on state set: \(self.state)")
         }
     }
     private var removalState: RemovalState = .notAddedToPipeline
@@ -538,7 +542,8 @@ extension ByteToMessageHandler {
             var possiblyReclaimBytes = false
             var decoder: Decoder? = nil
             swap(&decoder, &self.decoder)
-            assert(decoder != nil)  // self.decoder only `nil` if we're being re-entered, but .available means we're not
+            // self.decoder only `nil` if we're being re-entered, but .available means we're not
+            assert(decoder != nil)
             defer {
                 swap(&decoder, &self.decoder)
                 if buffer.readableBytes > 0 && possiblyReclaimBytes {

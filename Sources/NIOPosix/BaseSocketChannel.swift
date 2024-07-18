@@ -77,28 +77,33 @@ private struct SocketChannelLifecycleManager {
         self.currentState == .closed
     }
 
-    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)
     internal mutating func beginRegistration() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         self.moveState(event: .beginRegistration)
     }
 
-    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)
     internal mutating func finishRegistration() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         self.moveState(event: .finishRegistration)
     }
 
-    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)
     internal mutating func close() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         self.moveState(event: .close)
     }
 
-    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)
     internal mutating func activate() -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         self.moveState(event: .activate)
     }
 
     // MARK: private API
-    @inline(__always)  // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    // we need to return a closure here and to not suffer from a potential allocation for that this must be inlined
+    @inline(__always)
     private mutating func moveState(event: Event) -> ((EventLoopPromise<Void>?, ChannelPipeline) -> Void) {
         self.eventLoop.assertInEventLoop()
 
@@ -251,8 +256,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     private var inFlushNow: Bool = false  // Guard against re-entrance of flushNow() method.
     private var autoRead: Bool = true
 
-    // MARK: Variables that are really constants
-    private var _pipeline: ChannelPipeline! = nil  // this is really a constant (set in .init) but needs `self` to be constructed and therefore a `var`. Do not change as this needs to accessed from arbitrary threads
+    // MARK: Variables that are really constant
+    // this is really a constant (set in .init) but needs `self` to be constructed and
+    // therefore a `var`. Do not change as this needs to accessed from arbitrary threads
+    private var _pipeline: ChannelPipeline! = nil
 
     // MARK: Special variables, please read comments.
     // For reads guarded by _either_ `self._offEventLoopLock` or the EL thread

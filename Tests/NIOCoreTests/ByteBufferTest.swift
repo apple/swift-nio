@@ -2345,7 +2345,8 @@ class ByteBufferTest: XCTestCase {
             XCTAssertNotEqual(buf.capacity, oldCapacity)
             XCTAssertNotEqual(oldPtrVal, newPtrVal)
         }
-        bufCopy.writeString("foo")  // stops the optimiser removing `bufCopy` which would make `reserveCapacity` use malloc instead of realloc
+        // stops the optimiser removing `bufCopy` which would make `reserveCapacity` use malloc instead of realloc
+        bufCopy.writeString("foo")
     }
 
     func testReserveCapacityWithMinimumWritableBytesWhenNotEnoughWritableBytes() {

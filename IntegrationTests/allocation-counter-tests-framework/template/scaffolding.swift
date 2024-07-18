@@ -36,7 +36,8 @@ func waitForThreadsToQuiesce(shouldReachZero: Bool) {
             return
         }
         count += 1
-        usleep(shouldReachZero ? 50_000 : 200_000)  // allocs/frees happen on multiple threads, allow some cool down time
+        // allocs/frees happen on multiple threads, allow some cool down time
+        usleep(shouldReachZero ? 50_000 : 200_000)
         let newNumberOfUnfreed = getUnfreed()
         if oldNumberOfUnfreed == newNumberOfUnfreed && (!shouldReachZero || newNumberOfUnfreed <= 0) {
             // nothing happened in the last 100ms, let's assume everything's

@@ -349,7 +349,9 @@ extension Selector: _SelectorBackendProtocol {
                     // This is only needed due to the edge triggered nature of liburing, possibly
                     // we can get away with only updating (force triggering an event if available) for
                     // partial reads (where we currently give up after N iterations)
-                    if multishot && self.shouldRefreshPollForEvent(selectorEvent: selectorEvent) {  // can be after guard as it is multishot
+
+                    // can be after guard as it is multishot
+                    if multishot && self.shouldRefreshPollForEvent(selectorEvent: selectorEvent) {
                         ring.io_uring_poll_update(
                             fileDescriptor: event.fd,
                             newPollmask: registration.interested.uringEventSet,

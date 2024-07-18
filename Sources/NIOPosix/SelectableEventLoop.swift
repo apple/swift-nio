@@ -133,8 +133,10 @@ internal final class SelectableEventLoop: EventLoop {
         )
         return self._externalStateLock
     }
-    private var internalState: InternalState = .runningAndAcceptingNewRegistrations  // protected by the EventLoop thread
-    private var externalState: ExternalState = .open  // protected by externalStateLock
+    // protected by the EventLoop thread
+    private var internalState: InternalState = .runningAndAcceptingNewRegistrations
+    // protected by externalStateLock
+    private var externalState: ExternalState = .open
 
     let bufferPool: Pool<PooledBuffer>
     let msgBufferPool: Pool<PooledMsgBuffer>

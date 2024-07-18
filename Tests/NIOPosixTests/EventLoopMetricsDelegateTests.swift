@@ -63,7 +63,8 @@ final class EventLoopMetricsDelegateTests: XCTestCase {
             }
             if let lastTickStartTime = delegate.infos.last?.startTime {
                 let timeSinceStart = lastTickStartTime - testStartTime
-                XCTAssertLessThan(timeSinceStart.nanoseconds, 100_000_000)  // This should be near instant, limiting to 100ms
+                // This should be near instant, limiting to 100ms
+                XCTAssertLessThan(timeSinceStart.nanoseconds, 100_000_000)
                 XCTAssertGreaterThan(timeSinceStart.nanoseconds, 0)
             }
         }
