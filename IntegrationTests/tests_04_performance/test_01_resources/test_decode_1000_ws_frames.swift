@@ -21,8 +21,8 @@ class UnboxingChannelHandler: ChannelInboundHandler {
     typealias InboundOut = WebSocketFrame
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let data = self.unwrapInboundIn(data)
-        context.fireChannelRead(self.wrapInboundOut(data))
+        let data = Self.unwrapInboundIn(data)
+        context.fireChannelRead(Self.wrapInboundOut(data))
     }
 }
 

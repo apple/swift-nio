@@ -277,14 +277,14 @@ final class HTTPByteBufferResponsePartHandler: ChannelOutboundHandler {
     typealias OutboundOut = HTTPServerResponsePart
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let part = self.unwrapOutboundIn(data)
+        let part = Self.unwrapOutboundIn(data)
         switch part {
         case .head(let head):
-            context.write(self.wrapOutboundOut(.head(head)), promise: promise)
+            context.write(Self.wrapOutboundOut(.head(head)), promise: promise)
         case .body(let buffer):
-            context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: promise)
+            context.write(Self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: promise)
         case .end(let trailers):
-            context.write(self.wrapOutboundOut(.end(trailers)), promise: promise)
+            context.write(Self.wrapOutboundOut(.end(trailers)), promise: promise)
         }
     }
 }

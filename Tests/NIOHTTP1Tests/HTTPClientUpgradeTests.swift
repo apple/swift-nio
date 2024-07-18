@@ -248,13 +248,13 @@ extension ChannelInboundHandler where OutboundOut == HTTPClientRequestPart {
             headers: headers
         )
 
-        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
+        context.write(Self.wrapOutboundOut(.head(requestHead)), promise: nil)
 
         let emptyBuffer = context.channel.allocator.buffer(capacity: 0)
         let body = HTTPClientRequestPart.body(.byteBuffer(emptyBuffer))
         context.write(self.wrapOutboundOut(body), promise: nil)
 
-        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+        context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
     }
 }
 

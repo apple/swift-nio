@@ -33,7 +33,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
                 opcode: .connectionClose,
                 data: data
             )
-            context.writeAndFlush(self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
+            context.writeAndFlush(Self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
                 context.close(promise: nil)
             }
         }

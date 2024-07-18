@@ -279,7 +279,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._throwingSequence._storage._setDidSuspend { suspended.fulfill() }
 
         async let element = sequence.first { _ in true }
 
@@ -363,7 +363,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
 
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             let suspended = expectation(description: "task suspended")
-            sequence!._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+            sequence!._throwingSequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 let element = await sequence!.first { _ in true }
@@ -453,7 +453,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._throwingSequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Never> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -475,7 +475,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let resumed = expectation(description: "task resumed")
         let cancelled = expectation(description: "task cancelled")
 
-        sequence._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._throwingSequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Never> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -503,7 +503,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._throwingSequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._throwingSequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Never> = Task {
             let iterator = sequence.makeAsyncIterator()

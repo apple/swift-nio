@@ -85,14 +85,14 @@ final class DatagramReadRecorder<DataType>: ChannelInboundHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         XCTAssertEqual(.active, self.state)
-        let data = self.unwrapInboundIn(data)
+        let data = Self.unwrapInboundIn(data)
         reads.append(data)
 
         if let promise = readWaiters.removeValue(forKey: reads.count) {
             promise.succeed(reads)
         }
 
-        context.fireChannelRead(self.wrapInboundOut(data))
+        context.fireChannelRead(Self.wrapInboundOut(data))
     }
 
     func channelReadComplete(context: ChannelHandlerContext) {
@@ -394,7 +394,7 @@ class DatagramChannelTests: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                XCTFail("Should not receive data but got \(self.unwrapInboundIn(data))")
+                XCTFail("Should not receive data but got \(Self.unwrapInboundIn(data))")
             }
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -480,7 +480,7 @@ class DatagramChannelTests: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                XCTFail("Should not receive data but got \(self.unwrapInboundIn(data))")
+                XCTFail("Should not receive data but got \(Self.unwrapInboundIn(data))")
             }
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -860,9 +860,9 @@ class DatagramChannelTests: XCTestCase {
             typealias OutboundOut = AddressedEnvelope<ByteBuffer>
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-                let buffer = self.unwrapOutboundIn(data)
+                let buffer = Self.unwrapOutboundIn(data)
                 context.write(
-                    self.wrapOutboundOut(AddressedEnvelope(remoteAddress: context.channel.localAddress!, data: buffer)),
+                    Self.wrapOutboundOut(AddressedEnvelope(remoteAddress: context.channel.localAddress!, data: buffer)),
                     promise: promise
                 )
             }
@@ -1064,11 +1064,11 @@ class DatagramChannelTests: XCTestCase {
                     data: buffer
                 )
 
-                context.writeAndFlush(self.wrapOutboundOut(envelope)).cascadeFailure(to: self.completePromise)
+                context.writeAndFlush(Self.wrapOutboundOut(envelope)).cascadeFailure(to: self.completePromise)
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let envelope = self.unwrapInboundIn(data)
+                let envelope = Self.unwrapInboundIn(data)
 
                 // Complete with the payload.
                 self.completePromise.succeed(envelope.data)

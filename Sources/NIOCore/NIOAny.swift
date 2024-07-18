@@ -37,9 +37,9 @@
 ///                 dynamically at run-time. Yet, we assert that in any configuration the channel handler before
 ///                 `SandwichHandler` does actually send us a stream of `Bacon`.
 ///              */
-///              let bacon = self.unwrapInboundIn(data) /* `Bacon` or crash */
+///              let bacon = Self.unwrapInboundIn(data) /* `Bacon` or crash */
 ///              let sandwich = makeSandwich(bacon)
-///              context.fireChannelRead(self.wrapInboundOut(sandwich)) /* as promised we deliver a wrapped `Sandwich` */
+///              context.fireChannelRead(Self.wrapInboundOut(sandwich)) /* as promised we deliver a wrapped `Sandwich` */
 ///         }
 ///     }
 public struct NIOAny {
@@ -48,7 +48,7 @@ public struct NIOAny {
 
     /// Wrap a value in a `NIOAny`. In most cases you should not create a `NIOAny` directly using this constructor.
     /// The abstraction that accepts values of type `NIOAny` must also provide a mechanism to do the wrapping. An
-    /// example is a `ChannelInboundHandler` which provides `self.wrapInboundOut(aValueOfTypeInboundOut)`.
+    /// example is a `ChannelInboundHandler` which provides `Self.wrapInboundOut(aValueOfTypeInboundOut)`.
     @inlinable
     public init<T>(_ value: T) {
         self._storage = _NIOAny(value)

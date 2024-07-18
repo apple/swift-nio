@@ -40,7 +40,7 @@ private final class ReadRecorder: ChannelInboundHandler {
     public var reads: [Event] = []
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.reads.append(.channelRead(self.unwrapInboundIn(data)))
+        self.reads.append(.channelRead(Self.unwrapInboundIn(data)))
         context.fireChannelRead(data)
     }
 
@@ -60,7 +60,7 @@ private final class WriteRecorder: ChannelOutboundHandler {
     public var writes: [HTTPServerResponsePart] = []
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        self.writes.append(self.unwrapOutboundIn(data))
+        self.writes.append(Self.unwrapOutboundIn(data))
 
         context.write(data, promise: promise)
     }
@@ -485,7 +485,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             var state: State = .req1HeadExpected
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let req = self.unwrapInboundIn(data)
+                let req = Self.unwrapInboundIn(data)
                 switch req {
                 case .head(let head):
                     // except for "req_1", we always send the .end straight away
@@ -509,11 +509,11 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                         XCTFail("didn't expect \(head)")
                     }
                     context.write(
-                        self.wrapOutboundOut(.head(HTTPResponseHead(version: .http1_1, status: .ok))),
+                        Self.wrapOutboundOut(.head(HTTPResponseHead(version: .http1_1, status: .ok))),
                         promise: nil
                     )
                     if sendEnd {
-                        context.write(self.wrapOutboundOut(.end(nil)), promise: nil)
+                        context.write(Self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
                     context.flush()
                 case .end:
@@ -912,13 +912,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                switch self.unwrapInboundIn(data) {
+                switch Self.unwrapInboundIn(data) {
                 case .head:
                     // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
                     // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
                     context.eventLoop.execute {
                         context.writeAndFlush(
-                            self.wrapOutboundOut(
+                            Self.wrapOutboundOut(
                                 .head(
                                     .init(
                                         version: .http1_1,
@@ -937,7 +937,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                     // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
                     // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
                     context.eventLoop.execute {
-                        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                        context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
                     XCTAssertEqual(.reqEndExpected, self.state)
                     self.state = .errorExpected

@@ -20,7 +20,7 @@ private final class ReceiveAndCloseHandler: ChannelInboundHandler {
     public typealias OutboundOut = ByteBuffer
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let byteBuffer = self.unwrapInboundIn(data)
+        let byteBuffer = Self.unwrapInboundIn(data)
         precondition(byteBuffer.readableBytes == 1)
         context.channel.close(promise: nil)
     }

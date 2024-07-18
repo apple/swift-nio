@@ -294,7 +294,7 @@ final class ByteCountingHandler: ChannelInboundHandler, RemovableChannelHandler 
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var currentBuffer = self.unwrapInboundIn(data)
+        var currentBuffer = Self.unwrapInboundIn(data)
         buffer.writeBuffer(&currentBuffer)
 
         if buffer.readableBytes == numBytes {

@@ -29,7 +29,7 @@ public final class NIOHTTPRequestHeadersValidator: ChannelOutboundHandler, Remov
     public init() {}
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(let head):
             guard head.headers.areValidToSend else {
                 promise?.fail(HTTPParserError.invalidHeaderToken)
@@ -66,7 +66,7 @@ public final class NIOHTTPResponseHeadersValidator: ChannelOutboundHandler, Remo
     public init() {}
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(let head):
             guard head.headers.areValidToSend else {
                 promise?.fail(HTTPParserError.invalidHeaderToken)

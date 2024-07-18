@@ -110,7 +110,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 try await sequence.first { _ in true }
@@ -138,7 +138,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 try await sequence.first { _ in true }
@@ -166,7 +166,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         await withThrowingTaskGroup(of: Void.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 _ = try await sequence.first { _ in true }
@@ -191,7 +191,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         await withThrowingTaskGroup(of: Void.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 _ = try await sequence.first { _ in true }
@@ -256,7 +256,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 let element = try await sequence.first { _ in true }
@@ -339,7 +339,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             try await withThrowingTaskGroup(of: Void.self) { group in
 
                 let suspended = expectation(description: "task suspended")
-                sequence._storage._didSuspend = { suspended.fulfill() }
+                sequence._storage._setDidSuspend { suspended.fulfill() }
 
                 group.addTask {
                     _ = try await sequence.first { _ in true }
@@ -458,7 +458,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence!._storage._didSuspend = { suspended.fulfill() }
+            sequence!._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 let element = try await sequence!.first { _ in true }
@@ -550,7 +550,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -581,7 +581,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = new.sequence
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -605,7 +605,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let resumed = expectation(description: "task resumed")
         let cancelled = expectation(description: "task cancelled")
 
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -633,7 +633,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -707,7 +707,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
@@ -725,7 +725,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
@@ -745,7 +745,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
@@ -765,7 +765,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         Task {
             // Would prefer to use async let _ here but that is not allowed yet

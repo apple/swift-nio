@@ -54,7 +54,7 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
 extension NIOSingleStepByteToMessageDecoder {
     public mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         if let message = try self.decode(buffer: &buffer) {
-            context.fireChannelRead(self.wrapInboundOut(message))
+            context.fireChannelRead(Self.wrapInboundOut(message))
             return .continue
         } else {
             return .needMoreData
@@ -67,7 +67,7 @@ extension NIOSingleStepByteToMessageDecoder {
         seenEOF: Bool
     ) throws -> DecodingState {
         if let message = try self.decodeLast(buffer: &buffer, seenEOF: seenEOF) {
-            context.fireChannelRead(self.wrapInboundOut(message))
+            context.fireChannelRead(Self.wrapInboundOut(message))
             return .continue
         } else {
             return .needMoreData
@@ -111,12 +111,12 @@ extension NIOSingleStepByteToMessageDecoder {
 ///         private var messageProcessor: NIOSingleStepByteToMessageProcessor<TwoByteStringCodec>? = nil
 ///
 ///         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-///             let req = self.unwrapInboundIn(data)
+///             let req = Self.unwrapInboundIn(data)
 ///             do {
 ///                 switch req {
 ///                 case .head(let head):
 ///                     // simply forward on the head
-///                     context.fireChannelRead(self.wrapInboundOut(.head(head)))
+///                     context.fireChannelRead(Self.wrapInboundOut(.head(head)))
 ///                 case .body(let body):
 ///                     if self.messageProcessor == nil {
 ///                         self.messageProcessor = NIOSingleStepByteToMessageProcessor(TwoByteStringCodec())
@@ -129,7 +129,7 @@ extension NIOSingleStepByteToMessageDecoder {
 ///                     try self.messageProcessor?.finishProcessing(seenEOF: false) { message in
 ///                         self.channelReadMessage(context: context, message: message)
 ///                     }
-///                     context.fireChannelRead(self.wrapInboundOut(.end(trailers)))
+///                     context.fireChannelRead(Self.wrapInboundOut(.end(trailers)))
 ///                 }
 ///             } catch {
 ///                 context.fireErrorCaught(error)
@@ -138,7 +138,7 @@ extension NIOSingleStepByteToMessageDecoder {
 ///
 ///         // Forward on the body messages as whole messages
 ///         func channelReadMessage(context: ChannelHandlerContext, message: String) {
-///             context.fireChannelRead(self.wrapInboundOut(.body(message)))
+///             context.fireChannelRead(Self.wrapInboundOut(.body(message)))
 ///         }
 ///     }
 ///
@@ -149,7 +149,7 @@ extension NIOSingleStepByteToMessageDecoder {
 ///         var msgs: [String] = []
 ///
 ///         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-///             let message = self.unwrapInboundIn(data)
+///             let message = Self.unwrapInboundIn(data)
 ///
 ///             switch message {
 ///             case .head(let head):
@@ -166,13 +166,13 @@ extension NIOSingleStepByteToMessageDecoder {
 ///                 var headers = HTTPHeaders()
 ///                 headers.add(name: "content-length", value: String(responseBuffer.readableBytes))
 ///
-///                 context.write(self.wrapOutboundOut(HTTPServerResponsePart.head(
+///                 context.write(Self.wrapOutboundOut(HTTPServerResponsePart.head(
 ///                     HTTPResponseHead(version: .http1_1,
 ///                                      status: .ok, headers: headers))), promise: nil)
 ///
-///                 context.write(self.wrapOutboundOut(HTTPServerResponsePart.body(
+///                 context.write(Self.wrapOutboundOut(HTTPServerResponsePart.body(
 ///                     .byteBuffer(responseBuffer))), promise: nil)
-///                 context.writeAndFlush(self.wrapOutboundOut(HTTPServerResponsePart.end(nil)), promise: nil)
+///                 context.writeAndFlush(Self.wrapOutboundOut(HTTPServerResponsePart.end(nil)), promise: nil)
 ///             }
 ///         }
 ///     }

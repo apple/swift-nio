@@ -27,7 +27,7 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 buffer.moveReaderIndex(to: buffer.writerIndex)
-                context.fireChannelRead(self.wrapInboundOut("Y"))
+                context.fireChannelRead(Self.wrapInboundOut("Y"))
                 return .needMoreData
             }
 
@@ -110,7 +110,7 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             typealias InboundOut = String
 
             func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-                context.fireChannelRead(self.wrapInboundOut("Y"))
+                context.fireChannelRead(Self.wrapInboundOut("Y"))
                 return .needMoreData
             }
 
@@ -160,7 +160,7 @@ class ByteToMessageDecoderVerifierTest: XCTestCase {
             ) throws -> DecodingState {
                 while try self.decode(context: context, buffer: &buffer) == .continue {}
                 if buffer.readableBytes > 0 {
-                    context.fireChannelRead(self.wrapInboundOut("leftover"))
+                    context.fireChannelRead(Self.wrapInboundOut("leftover"))
                 }
                 return .needMoreData
             }

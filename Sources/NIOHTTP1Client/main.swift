@@ -44,16 +44,16 @@ private final class HTTPEchoHandler: ChannelInboundHandler {
             headers: headers
         )
 
-        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
+        context.write(Self.wrapOutboundOut(.head(requestHead)), promise: nil)
 
-        context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+        context.write(Self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
 
-        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+        context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
 
-        let clientResponse = self.unwrapInboundIn(data)
+        let clientResponse = Self.unwrapInboundIn(data)
 
         switch clientResponse {
         case .head(let responseHead):

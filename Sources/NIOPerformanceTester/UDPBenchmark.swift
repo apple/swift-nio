@@ -258,7 +258,7 @@ extension UDPBenchmark {
                     remoteAddress: self.config.remoteAddress,
                     data: self.config.request
                 )
-                context.write(self.wrapOutboundOut(envolope), promise: nil)
+                context.write(Self.wrapOutboundOut(envolope), promise: nil)
                 if flush {
                     context.flush()
                 }

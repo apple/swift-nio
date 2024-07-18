@@ -28,7 +28,7 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readable = buffer.withUnsafeReadableBytes { $0.firstIndex(of: newLine) }
         if let r = readable {
-            context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: r + 1)!))
+            context.fireChannelRead(Self.wrapInboundOut(buffer.readSlice(length: r + 1)!))
             return .continue
         }
         return .needMoreData
@@ -69,7 +69,7 @@ final class ChatHandler: ChannelInboundHandler {
 
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeString("(ChatServer) - Welcome to: \(context.localAddress!)\n")
-        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+        context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: nil)
     }
 
     public func channelInactive(context: ChannelHandlerContext) {
@@ -88,7 +88,7 @@ final class ChatHandler: ChannelInboundHandler {
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let id = ObjectIdentifier(context.channel)
-        var read = self.unwrapInboundIn(data)
+        var read = Self.unwrapInboundIn(data)
 
         // 64 should be good enough for the ipaddress
         var buffer = context.channel.allocator.buffer(capacity: read.readableBytes + 64)

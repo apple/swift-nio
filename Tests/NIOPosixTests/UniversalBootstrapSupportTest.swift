@@ -64,7 +64,7 @@ class UniversalBootstrapSupportTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let channel = self.unwrapInboundIn(data)
+                let channel = Self.unwrapInboundIn(data)
                 self.acceptedChannels.append(channel)
                 if self.acceptedChannels.count == 1 {
                     self.firstArrived.succeed(())

@@ -1440,7 +1440,7 @@ public final class EventLoopTest: XCTestCase {
                 self.readCalls += 1
                 XCTAssertEqual(1, self.readCalls)
 
-                var data = self.unwrapInboundIn(data)
+                var data = Self.unwrapInboundIn(data)
                 XCTAssertEqual(1, data.readableBytes)
 
                 XCTAssertNil(self.received)

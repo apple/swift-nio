@@ -30,6 +30,11 @@ extension _EmittingChannelHandler {
     public func wrapOutboundOut(_ value: OutboundOut) -> NIOAny {
         NIOAny(value)
     }
+
+    @inlinable
+    public static func wrapOutboundOut(_ value: OutboundOut) -> NIOAny {
+        NIOAny(value)
+    }
 }
 
 ///  `ChannelHandler` which handles inbound I/O events for a `Channel`.
@@ -62,6 +67,16 @@ extension ChannelInboundHandler {
     public func wrapInboundOut(_ value: InboundOut) -> NIOAny {
         NIOAny(value)
     }
+
+    @inlinable
+    public static func unwrapInboundIn(_ value: NIOAny) -> InboundIn {
+        value.forceAs()
+    }
+
+    @inlinable
+    public static func wrapInboundOut(_ value: InboundOut) -> NIOAny {
+        NIOAny(value)
+    }
 }
 
 /// `ChannelHandler` which handles outbound I/O events or intercept an outbound I/O operation for a `Channel`.
@@ -80,6 +95,11 @@ public protocol ChannelOutboundHandler: _ChannelOutboundHandler, _EmittingChanne
 extension ChannelOutboundHandler {
     @inlinable
     public func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn {
+        value.forceAs()
+    }
+
+    @inlinable
+    public static func unwrapOutboundIn(_ value: NIOAny) -> OutboundIn {
         value.forceAs()
     }
 }

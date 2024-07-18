@@ -453,7 +453,7 @@ public final class ServerBootstrap {
         }
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-            let accepted = self.unwrapInboundIn(data)
+            let accepted = Self.unwrapInboundIn(data)
             let ctxEventLoop = context.eventLoop
             let childEventLoop = accepted.eventLoop
             let childChannelInit = self.childChannelInit ?? { (_: Channel) in childEventLoop.makeSucceededFuture(()) }

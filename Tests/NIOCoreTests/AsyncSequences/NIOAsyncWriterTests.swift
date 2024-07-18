@@ -78,7 +78,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         )
         self.writer = newWriter.writer
         self.sink = newWriter.sink
-        self.sink._storage._didSuspend = self.delegate.didSuspend
+        self.sink._storage._setDidSuspend { self.delegate.didSuspend() }
     }
 
     override func tearDown() {

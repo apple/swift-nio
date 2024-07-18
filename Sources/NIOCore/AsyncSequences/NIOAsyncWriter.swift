@@ -419,12 +419,12 @@ extension NIOAsyncWriter {
 extension NIOAsyncWriter {
     /// This is the underlying storage of the writer. The goal of this is to synchronize the access to all state.
     @usableFromInline
-    internal final class Storage: @unchecked Sendable {
+    internal struct Storage: Sendable {
         /// Internal type to generate unique yield IDs.
         ///
         /// This type has reference semantics.
         @usableFromInline
-        struct YieldIDGenerator {
+        struct YieldIDGenerator: Sendable {
             /// A struct representing a unique yield ID.
             @usableFromInline
             struct YieldID: Equatable, Sendable {
@@ -450,27 +450,43 @@ extension NIOAsyncWriter {
             }
         }
 
-        /// The lock that protects our state.
-        @usableFromInline
-        internal let _lock = NIOLock()
         /// The counter used to assign an ID to all our yields.
         @usableFromInline
         internal let _yieldIDGenerator = YieldIDGenerator()
         /// The state machine.
         @usableFromInline
-        internal var _stateMachine: StateMachine
+        internal let _state: NIOLockedValueBox<State>
+
+        @usableFromInline
+        struct State: Sendable {
+            @usableFromInline
+            var stateMachine: StateMachine
+            @usableFromInline
+            var didSuspend: (@Sendable () -> Void)?
+
+            @inlinable
+            init(stateMachine: StateMachine) {
+                self.stateMachine = stateMachine
+                self.didSuspend = nil
+            }
+        }
+
         /// Hook used in testing.
         @usableFromInline
-        internal var _didSuspend: (() -> Void)?
+        internal func _setDidSuspend(_ didSuspend: (@Sendable () -> Void)?) {
+            self._state.withLockedValue {
+                $0.didSuspend = didSuspend
+            }
+        }
 
         @inlinable
         internal var isWriterFinished: Bool {
-            self._lock.withLock { self._stateMachine.isWriterFinished }
+            self._state.withLockedValue { $0.stateMachine.isWriterFinished }
         }
 
         @inlinable
         internal var isSinkFinished: Bool {
-            self._lock.withLock { self._stateMachine.isSinkFinished }
+            self._state.withLockedValue { $0.stateMachine.isSinkFinished }
         }
 
         @inlinable
@@ -478,10 +494,8 @@ extension NIOAsyncWriter {
             isWritable: Bool,
             delegate: Delegate
         ) {
-            self._stateMachine = .init(
-                isWritable: isWritable,
-                delegate: delegate
-            )
+            let state = State(stateMachine: StateMachine(isWritable: isWritable, delegate: delegate))
+            self._state = NIOLockedValueBox(state)
         }
 
         @inlinable
@@ -489,8 +503,8 @@ extension NIOAsyncWriter {
             // We must not resume the continuation while holding the lock
             // because it can deadlock in combination with the underlying ulock
             // in cases where we race with a cancellation handler
-            let action = self._lock.withLock {
-                self._stateMachine.setWritability(to: writability)
+            let action = self._state.withLockedValue {
+                $0.stateMachine.setWritability(to: writability)
             }
 
             switch action {
@@ -527,40 +541,43 @@ extension NIOAsyncWriter {
 
             return try await withTaskCancellationHandler {
                 // We are manually locking here to hold the lock across the withCheckedContinuation call
-                self._lock.lock()
+                let unsafe = self._state.unsafe
+                unsafe.lock()
 
-                let action = self._stateMachine.yield(yieldID: yieldID)
+                let action = unsafe.withValueAssumingLockIsAcquired {
+                    $0.stateMachine.yield(yieldID: yieldID)
+                }
 
                 switch action {
                 case .callDidYield(let delegate):
                     // We are allocating a new Deque for every write here
-                    self._lock.unlock()
+                    unsafe.unlock()
                     delegate.didYield(contentsOf: Deque(sequence))
                     self.unbufferQueuedEvents()
                     return .yielded
 
                 case .throwError(let error):
-                    self._lock.unlock()
+                    unsafe.unlock()
                     throw error
 
                 case .suspendTask:
                     return try await withCheckedThrowingContinuation {
                         (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
-                        self._stateMachine.yield(
-                            continuation: continuation,
-                            yieldID: yieldID
-                        )
+                        let didSuspend = unsafe.withValueAssumingLockIsAcquired {
+                            $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
+                            return $0.didSuspend
+                        }
 
-                        self._lock.unlock()
-                        self._didSuspend?()
+                        unsafe.unlock()
+                        didSuspend?()
                     }
                 }
             } onCancel: {
                 // We must not resume the continuation while holding the lock
                 // because it can deadlock in combination with the underlying ulock
                 // in cases where we race with a cancellation handler
-                let action = self._lock.withLock {
-                    self._stateMachine.cancel(yieldID: yieldID)
+                let action = self._state.withLockedValue {
+                    $0.stateMachine.cancel(yieldID: yieldID)
                 }
 
                 switch action {
@@ -595,40 +612,42 @@ extension NIOAsyncWriter {
 
             return try await withTaskCancellationHandler {
                 // We are manually locking here to hold the lock across the withCheckedContinuation call
-                self._lock.lock()
+                let unsafe = self._state.unsafe
+                unsafe.lock()
 
-                let action = self._stateMachine.yield(yieldID: yieldID)
+                let action = unsafe.withValueAssumingLockIsAcquired {
+                    $0.stateMachine.yield(yieldID: yieldID)
+                }
 
                 switch action {
                 case .callDidYield(let delegate):
                     // We are allocating a new Deque for every write here
-                    self._lock.unlock()
+                    unsafe.unlock()
                     delegate.didYield(element)
                     self.unbufferQueuedEvents()
                     return .yielded
 
                 case .throwError(let error):
-                    self._lock.unlock()
+                    unsafe.unlock()
                     throw error
 
                 case .suspendTask:
                     return try await withCheckedThrowingContinuation {
                         (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
-                        self._stateMachine.yield(
-                            continuation: continuation,
-                            yieldID: yieldID
-                        )
-
-                        self._lock.unlock()
-                        self._didSuspend?()
+                        let didSuspend = unsafe.withValueAssumingLockIsAcquired {
+                            $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
+                            return $0.didSuspend
+                        }
+                        unsafe.unlock()
+                        didSuspend?()
                     }
                 }
             } onCancel: {
                 // We must not resume the continuation while holding the lock
-                // because it can deadlock in combination with the underlying ulock
+                // because it can deadlock in combination with the underlying lock
                 // in cases where we race with a cancellation handler
-                let action = self._lock.withLock {
-                    self._stateMachine.cancel(yieldID: yieldID)
+                let action = self._state.withLockedValue {
+                    $0.stateMachine.cancel(yieldID: yieldID)
                 }
 
                 switch action {
@@ -646,8 +665,8 @@ extension NIOAsyncWriter {
             // We must not resume the continuation while holding the lock
             // because it can deadlock in combination with the underlying ulock
             // in cases where we race with a cancellation handler
-            let action = self._lock.withLock {
-                self._stateMachine.writerFinish(error: error)
+            let action = self._state.withLockedValue {
+                $0.stateMachine.writerFinish(error: error)
             }
 
             switch action {
@@ -669,8 +688,8 @@ extension NIOAsyncWriter {
             // We must not resume the continuation while holding the lock
             // because it can deadlock in combination with the underlying ulock
             // in cases where we race with a cancellation handler
-            let action = self._lock.withLock {
-                self._stateMachine.sinkFinish(error: error)
+            let action = self._state.withLockedValue {
+                $0.stateMachine.sinkFinish(error: error)
             }
 
             switch action {
@@ -686,7 +705,7 @@ extension NIOAsyncWriter {
 
         @inlinable
         internal func unbufferQueuedEvents() {
-            while let action = self._lock.withLock({ self._stateMachine.unbufferQueuedEvents() }) {
+            while let action = self._state.withLockedValue({ $0.stateMachine.unbufferQueuedEvents() }) {
                 switch action {
                 case .callDidTerminate(let delegate, let error):
                     delegate.didTerminate(error: error)
@@ -705,12 +724,12 @@ extension NIOAsyncWriter {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncWriter {
     @usableFromInline
-    internal struct StateMachine {
+    internal struct StateMachine: Sendable {
         @usableFromInline
         typealias YieldID = Storage.YieldIDGenerator.YieldID
         /// This is a small helper struct to encapsulate the two different values for a suspended yield.
         @usableFromInline
-        internal struct SuspendedYield {
+        internal struct SuspendedYield: Sendable {
             /// The yield's ID.
             @usableFromInline
             var yieldID: YieldID
@@ -736,7 +755,7 @@ extension NIOAsyncWriter {
 
         /// The current state of our ``NIOAsyncWriter``.
         @usableFromInline
-        internal enum State: CustomStringConvertible {
+        internal enum State: Sendable, CustomStringConvertible {
             /// The initial state before either a call to ``NIOAsyncWriter/yield(contentsOf:)`` or
             /// ``NIOAsyncWriter/finish(completion:)`` happened.
             case initial(

@@ -1900,7 +1900,7 @@ public final class ChannelTests: XCTestCase {
                 if !self.expectingData {
                     XCTFail("Received data before we expected it.")
                 } else {
-                    let data = self.unwrapInboundIn(data)
+                    let data = Self.unwrapInboundIn(data)
                     XCTAssertEqual(data.getString(at: data.readerIndex, length: data.readableBytes), "test")
                 }
             }
@@ -1962,7 +1962,7 @@ public final class ChannelTests: XCTestCase {
                     )
                 }
                 self.numberOfChannelReads += 1
-                let buffer = self.unwrapInboundIn(data)
+                let buffer = Self.unwrapInboundIn(data)
                 XCTAssertLessThanOrEqual(buffer.readableBytes, 8)
                 XCTAssertEqual(1, self.numberOfChannelReads)
                 context.close(mode: .all, promise: nil)
@@ -2455,7 +2455,7 @@ public final class ChannelTests: XCTestCase {
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTAssertEqual(.active, self.state)
                 self.state = .read
-                var buffer = self.unwrapInboundIn(data)
+                var buffer = Self.unwrapInboundIn(data)
                 XCTAssertEqual(1, buffer.readableBytes)
                 XCTAssertEqual([0xff], buffer.readBytes(length: 1)!)
             }
@@ -2860,14 +2860,14 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let buffer = self.unwrapInboundIn(data)
+                let buffer = Self.unwrapInboundIn(data)
                 XCTFail("unexpected read: \(String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))")
             }
 
             func channelActive(context: ChannelHandlerContext) {
                 var buffer = context.channel.allocator.buffer(capacity: 1)
                 buffer.writeStaticString("X")
-                context.channel.writeAndFlush(self.wrapOutboundOut(buffer)).map { context.channel }.cascade(
+                context.channel.writeAndFlush(Self.wrapOutboundOut(buffer)).map { context.channel }.cascade(
                     to: self.channelAvailablePromise
                 )
             }
@@ -2944,7 +2944,7 @@ public final class ChannelTests: XCTestCase {
                         }
                         workaroundSR487()
 
-                        return context.writeAndFlush(self.wrapOutboundOut(buffer))
+                        return context.writeAndFlush(Self.wrapOutboundOut(buffer))
                     }.map {
                         XCTFail("this should have failed")
                     }.whenFailure { error in
@@ -2960,7 +2960,7 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let buffer = self.unwrapInboundIn(data)
+                let buffer = Self.unwrapInboundIn(data)
                 XCTAssertEqual("X", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
                 context.close(promise: nil)
             }
@@ -3411,7 +3411,7 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
         // emitted. The flush for that write should result in the writability flipping back
         // again.
         let b1 = context.channel.allocator.buffer(repeating: 0, count: 50)
-        context.write(self.wrapOutboundOut(b1)).whenSuccess { _ in
+        context.write(Self.wrapOutboundOut(b1)).whenSuccess { _ in
             // We should still be writable.
             XCTAssertTrue(context.channel.isWritable)
             XCTAssertEqual(self.isNotWritableCount, 0)
@@ -3420,7 +3420,7 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
             // Write again. But now breach high water mark. This should cause us to become
             // unwritable.
             let b2 = context.channel.allocator.buffer(repeating: 0, count: 250)
-            context.write(self.wrapOutboundOut(b2), promise: nil)
+            context.write(Self.wrapOutboundOut(b2), promise: nil)
             XCTAssertFalse(context.channel.isWritable)
             XCTAssertEqual(self.isNotWritableCount, 1)
             XCTAssertEqual(self.isWritableCount, 0)
@@ -3430,7 +3430,7 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
         }
 
         // Queue another write and flush.
-        context.writeAndFlush(self.wrapOutboundOut(b1), promise: nil)
+        context.writeAndFlush(Self.wrapOutboundOut(b1), promise: nil)
     }
 
     func channelWritabilityChanged(context: ChannelHandlerContext) {

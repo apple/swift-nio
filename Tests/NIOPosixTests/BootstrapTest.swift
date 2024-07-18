@@ -814,7 +814,7 @@ private final class WriteStringOnChannelActive: ChannelInboundHandler {
     func channelActive(context: ChannelHandlerContext) {
         var buffer = context.channel.allocator.buffer(capacity: self.string.utf8.count)
         buffer.writeString(string)
-        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+        context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: nil)
     }
 }
 

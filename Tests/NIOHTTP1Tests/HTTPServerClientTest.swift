@@ -50,7 +50,7 @@ internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.receiveds.append(self.unwrapInboundIn(data))
+        self.receiveds.append(Self.unwrapInboundIn(data))
     }
 
     public func channelUnregistered(context: ChannelHandlerContext) {
@@ -109,7 +109,7 @@ class HTTPServerClientTest: XCTestCase {
         }
 
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-            switch self.unwrapInboundIn(data) {
+            switch Self.unwrapInboundIn(data) {
             case .head(let req):
                 switch req.uri {
                 case "/helloworld":
@@ -118,15 +118,15 @@ class HTTPServerClientTest: XCTestCase {
                     head.headers.add(name: "Content-Length", value: "\(replyString.utf8.count)")
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r), promise: nil)
+                    context.write(Self.wrapOutboundOut(r), promise: nil)
                     var b = context.channel.allocator.buffer(capacity: replyString.count)
                     b.writeString(replyString)
 
                     let outbound = self.outboundBody(b)
-                    context.write(self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
+                    context.write(Self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -136,7 +136,7 @@ class HTTPServerClientTest: XCTestCase {
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(Self.wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
                     var b = context.channel.allocator.buffer(capacity: 1024)
@@ -145,13 +145,13 @@ class HTTPServerClientTest: XCTestCase {
                         b.writeString("\(i)")
 
                         let outbound = self.outboundBody(b)
-                        context.write(self.wrapOutboundOut(outbound.body)).recover { error in
+                        context.write(Self.wrapOutboundOut(outbound.body)).recover { error in
                             XCTFail("unexpected error \(error)")
                         }.whenComplete { (_: Result<Void, Error>) in
                             outbound.destructor()
                         }
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -162,7 +162,7 @@ class HTTPServerClientTest: XCTestCase {
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Transfer-Encoding", value: "chunked")
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(Self.wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
                     var b = context.channel.allocator.buffer(capacity: 1024)
@@ -171,7 +171,7 @@ class HTTPServerClientTest: XCTestCase {
                         b.writeString("\(i)")
 
                         let outbound = self.outboundBody(b)
-                        context.write(self.wrapOutboundOut(outbound.body)).recover { error in
+                        context.write(Self.wrapOutboundOut(outbound.body)).recover { error in
                             XCTFail("unexpected error \(error)")
                         }.whenComplete { (_: Result<Void, Error>) in
                             outbound.destructor()
@@ -181,7 +181,7 @@ class HTTPServerClientTest: XCTestCase {
                     var trailers = HTTPHeaders()
                     trailers.add(name: "X-URL-Path", value: "/trailers")
                     trailers.add(name: "X-Should-Trail", value: "sure")
-                    context.write(self.wrapOutboundOut(.end(trailers))).recover { error in
+                    context.write(Self.wrapOutboundOut(.end(trailers))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -196,16 +196,16 @@ class HTTPServerClientTest: XCTestCase {
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Content-Length", value: "\(HTTPServerClientTest.massiveResponseLength)")
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(Self.wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
                     let outbound = self.outboundBody(buf)
-                    context.writeAndFlush(self.wrapOutboundOut(outbound.body)).recover { error in
+                    context.writeAndFlush(Self.wrapOutboundOut(outbound.body)).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -215,10 +215,10 @@ class HTTPServerClientTest: XCTestCase {
                     var head = HTTPResponseHead(version: req.version, status: .ok)
                     head.headers.add(name: "Connection", value: "close")
                     head.headers.add(name: "Content-Length", value: "5000")
-                    context.write(self.wrapOutboundOut(.head(head))).whenFailure { error in
+                    context.write(Self.wrapOutboundOut(.head(head))).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -227,10 +227,10 @@ class HTTPServerClientTest: XCTestCase {
                 case "/204":
                     var head = HTTPResponseHead(version: req.version, status: .noContent)
                     head.headers.add(name: "Connection", value: "keep-alive")
-                    context.write(self.wrapOutboundOut(.head(head))).whenFailure { error in
+                    context.write(Self.wrapOutboundOut(.head(head))).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -240,15 +240,15 @@ class HTTPServerClientTest: XCTestCase {
                     let replyString = "Hello World!\r\n"
                     let head = HTTPResponseHead(version: req.version, status: .ok)
                     let r = HTTPServerResponsePart.head(head)
-                    context.write(self.wrapOutboundOut(r), promise: nil)
+                    context.write(Self.wrapOutboundOut(r), promise: nil)
                     var b = context.channel.allocator.buffer(capacity: replyString.count)
                     b.writeString(replyString)
 
                     let outbound = self.outboundBody(b)
-                    context.write(self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
+                    context.write(Self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true
@@ -257,18 +257,18 @@ class HTTPServerClientTest: XCTestCase {
                 case "/zero-length-body-part":
 
                     let r = HTTPServerResponsePart.head(.init(version: req.version, status: .ok))
-                    context.write(self.wrapOutboundOut(r)).whenFailure { error in
+                    context.write(Self.wrapOutboundOut(r)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
 
-                    context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer())))).whenFailure { error in
+                    context.writeAndFlush(Self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer())))).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
-                    context.writeAndFlush(self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer(string: "Hello World")))))
+                    context.writeAndFlush(Self.wrapOutboundOut(.body(.byteBuffer(ByteBuffer(string: "Hello World")))))
                         .whenFailure { error in
                             XCTFail("unexpected error \(error)")
                         }
-                    context.write(self.wrapOutboundOut(.end(nil))).recover { error in
+                    context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
                         self.sentEnd = true

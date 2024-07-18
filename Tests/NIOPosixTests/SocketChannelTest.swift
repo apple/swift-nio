@@ -143,7 +143,7 @@ public final class SocketChannelTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                XCTFail("Should not accept a Channel but got \(self.unwrapInboundIn(data))")
+                XCTFail("Should not accept a Channel but got \(Self.unwrapInboundIn(data))")
             }
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -773,7 +773,7 @@ public final class SocketChannelTest: XCTestCase {
             typealias InboundIn = Channel
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                self.unwrapInboundIn(data).close(promise: nil)
+                Self.unwrapInboundIn(data).close(promise: nil)
             }
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -995,7 +995,7 @@ public final class SocketChannelTest: XCTestCase {
             func channelActive(context: ChannelHandlerContext) {
                 var buffer = context.channel.allocator.buffer(capacity: 128)
                 buffer.writeString(String(repeating: "x", count: 517))
-                context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+                context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: nil)
             }
 
             func channelInactive(context: ChannelHandlerContext) {
@@ -1131,7 +1131,7 @@ class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler {
             // the connection is fully closed but because we support half-closure, we need to write to 'learn' that the
             // other side has actually fully closed the socket.
             func writeUntilError() {
-                context.writeAndFlush(self.wrapOutboundOut(buffer)).map {
+                context.writeAndFlush(Self.wrapOutboundOut(buffer)).map {
                     writeUntilError()
                 }.whenFailure { (_: Error) in
                     self.waitUntilWriteFailedPromise.succeed(())

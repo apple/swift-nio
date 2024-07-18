@@ -24,9 +24,9 @@ private final class IPHeaderRemoverHandler: ChannelInboundHandler {
     typealias InboundOut = AddressedEnvelope<ByteBuffer>
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var data = self.unwrapInboundIn(data)
+        var data = Self.unwrapInboundIn(data)
         assert(data.data.readIPv4Header() != nil)
-        context.fireChannelRead(self.wrapInboundOut(data))
+        context.fireChannelRead(Self.wrapInboundOut(data))
     }
 }
 
@@ -52,11 +52,11 @@ private final class LineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncod
                 buffer.moveReaderIndex(forwardBy: 1)
 
                 if id == inboundID {
-                    context.fireChannelRead(self.wrapInboundOut(data))
+                    context.fireChannelRead(Self.wrapInboundOut(data))
                 }
                 return .continue
             } else {
-                context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: readable)!))
+                context.fireChannelRead(Self.wrapInboundOut(buffer.readSlice(length: readable)!))
                 buffer.moveReaderIndex(forwardBy: 1)
                 return .continue
             }
@@ -110,7 +110,7 @@ private final class TLSUserEventHandler: ChannelInboundHandler, RemovableChannel
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let buffer = self.unwrapInboundIn(data)
+        let buffer = Self.unwrapInboundIn(data)
         let string = String(buffer: buffer)
 
         if string.hasPrefix("negotiate-alpn:") {
@@ -136,12 +136,12 @@ private final class ByteBufferToStringHandler: ChannelDuplexHandler {
     typealias OutboundOut = ByteBuffer
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let buffer = self.unwrapInboundIn(data)
-        context.fireChannelRead(self.wrapInboundOut(String(buffer: buffer)))
+        let buffer = Self.unwrapInboundIn(data)
+        context.fireChannelRead(Self.wrapInboundOut(String(buffer: buffer)))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let buffer = ByteBuffer(string: self.unwrapOutboundIn(data))
+        let buffer = ByteBuffer(string: Self.unwrapOutboundIn(data))
         context.write(.init(buffer), promise: promise)
     }
 }
@@ -153,13 +153,13 @@ private final class ByteBufferToByteHandler: ChannelDuplexHandler {
     typealias OutboundOut = ByteBuffer
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buffer = self.unwrapInboundIn(data)
+        var buffer = Self.unwrapInboundIn(data)
         let byte = buffer.readInteger(as: UInt8.self)!
-        context.fireChannelRead(self.wrapInboundOut(byte))
+        context.fireChannelRead(Self.wrapInboundOut(byte))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let buffer = ByteBuffer(integer: self.unwrapOutboundIn(data))
+        let buffer = ByteBuffer(integer: Self.unwrapOutboundIn(data))
         context.write(.init(buffer), promise: promise)
     }
 }
@@ -177,23 +177,23 @@ private final class AddressedEnvelopingHandler: ChannelDuplexHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let envelope = self.unwrapInboundIn(data)
+        let envelope = Self.unwrapInboundIn(data)
         self.remoteAddress = envelope.remoteAddress
 
-        context.fireChannelRead(self.wrapInboundOut(envelope.data))
+        context.fireChannelRead(Self.wrapInboundOut(envelope.data))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let buffer = self.unwrapOutboundIn(data)
+        let buffer = Self.unwrapOutboundIn(data)
         if let remoteAddress = self.remoteAddress {
             context.write(
-                self.wrapOutboundOut(AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)),
+                Self.wrapOutboundOut(AddressedEnvelope(remoteAddress: remoteAddress, data: buffer)),
                 promise: promise
             )
             return
         }
 
-        context.write(self.wrapOutboundOut(buffer), promise: promise)
+        context.write(Self.wrapOutboundOut(buffer), promise: promise)
     }
 }
 
@@ -489,7 +489,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let channel = self.unwrapInboundIn(data)
+                let channel = Self.unwrapInboundIn(data)
 
                 self.channels.withLockedValue { $0.append(channel) }
 

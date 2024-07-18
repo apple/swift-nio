@@ -159,11 +159,11 @@ class StreamChannelTest: XCTestCase {
                 var buffer = context.channel.allocator.buffer(capacity: chunkSize)
                 buffer.writeBytes(repeatElement(UInt8(ascii: "x"), count: chunkSize))
                 for _ in 0..<(totalAmount / chunkSize) {
-                    context.write(self.wrapOutboundOut(buffer)).whenFailure { error in
+                    context.write(Self.wrapOutboundOut(buffer)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
                 }
-                context.write(self.wrapOutboundOut(buffer)).map {
+                context.write(Self.wrapOutboundOut(buffer)).map {
                     XCTAssertEqual(self.state, .thenTrueAgain)
                 }.recover { error in
                     XCTFail("unexpected error \(error)")
@@ -339,7 +339,7 @@ class StreamChannelTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 guard self.areReadsOkayNow.load(ordering: .relaxed) else {
-                    XCTFail("unexpected read of \(self.unwrapInboundIn(data))")
+                    XCTFail("unexpected read of \(Self.unwrapInboundIn(data))")
                     return
                 }
             }
@@ -433,7 +433,7 @@ class StreamChannelTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 // The two writes could be coalesced, so we add up the bytes and not always the number of read calls.
-                self.numberOfBytes += self.unwrapInboundIn(data).readableBytes
+                self.numberOfBytes += Self.unwrapInboundIn(data).readableBytes
                 if self.numberOfBytes == 2 {
                     self.allDonePromise.succeed(())
                 }
@@ -488,7 +488,7 @@ class StreamChannelTest: XCTestCase {
                     buffer.writeString("hello")
                     context.channel.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1024, high: 1024))
                         .flatMap {
-                            context.writeAndFlush(self.wrapOutboundOut(buffer))
+                            context.writeAndFlush(Self.wrapOutboundOut(buffer))
                         }.whenFailure { error in
                             XCTFail("unexpected error: \(error)")
                         }
@@ -512,7 +512,7 @@ class StreamChannelTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 // The two writes could be coalesced, so we add up the bytes and not always the number of read calls.
-                self.numberOfReads += self.unwrapInboundIn(data).readableBytes
+                self.numberOfReads += Self.unwrapInboundIn(data).readableBytes
                 if self.numberOfReads >= self.expectedNumberOfBytes {
                     self.allDonePromise.succeed(())
                 }
@@ -653,7 +653,7 @@ class StreamChannelTest: XCTestCase {
 
                 func writeOneMore() {
                     self.bytesWritten += buffer.readableBytes
-                    context.writeAndFlush(self.wrapOutboundOut(buffer)).whenFailure { error in
+                    context.writeAndFlush(Self.wrapOutboundOut(buffer)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
                     context.eventLoop.scheduleTask(in: .microseconds(100)) {
@@ -667,7 +667,7 @@ class StreamChannelTest: XCTestCase {
                             buffer.writeString("1")
                             self.state = .done
                             self.bytesWritten += 1
-                            context.writeAndFlush(self.wrapOutboundOut(buffer)).whenFailure { error in
+                            context.writeAndFlush(Self.wrapOutboundOut(buffer)).whenFailure { error in
                                 XCTFail("unexpected error \(error)")
                             }
                             self.wroteEnoughToBeStuckPromise.succeed(self.bytesWritten)
@@ -733,7 +733,7 @@ class StreamChannelTest: XCTestCase {
                     self.state = .done
                     var buffer = context.channel.allocator.buffer(capacity: 10 * 1024 * 1024)
                     buffer.writeBytes(Array(repeating: UInt8(ascii: "X"), count: buffer.capacity - 1))
-                    context.writeAndFlush(self.wrapOutboundOut(buffer), promise: self.finishedBigWritePromise)
+                    context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: self.finishedBigWritePromise)
                     self.beganBigWritePromise.succeed(())
                 case .done:
                     ()  // ignored
@@ -764,7 +764,7 @@ class StreamChannelTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let buffer = self.unwrapInboundIn(data)
+                let buffer = Self.unwrapInboundIn(data)
                 switch self.state {
                 case .waitingForInitialOutsideReadCall:
                     XCTFail("unexpected \(#function)")
@@ -906,7 +906,7 @@ class StreamChannelTest: XCTestCase {
                         // Let's send another 2 bytes, ...
                         var buffer = context.channel.allocator.buffer(capacity: amount)
                         buffer.writeBytes(Array(repeating: UInt8(ascii: "X"), count: amount))
-                        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+                        context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: nil)
 
                         // ... and let's close
                         context.close(promise: nil)
@@ -952,7 +952,7 @@ final class AccumulateAllReads: ChannelInboundHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buffer = self.unwrapInboundIn(data)
+        var buffer = Self.unwrapInboundIn(data)
         let closeAfter = buffer.readableBytesView.last == UInt8(ascii: "$")
         self.accumulator.writeBuffer(&buffer)
         if closeAfter {

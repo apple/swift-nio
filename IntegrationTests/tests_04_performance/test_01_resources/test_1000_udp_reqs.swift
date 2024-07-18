@@ -73,7 +73,7 @@ private final class ClientHandler: ChannelInboundHandler {
         // Send the data with ECN
         let metadata = AddressedEnvelope<ByteBuffer>.Metadata(ecnState: .transportCapableFlag1)
         let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer, metadata: metadata)
-        clientChannel.writeAndFlush(self.wrapOutboundOut(envelope), promise: nil)
+        clientChannel.writeAndFlush(Self.wrapOutboundOut(envelope), promise: nil)
     }
 
     func sendBytesAndWaitForReply(clientChannel: Channel) -> Int {

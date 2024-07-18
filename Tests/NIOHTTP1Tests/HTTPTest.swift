@@ -29,7 +29,7 @@ private final class TestChannelInboundHandler: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        context.fireChannelRead(self.wrapInboundOut(self.body(self.unwrapInboundIn(data))))
+        context.fireChannelRead(Self.wrapInboundOut(self.body(Self.unwrapInboundIn(data))))
     }
 }
 

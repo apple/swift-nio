@@ -146,7 +146,7 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let buffer = self.unwrapInboundIn(data)
+        let buffer = Self.unwrapInboundIn(data)
         self.receiveds.append(buffer)
         if let finalBytes = buffer.getBytes(at: buffer.writerIndex - 4, length: 4),
             finalBytes == [0x0D, 0x0A, 0x0D, 0x0A]
@@ -450,7 +450,7 @@ private class DataRecorder<T>: ChannelInboundHandler {
     private var data: [T] = []
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let datum = self.unwrapInboundIn(data)
+        let datum = Self.unwrapInboundIn(data)
         self.data.append(datum)
     }
 
@@ -1331,7 +1331,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                var buf = self.unwrapInboundIn(data)
+                var buf = Self.unwrapInboundIn(data)
                 XCTAssertEqual(1, buf.readableBytes)
                 let stringRead = buf.readString(length: buf.readableBytes)
                 switch self.state {
@@ -2082,7 +2082,7 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                var buf = self.unwrapInboundIn(data)
+                var buf = Self.unwrapInboundIn(data)
                 XCTAssertEqual(1, buf.readableBytes)
                 let stringRead = buf.readString(length: buf.readableBytes)
                 switch self.state {
