@@ -388,23 +388,41 @@ extension NIOThrowingAsyncSequenceProducer {
 extension NIOThrowingAsyncSequenceProducer {
     /// This is the underlying storage of the sequence. The goal of this is to synchronize the access to all state.
     @usableFromInline
-    /* fileprivate */ internal final class Storage: @unchecked Sendable {
-        /// The lock that protects our state.
+    /* fileprivate */ internal struct Storage: Sendable {
         @usableFromInline
-        /* private */ internal let _lock = NIOLock()
-        /// The state machine.
+        struct State: Sendable {
+            @usableFromInline
+            var stateMachine: StateMachine
+            @usableFromInline
+            var delegate: Delegate?
+            @usableFromInline
+            var didSuspend: (@Sendable () -> Void)?
+
+            @inlinable
+            init(
+                stateMachine: StateMachine,
+                delegate: Delegate? = nil,
+                didSuspend: (@Sendable () -> Void)? = nil
+            ) {
+                self.stateMachine = stateMachine
+                self.delegate = delegate
+                self.didSuspend = didSuspend
+            }
+        }
+
         @usableFromInline
-        /* private */ internal var _stateMachine: StateMachine
-        /// The delegate.
+        internal let _state: NIOLockedValueBox<State>
+
         @usableFromInline
-        /* private */ internal var _delegate: Delegate?
-        /// Hook used in testing.
-        @usableFromInline
-        internal var _didSuspend: (() -> Void)?
+        internal func _setDidSuspend(_ didSuspend: (@Sendable () -> Void)?) {
+            self._state.withLockedValue {
+                $0.didSuspend = didSuspend
+            }
+        }
 
         @inlinable
         var isFinished: Bool {
-            self._lock.withLock { self._stateMachine.isFinished }
+            self._state.withLockedValue { $0.stateMachine.isFinished }
         }
 
         @usableFromInline
@@ -412,19 +430,22 @@ extension NIOThrowingAsyncSequenceProducer {
             backPressureStrategy: Strategy,
             delegate: Delegate
         ) {
-            self._stateMachine = .init(backPressureStrategy: backPressureStrategy)
-            self._delegate = delegate
+            let state = State(
+                stateMachine: .init(backPressureStrategy: backPressureStrategy),
+                delegate: delegate
+            )
+            self._state = NIOLockedValueBox(state)
         }
 
         @inlinable
         /* fileprivate */ internal func sequenceDeinitialized() {
-            let delegate: Delegate? = self._lock.withLock {
-                let action = self._stateMachine.sequenceDeinitialized()
+            let delegate: Delegate? = self._state.withLockedValue {
+                let action = $0.stateMachine.sequenceDeinitialized()
 
                 switch action {
                 case .callDidTerminate:
-                    let delegate = self._delegate
-                    self._delegate = nil
+                    let delegate = $0.delegate
+                    $0.delegate = nil
                     return delegate
 
                 case .none:
@@ -437,20 +458,20 @@ extension NIOThrowingAsyncSequenceProducer {
 
         @inlinable
         /* fileprivate */ internal func iteratorInitialized() {
-            self._lock.withLock {
-                self._stateMachine.iteratorInitialized()
+            self._state.withLockedValue {
+                $0.stateMachine.iteratorInitialized()
             }
         }
 
         @inlinable
         /* fileprivate */ internal func iteratorDeinitialized() {
-            let delegate: Delegate? = self._lock.withLock {
-                let action = self._stateMachine.iteratorDeinitialized()
+            let delegate: Delegate? = self._state.withLockedValue {
+                let action = $0.stateMachine.iteratorDeinitialized()
 
                 switch action {
                 case .callDidTerminate:
-                    let delegate = self._delegate
-                    self._delegate = nil
+                    let delegate = $0.delegate
+                    $0.delegate = nil
 
                     return delegate
 
@@ -467,8 +488,8 @@ extension NIOThrowingAsyncSequenceProducer {
             // We must not resume the continuation while holding the lock
             // because it can deadlock in combination with the underlying ulock
             // in cases where we race with a cancellation handler
-            let action = self._lock.withLock {
-                self._stateMachine.yield(sequence)
+            let action = self._state.withLockedValue {
+                $0.stateMachine.yield(sequence)
             }
 
             switch action {
@@ -498,13 +519,13 @@ extension NIOThrowingAsyncSequenceProducer {
             // We must not resume the continuation while holding the lock
             // because it can deadlock in combination with the underlying ulock
             // in cases where we race with a cancellation handler
-            let (delegate, action): (Delegate?, NIOThrowingAsyncSequenceProducer.StateMachine.FinishAction) = self._lock.withLock {
-                let action = self._stateMachine.finish(failure)
-                
+            let (delegate, action): (Delegate?, NIOThrowingAsyncSequenceProducer.StateMachine.FinishAction) = self._state.withLockedValue {
+                let action = $0.stateMachine.finish(failure)
+
                 switch action {
                 case .resumeContinuationWithFailureAndCallDidTerminate:
-                    let delegate = self._delegate
-                    self._delegate = nil
+                    let delegate = $0.delegate
+                    $0.delegate = nil
                     return (delegate, action)
 
                 case .none:
@@ -530,28 +551,36 @@ extension NIOThrowingAsyncSequenceProducer {
 
         @inlinable
         /* fileprivate */ internal func next() async throws -> Element? {
-            try await withTaskCancellationHandler {
-                self._lock.lock()
+            try await withTaskCancellationHandler { () async throws -> Element? in
+                let unsafe = self._state.unsafe
+                unsafe.lock()
 
-                let action = self._stateMachine.next()
+                let action = unsafe.withValueAssumingLockIsAcquired {
+                    $0.stateMachine.next()
+                }
 
                 switch action {
                 case .returnElement(let element):
-                    self._lock.unlock()
+                    unsafe.unlock()
                     return element
 
                 case .returnElementAndCallProduceMore(let element):
-                    let delegate = self._delegate
-                    self._lock.unlock()
+                    let delegate = unsafe.withValueAssumingLockIsAcquired {
+                        $0.delegate
+                    }
+                    unsafe.unlock()
 
                     delegate?.produceMore()
 
                     return element
 
                 case .returnFailureAndCallDidTerminate(let failure):
-                    let delegate = self._delegate
-                    self._delegate = nil
-                    self._lock.unlock()
+                    let delegate = unsafe.withValueAssumingLockIsAcquired {
+                        let delegate = $0.delegate
+                        $0.delegate = nil
+                        return delegate
+                    }
+                    unsafe.unlock()
 
                     delegate?.didTerminate()
 
@@ -564,7 +593,7 @@ extension NIOThrowingAsyncSequenceProducer {
                     }
 
                 case .returnCancellationError:
-                    self._lock.unlock()
+                    unsafe.unlock()
                     // We have deprecated the generic Failure type in the public API and Failure should
                     // now be `Swift.Error`. However, if users have not migrated to the new API they could
                     // still use a custom generic Error type and this cast might fail.
@@ -579,45 +608,55 @@ extension NIOThrowingAsyncSequenceProducer {
                     return nil
 
                 case .returnNil:
-                    self._lock.unlock()
+                    unsafe.unlock()
                     return nil
 
                 case .suspendTask:
                     // It is safe to hold the lock across this method
                     // since the closure is guaranteed to be run straight away
-                    return try await withCheckedThrowingContinuation { continuation in
-                        let action = self._stateMachine.next(for: continuation)
+                    return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Element?, any Error>) in
+                        let (action, callDidSuspend) = unsafe.withValueAssumingLockIsAcquired {
+                            let action = $0.stateMachine.next(for: continuation)
+                            let callDidSuspend = $0.didSuspend != nil
+                            return (action, callDidSuspend)
+                        }
 
                         switch action {
                         case .callProduceMore:
-                            let delegate = _delegate
-                            self._lock.unlock()
+                            let delegate = unsafe.withValueAssumingLockIsAcquired {
+                                $0.delegate
+                            }
+                            unsafe.unlock()
 
                             delegate?.produceMore()
 
                         case .none:
-                            self._lock.unlock()
+                            unsafe.unlock()
                         }
-                        self._didSuspend?()
+
+                        if callDidSuspend {
+                            let didSuspend = self._state.withLockedValue { $0.didSuspend }
+                            didSuspend?()
+                        }
                     }
                 }
             } onCancel: {
                 // We must not resume the continuation while holding the lock
                 // because it can deadlock in combination with the underlying ulock
                 // in cases where we race with a cancellation handler
-                let (delegate, action): (Delegate?, NIOThrowingAsyncSequenceProducer.StateMachine.CancelledAction) = self._lock.withLock {
-                    let action = self._stateMachine.cancelled()
+                let (delegate, action): (Delegate?, NIOThrowingAsyncSequenceProducer.StateMachine.CancelledAction) = self._state.withLockedValue {
+                    let action = $0.stateMachine.cancelled()
 
                     switch action {
                     case .callDidTerminate:
-                        let delegate = self._delegate
-                        self._delegate = nil
+                        let delegate = $0.delegate
+                        $0.delegate = nil
 
                         return (delegate, action)
 
                     case .resumeContinuationWithCancellationErrorAndCallDidTerminate:
-                        let delegate = self._delegate
-                        self._delegate = nil
+                        let delegate = $0.delegate
+                        $0.delegate = nil
 
                         return (delegate, action)
 
@@ -658,9 +697,9 @@ extension NIOThrowingAsyncSequenceProducer {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOThrowingAsyncSequenceProducer {
     @usableFromInline
-    /* private */ internal struct StateMachine {
+    /* private */ internal struct StateMachine: Sendable {
         @usableFromInline
-        /* private */ internal enum State {
+        /* private */ internal enum State: Sendable {
             /// The initial state before either a call to `yield()` or a call to `next()` happened
             case initial(
                 backPressureStrategy: Strategy,
