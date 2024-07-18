@@ -194,6 +194,10 @@ public struct ReadFileHandle: ReadableFileHandleProtocol, _HasFileHandle {
         self.fileHandle.systemFileHandle.readChunks(in: range, chunkLength: chunkLength)
     }
 
+    public func readChunksFromFilePointer(chunkLength size: ByteCount) -> FileChunks {
+        self.fileHandle.systemFileHandle.readChunksFromFilePointer(chunkLength: size)
+    }
+
     public func setTimes(
         lastAccess: FileInfo.Timespec?,
         lastDataModification: FileInfo.Timespec?
@@ -267,6 +271,10 @@ public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFi
 
     public func readChunks(in offset: Range<Int64>, chunkLength: ByteCount) -> FileChunks {
         self.fileHandle.systemFileHandle.readChunks(in: offset, chunkLength: chunkLength)
+    }
+
+    public func readChunksFromFilePointer(chunkLength size: ByteCount) -> FileChunks {
+        self.fileHandle.systemFileHandle.readChunksFromFilePointer(chunkLength: size)
     }
 
     @discardableResult
