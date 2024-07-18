@@ -22,7 +22,7 @@
     "AllPublicDeclarationsHaveDocumentation" : false,
     "AlwaysUseLiteralForEmptyCollectionInit" : false,
     "AlwaysUseLowerCamelCase" : false,
-    "AmbiguousTrailingClosureOverload" : false,
+    "AmbiguousTrailingClosureOverload" : true,
     "BeginDocumentationCommentWithOneLineSummary" : false,
     "DoNotUseSemicolons" : true,
     "DontRepeatTypeInStaticProperties" : true,

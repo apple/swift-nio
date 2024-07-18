@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// swift-format-ignore: AmbiguousTrailingClosureOverload
+
 import NIOConcurrencyHelpers
 import XCTest
 
@@ -94,6 +96,7 @@ func withPipe(
     }
 }
 
+// swift-format-ignore: AmbiguousTrailingClosureOverload
 func withTemporaryDirectory<T>(_ body: (String) throws -> T) rethrows -> T {
     let dir = createTemporaryDirectory()
     defer {

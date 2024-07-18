@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// swift-format-ignore: AmbiguousTrailingClosureOverload
+
 import Dispatch
 import NIOCore
 import NIOEmbedded

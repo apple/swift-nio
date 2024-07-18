@@ -111,20 +111,6 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
     ///
     /// - Parameters:
     ///   - predicate: A predicate which evaluates to `true` for all bytes returned.
-    /// - Returns: The bytes read from the file.
-    /// - Important: This method has been deprecated: use ``read(while:)-8aukk`` instead.
-    @available(*, deprecated, message: "Use the read(while:) method returning a (ByteBuffer, Bool) tuple instead.")
-    public mutating func read(
-        while predicate: (UInt8) -> Bool
-    ) async throws -> ByteBuffer {
-        try await self.read(while: predicate).bytes
-    }
-
-    /// Reads from  the current position in the file until `predicate` returns `false` and returns
-    /// the read bytes.
-    ///
-    /// - Parameters:
-    ///   - predicate: A predicate which evaluates to `true` for all bytes returned.
     /// - Returns: A tuple containing the bytes read from the file in its first component, and a boolean
     /// indicating whether we've stopped reading because EOF has been reached, or because the predicate
     /// condition doesn't hold true anymore.
@@ -218,6 +204,24 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
                 return
             }
         }
+    }
+}
+
+// swift-format-ignore: AmbiguousTrailingClosureOverload
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension BufferedReader {
+    /// Reads from  the current position in the file until `predicate` returns `false` and returns
+    /// the read bytes.
+    ///
+    /// - Parameters:
+    ///   - predicate: A predicate which evaluates to `true` for all bytes returned.
+    /// - Returns: The bytes read from the file.
+    /// - Important: This method has been deprecated: use ``read(while:)-8aukk`` instead.
+    @available(*, deprecated, message: "Use the read(while:) method returning a (ByteBuffer, Bool) tuple instead.")
+    public mutating func read(
+        while predicate: (UInt8) -> Bool
+    ) async throws -> ByteBuffer {
+        try await self.read(while: predicate).bytes
     }
 }
 

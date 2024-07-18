@@ -312,7 +312,11 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
         }
         return result
     }
+}
 
+// swift-format-ignore: AmbiguousTrailingClosureOverload
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension NIOAsyncChannel {
     /// Provides scoped access to the inbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
