@@ -139,7 +139,7 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = HTTPServerRequestPart
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let part = self.unwrapInboundIn(data)
+                let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .head(let h):
                     XCTAssertEqual("/SomeURL", h.uri)
@@ -182,7 +182,7 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = HTTPServerRequestPart
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let part = self.unwrapInboundIn(data)
+                let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .end:
                     // ignore
@@ -212,7 +212,7 @@ class HTTPDecoderTest: XCTestCase {
             var called: Bool = false
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                var buffer = self.unwrapInboundIn(data)
+                var buffer = Self.unwrapInboundIn(data)
                 XCTAssertEqual("XXXX", buffer.readString(length: buffer.readableBytes)!)
                 self.called = true
             }
@@ -236,7 +236,7 @@ class HTTPDecoderTest: XCTestCase {
             let collector = ByteCollector()
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let part = self.unwrapInboundIn(data)
+                let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .end:
                     _ = context.pipeline.removeHandler(self).flatMap { _ in
@@ -271,7 +271,7 @@ class HTTPDecoderTest: XCTestCase {
             var called: Bool = false
             
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                var buffer = self.unwrapInboundIn(data)
+                var buffer = Self.unwrapInboundIn(data)
                 XCTAssertEqual("XXXX", buffer.readString(length: buffer.readableBytes)!)
                 self.called = true
             }
@@ -300,7 +300,7 @@ class HTTPDecoderTest: XCTestCase {
             }
             
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let part = self.unwrapInboundIn(data)
+                let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .end:
                     _ = context.pipeline.removeHandler(self).flatMap { _ in
@@ -550,7 +550,7 @@ class HTTPDecoderTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let part = self.unwrapInboundIn(data)
+                let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .head(let head):
                     XCTAssertEqual(.OPTIONS, head.method)
@@ -580,7 +580,7 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = HTTPServerRequestPart
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let part = self.unwrapInboundIn(data)
+                let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .head(let head):
                     XCTAssertEqual(.OPTIONS, head.method)
@@ -617,7 +617,7 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = HTTPServerRequestPart
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let part = self.unwrapInboundIn(data)
+                let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .head(let head):
                     XCTAssertEqual(.OPTIONS, head.method)
@@ -661,7 +661,7 @@ class HTTPDecoderTest: XCTestCase {
             typealias InboundIn = HTTPServerRequestPart
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let part = self.unwrapInboundIn(data)
+                let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .head(let head):
                     XCTAssertEqual(.OPTIONS, head.method)

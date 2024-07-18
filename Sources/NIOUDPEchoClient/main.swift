@@ -43,7 +43,7 @@ private final class EchoHandler: ChannelInboundHandler {
             // Forward the data.
             let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
             
-            context.writeAndFlush(self.wrapOutboundOut(envelope), promise: nil)
+            context.writeAndFlush(Self.wrapOutboundOut(envelope), promise: nil)
             
         } catch {
             print("Could not resolve remote address")
@@ -51,7 +51,7 @@ private final class EchoHandler: ChannelInboundHandler {
     }
     
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let envelope = self.unwrapInboundIn(data)
+        let envelope = Self.unwrapInboundIn(data)
         let byteBuffer = envelope.data
         
         self.numBytes -= byteBuffer.readableBytes

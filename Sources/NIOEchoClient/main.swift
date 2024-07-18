@@ -29,11 +29,11 @@ private final class EchoHandler: ChannelInboundHandler {
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
         let buffer = context.channel.allocator.buffer(string: line)
         self.sendBytes = buffer.readableBytes
-        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+        context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: nil)
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var unwrappedInboundData = self.unwrapInboundIn(data)
+        var unwrappedInboundData = Self.unwrapInboundIn(data)
         self.sendBytes -= unwrappedInboundData.readableBytes
         receiveBuffer.writeBuffer(&unwrappedInboundData)
         

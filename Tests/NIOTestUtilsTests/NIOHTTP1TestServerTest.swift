@@ -368,7 +368,7 @@ private final class TestHTTPHandler: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        switch self.unwrapInboundIn(data) {
+        switch Self.unwrapInboundIn(data) {
         case .head(let responseHead):
             guard case .ok = responseHead.status else {
                 self.responsePromise.fail(ResponseError.badStatus)
@@ -429,14 +429,14 @@ private final class AggregateBodyHandler: ChannelInboundHandler {
     var receivedSoFar: ByteBuffer? = nil
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        switch self.unwrapInboundIn(data) {
+        switch Self.unwrapInboundIn(data) {
         case .head:
             context.fireChannelRead(data)
         case .body(var buffer):
             self.receivedSoFar.setOrWriteBuffer(&buffer)
         case .end:
             if let receivedSoFar = self.receivedSoFar {
-                context.fireChannelRead(self.wrapInboundOut(.body(receivedSoFar)))
+                context.fireChannelRead(Self.wrapInboundOut(.body(receivedSoFar)))
             }
             context.fireChannelRead(data)
         }

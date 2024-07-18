@@ -45,7 +45,7 @@ final class DuplicatingReadHandler: ChannelInboundHandler {
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         if !self.hasDuplicatedRead {
             self.hasDuplicatedRead = true
-            try! self.channel.writeInbound(self.unwrapInboundIn(data))
+            try! self.channel.writeInbound(Self.unwrapInboundIn(data))
         }
         context.fireChannelRead(data)
     }

@@ -44,7 +44,7 @@ private final class ReadRecorder<T: Equatable>: ChannelInboundHandler, Removable
     public var reads: [Event] = []
     
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.reads.append(.channelRead(self.unwrapInboundIn(data)))
+        self.reads.append(.channelRead(Self.unwrapInboundIn(data)))
         context.fireChannelRead(data)
     }
     
@@ -70,7 +70,7 @@ private final class WriteRecorder: ChannelOutboundHandler, RemovableChannelHandl
     public var writes: [HTTPServerResponsePart] = []
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        self.writes.append(self.unwrapOutboundIn(data))
+        self.writes.append(Self.unwrapOutboundIn(data))
 
         context.write(data, promise: promise)
     }

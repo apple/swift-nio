@@ -170,7 +170,7 @@ class SelectorTest: XCTestCase {
                 XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
 
                 XCTAssertFalse(self.didRead)
-                var buf = self.unwrapInboundIn(data)
+                var buf = Self.unwrapInboundIn(data)
                 XCTAssertEqual(1, buf.readableBytes)
                 XCTAssertEqual("H", buf.readString(length: 1)!)
                 self.didRead = true

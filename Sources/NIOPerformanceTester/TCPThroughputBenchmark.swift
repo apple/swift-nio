@@ -52,7 +52,7 @@ final class TCPThroughputBenchmark: Benchmark {
 
         public func send(_ message: ByteBuffer, times count: Int) {
             for _ in 0..<count {
-                _ = self.context.writeAndFlush(self.wrapOutboundOut(message.slice()))
+                _ = self.context.writeAndFlush(Self.wrapOutboundOut(message.slice()))
             }
         }
     }
@@ -64,7 +64,7 @@ final class TCPThroughputBenchmark: Benchmark {
         public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
             if let messageSize = buffer.getInteger(at: buffer.readerIndex, as: UInt16.self) {
                 if buffer.readableBytes >= messageSize {
-                    context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: Int(messageSize))!))
+                    context.fireChannelRead(Self.wrapInboundOut(buffer.readSlice(length: Int(messageSize))!))
                     return .continue
                 }
             }

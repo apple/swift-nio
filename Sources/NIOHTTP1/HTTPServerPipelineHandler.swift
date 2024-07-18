@@ -301,7 +301,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         self.checkAssertion(self.lifecycleState != .quiescingLastRequestEndReceived &&
                                self.lifecycleState != .quiescingCompleted,
                                "deliverOneMessage called in lifecycle illegal state \(self.lifecycleState)")
-        let msg = self.unwrapInboundIn(data)
+        let msg = Self.unwrapInboundIn(data)
 
         debugOnly {
             switch msg {
@@ -403,7 +403,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         self.checkAssertion(self.state != .requestEndPending,
                                "Received second response while waiting for first one to complete")
         debugOnly {
-            let res = self.unwrapOutboundIn(data)
+            let res = Self.unwrapOutboundIn(data)
             switch res {
             case .head(let head) where head.isInformational:
                 self.checkAssertion(self.nextExpectedOutboundMessage == .head)
@@ -420,12 +420,12 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
 
         var startReadingAgain = false
 
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(var head) where self.lifecycleState != .acceptingEvents:
             if head.isKeepAlive {
                 head.headers.replaceOrAdd(name: "connection", value: "close")
             }
-            context.write(self.wrapOutboundOut(.head(head)), promise: promise)
+            context.write(Self.wrapOutboundOut(.head(head)), promise: promise)
         case .end:
             startReadingAgain = true
 
@@ -643,7 +643,7 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
         let maybeFirstHead = self.eventBuffer.firstIndex(where: { element in
             switch element {
             case .channelRead(let read):
-                switch self.unwrapInboundIn(read) {
+                switch Self.unwrapInboundIn(read) {
                 case .head:
                     return true
                 case .body, .end:
