@@ -21,6 +21,114 @@ import XCTest
 
 @available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
 final class FileHandleTests: XCTestCase {
+    private enum MockFileHandleError: Error {
+        case unimplemented(function: String)
+    }
+
+    private final class MockFileHandle: ReadableFileHandleProtocol {
+        struct ChunkedByteBufferSequence: AsyncSequence {
+            struct Interator: AsyncIteratorProtocol {
+                let buffer: ByteBuffer
+                private(set) var range: Range<Int64>
+                let chunkLength: Int
+                mutating func next() async throws -> ByteBuffer? {
+                    guard let slice = self.buffer.getSlice(at: Int(range.lowerBound), length: self.chunkLength) else {
+                        return nil
+                    }
+                    self.range = self.range.lowerBound+Int64(slice.readableBytes)..<self.range.upperBound
+                    return slice
+
+                }
+            }
+            let buffer: ByteBuffer
+            let range: Range<Int64>
+            let chunkLength: ByteCount
+            func makeAsyncIterator() -> Interator {
+                .init(buffer: self.buffer, range: self.range, chunkLength: Int(self.chunkLength.bytes))
+            }
+        }
+        let bytes: ByteBuffer
+        let size: Int
+        let chunkSize: ByteCount
+
+        init(bytes: ByteBuffer, chunkSize: ByteCount = .bytes(Int64.max)) {
+            self.bytes = bytes
+            self.size = bytes.readableBytes  // capture initial size since we might be moving the read/write index later
+            self.chunkSize = chunkSize
+        }
+
+        func readChunk(fromAbsoluteOffset offset: Int64, length: ByteCount) async throws -> ByteBuffer {
+            self.bytes.getSlice(at: Int(offset), length: Int(min(length.bytes, self.chunkSize.bytes))) ?? .init()
+        }
+
+        func readChunks(in range: Range<Int64>?, chunkLength: ByteCount) -> FileChunks {
+            guard let range else {
+                preconditionFailure("Reading from the current offset is not implemented for MockFileHandle")
+            }
+            return .init(wrapping: ChunkedByteBufferSequence(buffer: self.bytes, range: range, chunkLength: chunkLength))
+        }
+
+        func info() async throws -> FileInfo {
+            .init(
+                type: .regular,
+                permissions: [.ownerReadWrite, .groupRead, .otherRead],
+                size: Int64(self.size),
+                userID: .init(rawValue: 501),
+                groupID: .init(rawValue: 20),
+                lastAccessTime: .omit,
+                lastDataModificationTime: .omit,
+                lastStatusChangeTime: .omit
+            )
+        }
+
+        func replacePermissions(_ permissions: FilePermissions) async throws {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func addPermissions(_ permissions: FilePermissions) async throws -> FilePermissions {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func removePermissions(_ permissions: FilePermissions) async throws -> FilePermissions {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func attributeNames() async throws -> [String] {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func valueForAttribute(_ name: String) async throws -> [UInt8] {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func updateValueForAttribute(_ bytes: some RandomAccessCollection<UInt8> & Sendable, attribute name: String) async throws {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func removeValueForAttribute(_ name: String) async throws {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func synchronize() async throws {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func withUnsafeDescriptor<R>(_ execute: @escaping @Sendable (FileDescriptor) throws -> R) async throws -> R where R : Sendable {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func detachUnsafeFileDescriptor() throws -> FileDescriptor {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func close() async throws {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+
+        func setTimes(lastAccess: FileInfo.Timespec?, lastDataModification: FileInfo.Timespec?) async throws {
+            throw MockFileHandleError.unimplemented(function: #function)
+        }
+    }
     static let thisFile = FilePath(#filePath)
     static let testData = FilePath(#filePath)
         .removingLastComponent()  // FileHandleTests.swift
@@ -303,6 +411,20 @@ final class FileHandleTests: XCTestCase {
         }
     }
 
+    func testReadWholeFilePartialChunk() async throws {
+        let fileContents = ByteBuffer(string: "the quick brown fox jumped over the lazy dog")
+        let mockHandle = MockFileHandle(
+            bytes: fileContents,
+            chunkSize: .bytes(Int64(fileContents.readableBytes / 2))  // simulate reading a chunk of less than the requested size
+        )
+        let contents = try await mockHandle.readToEnd(maximumSizeAllowed: .bytes(Int64.max))
+        XCTAssertEqual(
+            contents,
+            fileContents,
+            "Contents of mock file differ to what was read by readToEnd"
+        )
+    }
+
     func testWriteAndReadUnseekableFile() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
@@ -317,10 +439,11 @@ final class FileHandleTests: XCTestCase {
         try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
             handle in
             let someBytes = ByteBuffer(repeating: 42, count: 1546)
+
             try await handle.write(contentsOf: someBytes.readableBytesView, toAbsoluteOffset: 0)
 
-            let readSomeBytes = try await handle.readToEnd(maximumSizeAllowed: .bytes(1546))
-            XCTAssertEqual(readSomeBytes, someBytes)
+            let contents = try await handle.readToEnd(maximumSizeAllowed: .bytes(1546))
+            XCTAssertEqual(contents, someBytes, "Data read back from the fifo should match what was written")
         }
     }
 

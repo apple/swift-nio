@@ -22,8 +22,10 @@ import NIOPosix
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public struct FileChunks: AsyncSequence {
     enum ChunkRange {
-        case entireFile
-        case partial(Range<Int64>)
+        /// Read from the current file access offset. Useful for reading from unseekable files.
+        case current
+        /// Read from a specific offset.
+        case specified(Range<Int64>)
     }
 
     public typealias Element = ByteBuffer
@@ -39,13 +41,12 @@ public struct FileChunks: AsyncSequence {
     internal init(
         handle: SystemFileHandle,
         chunkLength: ByteCount,
-        range: Range<Int64>
+        range: Range<Int64>?
     ) {
-        let chunkRange: ChunkRange
-        if range.lowerBound == 0, range.upperBound == .max {
-            chunkRange = .entireFile
+        let chunkRange: ChunkRange = if let range {
+            .specified(range)
         } else {
-            chunkRange = .partial(range)
+            .current
         }
 
         // TODO: choose reasonable watermarks; this should likely be at least somewhat dependent
@@ -96,9 +97,9 @@ extension BufferedStream where Element == ByteBuffer {
     ) -> BufferedStream<ByteBuffer> {
         let state: ProducerState
         switch range {
-        case .entireFile:
+        case .current:
             state = ProducerState(handle: handle, range: nil)
-        case .partial(let partialRange):
+        case .specified(let partialRange):
             state = ProducerState(handle: handle, range: partialRange)
         }
         let protectedState = NIOLockedValueBox(state)

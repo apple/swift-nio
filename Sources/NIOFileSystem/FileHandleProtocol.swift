@@ -201,7 +201,7 @@ public protocol ReadableFileHandleProtocol: FileHandleProtocol {
     ///   - range: The absolute offsets into the file to read.
     ///   - chunkLength: The maximum length of the chunk to read as a ``ByteCount``.
     /// - Returns: A sequence of chunks read from the file.
-    func readChunks(in range: Range<Int64>, chunkLength: ByteCount) -> FileChunks
+    func readChunks(in range: Range<Int64>?, chunkLength: ByteCount) -> FileChunks
 }
 
 // MARK: - Read chunks with default chunk length
@@ -227,15 +227,13 @@ extension ReadableFileHandleProtocol {
     ///
     /// - Parameters:
     ///   - range: A range of offsets in the file to read.
-    ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
     /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
-        in range: Range<Int64>,
-        chunkLength: ByteCount = .kibibytes(128)
+        in range: Range<Int64>?
     ) -> FileChunks {
-        return self.readChunks(in: range, chunkLength: chunkLength)
+        return self.readChunks(in: range, chunkLength: .kibibytes(128))
     }
 
     /// Returns an asynchronous sequence of chunks read from the file.
@@ -376,33 +374,31 @@ extension ReadableFileHandleProtocol {
                 forceChunkedRead = true
             }
 
-            if !forceChunkedRead, readSize <= singleShotReadLimit {
-                return try await self.readChunk(
-                    fromAbsoluteOffset: offset,
-                    length: .bytes(Int64(readSize))
-                )
+            let chunkLength: ByteCount = if !forceChunkedRead, readSize <= singleShotReadLimit {
+                .bytes(Int64(readSize))
             } else {
-                var accumulator = ByteBuffer()
-                accumulator.reserveCapacity(readSize)
-
-                for try await chunk in self.readChunks(in: offset..., chunkLength: .mebibytes(8)) {
-                    accumulator.writeImmutableBuffer(chunk)
-                    if accumulator.readableBytes > maximumSizeAllowed.bytes {
-                        throw FileSystemError(
-                            code: .resourceExhausted,
-                            message: """
-                                There are more bytes to read than the maximum size allowed \
-                                (\(maximumSizeAllowed)). Read the file in chunks or increase the maximum size \
-                                allowed.
-                                """,
-                            cause: nil,
-                            location: .here()
-                        )
-                    }
-                }
-
-                return accumulator
+                .mebibytes(8)
             }
+            var accumulator = ByteBuffer()
+            accumulator.reserveCapacity(readSize)
+
+            for try await chunk in self.readChunks(in: offset..., chunkLength: chunkLength) {
+                accumulator.writeImmutableBuffer(chunk)
+                if accumulator.readableBytes > maximumSizeAllowed.bytes {
+                    throw FileSystemError(
+                        code: .resourceExhausted,
+                        message: """
+                            There are more bytes to read than the maximum size allowed \
+                            (\(maximumSizeAllowed)). Read the file in chunks or increase the maximum size \
+                            allowed.
+                            """,
+                        cause: nil,
+                        location: .here()
+                    )
+                }
+            }
+
+            return accumulator
         } else {
             guard offset == 0 else {
                 throw FileSystemError(
@@ -415,7 +411,7 @@ extension ReadableFileHandleProtocol {
             var accumulator = ByteBuffer()
             accumulator.reserveCapacity(readSize)
 
-            for try await chunk in self.readChunks(in: ..., chunkLength: .mebibytes(8)) {
+            for try await chunk in self.readChunks(in: nil, chunkLength: .mebibytes(8)) {
                 accumulator.writeImmutableBuffer(chunk)
                 if accumulator.readableBytes > maximumSizeAllowed.bytes {
                     throw FileSystemError(

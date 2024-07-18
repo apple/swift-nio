@@ -190,7 +190,7 @@ public struct ReadFileHandle: ReadableFileHandleProtocol, _HasFileHandle {
         )
     }
 
-    public func readChunks(in range: Range<Int64>, chunkLength: ByteCount) -> FileChunks {
+    public func readChunks(in range: Range<Int64>?, chunkLength: ByteCount) -> FileChunks {
         self.fileHandle.systemFileHandle.readChunks(in: range, chunkLength: chunkLength)
     }
 
@@ -265,7 +265,7 @@ public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFi
         )
     }
 
-    public func readChunks(in offset: Range<Int64>, chunkLength: ByteCount) -> FileChunks {
+    public func readChunks(in offset: Range<Int64>?, chunkLength: ByteCount) -> FileChunks {
         self.fileHandle.systemFileHandle.readChunks(in: offset, chunkLength: chunkLength)
     }
 
