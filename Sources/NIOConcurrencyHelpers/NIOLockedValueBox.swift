@@ -65,10 +65,13 @@ public struct NIOLockedValueBox<Value> {
         }
 
         /// Mutate the value, assuming the lock has been acquired manually.
+        ///
+        /// - Parameter mutate: A closure with scoped access to the value.
+        /// - Returns: The result of the `mutate` closure.
         @inlinable
-        public func withValueAssumingLockIsAcquired<T>(
-            _ mutate: (inout Value) throws -> T
-        ) rethrows -> T {
+        public func withValueAssumingLockIsAcquired<Result>(
+            _ mutate: (_ value: inout Value) throws -> Result
+        ) rethrows -> Result {
             return try self._storage.withUnsafeMutablePointerToHeader { value in
                 try mutate(&value.pointee)
             }
