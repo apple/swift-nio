@@ -702,7 +702,7 @@ class HTTPDecoderTest: XCTestCase {
             channel.pipeline.syncOperations.removeHandler(decoder),
         ]
         channel.embeddedEventLoop.run()
-        for future in try removalFutures {
+        for future in removalFutures {
             XCTAssertNoThrow(try future.wait())
         }
         XCTAssertNoThrow(

@@ -44,7 +44,7 @@ class LinuxTest: XCTestCase {
 
     func testCoreCountCpuset() throws {
         #if os(Linux) || os(Android)
-        let cpuSets = [
+        let cpusets = [
             ("0", 1),
             ("0,3", 2),
             ("0-3", 4),
@@ -53,7 +53,7 @@ class LinuxTest: XCTestCase {
             ("0,2-4,6,7,9-11", 9),
             ("", nil),
         ]
-        for (cpuSet, count) in cpuSets {
+        for (cpuset, count) in cpusets {
             try withTemporaryFile(content: cpuset) { (_, path) -> Void in
                 XCTAssertEqual(Linux.coreCount(cpuset: path), count)
             }
