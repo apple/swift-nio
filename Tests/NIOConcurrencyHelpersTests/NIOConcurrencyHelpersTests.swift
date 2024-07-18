@@ -17,6 +17,7 @@ import NIOCore
 import XCTest
 
 @testable import NIOConcurrencyHelpers
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
