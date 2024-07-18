@@ -1,9 +1,3 @@
-import Dispatch
-import NIOCore
-import XCTest
-
-@testable import NIOConcurrencyHelpers
-
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -17,6 +11,12 @@ import XCTest
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+import Dispatch
+import NIOCore
+import XCTest
+
+@testable import NIOConcurrencyHelpers
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
