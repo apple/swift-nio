@@ -49,7 +49,7 @@
     "OrderedImports" : true,
     "ReplaceForEachWithForLoop" : true,
     "ReturnVoidInsteadOfEmptyTuple" : true,
-    "UseEarlyExits" : false,
+    "UseEarlyExits" : true,
     "UseExplicitNilCheckInConditions" : false,
     "UseLetInEveryBoundCaseVariable" : false,
     "UseShorthandTypeNames" : true,

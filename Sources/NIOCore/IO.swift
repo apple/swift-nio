@@ -121,11 +121,10 @@ public struct IOError: Swift.Error {
 ///     - reason: what failed
 /// - returns: the constructed reason.
 private func reasonForError(errnoCode: CInt, reason: String) -> String {
-    if let errorDescC = strerror(errnoCode) {
-        return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"
-    } else {
+    guard let errorDescC = strerror(errnoCode) else {
         return "\(reason): Broken strerror, unknown error: \(errnoCode)"
     }
+    return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"
 }
 
 #if os(Windows)

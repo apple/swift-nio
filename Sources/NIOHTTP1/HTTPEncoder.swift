@@ -135,12 +135,11 @@ private func correctlyFrameTransportHeaders(
         if headers.contains(name: "content-length") {
             return .contentLength
         }
-        if version.major == 1 && version.minor >= 1 {
-            headers.replaceOrAdd(name: "transfer-encoding", value: "chunked")
-            return .chunked
-        } else {
+        guard version.major == 1 && version.minor >= 1 else {
             return .neither
         }
+        headers.replaceOrAdd(name: "transfer-encoding", value: "chunked")
+        return .chunked
     case .unlikely:
         if headers.contains(name: "content-length") {
             return .contentLength
@@ -155,11 +154,10 @@ private func correctlyFrameTransportHeaders(
 /// Validates the response/request headers to ensure that we correctly send the body with chunked transfer
 /// encoding, when needed.
 private func messageIsChunked(headers: HTTPHeaders, version: HTTPVersion) -> Bool {
-    if version.major == 1 && version.minor >= 1 {
-        return headers.first(name: "transfer-encoding") == "chunked" ? true : false
-    } else {
+    guard version.major == 1 && version.minor >= 1 else {
         return false
     }
+    return headers.first(name: "transfer-encoding") == "chunked" ? true : false
 }
 
 /// A `ChannelOutboundHandler` that can serialize HTTP requests.

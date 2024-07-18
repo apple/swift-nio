@@ -33,11 +33,10 @@ struct CrashTest {
 extension Process {
     var binaryPath: String? {
         get {
-            if #available(macOS 10.13, *) {
-                return self.executableURL?.path
-            } else {
+            guard #available(macOS 10.13, *) else {
                 return self.launchPath
             }
+            return self.executableURL?.path
         }
         set {
             if #available(macOS 10.13, *) {
@@ -114,11 +113,10 @@ func main() throws {
         }
 
         let output = try result.get()
-        if output.range(of: regex, options: .regularExpression) != nil {
-            return .crashedAsExpected
-        } else {
+        guard output.range(of: regex, options: .regularExpression) != nil else {
             return .regexDidNotMatch(regex: regex, output: output)
         }
+        return .crashedAsExpected
     }
 
     func usage() {

@@ -27,12 +27,11 @@ private final class PongDecoder: ByteToMessageDecoder {
     typealias InboundOut = UInt8
 
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
-        if let ping = buffer.readInteger(as: UInt8.self) {
-            context.fireChannelRead(Self.wrapInboundOut(ping))
-            return .continue
-        } else {
+        guard let ping = buffer.readInteger(as: UInt8.self) else {
             return .needMoreData
         }
+        context.fireChannelRead(Self.wrapInboundOut(ping))
+        return .continue
     }
 
     public func decodeLast(

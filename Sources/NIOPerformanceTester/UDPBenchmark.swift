@@ -167,13 +167,12 @@ extension UDPBenchmark {
                 switch self.state {
                 case .running(var running):
                     running.responsesToRecieve &-= 1
-                    if running.responsesToRecieve == 0, running.requestsToSend == 0 {
-                        self.state = .stopped
-                        return .finished(running.promise)
-                    } else {
+                    guard running.responsesToRecieve == 0, running.requestsToSend == 0 else {
                         self.state = .running(running)
                         return .write
                     }
+                    self.state = .stopped
+                    return .finished(running.promise)
 
                 case .stopped:
                     fatalError("Received too many messages")

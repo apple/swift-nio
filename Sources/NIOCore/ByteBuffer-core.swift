@@ -537,14 +537,15 @@ public struct ByteBuffer {
     @inlinable
     mutating func _setBytes<Bytes: Sequence>(_ bytes: Bytes, at index: _Index) -> _Capacity
     where Bytes.Element == UInt8 {
-        if let written = bytes.withContiguousStorageIfAvailable({ bytes in
-            self._setBytes(UnsafeRawBufferPointer(bytes), at: index)
-        }) {
-            // fast path, we've got access to the contiguous bytes
-            return written
-        } else {
+        guard
+            let written = bytes.withContiguousStorageIfAvailable({ bytes in
+                self._setBytes(UnsafeRawBufferPointer(bytes), at: index)
+            })
+        else {
             return self._setSlowPath(bytes: bytes, at: index)
         }
+        // fast path, we've got access to the contiguous bytes
+        return written
     }
 
     // MARK: Public Core API
@@ -1190,11 +1191,10 @@ extension ByteBuffer {
     /// - returns: The return value of `body`.
     @inlinable
     public mutating func modifyIfUniquelyOwned<T>(_ body: (inout ByteBuffer) throws -> T) rethrows -> T? {
-        if isKnownUniquelyReferenced(&self._storage) {
-            return try body(&self)
-        } else {
+        guard isKnownUniquelyReferenced(&self._storage) else {
             return nil
         }
+        return try body(&self)
     }
 }
 

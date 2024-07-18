@@ -199,11 +199,10 @@ extension OpenOptions {
 extension OpenOptions.Write {
     @_spi(Testing)
     public var permissionsForRegularFile: FilePermissions? {
-        if let newFile = self.newFile {
-            return newFile.permissions ?? .defaultsForRegularFile
-        } else {
+        guard let newFile = self.newFile else {
             return nil
         }
+        return newFile.permissions ?? .defaultsForRegularFile
     }
 
     var descriptorOptions: FileDescriptor.OpenOptions {

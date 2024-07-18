@@ -502,11 +502,10 @@ public struct TimeAmount: Hashable, Sendable {
     @inlinable
     static func _cappedNanoseconds(amount: Int64, multiplier: Int64) -> Int64 {
         let nanosecondsMultiplication = amount.multipliedReportingOverflow(by: multiplier)
-        if nanosecondsMultiplication.overflow {
-            return amount >= 0 ? .max : .min
-        } else {
+        guard nanosecondsMultiplication.overflow else {
             return nanosecondsMultiplication.partialValue
         }
+        return amount >= 0 ? .max : .min
     }
 }
 
@@ -852,12 +851,11 @@ extension EventLoop {
     /// - returns: a succeeded `EventLoopFuture`.
     @inlinable
     public func makeSucceededFuture<Success>(_ value: Success) -> EventLoopFuture<Success> {
-        if Success.self == Void.self {
-            // The as! will always succeed because we previously checked that Success.self == Void.self.
-            return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
-        } else {
+        guard Success.self == Void.self else {
             return EventLoopFuture<Success>(eventLoop: self, value: value)
         }
+        // The as! will always succeed because we previously checked that Success.self == Void.self.
+        return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
     }
 
     /// Creates and returns a new `EventLoopFuture` that is marked as succeeded or failed with the value held by `result`.

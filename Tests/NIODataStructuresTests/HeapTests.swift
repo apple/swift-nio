@@ -120,9 +120,7 @@ extension Heap {
         func checkHeapProperty(index: Int) -> Bool {
             let li = self.leftIndex(index)
             let ri = self.rightIndex(index)
-            if index >= self.storage.count {
-                return true
-            } else {
+            guard index >= self.storage.count else {
                 let me = self.storage[index]
                 var lCond = true
                 var rCond = true
@@ -136,6 +134,7 @@ extension Heap {
                 }
                 return lCond && rCond && checkHeapProperty(index: li) && checkHeapProperty(index: ri)
             }
+            return true
         }
         return checkHeapProperty(index: 0)
     }

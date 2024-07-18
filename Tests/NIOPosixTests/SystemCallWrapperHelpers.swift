@@ -88,21 +88,20 @@ func runSystemCallWrapperPerformanceTest(
         for _ in 0..<iterations {
             while true {
                 let r = write(fd, pointer, 0)
-                if r < 0 {
-                    let saveErrno = errno
-                    switch saveErrno {
-                    case EINTR:
-                        continue
-                    case EWOULDBLOCK:
-                        throw TestError.wouldBlock
-                    case EBADF, EFAULT:
-                        fatalError()
-                    default:
-                        throw TestError.writeFailed
-                    }
-                } else {
+                guard r < 0 else {
                     preventCompilerOptimisation += r
                     break
+                }
+                let saveErrno = errno
+                switch saveErrno {
+                case EINTR:
+                    continue
+                case EWOULDBLOCK:
+                    throw TestError.wouldBlock
+                case EBADF, EFAULT:
+                    fatalError()
+                default:
+                    throw TestError.writeFailed
                 }
             }
         }

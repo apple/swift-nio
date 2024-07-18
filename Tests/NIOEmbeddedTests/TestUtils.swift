@@ -41,15 +41,7 @@ func assert(
 
 extension EventLoopFuture {
     var isFulfilled: Bool {
-        if self.eventLoop.inEventLoop {
-            // Easy, we're on the EventLoop. Let's just use our knowledge that we run completed future callbacks
-            // immediately.
-            var fulfilled = false
-            self.whenComplete { _ in
-                fulfilled = true
-            }
-            return fulfilled
-        } else {
+        guard self.eventLoop.inEventLoop else {
             let lock = NIOLock()
             let group = DispatchGroup()
             var fulfilled = false  // protected by lock
@@ -65,6 +57,13 @@ extension EventLoopFuture {
             group.wait()  // this is very nasty but this is for tests only, so...
             return lock.withLock { fulfilled }
         }
+        // Easy, we're on the EventLoop. Let's just use our knowledge that we run completed future callbacks
+        // immediately.
+        var fulfilled = false
+        self.whenComplete { _ in
+            fulfilled = true
+        }
+        return fulfilled
     }
 }
 

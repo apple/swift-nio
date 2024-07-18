@@ -164,24 +164,22 @@ private struct FileChunkProducer: Sendable {
         try self.state.withLockedValue { state in
             state.produceMore()
         }.flatMap {
-            if let (descriptor, range) = $0 {
-                if let range {
-                    let remainingBytes = range.upperBound - range.lowerBound
-                    let clampedLength = min(self.length, remainingBytes)
-                    return descriptor.readChunk(
-                        fromAbsoluteOffset: range.lowerBound,
-                        length: clampedLength
-                    ).mapError { error in
-                        .read(usingSyscall: .pread, error: error, path: self.path, location: .here())
-                    }
-                } else {
-                    return descriptor.readChunk(length: self.length).mapError { error in
-                        .read(usingSyscall: .read, error: error, path: self.path, location: .here())
-                    }
-                }
-            } else {
+            guard let (descriptor, range) = $0 else {
                 // nil means done: return empty to indicate the stream should finish.
                 return .success(ByteBuffer())
+            }
+            guard let range else {
+                return descriptor.readChunk(length: self.length).mapError { error in
+                    .read(usingSyscall: .read, error: error, path: self.path, location: .here())
+                }
+            }
+            let remainingBytes = range.upperBound - range.lowerBound
+            let clampedLength = min(self.length, remainingBytes)
+            return descriptor.readChunk(
+                fromAbsoluteOffset: range.lowerBound,
+                length: clampedLength
+            ).mapError { error in
+                .read(usingSyscall: .pread, error: error, path: self.path, location: .here())
             }
         }.get()
     }
@@ -291,9 +289,7 @@ private struct ProducerState: Sendable {
     mutating func produceMore() -> Result<(FileDescriptor, Range<Int64>?)?, FileSystemError> {
         switch self.state {
         case let .producing(state):
-            if let descriptor = state.handle.descriptorIfAvailable() {
-                return .success((descriptor, state.range))
-            } else {
+            guard let descriptor = state.handle.descriptorIfAvailable() else {
                 let error = FileSystemError(
                     code: .closed,
                     message: "Cannot read from closed file ('\(state.handle.path)').",
@@ -302,6 +298,7 @@ private struct ProducerState: Sendable {
                 )
                 return .failure(error)
             }
+            return .success((descriptor, state.range))
         case .done:
             return .success(nil)
         }

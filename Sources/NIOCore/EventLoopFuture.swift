@@ -486,13 +486,12 @@ extension EventLoopFuture {
             switch self._value! {
             case .success(let t):
                 let futureU = callback(t)
-                if futureU.eventLoop.inEventLoop {
-                    return futureU._addCallback {
-                        next._setValue(value: futureU._value!)
-                    }
-                } else {
+                guard futureU.eventLoop.inEventLoop else {
                     futureU.cascade(to: next)
                     return CallbackList()
+                }
+                return futureU._addCallback {
+                    next._setValue(value: futureU._value!)
                 }
             case .failure(let error):
                 return next._setValue(value: .failure(error))
@@ -621,16 +620,15 @@ extension EventLoopFuture {
 
     @inlinable
     func _map<NewValue>(_ callback: @escaping MapCallback<NewValue>) -> EventLoopFuture<NewValue> {
-        if NewValue.self == Value.self && NewValue.self == Void.self {
-            self.whenSuccess(callback as! @Sendable (Value) -> Void)
-            return self as! EventLoopFuture<NewValue>
-        } else {
+        guard NewValue.self == Value.self && NewValue.self == Void.self else {
             let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
             self._whenComplete {
                 next._setValue(value: self._value!.map(callback))
             }
             return next.futureResult
         }
+        self.whenSuccess(callback as! @Sendable (Value) -> Void)
+        return self as! EventLoopFuture<NewValue>
     }
 
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
@@ -662,13 +660,12 @@ extension EventLoopFuture {
                 return next._setValue(value: .success(t))
             case .failure(let e):
                 let t = callback(e)
-                if t.eventLoop.inEventLoop {
-                    return t._addCallback {
-                        next._setValue(value: t._value!)
-                    }
-                } else {
+                guard t.eventLoop.inEventLoop else {
                     t.cascade(to: next)
                     return CallbackList()
+                }
+                return t._addCallback {
+                    next._setValue(value: t._value!)
                 }
             }
         }
@@ -1087,15 +1084,14 @@ extension EventLoopFuture {
             return body
         }
 
-        if self.eventLoop.inEventLoop {
-            return fold0()
-        } else {
+        guard self.eventLoop.inEventLoop else {
             let promise = self.eventLoop.makePromise(of: Value.self)
             self.eventLoop.execute {
                 fold0().cascade(to: promise)
             }
             return promise.futureResult
         }
+        return fold0()
     }
 }
 

@@ -304,12 +304,11 @@ extension B2MDBuffer {
             var buffer = self.buffers.removeFirst()
             buffer.writeBuffers(self.buffers)
             self.buffers.removeAll(keepingCapacity: self.buffers.capacity < 16)  // don't grow too much
-            if buffer.readableBytes > 0 || allowEmptyBuffer {
-                self.state = .processingInProgress
-                return .available(buffer)
-            } else {
+            guard buffer.readableBytes > 0 || allowEmptyBuffer else {
                 return .nothingAvailable
             }
+            self.state = .processingInProgress
+            return .available(buffer)
         case .ready:
             assert(self.buffers.isEmpty)
             if allowEmptyBuffer {
@@ -618,12 +617,11 @@ extension ByteToMessageHandler {
                 self.tryDecodeWrites()
                 continue
             case .didProcess(.needMoreData):
-                if self.queuedWrites.count > 0 {
-                    self.tryDecodeWrites()
-                    continue  // we might have received more, so let's spin once more
-                } else {
+                guard self.queuedWrites.count > 0 else {
                     return .didProcess(.needMoreData)
                 }
+                self.tryDecodeWrites()
+                continue  // we might have received more, so let's spin once more
             case .cannotProcessReentrantly:
                 return .cannotProcessReentrantly
             }

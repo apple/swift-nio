@@ -225,11 +225,10 @@ var temporaryDirectory: String {
         #if os(Linux)
         return "/tmp"
         #else
-        if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {
-            return FileManager.default.temporaryDirectory.path
-        } else {
+        guard #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) else {
             return "/tmp"
         }
+        return FileManager.default.temporaryDirectory.path
         #endif  // os
         #endif  // targetEnvironment
     }
@@ -365,11 +364,10 @@ func assertNoThrowWithValue<T>(
         return try body()
     } catch {
         XCTFail("\(message.map { $0 + ": " } ?? "")unexpected error \(error) thrown", file: (file), line: line)
-        if let defaultValue = defaultValue {
-            return defaultValue
-        } else {
+        guard let defaultValue = defaultValue else {
             throw error
         }
+        return defaultValue
     }
 }
 
@@ -842,15 +840,7 @@ func forEachCrossConnectedStreamChannelPair<R>(
 
 extension EventLoopFuture {
     var isFulfilled: Bool {
-        if self.eventLoop.inEventLoop {
-            // Easy, we're on the EventLoop. Let's just use our knowledge that we run completed future callbacks
-            // immediately.
-            var fulfilled = false
-            self.whenComplete { _ in
-                fulfilled = true
-            }
-            return fulfilled
-        } else {
+        guard self.eventLoop.inEventLoop else {
             let lock = NIOLock()
             let group = DispatchGroup()
             var fulfilled = false  // protected by lock
@@ -866,5 +856,12 @@ extension EventLoopFuture {
             group.wait()  // this is very nasty but this is for tests only, so...
             return lock.withLock { fulfilled }
         }
+        // Easy, we're on the EventLoop. Let's just use our knowledge that we run completed future callbacks
+        // immediately.
+        var fulfilled = false
+        self.whenComplete { _ in
+            fulfilled = true
+        }
+        return fulfilled
     }
 }

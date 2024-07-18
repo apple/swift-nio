@@ -104,14 +104,13 @@ internal class GetaddrinfoResolver: Resolver {
         if let offloadQueue = offloadQueueTSV.currentValue {
             return offloadQueue
         } else {
-            if MultiThreadedEventLoopGroup.currentEventLoop != nil {
-                // Okay, we're on an SelectableEL thread. Let's stuff our queue into the thread local.
-                let offloadQueue = DispatchQueue(label: "io.swiftnio.GetaddrinfoResolver.offloadQueue")
-                offloadQueueTSV.currentValue = offloadQueue
-                return offloadQueue
-            } else {
+            guard MultiThreadedEventLoopGroup.currentEventLoop != nil else {
                 return DispatchQueue.global()
             }
+            // Okay, we're on an SelectableEL thread. Let's stuff our queue into the thread local.
+            let offloadQueue = DispatchQueue(label: "io.swiftnio.GetaddrinfoResolver.offloadQueue")
+            offloadQueueTSV.currentValue = offloadQueue
+            return offloadQueue
         }
     }
 

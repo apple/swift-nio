@@ -898,14 +898,13 @@ class EchoServerClientTest: XCTestCase {
                         return channel.eventLoop.makeSucceededFuture(())
                     }.bind(host: host, port: 0).wait()
             } catch let e as SocketAddressError {
-                if case .unknown(host, port: 0) = e {
-                    // this can happen if the system isn't configured for both IPv4 and IPv6
-                    continue
-                } else {
+                guard case .unknown(host, port: 0) = e else {
                     // nope, that's a different socket error
                     XCTFail("unexpected SocketAddressError: \(e)")
                     break
                 }
+                // this can happen if the system isn't configured for both IPv4 and IPv6
+                continue
             } catch {
                 // other unknown error
                 XCTFail("unexpected error: \(error)")

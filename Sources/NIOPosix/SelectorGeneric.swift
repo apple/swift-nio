@@ -23,12 +23,11 @@ internal enum SelectorLifecycleState {
 
 extension Optional {
     internal func withUnsafeOptionalPointer<T>(_ body: (UnsafePointer<Wrapped>?) throws -> T) rethrows -> T {
-        if var this = self {
-            return try withUnsafePointer(to: &this) { x in
-                try body(x)
-            }
-        } else {
+        guard var this = self else {
             return try body(nil)
+        }
+        return try withUnsafePointer(to: &this) { x in
+            try body(x)
         }
     }
 }
@@ -344,13 +343,12 @@ extension Selector: CustomStringConvertible {
             "Selector { descriptor = \(self.selectorFD) }"
         }
 
-        if NIOThread.current == self.myThread {
-            return makeDescription()
-        } else {
+        guard NIOThread.current == self.myThread else {
             return self.externalSelectorFDLock.withLock {
                 makeDescription()
             }
         }
+        return makeDescription()
     }
 }
 
@@ -403,11 +401,10 @@ extension Selector where R == NIORegistration {
             }
         }.map { future in
             future.flatMapErrorThrowing { error in
-                if let error = error as? ChannelError, error == .alreadyClosed {
-                    return ()
-                } else {
+                guard let error = error as? ChannelError, error == .alreadyClosed else {
                     throw error
                 }
+                return ()
             }
         }
 

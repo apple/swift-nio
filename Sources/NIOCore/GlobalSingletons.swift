@@ -89,16 +89,15 @@ extension NIOSingletons {
                 desired: 1,
                 ordering: .relaxed
             )
-            if exchanged {
-                // Never been set, we're committing to the default (enabled).
-                assert(original == 0)
-                return true
-            } else {
+            guard exchanged else {
                 // This has been set before, 1: enabled; -1 disabled.
                 assert(original != 0)
                 assert(original == -1 || original == 1)
                 return original > 0
             }
+            // Never been set, we're committing to the default (enabled).
+            assert(original == 0)
+            return true
         }
 
         set {

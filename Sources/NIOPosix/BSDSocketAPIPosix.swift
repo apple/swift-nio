@@ -246,11 +246,10 @@ extension NIOBSDSocket {
             }
 
             // Only unlink the existing file if it is a socket
-            if sb.st_mode & S_IFSOCK == S_IFSOCK {
-                try Posix.unlink(pathname: path)
-            } else {
+            guard sb.st_mode & S_IFSOCK == S_IFSOCK else {
                 throw UnixDomainSocketPathWrongType()
             }
+            try Posix.unlink(pathname: path)
         } catch let err as IOError {
             // If the filepath did not exist, we consider it cleaned up
             if err.errnoCode == ENOENT {

@@ -33,11 +33,10 @@ class Pool<Element: PoolElement> {
     }
 
     func get() -> Element {
-        if elements.isEmpty {
-            return Element()
-        } else {
+        guard elements.isEmpty else {
             return elements.removeLast()
         }
+        return Element()
     }
 
     func put(_ e: Element) {

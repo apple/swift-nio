@@ -336,23 +336,22 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
             guard self.isOpen else {
                 throw ChannelError._eof
             }
-            if let accepted = try self.socket.accept(setNonBlocking: true) {
-                readPending = false
-                result = .some
-                do {
-                    let chan = try SocketChannel(
-                        socket: accepted,
-                        parent: self,
-                        eventLoop: group.next() as! SelectableEventLoop
-                    )
-                    assert(self.isActive)
-                    self.pipeline.syncOperations.fireChannelRead(NIOAny(chan))
-                } catch {
-                    try? accepted.close()
-                    throw error
-                }
-            } else {
+            guard let accepted = try self.socket.accept(setNonBlocking: true) else {
                 break
+            }
+            readPending = false
+            result = .some
+            do {
+                let chan = try SocketChannel(
+                    socket: accepted,
+                    parent: self,
+                    eventLoop: group.next() as! SelectableEventLoop
+                )
+                assert(self.isActive)
+                self.pipeline.syncOperations.fireChannelRead(NIOAny(chan))
+            } catch {
+                try? accepted.close()
+                throw error
             }
         }
         return result

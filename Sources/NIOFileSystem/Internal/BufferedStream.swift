@@ -998,23 +998,18 @@ extension BufferedStream {
         mutating func sequenceDeinitialized() -> SequenceDeinitializedAction? {
             switch self._state {
             case .initial(let initial):
-                if initial.iteratorInitialized {
-                    // An iterator was created and we deinited the sequence.
-                    // This is an expected pattern and we just continue on normal.
-                    return .none
-                } else {
+                guard initial.iteratorInitialized else {
                     // No iterator was created so we can transition to finished right away.
                     self._state = .finished(iteratorInitialized: false)
 
                     return .callOnTermination(initial.onTermination)
                 }
+                // An iterator was created and we deinited the sequence.
+                // This is an expected pattern and we just continue on normal.
+                return .none
 
             case .streaming(let streaming):
-                if streaming.iteratorInitialized {
-                    // An iterator was created and we deinited the sequence.
-                    // This is an expected pattern and we just continue on normal.
-                    return .none
-                } else {
+                guard streaming.iteratorInitialized else {
                     // No iterator was created so we can transition to finished right away.
                     self._state = .finished(iteratorInitialized: false)
 
@@ -1023,18 +1018,20 @@ extension BufferedStream {
                         streaming.onTermination
                     )
                 }
+                // An iterator was created and we deinited the sequence.
+                // This is an expected pattern and we just continue on normal.
+                return .none
 
             case .sourceFinished(let sourceFinished):
-                if sourceFinished.iteratorInitialized {
-                    // An iterator was created and we deinited the sequence.
-                    // This is an expected pattern and we just continue on normal.
-                    return .none
-                } else {
+                guard sourceFinished.iteratorInitialized else {
                     // No iterator was created so we can transition to finished right away.
                     self._state = .finished(iteratorInitialized: false)
 
                     return .callOnTermination(sourceFinished.onTermination)
                 }
+                // An iterator was created and we deinited the sequence.
+                // This is an expected pattern and we just continue on normal.
+                return .none
 
             case .finished:
                 // We are already finished so there is nothing left to clean up.
@@ -1174,15 +1171,7 @@ extension BufferedStream {
                 return .callOnTermination(initial.onTermination)
 
             case .streaming(let streaming):
-                if streaming.buffer.isEmpty {
-                    // We can transition to finished right away since the buffer is empty now
-                    self._state = .finished(iteratorInitialized: streaming.iteratorInitialized)
-
-                    return .failProducersAndCallOnTermination(
-                        Array(streaming.producerContinuations.map { $0.1 }),
-                        streaming.onTermination
-                    )
-                } else {
+                guard streaming.buffer.isEmpty else {
                     // The continuation must be `nil` if the buffer has elements
                     precondition(streaming.consumerContinuation == nil)
 
@@ -1199,6 +1188,13 @@ extension BufferedStream {
                         Array(streaming.producerContinuations.map { $0.1 })
                     )
                 }
+                // We can transition to finished right away since the buffer is empty now
+                self._state = .finished(iteratorInitialized: streaming.iteratorInitialized)
+
+                return .failProducersAndCallOnTermination(
+                    Array(streaming.producerContinuations.map { $0.1 }),
+                    streaming.onTermination
+                )
 
             case .sourceFinished, .finished:
                 // This is normal and we just have to tolerate it
@@ -1296,28 +1292,27 @@ extension BufferedStream {
                 streaming.hasOutstandingDemand = shouldProduceMore
                 let callbackToken = shouldProduceMore ? nil : self.nextCallbackToken()
 
-                if let consumerContinuation = streaming.consumerContinuation {
-                    guard let element = streaming.buffer.popFirst() else {
-                        // We got a yield of an empty sequence. We just tolerate this.
-                        self._state = .streaming(streaming)
-
-                        return .init(callbackToken: callbackToken)
-                    }
-
-                    // We got a consumer continuation and an element. We can resume the consumer now
-                    streaming.consumerContinuation = nil
-                    self._state = .streaming(streaming)
-                    return .init(
-                        callbackToken: callbackToken,
-                        continuationAndElement: (consumerContinuation, element)
-                    )
-                } else {
+                guard let consumerContinuation = streaming.consumerContinuation else {
                     // We don't have a suspended consumer so we just buffer the elements
                     self._state = .streaming(streaming)
                     return .init(
                         callbackToken: callbackToken
                     )
                 }
+                guard let element = streaming.buffer.popFirst() else {
+                    // We got a yield of an empty sequence. We just tolerate this.
+                    self._state = .streaming(streaming)
+
+                    return .init(callbackToken: callbackToken)
+                }
+
+                // We got a consumer continuation and an element. We can resume the consumer now
+                streaming.consumerContinuation = nil
+                self._state = .streaming(streaming)
+                return .init(
+                    callbackToken: callbackToken,
+                    continuationAndElement: (consumerContinuation, element)
+                )
 
             case .sourceFinished, .finished:
                 // If the source has finished we are dropping the elements.
@@ -1391,16 +1386,11 @@ extension BufferedStream {
                 fatalError("AsyncStream internal inconsistency")
 
             case .streaming(var streaming):
-                if let index = streaming.producerContinuations.firstIndex(where: {
-                    $0.0 == callbackToken.id
-                }) {
-                    // We have an enqueued producer that we need to resume now
-                    self._state = .modify
-                    let continuation = streaming.producerContinuations.remove(at: index).1
-                    self._state = .streaming(streaming)
-
-                    return .resumeProducerWithCancellationError(continuation)
-                } else {
+                guard
+                    let index = streaming.producerContinuations.firstIndex(where: {
+                        $0.0 == callbackToken.id
+                    })
+                else {
                     // The task that yields was cancelled before yielding so the cancellation handler
                     // got invoked right away
                     self._state = .modify
@@ -1409,6 +1399,12 @@ extension BufferedStream {
 
                     return .none
                 }
+                // We have an enqueued producer that we need to resume now
+                self._state = .modify
+                let continuation = streaming.producerContinuations.remove(at: index).1
+                self._state = .streaming(streaming)
+
+                return .resumeProducerWithCancellationError(continuation)
 
             case .sourceFinished, .finished:
                 // Since we are unlocking between yielding and suspending the yield
@@ -1455,24 +1451,7 @@ extension BufferedStream {
                 return .callOnTermination(initial.onTermination)
 
             case .streaming(let streaming):
-                if let consumerContinuation = streaming.consumerContinuation {
-                    // We have a continuation, this means our buffer must be empty
-                    // Furthermore, we can now transition to finished
-                    // and resume the continuation with the failure
-                    precondition(streaming.buffer.isEmpty, "Expected an empty buffer")
-                    precondition(
-                        streaming.producerContinuations.isEmpty,
-                        "Expected no suspended producers"
-                    )
-
-                    self._state = .finished(iteratorInitialized: streaming.iteratorInitialized)
-
-                    return .resumeConsumerAndCallOnTermination(
-                        consumerContinuation: consumerContinuation,
-                        failure: failure,
-                        onTermination: streaming.onTermination
-                    )
-                } else {
+                guard let consumerContinuation = streaming.consumerContinuation else {
                     self._state = .sourceFinished(
                         .init(
                             iteratorInitialized: streaming.iteratorInitialized,
@@ -1486,6 +1465,22 @@ extension BufferedStream {
                         producerContinuations: Array(streaming.producerContinuations.map { $0.1 })
                     )
                 }
+                // We have a continuation, this means our buffer must be empty
+                // Furthermore, we can now transition to finished
+                // and resume the continuation with the failure
+                precondition(streaming.buffer.isEmpty, "Expected an empty buffer")
+                precondition(
+                    streaming.producerContinuations.isEmpty,
+                    "Expected no suspended producers"
+                )
+
+                self._state = .finished(iteratorInitialized: streaming.iteratorInitialized)
+
+                return .resumeConsumerAndCallOnTermination(
+                    consumerContinuation: consumerContinuation,
+                    failure: failure,
+                    onTermination: streaming.onTermination
+                )
 
             case .sourceFinished, .finished:
                 // If the source has finished, finishing again has no effect.
@@ -1537,25 +1532,7 @@ extension BufferedStream {
 
                 self._state = .modify
 
-                if let element = streaming.buffer.popFirst() {
-                    // We have an element to fulfil the demand right away.
-                    let shouldProduceMore = streaming.backPressureStrategy.didConsume(
-                        bufferDepth: streaming.buffer.count
-                    )
-                    streaming.hasOutstandingDemand = shouldProduceMore
-
-                    if shouldProduceMore {
-                        // There is demand and we have to resume our producers
-                        let producers = Array(streaming.producerContinuations.map { $0.1 })
-                        streaming.producerContinuations.removeAll()
-                        self._state = .streaming(streaming)
-                        return .returnElementAndResumeProducers(element, producers)
-                    } else {
-                        // We don't have any new demand, so we can just return the element.
-                        self._state = .streaming(streaming)
-                        return .returnElement(element)
-                    }
-                } else {
+                guard let element = streaming.buffer.popFirst() else {
                     // There is nothing in the buffer to fulfil the demand so we need to suspend.
                     // We are not interacting with the back-pressure strategy here because
                     // we are doing this inside `suspendNext`
@@ -1563,16 +1540,28 @@ extension BufferedStream {
 
                     return .suspendTask
                 }
+                // We have an element to fulfil the demand right away.
+                let shouldProduceMore = streaming.backPressureStrategy.didConsume(
+                    bufferDepth: streaming.buffer.count
+                )
+                streaming.hasOutstandingDemand = shouldProduceMore
+
+                guard shouldProduceMore else {
+                    // We don't have any new demand, so we can just return the element.
+                    self._state = .streaming(streaming)
+                    return .returnElement(element)
+                }
+                // There is demand and we have to resume our producers
+                let producers = Array(streaming.producerContinuations.map { $0.1 })
+                streaming.producerContinuations.removeAll()
+                self._state = .streaming(streaming)
+                return .returnElementAndResumeProducers(element, producers)
 
             case .sourceFinished(var sourceFinished):
                 // Check if we have an element left in the buffer and return it
                 self._state = .modify
 
-                if let element = sourceFinished.buffer.popFirst() {
-                    self._state = .sourceFinished(sourceFinished)
-
-                    return .returnElement(element)
-                } else {
+                guard let element = sourceFinished.buffer.popFirst() else {
                     // We are returning the queued failure now and can transition to finished
                     self._state = .finished(iteratorInitialized: sourceFinished.iteratorInitialized)
 
@@ -1581,6 +1570,9 @@ extension BufferedStream {
                         sourceFinished.onTermination
                     )
                 }
+                self._state = .sourceFinished(sourceFinished)
+
+                return .returnElement(element)
 
             case .finished:
                 return .returnNil
@@ -1629,46 +1621,40 @@ extension BufferedStream {
                 self._state = .modify
 
                 // We have to check here again since we might have a producer interleave next and suspendNext
-                if let element = streaming.buffer.popFirst() {
-                    // We have an element to fulfil the demand right away.
-
-                    let shouldProduceMore = streaming.backPressureStrategy.didConsume(
-                        bufferDepth: streaming.buffer.count
-                    )
-                    streaming.hasOutstandingDemand = shouldProduceMore
-
-                    if shouldProduceMore {
-                        // There is demand and we have to resume our producers
-                        let producers = Array(streaming.producerContinuations.map { $0.1 })
-                        streaming.producerContinuations.removeAll()
-                        self._state = .streaming(streaming)
-                        return .resumeConsumerWithElementAndProducers(
-                            continuation,
-                            element,
-                            producers
-                        )
-                    } else {
-                        // We don't have any new demand, so we can just return the element.
-                        self._state = .streaming(streaming)
-                        return .resumeConsumerWithElement(continuation, element)
-                    }
-                } else {
+                guard let element = streaming.buffer.popFirst() else {
                     // There is nothing in the buffer to fulfil the demand so we to store the continuation.
                     streaming.consumerContinuation = continuation
                     self._state = .streaming(streaming)
 
                     return .none
                 }
+                // We have an element to fulfil the demand right away.
+
+                let shouldProduceMore = streaming.backPressureStrategy.didConsume(
+                    bufferDepth: streaming.buffer.count
+                )
+                streaming.hasOutstandingDemand = shouldProduceMore
+
+                guard shouldProduceMore else {
+                    // We don't have any new demand, so we can just return the element.
+                    self._state = .streaming(streaming)
+                    return .resumeConsumerWithElement(continuation, element)
+                }
+                // There is demand and we have to resume our producers
+                let producers = Array(streaming.producerContinuations.map { $0.1 })
+                streaming.producerContinuations.removeAll()
+                self._state = .streaming(streaming)
+                return .resumeConsumerWithElementAndProducers(
+                    continuation,
+                    element,
+                    producers
+                )
 
             case .sourceFinished(var sourceFinished):
                 // Check if we have an element left in the buffer and return it
                 self._state = .modify
 
-                if let element = sourceFinished.buffer.popFirst() {
-                    self._state = .sourceFinished(sourceFinished)
-
-                    return .resumeConsumerWithElement(continuation, element)
-                } else {
+                guard let element = sourceFinished.buffer.popFirst() else {
                     // We are returning the queued failure now and can transition to finished
                     self._state = .finished(iteratorInitialized: sourceFinished.iteratorInitialized)
 
@@ -1678,6 +1664,9 @@ extension BufferedStream {
                         sourceFinished.onTermination
                     )
                 }
+                self._state = .sourceFinished(sourceFinished)
+
+                return .resumeConsumerWithElement(continuation, element)
 
             case .finished:
                 return .resumeConsumerWithNil(continuation)
@@ -1707,21 +1696,20 @@ extension BufferedStream {
             case .streaming(let streaming):
                 self._state = .finished(iteratorInitialized: streaming.iteratorInitialized)
 
-                if let consumerContinuation = streaming.consumerContinuation {
-                    precondition(
-                        streaming.producerContinuations.isEmpty,
-                        "Internal inconsistency. Unexpected producer continuations."
-                    )
-                    return .resumeConsumerWithCancellationErrorAndCallOnTermination(
-                        consumerContinuation,
-                        streaming.onTermination
-                    )
-                } else {
+                guard let consumerContinuation = streaming.consumerContinuation else {
                     return .failProducersAndCallOnTermination(
                         Array(streaming.producerContinuations.map { $0.1 }),
                         streaming.onTermination
                     )
                 }
+                precondition(
+                    streaming.producerContinuations.isEmpty,
+                    "Internal inconsistency. Unexpected producer continuations."
+                )
+                return .resumeConsumerWithCancellationErrorAndCallOnTermination(
+                    consumerContinuation,
+                    streaming.onTermination
+                )
 
             case .sourceFinished, .finished:
                 return .none

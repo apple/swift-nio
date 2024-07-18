@@ -161,11 +161,10 @@ extension SystemFileHandle.SendableView {
         _ execute: (FileDescriptor) throws -> R,
         onUnavailable: () -> FileSystemError
     ) throws -> R {
-        if let descriptor = self.descriptorIfAvailable() {
-            return try execute(descriptor)
-        } else {
+        guard let descriptor = self.descriptorIfAvailable() else {
             throw onUnavailable()
         }
+        return try execute(descriptor)
     }
 
     /// Executes a closure with the file descriptor if it's available otherwise returns the result
@@ -174,11 +173,10 @@ extension SystemFileHandle.SendableView {
         _ execute: (FileDescriptor) -> Result<R, FileSystemError>,
         onUnavailable: () -> FileSystemError
     ) -> Result<R, FileSystemError> {
-        if let descriptor = self.descriptorIfAvailable() {
-            return execute(descriptor)
-        } else {
+        guard let descriptor = self.descriptorIfAvailable() else {
             return .failure(onUnavailable())
         }
+        return execute(descriptor)
     }
 }
 
@@ -738,11 +736,10 @@ extension SystemFileHandle.SendableView {
             let linkAtResult = linkAtEmptyPath().flatMapError { errno in
                 // ENOENT means we likely didn't have the 'CAP_DAC_READ_SEARCH' capability
                 // so try again by linking to the descriptor via procfs.
-                if errno == .noSuchFileOrDirectory {
-                    return linkAtProcFS()
-                } else {
+                guard errno == .noSuchFileOrDirectory else {
                     return .failure(errno)
                 }
+                return linkAtProcFS()
             }.mapError { errno in
                 FileSystemError.link(
                     errno: errno,
@@ -756,24 +753,7 @@ extension SystemFileHandle.SendableView {
 
         case .failure(.noSuchFileOrDirectory):
             result = linkAtProcFS().flatMapError { errno in
-                if errno == .fileExists, !exclusive {
-                    return Libc.remove(desiredPath).mapError { errno in
-                        FileSystemError.remove(
-                            errno: errno,
-                            path: desiredPath,
-                            location: .here()
-                        )
-                    }.flatMap {
-                        linkAtProcFS().mapError { errno in
-                            FileSystemError.link(
-                                errno: errno,
-                                from: createdPath,
-                                to: desiredPath,
-                                location: .here()
-                            )
-                        }
-                    }
-                } else {
+                guard errno == .fileExists, !exclusive else {
                     let error = FileSystemError.link(
                         errno: errno,
                         from: createdPath,
@@ -781,6 +761,22 @@ extension SystemFileHandle.SendableView {
                         location: .here()
                     )
                     return .failure(error)
+                }
+                return Libc.remove(desiredPath).mapError { errno in
+                    FileSystemError.remove(
+                        errno: errno,
+                        path: desiredPath,
+                        location: .here()
+                    )
+                }.flatMap {
+                    linkAtProcFS().mapError { errno in
+                        FileSystemError.link(
+                            errno: errno,
+                            from: createdPath,
+                            to: desiredPath,
+                            location: .here()
+                        )
+                    }
                 }
             }
 
@@ -1029,27 +1025,7 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
                     fromAbsoluteOffset: offset,
                     length: length.bytes
                 ).flatMapError { error in
-                    if let errno = error as? Errno, errno == .illegalSeek {
-                        guard offset == 0 else {
-                            return .failure(
-                                FileSystemError(
-                                    code: .unsupported,
-                                    message: "File is unseekable.",
-                                    cause: nil,
-                                    location: .here()
-                                )
-                            )
-                        }
-
-                        return descriptor.readChunk(length: length.bytes).mapError { error in
-                            FileSystemError.read(
-                                usingSyscall: .read,
-                                error: error,
-                                path: sendableView.path,
-                                location: .here()
-                            )
-                        }
-                    } else {
+                    guard let errno = error as? Errno, errno == .illegalSeek else {
                         return .failure(
                             FileSystemError.read(
                                 usingSyscall: .pread,
@@ -1057,6 +1033,25 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
                                 path: sendableView.path,
                                 location: .here()
                             )
+                        )
+                    }
+                    guard offset == 0 else {
+                        return .failure(
+                            FileSystemError(
+                                code: .unsupported,
+                                message: "File is unseekable.",
+                                cause: nil,
+                                location: .here()
+                            )
+                        )
+                    }
+
+                    return descriptor.readChunk(length: length.bytes).mapError { error in
+                        FileSystemError.read(
+                            usingSyscall: .read,
+                            error: error,
+                            path: sendableView.path,
+                            location: .here()
                         )
                     }
                 }
@@ -1093,28 +1088,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
             try sendableView._withUnsafeDescriptor { descriptor in
                 try descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
                     .flatMapError { error in
-                        if let errno = error as? Errno, errno == .illegalSeek {
-                            guard offset == 0 else {
-                                return .failure(
-                                    FileSystemError(
-                                        code: .unsupported,
-                                        message: "File is unseekable.",
-                                        cause: nil,
-                                        location: .here()
-                                    )
-                                )
-                            }
-
-                            return descriptor.write(contentsOf: bytes)
-                                .mapError { error in
-                                    FileSystemError.write(
-                                        usingSyscall: .write,
-                                        error: error,
-                                        path: sendableView.path,
-                                        location: .here()
-                                    )
-                                }
-                        } else {
+                        guard let errno = error as? Errno, errno == .illegalSeek else {
                             return .failure(
                                 FileSystemError.write(
                                     usingSyscall: .pwrite,
@@ -1124,6 +1098,26 @@ extension SystemFileHandle: WritableFileHandleProtocol {
                                 )
                             )
                         }
+                        guard offset == 0 else {
+                            return .failure(
+                                FileSystemError(
+                                    code: .unsupported,
+                                    message: "File is unseekable.",
+                                    cause: nil,
+                                    location: .here()
+                                )
+                            )
+                        }
+
+                        return descriptor.write(contentsOf: bytes)
+                            .mapError { error in
+                                FileSystemError.write(
+                                    usingSyscall: .write,
+                                    error: error,
+                                    path: sendableView.path,
+                                    location: .here()
+                                )
+                            }
                     }
                     .get()
             } onUnavailable: {
@@ -1336,27 +1330,7 @@ extension SystemFileHandle {
         let truncate = options.contains(.truncate)
         let delayMaterialization = transactional && isWritable && (exclusiveCreate || truncate)
 
-        if delayMaterialization {
-            // When opening in this mode we can more "atomically" create the file, that is, by not
-            // leaving the user with a half written file should e.g. the system crash or throw an
-            // error while writing. On non-Android Linux we do this by opening the directory for
-            // the path with `O_TMPFILE` and creating a hard link when closing the file. On other
-            // platforms we generate a dot file with a randomised suffix name and rename it to the
-            // destination.
-            #if os(Android)
-            let temporaryHardLink = false
-            #else
-            let temporaryHardLink = true
-            #endif
-            return Self.syncOpenWithMaterialization(
-                atPath: path,
-                mode: mode,
-                options: options,
-                permissions: permissions,
-                threadPool: threadPool,
-                useTemporaryFileIfPossible: temporaryHardLink
-            )
-        } else {
+        guard delayMaterialization else {
             return Self.syncOpen(
                 atPath: path,
                 mode: mode,
@@ -1365,6 +1339,25 @@ extension SystemFileHandle {
                 threadPool: threadPool
             )
         }
+        // When opening in this mode we can more "atomically" create the file, that is, by not
+        // leaving the user with a half written file should e.g. the system crash or throw an
+        // error while writing. On non-Android Linux we do this by opening the directory for
+        // the path with `O_TMPFILE` and creating a hard link when closing the file. On other
+        // platforms we generate a dot file with a randomised suffix name and rename it to the
+        // destination.
+        #if os(Android)
+        let temporaryHardLink = false
+        #else
+        let temporaryHardLink = true
+        #endif
+        return Self.syncOpenWithMaterialization(
+            atPath: path,
+            mode: mode,
+            options: options,
+            permissions: permissions,
+            threadPool: threadPool,
+            useTemporaryFileIfPossible: temporaryHardLink
+        )
     }
 
     static func syncOpen(

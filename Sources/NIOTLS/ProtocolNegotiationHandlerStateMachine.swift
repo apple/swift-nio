@@ -53,20 +53,19 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
 
     @inlinable
     mutating func userInboundEventTriggered(event: Any) -> UserInboundEventTriggeredAction {
-        if case .handshakeCompleted(let negotiated) = event as? TLSUserEvent {
-            switch self.state {
-            case .initial:
-                self.state = .waitingForUser(buffer: .init())
+        guard case .handshakeCompleted(let negotiated) = event as? TLSUserEvent else {
+            return .fireUserInboundEventTriggered
+        }
+        switch self.state {
+        case .initial:
+            self.state = .waitingForUser(buffer: .init())
 
-                return .invokeUserClosure(.init(negotiated: negotiated))
-            case .waitingForUser, .unbuffering:
-                preconditionFailure("Unexpectedly received two TLSUserEvents")
+            return .invokeUserClosure(.init(negotiated: negotiated))
+        case .waitingForUser, .unbuffering:
+            preconditionFailure("Unexpectedly received two TLSUserEvents")
 
-            case .finished:
-                // This is weird but we can tolerate it and just forward the event
-                return .fireUserInboundEventTriggered
-            }
-        } else {
+        case .finished:
+            // This is weird but we can tolerate it and just forward the event
             return .fireUserInboundEventTriggered
         }
     }
@@ -114,22 +113,20 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
 
             switch result {
             case .success(let value):
-                if !buffer.isEmpty {
-                    self.state = .unbuffering(buffer: buffer)
-                    return .startUnbuffering(value)
-                } else {
+                guard !buffer.isEmpty else {
                     self.state = .finished
                     return .removeHandler(value)
                 }
+                self.state = .unbuffering(buffer: buffer)
+                return .startUnbuffering(value)
 
             case .failure(let error):
-                if !buffer.isEmpty {
-                    self.state = .unbuffering(buffer: buffer)
-                    return .fireErrorCaughtAndStartUnbuffering(error)
-                } else {
+                guard !buffer.isEmpty else {
                     self.state = .finished
                     return .fireErrorCaughtAndRemoveHandler(error)
                 }
+                self.state = .unbuffering(buffer: buffer)
+                return .fireErrorCaughtAndStartUnbuffering(error)
             }
 
         case .unbuffering:
@@ -154,15 +151,14 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
             preconditionFailure("Invalid state \(self.state)")
 
         case .unbuffering(var buffer):
-            if let element = buffer.popFirst() {
-                self.state = .unbuffering(buffer: buffer)
-
-                return .fireChannelRead(element)
-            } else {
+            guard let element = buffer.popFirst() else {
                 self.state = .finished
 
                 return .fireChannelReadCompleteAndRemoveHandler
             }
+            self.state = .unbuffering(buffer: buffer)
+
+            return .fireChannelRead(element)
         }
     }
 

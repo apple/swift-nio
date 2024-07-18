@@ -156,14 +156,13 @@ private struct PendingStreamWritesState {
 
     /// Check if there are no outstanding writes.
     public var isEmpty: Bool {
-        if self.pendingWrites.isEmpty {
-            assert(self.bytes == 0)
-            assert(!self.pendingWrites.hasMark)
-            return true
-        } else {
+        guard self.pendingWrites.isEmpty else {
             assert(self.bytes >= 0)
             return false
         }
+        assert(self.bytes == 0)
+        assert(!self.pendingWrites.hasMark)
+        return true
     }
 
     /// Add a new write and optionally the corresponding promise to the list of outstanding writes.
@@ -211,22 +210,21 @@ private struct PendingStreamWritesState {
             var unaccountedWrites = written
             for _ in 0..<itemCount {
                 let headItemReadableBytes = self.pendingWrites.first!.data.readableBytes
-                if unaccountedWrites >= headItemReadableBytes {
-                    unaccountedWrites -= headItemReadableBytes
-                    // we wrote at least the whole head item, so drop it and succeed the promise
-                    if let promise = self.fullyWrittenFirst() {
-                        if let p = promise0 {
-                            p.futureResult.cascade(to: promise)
-                        } else {
-                            promise0 = promise
-                        }
-                    }
-                } else {
+                guard unaccountedWrites >= headItemReadableBytes else {
                     // we could only write a part of the head item, so don't drop it but remember what we wrote
                     self.partiallyWrittenFirst(bytes: unaccountedWrites)
 
                     // may try again depending on the writeSpinCount
                     return (promise0, .writtenPartially)
+                }
+                unaccountedWrites -= headItemReadableBytes
+                // we wrote at least the whole head item, so drop it and succeed the promise
+                if let promise = self.fullyWrittenFirst() {
+                    if let p = promise0 {
+                        p.futureResult.cascade(to: promise)
+                    } else {
+                        promise0 = promise
+                    }
                 }
             }
             assert(

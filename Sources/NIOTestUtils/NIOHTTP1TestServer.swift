@@ -218,11 +218,10 @@ public final class NIOHTTP1TestServer {
             return
         }
         channel.pipeline.configureHTTPServerPipeline().flatMap {
-            if self.aggregateBody {
-                return channel.pipeline.addHandler(AggregateBodyHandler())
-            } else {
+            guard self.aggregateBody else {
                 return self.eventLoop.makeSucceededVoidFuture()
             }
+            return channel.pipeline.addHandler(AggregateBodyHandler())
         }.flatMap {
             channel.pipeline.addHandler(WebServerHandler(webServer: self))
         }.whenSuccess {
@@ -306,11 +305,10 @@ extension NIOHTTP1TestServer {
     public func writeOutbound(_ data: HTTPServerResponsePart) throws {
         self.eventLoop.assertNotInEventLoop()
         try self.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
-            if let channel = self.currentClientChannel {
-                return channel.writeAndFlush(data)
-            } else {
+            guard let channel = self.currentClientChannel else {
                 return self.eventLoop.makeFailedFuture(ChannelError.ioOnClosedChannel)
             }
+            return channel.writeAndFlush(data)
         }.wait()
     }
 

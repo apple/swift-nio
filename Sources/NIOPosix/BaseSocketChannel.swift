@@ -272,13 +272,12 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     // This is called from arbitrary threads.
     internal var addressesCached: AddressCache {
         get {
-            if self.eventLoop.inEventLoop {
-                return self._addressCache
-            } else {
+            guard self.eventLoop.inEventLoop else {
                 return self._offEventLoopLock.withLock {
                     self._addressCache
                 }
             }
+            return self._addressCache
         }
         set {
             self.eventLoop.preconditionInEventLoop()
@@ -291,13 +290,12 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     // This is called from arbitrary threads.
     private var bufferAllocatorCached: ByteBufferAllocator {
         get {
-            if self.eventLoop.inEventLoop {
-                return self._bufferAllocatorCache
-            } else {
+            guard self.eventLoop.inEventLoop else {
                 return self._offEventLoopLock.withLock {
                     self._bufferAllocatorCache
                 }
             }
+            return self._bufferAllocatorCache
         }
         set {
             self.eventLoop.preconditionInEventLoop()
@@ -608,13 +606,12 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     public final func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        if eventLoop.inEventLoop {
-            let promise = eventLoop.makePromise(of: Void.self)
-            executeAndComplete(promise) { try self.setOption0(option, value: value) }
-            return promise.futureResult
-        } else {
+        guard eventLoop.inEventLoop else {
             return eventLoop.submit { try self.setOption0(option, value: value) }
         }
+        let promise = eventLoop.makePromise(of: Void.self)
+        executeAndComplete(promise) { try self.setOption0(option, value: value) }
+        return promise.futureResult
     }
 
     func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
@@ -654,14 +651,13 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     }
 
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
-        if eventLoop.inEventLoop {
-            do {
-                return self.eventLoop.makeSucceededFuture(try self.getOption0(option))
-            } catch {
-                return self.eventLoop.makeFailedFuture(error)
-            }
-        } else {
+        guard eventLoop.inEventLoop else {
             return self.eventLoop.submit { try self.getOption0(option) }
+        }
+        do {
+            return self.eventLoop.makeSucceededFuture(try self.getOption0(option))
+        } catch {
+            return self.eventLoop.makeFailedFuture(error)
         }
     }
 

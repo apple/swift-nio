@@ -92,12 +92,11 @@ private struct NewlineFramer: ByteToMessageDecoder {
     typealias InboundOut = String
 
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        if let firstNewline = buffer.readableBytesView.firstIndex(of: UInt8(ascii: "\n")) {
-            let length = firstNewline - buffer.readerIndex + 1
-            context.fireChannelRead(Self.wrapInboundOut(String(buffer.readString(length: length)!.dropLast())))
-            return .continue
-        } else {
+        guard let firstNewline = buffer.readableBytesView.firstIndex(of: UInt8(ascii: "\n")) else {
             return .needMoreData
         }
+        let length = firstNewline - buffer.readerIndex + 1
+        context.fireChannelRead(Self.wrapInboundOut(String(buffer.readString(length: length)!.dropLast())))
+        return .continue
     }
 }

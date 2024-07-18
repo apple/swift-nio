@@ -125,22 +125,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
             // the end of the loop to not do an allocation when the loop exits.
             switch readResult {
             case .processed(let bytesRead):
-                if bytesRead > 0 {
-                    self.recvBufferPool.record(actualReadBytes: bytesRead)
-                    self.readPending = false
-
-                    assert(self.isActive)
-                    self.pipeline.syncOperations.fireChannelRead(NIOAny(buffer))
-                    result = .some
-
-                    if buffer.writableBytes > 0 {
-                        // If we did not fill the whole buffer with read(...) we should stop reading and wait until we get notified again.
-                        // Otherwise chances are good that the next read(...) call will either read nothing or only a very small amount of data.
-                        // Also this will allow us to call fireChannelReadComplete() which may give the user the chance to flush out all pending
-                        // writes.
-                        return result
-                    }
-                } else {
+                guard bytesRead > 0 else {
                     if self.inputShutdown {
                         // We received a EOF because we called shutdown on the fd by ourself, unregister from the Selector and return
                         self.readPending = false
@@ -149,6 +134,20 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     }
                     // end-of-file
                     throw ChannelError._eof
+                }
+                self.recvBufferPool.record(actualReadBytes: bytesRead)
+                self.readPending = false
+
+                assert(self.isActive)
+                self.pipeline.syncOperations.fireChannelRead(NIOAny(buffer))
+                result = .some
+
+                if buffer.writableBytes > 0 {
+                    // If we did not fill the whole buffer with read(...) we should stop reading and wait until we get notified again.
+                    // Otherwise chances are good that the next read(...) call will either read nothing or only a very small amount of data.
+                    // Also this will allow us to call fireChannelReadComplete() which may give the user the chance to flush out all pending
+                    // writes.
+                    return result
                 }
             case .wouldBlock(let bytesRead):
                 assert(bytesRead == 0)

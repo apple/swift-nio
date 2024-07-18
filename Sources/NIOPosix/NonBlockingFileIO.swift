@@ -377,20 +377,19 @@ public struct NonBlockingFileIO: Sendable {
         while bytesRead < byteCount {
             let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr in
                 let res = try fileHandle.withUnsafeFileDescriptor { descriptor -> IOResult<ssize_t> in
-                    if let offset = fromOffset {
-                        return try Posix.pread(
-                            descriptor: descriptor,
-                            pointer: ptr.baseAddress!,
-                            size: byteCount - bytesRead,
-                            offset: off_t(offset) + off_t(bytesRead)
-                        )
-                    } else {
+                    guard let offset = fromOffset else {
                         return try Posix.read(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
                             size: byteCount - bytesRead
                         )
                     }
+                    return try Posix.pread(
+                        descriptor: descriptor,
+                        pointer: ptr.baseAddress!,
+                        size: byteCount - bytesRead,
+                        offset: off_t(offset) + off_t(bytesRead)
+                    )
                 }
                 switch res {
                 case .processed(let n):
@@ -514,20 +513,19 @@ public struct NonBlockingFileIO: Sendable {
             let n = try buf.readWithUnsafeReadableBytes { ptr in
                 precondition(ptr.count == byteCount - offsetAccumulator)
                 let res: IOResult<ssize_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
-                    if let toOffset = toOffset {
-                        return try Posix.pwrite(
-                            descriptor: descriptor,
-                            pointer: ptr.baseAddress!,
-                            size: byteCount - offsetAccumulator,
-                            offset: off_t(toOffset + Int64(offsetAccumulator))
-                        )
-                    } else {
+                    guard let toOffset = toOffset else {
                         return try Posix.write(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
                             size: byteCount - offsetAccumulator
                         )
                     }
+                    return try Posix.pwrite(
+                        descriptor: descriptor,
+                        pointer: ptr.baseAddress!,
+                        size: byteCount - offsetAccumulator,
+                        offset: off_t(toOffset + Int64(offsetAccumulator))
+                    )
                 }
                 switch res {
                 case .processed(let n):

@@ -196,13 +196,12 @@ public final class NIORawSocketBootstrap {
             }
         }
 
-        if eventLoop.inEventLoop {
-            return setupChannel()
-        } else {
+        guard eventLoop.inEventLoop else {
             return eventLoop.flatSubmit {
                 setupChannel()
             }
         }
+        return setupChannel()
     }
 }
 
@@ -360,13 +359,12 @@ extension NIORawSocketBootstrap {
             }
         }
 
-        if eventLoop.inEventLoop {
-            return setupChannel()
-        } else {
+        guard eventLoop.inEventLoop else {
             return eventLoop.flatSubmit {
                 setupChannel()
             }
         }
+        return setupChannel()
     }
 }
 

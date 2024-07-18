@@ -79,9 +79,7 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
         let byteCount = Int(count.bytes)
         guard byteCount > 0 else { return ByteBuffer() }
 
-        if let bytes = self.buffer.readSlice(length: byteCount) {
-            return bytes
-        } else {
+        guard let bytes = self.buffer.readSlice(length: byteCount) else {
             // Not enough bytes: read enough for the caller and to fill the buffer back to capacity.
             var buffer = self.buffer
             self.buffer = ByteBuffer()
@@ -104,6 +102,7 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
 
             return buffer
         }
+        return bytes
     }
 
     /// Reads from  the current position in the file until `predicate` returns `false` and returns

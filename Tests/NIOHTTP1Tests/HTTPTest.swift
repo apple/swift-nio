@@ -124,17 +124,16 @@ class HTTPTest: XCTestCase {
             XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(writeFutures, on: channel.eventLoop).wait())
             XCTAssertEqual(2 * expecteds.count, step)
 
-            if body != nil {
-                XCTAssertGreaterThan(allBodyDatas.count, 0)
-                let firstBodyData = allBodyDatas[0]
-                for bodyData in allBodyDatas {
-                    XCTAssertEqual(firstBodyData, bodyData)
-                }
-                return String(decoding: firstBodyData, as: Unicode.UTF8.self)
-            } else {
+            guard body != nil else {
                 XCTAssertEqual(0, allBodyDatas.count, "left with \(allBodyDatas)")
                 return nil
             }
+            XCTAssertGreaterThan(allBodyDatas.count, 0)
+            let firstBodyData = allBodyDatas[0]
+            for bodyData in allBodyDatas {
+                XCTAssertEqual(firstBodyData, bodyData)
+            }
+            return String(decoding: firstBodyData, as: Unicode.UTF8.self)
         }
 
         // send all bytes in one go

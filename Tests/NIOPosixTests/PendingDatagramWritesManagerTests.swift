@@ -101,48 +101,46 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                         singleState += 1
                         everythingState += 1
                     }
-                    if let expected = expectedSingleWritabilities {
-                        if expected.count > singleState {
-                            XCTAssertGreaterThan(returns.count, everythingState)
-                            XCTAssertEqual(
-                                expected[singleState].0,
-                                buf.count,
-                                "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].0) bytes expected but \(buf.count) actual",
-                                file: (file),
-                                line: line
-                            )
-                            XCTAssertEqual(
-                                expected[singleState].1,
-                                addr.map(SocketAddress.init),
-                                "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].1) address expected but \(String(describing: addr.map(SocketAddress.init))) received",
-                                file: (file),
-                                line: line
-                            )
-                            XCTAssertEqual(
-                                expected[singleState].1.expectedSize,
-                                len,
-                                "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].1.expectedSize) socklen expected but \(len) received",
-                                file: (file),
-                                line: line
-                            )
-
-                            switch returns[everythingState] {
-                            case .success(let r):
-                                return r
-                            case .failure(let e):
-                                throw e
-                            }
-                        } else {
-                            XCTFail(
-                                "single write call \(singleState) but less than \(expected.count) expected",
-                                file: (file),
-                                line: line
-                            )
-                            return IOResult.wouldBlock(-1 * (everythingState + 1))
-                        }
-                    } else {
+                    guard let expected = expectedSingleWritabilities else {
                         XCTFail("single write called on \(buf) but no single writes expected", file: (file), line: line)
                         return IOResult.wouldBlock(-1 * (everythingState + 1))
+                    }
+                    guard expected.count > singleState else {
+                        XCTFail(
+                            "single write call \(singleState) but less than \(expected.count) expected",
+                            file: (file),
+                            line: line
+                        )
+                        return IOResult.wouldBlock(-1 * (everythingState + 1))
+                    }
+                    XCTAssertGreaterThan(returns.count, everythingState)
+                    XCTAssertEqual(
+                        expected[singleState].0,
+                        buf.count,
+                        "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].0) bytes expected but \(buf.count) actual",
+                        file: (file),
+                        line: line
+                    )
+                    XCTAssertEqual(
+                        expected[singleState].1,
+                        addr.map(SocketAddress.init),
+                        "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].1) address expected but \(String(describing: addr.map(SocketAddress.init))) received",
+                        file: (file),
+                        line: line
+                    )
+                    XCTAssertEqual(
+                        expected[singleState].1.expectedSize,
+                        len,
+                        "in single write \(singleState) (overall \(everythingState)), \(expected[singleState].1.expectedSize) socklen expected but \(len) received",
+                        file: (file),
+                        line: line
+                    )
+
+                    switch returns[everythingState] {
+                    case .success(let r):
+                        return r
+                    case .failure(let e):
+                        throw e
                     }
                 },
                 vectorWriteOperation: { ptrs in
@@ -150,66 +148,64 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                         multiState += 1
                         everythingState += 1
                     }
-                    if let expected = expectedVectorWritabilities {
-                        if expected.count > multiState {
-                            XCTAssertGreaterThan(returns.count, everythingState)
-                            XCTAssertEqual(
-                                ptrs.map { $0.msg_hdr.msg_iovlen },
-                                Array(repeating: 1, count: ptrs.count),
-                                "mustn't write more than one iovec element per datagram",
-                                file: (file),
-                                line: line
-                            )
-                            XCTAssertEqual(
-                                expected[multiState].map { numericCast($0.0) },
-                                ptrs.map { $0.msg_hdr.msg_iov.pointee.iov_len },
-                                "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.msg_hdr.msg_iov.pointee.iov_len }) actual",
-                                file: (file),
-                                line: line
-                            )
-                            XCTAssertEqual(
-                                ptrs.map { Int($0.msg_len) },
-                                Array(repeating: 0, count: ptrs.count),
-                                "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.msg_len }) actual",
-                                file: (file),
-                                line: line
-                            )
-                            XCTAssertEqual(
-                                expected[multiState].map { $0.1 },
-                                ptrs.map { SocketAddress($0.msg_hdr.msg_name.assumingMemoryBound(to: sockaddr.self)) },
-                                "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState].map { $0.1 }) addresses expected but \(ptrs.map { SocketAddress($0.msg_hdr.msg_name.assumingMemoryBound(to: sockaddr.self)) }) actual",
-                                file: (file),
-                                line: line
-                            )
-                            XCTAssertEqual(
-                                expected[multiState].map { $0.1.expectedSize },
-                                ptrs.map { $0.msg_hdr.msg_namelen },
-                                "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState].map { $0.1.expectedSize }) address lengths expected but \(ptrs.map { $0.msg_hdr.msg_namelen }) actual",
-                                file: (file),
-                                line: line
-                            )
-
-                            switch returns[everythingState] {
-                            case .success(let r):
-                                return r
-                            case .failure(let e):
-                                throw e
-                            }
-                        } else {
-                            XCTFail(
-                                "vector write call \(multiState) but less than \(expected.count) expected",
-                                file: (file),
-                                line: line
-                            )
-                            return IOResult.wouldBlock(-1 * (everythingState + 1))
-                        }
-                    } else {
+                    guard let expected = expectedVectorWritabilities else {
                         XCTFail(
                             "vector write called on \(ptrs) but no vector writes expected",
                             file: (file),
                             line: line
                         )
                         return IOResult.wouldBlock(-1 * (everythingState + 1))
+                    }
+                    guard expected.count > multiState else {
+                        XCTFail(
+                            "vector write call \(multiState) but less than \(expected.count) expected",
+                            file: (file),
+                            line: line
+                        )
+                        return IOResult.wouldBlock(-1 * (everythingState + 1))
+                    }
+                    XCTAssertGreaterThan(returns.count, everythingState)
+                    XCTAssertEqual(
+                        ptrs.map { $0.msg_hdr.msg_iovlen },
+                        Array(repeating: 1, count: ptrs.count),
+                        "mustn't write more than one iovec element per datagram",
+                        file: (file),
+                        line: line
+                    )
+                    XCTAssertEqual(
+                        expected[multiState].map { numericCast($0.0) },
+                        ptrs.map { $0.msg_hdr.msg_iov.pointee.iov_len },
+                        "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.msg_hdr.msg_iov.pointee.iov_len }) actual",
+                        file: (file),
+                        line: line
+                    )
+                    XCTAssertEqual(
+                        ptrs.map { Int($0.msg_len) },
+                        Array(repeating: 0, count: ptrs.count),
+                        "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.msg_len }) actual",
+                        file: (file),
+                        line: line
+                    )
+                    XCTAssertEqual(
+                        expected[multiState].map { $0.1 },
+                        ptrs.map { SocketAddress($0.msg_hdr.msg_name.assumingMemoryBound(to: sockaddr.self)) },
+                        "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState].map { $0.1 }) addresses expected but \(ptrs.map { SocketAddress($0.msg_hdr.msg_name.assumingMemoryBound(to: sockaddr.self)) }) actual",
+                        file: (file),
+                        line: line
+                    )
+                    XCTAssertEqual(
+                        expected[multiState].map { $0.1.expectedSize },
+                        ptrs.map { $0.msg_hdr.msg_namelen },
+                        "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState].map { $0.1.expectedSize }) address lengths expected but \(ptrs.map { $0.msg_hdr.msg_namelen }) actual",
+                        file: (file),
+                        line: line
+                    )
+
+                    switch returns[everythingState] {
+                    case .success(let r):
+                        return r
+                    case .failure(let e):
+                        throw e
                     }
                 }
             )

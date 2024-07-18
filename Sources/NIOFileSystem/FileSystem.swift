@@ -820,13 +820,12 @@ extension FileSystem {
                 }
 
                 // Drop the last component and loop around.
-                if let component = path.lastComponent {
-                    path.removeLastComponent()
-                    droppedComponents.append(component)
-                } else {
+                guard let component = path.lastComponent else {
                     // Should only happen if the path is empty or contains just the root.
                     return .failure(.mkdir(errno: errno, path: path, location: .here()))
                 }
+                path.removeLastComponent()
+                droppedComponents.append(component)
             }
         }
 
@@ -859,12 +858,11 @@ extension FileSystem {
         return result.map {
             FileInfo(platformSpecificStatus: $0)
         }.flatMapError { errno in
-            if errno == .noSuchFileOrDirectory {
-                return .success(nil)
-            } else {
+            guard errno == .noSuchFileOrDirectory else {
                 let name = infoAboutSymbolicLink ? "lstat" : "stat"
                 return .failure(.stat(name, errno: errno, path: path, location: .here()))
             }
+            return .success(nil)
         }
     }
 
@@ -1317,19 +1315,18 @@ extension FileSystem {
             case .success:
                 return .success(finalPath)
             case let .failure(error):
-                if let systemCallError = error.cause as? FileSystemError.SystemCallError {
-                    switch systemCallError.errno {
-                    // If the file at the generated path already exists, we generate a new file path.
-                    case .fileExists, .isDirectory:
-                        break
-                    default:
-                        let fileSystemError = FileSystemError(
-                            message: "Unable to create temporary directory '\(template)'.",
-                            wrapping: error
-                        )
-                        return .failure(fileSystemError)
-                    }
-                } else {
+                guard let systemCallError = error.cause as? FileSystemError.SystemCallError else {
+                    let fileSystemError = FileSystemError(
+                        message: "Unable to create temporary directory '\(template)'.",
+                        wrapping: error
+                    )
+                    return .failure(fileSystemError)
+                }
+                switch systemCallError.errno {
+                // If the file at the generated path already exists, we generate a new file path.
+                case .fileExists, .isDirectory:
+                    break
+                default:
                     let fileSystemError = FileSystemError(
                         message: "Unable to create temporary directory '\(template)'.",
                         wrapping: error

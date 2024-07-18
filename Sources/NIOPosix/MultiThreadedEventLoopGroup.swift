@@ -318,17 +318,16 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///
     /// - returns: The `EventLoop`.
     public func any() -> EventLoop {
-        if let loop = Self.currentSelectableEventLoop,
+        guard let loop = Self.currentSelectableEventLoop,
             // We are on `loop`'s thread, so we may ask for the its parent group.
             loop.parentGroupCallableFromThisEventLoopOnly() === self
-        {
-            // Nice, we can return this.
-            loop.assertInEventLoop()
-            return loop
-        } else {
+        else {
             // Oh well, let's just vend the next one then.
             return self.next()
         }
+        // Nice, we can return this.
+        loop.assertInEventLoop()
+        return loop
     }
 
     /// Shut this `MultiThreadedEventLoopGroup` down which causes the `EventLoop`s and their associated threads to be
@@ -543,11 +542,10 @@ extension ScheduledTask: CustomStringConvertible {
 extension ScheduledTask: Comparable {
     @usableFromInline
     static func < (lhs: ScheduledTask, rhs: ScheduledTask) -> Bool {
-        if lhs.readyTime == rhs.readyTime {
-            return lhs.id < rhs.id
-        } else {
+        guard lhs.readyTime == rhs.readyTime else {
             return lhs.readyTime < rhs.readyTime
         }
+        return lhs.id < rhs.id
     }
 
     @usableFromInline

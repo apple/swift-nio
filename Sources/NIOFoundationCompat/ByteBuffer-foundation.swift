@@ -120,12 +120,7 @@ extension ByteBuffer {
         }
 
         return self.withUnsafeReadableBytesWithStorageManagement { ptr, storageRef in
-            if doCopy {
-                return Data(
-                    bytes: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
-                    count: Int(length)
-                )
-            } else {
+            guard doCopy else {
                 _ = storageRef.retain()
                 return Data(
                     bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
@@ -133,6 +128,10 @@ extension ByteBuffer {
                     deallocator: .custom { _, _ in storageRef.release() }
                 )
             }
+            return Data(
+                bytes: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
+                count: Int(length)
+            )
         }
     }
 
