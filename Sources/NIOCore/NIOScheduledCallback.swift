@@ -20,6 +20,19 @@ public protocol NIOScheduledCallbackHandler {
     ///
     /// - Parameter eventLoop: The event loop on which the callback was scheduled.
     func handleScheduledCallback(eventLoop: some EventLoop)
+
+    /// This function is called if the scheduled callback is cancelled.
+    ///
+    /// The callback could be cancelled explictily, by the user calling ``NIOScheduledCallback/cancel()``, or
+    /// implicitly, if it was still pending when the event loop was shut down.
+    ///
+    /// - Parameter eventLoop: The event loop on which the callback was scheduled.
+    func onCancelScheduledCallback(eventLoop: some EventLoop)
+}
+
+extension NIOScheduledCallbackHandler {
+    /// Default implementation of `onCancelScheduledCallback(eventLoop:)`: does nothing.
+    public func onCancelScheduledCallback(eventLoop: some EventLoop) {}
 }
 
 /// An opaque handle that can be used to cancel a scheduled callback.
@@ -76,11 +89,47 @@ public struct NIOScheduledCallback: Sendable {
 }
 
 extension EventLoop {
+    /* package */ public func _scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
+        let task = self.scheduleTask(deadline: deadline) { handler.handleScheduledCallback(eventLoop: self) }
+        task.futureResult.whenFailure { error in
+            if case .cancelled = error as? EventLoopError {
+                handler.onCancelScheduledCallback(eventLoop: self)
+            }
+        }
+        return NIOScheduledCallback(self, task)
+    }
+
     /// Default implementation of `scheduleCallback(at deadline:handler:)`: backed by `EventLoop.scheduleTask`.
+    ///
+    /// Ideally the scheduled callback handler should be called exactly once for each call to `scheduleCallback`:
+    /// either the callback handler, or the cancellation handler.
+    ///
+    /// In order to support cancellation in the default implementation, we hook the future of the scheduled task
+    /// backing the scheduled callback. This requires two calls to the event loop: `EventLoop.scheduleTask`, and
+    /// `EventLoopFuture.whenFailure`, both of which queue onto the event loop if called from off the event loop.
+    ///
+    /// This can present a challenge during event loop shutdown, where typically:
+    /// 1. Scheduled work that is past its deadline gets run.
+    /// 2. Scheduled future work gets cancelled.
+    /// 3. New work resulting from (1) and (2) gets handled differently depending on the EL:
+    ///   a. `SelectableEventLoop` runs new work recursively and crashes if not quiesced in some number of ticks.
+    ///   b. `EmbeddedEventLoop` and `NIOAsyncTestingEventLoop` will fail incoming work.
+    ///
+    /// `SelectableEventLoop` has a custom implementation for scheduled callbacks so warrants no further discussion.
+    ///
+    /// As a practical matter, the `EmbeddedEventLoop` is OK because it shares the thread of the caller, but for
+    /// other event loops (including any outside this repo), it's possible that the call to shutdown interleaves
+    /// with the call to create the scheduled task and the call to hook the task future.
+    ///
+    /// Because this API is synchronous and we cannot block the calling thread, users of event loops with this
+    /// default implementation will have cancellation callbacks delivered on a best-effort basis when the event loop
+    /// is shutdown and depends on how the event loop deals with newly scheduled tasks during shutdown.
+    ///
+    /// The implementation of this default conformance has been further factored out so we can use it in
+    /// `NIOAsyncTestingEventLoop`, where the use of `wait()` is _less bad_.
     @discardableResult
     public func scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
-        let task = self.scheduleTask(deadline: deadline) { handler.handleScheduledCallback(eventLoop: self) }
-        return NIOScheduledCallback(self, task)
+        self._scheduleCallback(at: deadline, handler: handler)
     }
 
     /// Default implementation of `scheduleCallback(in amount:handler:)`: calls `scheduleCallback(at deadline:handler:)`.

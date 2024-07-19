@@ -695,13 +695,14 @@ internal final class SelectableEventLoop: EventLoop {
                 for task in immediateTasksCopy {
                     self.run(task)
                 }
-                // Fail all the scheduled tasks (callbacks have no failFn and can just be dropped).
                 for task in scheduledTasksCopy {
                     switch task.kind {
+                    // Fail all the scheduled tasks.
                     case .task(_, let failFn):
                         failFn(EventLoopError._shutdown)
-                    case .callback:
-                        break
+                    // Call the cancellation handler for all the scheduled callbacks.
+                    case .callback(let handler):
+                        handler.onCancelScheduledCallback(eventLoop: self)
                     }
                 }
 
@@ -944,7 +945,14 @@ extension SelectableEventLoop {
             preconditionFailure("No custom ID for callback")
         }
         self._tasksLock.withLock {
-            self._scheduledTasks.removeFirst(where: { $0.id == id })
+            guard let scheduledTask = self._scheduledTasks.removeFirst(where: { $0.id == id }) else {
+                // Must have been cancelled already.
+                return
+            }
+            guard case .callback(let handler) = scheduledTask.kind else {
+                preconditionFailure("Incorrect task kind for callback")
+            }
+            handler.onCancelScheduledCallback(eventLoop: self)
         }
     }
 }
