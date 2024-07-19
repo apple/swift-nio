@@ -287,32 +287,53 @@ public final class ChannelTests: XCTestCase {
                     singleState += 1
                     everythingState += 1
                 }
-                guard let expected = expectedSingleWritabilities else {
+                if let expected = expectedSingleWritabilities {
+                    if expected.count > singleState {
+                        XCTAssertGreaterThan(returns.count, everythingState)
+                        XCTAssertEqual(
+                            expected[singleState],
+                            buf.count,
+                            "in single write \(singleState) (overall \(everythingState)), \(expected[singleState]) bytes expected but \(buf.count) actual"
+                        )
+                        return returns[everythingState]
+                    } else {
+                        XCTFail(
+                            "single write call \(singleState) but less than \(expected.count) expected",
+                            file: (file),
+                            line: line
+                        )
+                        return IOResult.wouldBlock(-1 * (everythingState + 1))
+                    }
+                } else {
                     XCTFail("single write called on \(buf) but no single writes expected", file: (file), line: line)
                     return IOResult.wouldBlock(-1 * (everythingState + 1))
                 }
-                guard expected.count > singleState else {
-                    XCTFail(
-                        "single write call \(singleState) but less than \(expected.count) expected",
-                        file: (file),
-                        line: line
-                    )
-                    return IOResult.wouldBlock(-1 * (everythingState + 1))
-                }
-                XCTAssertGreaterThan(returns.count, everythingState)
-                XCTAssertEqual(
-                    expected[singleState],
-                    buf.count,
-                    "in single write \(singleState) (overall \(everythingState)), \(expected[singleState]) bytes expected but \(buf.count) actual"
-                )
-                return returns[everythingState]
             },
             vectorBufferWriteOperation: { ptrs in
                 defer {
                     multiState += 1
                     everythingState += 1
                 }
-                guard let expected = expectedVectorWritabilities else {
+                if let expected = expectedVectorWritabilities {
+                    if expected.count > multiState {
+                        XCTAssertGreaterThan(returns.count, everythingState)
+                        XCTAssertEqual(
+                            expected[multiState],
+                            ptrs.map { numericCast($0.iov_len) },
+                            "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.iov_len }) actual",
+                            file: (file),
+                            line: line
+                        )
+                        return returns[everythingState]
+                    } else {
+                        XCTFail(
+                            "vector write call \(multiState) but less than \(expected.count) expected",
+                            file: (file),
+                            line: line
+                        )
+                        return IOResult.wouldBlock(-1 * (everythingState + 1))
+                    }
+                } else {
                     XCTFail(
                         "vector write called on \(ptrs) but no vector writes expected",
                         file: (file),
@@ -320,23 +341,6 @@ public final class ChannelTests: XCTestCase {
                     )
                     return IOResult.wouldBlock(-1 * (everythingState + 1))
                 }
-                guard expected.count > multiState else {
-                    XCTFail(
-                        "vector write call \(multiState) but less than \(expected.count) expected",
-                        file: (file),
-                        line: line
-                    )
-                    return IOResult.wouldBlock(-1 * (everythingState + 1))
-                }
-                XCTAssertGreaterThan(returns.count, everythingState)
-                XCTAssertEqual(
-                    expected[multiState],
-                    ptrs.map { numericCast($0.iov_len) },
-                    "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.iov_len }) actual",
-                    file: (file),
-                    line: line
-                )
-                return returns[everythingState]
             },
             scalarFileWriteOperation: { _, start, end in
                 defer {
@@ -352,7 +356,24 @@ public final class ChannelTests: XCTestCase {
                     return IOResult.wouldBlock(-1 * (everythingState + 1))
                 }
 
-                guard expected.count > fileState else {
+                if expected.count > fileState {
+                    XCTAssertGreaterThan(returns.count, everythingState)
+                    XCTAssertEqual(
+                        expected[fileState].0,
+                        start,
+                        "in file write \(fileState) (overall \(everythingState)), \(expected[fileState].0) expected as start index but \(start) actual",
+                        file: (file),
+                        line: line
+                    )
+                    XCTAssertEqual(
+                        expected[fileState].1,
+                        end,
+                        "in file write \(fileState) (overall \(everythingState)), \(expected[fileState].1) expected as end index but \(end) actual",
+                        file: (file),
+                        line: line
+                    )
+                    return returns[everythingState]
+                } else {
                     XCTFail(
                         "file write call \(fileState) but less than \(expected.count) expected",
                         file: (file),
@@ -360,22 +381,6 @@ public final class ChannelTests: XCTestCase {
                     )
                     return IOResult.wouldBlock(-1 * (everythingState + 1))
                 }
-                XCTAssertGreaterThan(returns.count, everythingState)
-                XCTAssertEqual(
-                    expected[fileState].0,
-                    start,
-                    "in file write \(fileState) (overall \(everythingState)), \(expected[fileState].0) expected as start index but \(start) actual",
-                    file: (file),
-                    line: line
-                )
-                XCTAssertEqual(
-                    expected[fileState].1,
-                    end,
-                    "in file write \(fileState) (overall \(everythingState)), \(expected[fileState].1) expected as end index but \(end) actual",
-                    file: (file),
-                    line: line
-                )
-                return returns[everythingState]
             }
         )
         if everythingState > 0 {
@@ -2211,10 +2216,11 @@ public final class ChannelTests: XCTestCase {
                 try super.init(protocolFamily: protocolFamily, type: .stream, setNonBlocking: true)
             }
             override func connect(to address: SocketAddress) throws -> Bool {
-                guard address.port == 123 else {
+                if address.port == 123 {
+                    return true
+                } else {
                     return try super.connect(to: address)
                 }
-                return true
             }
         }
         class ReadDoesNotHappen: ChannelInboundHandler {
@@ -2416,12 +2422,13 @@ public final class ChannelTests: XCTestCase {
                     self.firstReadHappened = true
                 }
                 XCTAssertGreaterThan(pointer.count, 0)
-                guard self.firstReadHappened else {
+                if self.firstReadHappened {
+                    // this is a copy of the exact error that'd come out of the real Socket.read
+                    throw IOError.init(errnoCode: ECONNRESET, reason: "read(descriptor:pointer:size:)")
+                } else {
                     pointer[0] = 0xff
                     return .processed(1)
                 }
-                // this is a copy of the exact error that'd come out of the real Socket.read
-                throw IOError.init(errnoCode: ECONNRESET, reason: "read(descriptor:pointer:size:)")
             }
         }
         class VerifyThingsAreRightHandler: ChannelInboundHandler {

@@ -581,10 +581,11 @@ internal enum Posix {
             sysAccept(descriptor, addr, len)
         }
 
-        guard case .processed(let fd) = result else {
+        if case .processed(let fd) = result {
+            return fd
+        } else {
             return nil
         }
-        return fd
     }
 
     @inline(never)

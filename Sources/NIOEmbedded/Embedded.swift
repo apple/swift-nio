@@ -47,10 +47,11 @@ internal struct EmbeddedScheduledTask {
 
 extension EmbeddedScheduledTask: Comparable {
     static func < (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
-        guard lhs.readyTime == rhs.readyTime else {
+        if lhs.readyTime == rhs.readyTime {
+            return lhs.insertOrder < rhs.insertOrder
+        } else {
             return lhs.readyTime < rhs.readyTime
         }
-        return lhs.insertOrder < rhs.insertOrder
     }
 
     static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
@@ -346,19 +347,21 @@ class EmbeddedChannelCore: ChannelCore {
     @usableFromInline
     func localAddress0() throws -> SocketAddress {
         self.eventLoop.preconditionInEventLoop()
-        guard let localAddress = self.localAddress else {
+        if let localAddress = self.localAddress {
+            return localAddress
+        } else {
             throw ChannelError.operationUnsupported
         }
-        return localAddress
     }
 
     @usableFromInline
     func remoteAddress0() throws -> SocketAddress {
         self.eventLoop.preconditionInEventLoop()
-        guard let remoteAddress = self.remoteAddress else {
+        if let remoteAddress = self.remoteAddress {
+            return remoteAddress
+        } else {
             throw ChannelError.operationUnsupported
         }
-        return remoteAddress
     }
 
     @usableFromInline
@@ -518,10 +521,11 @@ public final class EmbeddedChannel: Channel {
         /// `true` if the `EmbeddedChannel` was `clean` on `finish`, ie. there is no unconsumed inbound, outbound, or
         /// pending outbound data left on the `Channel`.
         public var isClean: Bool {
-            guard case .clean = self else {
+            if case .clean = self {
+                return true
+            } else {
                 return false
             }
-            return true
         }
 
         /// `true` if the `EmbeddedChannel` if there was unconsumed inbound, outbound, or pending outbound data left
@@ -547,10 +551,11 @@ public final class EmbeddedChannel: Channel {
 
         /// Returns `true` is the buffer was empty.
         public var isEmpty: Bool {
-            guard case .empty = self else {
+            if case .empty = self {
+                return true
+            } else {
                 return false
             }
-            return true
         }
 
         /// Returns `true` if the buffer was non-empty.
@@ -639,14 +644,15 @@ public final class EmbeddedChannel: Channel {
         self.embeddedEventLoop.run()
         try throwIfErrorCaught()
         let c = self.channelcore
-        guard c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty else {
+        if c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty {
+            return .clean
+        } else {
             return .leftOvers(
                 inbound: Array(c.inboundBuffer),
                 outbound: Array(c.outboundBuffer),
                 pendingOutbound: c.pendingOutboundBuffer.map { $0.0 }
             )
         }
-        return .clean
     }
 
     /// Synchronously closes the `EmbeddedChannel`.

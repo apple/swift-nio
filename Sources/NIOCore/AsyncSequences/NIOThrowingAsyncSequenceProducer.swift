@@ -1197,7 +1197,27 @@ extension NIOThrowingAsyncSequenceProducer {
             ):
                 self._state = .modifying
 
-                guard let element = buffer.popFirst() else {
+                if let element = buffer.popFirst() {
+                    // We have an element to fulfil the demand right away.
+
+                    let shouldProduceMore = backPressureStrategy.didConsume(bufferDepth: buffer.count)
+
+                    self._state = .streaming(
+                        backPressureStrategy: backPressureStrategy,
+                        buffer: buffer,
+                        continuation: nil,
+                        hasOutstandingDemand: shouldProduceMore,
+                        iteratorInitialized: iteratorInitialized
+                    )
+
+                    if shouldProduceMore && !hasOutstandingDemand {
+                        // We didn't have any demand but now we do, so we need to inform the delegate.
+                        return .returnElementAndCallProduceMore(element)
+                    } else {
+                        // We don't have any new demand, so we can just return the element.
+                        return .returnElement(element)
+                    }
+                } else {
                     // There is nothing in the buffer to fulfil the demand so we need to suspend.
                     // We are not interacting with the back-pressure strategy here because
                     // we are doing this inside `next(:)`
@@ -1211,42 +1231,25 @@ extension NIOThrowingAsyncSequenceProducer {
 
                     return .suspendTask
                 }
-                // We have an element to fulfil the demand right away.
-
-                let shouldProduceMore = backPressureStrategy.didConsume(bufferDepth: buffer.count)
-
-                self._state = .streaming(
-                    backPressureStrategy: backPressureStrategy,
-                    buffer: buffer,
-                    continuation: nil,
-                    hasOutstandingDemand: shouldProduceMore,
-                    iteratorInitialized: iteratorInitialized
-                )
-
-                guard shouldProduceMore && !hasOutstandingDemand else {
-                    // We don't have any new demand, so we can just return the element.
-                    return .returnElement(element)
-                }
-                // We didn't have any demand but now we do, so we need to inform the delegate.
-                return .returnElementAndCallProduceMore(element)
 
             case .sourceFinished(var buffer, let iteratorInitialized, let failure):
                 self._state = .modifying
 
                 // Check if we have an element left in the buffer and return it
-                guard let element = buffer.popFirst() else {
+                if let element = buffer.popFirst() {
+                    self._state = .sourceFinished(
+                        buffer: buffer,
+                        iteratorInitialized: iteratorInitialized,
+                        failure: failure
+                    )
+
+                    return .returnElement(element)
+                } else {
                     // We are returning the queued failure now and can transition to finished
                     self._state = .finished(iteratorInitialized: iteratorInitialized)
 
                     return .returnFailureAndCallDidTerminate(failure)
                 }
-                self._state = .sourceFinished(
-                    buffer: buffer,
-                    iteratorInitialized: iteratorInitialized,
-                    failure: failure
-                )
-
-                return .returnElement(element)
 
             case .cancelled(let iteratorInitialized):
                 self._state = .finished(iteratorInitialized: iteratorInitialized)
@@ -1296,10 +1299,11 @@ extension NIOThrowingAsyncSequenceProducer {
                     iteratorInitialized: iteratorInitialized
                 )
 
-                guard shouldProduceMore && !hasOutstandingDemand else {
+                if shouldProduceMore && !hasOutstandingDemand {
+                    return .callProduceMore
+                } else {
                     return .none
                 }
-                return .callProduceMore
 
             case .streaming(_, _, .some(_), _, _), .sourceFinished, .finished, .cancelled:
                 preconditionFailure("This should have already been handled by `next()`")

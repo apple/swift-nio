@@ -392,11 +392,12 @@ extension ChannelOptions {
             var hasSet = false
             self._storage = self._storage.map { currentKeyAndValue in
                 let (currentKey, _) = currentKeyAndValue
-                guard let currentKey = currentKey as? Option, currentKey == newKey else {
+                if let currentKey = currentKey as? Option, currentKey == newKey {
+                    hasSet = true
+                    return (currentKey, (newValue, applier))
+                } else {
                     return currentKeyAndValue
                 }
-                hasSet = true
-                return (currentKey, (newValue, applier))
             }
             if !hasSet {
                 self._storage.append((newKey, (newValue, applier)))

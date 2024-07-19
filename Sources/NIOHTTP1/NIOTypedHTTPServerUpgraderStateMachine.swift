@@ -96,15 +96,16 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
             return .unwrapData
 
         case .awaitingUpgrader(var awaitingUpgrader):
-            guard awaitingUpgrader.seenFirstRequest else {
+            if awaitingUpgrader.seenFirstRequest {
+                // We should buffer the data since we have seen the full request.
+                self.state = .modifying
+                awaitingUpgrader.buffer.append(data)
+                self.state = .awaitingUpgrader(awaitingUpgrader)
+                return nil
+            } else {
                 // We shouldn't buffer. This means we are still expecting HTTP parts.
                 return .unwrapData
             }
-            // We should buffer the data since we have seen the full request.
-            self.state = .modifying
-            awaitingUpgrader.buffer.append(data)
-            self.state = .awaitingUpgrader(awaitingUpgrader)
-            return nil
 
         case .upgraderReady:
             // We have not seen the end of the HTTP request so this
@@ -257,23 +258,25 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
         case .upgrading(let upgrading):
             switch result {
             case .success(let value):
-                guard !upgrading.buffer.isEmpty else {
+                if !upgrading.buffer.isEmpty {
+                    self.state = .unbuffering(.init(buffer: upgrading.buffer))
+                    return .startUnbuffering(value)
+                } else {
                     self.state = .finished
                     return .removeHandler(value)
                 }
-                self.state = .unbuffering(.init(buffer: upgrading.buffer))
-                return .startUnbuffering(value)
 
             case .failure(let error):
-                guard !upgrading.buffer.isEmpty else {
+                if !upgrading.buffer.isEmpty {
+                    // So we failed to upgrade. There is nothing really that we can do here.
+                    // We are unbuffering the reads but there shouldn't be any handler in the pipeline
+                    // that expects a specific type of reads anyhow.
+                    self.state = .unbuffering(.init(buffer: upgrading.buffer))
+                    return .fireErrorCaughtAndStartUnbuffering(error)
+                } else {
                     self.state = .finished
                     return .fireErrorCaughtAndRemoveHandler(error)
                 }
-                // So we failed to upgrade. There is nothing really that we can do here.
-                // We are unbuffering the reads but there shouldn't be any handler in the pipeline
-                // that expects a specific type of reads anyhow.
-                self.state = .unbuffering(.init(buffer: upgrading.buffer))
-                return .fireErrorCaughtAndStartUnbuffering(error)
             }
 
         case .finished:
@@ -317,7 +320,11 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
         case .awaitingUpgrader(let awaitingUpgrader):
             switch result {
             case .success(.some((let upgrader, let responseHeaders, let proto))):
-                guard awaitingUpgrader.seenFirstRequest else {
+                if awaitingUpgrader.seenFirstRequest {
+                    // We have seen the end of the request. So we can upgrade now.
+                    self.state = .upgrading(.init(buffer: awaitingUpgrader.buffer))
+                    return .startUpgrading(upgrader: upgrader, responseHeaders: responseHeaders, proto: proto)
+                } else {
                     // We have not yet seen the end so we have to wait until that happens
                     self.state = .upgraderReady(
                         .init(
@@ -330,9 +337,6 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
                     )
                     return nil
                 }
-                // We have seen the end of the request. So we can upgrade now.
-                self.state = .upgrading(.init(buffer: awaitingUpgrader.buffer))
-                return .startUpgrading(upgrader: upgrader, responseHeaders: responseHeaders, proto: proto)
 
             case .success(.none):
                 // There was no upgrader to handle the request. We just run the not upgrading
@@ -341,12 +345,13 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
                 return .runNotUpgradingInitializer
 
             case .failure(let error):
-                guard !awaitingUpgrader.buffer.isEmpty else {
+                if !awaitingUpgrader.buffer.isEmpty {
+                    self.state = .unbuffering(.init(buffer: awaitingUpgrader.buffer))
+                    return .fireErrorCaughtAndStartUnbuffering(error)
+                } else {
                     self.state = .finished
                     return .fireErrorCaughtAndRemoveHandler(error)
                 }
-                self.state = .unbuffering(.init(buffer: awaitingUpgrader.buffer))
-                return .fireErrorCaughtAndStartUnbuffering(error)
             }
 
         case .upgrading, .unbuffering, .finished:
@@ -372,14 +377,15 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
         case .unbuffering(var unbuffering):
             self.state = .modifying
 
-            guard let element = unbuffering.buffer.popFirst() else {
+            if let element = unbuffering.buffer.popFirst() {
+                self.state = .unbuffering(unbuffering)
+
+                return .fireChannelRead(element)
+            } else {
                 self.state = .finished
 
                 return .fireChannelReadCompleteAndRemoveHandler
             }
-            self.state = .unbuffering(unbuffering)
-
-            return .fireChannelRead(element)
 
         case .modifying:
             fatalError("Internal inconsistency in HTTPServerUpgradeStateMachine")

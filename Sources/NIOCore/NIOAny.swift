@@ -83,10 +83,11 @@ public struct NIOAny {
     /// - returns: The wrapped `ByteBuffer` or `nil` if the wrapped message is not a `ByteBuffer`.
     @inlinable
     func tryAsByteBuffer() -> ByteBuffer? {
-        guard case .ioData(.byteBuffer(let bb)) = self._storage else {
+        if case .ioData(.byteBuffer(let bb)) = self._storage {
+            return bb
+        } else {
             return nil
         }
-        return bb
     }
 
     /// Force unwrapping the wrapped message as `ByteBuffer`.
@@ -108,10 +109,11 @@ public struct NIOAny {
     /// - returns: The wrapped `IOData` or `nil` if the wrapped message is not a `IOData`.
     @inlinable
     func tryAsIOData() -> IOData? {
-        guard case .ioData(let data) = self._storage else {
+        if case .ioData(let data) = self._storage {
+            return data
+        } else {
             return nil
         }
-        return data
     }
 
     /// Force unwrapping the wrapped message as `IOData`.
@@ -133,10 +135,11 @@ public struct NIOAny {
     /// - returns: The wrapped `FileRegion` or `nil` if the wrapped message is not a `FileRegion`.
     @inlinable
     func tryAsFileRegion() -> FileRegion? {
-        guard case .ioData(.fileRegion(let f)) = self._storage else {
+        if case .ioData(.fileRegion(let f)) = self._storage {
+            return f
+        } else {
             return nil
         }
-        return f
     }
 
     /// Force unwrapping the wrapped message as `FileRegion`.
@@ -158,10 +161,11 @@ public struct NIOAny {
     /// - returns: The wrapped `AddressedEnvelope<ByteBuffer>` or `nil` if the wrapped message is not an `AddressedEnvelope<ByteBuffer>`.
     @inlinable
     func tryAsByteEnvelope() -> AddressedEnvelope<ByteBuffer>? {
-        guard case .bufferEnvelope(let e) = self._storage else {
+        if case .bufferEnvelope(let e) = self._storage {
+            return e
+        } else {
             return nil
         }
-        return e
     }
 
     /// Force unwrapping the wrapped message as `AddressedEnvelope<ByteBuffer>`.

@@ -43,10 +43,11 @@ extension String {
         let fastResult = self.utf8.withContiguousStorageIfAvailable { ptr in
             ptr.allSatisfy { $0.isValidHeaderFieldValueByte }
         }
-        guard let fastResult = fastResult else {
+        if let fastResult = fastResult {
+            return fastResult
+        } else {
             return self.utf8._isValidHeaderFieldValue_slowPath
         }
-        return fastResult
     }
 
     /// Validates a given header field name against the definition in RFC 9110.
@@ -70,10 +71,11 @@ extension String {
         let fastResult = self.utf8.withContiguousStorageIfAvailable { ptr in
             ptr.allSatisfy { $0.isValidHeaderFieldNameByte }
         }
-        guard let fastResult = fastResult else {
+        if let fastResult = fastResult {
+            return fastResult
+        } else {
             return self.utf8._isValidHeaderFieldName_slowPath
         }
-        return fastResult
     }
 }
 

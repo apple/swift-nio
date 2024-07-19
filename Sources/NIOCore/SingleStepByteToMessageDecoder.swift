@@ -53,11 +53,12 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
 // MARK: NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder
 extension NIOSingleStepByteToMessageDecoder {
     public mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        guard let message = try self.decode(buffer: &buffer) else {
+        if let message = try self.decode(buffer: &buffer) {
+            context.fireChannelRead(Self.wrapInboundOut(message))
+            return .continue
+        } else {
             return .needMoreData
         }
-        context.fireChannelRead(Self.wrapInboundOut(message))
-        return .continue
     }
 
     public mutating func decodeLast(
@@ -65,11 +66,12 @@ extension NIOSingleStepByteToMessageDecoder {
         buffer: inout ByteBuffer,
         seenEOF: Bool
     ) throws -> DecodingState {
-        guard let message = try self.decodeLast(buffer: &buffer, seenEOF: seenEOF) else {
+        if let message = try self.decodeLast(buffer: &buffer, seenEOF: seenEOF) {
+            context.fireChannelRead(Self.wrapInboundOut(message))
+            return .continue
+        } else {
             return .needMoreData
         }
-        context.fireChannelRead(Self.wrapInboundOut(message))
-        return .continue
     }
 }
 
@@ -255,10 +257,11 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         assert(self._buffer != nil)
 
         func decodeOnce(buffer: inout ByteBuffer) throws -> Decoder.InboundOut? {
-            guard decodeMode == .normal else {
+            if decodeMode == .normal {
+                return try self.decoder.decode(buffer: &buffer)
+            } else {
                 return try self.decoder.decodeLast(buffer: &buffer, seenEOF: seenEOF)
             }
-            return try self.decoder.decode(buffer: &buffer)
         }
 
         while let message = try self._withNonCoWBuffer(decodeOnce) {

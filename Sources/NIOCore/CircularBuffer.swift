@@ -456,10 +456,11 @@ extension CircularBuffer {
     /// Returns the number of element in the ring.
     @inlinable
     public var count: Int {
-        guard self.tailBackingIndex >= self.headBackingIndex else {
+        if self.tailBackingIndex >= self.headBackingIndex {
+            return self.tailBackingIndex &- self.headBackingIndex
+        } else {
             return self._buffer.count &- (self.headBackingIndex &- self.tailBackingIndex)
         }
-        return self.tailBackingIndex &- self.headBackingIndex
     }
 
     /// The total number of elements that the ring can contain without allocating new storage.
@@ -537,10 +538,11 @@ extension CircularBuffer: RangeReplaceableCollection {
     /// - Complexity: O(1)
     @inlinable
     public mutating func popFirst() -> Element? {
-        guard count > 0 else {
+        if count > 0 {
+            return self.removeFirst()
+        } else {
             return nil
         }
-        return self.removeFirst()
     }
 
     /// Removes and returns the last element of the `CircularBuffer`.
@@ -555,10 +557,11 @@ extension CircularBuffer: RangeReplaceableCollection {
     /// - Complexity: O(1)
     @inlinable
     public mutating func popLast() -> Element? {
-        guard count > 0 else {
+        if count > 0 {
+            return self.removeLast()
+        } else {
             return nil
         }
-        return self.removeLast()
     }
 
     /// Removes the specified number of elements from the end of the

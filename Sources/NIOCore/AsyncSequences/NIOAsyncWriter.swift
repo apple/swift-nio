@@ -1077,46 +1077,15 @@ extension NIOAsyncWriter {
                 let delegate,
                 let error
             ):
-                guard bufferedYieldIDs.contains(yieldID) else {
-                    // We are already finished and still tried to write something
-                    return .throwError(NIOAsyncWriterError.alreadyFinished())
-                }
-                // This yield was buffered before we became finished so we still have to deliver it
-                self._state = .modifying
+                if bufferedYieldIDs.contains(yieldID) {
+                    // This yield was buffered before we became finished so we still have to deliver it
+                    self._state = .modifying
 
-                if let index = cancelledYields.firstIndex(of: yieldID) {
-                    // We already marked the yield as cancelled. We have to remove it and
-                    // throw a CancellationError.
-                    cancelledYields.remove(at: index)
+                    if let index = cancelledYields.firstIndex(of: yieldID) {
+                        // We already marked the yield as cancelled. We have to remove it and
+                        // throw a CancellationError.
+                        cancelledYields.remove(at: index)
 
-                    self._state = .writerFinished(
-                        isWritable: isWritable,
-                        inDelegateOutcall: inDelegateOutcall,
-                        suspendedYields: suspendedYields,
-                        cancelledYields: cancelledYields,
-                        bufferedYieldIDs: bufferedYieldIDs,
-                        delegate: delegate,
-                        error: error
-                    )
-
-                    return .throwError(CancellationError())
-                } else {
-                    // Yield hasn't been marked as cancelled.
-
-                    switch (isWritable, inDelegateOutcall) {
-                    case (true, false):
-                        self._state = .writerFinished(
-                            isWritable: isWritable,
-                            inDelegateOutcall: true,  // We are now making a call to the delegate
-                            suspendedYields: suspendedYields,
-                            cancelledYields: cancelledYields,
-                            bufferedYieldIDs: bufferedYieldIDs,
-                            delegate: delegate,
-                            error: error
-                        )
-
-                        return .callDidYield(delegate)
-                    case (true, true), (false, _):
                         self._state = .writerFinished(
                             isWritable: isWritable,
                             inDelegateOutcall: inDelegateOutcall,
@@ -1126,8 +1095,40 @@ extension NIOAsyncWriter {
                             delegate: delegate,
                             error: error
                         )
-                        return .suspendTask
+
+                        return .throwError(CancellationError())
+                    } else {
+                        // Yield hasn't been marked as cancelled.
+
+                        switch (isWritable, inDelegateOutcall) {
+                        case (true, false):
+                            self._state = .writerFinished(
+                                isWritable: isWritable,
+                                inDelegateOutcall: true,  // We are now making a call to the delegate
+                                suspendedYields: suspendedYields,
+                                cancelledYields: cancelledYields,
+                                bufferedYieldIDs: bufferedYieldIDs,
+                                delegate: delegate,
+                                error: error
+                            )
+
+                            return .callDidYield(delegate)
+                        case (true, true), (false, _):
+                            self._state = .writerFinished(
+                                isWritable: isWritable,
+                                inDelegateOutcall: inDelegateOutcall,
+                                suspendedYields: suspendedYields,
+                                cancelledYields: cancelledYields,
+                                bufferedYieldIDs: bufferedYieldIDs,
+                                delegate: delegate,
+                                error: error
+                            )
+                            return .suspendTask
+                        }
                     }
+                } else {
+                    // We are already finished and still tried to write something
+                    return .throwError(NIOAsyncWriterError.alreadyFinished())
                 }
 
             case .finished(let sinkError):
@@ -1215,7 +1216,28 @@ extension NIOAsyncWriter {
                 var suspendedYields,
                 let delegate
             ):
-                guard let index = suspendedYields.firstIndex(where: { $0.yieldID == yieldID }) else {
+                if let index = suspendedYields.firstIndex(where: { $0.yieldID == yieldID }) {
+                    self._state = .modifying
+                    // We have a suspended yield for the id. We need to resume the continuation now.
+
+                    // Removing can be quite expensive if it produces a gap in the array.
+                    // Since we are not expecting a lot of elements in this array it should be fine
+                    // to just remove. If this turns out to be a performance pitfall, we can
+                    // swap the elements before removing. So that we always remove the last element.
+                    let suspendedYield = suspendedYields.remove(at: index)
+
+                    // We are keeping the elements that the yield produced.
+                    self._state = .streaming(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        cancelledYields: cancelledYields,
+                        suspendedYields: suspendedYields,
+                        delegate: delegate
+                    )
+
+                    return .resumeContinuationWithCancellationError(suspendedYield.continuation)
+
+                } else {
                     self._state = .modifying
                     // There is no suspended yield. This can mean that we either already yielded
                     // or that the call to `yield` is coming afterwards. We need to store
@@ -1232,25 +1254,6 @@ extension NIOAsyncWriter {
 
                     return .none
                 }
-                self._state = .modifying
-                // We have a suspended yield for the id. We need to resume the continuation now.
-
-                // Removing can be quite expensive if it produces a gap in the array.
-                // Since we are not expecting a lot of elements in this array it should be fine
-                // to just remove. If this turns out to be a performance pitfall, we can
-                // swap the elements before removing. So that we always remove the last element.
-                let suspendedYield = suspendedYields.remove(at: index)
-
-                // We are keeping the elements that the yield produced.
-                self._state = .streaming(
-                    isWritable: isWritable,
-                    inDelegateOutcall: inDelegateOutcall,
-                    cancelledYields: cancelledYields,
-                    suspendedYields: suspendedYields,
-                    delegate: delegate
-                )
-
-                return .resumeContinuationWithCancellationError(suspendedYield.continuation)
 
             case .writerFinished(
                 let isWritable,
@@ -1264,7 +1267,30 @@ extension NIOAsyncWriter {
                 guard bufferedYieldIDs.contains(yieldID) else {
                     return .none
                 }
-                guard let index = suspendedYields.firstIndex(where: { $0.yieldID == yieldID }) else {
+                if let index = suspendedYields.firstIndex(where: { $0.yieldID == yieldID }) {
+                    self._state = .modifying
+                    // We have a suspended yield for the id. We need to resume the continuation now.
+
+                    // Removing can be quite expensive if it produces a gap in the array.
+                    // Since we are not expecting a lot of elements in this array it should be fine
+                    // to just remove. If this turns out to be a performance pitfall, we can
+                    // swap the elements before removing. So that we always remove the last element.
+                    let suspendedYield = suspendedYields.remove(at: index)
+
+                    // We are keeping the elements that the yield produced.
+                    self._state = .writerFinished(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: suspendedYields,
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: bufferedYieldIDs,
+                        delegate: delegate,
+                        error: error
+                    )
+
+                    return .resumeContinuationWithCancellationError(suspendedYield.continuation)
+
+                } else {
                     self._state = .modifying
                     // There is no suspended yield. This can mean that we either already yielded
                     // or that the call to `yield` is coming afterwards. We need to store
@@ -1283,27 +1309,6 @@ extension NIOAsyncWriter {
 
                     return .none
                 }
-                self._state = .modifying
-                // We have a suspended yield for the id. We need to resume the continuation now.
-
-                // Removing can be quite expensive if it produces a gap in the array.
-                // Since we are not expecting a lot of elements in this array it should be fine
-                // to just remove. If this turns out to be a performance pitfall, we can
-                // swap the elements before removing. So that we always remove the last element.
-                let suspendedYield = suspendedYields.remove(at: index)
-
-                // We are keeping the elements that the yield produced.
-                self._state = .writerFinished(
-                    isWritable: isWritable,
-                    inDelegateOutcall: inDelegateOutcall,
-                    suspendedYields: suspendedYields,
-                    cancelledYields: cancelledYields,
-                    bufferedYieldIDs: bufferedYieldIDs,
-                    delegate: delegate,
-                    error: error
-                )
-
-                return .resumeContinuationWithCancellationError(suspendedYield.continuation)
 
             case .finished:
                 // We are already finished and there is nothing to do
@@ -1342,7 +1347,27 @@ extension NIOAsyncWriter {
                 let delegate
             ):
                 // We are currently streaming and the writer got finished.
-                guard suspendedYields.isEmpty else {
+                if suspendedYields.isEmpty {
+                    if inDelegateOutcall {
+                        // We are in an outcall already and have to buffer
+                        // the didTerminate call.
+                        self._state = .writerFinished(
+                            isWritable: isWritable,
+                            inDelegateOutcall: inDelegateOutcall,
+                            suspendedYields: .init(),
+                            cancelledYields: cancelledYields,
+                            bufferedYieldIDs: .init(),
+                            delegate: delegate,
+                            error: error
+                        )
+                        return .none
+                    } else {
+                        // We have no elements left and are not in an outcall so we
+                        // can transition to finished directly
+                        self._state = .finished(sinkError: nil)
+                        return .callDidTerminate(delegate)
+                    }
+                } else {
                     // There are still suspended writer tasks which we need to deliver once we become writable again
                     self._state = .writerFinished(
                         isWritable: isWritable,
@@ -1356,24 +1381,6 @@ extension NIOAsyncWriter {
 
                     return .none
                 }
-                guard inDelegateOutcall else {
-                    // We have no elements left and are not in an outcall so we
-                    // can transition to finished directly
-                    self._state = .finished(sinkError: nil)
-                    return .callDidTerminate(delegate)
-                }
-                // We are in an outcall already and have to buffer
-                // the didTerminate call.
-                self._state = .writerFinished(
-                    isWritable: isWritable,
-                    inDelegateOutcall: inDelegateOutcall,
-                    suspendedYields: .init(),
-                    cancelledYields: cancelledYields,
-                    bufferedYieldIDs: .init(),
-                    delegate: delegate,
-                    error: error
-                )
-                return .none
 
             case .writerFinished, .finished:
                 // We are already finished and there is nothing to do
@@ -1452,7 +1459,17 @@ extension NIOAsyncWriter {
                 precondition(inDelegateOutcall, "We must be in a delegate outcall when we unbuffer events")
                 // We have to resume the other suspended yields now.
 
-                guard suspendedYields.isEmpty else {
+                if suspendedYields.isEmpty {
+                    // There are no other writer suspended writer tasks so we can just return
+                    self._state = .streaming(
+                        isWritable: isWritable,
+                        inDelegateOutcall: false,
+                        cancelledYields: cancelledYields,
+                        suspendedYields: suspendedYields,
+                        delegate: delegate
+                    )
+                    return .none
+                } else {
                     // We have to resume the other suspended yields now.
                     self._state = .streaming(
                         isWritable: isWritable,
@@ -1463,15 +1480,6 @@ extension NIOAsyncWriter {
                     )
                     return .resumeContinuations(suspendedYields)
                 }
-                // There are no other writer suspended writer tasks so we can just return
-                self._state = .streaming(
-                    isWritable: isWritable,
-                    inDelegateOutcall: false,
-                    cancelledYields: cancelledYields,
-                    suspendedYields: suspendedYields,
-                    delegate: delegate
-                )
-                return .none
 
             case .writerFinished(
                 let isWritable,
@@ -1483,7 +1491,11 @@ extension NIOAsyncWriter {
                 let error
             ):
                 precondition(inDelegateOutcall, "We must be in a delegate outcall when we unbuffer events")
-                guard suspendedYields.isEmpty else {
+                if suspendedYields.isEmpty {
+                    // We were the last writer task and can now call didTerminate
+                    self._state = .finished(sinkError: nil)
+                    return .callDidTerminate(delegate, error)
+                } else {
                     // There are still other writer tasks that need to be resumed
                     self._state = .modifying
 
@@ -1499,9 +1511,6 @@ extension NIOAsyncWriter {
 
                     return .resumeContinuations(suspendedYields)
                 }
-                // We were the last writer task and can now call didTerminate
-                self._state = .finished(sinkError: nil)
-                return .callDidTerminate(delegate, error)
 
             case .finished:
                 return .none

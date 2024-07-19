@@ -1791,13 +1791,14 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
                         configuration: configuration
                     )
                     .flatMap { result in
-                        guard result else {
+                        if result {
+                            return channel.pipeline.context(handlerType: NIOTypedHTTPServerUpgradeHandler<Bool>.self)
+                                .map {
+                                    upgradeCompletionHandler($0)
+                                }
+                        } else {
                             return channel.eventLoop.makeSucceededVoidFuture()
                         }
-                        return channel.pipeline.context(handlerType: NIOTypedHTTPServerUpgradeHandler<Bool>.self)
-                            .map {
-                                upgradeCompletionHandler($0)
-                            }
                     }
                 }
                 .flatMap { _ in

@@ -501,11 +501,12 @@ public final class AtomicBox<T: AnyObject> {
                     return true
                 } else {
                     let currentPtrBits = self.storage.load()
-                    guard currentPtrBits == 0 || currentPtrBits == expectedPtrBits else {
+                    if currentPtrBits == 0 || currentPtrBits == expectedPtrBits {
+                        sys_sched_yield()
+                        continue
+                    } else {
                         return false
                     }
-                    sys_sched_yield()
-                    continue
                 }
             }
         }

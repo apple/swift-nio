@@ -547,9 +547,10 @@ func assertNoThrowWithValue<T>(
         return try body()
     } catch {
         XCTFail("\(message.map { $0 + ": " } ?? "")unexpected error \(error) thrown", file: (file), line: line)
-        guard let defaultValue = defaultValue else {
+        if let defaultValue = defaultValue {
+            return defaultValue
+        } else {
             throw error
         }
-        return defaultValue
     }
 }

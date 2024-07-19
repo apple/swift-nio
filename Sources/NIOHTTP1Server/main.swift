@@ -17,10 +17,11 @@ import NIOPosix
 
 extension String {
     func chopPrefix(_ prefix: String) -> String? {
-        guard self.unicodeScalars.starts(with: prefix.unicodeScalars) else {
+        if self.unicodeScalars.starts(with: prefix.unicodeScalars) {
+            return String(self[self.index(self.startIndex, offsetBy: prefix.count)...])
+        } else {
             return nil
         }
-        return String(self[self.index(self.startIndex, offsetBy: prefix.count)...])
     }
 
     func containsDotDot() -> Bool {
@@ -428,16 +429,17 @@ private final class HTTPHandler: ChannelInboundHandler {
                         self.completeResponse(context, trailers: nil, promise: p)
                         return p.futureResult
                     }.flatMapError { error in
-                        guard !responseStarted else {
+                        if !responseStarted {
+                            let response = httpResponseHead(request: request, status: .ok)
+                            context.write(Self.wrapOutboundOut(.head(response)), promise: nil)
+                            var buffer = context.channel.allocator.buffer(capacity: 100)
+                            buffer.writeString("fail: \(error)")
+                            context.write(Self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+                            self.state.responseComplete()
+                            return context.writeAndFlush(Self.wrapOutboundOut(.end(nil)))
+                        } else {
                             return context.close()
                         }
-                        let response = httpResponseHead(request: request, status: .ok)
-                        context.write(Self.wrapOutboundOut(.head(response)), promise: nil)
-                        var buffer = context.channel.allocator.buffer(capacity: 100)
-                        buffer.writeString("fail: \(error)")
-                        context.write(Self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-                        self.state.responseComplete()
-                        return context.writeAndFlush(Self.wrapOutboundOut(.end(nil)))
                     }.whenComplete { (_: Result<Void, Error>) in
                         _ = try? file.close()
                     }

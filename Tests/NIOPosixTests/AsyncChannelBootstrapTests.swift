@@ -46,19 +46,20 @@ private final class LineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncod
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readable = buffer.withUnsafeReadableBytes { $0.firstIndex(of: self.newLine) }
         if let readable = readable {
-            guard let id = self.inboundID else {
+            if let id = self.inboundID {
+                let data = buffer.readSlice(length: readable - 1)!
+                let inboundID = buffer.readInteger(as: UInt8.self)!
+                buffer.moveReaderIndex(forwardBy: 1)
+
+                if id == inboundID {
+                    context.fireChannelRead(Self.wrapInboundOut(data))
+                }
+                return .continue
+            } else {
                 context.fireChannelRead(Self.wrapInboundOut(buffer.readSlice(length: readable)!))
                 buffer.moveReaderIndex(forwardBy: 1)
                 return .continue
             }
-            let data = buffer.readSlice(length: readable - 1)!
-            let inboundID = buffer.readInteger(as: UInt8.self)!
-            buffer.moveReaderIndex(forwardBy: 1)
-
-            if id == inboundID {
-                context.fireChannelRead(Self.wrapInboundOut(data))
-            }
-            return .continue
         }
         return .needMoreData
     }

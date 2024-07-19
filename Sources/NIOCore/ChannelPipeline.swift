@@ -570,10 +570,11 @@ public final class ChannelPipeline: ChannelInvoker {
     internal func _contextSync(_ body: (ChannelHandlerContext) -> Bool) -> Result<ChannelHandlerContext, Error> {
         self.eventLoop.assertInEventLoop()
 
-        guard let context = self.contextForPredicate0(body) else {
+        if let context = self.contextForPredicate0(body) {
+            return .success(context)
+        } else {
             return .failure(ChannelPipelineError.notFound)
         }
-        return .success(context)
     }
 
     /// Returns a `ChannelHandlerContext` which matches.

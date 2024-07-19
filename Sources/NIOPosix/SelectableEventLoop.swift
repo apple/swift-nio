@@ -404,13 +404,14 @@ internal final class SelectableEventLoop: EventLoop {
                         self._immediateTasks.append(task)
                     }
 
-                    guard self._pendingTaskPop == false else {
+                    if self._pendingTaskPop == false {
+                        // Our job to wake the selector.
+                        self._pendingTaskPop = true
+                        return true
+                    } else {
                         // There is already an event-loop-tick scheduled, we don't need to wake the selector.
                         return false
                     }
-                    // Our job to wake the selector.
-                    self._pendingTaskPop = true
-                    return true
                 }
             }
 
@@ -474,11 +475,12 @@ internal final class SelectableEventLoop: EventLoop {
         }
 
         let nextReady = deadline.readyIn(.now())
-        guard nextReady <= .nanoseconds(0) else {
+        if nextReady <= .nanoseconds(0) {
+            // Something is ready to be processed just do a non-blocking select of events.
+            return .now
+        } else {
             return .blockUntilTimeout(nextReady)
         }
-        // Something is ready to be processed just do a non-blocking select of events.
-        return .now
     }
 
     private func run(_ task: UnderlyingTask) {
@@ -788,11 +790,12 @@ internal final class SelectableEventLoop: EventLoop {
             }
         } else {
             let goAhead = self.externalStateLock.withLock { () -> Bool in
-                guard self.externalState == .open else {
+                if self.externalState == .open {
+                    self.externalState = .closing
+                    return true
+                } else {
                     return false
                 }
-                self.externalState = .closing
-                return true
             }
             guard goAhead else {
                 queue.async {

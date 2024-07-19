@@ -430,13 +430,18 @@ private class BetterHTTPParser {
             // If we have a richer error than the errno code, and the errno is internal, we'll use it. Otherwise, we use the
             // error from http_parser.
             let err = self.httpErrno ?? parserErrno
-            guard err == HPE_INTERNAL || err == HPE_USER, let richerError = self.richerError else {
+            if err == HPE_INTERNAL || err == HPE_USER, let richerError = self.richerError {
+                throw richerError
+            } else {
                 throw HTTPParserError.httpError(fromCHTTPParserErrno: err)!
             }
-            throw richerError
         }
 
-        guard let firstNonDiscardableOffset = self.firstNonDiscardableOffset else {
+        if let firstNonDiscardableOffset = self.firstNonDiscardableOffset {
+            self.httpParserOffset += bytesRead - firstNonDiscardableOffset
+            self.firstNonDiscardableOffset = 0
+            return firstNonDiscardableOffset
+        } else {
             // By definition we've consumed all of the http parser offset at this stage. There may still be bytes
             // left in the buffer though: we didn't consume them because they aren't ours to consume, as they may belong
             // to an upgraded protocol.
@@ -447,9 +452,6 @@ private class BetterHTTPParser {
             self.httpParserOffset = 0
             return consumedBytes
         }
-        self.httpParserOffset += bytesRead - firstNonDiscardableOffset
-        self.firstNonDiscardableOffset = 0
-        return firstNonDiscardableOffset
     }
 }
 

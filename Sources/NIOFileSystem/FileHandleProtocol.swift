@@ -354,7 +354,56 @@ extension ReadableFileHandleProtocol {
         }
 
         let isSeekable = !(info.type == .fifo || info.type == .socket)
-        guard isSeekable else {
+        if isSeekable {
+            // Limit the size of single shot reads. If the system is busy then avoid slowing down other
+            // work by blocking an I/O executor thread while doing a large read. The limit is somewhat
+            // arbitrary.
+            let singleShotReadLimit = 64 * 1024 * 1024
+
+            // If the file size isn't 0 but the read size is, then it means that
+            // we are intending to read an empty fragment: we can just return
+            // fast and skip any reads.
+            // If the file size is 0, we can't conclude anything about the size
+            // of the file, as `stat` will return 0 for unbounded files.
+            // If this happens, just read in chunks to make sure the whole file
+            // is read (up to `maximumSizeAllowed` bytes).
+            var forceChunkedRead = false
+            if fileSize > 0 {
+                if readSize == 0 {
+                    return ByteBuffer()
+                }
+            } else {
+                forceChunkedRead = true
+            }
+
+            if !forceChunkedRead, readSize <= singleShotReadLimit {
+                return try await self.readChunk(
+                    fromAbsoluteOffset: offset,
+                    length: .bytes(Int64(readSize))
+                )
+            } else {
+                var accumulator = ByteBuffer()
+                accumulator.reserveCapacity(readSize)
+
+                for try await chunk in self.readChunks(in: offset..., chunkLength: .mebibytes(8)) {
+                    accumulator.writeImmutableBuffer(chunk)
+                    if accumulator.readableBytes > maximumSizeAllowed.bytes {
+                        throw FileSystemError(
+                            code: .resourceExhausted,
+                            message: """
+                                There are more bytes to read than the maximum size allowed \
+                                (\(maximumSizeAllowed)). Read the file in chunks or increase the maximum size \
+                                allowed.
+                                """,
+                            cause: nil,
+                            location: .here()
+                        )
+                    }
+                }
+
+                return accumulator
+            }
+        } else {
             guard offset == 0 else {
                 throw FileSystemError(
                     code: .unsupported,
@@ -384,53 +433,6 @@ extension ReadableFileHandleProtocol {
 
             return accumulator
         }
-        // Limit the size of single shot reads. If the system is busy then avoid slowing down other
-        // work by blocking an I/O executor thread while doing a large read. The limit is somewhat
-        // arbitrary.
-        let singleShotReadLimit = 64 * 1024 * 1024
-
-        // If the file size isn't 0 but the read size is, then it means that
-        // we are intending to read an empty fragment: we can just return
-        // fast and skip any reads.
-        // If the file size is 0, we can't conclude anything about the size
-        // of the file, as `stat` will return 0 for unbounded files.
-        // If this happens, just read in chunks to make sure the whole file
-        // is read (up to `maximumSizeAllowed` bytes).
-        var forceChunkedRead = false
-        if fileSize > 0 {
-            if readSize == 0 {
-                return ByteBuffer()
-            }
-        } else {
-            forceChunkedRead = true
-        }
-
-        guard !forceChunkedRead, readSize <= singleShotReadLimit else {
-            var accumulator = ByteBuffer()
-            accumulator.reserveCapacity(readSize)
-
-            for try await chunk in self.readChunks(in: offset..., chunkLength: .mebibytes(8)) {
-                accumulator.writeImmutableBuffer(chunk)
-                if accumulator.readableBytes > maximumSizeAllowed.bytes {
-                    throw FileSystemError(
-                        code: .resourceExhausted,
-                        message: """
-                            There are more bytes to read than the maximum size allowed \
-                            (\(maximumSizeAllowed)). Read the file in chunks or increase the maximum size \
-                            allowed.
-                            """,
-                        cause: nil,
-                        location: .here()
-                    )
-                }
-            }
-
-            return accumulator
-        }
-        return try await self.readChunk(
-            fromAbsoluteOffset: offset,
-            length: .bytes(Int64(readSize))
-        )
     }
 }
 

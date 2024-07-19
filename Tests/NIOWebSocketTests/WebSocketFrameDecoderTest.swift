@@ -115,10 +115,11 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         // an encoder because we want to fail gracefully if a frame is written.
         let f = self.decoderChannel.pipeline.context(handlerType: ByteToMessageHandler<WebSocketFrameDecoder>.self)
             .flatMapThrowing {
-                guard let handler = $0.handler as? RemovableChannelHandler else {
+                if let handler = $0.handler as? RemovableChannelHandler {
+                    return handler
+                } else {
                     throw ChannelError.unremovableHandler
                 }
-                return handler
             }.flatMap {
                 self.decoderChannel.pipeline.removeHandler($0)
             }

@@ -256,11 +256,12 @@ public final class NIOHTTPServerRequestAggregator: ChannelInboundHandler, Remova
         content: inout ByteBuffer,
         message: InboundIn
     ) -> HTTPResponseHead? {
-        guard content.readableBytes > self.maxContentLength - self.buffer.readableBytes else {
+        if content.readableBytes > self.maxContentLength - self.buffer.readableBytes {
+            return self.handleOversizeMessage(message: message)
+        } else {
             self.buffer.writeBuffer(&content)
             return nil
         }
-        return self.handleOversizeMessage(message: message)
     }
 
     private func endAggregation(context: ChannelHandlerContext, trailingHeaders: HTTPHeaders?) {

@@ -47,13 +47,14 @@ internal struct PooledRecvBufferAllocator {
 
     /// Returns the number of buffers in the pool.
     var count: Int {
-        guard self.buffer == nil else {
+        if self.buffer == nil {
+            // Empty or switched to `buffers` for storage.
+            return self.buffers.count
+        } else {
             // `buffer` is non-nil; `buffers` must be empty and the count must be 1.
             assert(self.buffers.isEmpty)
             return 1
         }
-        // Empty or switched to `buffers` for storage.
-        return self.buffers.count
     }
 
     /// Update the capacity of the underlying buffer pool.
@@ -92,12 +93,13 @@ internal struct PooledRecvBufferAllocator {
         _ body: (inout ByteBuffer) throws -> Result
     ) rethrows -> (ByteBuffer, Result) {
         // Reuse an existing buffer if we can do so without CoWing.
-        guard let bufferAndResult = try self.reuseExistingBuffer(body) else {
+        if let bufferAndResult = try self.reuseExistingBuffer(body) {
+            return bufferAndResult
+        } else {
             // No available buffers or the allocator does not offer up buffer sizes; directly
             // allocate a new one.
             return try self.allocateNewBuffer(using: allocator, body)
         }
-        return bufferAndResult
     }
 
     private mutating func reuseExistingBuffer<Result>(
@@ -144,16 +146,17 @@ internal struct PooledRecvBufferAllocator {
             // We have a stored buffer, either:
             // 1. We have capacity to add more and use `buffers` for storage, or
             // 2. Our capacity is 1; we can't use `buffers` for storage.
-            guard self.capacity > 1 else {
+            if self.capacity > 1 {
+                self.buffer = nil
+                self.buffers.reserveCapacity(self.capacity)
+                self.buffers.append(buffer)
+                self.buffers.append(newBuffer)
+                self.lastUsedIndex = self.buffers.index(before: self.buffers.endIndex)
+                return try self.modifyBuffer(atIndex: self.lastUsedIndex, body)
+            } else {
                 let result = try body(&newBuffer)
                 return (newBuffer, result)
             }
-            self.buffer = nil
-            self.buffers.reserveCapacity(self.capacity)
-            self.buffers.append(buffer)
-            self.buffers.append(newBuffer)
-            self.lastUsedIndex = self.buffers.index(before: self.buffers.endIndex)
-            return try self.modifyBuffer(atIndex: self.lastUsedIndex, body)
         } else {
             // There's no stored buffer which could be due to:
             // 1. this is the first buffer we allocate (i.e. buffers is empty, we already know

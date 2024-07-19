@@ -248,16 +248,18 @@ extension ByteBuffer {
     public func hexDump(format: HexDumpFormat) -> String {
         switch format.value {
         case .plain(let maxBytes):
-            guard let maxBytes = maxBytes else {
+            if let maxBytes = maxBytes {
+                return self.hexDumpPlain(maxBytes: maxBytes)
+            } else {
                 return self.hexDumpPlain()
             }
-            return self.hexDumpPlain(maxBytes: maxBytes)
 
         case .detailed(let maxBytes):
-            guard let maxBytes = maxBytes else {
+            if let maxBytes = maxBytes {
+                return self.hexDumpDetailed(maxBytes: maxBytes)
+            } else {
                 return self.hexdumpDetailed()
             }
-            return self.hexDumpDetailed(maxBytes: maxBytes)
         }
     }
 }

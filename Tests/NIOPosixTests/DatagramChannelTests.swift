@@ -1206,11 +1206,12 @@ class DatagramChannelTests: XCTestCase {
         to destinationChannel: Channel,
         wrappingInAddressedEnvelope shouldWrapInAddressedEnvelope: Bool
     ) -> EventLoopFuture<Void> {
-        guard shouldWrapInAddressedEnvelope else {
+        if shouldWrapInAddressedEnvelope {
+            let envelope = AddressedEnvelope(remoteAddress: destinationChannel.localAddress!, data: data)
+            return sourceChannel.write(envelope)
+        } else {
             return sourceChannel.write(data)
         }
-        let envelope = AddressedEnvelope(remoteAddress: destinationChannel.localAddress!, data: data)
-        return sourceChannel.write(envelope)
     }
 
     func bufferWriteOfHelloWorld(

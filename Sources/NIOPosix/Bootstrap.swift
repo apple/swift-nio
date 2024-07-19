@@ -792,14 +792,15 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     private var protocolHandlers: Optional<@Sendable () -> [ChannelHandler]>
     private var _channelInitializer: ChannelInitializerCallback
     private var channelInitializer: ChannelInitializerCallback {
-        guard let protocolHandlers = self.protocolHandlers else {
-            return self._channelInitializer
-        }
-        let channelInitializer = _channelInitializer
-        return { channel in
-            channelInitializer(channel).flatMap {
-                channel.pipeline.addHandlers(protocolHandlers(), position: .first)
+        if let protocolHandlers = self.protocolHandlers {
+            let channelInitializer = _channelInitializer
+            return { channel in
+                channelInitializer(channel).flatMap {
+                    channel.pipeline.addHandlers(protocolHandlers(), position: .first)
+                }
             }
+        } else {
+            return self._channelInitializer
         }
     }
     @usableFromInline
@@ -1109,10 +1110,11 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
             }
         }
 
-        guard eventLoop.inEventLoop else {
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
             return eventLoop.flatSubmit { setupChannel() }
         }
-        return setupChannel()
     }
 
     private func initializeAndRegisterNewChannel(
@@ -1141,11 +1143,12 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
             return channelOptions.applyAllChannelOptions(to: channel).flatMap {
-                guard let bindTarget = self.bindTarget else {
+                if let bindTarget = self.bindTarget {
+                    return channel.bind(to: bindTarget).flatMap {
+                        channelInitializer(channel)
+                    }
+                } else {
                     return channelInitializer(channel)
-                }
-                return channel.bind(to: bindTarget).flatMap {
-                    channelInitializer(channel)
                 }
             }.flatMap {
                 eventLoop.assertInEventLoop()
@@ -1158,12 +1161,13 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
             }
         }
 
-        guard eventLoop.inEventLoop else {
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
             return eventLoop.flatSubmit {
                 setupChannel()
             }
         }
-        return setupChannel()
     }
 }
 
@@ -1411,15 +1415,16 @@ extension ClientBootstrap {
                 channelOptions
                 .applyAllChannelOptions(to: channel)
                 .flatMap {
-                    guard let bindTarget = bindTarget else {
+                    if let bindTarget = bindTarget {
+                        return
+                            channel
+                            .bind(to: bindTarget)
+                            .flatMap {
+                                channelInitializer(channel)
+                            }
+                    } else {
                         return channelInitializer(channel)
                     }
-                    return
-                        channel
-                        .bind(to: bindTarget)
-                        .flatMap {
-                            channelInitializer(channel)
-                        }
                 }.flatMap { (result: ChannelInitializerResult) in
                     eventLoop.assertInEventLoop()
                     return registration(channel).map {
@@ -1435,12 +1440,13 @@ extension ClientBootstrap {
                 }
         }
 
-        guard eventLoop.inEventLoop else {
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
             return eventLoop.flatSubmit {
                 setupChannel()
             }
         }
-        return setupChannel()
     }
 }
 
@@ -1712,12 +1718,13 @@ public final class DatagramBootstrap {
             }
         }
 
-        guard eventLoop.inEventLoop else {
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
             return eventLoop.flatSubmit {
                 setupChannel()
             }
         }
-        return setupChannel()
     }
 }
 
@@ -2005,12 +2012,13 @@ extension DatagramBootstrap {
             }
         }
 
-        guard eventLoop.inEventLoop else {
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
             return eventLoop.flatSubmit {
                 setupChannel()
             }
         }
-        return setupChannel()
     }
 }
 
@@ -2222,10 +2230,11 @@ public final class NIOPipeBootstrap {
             let eventLoop = self.group.next()
             let channelInitializer = self.channelInitializer
             return { channel in
-                guard let channelInitializer = channelInitializer else {
+                if let channelInitializer = channelInitializer {
+                    return channelInitializer(channel).map { channel }
+                } else {
                     return eventLoop.makeSucceededFuture(channel)
                 }
-                return channelInitializer(channel).map { channel }
             }
 
         }()
@@ -2446,12 +2455,13 @@ extension NIOPipeBootstrap {
             }
         }
 
-        guard eventLoop.inEventLoop else {
+        if eventLoop.inEventLoop {
+            return setupChannel()
+        } else {
             return eventLoop.flatSubmit {
                 setupChannel()
             }
         }
-        return setupChannel()
     }
 }
 

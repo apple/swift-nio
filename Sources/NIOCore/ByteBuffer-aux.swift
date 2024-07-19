@@ -119,14 +119,13 @@ extension ByteBuffer {
     @inlinable
     mutating func _setStringSlowpath(_ string: String, at index: Int) -> Int {
         // slow path, let's try to force the string to be native
-        guard
-            let written = (string + "").utf8.withContiguousStorageIfAvailable({ utf8Bytes in
-                self.setBytes(utf8Bytes, at: index)
-            })
-        else {
+        if let written = (string + "").utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+            self.setBytes(utf8Bytes, at: index)
+        }) {
+            return written
+        } else {
             return self.setBytes(string.utf8, at: index)
         }
-        return written
     }
 
     /// Write `string` into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
@@ -141,15 +140,14 @@ extension ByteBuffer {
         // Do not implement setString via setSubstring. Before Swift version 5.3,
         // Substring.UTF8View did not implement withContiguousStorageIfAvailable
         // and therefore had no fast access to the backing storage.
-        guard
-            let written = string.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
-                self.setBytes(utf8Bytes, at: index)
-            })
-        else {
+        if let written = string.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+            self.setBytes(utf8Bytes, at: index)
+        }) {
+            // fast path, directly available
+            return written
+        } else {
             return self._setStringSlowpath(string, at: index)
         }
-        // fast path, directly available
-        return written
     }
 
     /// Write `string` null terminated into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
@@ -264,16 +262,15 @@ extension ByteBuffer {
     public mutating func setSubstring(_ substring: Substring, at index: Int) -> Int {
         // Substring.UTF8View implements withContiguousStorageIfAvailable starting with
         // Swift version 5.3.
-        guard
-            let written = substring.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
-                self.setBytes(utf8Bytes, at: index)
-            })
-        else {
+        if let written = substring.utf8.withContiguousStorageIfAvailable({ utf8Bytes in
+            self.setBytes(utf8Bytes, at: index)
+        }) {
+            // fast path, directly available
+            return written
+        } else {
             // slow path, convert to string
             return self.setString(String(substring), at: index)
         }
-        // fast path, directly available
-        return written
     }
 
     // MARK: DispatchData APIs
@@ -847,12 +844,13 @@ extension Optional where Wrapped == ByteBuffer {
     @discardableResult
     @inlinable
     public mutating func setOrWriteBuffer(_ buffer: inout ByteBuffer) -> Int {
-        guard self == nil else {
+        if self == nil {
+            let readableBytes = buffer.readableBytes
+            self = buffer
+            buffer.moveReaderIndex(to: buffer.writerIndex)
+            return readableBytes
+        } else {
             return self!.writeBuffer(&buffer)
         }
-        let readableBytes = buffer.readableBytes
-        self = buffer
-        buffer.moveReaderIndex(to: buffer.writerIndex)
-        return readableBytes
     }
 }

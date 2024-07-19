@@ -114,11 +114,12 @@ internal struct Heap<Element: Comparable> {
     @discardableResult
     @inlinable
     internal mutating func remove(value: Element) -> Bool {
-        guard let idx = self.storage.firstIndex(of: value) else {
+        if let idx = self.storage.firstIndex(of: value) {
+            self._remove(index: idx)
+            return true
+        } else {
             return false
         }
-        self._remove(index: idx)
-        return true
     }
 
     @inlinable

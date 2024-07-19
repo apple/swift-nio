@@ -34,11 +34,12 @@ extension FileSystem {
         _ function: String = #function,
         inTemporaryDirectory: Bool = true
     ) async throws -> FilePath {
-        guard inTemporaryDirectory else {
+        if inTemporaryDirectory {
+            let directory = try await self.temporaryDirectory
+            return self.temporaryFilePath(function, inDirectory: directory)
+        } else {
             return self.temporaryFilePath(function, inDirectory: nil)
         }
-        let directory = try await self.temporaryDirectory
-        return self.temporaryFilePath(function, inDirectory: directory)
     }
 
     func temporaryFilePath(
@@ -50,10 +51,11 @@ extension FileSystem {
         let random = UInt32.random(in: .min ... .max)
         let fileName = "\(functionName)-\(random)"
 
-        guard let directory = directory else {
+        if let directory = directory {
+            return directory.appending(fileName)
+        } else {
             return FilePath(fileName)
         }
-        return directory.appending(fileName)
     }
 }
 

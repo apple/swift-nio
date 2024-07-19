@@ -70,14 +70,16 @@ public func valueOrErrno<I: FixedWidthInteger>(
     while true {
         Errno.clear()
         let result = fn()
-        guard result == -1 else {
+        if result == -1 {
+            let errno = Errno._current
+            if errno == .interrupted, retryOnInterrupt {
+                continue
+            } else {
+                return .failure(errno)
+            }
+        } else {
             return .success(result)
         }
-        let errno = Errno._current
-        guard errno == .interrupted, retryOnInterrupt else {
-            return .failure(errno)
-        }
-        continue
     }
 }
 

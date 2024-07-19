@@ -91,11 +91,12 @@ private func doPendingDatagramWriteVectorOperation(
             // plausible given that a similar limit exists for TCP. For now we assume it's present
             // in UDP until I can do some research to validate the existence of this limit.
             guard Socket.writevLimitBytes - toWrite >= p.data.readableBytes else {
-                guard c == 0 else {
+                if c == 0 {
+                    // The first buffer is larger than the writev limit. Let's throw, and fall back to linear processing.
+                    throw IOError(errnoCode: EMSGSIZE, reason: "synthetic error for overlarge write")
+                } else {
                     break
                 }
-                // The first buffer is larger than the writev limit. Let's throw, and fall back to linear processing.
-                throw IOError(errnoCode: EMSGSIZE, reason: "synthetic error for overlarge write")
             }
 
             // Must not write more than writevLimitIOVectors in one go
@@ -208,14 +209,15 @@ private struct PendingDatagramWritesState {
 
     /// Check if there are no outstanding writes.
     public var isEmpty: Bool {
-        guard self.pendingWrites.isEmpty else {
+        if self.pendingWrites.isEmpty {
+            assert(self.chunks == 0)
+            assert(self.bytes == 0)
+            assert(!self.pendingWrites.hasMark)
+            return true
+        } else {
             assert(self.chunks > 0 && self.bytes >= 0)
             return false
         }
-        assert(self.chunks == 0)
-        assert(self.bytes == 0)
-        assert(!self.pendingWrites.hasMark)
-        return true
     }
 
     /// Add a new write and optionally the corresponding promise to the list of outstanding writes.
@@ -250,10 +252,11 @@ private struct PendingDatagramWritesState {
     ) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
         switch data {
         case .processed(let written):
-            guard let messages = messages else {
+            if let messages = messages {
+                return didVectorWrite(written: written, messages: messages)
+            } else {
                 return didScalarWrite(written: written)
             }
-            return didVectorWrite(written: written, messages: messages)
         case .wouldBlock:
             return (nil, .wouldBlock)
         }
@@ -472,7 +475,22 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// - warning: If the socket is connected, then the `envelope.remoteAddress` _must_ match the
     /// address of the connected peer, otherwise this function will throw a fatal error.
     func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
-        guard let remoteAddress = self.state.remoteAddress else {
+        if let remoteAddress = self.state.remoteAddress {
+            precondition(
+                envelope.remoteAddress == remoteAddress,
+                """
+                Remote address of AddressedEnvelope does not match remote address of connected socket.
+                """
+            )
+            return self.add(
+                PendingDatagramWrite(
+                    data: envelope.data,
+                    promise: promise,
+                    address: nil,
+                    metadata: envelope.metadata
+                )
+            )
+        } else {
             return self.add(
                 PendingDatagramWrite(
                     data: envelope.data,
@@ -482,20 +500,6 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                 )
             )
         }
-        precondition(
-            envelope.remoteAddress == remoteAddress,
-            """
-            Remote address of AddressedEnvelope does not match remote address of connected socket.
-            """
-        )
-        return self.add(
-            PendingDatagramWrite(
-                data: envelope.data,
-                promise: promise,
-                address: nil,
-                metadata: envelope.metadata
-            )
-        )
     }
 
     /// Add a pending write, without an `AddressedEnvelope`, on a connected socket.

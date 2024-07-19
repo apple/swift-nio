@@ -49,12 +49,13 @@ extension EventLoopFuture {
             switch self._value! {
             case .success(let t):
                 let futureU = callback(t, eventLoop)
-                guard futureU.eventLoop.inEventLoop else {
+                if futureU.eventLoop.inEventLoop {
+                    return futureU._addCallback {
+                        next._setValue(value: futureU._value!)
+                    }
+                } else {
                     futureU.cascade(to: next)
                     return CallbackList()
-                }
-                return futureU._addCallback {
-                    next._setValue(value: futureU._value!)
                 }
             case .failure(let error):
                 return next._setValue(value: .failure(error))
@@ -86,12 +87,13 @@ extension EventLoopFuture {
                 return next._setValue(value: .success(t))
             case .failure(let e):
                 let t = callback(e, eventLoop)
-                guard t.eventLoop.inEventLoop else {
+                if t.eventLoop.inEventLoop {
+                    return t._addCallback {
+                        next._setValue(value: t._value!)
+                    }
+                } else {
                     t.cascade(to: next)
                     return CallbackList()
-                }
-                return t._addCallback {
-                    next._setValue(value: t._value!)
                 }
             }
         }
@@ -134,13 +136,14 @@ extension EventLoopFuture {
             return body
         }
 
-        guard self.eventLoop.inEventLoop else {
+        if self.eventLoop.inEventLoop {
+            return fold0(eventLoop: self.eventLoop)
+        } else {
             let promise = self.eventLoop.makePromise(of: Value.self)
             self.eventLoop.execute { [eventLoop = self.eventLoop] in
                 fold0(eventLoop: eventLoop).cascade(to: promise)
             }
             return promise.futureResult
         }
-        return fold0(eventLoop: self.eventLoop)
     }
 }

@@ -60,22 +60,24 @@ public struct FileSystemError: Error, Sendable {
 
 extension FileSystemError: CustomStringConvertible {
     public var description: String {
-        guard let cause = self.cause else {
+        if let cause = self.cause {
+            return "\(self.code): \(self.message) (\(cause))"
+        } else {
             return "\(self.code): \(self.message)"
         }
-        return "\(self.code): \(self.message) (\(cause))"
     }
 }
 
 extension FileSystemError: CustomDebugStringConvertible {
     public var debugDescription: String {
-        guard let cause = self.cause else {
+        if let cause = self.cause {
+            return """
+                \(String(reflecting: self.code)): \(String(reflecting: self.message)) \
+                (\(String(reflecting: cause)))
+                """
+        } else {
             return "\(String(reflecting: self.code)): \(String(reflecting: self.message))"
         }
-        return """
-            \(String(reflecting: self.code)): \(String(reflecting: self.message)) \
-            (\(String(reflecting: cause)))
-            """
     }
 }
 

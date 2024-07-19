@@ -757,14 +757,15 @@ public final class SocketChannelTest: XCTestCase {
             let shouldAcceptsFail = ManagedAtomic(true)
             override func accept(setNonBlocking: Bool = false) throws -> Socket? {
                 XCTAssertTrue(setNonBlocking)
-                guard self.shouldAcceptsFail.load(ordering: .relaxed) else {
+                if self.shouldAcceptsFail.load(ordering: .relaxed) {
+                    throw NIOFcntlFailedError()
+                } else {
                     return try Socket(
                         protocolFamily: .inet,
                         type: .stream,
                         setNonBlocking: false
                     )
                 }
-                throw NIOFcntlFailedError()
             }
         }
 

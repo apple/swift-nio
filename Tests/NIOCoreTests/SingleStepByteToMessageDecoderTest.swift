@@ -284,22 +284,24 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
             var state: Int = 1
 
             mutating func decode(buffer: inout ByteBuffer) throws -> InboundOut? {
-                guard buffer.readSlice(length: self.state) != nil else {
+                if buffer.readSlice(length: self.state) != nil {
+                    defer {
+                        self.state += 1
+                    }
+                    return self.state
+                } else {
                     return nil
                 }
-                defer {
-                    self.state += 1
-                }
-                return self.state
             }
 
             mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut? {
                 XCTAssertTrue(seenEOF)
-                guard self.state > 0 else {
+                if self.state > 0 {
+                    self.state = 0
+                    return buffer.readableBytes * -1
+                } else {
                     return nil
                 }
-                self.state = 0
-                return buffer.readableBytes * -1
             }
         }
         let allocator = ByteBufferAllocator()

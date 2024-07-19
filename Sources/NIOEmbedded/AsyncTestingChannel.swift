@@ -100,10 +100,11 @@ public final class NIOAsyncTestingChannel: Channel {
         /// `true` if the ``NIOAsyncTestingChannel`` was `clean` on ``NIOAsyncTestingChannel/finish()``, ie. there is no unconsumed inbound, outbound, or
         /// pending outbound data left on the `Channel`.
         public var isClean: Bool {
-            guard case .clean = self else {
+            if case .clean = self {
+                return true
+            } else {
                 return false
             }
-            return true
         }
 
         /// `true` if the ``NIOAsyncTestingChannel`` if there was unconsumed inbound, outbound, or pending outbound data left
@@ -130,10 +131,11 @@ public final class NIOAsyncTestingChannel: Channel {
 
         /// Returns `true` is the buffer was empty.
         public var isEmpty: Bool {
-            guard case .empty = self else {
+            if case .empty = self {
+                return true
+            } else {
                 return false
             }
-            return true
         }
 
         /// Returns `true` if the buffer was non-empty.
@@ -333,14 +335,15 @@ public final class NIOAsyncTestingChannel: Channel {
         // This can never actually throw.
         return try! await self.testingEventLoop.executeInContext {
             let c = self.channelcore!
-            guard c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty else {
+            if c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty {
+                return .clean
+            } else {
                 return .leftOvers(
                     inbound: c.inboundBuffer,
                     outbound: c.outboundBuffer,
                     pendingOutbound: c.pendingOutboundBuffer.map { $0.0 }
                 )
             }
-            return .clean
         }
     }
 
@@ -541,11 +544,12 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.setOption`
     @inlinable
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        guard self.eventLoop.inEventLoop else {
+        if self.eventLoop.inEventLoop {
+            self.setOptionSync(option, value: value)
+            return self.eventLoop.makeSucceededVoidFuture()
+        } else {
             return self.eventLoop.submit { self.setOptionSync(option, value: value) }
         }
-        self.setOptionSync(option, value: value)
-        return self.eventLoop.makeSucceededVoidFuture()
     }
 
     @inlinable
@@ -561,10 +565,11 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.getOption`
     @inlinable
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
-        guard self.eventLoop.inEventLoop else {
+        if self.eventLoop.inEventLoop {
+            return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
+        } else {
             return self.eventLoop.submit { self.getOptionSync(option) }
         }
-        return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
     }
 
     @inlinable

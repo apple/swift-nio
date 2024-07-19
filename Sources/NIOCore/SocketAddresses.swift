@@ -496,17 +496,18 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             }
         }
 
-        guard let info = info, let addrPointer = info.pointee.ai_addr else {
+        if let info = info, let addrPointer = info.pointee.ai_addr {
+            let addressBytes = UnsafeRawPointer(addrPointer)
+            switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
+            case .inet:
+                return .v4(.init(address: addressBytes.load(as: sockaddr_in.self), host: host))
+            case .inet6:
+                return .v6(.init(address: addressBytes.load(as: sockaddr_in6.self), host: host))
+            default:
+                throw SocketAddressError.unsupported
+            }
+        } else {
             // this is odd, getaddrinfo returned NULL
-            throw SocketAddressError.unsupported
-        }
-        let addressBytes = UnsafeRawPointer(addrPointer)
-        switch NIOBSDSocket.AddressFamily(rawValue: info.pointee.ai_family) {
-        case .inet:
-            return .v4(.init(address: addressBytes.load(as: sockaddr_in.self), host: host))
-        case .inet6:
-            return .v6(.init(address: addressBytes.load(as: sockaddr_in6.self), host: host))
-        default:
             throw SocketAddressError.unsupported
         }
         #endif

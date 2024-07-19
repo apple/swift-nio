@@ -423,13 +423,14 @@ final class SyscallTests: XCTestCase {
 
         var shouldInterrupt = true
         let r2: Result<Int, Errno> = valueOrErrno(retryOnInterrupt: true) {
-            guard shouldInterrupt else {
+            if shouldInterrupt {
+                shouldInterrupt = false
+                Errno._current = .interrupted
+                return -1
+            } else {
                 Errno._current = .permissionDenied
                 return -1
             }
-            shouldInterrupt = false
-            Errno._current = .interrupted
-            return -1
         }
         XCTAssertFalse(shouldInterrupt)
         XCTAssertEqual(r2, .failure(.permissionDenied))
@@ -450,13 +451,14 @@ final class SyscallTests: XCTestCase {
 
         var shouldInterrupt = true
         let r2: Result<Void, Errno> = nothingOrErrno(retryOnInterrupt: true) {
-            guard shouldInterrupt else {
+            if shouldInterrupt {
+                shouldInterrupt = false
+                Errno._current = .interrupted
+                return -1
+            } else {
                 Errno._current = .permissionDenied
                 return -1
             }
-            shouldInterrupt = false
-            Errno._current = .interrupted
-            return -1
         }
         XCTAssertFalse(shouldInterrupt)
         XCTAssertThrowsError(try r2.get()) { error in
@@ -476,12 +478,13 @@ final class SyscallTests: XCTestCase {
 
         var shouldInterrupt = true
         let r2: Result<String?, Errno> = optionalValueOrErrno(retryOnInterrupt: true) {
-            guard shouldInterrupt else {
+            if shouldInterrupt {
+                shouldInterrupt = false
+                Errno._current = .interrupted
+                return nil
+            } else {
                 return "foo"
             }
-            shouldInterrupt = false
-            Errno._current = .interrupted
-            return nil
         }
         XCTAssertFalse(shouldInterrupt)
         XCTAssertEqual(r2, .success("foo"))

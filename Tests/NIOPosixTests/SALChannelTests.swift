@@ -424,18 +424,18 @@ final class SALChannelTest: XCTestCase, SALTest {
 
                 // Then we register the inbound channel.
                 try self.assertRegister { selectable, eventSet, registration in
-                    guard
-                        case (.socketChannel(let channel), let registrationEventSet) =
-                            (registration.channel, registration.interested)
-                    else {
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
+
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
                         return false
                     }
-
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
                 }
                 try self.assertReregister { selectable, eventSet in
                     XCTAssertEqual([.reset, .readEOF], eventSet)
@@ -497,18 +497,18 @@ final class SALChannelTest: XCTestCase, SALTest {
 
                 // Then we register the inbound channel from the first accept.
                 try self.assertRegister { selectable, eventSet, registration in
-                    guard
-                        case (.socketChannel(let channel), let registrationEventSet) =
-                            (registration.channel, registration.interested)
-                    else {
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
+
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
                         return false
                     }
-
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
                 }
                 try self.assertReregister { selectable, eventSet in
                     XCTAssertEqual([.reset, .readEOF], eventSet)
@@ -808,18 +808,18 @@ final class SALChannelTest: XCTestCase, SALTest {
 
                 // Then we register the inbound channel.
                 try self.assertRegister { selectable, eventSet, registration in
-                    guard
-                        case (.socketChannel(let channel), let registrationEventSet) =
-                            (registration.channel, registration.interested)
-                    else {
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
+
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
                         return false
                     }
-
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
                 }
                 try self.assertReregister { selectable, event in
                     XCTAssertEqual([.reset, .readEOF], event)
@@ -888,18 +888,18 @@ final class SALChannelTest: XCTestCase, SALTest {
 
                 // Then we register the inbound channel.
                 try self.assertRegister { selectable, eventSet, registration in
-                    guard
-                        case (.socketChannel(let channel), let registrationEventSet) =
-                            (registration.channel, registration.interested)
-                    else {
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
+
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
                         return false
                     }
-
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
                 }
                 try self.assertReregister { selectable, event in
                     XCTAssertEqual([.reset, .readEOF], event)
@@ -976,18 +976,18 @@ final class SALChannelTest: XCTestCase, SALTest {
 
                 // Then we register the inbound channel.
                 try self.assertRegister { selectable, eventSet, registration in
-                    guard
-                        case (.socketChannel(let channel), let registrationEventSet) =
-                            (registration.channel, registration.interested)
-                    else {
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
+
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
                         return false
                     }
-
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
                 }
                 try self.assertReregister { selectable, event in
                     XCTAssertEqual([.reset, .readEOF], event)

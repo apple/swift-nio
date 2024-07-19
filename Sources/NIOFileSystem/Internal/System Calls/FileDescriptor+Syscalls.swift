@@ -51,11 +51,12 @@ extension FileDescriptor {
         let oFlag = mode.rawValue | options.rawValue
         let rawValue = valueOrErrno(retryOnInterrupt: retryOnInterrupt) {
             path.withPlatformString {
-                guard let permissions = permissions else {
+                if let permissions = permissions {
+                    return system_fdopenat(self.rawValue, $0, oFlag, permissions.rawValue)
+                } else {
                     precondition(!options.contains(.create), "Create must be given permissions")
                     return system_fdopenat(self.rawValue, $0, oFlag)
                 }
-                return system_fdopenat(self.rawValue, $0, oFlag, permissions.rawValue)
             }
         }
 
@@ -278,10 +279,11 @@ extension FileDescriptor {
                     bufferPointer = buffer
                 }
 
-                guard let offset else {
+                if let offset {
+                    return try self.read(fromAbsoluteOffset: offset, into: bufferPointer)
+                } else {
                     return try self.read(into: bufferPointer)
                 }
-                return try self.read(fromAbsoluteOffset: offset, into: bufferPointer)
             }
             return buffer
         }

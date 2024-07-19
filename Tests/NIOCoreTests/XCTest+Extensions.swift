@@ -47,10 +47,11 @@ func assertNoThrowWithValue<T>(
         return try body()
     } catch {
         XCTFail("\(message.map { $0 + ": " } ?? "")unexpected error \(error) thrown", file: (file), line: line)
-        guard let defaultValue = defaultValue else {
+        if let defaultValue = defaultValue {
+            return defaultValue
+        } else {
             throw error
         }
-        return defaultValue
     }
 }
 
@@ -79,10 +80,11 @@ private var temporaryDirectory: String {
         #if os(Linux)
         return "/tmp"
         #else
-        guard #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) else {
+        if #available(macOS 10.12, iOS 10, tvOS 10, watchOS 3, *) {
+            return FileManager.default.temporaryDirectory.path
+        } else {
             return "/tmp"
         }
-        return FileManager.default.temporaryDirectory.path
         #endif  // os
         #endif  // targetEnvironment
     }

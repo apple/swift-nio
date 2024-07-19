@@ -98,20 +98,22 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     public func isMarked(index: Index) -> Bool {
         assert(index >= self.startIndex, "index must not be negative")
         precondition(index < self.endIndex, "index \(index) out of range (0..<\(self._buffer.count))")
-        guard let markedIndexOffset = self._markedIndexOffset else {
+        if let markedIndexOffset = self._markedIndexOffset {
+            return self.index(self.startIndex, offsetBy: markedIndexOffset) == index
+        } else {
             return false
         }
-        return self.index(self.startIndex, offsetBy: markedIndexOffset) == index
     }
 
     /// Returns the index of the marked element.
     @inlinable
     public var markedElementIndex: Index? {
-        guard let markedIndexOffset = self._markedIndexOffset else {
+        if let markedIndexOffset = self._markedIndexOffset {
+            assert(markedIndexOffset >= 0)
+            return self.index(self.startIndex, offsetBy: markedIndexOffset)
+        } else {
             return nil
         }
-        assert(markedIndexOffset >= 0)
-        return self.index(self.startIndex, offsetBy: markedIndexOffset)
     }
 
     /// Returns the marked element.

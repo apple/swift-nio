@@ -59,10 +59,11 @@ extension Sequence where Self.Element == UInt8 {
             }
         }
 
-        guard let maybeResult = maybeMaybeResult, let result = maybeResult else {
+        if let maybeResult = maybeMaybeResult, let result = maybeResult {
+            return result
+        } else {
             return self.elementsEqual(to, by: { ($0 & 0xdf) == ($1 & 0xdf) })
         }
-        return result
     }
 }
 

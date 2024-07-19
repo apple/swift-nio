@@ -273,23 +273,25 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
         case .upgrading(let upgrading):
             switch result {
             case .success(let value):
-                guard !upgrading.buffer.isEmpty else {
+                if !upgrading.buffer.isEmpty {
+                    self.state = .unbuffering(.init(buffer: upgrading.buffer))
+                    return .startUnbuffering(value)
+                } else {
                     self.state = .finished
                     return .removeHandler(value)
                 }
-                self.state = .unbuffering(.init(buffer: upgrading.buffer))
-                return .startUnbuffering(value)
 
             case .failure(let error):
-                guard !upgrading.buffer.isEmpty else {
+                if !upgrading.buffer.isEmpty {
+                    // So we failed to upgrade. There is nothing really that we can do here.
+                    // We are unbuffering the reads but there shouldn't be any handler in the pipeline
+                    // that expects a specific type of reads anyhow.
+                    self.state = .unbuffering(.init(buffer: upgrading.buffer))
+                    return .fireErrorCaughtAndStartUnbuffering(error)
+                } else {
                     self.state = .finished
                     return .fireErrorCaughtAndRemoveHandler(error)
                 }
-                // So we failed to upgrade. There is nothing really that we can do here.
-                // We are unbuffering the reads but there shouldn't be any handler in the pipeline
-                // that expects a specific type of reads anyhow.
-                self.state = .unbuffering(.init(buffer: upgrading.buffer))
-                return .fireErrorCaughtAndStartUnbuffering(error)
             }
 
         case .finished:
@@ -316,14 +318,15 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
         case .unbuffering(var unbuffering):
             self.state = .modifying
 
-            guard let element = unbuffering.buffer.popFirst() else {
+            if let element = unbuffering.buffer.popFirst() {
+                self.state = .unbuffering(unbuffering)
+
+                return .fireChannelRead(element)
+            } else {
                 self.state = .finished
 
                 return .fireChannelReadCompleteAndRemoveHandler
             }
-            self.state = .unbuffering(unbuffering)
-
-            return .fireChannelRead(element)
 
         case .modifying:
             fatalError("Internal inconsistency in HTTPClientUpgradeStateMachine")

@@ -404,10 +404,11 @@ public final class SNIHandler: ByteToMessageDecoder {
                 }
                 return UnsafeRawBufferPointer(rebasing: ptr.prefix(nameLength)).decodeStringValidatingASCII()
             }
-            guard let hostname = hostname else {
+            if let hostname = hostname {
+                return hostname
+            } else {
                 throw InternalSNIErrors.invalidRecord
             }
-            return hostname
         }
         return nil
     }
