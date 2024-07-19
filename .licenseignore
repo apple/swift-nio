@@ -2,6 +2,7 @@
 **/.gitignore
 .licenseignore
 .gitattributes
+.git-blame-ignore-revs
 .mailfilter
 .mailmap
 .spi.yml
