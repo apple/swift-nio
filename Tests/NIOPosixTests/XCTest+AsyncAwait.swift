@@ -64,7 +64,7 @@ internal func XCTAssertNoThrow<T>(
     do {
         _ = try await expression()
     } catch {
-        XCTFail("Expression did throw error", file: file, line: line)
+        XCTFail("Expression did throw error: \(error)", file: file, line: line)
     }
 }
 

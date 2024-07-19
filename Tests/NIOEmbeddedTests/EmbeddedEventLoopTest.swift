@@ -354,42 +354,67 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         }
     }
 
-    func testDrainScheduledTasks() {
+    func testShutdownCancelsFutureScheduledTasks() {
         let eventLoop = EmbeddedEventLoop()
-        let timeAtStart = eventLoop._now
         var tasksRun = 0
 
-        eventLoop.scheduleTask(in: .nanoseconds(3_141_592)) {
-            XCTAssertEqual(eventLoop._now, timeAtStart + .nanoseconds(3_141_592))
-            tasksRun += 1
-        }
+        let a = eventLoop.scheduleTask(in: .seconds(1)) { tasksRun += 1 }
+        let b = eventLoop.scheduleTask(in: .seconds(2)) { tasksRun += 1 }
 
-        eventLoop.scheduleTask(in: .seconds(3_141_592)) {
-            XCTAssertEqual(eventLoop._now, timeAtStart + .seconds(3_141_592))
-            tasksRun += 1
-        }
+        XCTAssertEqual(tasksRun, 0)
 
-        eventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
-        XCTAssertEqual(tasksRun, 2)
+        eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(tasksRun, 1)
+
+        XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+        XCTAssertEqual(tasksRun, 1)
+
+        eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(tasksRun, 1)
+
+        eventLoop.advanceTime(to: .distantFuture)
+        XCTAssertEqual(tasksRun, 1)
+
+        XCTAssertNoThrow(try a.futureResult.wait())
+        XCTAssertThrowsError(try b.futureResult.wait()) { error in
+            XCTAssertEqual(error as? EventLoopError, .cancelled)
+            XCTAssertEqual(tasksRun, 1)
+        }
     }
 
-    func testDrainScheduledTasksDoesNotRunNewlyScheduledTasks() {
+    func testTasksScheduledDuringShutdownAreAutomaticallyCancelled() throws {
         let eventLoop = EmbeddedEventLoop()
         var tasksRun = 0
-        var lastScheduled: Scheduled<Void>?
+        var childTasks: [Scheduled<Void>] = []
 
-        func scheduleNowAndIncrement() {
-            lastScheduled = eventLoop.scheduleTask(in: .nanoseconds(0)) {
+        func scheduleRecursiveTask(
+            at taskStartTime: NIODeadline,
+            andChildTaskAfter childTaskStartDelay: TimeAmount
+        ) -> Scheduled<Void> {
+            eventLoop.scheduleTask(deadline: taskStartTime) {
                 tasksRun += 1
-                scheduleNowAndIncrement()
+                try eventLoop.syncShutdownGracefully()
+                childTasks.append(
+                    scheduleRecursiveTask(
+                        at: eventLoop._now + childTaskStartDelay,
+                        andChildTaskAfter: childTaskStartDelay
+                    )
+                )
             }
         }
 
-        scheduleNowAndIncrement()
-        eventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
+        let rootTask = scheduleRecursiveTask(at: .uptimeNanoseconds(1), andChildTaskAfter: .zero)
+
+        eventLoop.advanceTime(to: .uptimeNanoseconds(1))
+
         XCTAssertEqual(tasksRun, 1)
-        XCTAssertThrowsError(try lastScheduled!.futureResult.wait()) { error in
-            XCTAssertEqual(error as! EventLoopError, EventLoopError.shutdown)
+        XCTAssertNoThrow(try rootTask.futureResult.wait())
+
+        for childTask in childTasks {
+            XCTAssertThrowsError(try childTask.futureResult.wait()) { error in
+                XCTAssertEqual(error as? EventLoopError, .cancelled)
+                XCTAssertEqual(tasksRun, 1)
+            }
         }
     }
 
