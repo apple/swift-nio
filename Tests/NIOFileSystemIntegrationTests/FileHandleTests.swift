@@ -28,7 +28,7 @@ final class FileHandleTests: XCTestCase {
         .lexicallyNormalized()
 
     private static func temporaryFileName() -> FilePath {
-        return FilePath("swift-filesystem-tests-\(UInt64.random(in: .min ... .max))")
+        FilePath("swift-filesystem-tests-\(UInt64.random(in: .min ... .max))")
     }
 
     func withTemporaryFile(
@@ -223,7 +223,7 @@ final class FileHandleTests: XCTestCase {
         try await self.withTemporaryFile { handle in
             // Check we can successfully return a value.
             let value = try await handle.withUnsafeDescriptor { descriptor in
-                return 42
+                42
             }
             XCTAssertEqual(value, 42)
         }
@@ -306,7 +306,7 @@ final class FileHandleTests: XCTestCase {
     func testWriteAndReadUnseekableFile() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
-           try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
+            try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
         guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
@@ -327,7 +327,7 @@ final class FileHandleTests: XCTestCase {
     func testWriteAndReadUnseekableFileOverMaximumSizeAllowedThrowsError() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
-           try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
+            try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
         guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
@@ -351,7 +351,7 @@ final class FileHandleTests: XCTestCase {
     func testWriteAndReadUnseekableFileWithOffsetsThrows() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
-           try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
+            try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
         guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {

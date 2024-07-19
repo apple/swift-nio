@@ -22,7 +22,7 @@
 /// acquire/release the lock in the correct place. ``NIOLockedValueBox`` makes
 /// that much easier.
 public struct NIOLockedValueBox<Value> {
-    
+
     @usableFromInline
     internal let _storage: LockStorage<Value>
 
@@ -35,7 +35,7 @@ public struct NIOLockedValueBox<Value> {
     /// Access the `Value`, allowing mutation of it.
     @inlinable
     public func withLockedValue<T>(_ mutate: (inout Value) throws -> T) rethrows -> T {
-        return try self._storage.withLockedValue(mutate)
+        try self._storage.withLockedValue(mutate)
     }
 
     /// Provides an unsafe view over the lock and its value.
@@ -72,7 +72,7 @@ public struct NIOLockedValueBox<Value> {
         public func withValueAssumingLockIsAcquired<Result>(
             _ mutate: (_ value: inout Value) throws -> Result
         ) rethrows -> Result {
-            return try self._storage.withUnsafeMutablePointerToHeader { value in
+            try self._storage.withUnsafeMutablePointerToHeader { value in
                 try mutate(&value.pointee)
             }
         }

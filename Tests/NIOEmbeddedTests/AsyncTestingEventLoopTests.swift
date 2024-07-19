@@ -11,13 +11,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOCore
-@testable import NIOEmbedded
-import XCTest
-import NIOConcurrencyHelpers
-import Atomics
 
-private class EmbeddedTestError: Error { }
+import Atomics
+import NIOConcurrencyHelpers
+import NIOCore
+import XCTest
+
+@testable import NIOEmbedded
+
+private class EmbeddedTestError: Error {}
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class NIOAsyncTestingEventLoopTests: XCTestCase {
@@ -453,13 +455,13 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         let tasksRun = ManagedAtomic(0)
         let startTime = eventLoop.now
 
-        eventLoop.scheduleTask(in: .nanoseconds(3141592)) {
-            XCTAssertEqual(eventLoop.now, startTime + .nanoseconds(3141592))
+        eventLoop.scheduleTask(in: .nanoseconds(3_141_592)) {
+            XCTAssertEqual(eventLoop.now, startTime + .nanoseconds(3_141_592))
             tasksRun.wrappingIncrement(ordering: .relaxed)
         }
 
-        eventLoop.scheduleTask(in: .seconds(3141592)) {
-            XCTAssertEqual(eventLoop.now, startTime + .seconds(3141592))
+        eventLoop.scheduleTask(in: .seconds(3_141_592)) {
+            XCTAssertEqual(eventLoop.now, startTime + .seconds(3_141_592))
             tasksRun.wrappingIncrement(ordering: .relaxed)
         }
 

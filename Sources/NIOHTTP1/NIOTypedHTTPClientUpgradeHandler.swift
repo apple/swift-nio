@@ -75,7 +75,9 @@ public struct NIOTypedHTTPClientUpgradeConfiguration<UpgradeResult: Sendable> {
 /// It will only upgrade to the protocol that is returned first in the list and does not currently
 /// have the capability to upgrade to multiple simultaneous layered protocols.
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: ChannelDuplexHandler, RemovableChannelHandler {
+public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: ChannelDuplexHandler,
+    RemovableChannelHandler
+{
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = HTTPClientRequestPart
     public typealias InboundIn = HTTPClientResponsePart

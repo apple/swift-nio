@@ -36,7 +36,7 @@ extension ByteBuffer {
             // this is not technically correct because we shouldn't just bind
             // the memory to `UInt8` but it's not a real issue either and we
             // need to work around https://bugs.swift.org/browse/SR-9604
-            Array<UInt8>(UnsafeRawBufferPointer(fastRebase: ptr[range]).bindMemory(to: UInt8.self))
+            [UInt8](UnsafeRawBufferPointer(fastRebase: ptr[range]).bindMemory(to: UInt8.self))
         }
     }
 
@@ -79,8 +79,13 @@ extension ByteBuffer {
     @inlinable
     public mutating func setStaticString(_ string: StaticString, at index: Int) -> Int {
         // please do not replace the code below with code that uses `string.withUTF8Buffer { ... }` (see SR-7541)
-        return self.setBytes(UnsafeRawBufferPointer(start: string.utf8Start,
-                                                    count: string.utf8CodeUnitCount), at: index)
+        self.setBytes(
+            UnsafeRawBufferPointer(
+                start: string.utf8Start,
+                count: string.utf8CodeUnitCount
+            ),
+            at: index
+        )
     }
 
     // MARK: String APIs
@@ -96,7 +101,7 @@ extension ByteBuffer {
         self._moveWriterIndex(forwardBy: written)
         return written
     }
-    
+
     /// Write `string` into this `ByteBuffer` null terminated using UTF-8 encoding, moving the writer index forward appropriately.
     ///
     /// - parameters:
@@ -144,7 +149,7 @@ extension ByteBuffer {
             return self._setStringSlowpath(string, at: index)
         }
     }
-    
+
     /// Write `string` null terminated into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
     ///
     /// - parameters:
@@ -176,7 +181,7 @@ extension ByteBuffer {
             return String(decoding: UnsafeRawBufferPointer(fastRebase: pointer[range]), as: Unicode.UTF8.self)
         }
     }
-    
+
     /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
     /// The selected bytes must be readable or else `nil` will be returned.
     ///
@@ -216,7 +221,7 @@ extension ByteBuffer {
         self._moveReaderIndex(forwardBy: length)
         return result
     }
-    
+
     /// Read a null terminated string off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Move the reader index
     /// forward by the string's length and its null terminator.
     ///
@@ -228,7 +233,7 @@ extension ByteBuffer {
             return nil
         }
         let result = self.readString(length: stringLength)
-        self.moveReaderIndex(forwardBy: 1) // move forward by null terminator
+        self.moveReaderIndex(forwardBy: 1)  // move forward by null terminator
         return result
     }
 
@@ -245,7 +250,7 @@ extension ByteBuffer {
         self._moveWriterIndex(forwardBy: written)
         return written
     }
-    
+
     /// Write `substring` into this `ByteBuffer` at `index` using UTF-8 encoding. Does not move the writer index.
     ///
     /// - parameters:
@@ -267,7 +272,7 @@ extension ByteBuffer {
             return self.setString(String(substring), at: index)
         }
     }
-    
+
     // MARK: DispatchData APIs
     /// Write `dispatchData` into this `ByteBuffer`, moving the writer index forward appropriately.
     ///
@@ -295,7 +300,7 @@ extension ByteBuffer {
         self.reserveCapacity(index + allBytesCount)
         self.withVeryUnsafeMutableBytes { destCompleteStorage in
             assert(destCompleteStorage.count >= index + allBytesCount)
-            let dest = destCompleteStorage[index ..< index + allBytesCount]
+            let dest = destCompleteStorage[index..<index + allBytesCount]
             dispatchData.copyBytes(to: .init(fastRebase: dest), count: dest.count)
         }
         return allBytesCount
@@ -315,7 +320,7 @@ extension ByteBuffer {
             return nil
         }
         return self.withUnsafeReadableBytes { pointer in
-            return DispatchData(bytes: UnsafeRawBufferPointer(fastRebase: pointer[range]))
+            DispatchData(bytes: UnsafeRawBufferPointer(fastRebase: pointer[range]))
         }
     }
 
@@ -332,7 +337,6 @@ extension ByteBuffer {
         self._moveReaderIndex(forwardBy: length)
         return result
     }
-
 
     // MARK: Other APIs
 
@@ -352,21 +356,6 @@ extension ByteBuffer {
         return bytesRead
     }
 
-    /// Yields an immutable buffer pointer containing this `ByteBuffer`'s readable bytes. Will move the reader index
-    /// by the number of bytes `body` returns in the first tuple component.
-    ///
-    /// - warning: Do not escape the pointer from the closure for later use.
-    ///
-    /// - parameters:
-    ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
-    /// - returns: The value `body` returned in the second tuple component.
-    @inlinable
-    public mutating func readWithUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> (Int, T)) rethrows -> T {
-        let (bytesRead, ret) = try self.withUnsafeReadableBytes({ try body($0) })
-        self._moveReaderIndex(forwardBy: bytesRead)
-        return ret
-    }
-
     /// Yields a mutable buffer pointer containing this `ByteBuffer`'s readable bytes. You may modify the yielded bytes.
     /// Will move the reader index by the number of bytes returned by `body` but leave writer index as it was.
     ///
@@ -377,25 +366,12 @@ extension ByteBuffer {
     /// - returns: The number of bytes read.
     @discardableResult
     @inlinable
-    public mutating func readWithUnsafeMutableReadableBytes(_ body: (UnsafeMutableRawBufferPointer) throws -> Int) rethrows -> Int {
+    public mutating func readWithUnsafeMutableReadableBytes(
+        _ body: (UnsafeMutableRawBufferPointer) throws -> Int
+    ) rethrows -> Int {
         let bytesRead = try self.withUnsafeMutableReadableBytes({ try body($0) })
         self._moveReaderIndex(forwardBy: bytesRead)
         return bytesRead
-    }
-
-    /// Yields a mutable buffer pointer containing this `ByteBuffer`'s readable bytes. You may modify the yielded bytes.
-    /// Will move the reader index by the number of bytes `body` returns in the first tuple component but leave writer index as it was.
-    ///
-    /// - warning: Do not escape the pointer from the closure for later use.
-    ///
-    /// - parameters:
-    ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
-    /// - returns: The value `body` returned in the second tuple component.
-    @inlinable
-    public mutating func readWithUnsafeMutableReadableBytes<T>(_ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)) rethrows -> T {
-        let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes({ try body($0) })
-        self._moveReaderIndex(forwardBy: bytesRead)
-        return ret
     }
 
     /// Copy `buffer`'s readable bytes into this `ByteBuffer` starting at `index`. Does not move any of the reader or writer indices.
@@ -407,7 +383,7 @@ extension ByteBuffer {
     @discardableResult
     @available(*, deprecated, renamed: "setBuffer(_:at:)")
     public mutating func set(buffer: ByteBuffer, at index: Int) -> Int {
-        return self.setBuffer(buffer, at: index)
+        self.setBuffer(buffer, at: index)
     }
 
     /// Copy `buffer`'s readable bytes into this `ByteBuffer` starting at `index`. Does not move any of the reader or writer indices.
@@ -419,7 +395,7 @@ extension ByteBuffer {
     @discardableResult
     @inlinable
     public mutating func setBuffer(_ buffer: ByteBuffer, at index: Int) -> Int {
-        return buffer.withUnsafeReadableBytes{ p in
+        buffer.withUnsafeReadableBytes { p in
             self.setBytes(p, at: index)
         }
     }
@@ -464,7 +440,7 @@ extension ByteBuffer {
         self._moveWriterIndex(forwardBy: written)
         return written
     }
-    
+
     /// Writes `byte` `count` times. Moves the writer index forward by the number of bytes written.
     ///
     /// - parameter byte: The `UInt8` byte to repeat.
@@ -477,7 +453,7 @@ extension ByteBuffer {
         self._moveWriterIndex(forwardBy: written)
         return written
     }
-    
+
     /// Sets the given `byte` `count` times at the given `index`. Will reserve more memory if necessary. Does not move the writer index.
     ///
     /// - parameter byte: The `UInt8` byte to repeat.
@@ -489,7 +465,7 @@ extension ByteBuffer {
         precondition(count >= 0, "Can't write fewer than 0 bytes")
         self.reserveCapacity(index + count)
         self.withVeryUnsafeMutableBytes { pointer in
-            let dest = UnsafeMutableRawBufferPointer(fastRebase: pointer[index ..< index+count])
+            let dest = UnsafeMutableRawBufferPointer(fastRebase: pointer[index..<index + count])
             _ = dest.initializeMemory(as: UInt8.self, repeating: byte)
         }
         return count
@@ -504,7 +480,8 @@ extension ByteBuffer {
     /// - returns: A `ByteBuffer` sharing storage containing the readable bytes only.
     @inlinable
     public func slice() -> ByteBuffer {
-        return self.getSlice(at: self.readerIndex, length: self.readableBytes)! // must work, bytes definitely in the buffer
+        // must work, bytes definitely in the buffer// must work, bytes definitely in the buffer
+        self.getSlice(at: self.readerIndex, length: self.readableBytes)!
     }
 
     /// Slice `length` bytes off this `ByteBuffer` and move the reader index forward by `length`.
@@ -533,6 +510,43 @@ extension ByteBuffer {
     public mutating func writeImmutableBuffer(_ buffer: ByteBuffer) -> Int {
         var mutable = buffer
         return self.writeBuffer(&mutable)
+    }
+}
+
+// swift-format-ignore: AmbiguousTrailingClosureOverload
+extension ByteBuffer {
+    /// Yields a mutable buffer pointer containing this `ByteBuffer`'s readable bytes. You may modify the yielded bytes.
+    /// Will move the reader index by the number of bytes `body` returns in the first tuple component but leave writer index as it was.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
+    /// - returns: The value `body` returned in the second tuple component.
+    @inlinable
+    public mutating func readWithUnsafeMutableReadableBytes<T>(
+        _ body: (UnsafeMutableRawBufferPointer) throws -> (Int, T)
+    ) rethrows -> T {
+        let (bytesRead, ret) = try self.withUnsafeMutableReadableBytes({ try body($0) })
+        self._moveReaderIndex(forwardBy: bytesRead)
+        return ret
+    }
+
+    /// Yields an immutable buffer pointer containing this `ByteBuffer`'s readable bytes. Will move the reader index
+    /// by the number of bytes `body` returns in the first tuple component.
+    ///
+    /// - warning: Do not escape the pointer from the closure for later use.
+    ///
+    /// - parameters:
+    ///     - body: The closure that will accept the yielded bytes and returns the number of bytes it processed along with some other value.
+    /// - returns: The value `body` returned in the second tuple component.
+    @inlinable
+    public mutating func readWithUnsafeReadableBytes<T>(
+        _ body: (UnsafeRawBufferPointer) throws -> (Int, T)
+    ) rethrows -> T {
+        let (bytesRead, ret) = try self.withUnsafeReadableBytes({ try body($0) })
+        self._moveReaderIndex(forwardBy: bytesRead)
+        return ret
     }
 }
 
@@ -749,9 +763,11 @@ extension ByteBufferAllocator {
     ///
     /// - returns: The `ByteBuffer` containing the written bytes.
     @inlinable
-    public func buffer<I: FixedWidthInteger>(integer: I,
-                                             endianness: Endianness = .big,
-                                             as: I.Type = I.self) -> ByteBuffer {
+    public func buffer<I: FixedWidthInteger>(
+        integer: I,
+        endianness: Endianness = .big,
+        as: I.Type = I.self
+    ) -> ByteBuffer {
         var buffer = self.buffer(capacity: MemoryLayout<I>.size)
         buffer.writeInteger(integer, endianness: endianness, as: `as`)
         return buffer
@@ -798,7 +814,6 @@ extension ByteBufferAllocator {
         return buffer
     }
 }
-
 
 extension Optional where Wrapped == ByteBuffer {
     /// If `nil`, replace `self` with `.some(buffer)`. If non-`nil`, write `buffer`'s readable bytes into the

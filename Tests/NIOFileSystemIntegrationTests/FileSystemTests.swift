@@ -61,7 +61,7 @@ extension FileSystem {
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class FileSystemTests: XCTestCase {
-    var fs: FileSystem { return .shared }
+    var fs: FileSystem { .shared }
 
     func testOpenFileForReading() async throws {
         try await self.fs.withFileHandle(forReadingAt: .testDataReadme) { file in
@@ -708,7 +708,7 @@ final class FileSystemTests: XCTestCase {
             throw error
         } shouldCopyFile: { source, destination in
             // Copy the directory and 'file-1-regular'
-            return (source == path) || (source.lastComponent!.string == "file-0-regular")
+            (source == path) || (source.lastComponent!.string == "file-0-regular")
         }
 
         let paths = try await self.fs.withDirectoryHandle(atPath: copyPath) { dir in

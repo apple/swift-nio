@@ -166,7 +166,7 @@ final class SyscallTests: XCTestCase {
         let testCases = [
             MockTestCase(name: "link", .noInterrupt, "src", "dst") { _ in
                 try Syscall.link(from: "src", to: "dst").get()
-            },
+            }
         ]
         testCases.run()
     }
@@ -175,7 +175,7 @@ final class SyscallTests: XCTestCase {
         let testCases = [
             MockTestCase(name: "unlink", .noInterrupt, "path") { _ in
                 try Syscall.unlink(path: "path").get()
-            },
+            }
         ]
         testCases.run()
     }

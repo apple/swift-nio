@@ -19,11 +19,15 @@ enum _IntegerBitPacking {}
 
 extension _IntegerBitPacking {
     @inlinable
-    static func packUU<Left: FixedWidthInteger & UnsignedInteger,
-                       Right: FixedWidthInteger & UnsignedInteger,
-                       Result: FixedWidthInteger & UnsignedInteger>(_ left: Left,
-                                                                    _ right: Right,
-                                                                    type: Result.Type = Result.self) -> Result {
+    static func packUU<
+        Left: FixedWidthInteger & UnsignedInteger,
+        Right: FixedWidthInteger & UnsignedInteger,
+        Result: FixedWidthInteger & UnsignedInteger
+    >(
+        _ left: Left,
+        _ right: Right,
+        type: Result.Type = Result.self
+    ) -> Result {
         assert(MemoryLayout<Left>.size + MemoryLayout<Right>.size <= MemoryLayout<Result>.size)
 
         let resultLeft = Result(left)
@@ -34,11 +38,15 @@ extension _IntegerBitPacking {
     }
 
     @inlinable
-    static func unpackUU<Input: FixedWidthInteger & UnsignedInteger,
-                         Left: FixedWidthInteger & UnsignedInteger,
-                         Right: FixedWidthInteger & UnsignedInteger>(_ input: Input,
-                                                                     leftType: Left.Type = Left.self,
-                                                                     rightType: Right.Type = Right.self) -> (Left, Right) {
+    static func unpackUU<
+        Input: FixedWidthInteger & UnsignedInteger,
+        Left: FixedWidthInteger & UnsignedInteger,
+        Right: FixedWidthInteger & UnsignedInteger
+    >(
+        _ input: Input,
+        leftType: Left.Type = Left.self,
+        rightType: Right.Type = Right.self
+    ) -> (Left, Right) {
         assert(MemoryLayout<Left>.size + MemoryLayout<Right>.size <= MemoryLayout<Input>.size)
 
         let leftMask = Input(Left.max)
@@ -57,7 +65,7 @@ enum IntegerBitPacking {}
 extension IntegerBitPacking {
     @inlinable
     static func packUInt32UInt16UInt8(_ left: UInt32, _ middle: UInt16, _ right: UInt8) -> UInt64 {
-        return _IntegerBitPacking.packUU(
+        _IntegerBitPacking.packUU(
             _IntegerBitPacking.packUU(right, middle, type: UInt32.self),
             left
         )
@@ -72,27 +80,27 @@ extension IntegerBitPacking {
 
     @inlinable
     static func packUInt8UInt8(_ left: UInt8, _ right: UInt8) -> UInt16 {
-        return _IntegerBitPacking.packUU(left, right)
+        _IntegerBitPacking.packUU(left, right)
     }
 
     @inlinable
     static func unpackUInt8UInt8(_ value: UInt16) -> (UInt8, UInt8) {
-        return _IntegerBitPacking.unpackUU(value)
+        _IntegerBitPacking.unpackUU(value)
     }
 
     @inlinable
     static func packUInt16UInt8(_ left: UInt16, _ right: UInt8) -> UInt32 {
-        return _IntegerBitPacking.packUU(left, right)
+        _IntegerBitPacking.packUU(left, right)
     }
 
     @inlinable
     static func unpackUInt16UInt8(_ value: UInt32) -> (UInt16, UInt8) {
-        return _IntegerBitPacking.unpackUU(value)
+        _IntegerBitPacking.unpackUU(value)
     }
 
     @inlinable
     static func packUInt32CInt(_ left: UInt32, _ right: CInt) -> UInt64 {
-        return _IntegerBitPacking.packUU(left, UInt32(truncatingIfNeeded: right))
+        _IntegerBitPacking.packUU(left, UInt32(truncatingIfNeeded: right))
     }
 
     @inlinable

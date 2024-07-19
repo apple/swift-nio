@@ -63,7 +63,6 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
     private var state: State = .operational
     private var promiseBuffer: CircularBuffer<EventLoopPromise<Response>>
 
-
     /// Create a new `RequestResponseHandler`.
     ///
     /// - parameters:
@@ -83,7 +82,7 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
         case .operational:
             let promiseBuffer = self.promiseBuffer
             self.promiseBuffer.removeAll()
-            promiseBuffer.forEach { promise in
+            for promise in promiseBuffer {
                 promise.fail(ChannelError.eof)
             }
         }
@@ -112,8 +111,8 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
         let promiseBuffer = self.promiseBuffer
         self.promiseBuffer.removeAll()
         context.close(promise: nil)
-        promiseBuffer.forEach {
-            $0.fail(error)
+        for promise in promiseBuffer {
+            promise.fail(error)
         }
     }
 

@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Atomics
 import NIOCore
+import XCTest
+
 @testable import NIOEmbedded
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
@@ -84,11 +85,14 @@ class AsyncTestingChannelTests: XCTestCase {
             let task1 = Task { try await channel.waitForInboundWrite(as: Int.self) }
             let task2 = Task { try await channel.waitForInboundWrite(as: Int.self) }
             let task3 = Task { try await channel.waitForInboundWrite(as: Int.self) }
-            try await XCTAsyncAssertEqual(Set([
-                try await task1.value,
-                try await task2.value,
-                try await task3.value,
-            ]), [1, 2, 3])
+            try await XCTAsyncAssertEqual(
+                Set([
+                    try await task1.value,
+                    try await task2.value,
+                    try await task3.value,
+                ]),
+                [1, 2, 3]
+            )
         }
 
         try await channel.writeInbound(1)
@@ -117,11 +121,14 @@ class AsyncTestingChannelTests: XCTestCase {
             let task1 = Task { try await channel.waitForOutboundWrite(as: Int.self) }
             let task2 = Task { try await channel.waitForOutboundWrite(as: Int.self) }
             let task3 = Task { try await channel.waitForOutboundWrite(as: Int.self) }
-            try await XCTAsyncAssertEqual(Set([
-                try await task1.value,
-                try await task2.value,
-                try await task3.value,
-            ]), [1, 2, 3])
+            try await XCTAsyncAssertEqual(
+                Set([
+                    try await task1.value,
+                    try await task2.value,
+                    try await task3.value,
+                ]),
+                [1, 2, 3]
+            )
         }
 
         try await channel.writeOutbound(1)
@@ -254,22 +261,33 @@ class AsyncTestingChannelTests: XCTestCase {
         let buffer = channel.allocator.buffer(capacity: 0)
 
         try await XCTAsyncAssertTrue(await channel.writeOutbound(buffer).isFull)
-        try await XCTAsyncAssertTrue(await channel.writeOutbound(
-            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
-                                          data: buffer)).isFull)
+        try await XCTAsyncAssertTrue(
+            await channel.writeOutbound(
+                AddressedEnvelope<ByteBuffer>(
+                    remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
+                    data: buffer
+                )
+            ).isFull
+        )
         try await XCTAsyncAssertTrue(await channel.writeOutbound(buffer).isFull)
 
-
         try await XCTAsyncAssertTrue(await channel.writeInbound(buffer).isFull)
-        try await XCTAsyncAssertTrue(await channel.writeInbound(
-            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
-                                          data: buffer)).isFull)
+        try await XCTAsyncAssertTrue(
+            await channel.writeInbound(
+                AddressedEnvelope<ByteBuffer>(
+                    remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
+                    data: buffer
+                )
+            ).isFull
+        )
         try await XCTAsyncAssertTrue(await channel.writeInbound(buffer).isFull)
 
-        func check<Expected: Sendable, Actual>(expected: Expected.Type,
-                                               actual: Actual.Type,
-                                               file: StaticString = #filePath,
-                                               line: UInt = #line) async {
+        func check<Expected: Sendable, Actual>(
+            expected: Expected.Type,
+            actual: Actual.Type,
+            file: StaticString = #filePath,
+            line: UInt = #line
+        ) async {
             do {
                 _ = try await channel.readOutbound(as: Expected.self)
                 XCTFail("this should have failed", file: (file), line: line)
@@ -337,7 +355,7 @@ class AsyncTestingChannelTests: XCTestCase {
         XCTAssertFalse(channel.isActive)
     }
 
-    private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
+    private final class ExceptionThrowingInboundHandler: ChannelInboundHandler {
         typealias InboundIn = String
 
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -345,7 +363,7 @@ class AsyncTestingChannelTests: XCTestCase {
         }
     }
 
-    private final class ExceptionThrowingOutboundHandler : ChannelOutboundHandler {
+    private final class ExceptionThrowingOutboundHandler: ChannelOutboundHandler {
         typealias OutboundIn = String
         typealias OutboundOut = Never
 
@@ -474,20 +492,20 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testFinishWithRecursivelyScheduledTasks() async throws {
-            let channel = NIOAsyncTestingChannel()
-            let invocations = AtomicCounter()
+        let channel = NIOAsyncTestingChannel()
+        let invocations = AtomicCounter()
 
-            @Sendable func recursivelyScheduleAndIncrement() {
-                channel.pipeline.eventLoop.scheduleTask(deadline: .distantFuture) {
-                    invocations.increment()
-                    recursivelyScheduleAndIncrement()
-                }
+        @Sendable func recursivelyScheduleAndIncrement() {
+            channel.pipeline.eventLoop.scheduleTask(deadline: .distantFuture) {
+                invocations.increment()
+                recursivelyScheduleAndIncrement()
             }
+        }
 
-            recursivelyScheduleAndIncrement()
+        recursivelyScheduleAndIncrement()
 
-            _ = try await channel.finish()
-            XCTAssertEqual(invocations.load(), 1)
+        _ = try await channel.finish()
+        XCTAssertEqual(invocations.load(), 1)
     }
 
     func testSyncOptionsAreSupported() throws {
@@ -536,20 +554,34 @@ class AsyncTestingChannelTests: XCTestCase {
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-fileprivate func XCTAsyncAssertTrue(_ predicate: @autoclosure () async throws -> Bool, file: StaticString = #filePath, line: UInt = #line) async rethrows {
+private func XCTAsyncAssertTrue(
+    _ predicate: @autoclosure () async throws -> Bool,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) async rethrows {
     let result = try await predicate()
     XCTAssertTrue(result, file: file, line: line)
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-fileprivate func XCTAsyncAssertEqual<Element: Equatable>(_ lhs: @autoclosure () async throws -> Element, _ rhs: @autoclosure () async throws -> Element, file: StaticString = #filePath, line: UInt = #line) async rethrows {
+private func XCTAsyncAssertEqual<Element: Equatable>(
+    _ lhs: @autoclosure () async throws -> Element,
+    _ rhs: @autoclosure () async throws -> Element,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) async rethrows {
     let lhsResult = try await lhs()
     let rhsResult = try await rhs()
     XCTAssertEqual(lhsResult, rhsResult, file: file, line: line)
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-fileprivate func XCTAsyncAssertThrowsError<ResultType>(_ expression: @autoclosure () async throws -> ResultType, file: StaticString = #filePath, line: UInt = #line, _ callback: Optional<(Error) -> Void> = nil) async {
+private func XCTAsyncAssertThrowsError<ResultType>(
+    _ expression: @autoclosure () async throws -> ResultType,
+    file: StaticString = #filePath,
+    line: UInt = #line,
+    _ callback: ((Error) -> Void)? = nil
+) async {
     do {
         let _ = try await expression()
         XCTFail("Did not throw", file: file, line: line)
@@ -559,13 +591,21 @@ fileprivate func XCTAsyncAssertThrowsError<ResultType>(_ expression: @autoclosur
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-fileprivate func XCTAsyncAssertNil(_ expression: @autoclosure () async throws -> Any?, file: StaticString = #filePath, line: UInt = #line) async rethrows {
+private func XCTAsyncAssertNil(
+    _ expression: @autoclosure () async throws -> Any?,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) async rethrows {
     let result = try await expression()
     XCTAssertNil(result, file: file, line: line)
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-fileprivate func XCTAsyncAssertNotNil(_ expression: @autoclosure () async throws -> Any?, file: StaticString = #filePath, line: UInt = #line) async rethrows {
+private func XCTAsyncAssertNotNil(
+    _ expression: @autoclosure () async throws -> Any?,
+    file: StaticString = #filePath,
+    line: UInt = #line
+) async rethrows {
     let result = try await expression()
     XCTAssertNotNil(result, file: file, line: line)
 }

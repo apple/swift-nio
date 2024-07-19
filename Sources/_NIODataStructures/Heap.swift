@@ -26,7 +26,7 @@ import ucrt
 @usableFromInline
 internal struct Heap<Element: Comparable> {
     @usableFromInline
-    internal private(set) var storage: Array<Element>
+    internal private(set) var storage: [Element]
 
     @inlinable
     internal init() {
@@ -36,29 +36,29 @@ internal struct Heap<Element: Comparable> {
     @inlinable
     internal func comparator(_ lhs: Element, _ rhs: Element) -> Bool {
         // This heap is always a min-heap.
-        return lhs < rhs
+        lhs < rhs
     }
 
     // named `PARENT` in CLRS
     @inlinable
     internal func parentIndex(_ i: Int) -> Int {
-        return (i-1) / 2
+        (i - 1) / 2
     }
 
     // named `LEFT` in CLRS
     @inlinable
     internal func leftIndex(_ i: Int) -> Int {
-        return 2*i + 1
+        2 * i + 1
     }
 
     // named `RIGHT` in CLRS
     @inlinable
     internal func rightIndex(_ i: Int) -> Int {
-        return 2*i + 2
+        2 * i + 2
     }
 
     // named `MAX-HEAPIFY` in CLRS
-    /* private but */ @inlinable
+    @inlinable
     mutating func _heapify(_ index: Int) {
         let left = self.leftIndex(index)
         let right = self.rightIndex(index)
@@ -81,7 +81,7 @@ internal struct Heap<Element: Comparable> {
     }
 
     // named `HEAP-INCREASE-KEY` in CRLS
-    /* private but */ @inlinable
+    @inlinable
     mutating func _heapRootify(index: Int, key: Element) {
         var index = index
         if self.comparator(storage[index], key) {
@@ -108,7 +108,7 @@ internal struct Heap<Element: Comparable> {
     @discardableResult
     @inlinable
     internal mutating func removeRoot() -> Element? {
-        return self._remove(index: 0)
+        self._remove(index: 0)
     }
 
     @discardableResult
@@ -121,7 +121,7 @@ internal struct Heap<Element: Comparable> {
             return false
         }
     }
-    
+
     @inlinable
     internal mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows {
         guard self.storage.count > 0 else {
@@ -131,12 +131,12 @@ internal struct Heap<Element: Comparable> {
         guard let index = try self.storage.firstIndex(where: shouldBeRemoved) else {
             return
         }
-        
+
         self._remove(index: index)
     }
 
     @discardableResult
-    /* private but */ @inlinable
+    @inlinable
     mutating func _remove(index: Int) -> Element? {
         guard self.storage.count > 0 else {
             return nil
@@ -163,7 +163,7 @@ extension Heap: CustomDebugStringConvertible {
             return "<empty heap>"
         }
         let descriptions = self.storage.map { String(describing: $0) }
-        let maxLen: Int = descriptions.map { $0.count }.max()! // storage checked non-empty above
+        let maxLen: Int = descriptions.map { $0.count }.max()!  // storage checked non-empty above
         let paddedDescs = descriptions.map { (desc: String) -> String in
             var desc = desc
             while desc.count < maxLen {
@@ -200,7 +200,7 @@ extension Heap: CustomDebugStringConvertible {
             all += String(repeating: " ", count: rightWidth)
 
             func height(index: Int) -> Int {
-                return Int(log2(Double(index + 1)))
+                Int(log2(Double(index + 1)))
             }
             let myHeight = height(index: index)
             let nextHeight = height(index: index + 1)
@@ -217,7 +217,7 @@ extension Heap: CustomDebugStringConvertible {
 
 @usableFromInline
 struct HeapIterator<Element: Comparable>: IteratorProtocol {
-    /* private but */ @usableFromInline
+    @usableFromInline
     var _heap: Heap<Element>
 
     @inlinable
@@ -227,44 +227,44 @@ struct HeapIterator<Element: Comparable>: IteratorProtocol {
 
     @inlinable
     mutating func next() -> Element? {
-        return self._heap.removeRoot()
+        self._heap.removeRoot()
     }
 }
 
 extension Heap: Sequence {
     @inlinable
     var startIndex: Int {
-        return self.storage.startIndex
+        self.storage.startIndex
     }
 
     @inlinable
     var endIndex: Int {
-        return self.storage.endIndex
+        self.storage.endIndex
     }
 
     @inlinable
     var underestimatedCount: Int {
-        return self.storage.count
+        self.storage.count
     }
 
     @inlinable
     func makeIterator() -> HeapIterator<Element> {
-        return HeapIterator(heap: self)
+        HeapIterator(heap: self)
     }
 
     @inlinable
     subscript(position: Int) -> Element {
-        return self.storage[position]
+        self.storage[position]
     }
 
     @inlinable
     func index(after i: Int) -> Int {
-        return i + 1
+        i + 1
     }
 
     @inlinable
     var count: Int {
-        return self.storage.count
+        self.storage.count
     }
 }
 

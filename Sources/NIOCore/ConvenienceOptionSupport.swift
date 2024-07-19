@@ -20,7 +20,7 @@ extension NIOClientTCPBootstrapProtocol {
     /// - returns: The updated bootstrap with and options applied.
     public func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.TCPConvenienceOptions) -> Self {
         // Default is to consume no options and not update self.
-        return self
+        self
     }
 }
 
@@ -34,8 +34,10 @@ extension NIOClientTCPBootstrap {
         var optionsRemaining = options
         // First give the underlying a chance to consume options.
         let withUnderlyingOverrides =
-            NIOClientTCPBootstrap(self,
-                                  updating: underlyingBootstrap._applyChannelConvenienceOptions(&optionsRemaining))
+            NIOClientTCPBootstrap(
+                self,
+                updating: underlyingBootstrap._applyChannelConvenienceOptions(&optionsRemaining)
+            )
         // Default apply any remaining options.
         return optionsRemaining.applyFallbackMapping(withUnderlyingOverrides)
     }
@@ -84,11 +86,11 @@ extension ChannelOptions {
     /// A TCP channel option which can be applied to a bootstrap using convenience notation.
     public struct TCPConvenienceOption: Hashable, Sendable {
         fileprivate var data: ConvenienceOption
-        
+
         private init(_ data: ConvenienceOption) {
             self.data = data
         }
-        
+
         fileprivate enum ConvenienceOption: Hashable {
             case allowLocalEndpointReuse
             case disableAutoRead
@@ -101,17 +103,17 @@ extension ChannelOptions {
 extension ChannelOptions.TCPConvenienceOption {
     /// Allow immediately reusing a local address.
     public static let allowLocalEndpointReuse = ChannelOptions.TCPConvenienceOption(.allowLocalEndpointReuse)
-    
+
     /// The user will manually call `Channel.read` once all the data is read from the transport.
     public static let disableAutoRead = ChannelOptions.TCPConvenienceOption(.disableAutoRead)
-    
+
     /// Allows users to configure whether the `Channel` will close itself when its remote
     /// peer shuts down its send stream, or whether it will remain open. If set to `false` (the default), the `Channel`
     /// will be closed automatically if the remote peer shuts down its send stream. If set to true, the `Channel` will
     /// not be closed: instead, a `ChannelEvent.inboundClosed` user event will be sent on the `ChannelPipeline`,
     /// and no more data will be received.
     public static let allowRemoteHalfClosure =
-                        ChannelOptions.TCPConvenienceOption(.allowRemoteHalfClosure)
+        ChannelOptions.TCPConvenienceOption(.allowRemoteHalfClosure)
 }
 
 extension ChannelOptions {
@@ -120,7 +122,7 @@ extension ChannelOptions {
         var allowLocalEndpointReuse = false
         var disableAutoRead = false
         var allowRemoteHalfClosure = false
-        
+
         /// Construct from an array literal.
         @inlinable
         public init(arrayLiteral elements: TCPConvenienceOption...) {
@@ -128,7 +130,7 @@ extension ChannelOptions {
                 self.add(element)
             }
         }
-        
+
         @usableFromInline
         mutating func add(_ element: TCPConvenienceOption) {
             switch element.data {
@@ -140,7 +142,7 @@ extension ChannelOptions {
                 self.disableAutoRead = true
             }
         }
-        
+
         /// Caller is consuming the knowledge that `allowLocalEndpointReuse` was set or not.
         /// The setting will nolonger be set after this call.
         /// - Returns: If `allowLocalEndpointReuse` was set.
@@ -150,7 +152,7 @@ extension ChannelOptions {
             }
             return Types.ConvenienceOptionValue<Void>(flag: self.allowLocalEndpointReuse)
         }
-        
+
         /// Caller is consuming the knowledge that disableAutoRead was set or not.
         /// The setting will nolonger be set after this call.
         /// - Returns: If disableAutoRead was set.
@@ -160,7 +162,7 @@ extension ChannelOptions {
             }
             return Types.ConvenienceOptionValue<Void>(flag: self.disableAutoRead)
         }
-        
+
         /// Caller is consuming the knowledge that allowRemoteHalfClosure was set or not.
         /// The setting will nolonger be set after this call.
         /// - Returns: If allowRemoteHalfClosure was set.
@@ -170,7 +172,7 @@ extension ChannelOptions {
             }
             return Types.ConvenienceOptionValue<Void>(flag: self.allowRemoteHalfClosure)
         }
-        
+
         mutating func applyFallbackMapping(_ universalBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
             var result = universalBootstrap
             if self.consumeAllowLocalEndpointReuse().isSet {

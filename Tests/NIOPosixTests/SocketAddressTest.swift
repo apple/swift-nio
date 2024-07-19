@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 @testable import NIOCore
 @testable import NIOPosix
 
@@ -49,7 +50,9 @@ class SocketAddressTest: XCTestCase {
     }
 
     func testDescriptionWorksWithByteBufferIPv6IP() throws {
-        let IPv6: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
+        let IPv6: [UInt8] = [
+            0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05,
+        ]
         let ipv6Address: ByteBuffer = ByteBuffer.init(bytes: IPv6)
         let sa = try! SocketAddress(packedIPAddress: ipv6Address, port: 12345)
         XCTAssertEqual("[IPv6]fe80::5:12345", sa.description)
@@ -70,28 +73,34 @@ class SocketAddressTest: XCTestCase {
 
     func testIn6AddrDescriptionWorks() throws {
         let sampleString = "::1"
-        let sampleIn6Addr: [UInt8] = [ // ::1
+        let sampleIn6Addr: [UInt8] = [  // ::1
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
             0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x70, 0x0, 0x0, 0x54,
             0xc2, 0xb5, 0x58, 0xff, 0x7f, 0x0, 0x0, 0x7,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x1, 0x1, 0x0
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x40, 0x1, 0x1, 0x0,
         ]
 
-        var address         = sockaddr_in6()
-        #if os(Linux) || os(Android) // no sin6_len on Linux/Android
+        var address = sockaddr_in6()
+        #if os(Linux) || os(Android)  // no sin6_len on Linux/Android
         #else
-          address.sin6_len  = UInt8(MemoryLayout<sockaddr_in6>.size)
+        address.sin6_len = UInt8(MemoryLayout<sockaddr_in6>.size)
         #endif
         address.sin6_family = sa_family_t(NIOBSDSocket.AddressFamily.inet6.rawValue)
-        address.sin6_addr   = sampleIn6Addr.withUnsafeBytes {
+        address.sin6_addr = sampleIn6Addr.withUnsafeBytes {
             $0.baseAddress!.bindMemory(to: in6_addr.self, capacity: 1).pointee
         }
 
         let s = __testOnly_addressDescription(address)
-        XCTAssertEqual(s.count, sampleString.count,
-                       "Address description has unexpected length 😱")
-        XCTAssertEqual(s, sampleString,
-                       "Address description is way below our expectations 😱")
+        XCTAssertEqual(
+            s.count,
+            sampleString.count,
+            "Address description has unexpected length 😱"
+        )
+        XCTAssertEqual(
+            s,
+            sampleString,
+            "Address description is way below our expectations 😱"
+        )
     }
 
     func testIPAddressWorks() throws {
@@ -125,7 +134,9 @@ class SocketAddressTest: XCTestCase {
 
     func testCanCreateIPv6AddressFromString() throws {
         let sa = try SocketAddress(ipAddress: "fe80::5", port: 443)
-        let expectedAddress: [UInt8] = [0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05]
+        let expectedAddress: [UInt8] = [
+            0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05,
+        ]
         if case .v6(let address) = sa {
             var addr = address.address
             let host = address.host
@@ -149,7 +160,7 @@ class SocketAddressTest: XCTestCase {
         XCTAssertThrowsError(try SocketAddress(ipAddress: "definitelynotanip", port: 800)) { error in
             switch error as? SocketAddressError {
             case .some(.failedToParseIPString("definitelynotanip")):
-                () // ok
+                ()  // ok
             default:
                 XCTFail("unexpected error: \(error)")
             }

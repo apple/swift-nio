@@ -151,7 +151,7 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
 
     @inlinable
     public func makeAsyncIterator() -> AsyncIterator {
-        return AsyncIterator(self._backing)
+        AsyncIterator(self._backing)
     }
 }
 

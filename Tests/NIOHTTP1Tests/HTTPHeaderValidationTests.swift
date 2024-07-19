@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Dispatch
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
+import XCTest
 
 final class HTTPHeaderValidationTests: XCTestCase {
     func testEncodingInvalidHeaderFieldNamesInRequests() throws {
@@ -39,7 +39,9 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
         let headers = HTTPHeaders([("Host", "example.com"), (weirdAllowedFieldName, "present")])
         let goodRequest = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/", headers: headers)
-        let goodRequestBytes = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\n\(weirdAllowedFieldName): present\r\n\r\n")
+        let goodRequestBytes = ByteBuffer(
+            string: "GET / HTTP/1.1\r\nHost: example.com\r\n\(weirdAllowedFieldName): present\r\n\r\n"
+        )
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)))
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(nil)))
@@ -93,7 +95,9 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
         let headers = HTTPHeaders([("Host", "example.com"), ("Transfer-Encoding", "chunked")])
         let goodRequest = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/", headers: headers)
-        let goodRequestBytes = ByteBuffer(string: "POST / HTTP/1.1\r\nHost: example.com\r\ntransfer-encoding: chunked\r\n\r\n")
+        let goodRequestBytes = ByteBuffer(
+            string: "POST / HTTP/1.1\r\nHost: example.com\r\ntransfer-encoding: chunked\r\n\r\n"
+        )
         let goodTrailers = ByteBuffer(string: "0\r\n\(weirdAllowedFieldName): present\r\n\r\n")
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)))
@@ -132,14 +136,17 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
     func testEncodingInvalidHeaderFieldValuesInRequests() throws {
         // We reject all ASCII control characters except HTAB and tolerate everything else.
-        let weirdAllowedFieldValue = "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+        let weirdAllowedFieldValue =
+            "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 
         let channel = EmbeddedChannel()
         try channel.pipeline.syncOperations.addHTTPClientHandlers()
 
         let headers = HTTPHeaders([("Host", "example.com"), ("Weird-Value", weirdAllowedFieldValue)])
         let goodRequest = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/", headers: headers)
-        let goodRequestBytes = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\nWeird-Value: \(weirdAllowedFieldValue)\r\n\r\n")
+        let goodRequestBytes = ByteBuffer(
+            string: "GET / HTTP/1.1\r\nHost: example.com\r\nWeird-Value: \(weirdAllowedFieldValue)\r\n\r\n"
+        )
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)))
 
@@ -180,7 +187,9 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
             let headers = HTTPHeaders([("Host", "example.com"), ("Weird-Value", evenWeirderAllowedValue)])
             let goodRequest = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/", headers: headers)
-            let goodRequestBytes = ByteBuffer(string: "GET / HTTP/1.1\r\nHost: example.com\r\nWeird-Value: \(evenWeirderAllowedValue)\r\n\r\n")
+            let goodRequestBytes = ByteBuffer(
+                string: "GET / HTTP/1.1\r\nHost: example.com\r\nWeird-Value: \(evenWeirderAllowedValue)\r\n\r\n"
+            )
 
             XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)))
 
@@ -195,14 +204,17 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
     func testEncodingInvalidTrailerFieldValuesInRequests() throws {
         // We reject all ASCII control characters except HTAB and tolerate everything else.
-        let weirdAllowedFieldValue = "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+        let weirdAllowedFieldValue =
+            "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 
         let channel = EmbeddedChannel()
         try channel.pipeline.syncOperations.addHTTPClientHandlers()
 
         let headers = HTTPHeaders([("Host", "example.com"), ("Transfer-Encoding", "chunked")])
         let goodRequest = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/", headers: headers)
-        let goodRequestBytes = ByteBuffer(string: "POST / HTTP/1.1\r\nHost: example.com\r\ntransfer-encoding: chunked\r\n\r\n")
+        let goodRequestBytes = ByteBuffer(
+            string: "POST / HTTP/1.1\r\nHost: example.com\r\ntransfer-encoding: chunked\r\n\r\n"
+        )
         let goodTrailers = ByteBuffer(string: "0\r\nWeird-Value: \(weirdAllowedFieldValue)\r\n\r\n")
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)))
@@ -227,7 +239,6 @@ final class HTTPHeaderValidationTests: XCTestCase {
             let channel = EmbeddedChannel()
             try channel.pipeline.syncOperations.addHTTPClientHandlers()
 
-
             XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)))
 
             XCTAssertThrowsError(
@@ -249,7 +260,9 @@ final class HTTPHeaderValidationTests: XCTestCase {
             let weirdGoodTrailers = ByteBuffer(string: "0\r\nWeird-Value: \(evenWeirderAllowedValue)\r\n\r\n")
 
             XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(goodRequest)))
-            XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(["Weird-Value": evenWeirderAllowedValue])))
+            XCTAssertNoThrow(
+                try channel.writeOutbound(HTTPClientRequestPart.end(["Weird-Value": evenWeirderAllowedValue]))
+            )
             XCTAssertNoThrow(maybeRequestHeadBytes = try channel.readOutbound())
             XCTAssertNoThrow(maybeRequestEndBytes = try channel.readOutbound())
             XCTAssertEqual(maybeRequestHeadBytes, goodRequestBytes)
@@ -280,7 +293,9 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
         let headers = HTTPHeaders([("Content-Length", "0"), (weirdAllowedFieldName, "present")])
         let goodResponse = HTTPResponseHead(version: .http1_1, status: .ok, headers: headers)
-        let goodResponseBytes = ByteBuffer(string: "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\(weirdAllowedFieldName): present\r\n\r\n")
+        let goodResponseBytes = ByteBuffer(
+            string: "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\(weirdAllowedFieldName): present\r\n\r\n"
+        )
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse)))
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.end(nil)))
@@ -376,7 +391,8 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
     func testEncodingInvalidHeaderFieldValuesInResponses() throws {
         // We reject all ASCII control characters except HTAB and tolerate everything else.
-        let weirdAllowedFieldValue = "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+        let weirdAllowedFieldValue =
+            "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 
         let channel = EmbeddedChannel()
         try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
@@ -384,7 +400,9 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
         let headers = HTTPHeaders([("Content-Length", "0"), ("Weird-Value", weirdAllowedFieldValue)])
         let goodResponse = HTTPResponseHead(version: .http1_1, status: .ok, headers: headers)
-        let goodResponseBytes = ByteBuffer(string: "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nWeird-Value: \(weirdAllowedFieldValue)\r\n\r\n")
+        let goodResponseBytes = ByteBuffer(
+            string: "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nWeird-Value: \(weirdAllowedFieldValue)\r\n\r\n"
+        )
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse)))
 
@@ -427,7 +445,9 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
             let headers = HTTPHeaders([("Content-Length", "0"), ("Weird-Value", evenWeirderAllowedValue)])
             let goodResponse = HTTPResponseHead(version: .http1_1, status: .ok, headers: headers)
-            let goodResponseBytes = ByteBuffer(string: "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nWeird-Value: \(evenWeirderAllowedValue)\r\n\r\n")
+            let goodResponseBytes = ByteBuffer(
+                string: "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nWeird-Value: \(evenWeirderAllowedValue)\r\n\r\n"
+            )
 
             XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse)))
 
@@ -442,7 +462,8 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
     func testEncodingInvalidTrailerFieldValuesInResponses() throws {
         // We reject all ASCII control characters except HTAB and tolerate everything else.
-        let weirdAllowedFieldValue = "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+        let weirdAllowedFieldValue =
+            "!\" \t#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 
         let channel = EmbeddedChannel()
         try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false)
@@ -498,7 +519,9 @@ final class HTTPHeaderValidationTests: XCTestCase {
             let weirdGoodTrailers = ByteBuffer(string: "0\r\nWeird-Value: \(evenWeirderAllowedValue)\r\n\r\n")
 
             XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(goodResponse)))
-            XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.end(["Weird-Value": evenWeirderAllowedValue])))
+            XCTAssertNoThrow(
+                try channel.writeOutbound(HTTPServerResponsePart.end(["Weird-Value": evenWeirderAllowedValue]))
+            )
             XCTAssertNoThrow(maybeResponseHeadBytes = try channel.readOutbound())
             XCTAssertNoThrow(maybeResponseEndBytes = try channel.readOutbound())
             XCTAssertEqual(maybeResponseHeadBytes, goodResponseBytes)
@@ -515,10 +538,18 @@ final class HTTPHeaderValidationTests: XCTestCase {
         let channel = EmbeddedChannel()
         try channel.pipeline.syncOperations.addHTTPClientHandlers(enableOutboundHeaderValidation: false)
 
-        let headers = HTTPHeaders([("Host", "example.com"), ("Transfer-Encoding", "chunked"), (invalidHeaderName, invalidHeaderValue)])
+        let headers = HTTPHeaders([
+            ("Host", "example.com"), ("Transfer-Encoding", "chunked"), (invalidHeaderName, invalidHeaderValue),
+        ])
         let toleratedRequest = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/", headers: headers)
-        let toleratedRequestBytes = ByteBuffer(string: "POST / HTTP/1.1\r\nHost: example.com\r\n\(invalidHeaderName): \(invalidHeaderValue)\r\ntransfer-encoding: chunked\r\n\r\n")
-        let toleratedTrailerBytes = ByteBuffer(string: "0\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\(invalidHeaderName): \(invalidHeaderValue)\r\n\r\n")
+        let toleratedRequestBytes = ByteBuffer(
+            string:
+                "POST / HTTP/1.1\r\nHost: example.com\r\n\(invalidHeaderName): \(invalidHeaderValue)\r\ntransfer-encoding: chunked\r\n\r\n"
+        )
+        let toleratedTrailerBytes = ByteBuffer(
+            string:
+                "0\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\(invalidHeaderName): \(invalidHeaderValue)\r\n\r\n"
+        )
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(toleratedRequest)))
         XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.end(headers)))
@@ -537,13 +568,24 @@ final class HTTPHeaderValidationTests: XCTestCase {
         let invalidHeaderValue = "HeaderValueWith\rCR"
 
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: false, withOutboundHeaderValidation: false)
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(
+            withErrorHandling: false,
+            withOutboundHeaderValidation: false
+        )
         try channel.primeForResponse()
 
-        let headers = HTTPHeaders([("Host", "example.com"), ("Transfer-Encoding", "chunked"), (invalidHeaderName, invalidHeaderValue)])
+        let headers = HTTPHeaders([
+            ("Host", "example.com"), ("Transfer-Encoding", "chunked"), (invalidHeaderName, invalidHeaderValue),
+        ])
         let toleratedRequest = HTTPResponseHead(version: .http1_1, status: .ok, headers: headers)
-        let toleratedRequestBytes = ByteBuffer(string: "HTTP/1.1 200 OK\r\nHost: example.com\r\n\(invalidHeaderName): \(invalidHeaderValue)\r\ntransfer-encoding: chunked\r\n\r\n")
-        let toleratedTrailerBytes = ByteBuffer(string: "0\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\(invalidHeaderName): \(invalidHeaderValue)\r\n\r\n")
+        let toleratedRequestBytes = ByteBuffer(
+            string:
+                "HTTP/1.1 200 OK\r\nHost: example.com\r\n\(invalidHeaderName): \(invalidHeaderValue)\r\ntransfer-encoding: chunked\r\n\r\n"
+        )
+        let toleratedTrailerBytes = ByteBuffer(
+            string:
+                "0\r\nHost: example.com\r\nTransfer-Encoding: chunked\r\n\(invalidHeaderName): \(invalidHeaderValue)\r\n\r\n"
+        )
 
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.head(toleratedRequest)))
         XCTAssertNoThrow(try channel.writeOutbound(HTTPServerResponsePart.end(headers)))

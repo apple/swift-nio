@@ -16,7 +16,6 @@
 
 import WinSDK
 
-
 typealias ThreadOpsSystem = ThreadOpsWindows
 enum ThreadOpsWindows: ThreadOps {
     typealias ThreadHandle = HANDLE
@@ -32,7 +31,11 @@ enum ThreadOpsWindows: ThreadOps {
         return string
     }
 
-    static func run(handle: inout ThreadOpsSystem.ThreadHandle?, args: Box<NIOThread.ThreadBoxValue>, detachThread: Bool) {
+    static func run(
+        handle: inout ThreadOpsSystem.ThreadHandle?,
+        args: Box<NIOThread.ThreadBoxValue>,
+        detachThread: Bool
+    ) {
         let argv0 = Unmanaged.passRetained(args).toOpaque()
 
         // FIXME(compnerd) this should use the `stdcall` calling convention
@@ -60,11 +63,11 @@ enum ThreadOpsWindows: ThreadOps {
     }
 
     static func isCurrentThread(_ thread: ThreadOpsSystem.ThreadHandle) -> Bool {
-        return CompareObjectHandles(thread, GetCurrentThread())
+        CompareObjectHandles(thread, GetCurrentThread())
     }
 
     static var currentThread: ThreadOpsSystem.ThreadHandle {
-        return GetCurrentThread()
+        GetCurrentThread()
     }
 
     static func joinThread(_ thread: ThreadOpsSystem.ThreadHandle) {
@@ -73,7 +76,7 @@ enum ThreadOpsWindows: ThreadOps {
     }
 
     static func allocateThreadSpecificValue(destructor: @escaping ThreadSpecificKeyDestructor) -> ThreadSpecificKey {
-        return FlsAlloc(destructor)
+        FlsAlloc(destructor)
     }
 
     static func deallocateThreadSpecificValue(_ key: ThreadSpecificKey) {
@@ -82,7 +85,7 @@ enum ThreadOpsWindows: ThreadOps {
     }
 
     static func getThreadSpecificValue(_ key: ThreadSpecificKey) -> UnsafeMutableRawPointer? {
-        return FlsGetValue(key)
+        FlsGetValue(key)
     }
 
     static func setThreadSpecificValue(key: ThreadSpecificKey, value: UnsafeMutableRawPointer?) {
@@ -90,7 +93,7 @@ enum ThreadOpsWindows: ThreadOps {
     }
 
     static func compareThreads(_ lhs: ThreadOpsSystem.ThreadHandle, _ rhs: ThreadOpsSystem.ThreadHandle) -> Bool {
-        return CompareObjectHandles(lhs, rhs)
+        CompareObjectHandles(lhs, rhs)
     }
 }
 

@@ -12,14 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-/*
- This source file is part of the Swift System open source project
-
- Copyright (c) 2020 Apple Inc. and the Swift System project authors
- Licensed under Apache License v2.0 with Runtime Library Exception
-
- See https://swift.org/LICENSE.txt for license information
- */
+// This source file is part of the Swift System open source project//
+// Copyright (c) 2020 Apple Inc. and the Swift System project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception//
+// See https://swift.org/LICENSE.txt for license information
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
@@ -141,7 +137,7 @@ extension MockingDriver {
 // Check TLS for mocking
 @inline(never)
 private var contextualMockingEnabled: Bool {
-    return currentMockingDriver != nil
+    currentMockingDriver != nil
 }
 
 extension MockingDriver {
@@ -212,7 +208,7 @@ private func mockImpl(syscall name: String, args: [AnyHashable]) -> CInt {
 }
 
 private func reinterpret(_ args: [AnyHashable?]) -> [AnyHashable] {
-    return args.map { arg in
+    args.map { arg in
         switch arg {
         case let charPointer as UnsafePointer<CInterop.PlatformChar>:
             return String(_errorCorrectingPlatformString: charPointer)
@@ -234,14 +230,14 @@ func mock(
     syscall name: String = #function,
     _ args: AnyHashable?...
 ) -> CInt {
-    return mockImpl(syscall: name, args: reinterpret(args))
+    mockImpl(syscall: name, args: reinterpret(args))
 }
 
 func mockInt(
     syscall name: String = #function,
     _ args: AnyHashable?...
 ) -> Int {
-    return Int(mockImpl(syscall: name, args: reinterpret(args)))
+    Int(mockImpl(syscall: name, args: reinterpret(args)))
 }
 
 #endif  // ENABLE_MOCKING
@@ -312,7 +308,7 @@ internal func system_strlen(_ s: UnsafeMutablePointer<CChar>) -> Int {
 
 // strlen for the platform string
 internal func system_platform_strlen(_ s: UnsafePointer<CInterop.PlatformChar>) -> Int {
-    return strlen(s)
+    strlen(s)
 }
 
 // memset for raw buffers
@@ -331,7 +327,7 @@ extension String {
         _ body: (UnsafePointer<CInterop.PlatformChar>) throws -> Result
     ) rethrows -> Result {
         // Need to #if because CChar may be signed
-        return try withCString(body)
+        try withCString(body)
     }
 
     internal init?(_platformString platformString: UnsafePointer<CInterop.PlatformChar>) {
@@ -364,6 +360,6 @@ internal func setTLS(_ key: _PlatformTLSKey, _ p: UnsafeMutableRawPointer?) {
 }
 
 internal func getTLS(_ key: _PlatformTLSKey) -> UnsafeMutableRawPointer? {
-    return pthread_getspecific(key)
+    pthread_getspecific(key)
 }
 #endif

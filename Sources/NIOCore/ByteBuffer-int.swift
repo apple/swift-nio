@@ -14,7 +14,7 @@
 
 extension ByteBuffer {
     @inlinable
-    func _toEndianness<T: FixedWidthInteger> (value: T, endianness: Endianness) -> T {
+    func _toEndianness<T: FixedWidthInteger>(value: T, endianness: Endianness) -> T {
         switch endianness {
         case .little:
             return value.littleEndian
@@ -48,7 +48,11 @@ extension ByteBuffer {
     /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest are not
     ///            readable.
     @inlinable
-    public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
+    public func getInteger<T: FixedWidthInteger>(
+        at index: Int,
+        endianness: Endianness = Endianness.big,
+        as: T.Type = T.self
+    ) -> T? {
         guard let range = self.rangeWithinReadableBytes(index: index, length: MemoryLayout<T>.size) else {
             return nil
         }
@@ -78,9 +82,11 @@ extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     @inlinable
-    public mutating func writeInteger<T: FixedWidthInteger>(_ integer: T,
-                                                            endianness: Endianness = .big,
-                                                            as: T.Type = T.self) -> Int {
+    public mutating func writeInteger<T: FixedWidthInteger>(
+        _ integer: T,
+        endianness: Endianness = .big,
+        as: T.Type = T.self
+    ) -> Int {
         let bytesWritten = self.setInteger(integer, at: self.writerIndex, endianness: endianness)
         self._moveWriterIndex(forwardBy: bytesWritten)
         return Int(bytesWritten)
@@ -96,7 +102,12 @@ extension ByteBuffer {
     /// - returns: The number of bytes written.
     @discardableResult
     @inlinable
-    public mutating func setInteger<T: FixedWidthInteger>(_ integer: T, at index: Int, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
+    public mutating func setInteger<T: FixedWidthInteger>(
+        _ integer: T,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: T.Type = T.self
+    ) -> Int {
         var value = _toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in
             self.setBytes(ptr, at: index)
@@ -166,7 +177,7 @@ public enum Endianness: Sendable {
     public static let host: Endianness = hostEndianness0()
 
     private static func hostEndianness0() -> Endianness {
-        let number: UInt32 = 0x12345678
+        let number: UInt32 = 0x1234_5678
         return number == number.bigEndian ? .big : .little
     }
 
@@ -176,5 +187,3 @@ public enum Endianness: Sendable {
     /// little endian, the least significant byte (LSB) is at the lowest address
     case little
 }
-
-

@@ -147,7 +147,6 @@ extension NIOAsyncChannelHandler: ChannelInboundHandler {
         context.fireChannelInactive()
     }
 
-
     @inlinable
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
@@ -298,7 +297,6 @@ extension NIOAsyncChannelHandler {
     }
 }
 
-
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncChannelHandler {
     @inlinable
@@ -341,7 +339,9 @@ struct NIOAsyncChannelHandlerProducerDelegate: @unchecked Sendable, NIOAsyncSequ
     let _produceMore: () -> Void
 
     @inlinable
-    init<InboundIn, ProducerElement, OutboundOut>(handler: NIOAsyncChannelHandler<InboundIn, ProducerElement, OutboundOut>) {
+    init<InboundIn, ProducerElement, OutboundOut>(
+        handler: NIOAsyncChannelHandler<InboundIn, ProducerElement, OutboundOut>
+    ) {
         self.eventLoop = handler.eventLoop
         self._didTerminate = handler._didTerminate
         self._produceMore = handler._produceMore

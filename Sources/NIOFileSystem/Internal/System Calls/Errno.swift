@@ -89,7 +89,7 @@ public func nothingOrErrno<I: FixedWidthInteger>(
     retryOnInterrupt: Bool = true,
     _ fn: () -> I
 ) -> Result<Void, Errno> {
-    return valueOrErrno(retryOnInterrupt: retryOnInterrupt, fn).map { _ in }
+    valueOrErrno(retryOnInterrupt: retryOnInterrupt, fn).map { _ in }
 }
 
 /// Returns a `Result` representing the value returned from the given closure

@@ -123,5 +123,12 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-    - name: Run format check
-      run: swift format lint --parallel --recursive --strict
+    - name: Mark the workspace as safe
+    # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+    - name: Run format lint check
+      run:  swift format lint --strict --recursive --parallel .
+    - name: Run format and check for modified files
+      run: |
+        swift format format --parallel --recursive --in-place .
+        git diff-index --quiet HEAD

@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
+
 @testable import NIOPosix
 
-class FileRegionTest : XCTestCase {
+class FileRegionTest: XCTestCase {
 
     func testWriteFileRegion() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
@@ -34,19 +35,23 @@ class FileRegionTest : XCTestCase {
 
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().makePromise())
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
 
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!)
-            .wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!)
+                .wait()
+        )
 
         defer {
             XCTAssertNoThrow(try clientChannel.close().wait())
@@ -74,19 +79,23 @@ class FileRegionTest : XCTestCase {
 
         let countingHandler = ByteCountingHandler(numBytes: 0, promise: group.next().makePromise())
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
 
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!)
-            .wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!)
+                .wait()
+        )
 
         defer {
             XCTAssertNoThrow(try clientChannel.close().wait())
@@ -105,7 +114,9 @@ class FileRegionTest : XCTestCase {
                 futures.append(clientChannel.write(NIOAny(fr)))
             }
             try clientChannel.writeAndFlush(NIOAny(fr)).wait()
-            try futures.forEach { try $0.wait() }
+            for future in futures {
+                try future.wait()
+            }
         }
     }
 
@@ -125,19 +136,23 @@ class FileRegionTest : XCTestCase {
 
         let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().makePromise())
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
 
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!)
-            .wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!)
+                .wait()
+        )
 
         defer {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
@@ -153,15 +168,17 @@ class FileRegionTest : XCTestCase {
                 XCTAssertNoThrow(try fh2.close())
             }
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
-            XCTAssertThrowsError(try clientChannel.writeAndFlush(NIOAny(fr1)).flatMap { () -> EventLoopFuture<Void> in
-                let frFuture = clientChannel.write(NIOAny(fr2))
-                var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
-                buffer.writeBytes(bytes)
-                let bbFuture = clientChannel.write(NIOAny(buffer))
-                clientChannel.close(promise: nil)
-                clientChannel.flush()
-                return frFuture.flatMap { bbFuture }
-            }.wait()) { error in
+            XCTAssertThrowsError(
+                try clientChannel.writeAndFlush(NIOAny(fr1)).flatMap { () -> EventLoopFuture<Void> in
+                    let frFuture = clientChannel.write(NIOAny(fr2))
+                    var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
+                    buffer.writeBytes(bytes)
+                    let bbFuture = clientChannel.write(NIOAny(buffer))
+                    clientChannel.close(promise: nil)
+                    clientChannel.flush()
+                    return frFuture.flatMap { bbFuture }
+                }.wait()
+            ) { error in
                 XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
             }
 
@@ -273,10 +290,15 @@ class FileRegionTest : XCTestCase {
         XCTAssertLessThanOrEqual(MemoryLayout<FileRegion>.size, 23)
         XCTAssertLessThanOrEqual(MemoryLayout<Level1>.size, 24)
 
-        XCTAssertNoThrow(try withTemporaryFile(content: "0123456789") { fh, path in
-            let fr = try FileRegion(fileHandle: fh)
-            XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case2(.case3(.case4(.fileRegion(fr)))))), 24)
-            XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case3(.case4(.case1(fr))))), 24)
-        })
+        XCTAssertNoThrow(
+            try withTemporaryFile(content: "0123456789") { fh, path in
+                let fr = try FileRegion(fileHandle: fh)
+                XCTAssertLessThanOrEqual(
+                    MemoryLayout.size(ofValue: Level1.case1(.case2(.case3(.case4(.fileRegion(fr)))))),
+                    24
+                )
+                XCTAssertLessThanOrEqual(MemoryLayout.size(ofValue: Level1.case1(.case3(.case4(.case1(fr))))), 24)
+            }
+        )
     }
 }

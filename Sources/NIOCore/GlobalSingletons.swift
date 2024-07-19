@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+
 #if canImport(Darwin)
 import Darwin
 #elseif os(Windows)
@@ -49,8 +50,10 @@ extension NIOSingletons {
         }
 
         get {
-            return Self.getTrustworthyThreadCount(rawStorage: globalRawSuggestedLoopCount,
-                                                  environmentVariable: "NIO_SINGLETON_GROUP_LOOP_COUNT")
+            Self.getTrustworthyThreadCount(
+                rawStorage: globalRawSuggestedLoopCount,
+                environmentVariable: "NIO_SINGLETON_GROUP_LOOP_COUNT"
+            )
         }
     }
 
@@ -67,8 +70,10 @@ extension NIOSingletons {
         }
 
         get {
-            return Self.getTrustworthyThreadCount(rawStorage: globalRawSuggestedBlockingThreadCount,
-                                                  environmentVariable: "NIO_SINGLETON_BLOCKING_POOL_THREAD_COUNT")
+            Self.getTrustworthyThreadCount(
+                rawStorage: globalRawSuggestedBlockingThreadCount,
+                environmentVariable: "NIO_SINGLETON_BLOCKING_POOL_THREAD_COUNT"
+            )
         }
     }
 
@@ -79,9 +84,11 @@ extension NIOSingletons {
     /// - note: This value must be set _before_ any singletons are used and must only be set once.
     public static var singletonsEnabledSuggestion: Bool {
         get {
-            let (exchanged, original) = globalRawSingletonsEnabled.compareExchange(expected: 0,
-                                                                                   desired: 1,
-                                                                                   ordering: .relaxed)
+            let (exchanged, original) = globalRawSingletonsEnabled.compareExchange(
+                expected: 0,
+                desired: 1,
+                ordering: .relaxed
+            )
             if exchanged {
                 // Never been set, we're committing to the default (enabled).
                 assert(original == 0)
@@ -96,15 +103,19 @@ extension NIOSingletons {
 
         set {
             let intRepresentation = newValue ? 1 : -1
-            let (exchanged, _) = globalRawSingletonsEnabled.compareExchange(expected: 0,
-                                                                            desired: intRepresentation,
-                                                                            ordering: .relaxed)
+            let (exchanged, _) = globalRawSingletonsEnabled.compareExchange(
+                expected: 0,
+                desired: intRepresentation,
+                ordering: .relaxed
+            )
             guard exchanged else {
-                fatalError("""
-                           Bug in user code: Global singleton enabled suggestion has been changed after \
-                           user or has been changed more than once. Either is an error, you must set this value very \
-                           early and only once.
-                           """)
+                fatalError(
+                    """
+                    Bug in user code: Global singleton enabled suggestion has been changed after \
+                    user or has been changed more than once. Either is an error, you must set this value very \
+                    early and only once.
+                    """
+                )
             }
         }
     }
@@ -124,19 +135,25 @@ extension NIOSingletons {
         // to 5.
         let (exchanged, _) = rawStorage.compareExchange(expected: 0, desired: -userValue, ordering: .relaxed)
         guard exchanged else {
-            fatalError("""
-                       Bug in user code: Global singleton suggested loop/thread count has been changed after \
-                       user or has been changed more than once. Either is an error, you must set this value very early \
-                       and only once.
-                       """)
+            fatalError(
+                """
+                Bug in user code: Global singleton suggested loop/thread count has been changed after \
+                user or has been changed more than once. Either is an error, you must set this value very early \
+                and only once.
+                """
+            )
         }
     }
 
     private static func validateTrustedThreadCount(_ threadCount: Int) {
-        assert(threadCount > 0,
-               "BUG IN NIO, please report: negative suggested loop/thread count: \(threadCount)")
-        assert(threadCount <= 1024,
-               "BUG IN NIO, please report: overly big suggested loop/thread count: \(threadCount)")
+        assert(
+            threadCount > 0,
+            "BUG IN NIO, please report: negative suggested loop/thread count: \(threadCount)"
+        )
+        assert(
+            threadCount <= 1024,
+            "BUG IN NIO, please report: overly big suggested loop/thread count: \(threadCount)"
+        )
     }
 
     private static func getTrustworthyThreadCount(rawStorage: ManagedAtomic<Int>, environmentVariable: String) -> Int {
@@ -144,15 +161,15 @@ extension NIOSingletons {
 
         let rawSuggestion = rawStorage.load(ordering: .relaxed)
         switch rawSuggestion {
-        case 0: // == 0
+        case 0:  // == 0
             // Not set by user, not yet finalised, let's try to get it from the env var and fall back to
             // `System.coreCount`.
             let envVarString = getenv(environmentVariable).map { String(cString: $0) }
             returnedValueUnchecked = envVarString.flatMap(Int.init) ?? System.coreCount
-        case .min ..< 0: // < 0
+        case .min..<0:  // < 0
             // Untrusted and unchecked user value. Let's invert and then sanitise/check.
             returnedValueUnchecked = -rawSuggestion
-        case 1 ... .max: // > 0
+        case 1 ... .max:  // > 0
             // Trustworthy value that has been evaluated and sanitised before.
             let returnValue = rawSuggestion
             Self.validateTrustedThreadCount(returnValue)
@@ -167,9 +184,11 @@ extension NIOSingletons {
         Self.validateTrustedThreadCount(returnValue)
 
         // Store it for next time.
-        let (exchanged, _) = rawStorage.compareExchange(expected: rawSuggestion,
-                                                        desired: returnValue,
-                                                        ordering: .relaxed)
+        let (exchanged, _) = rawStorage.compareExchange(
+            expected: rawSuggestion,
+            desired: returnValue,
+            ordering: .relaxed
+        )
         if !exchanged {
             // We lost the race, this must mean it has been concurrently set correctly so we can safely recurse
             // and try again.

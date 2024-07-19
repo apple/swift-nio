@@ -48,15 +48,19 @@ protocol SocketProtocol: BaseSocketProtocol {
 
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
 
-    func recvmsg(pointer: UnsafeMutableRawBufferPointer,
-                 storage: inout sockaddr_storage,
-                 storageLen: inout socklen_t,
-                 controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int>
+    func recvmsg(
+        pointer: UnsafeMutableRawBufferPointer,
+        storage: inout sockaddr_storage,
+        storageLen: inout socklen_t,
+        controlBytes: inout UnsafeReceivedControlBytes
+    ) throws -> IOResult<Int>
 
-    func sendmsg(pointer: UnsafeRawBufferPointer,
-                 destinationPtr: UnsafePointer<sockaddr>?,
-                 destinationSize: socklen_t,
-                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
+    func sendmsg(
+        pointer: UnsafeRawBufferPointer,
+        destinationPtr: UnsafePointer<sockaddr>?,
+        destinationSize: socklen_t,
+        controlBytes: UnsafeMutableRawBufferPointer
+    ) throws -> IOResult<Int>
 
     func sendFile(fd: CInt, offset: Int, count: Int) throws -> IOResult<Int>
 
@@ -72,7 +76,7 @@ protocol SocketProtocol: BaseSocketProtocol {
 #if os(Linux) || os(Android)
 // This is a lazily initialised global variable that when read for the first time, will ignore SIGPIPE.
 private let globallyIgnoredSIGPIPE: Bool = {
-    /* no F_SETNOSIGPIPE on Linux :( */
+    // no F_SETNOSIGPIPE on Linux :(
     #if canImport(Glibc)
     _ = Glibc.signal(SIGPIPE, SIG_IGN)
     #elseif canImport(Musl)
@@ -99,7 +103,7 @@ extension BaseSocketProtocol {
         do {
             try Posix.fcntl(descriptor: fd, command: F_SETNOSIGPIPE, value: 1)
         } catch let error as IOError {
-            try? Posix.close(descriptor: fd) // don't care about failure here
+            try? Posix.close(descriptor: fd)  // don't care about failure here
             if error.errnoCode == EINVAL {
                 // Darwin seems to sometimes do this despite the docs claiming it can't happen
                 throw NIOFcntlFailedError()
@@ -113,7 +117,7 @@ extension BaseSocketProtocol {
         #if os(Windows)
         // Deliberately empty: SIGPIPE just ain't a thing on Windows
         #else
-            try ignoreSIGPIPE(descriptor: handle)
+        try ignoreSIGPIPE(descriptor: handle)
         #endif
     }
 }

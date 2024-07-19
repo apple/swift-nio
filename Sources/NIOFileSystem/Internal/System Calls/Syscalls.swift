@@ -367,21 +367,21 @@ internal func system_futimens(
 internal func libc_fdopendir(
     _ fd: FileDescriptor.RawValue
 ) -> CInterop.DirPointer {
-    return fdopendir(fd)!
+    fdopendir(fd)!
 }
 
 /// readdir(3): Returns a pointer to the next directory entry
 internal func libc_readdir(
     _ dir: CInterop.DirPointer
 ) -> UnsafeMutablePointer<CInterop.DirEnt>? {
-    return readdir(dir)
+    readdir(dir)
 }
 
 /// readdir(3): Closes the directory stream and frees associated structures
 internal func libc_closedir(
     _ dir: CInterop.DirPointer
 ) -> CInt {
-    return closedir(dir)
+    closedir(dir)
 }
 
 /// remove(3): Remove directory entry
@@ -418,7 +418,7 @@ internal func libc_getcwd(
     _ buffer: UnsafeMutablePointer<CInterop.PlatformChar>,
     _ size: Int
 ) -> UnsafeMutablePointer<CInterop.PlatformChar>? {
-    return getcwd(buffer, size)
+    getcwd(buffer, size)
 }
 
 /// confstr(3)
@@ -428,7 +428,7 @@ internal func libc_confstr(
     _ buffer: UnsafeMutablePointer<CInterop.PlatformChar>,
     _ size: Int
 ) -> Int {
-    return confstr(name, buffer, size)
+    confstr(name, buffer, size)
 }
 #endif
 
@@ -438,14 +438,14 @@ internal func libc_fts_open(
     _ path: [UnsafeMutablePointer<CInterop.PlatformChar>],
     _ options: CInt
 ) -> UnsafeMutablePointer<CInterop.FTS> {
-    return fts_open(path, options, nil)!
+    fts_open(path, options, nil)!
 }
 #else
 internal func libc_fts_open(
     _ path: [UnsafeMutablePointer<CInterop.PlatformChar>?],
     _ options: CInt
 ) -> UnsafeMutablePointer<CInterop.FTS> {
-    return fts_open(path, options, nil)
+    fts_open(path, options, nil)
 }
 #endif
 
@@ -453,13 +453,13 @@ internal func libc_fts_open(
 internal func libc_fts_read(
     _ fts: UnsafeMutablePointer<CInterop.FTS>
 ) -> UnsafeMutablePointer<CInterop.FTSEnt>? {
-    return fts_read(fts)
+    fts_read(fts)
 }
 
 /// fts(3)
 internal func libc_fts_close(
     _ fts: UnsafeMutablePointer<CInterop.FTS>
 ) -> CInt {
-    return fts_close(fts)
+    fts_close(fts)
 }
 #endif

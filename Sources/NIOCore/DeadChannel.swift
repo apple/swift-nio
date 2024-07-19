@@ -80,7 +80,7 @@ internal final class DeadChannel: Channel, @unchecked Sendable {
     let pipeline: ChannelPipeline
 
     public var closeFuture: EventLoopFuture<Void> {
-        return self.eventLoop.makeSucceededFuture(())
+        self.eventLoop.makeSucceededFuture(())
     }
 
     internal init(pipeline: ChannelPipeline) {
@@ -90,25 +90,25 @@ internal final class DeadChannel: Channel, @unchecked Sendable {
 
     // This is `Channel` API so must be thread-safe.
     var allocator: ByteBufferAllocator {
-        return ByteBufferAllocator()
+        ByteBufferAllocator()
     }
 
     var localAddress: SocketAddress? {
-        return nil
+        nil
     }
 
     var remoteAddress: SocketAddress? {
-        return nil
+        nil
     }
 
     let parent: Channel? = nil
 
     func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
-        return self.pipeline.eventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
+        self.pipeline.eventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
     }
 
     func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
-        return eventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
+        eventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
     }
 
     let isWritable = false

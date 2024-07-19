@@ -10,7 +10,6 @@ jobs:
     uses: ./.github/workflows/pull_request_soundness.yml
     with:
       license_header_check_project_name: "SwiftNIO"
-      format_check_enabled: false
 
   call-pull-request-unit-tests-workflow:
     name: Unit tests

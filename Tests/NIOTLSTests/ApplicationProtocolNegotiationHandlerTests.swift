@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOTLS
 import NIOTestUtils
+import XCTest
 
 private class ReadCompletedHandler: ChannelInboundHandler {
     public typealias InboundIn = Any

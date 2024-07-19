@@ -14,7 +14,7 @@
 import NIOCore
 import XCTest
 
-fileprivate struct TestCase {
+private struct TestCase {
     var buffers: [[UInt8]]
     var file: StaticString
     var line: UInt
@@ -30,7 +30,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
     func testAsyncSequenceCollect() async throws {
         let testCases = [
             TestCase([
-                [],
+                []
             ]),
             TestCase([
                 [],
@@ -74,7 +74,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 [],
             ]),
             TestCase([
-                Array(0..<10),
+                Array(0..<10)
             ]),
             TestCase([
                 Array(0..<10),

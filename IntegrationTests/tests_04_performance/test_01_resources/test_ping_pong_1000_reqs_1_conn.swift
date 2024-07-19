@@ -35,8 +35,12 @@ private final class PongDecoder: ByteToMessageDecoder {
         }
     }
 
-    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-        return .needMoreData
+    public func decodeLast(
+        context: ChannelHandlerContext,
+        buffer: inout ByteBuffer,
+        seenEOF: Bool
+    ) throws -> DecodingState {
+        .needMoreData
     }
 }
 
@@ -69,9 +73,8 @@ private final class PingHandler: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buf = Self.unwrapInboundIn(data)
-        if buf.readableBytes == 1 &&
-            buf.readInteger(as: UInt8.self) == PongHandler.pongCode {
+        var buf = self.unwrapInboundIn(data)
+        if buf.readableBytes == 1 && buf.readInteger(as: UInt8.self) == PongHandler.pongCode {
             if self.remainingNumberOfRequests > 0 {
                 self.remainingNumberOfRequests -= 1
                 context.writeAndFlush(Self.wrapOutboundOut(self.pingBuffer), promise: nil)

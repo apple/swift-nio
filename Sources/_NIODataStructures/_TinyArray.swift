@@ -52,7 +52,7 @@ extension _TinyArray: RandomAccessCollection {
 
     @inlinable
     public func makeIterator() -> Iterator {
-        return Iterator(storage: self.storage)
+        Iterator(storage: self.storage)
     }
 
     public struct Iterator: IteratorProtocol {

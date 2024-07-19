@@ -92,7 +92,7 @@ final class TCPThroughputBenchmark: Benchmark {
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             self.messagesReceived += 1
 
-            if (self.expectedMessages == self.messagesReceived) {
+            if self.expectedMessages == self.messagesReceived {
                 let promise = self.completionPromise
 
                 self.messagesReceived = 0
@@ -133,9 +133,9 @@ final class TCPThroughputBenchmark: Benchmark {
             .wait()
 
         var message = self.serverChannel.allocator.buffer(capacity: self.messageSize)
-        message.writeInteger(UInt16(messageSize), as:UInt16.self)
+        message.writeInteger(UInt16(messageSize), as: UInt16.self)
         for idx in 0..<(self.messageSize - MemoryLayout<UInt16>.stride) {
-            message.writeInteger(UInt8(truncatingIfNeeded: idx), endianness:.little, as:UInt8.self)
+            message.writeInteger(UInt8(truncatingIfNeeded: idx), endianness: .little, as: UInt8.self)
         }
         self.message = message
 
@@ -154,7 +154,10 @@ final class TCPThroughputBenchmark: Benchmark {
         let expectedMessages = self.messages
 
         try clientChannel.eventLoop.submit {
-            try clientChannel.pipeline.syncOperations.handler(type: ClientHandler.self).prepareRun(expectedMessages: expectedMessages, promise: isDonePromise)
+            try clientChannel.pipeline.syncOperations.handler(type: ClientHandler.self).prepareRun(
+                expectedMessages: expectedMessages,
+                promise: isDonePromise
+            )
         }.wait()
 
         let serverHandler = self.serverHandler!

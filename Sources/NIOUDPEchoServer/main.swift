@@ -55,10 +55,13 @@ defer {
     try! group.syncShutdownGracefully()
 }
 
-var arguments = CommandLine.arguments.dropFirst(0) // just to get an ArraySlice<String> from [String]
+var arguments = CommandLine.arguments.dropFirst(0)  // just to get an ArraySlice<String> from [String]
 if arguments.dropFirst().first == .some("--enable-gathering-reads") {
     bootstrap = bootstrap.channelOption(ChannelOptions.datagramVectorReadMessageCount, value: 30)
-    bootstrap = bootstrap.channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 30 * 2048))
+    bootstrap = bootstrap.channelOption(
+        ChannelOptions.recvAllocator,
+        value: FixedSizeRecvByteBufferAllocator(capacity: 30 * 2048)
+    )
     arguments = arguments.dropFirst()
 }
 let arg1 = arguments.dropFirst().first
@@ -74,14 +77,14 @@ enum BindTo {
 
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
-    /* we got two arguments, let's interpret that as host and port */
+case (.some(let h), _, .some(let p)):
+    // we got two arguments, let's interpret that as host and port
     bindTarget = .ip(host: h, port: p)
 case (.some(let portString), .none, _):
-    /* couldn't parse as number, expecting unix domain socket path */
+    // couldn't parse as number, expecting unix domain socket path
     bindTarget = .unixDomainSocket(path: portString)
 case (_, .some(let p), _):
-    /* only one argument --> port */
+    // only one argument --> port
     bindTarget = .ip(host: defaultHost, port: p)
 default:
     bindTarget = .ip(host: defaultHost, port: defaultPort)
@@ -94,7 +97,7 @@ let channel = try { () -> Channel in
     case .unixDomainSocket(let path):
         return try bootstrap.bind(unixDomainSocketPath: path).wait()
     }
-    }()
+}()
 
 print("Server started and listening on \(channel.localAddress!)")
 

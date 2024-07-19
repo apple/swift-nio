@@ -34,61 +34,61 @@ typealias LockPrimitive = pthread_mutex_t
 #endif
 
 @usableFromInline
-enum LockOperations { }
+enum LockOperations {}
 
 extension LockOperations {
     @inlinable
     static func create(_ mutex: UnsafeMutablePointer<LockPrimitive>) {
         mutex.assertValidAlignment()
 
-#if os(Windows)
+        #if os(Windows)
         InitializeSRWLock(mutex)
-#else
+        #else
         var attr = pthread_mutexattr_t()
         pthread_mutexattr_init(&attr)
         debugOnly {
             pthread_mutexattr_settype(&attr, .init(PTHREAD_MUTEX_ERRORCHECK))
         }
-        
+
         let err = pthread_mutex_init(mutex, &attr)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-#endif
+        #endif
     }
-    
+
     @inlinable
     static func destroy(_ mutex: UnsafeMutablePointer<LockPrimitive>) {
         mutex.assertValidAlignment()
 
-#if os(Windows)
+        #if os(Windows)
         // SRWLOCK does not need to be free'd
-#else
+        #else
         let err = pthread_mutex_destroy(mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-#endif
+        #endif
     }
-    
+
     @inlinable
     static func lock(_ mutex: UnsafeMutablePointer<LockPrimitive>) {
         mutex.assertValidAlignment()
 
-#if os(Windows)
+        #if os(Windows)
         AcquireSRWLockExclusive(mutex)
-#else
+        #else
         let err = pthread_mutex_lock(mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-#endif
+        #endif
     }
-    
+
     @inlinable
     static func unlock(_ mutex: UnsafeMutablePointer<LockPrimitive>) {
         mutex.assertValidAlignment()
 
-#if os(Windows)
+        #if os(Windows)
         ReleaseSRWLockExclusive(mutex)
-#else
+        #else
         let err = pthread_mutex_unlock(mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
-#endif
+        #endif
     }
 }
 
@@ -122,49 +122,49 @@ extension LockOperations {
 // See also: https://github.com/apple/swift/pull/40000
 @usableFromInline
 final class LockStorage<Value>: ManagedBuffer<Value, LockPrimitive> {
-    
+
     @inlinable
     static func create(value: Value) -> Self {
         let buffer = Self.create(minimumCapacity: 1) { _ in
-            return value
+            value
         }
         let storage = unsafeDowncast(buffer, to: Self.self)
-        
+
         storage.withUnsafeMutablePointers { _, lockPtr in
             LockOperations.create(lockPtr)
         }
-        
+
         return storage
     }
-    
+
     @inlinable
     func lock() {
         self.withUnsafeMutablePointerToElements { lockPtr in
             LockOperations.lock(lockPtr)
         }
     }
-    
+
     @inlinable
     func unlock() {
         self.withUnsafeMutablePointerToElements { lockPtr in
             LockOperations.unlock(lockPtr)
         }
     }
-    
+
     @inlinable
     deinit {
         self.withUnsafeMutablePointerToElements { lockPtr in
             LockOperations.destroy(lockPtr)
         }
     }
-    
+
     @inlinable
     func withLockPrimitive<T>(_ body: (UnsafeMutablePointer<LockPrimitive>) throws -> T) rethrows -> T {
         try self.withUnsafeMutablePointerToElements { lockPtr in
-            return try body(lockPtr)
+            try body(lockPtr)
         }
     }
-    
+
     @inlinable
     func withLockedValue<T>(_ mutate: (inout Value) throws -> T) rethrows -> T {
         try self.withUnsafeMutablePointers { valuePtr, lockPtr in
@@ -175,7 +175,7 @@ final class LockStorage<Value>: ManagedBuffer<Value, LockPrimitive> {
     }
 }
 
-extension LockStorage: @unchecked Sendable { }
+extension LockStorage: @unchecked Sendable {}
 
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///
@@ -188,7 +188,7 @@ extension LockStorage: @unchecked Sendable { }
 public struct NIOLock {
     @usableFromInline
     internal let _storage: LockStorage<Void>
-    
+
     /// Create a new lock.
     @inlinable
     public init() {
@@ -215,7 +215,7 @@ public struct NIOLock {
 
     @inlinable
     internal func withLockPrimitive<T>(_ body: (UnsafeMutablePointer<LockPrimitive>) throws -> T) rethrows -> T {
-        return try self._storage.withLockPrimitive(body)
+        try self._storage.withLockPrimitive(body)
     }
 }
 
@@ -238,7 +238,7 @@ extension NIOLock {
     }
 
     @inlinable
-    public func withLockVoid(_ body: () throws -> Void) rethrows -> Void {
+    public func withLockVoid(_ body: () throws -> Void) rethrows {
         try self.withLock(body)
     }
 }
