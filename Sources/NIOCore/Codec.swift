@@ -828,7 +828,7 @@ extension MessageToByteHandler {
     public func flush(context: ChannelHandlerContext) {
         context.flush()
         if let desiredBufferCapacity {
-            self.buffer?.clampBufferCapacity(to: desiredBufferCapacity)
+            self.buffer?.shrinkBufferCapacity(to: desiredBufferCapacity)
         }
     }
 }

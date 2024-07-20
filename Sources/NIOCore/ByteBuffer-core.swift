@@ -324,12 +324,6 @@ public struct ByteBuffer {
             self.bytes = ptr
             self.capacity = newCapacity
         }
-        
-        @inlinable
-        func clampStorage(to capacity: Int) {
-            self.bytes.copyMemory(from: self.bytes, byteCount: capacity)
-            self.capacity = _toCapacity(capacity)
-        }
 
         private func deallocate() {
             self.allocator.free(self.bytes)
@@ -832,23 +826,20 @@ public struct ByteBuffer {
         return true
     }
     
-    /// Clamps the buffers capacity to the larger of two values, the `desiredCapacity` or the buffer's `readableBytes`.
+    /// Shrinks the buffers capacity to a `desiredCapacity` without altering readably bytes.
     ///
-    /// - Parameter desiredCapacity: The desired capacity for the buffers capacity to be clamped to
-    /// - returns: `true` if one or more bytes have been discarded, `false` if there are no bytes to discard.
+    /// - Parameter desiredCapacity: The desired capacity for the buffers capacity to be shrunken to
+    /// - Returns: Bool indicating whether the buffer capacity has been shrunk to the desiredCapacity.
     @inlinable
-    @discardableResult public mutating func clampBufferCapacity(to desiredCapacity: Int) -> Bool {
-        let maxRetainedCapacity = max(self.readableBytes, desiredCapacity)
-        guard maxRetainedCapacity < capacity else {
+    @discardableResult public mutating func shrinkBufferCapacity(to desiredCapacity: Int) -> Bool {
+        guard desiredCapacity < capacity, desiredCapacity > readableBytes else {
             return false
         }
         
-        if isKnownUniquelyReferenced(&self._storage) {
-            self._storage.clampStorage(to: maxRetainedCapacity)
-            self._slice = self._storage.fullSlice
-        } else {
-            self._copyStorageAndRebase(capacity: _toCapacity(maxRetainedCapacity), resetIndices: false)
-        }
+        let shrunkenCapacity = _toCapacity(desiredCapacity)
+        self._storage = self._storage.reallocSlice(self._slice.lowerBound..<self._slice.lowerBound + shrunkenCapacity, capacity: shrunkenCapacity)
+        self._slice = self._storage.fullSlice
+
         return true
     }
 

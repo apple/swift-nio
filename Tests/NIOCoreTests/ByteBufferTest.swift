@@ -1838,33 +1838,36 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0, buffer2.readableBytes)
     }
     
-    func testRestoreBufferCapacity() {
+    func testShrinkBufferCapacity() {
         let desiredCapacity = 1024
         var buffer = self.allocator.buffer(capacity: 512)
         
-        // If readable capacity and desired capacity are less than or equal to buffer capacity, should not clamp
+        // For any item, it should not shrink buffer capacity to a value larger than the current buffer capacity
+        buffer.clear()
+        buffer.writeString("Any item")
+        XCTAssertFalse(buffer.shrinkBufferCapacity(to: 2048))
+        XCTAssertEqual(buffer.capacity, 512)
+        
+        // If desired capacity are less than or equal to buffer capacity, should not shrink
         buffer.clear()
         buffer.writeString(String(repeating: "x", count: desiredCapacity))
         XCTAssertEqual(buffer.capacity, 1024) // Before
-        XCTAssertFalse(buffer.clampBufferCapacity(to: desiredCapacity))
+        XCTAssertFalse(buffer.shrinkBufferCapacity(to: desiredCapacity))
         XCTAssertEqual(buffer.capacity, 1024) // After
         
-        // If readable capacity is greater less than to buffer capacity, should clamp to readable bytes
+        // If desiredCapacity is less than readable bytes, do not shrink
         buffer.clear()
         buffer.writeString(String(repeating: "x", count: desiredCapacity + 1))
-        XCTAssertTrue(buffer.clampBufferCapacity(to: desiredCapacity))
-        XCTAssertEqual(buffer.capacity, 1025)
+        XCTAssertEqual(buffer.capacity, 2048)
+        XCTAssertFalse(buffer.shrinkBufferCapacity(to: desiredCapacity))
+        XCTAssertEqual(buffer.capacity, 2048)
         
-        // If desiredCapacity capacity is less than buffer capacity and larger than readable bytes, should clamp to desiredCapacity bytes
+        // If desired capacity is greater than the readable bytes and less than buffer capacity, should shrink to desiredCapacity.nextPowerOf2Clamp
+        // Where desiredCapacity.nextPowerOf2Clamp == desiredCapacity as desiredCapacity should already be a power of 2 value
         buffer.clear()
-        buffer.writeString(String(repeating: "x", count: 512))
-        XCTAssertTrue(buffer.clampBufferCapacity(to: desiredCapacity))
-        XCTAssertEqual(buffer.capacity, 1024)
-
-        // For any item, it should not clamp buffer capacity to a value larger than the current buffer capacity
-        buffer.clear()
-        buffer.writeString("Any item")
-        XCTAssertFalse(buffer.clampBufferCapacity(to: 2048))
+        buffer.writeString(String(repeating: "x", count: desiredCapacity - 1))
+        XCTAssertEqual(buffer.capacity, 2048)
+        XCTAssertTrue(buffer.shrinkBufferCapacity(to: desiredCapacity))
         XCTAssertEqual(buffer.capacity, 1024)
     }
 
