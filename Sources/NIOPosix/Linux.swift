@@ -80,20 +80,24 @@ internal enum Epoll {
     internal static let EPOLL_CTL_MOD: CInt = numericCast(CNIOLinux.EPOLL_CTL_MOD)
     internal static let EPOLL_CTL_DEL: CInt = numericCast(CNIOLinux.EPOLL_CTL_DEL)
 
-    #if os(Android)
+    #if canImport(Android) || canImport(Musl)
+    internal static let EPOLLIN: CUnsignedInt = numericCast(CNIOLinux.EPOLLIN)
+    internal static let EPOLLOUT: CUnsignedInt = numericCast(CNIOLinux.EPOLLOUT)
+    internal static let EPOLLERR: CUnsignedInt = numericCast(CNIOLinux.EPOLLERR)
+    internal static let EPOLLRDHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLRDHUP)
+    internal static let EPOLLHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLHUP)
+    #if canImport(Android)
+    internal static let EPOLLET: CUnsignedInt = 2_147_483_648  // C macro not imported by ClangImporter
+    #else
+    internal static let EPOLLET: CUnsignedInt = numericCast(CNIOLinux.EPOLLET)
+    #endif
+    #elseif os(Android)
     internal static let EPOLLIN: CUnsignedInt = 1  //numericCast(CNIOLinux.EPOLLIN)
     internal static let EPOLLOUT: CUnsignedInt = 4  //numericCast(CNIOLinux.EPOLLOUT)
     internal static let EPOLLERR: CUnsignedInt = 8  // numericCast(CNIOLinux.EPOLLERR)
     internal static let EPOLLRDHUP: CUnsignedInt = 8192  //numericCast(CNIOLinux.EPOLLRDHUP)
     internal static let EPOLLHUP: CUnsignedInt = 16  //numericCast(CNIOLinux.EPOLLHUP)
     internal static let EPOLLET: CUnsignedInt = 2_147_483_648  //numericCast(CNIOLinux.EPOLLET)
-    #elseif canImport(Musl)
-    internal static let EPOLLIN: CUnsignedInt = numericCast(CNIOLinux.EPOLLIN)
-    internal static let EPOLLOUT: CUnsignedInt = numericCast(CNIOLinux.EPOLLOUT)
-    internal static let EPOLLERR: CUnsignedInt = numericCast(CNIOLinux.EPOLLERR)
-    internal static let EPOLLRDHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLRDHUP)
-    internal static let EPOLLHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLHUP)
-    internal static let EPOLLET: CUnsignedInt = numericCast(CNIOLinux.EPOLLET)
     #else
     internal static let EPOLLIN: CUnsignedInt = numericCast(CNIOLinux.EPOLLIN.rawValue)
     internal static let EPOLLOUT: CUnsignedInt = numericCast(CNIOLinux.EPOLLOUT.rawValue)
@@ -140,8 +144,13 @@ internal enum Epoll {
 
 internal enum Linux {
     #if os(Android)
+    #if compiler(>=6.0)
+    static let SOCK_CLOEXEC = Android.SOCK_CLOEXEC
+    static let SOCK_NONBLOCK = Android.SOCK_NONBLOCK
+    #else
     static let SOCK_CLOEXEC = Glibc.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Glibc.SOCK_NONBLOCK
+    #endif
     #elseif canImport(Musl)
     static let SOCK_CLOEXEC = Musl.SOCK_CLOEXEC
     static let SOCK_NONBLOCK = Musl.SOCK_NONBLOCK

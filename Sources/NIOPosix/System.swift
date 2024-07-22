@@ -26,6 +26,8 @@ internal typealias MMsgHdr = CNIODarwin_mmsghdr
 @_exported import Glibc
 #elseif canImport(Musl)
 @_exported import Musl
+#elseif canImport(Android)
+@_exported import Android
 #endif
 import CNIOLinux
 internal typealias MMsgHdr = CNIOLinux_mmsghdr
@@ -42,9 +44,15 @@ internal typealias MMsgHdr = CNIOWindows_mmsghdr
 
 #if os(Android)
 let INADDR_ANY = UInt32(0)  // #define INADDR_ANY ((unsigned long int) 0x00000000)
+#if compiler(>=6.0)
+let IFF_BROADCAST: CUnsignedInt = numericCast(Android.IFF_BROADCAST.rawValue)
+let IFF_POINTOPOINT: CUnsignedInt = numericCast(Android.IFF_POINTOPOINT.rawValue)
+let IFF_MULTICAST: CUnsignedInt = numericCast(Android.IFF_MULTICAST.rawValue)
+#else
 let IFF_BROADCAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_BROADCAST.rawValue)
 let IFF_POINTOPOINT: CUnsignedInt = numericCast(SwiftGlibc.IFF_POINTOPOINT.rawValue)
 let IFF_MULTICAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_MULTICAST.rawValue)
+#endif
 internal typealias in_port_t = UInt16
 extension ipv6_mreq {  // http://lkml.iu.edu/hypermail/linux/kernel/0106.1/0080.html
     init(ipv6mr_multiaddr: in6_addr, ipv6mr_interface: UInt32) {
@@ -55,12 +63,21 @@ extension ipv6_mreq {  // http://lkml.iu.edu/hypermail/linux/kernel/0106.1/0080.
     }
 }
 #if arch(arm)
+#if compiler(>=6.0)
+let S_IFSOCK = UInt32(Android.S_IFSOCK)
+let S_IFMT = UInt32(Android.S_IFMT)
+let S_IFREG = UInt32(Android.S_IFREG)
+let S_IFDIR = UInt32(Android.S_IFDIR)
+let S_IFLNK = UInt32(Android.S_IFLNK)
+let S_IFBLK = UInt32(Android.S_IFBLK)
+#else
 let S_IFSOCK = UInt32(SwiftGlibc.S_IFSOCK)
 let S_IFMT = UInt32(SwiftGlibc.S_IFMT)
 let S_IFREG = UInt32(SwiftGlibc.S_IFREG)
 let S_IFDIR = UInt32(SwiftGlibc.S_IFDIR)
 let S_IFLNK = UInt32(SwiftGlibc.S_IFLNK)
 let S_IFBLK = UInt32(SwiftGlibc.S_IFBLK)
+#endif
 #endif
 #endif
 
@@ -421,6 +438,11 @@ internal enum Posix {
     static let SHUT_RD: CInt = CInt(Musl.SHUT_RD)
     static let SHUT_WR: CInt = CInt(Musl.SHUT_WR)
     static let SHUT_RDWR: CInt = CInt(Musl.SHUT_RDWR)
+    #elseif canImport(Android)
+    static let UIO_MAXIOV: Int = Int(Android.UIO_MAXIOV)
+    static let SHUT_RD: CInt = CInt(Android.SHUT_RD)
+    static let SHUT_WR: CInt = CInt(Android.SHUT_WR)
+    static let SHUT_RDWR: CInt = CInt(Android.SHUT_RDWR)
     #endif
     #else
     static var UIO_MAXIOV: Int {
@@ -733,6 +755,8 @@ internal enum Posix {
                 let result: ssize_t = Glibc.sendfile(descriptor, fd, &off, count)
                 #elseif canImport(Musl)
                 let result: ssize_t = Musl.sendfile(descriptor, fd, &off, count)
+                #elseif canImport(Android)
+                let result: ssize_t = Android.sendfile(descriptor, fd, &off, count)
                 #endif
                 if result >= 0 {
                     written = off_t(result)

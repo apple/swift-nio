@@ -19,6 +19,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Android)
+import Android
 #else
 #error("The File Handle module was unable to identify your C library.")
 #endif

@@ -19,6 +19,8 @@ import Glibc
 import Musl
 #elseif os(Windows)
 import ucrt
+#elseif canImport(Bionic)
+import Bionic
 #else
 #error("The Heap module was unable to identify your C library.")
 #endif
