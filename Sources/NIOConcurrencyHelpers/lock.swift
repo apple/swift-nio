@@ -21,6 +21,8 @@ import WinSDK
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
 #else
 #error("The concurrency lock module was unable to identify your C library.")
 #endif

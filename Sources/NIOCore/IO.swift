@@ -32,6 +32,8 @@ internal func MAKELANGID(_ p: WORD, _ s: WORD) -> DWORD {
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
 #elseif canImport(Darwin)
 import Darwin
 #else

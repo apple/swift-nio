@@ -25,6 +25,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
 #endif
 
 /// A file system which interacts with the local system. The file system uses a thread pool to
@@ -1086,7 +1088,7 @@ extension FileSystem {
                         location: .here()
                     )
                 }
-                #elseif canImport(Glibc) || canImport(Musl)
+                #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                 var offset = 0
 
                 while offset < sourceInfo.size {

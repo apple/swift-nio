@@ -21,6 +21,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Android)
+import Android
 #endif
 
 extension Errno {
@@ -33,6 +35,8 @@ extension Errno {
             return Errno(rawValue: Glibc.errno)
             #elseif canImport(Musl)
             return Errno(rawValue: Musl.errno)
+            #elseif canImport(Android)
+            return Errno(rawValue: Android.errno)
             #endif
         }
         set {
@@ -42,6 +46,8 @@ extension Errno {
             Glibc.errno = newValue.rawValue
             #elseif canImport(Musl)
             Musl.errno = newValue.rawValue
+            #elseif canImport(Android)
+            Android.errno = newValue.rawValue
             #endif
         }
     }
@@ -53,6 +59,8 @@ extension Errno {
         Glibc.errno = 0
         #elseif canImport(Musl)
         Musl.errno = 0
+        #elseif canImport(Android)
+        Android.errno = 0
         #endif
     }
 }

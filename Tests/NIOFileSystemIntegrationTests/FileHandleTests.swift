@@ -1020,7 +1020,7 @@ final class FileHandleTests: XCTestCase {
         // creating a temporary file and then renaming it using 'renameat2' and then takes a further
         // fallback path where 'renameat2' returns EINVAL so the 'rename' is used in combination
         // with 'stat'. This path is only reachable on Linux.
-        #if canImport(Glibc) || canImport(Musl)
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
         let path = temporaryDirectory.appending(Self.temporaryFileName().components)
         let handle = try SystemFileHandle.syncOpenWithMaterialization(

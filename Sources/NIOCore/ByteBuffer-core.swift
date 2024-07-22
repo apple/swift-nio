@@ -20,6 +20,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
 #else
 #error("The Byte Buffer module was unable to identify your C library.")
 #endif

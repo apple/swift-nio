@@ -27,6 +27,8 @@ import Glibc
 import Musl
 #elseif os(Windows)
 import CNIOWindows
+#elseif canImport(Android)
+import Android
 #else
 #error("The system call helpers module was unable to identify your C library.")
 #endif

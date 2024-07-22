@@ -28,6 +28,9 @@ import CNIOLinux
 #elseif canImport(Musl)
 import Musl
 import CNIOLinux
+#elseif canImport(Android)
+import Android
+import CNIOLinux
 #endif
 
 // Syscall mocking support.
@@ -283,6 +286,11 @@ internal var system_errno: CInt {
 internal var system_errno: CInt {
     get { Musl.errno }
     set { Musl.errno = newValue }
+}
+#elseif canImport(Android)
+internal var system_errno: CInt {
+    get { Android.errno }
+    set { Android.errno = newValue }
 }
 #endif
 
