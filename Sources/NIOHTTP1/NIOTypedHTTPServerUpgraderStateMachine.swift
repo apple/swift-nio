@@ -423,7 +423,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
                 self.state = .awaitingUpgrader(awaitingUpgrader)
                 return .continue
             } else {
-                // We shouldn't buffer. This means we are still expecting HTTP parts.
+                // We shouldn't buffer. This means we were still expecting HTTP parts.
                 return .close
             }
 
@@ -446,6 +446,6 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
             return .continue
         }
     }
- 
+
 }
 #endif

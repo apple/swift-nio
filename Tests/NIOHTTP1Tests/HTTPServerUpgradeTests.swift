@@ -1827,14 +1827,14 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
 
         let (_, client, connectedServer) = try setUpTestWithAutoremoval(
             upgraders: [upgrader],
-            extraHandlers: []
-        ) { channel in
-            notUpgraderCbFired.wrappedValue = true
-            // We're closing the connection now.
-            channel.close(promise: nil)
-            return channel.eventLoop.makeSucceededFuture(true)
-        } _: { _ in
-        }
+            extraHandlers: [],
+            notUpgradingHandler: { channel in
+                notUpgraderCbFired.wrappedValue = true
+                // We're closing the connection now.
+                channel.close(promise: nil)
+                return channel.eventLoop.makeSucceededFuture(true)
+            }
+        ) { _ in }
 
         let completePromise = Self.eventLoop.makePromise(of: Void.self)
         let clientHandler = ArrayAccumulationHandler<ByteBuffer> { buffers in
@@ -2209,11 +2209,12 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
 
         let upgrader = SuccessfulUpgrader(
             forProtocol: "myproto",
-            requiringHeaders: ["kafkaesque"]
-        ) {
-            // this is the wrong EL
-            otherELG.next().makeSucceededFuture($1)
-        } onUpgradeComplete: { req in
+            requiringHeaders: ["kafkaesque"],
+            buildUpgradeResponseFuture: {
+                // this is the wrong EL
+                otherELG.next().makeSucceededFuture($1)
+            }
+        ) { req in
             upgradeRequest.wrappedValue = req
             XCTAssertFalse(upgradeHandlerCbFired.wrappedValue)
             upgraderCbFired.wrappedValue = true
@@ -2341,9 +2342,33 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         ) { (context) in
         }
 
-        try client.close().wait()
+        try client.close(mode: .output).wait()
         try connectedServer.closeFuture.wait()
         XCTAssertEqual(errorCaught.wrappedValue, true)
+    }
+
+    /// Test that send a request and closing immediately performs a successful upgrade
+    func testSendRequestCloseImmediately() throws {
+        let upgradePerformed = UnsafeMutableTransferBox<Bool>(false)
+
+        let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"]) { _ in
+            upgradePerformed.wrappedValue = true
+        }
+        let (_, client, connectedServer) = try setUpTestWithAutoremoval(
+            upgraders: [upgrader],
+            extraHandlers: [],
+            upgradeErrorHandler: { error in
+                XCTFail("Error: \(error)")
+            }
+        ) { (context) in
+        }
+
+        let request =
+            "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
+        try client.close(mode: .output).wait()
+        try connectedServer.pipeline.waitForUpgraderToBeRemoved()
+        XCTAssertEqual(upgradePerformed.wrappedValue, true)
     }
 
 }
