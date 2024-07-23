@@ -2213,7 +2213,7 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         ) {
             // this is the wrong EL
             otherELG.next().makeSucceededFuture($1)
-        } onUpgradeComplete:  { req in
+        } onUpgradeComplete: { req in
             upgradeRequest.wrappedValue = req
             XCTAssertFalse(upgradeHandlerCbFired.wrappedValue)
             upgraderCbFired.wrappedValue = true
