@@ -21,6 +21,8 @@ jobs:
     benchmarks:
         name: Checks
         uses: ./.github/workflows/benchmarks.yml
+        with:
+            benchmark_package_path: "Benchmarks"
 
     cxx-interop:
         name: Checks
