@@ -613,6 +613,7 @@ public final class SocketChannelTest: XCTestCase {
         // asserting or silently ignoring if a client aborts the connection
         // early with a RST during or immediately after accept().
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let loop = group.next()
         defer { XCTAssertNoThrow(try group.syncShutdownGracefully()) }
 
         // Handler that checks for the expected error.
@@ -620,34 +621,44 @@ public final class SocketChannelTest: XCTestCase {
             typealias InboundIn = Channel
             typealias InboundOut = Channel
 
-            private let promise: EventLoopPromise<IOError>
+            private let expectedErrorPromise: EventLoopPromise<IOError>
+            private let channelActivePromise: EventLoopPromise<Void>
 
-            init(_ promise: EventLoopPromise<IOError>) {
-                self.promise = promise
+            init(
+                _ expectedErrorPromise: EventLoopPromise<IOError>,
+                _ channelActivePromise: EventLoopPromise<Void>
+            ) {
+                self.expectedErrorPromise = expectedErrorPromise
+                self.channelActivePromise = channelActivePromise
+            }
+
+            func channelActive(context: ChannelHandlerContext) {
+                self.channelActivePromise.succeed()
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTFail("Should not accept a Channel but got \(self.unwrapInboundIn(data))")
-                self.promise.fail(ChannelError.inappropriateOperationForState)  // any old error will do
+                self.expectedErrorPromise.fail(ChannelError.inappropriateOperationForState)  // any old error will do
             }
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
                 if let ioError = error as? IOError, ioError.errnoCode == EINVAL {
-                    self.promise.succeed(ioError)
+                    self.expectedErrorPromise.succeed(ioError)
                 } else {
-                    self.promise.fail(error)
+                    self.expectedErrorPromise.fail(error)
                 }
             }
         }
 
         // Build server channel; after this point the server called listen()
-        let serverPromise = group.next().makePromise(of: IOError.self)
+        let serverExpectedErrorPromise = loop.makePromise(of: IOError.self)
+        let serverChannelActivePromise = loop.makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .serverChannelOption(ChannelOptions.backlog, value: 256)
                 .serverChannelOption(ChannelOptions.autoRead, value: false)
-                .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
+                .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverExpectedErrorPromise, serverChannelActivePromise)) }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
         )
@@ -661,11 +672,12 @@ public final class SocketChannelTest: XCTestCase {
         XCTAssertNoThrow(try clientSocket.close())
 
         // Trigger accept() in the server
+        XCTAssertNoThrow(try serverChannelActivePromise.futureResult.wait())
         serverChannel.read()
 
         // Wait for the server to have something
-        XCTAssertThrowsError(try serverPromise.futureResult.wait()) { error in
-            XCTAssert(error is NIOFcntlFailedError)
+        XCTAssertThrowsError(try serverExpectedErrorPromise.futureResult.wait()) { error in
+            XCTAssert(error is NIOFcntlFailedError, "Unexpected error: \(error)")
         }
         #endif
     }
