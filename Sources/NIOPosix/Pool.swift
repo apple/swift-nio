@@ -164,7 +164,11 @@ extension PooledBuffer {
             }
 
             // Here we set up our memory bindings.
-            let storage = unsafeDowncast(baseStorage, to: Self.self)
+
+            // Intentionally using a force cast here to avoid a miss compiliation in 5.10.
+            // This is as fast as an unsafeDownCast since ManagedBuffer is inlined and the optimizer
+            // can eliminate the upcast/downcast pair
+            let storage = baseStorage as! Self
             storage.withUnsafeMutablePointers { headPointer, tailPointer in
                 UnsafeRawPointer(tailPointer + headPointer.pointee.iovectorOffset).bindMemory(
                     to: IOVector.self,
@@ -277,7 +281,10 @@ struct PooledMsgBuffer: PoolElement {
                 head
             }
 
-            let storage = unsafeDowncast(baseStorage, to: Self.self)
+            // Intentionally using a force cast here to avoid a miss compiliation in 5.10.
+            // This is as fast as an unsafeDownCast since ManagedBuffer is inlined and the optimizer
+            // can eliminate the upcast/downcast pair
+            let storage = baseStorage as! Self
             storage.withUnsafeMutablePointers { headPointer, tailPointer in
                 UnsafeRawPointer(tailPointer + headPointer.pointee.msgHdrsOffset).bindMemory(
                     to: MMsgHdr.self,

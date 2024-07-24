@@ -130,7 +130,10 @@ final class LockStorage<Value>: ManagedBuffer<Value, LockPrimitive> {
         let buffer = Self.create(minimumCapacity: 1) { _ in
             value
         }
-        let storage = unsafeDowncast(buffer, to: Self.self)
+        // Intentionally using a force cast here to avoid a miss compiliation in 5.10.
+        // This is as fast as an unsafeDownCast since ManagedBuffer is inlined and the optimizer
+        // can eliminate the upcast/downcast pair
+        let storage = buffer as! Self
 
         storage.withUnsafeMutablePointers { _, lockPtr in
             LockOperations.create(lockPtr)
