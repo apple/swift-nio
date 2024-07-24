@@ -32,7 +32,7 @@ jobs:
         uses: ./.github/workflows/cxx_interop.yml
 
     integration-tests:
-        name: Checks
+        name: Checks / Integration Tests
         uses: ./.github/workflows/swift_matrix.yml
         with:
           name: "Integration tests"
