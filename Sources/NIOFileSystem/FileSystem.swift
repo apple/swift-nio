@@ -293,21 +293,18 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
-    /// Copies the item at the specified path to a new location.
+    /// See ``FileSystemProtocol.copyItem()``
     ///
     /// The item to be copied must be a:
     /// - regular file,
     /// - symbolic link, or
     /// - directory.
     ///
-    /// If `sourcePath` is a symbolic link then only the link is copied. The copied file will
-    /// preserve permissions and any extended attributes (if supported by the file system).
+    /// But ``shouldCopyItem`` can be used to ignore things outside this supported set.
     ///
     /// #### Errors
     ///
-    /// Error codes thrown include:
-    /// - ``FileSystemError/Code-swift.struct/notFound`` if `sourcePath` doesn't exist.
-    /// - ``FileSystemError/Code-swift.struct/fileAlreadyExists`` if `destinationPath` exists.
+    /// In addition to the already documented errors these may be thrown
     /// - ``FileSystemError/Code-swift.struct/unsupported`` if an item to be copied is not a
     ///   regular file, symbolic link or directory.
     ///
@@ -315,24 +312,16 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// This function is platform dependent. On Darwin the `copyfile(2)` system call is
     /// used and items are cloned where possible. On Linux the `sendfile(2)` system call is used.
-    ///
-    /// - Parameters:
-    ///   - sourcePath: The path to the item to copy.
-    ///   - destinationPath: The path at which to place the copy.
-    ///   - shouldProceedAfterError: Determines whether to continue copying files if an error is
-    ///       thrown during the operation. This error does not have to match the error passed
-    ///       to the closure.
-    ///   - shouldCopyFile: A closure which is executed before each file to determine whether the
-    ///       file should be copied.
     public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
+        strategy copyStrategy : CopyStrategy,
         shouldProceedAfterError: @escaping @Sendable (
-            _ entry: DirectoryEntry,
+            _ source: DirectoryEntry,
             _ error: Error
         ) async throws -> Void,
-        shouldCopyFile: @escaping @Sendable (
-            _ source: FilePath,
+        shouldCopyItem: @escaping @Sendable (
+            _ source: DirectoryEntry,
             _ destination: FilePath
         ) async -> Bool
     ) async throws {
@@ -345,38 +334,37 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 location: .here()
             )
         }
-
-        switch info.type {
-        case .regular:
-            if await shouldCopyFile(sourcePath, destinationPath) {
+        
+        // By doing this before looking at the type we allow callers to decide whether
+        // unanticipated kinds of entries can be safely ignored without needing changes upstream
+        if await shouldCopyItem(.init(path:sourcePath, type:info.type)!, destinationPath) {
+            switch info.type {
+            case .regular:
                 try await self.copyRegularFile(from: sourcePath, to: destinationPath)
-            }
-
-        case .symlink:
-            if await shouldCopyFile(sourcePath, destinationPath) {
+                
+            case .symlink:
                 try await self.copySymbolicLink(from: sourcePath, to: destinationPath)
-            }
-
-        case .directory:
-            if await shouldCopyFile(sourcePath, destinationPath) {
+                
+            case .directory:
                 try await self.copyDirectory(
                     from: sourcePath,
                     to: destinationPath,
+                    strategy: copyStrategy,
                     shouldProceedAfterError: shouldProceedAfterError,
-                    shouldCopyFile: shouldCopyFile
+                    shouldCopyItem: shouldCopyItem
+                )
+                
+            default:
+                throw FileSystemError(
+                    code: .unsupported,
+                    message: """
+                        Can't copy '\(sourcePath)' of type '\(info.type)'; only regular files, \
+                        symbolic links and directories can be copied.
+                        """,
+                    cause: nil,
+                    location: .here()
                 )
             }
-
-        default:
-            throw FileSystemError(
-                code: .unsupported,
-                message: """
-                    Can't copy '\(sourcePath)' of type '\(info.type)'; only regular files, \
-                    symbolic links and directories can be copied.
-                    """,
-                cause: nil,
-                location: .here()
-            )
         }
     }
 
@@ -686,9 +674,9 @@ private let globalFileSystem: FileSystem = {
 extension NIOSingletons {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
-    /// The file system executes blocking work in a thread pool which defaults to having two
-    /// threads. This can be modified by `blockingPoolThreadCountSuggestion` or by
-    /// setting the `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` environment variable.
+    /// The file system executes blocking work in a thread pool see
+    /// ``NIOSingletons/blockingPoolThreadCountSuggestion`` for
+    /// the default behaviour and ways to control it.
     public static var fileSystem: FileSystem { globalFileSystem }
 }
 
@@ -869,24 +857,42 @@ extension FileSystem {
             }
         }
     }
-
-    /// Copies the directory from `sourcePath` to `destinationPath`.
-    private func copyDirectory(
+    
+    /// Represents an item in a directory that needs copying, or
+    /// an explicit indication of the end of items.
+    /// The provision of the ``endOfDir`` case significantly simplifies the parallel code
+    enum DirCopyItem : Hashable, Sendable {
+        case endOfDir
+        case toCopy(from: DirectoryEntry, to: FilePath)
+    }
+    
+    /// Creates the directory ``destinationPath`` based on the directory at ``sourcePath``
+    /// including any permissions/attributes. 
+    /// It does not copy the contents but does indicate the items directly within ``sourcePath`` which
+    /// should be copied
+    ///
+    /// This is a little cumbersome because it is used by ``copyDirectorySequential`` and
+    /// ``copyDirectoryParallel``.
+    /// It is desirable to use the file descriptor for the directory itself for as little time as possible 
+    /// (certainly not across async invocations).
+    /// The down stream paths in the parallel and sequential paths are very different
+    /// - Returns: 
+    ///     An array of `DirCopyItem` which have passed the ``shouldCopyItem```filter
+    ///     The target file paths will all be in ``destinationPath``
+    ///     The array will always finish with an ``DirCopyItem.endOfDir``
+    private func prepareDirectoryForRecusiveCopy(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
         shouldProceedAfterError: @escaping @Sendable (
             _ entry: DirectoryEntry,
             _ error: Error
         ) async throws -> Void,
-        shouldCopyFile: @escaping @Sendable (
-            _ source: FilePath,
+        shouldCopyItem: @escaping @Sendable (
+            _ source: DirectoryEntry,
             _ destination: FilePath
         ) async -> Bool
-    ) async throws {
-        // Strategy: copy regular files and symbolic links while the directory is open; defer
-        // copying directories until after the source directory has been closed to avoid consuming
-        // too many file descriptors.
-        let directoriesToCopy = try await self.withDirectoryHandle(atPath: sourcePath) { dir in
+    ) async throws -> [DirCopyItem] {
+        return try await self.withDirectoryHandle(atPath: sourcePath) { dir in
             // Grab the directory info to copy permissions.
             let info = try await dir.info()
             try await self.createDirectory(
@@ -917,72 +923,226 @@ extension FileSystem {
                 ()
             }
             #endif
-
-            // Build a list of directories to copy over. Do this after closing the current
-            // directory to avoid using too many descriptors.
-            var directoriesToCopy = [(from: FilePath, to: FilePath)]()
-
+            // Build a list of items the caller needs to deal with,
+            // they then do any further work after closing the current directory
+            var contentsToCopy = [DirCopyItem]()
+            
             for try await batch in dir.listContents().batched() {
                 for entry in batch {
-                    let entrySource = entry.path
+                    // Any further work is pointless, we are under no obligation to cleanup
+                    // so exit as fast and cleanly as possible.
+                    try Task.checkCancellation()
                     let entryDestination = destinationPath.appending(entry.name)
-
-                    switch entry.type {
-                    case .regular:
-                        if await shouldCopyFile(entrySource, entryDestination) {
-                            do {
-                                try await self.copyRegularFile(
-                                    from: entry.path,
-                                    to: destinationPath.appending(entry.name)
-                                )
-                            } catch {
-                                try await shouldProceedAfterError(entry, error)
-                            }
+                    
+                    if await shouldCopyItem(entry, entryDestination) {
+                        // Assume there's a good chance of everything in the batch
+                        // being included in the common case.
+                        // Let geometric growth go from this point though.
+                        if contentsToCopy.isEmpty {
+                            // Reserve space for the endOfDir entry too.
+                            contentsToCopy.reserveCapacity(batch.count + 1)
                         }
+                        switch entry.type {
+                        case .regular, .symlink, .directory:
+                            contentsToCopy.append(.toCopy(from: entry, to: entryDestination))
 
-                    case .symlink:
-                        if await shouldCopyFile(entrySource, entryDestination) {
-                            do {
-                                try await self.copySymbolicLink(
-                                    from: entry.path,
-                                    to: destinationPath.appending(entry.name)
-                                )
-                            } catch {
-                                try await shouldProceedAfterError(entry, error)
-                            }
+                        default:
+                            let error = FileSystemError(
+                                code: .unsupported,
+                                message: """
+                                    Can't copy '\(entry.path)' of type '\(entry.type)'; only regular \
+                                    files, symbolic links and directories can be copied.
+                                    """,
+                                cause: nil,
+                                location: .here()
+                            )
+                            
+                            try await shouldProceedAfterError(entry, error)
                         }
-
-                    case .directory:
-                        directoriesToCopy.append((entrySource, entryDestination))
-
-                    default:
-                        let error = FileSystemError(
-                            code: .unsupported,
-                            message: """
-                                Can't copy '\(entrySource)' of type '\(entry.type)'; only regular \
-                                files, symbolic links and directories can be copied.
-                                """,
-                            cause: nil,
-                            location: .here()
-                        )
-
-                        try await shouldProceedAfterError(entry, error)
                     }
                 }
             }
-
-            return directoriesToCopy
+            
+            contentsToCopy.append(.endOfDir)
+            return contentsToCopy
         }
+    }
+    
+    /// This could be achieved through quite complicated special casing of the parallel copy.
+    /// The resulting code is far harder to read and debug though so this is kept as a special case
+    private func copyDirectorySequential(
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        shouldProceedAfterError: @escaping @Sendable (
+            _ entry: DirectoryEntry,
+            _ error: Error
+        ) async throws -> Void,
+        shouldCopyItem: @escaping @Sendable (
+            _ source: DirectoryEntry,
+            _ destination: FilePath
+        ) async -> Bool
+    ) async throws {
+        // Strategy: find all needed items to copy/recurse into while the directory is open;
+        // defer actual copying and recursion until after the source directory has been closed
+        // to avoid consuming too many file descriptors.
+        let toCopy = try await self.prepareDirectoryForRecusiveCopy(
+            from: sourcePath,
+            to: destinationPath,
+            shouldProceedAfterError: shouldProceedAfterError,
+            shouldCopyItem: shouldCopyItem
+        )
 
-        for entry in directoriesToCopy {
-            if await shouldCopyFile(entry.from, entry.to) {
-                try await self.copyDirectory(
-                    from: entry.from,
-                    to: entry.to,
-                    shouldProceedAfterError: shouldProceedAfterError,
-                    shouldCopyFile: shouldCopyFile
-                )
+        for entry in toCopy {
+            switch entry {
+            case .endOfDir:
+                // Sequential cases doesn't need to worry about this, it uses simple recursion.
+                continue
+            case let .toCopy(source, destination):
+                // Note: The entry type could have changed between finding it and acting on it.
+                // This is inherent in file systems, just more likely in an async environment
+                // we just accept those coming through as regular errors.
+                switch source.type {
+                case .regular:
+                    do {
+                        try await self.copyRegularFile(
+                            from: source.path,
+                            to: destination
+                        )
+                    } catch {
+                        try await shouldProceedAfterError(source, error)
+                    }
+                    
+                case .symlink:
+                    do {
+                        try await self.copySymbolicLink(
+                            from: source.path,
+                            to: destination
+                        )
+                    } catch {
+                        try await shouldProceedAfterError(source, error)
+                    }
+                    
+                case .directory:
+                    try await self.copyDirectorySequential(
+                        from: source.path,
+                        to: destination,
+                        shouldProceedAfterError: shouldProceedAfterError,
+                        shouldCopyItem: shouldCopyItem
+                    )
+                    
+                default:
+                    let error = FileSystemError(
+                        code: .unsupported,
+                        message: """
+                            Can't copy '\(source.path)' of type '\(source.type)'; only regular \
+                            files, symbolic links and directories can be copied.
+                            """,
+                        cause: nil,
+                        location: .here()
+                    )
+                    
+                    try await shouldProceedAfterError(source, error)
+                }
             }
+        }
+    }
+
+    /// Copies the directory from `sourcePath` to `destinationPath`.
+    private func copyDirectory(
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        strategy copyStrategy: CopyStrategy,
+        shouldProceedAfterError: @escaping @Sendable (
+            _ entry: DirectoryEntry,
+            _ error: Error
+        ) async throws -> Void,
+        shouldCopyItem: @escaping @Sendable (
+            _ source: DirectoryEntry,
+            _ destination: FilePath
+        ) async -> Bool
+    ) async throws {
+        switch copyStrategy.wrapped {
+        case .sequential:
+            return try await copyDirectorySequential(
+                from: sourcePath,
+                to: destinationPath,
+                shouldProceedAfterError: shouldProceedAfterError,
+                shouldCopyItem: shouldCopyItem)
+        case let .parallel(maxDescriptors):
+            // Note that maxDescriptors was validated on construction of CopyStrategy.
+            // See notes on CopyStrategy about assumptions on descriptor use.
+            // For now we take the worst case peak for every operation, which is 2 descriptors,
+            // this keeps the downstream limiting code simple
+            // We do not preclude the use of more granular limiting in future (e.g. a directory
+            // scan only requires 1), for now we just drop any excess remainder entirely.
+            let limitValue = maxDescriptors / 2
+            return try await self.copyDirectoryParallel(
+                from: sourcePath,
+                to: destinationPath,
+                maxConcurrentOperations: limitValue,
+                shouldProceedAfterError: shouldProceedAfterError,
+                shouldCopyItem: shouldCopyItem
+            )
+        }
+    }
+    
+    /// Building block of the parallel directory copy implementation
+    /// Each invovation of this is allowed to consume two file descriptors,
+    /// any further work (if any) should be sent to `yield` for future processing
+    @Sendable func copySelfAndEnqueueChildren(
+        from: DirectoryEntry,
+        to: FilePath,
+        yield: @Sendable ([DirCopyItem]) -> Void,
+        shouldProceedAfterError: @escaping @Sendable (
+            _ source: DirectoryEntry,
+            _ error: Error
+        ) async throws -> Void,
+        shouldCopyItem: @escaping @Sendable (
+            _ source: DirectoryEntry,
+            _ destination: FilePath
+        ) async -> Bool
+    ) async throws {
+        switch from.type {
+        case .regular:
+            do {
+                try await self.copyRegularFile(
+                    from: from.path,
+                    to: to
+                )
+            } catch {
+                try await shouldProceedAfterError(from, error)
+            }
+            
+        case .symlink:
+            do {
+                try await self.copySymbolicLink(
+                    from: from.path,
+                    to: to
+                )
+            } catch {
+                try await shouldProceedAfterError(from, error)
+            }
+            
+        case .directory:
+            let toCopy = try await self.prepareDirectoryForRecusiveCopy(
+                from: from.path,
+                    to: to,
+                    shouldProceedAfterError: shouldProceedAfterError,
+                    shouldCopyItem: shouldCopyItem)
+            yield(toCopy)
+            
+        default:
+            let error = FileSystemError(
+                code: .unsupported,
+                message: """
+                        Can't copy '\(from.path)' of type '\(from.type)'; only regular \
+                        files, symbolic links and directories can be copied.
+                        """,
+                cause: nil,
+                location: .here()
+            )
+            
+            try await shouldProceedAfterError(from, error)
         }
     }
 
@@ -1376,5 +1536,4 @@ extension FileSystem {
         }
     }
 }
-
 #endif
