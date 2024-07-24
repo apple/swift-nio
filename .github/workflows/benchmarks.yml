@@ -34,7 +34,7 @@ on:
 jobs:
     benchmarks:
         name: Benchmarks
-        uses: ./.github/workflows/pull_request_swift_matrix.yml
+        uses: ./.github/workflows/swift_matrix.yml
         with:
           name: "Benchmarks"
           matrix_linux_command: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev && swift package --package-path ${{ inputs.benchmark_package_path }} ${{ inputs.swift_package_arguments }} benchmark baseline check --check-absolute-path ${{ inputs.benchmark_package_path }}/Thresholds/${SWIFT_VERSION}/"

@@ -1,4 +1,4 @@
-name: Pull Request
+name: Soundness
 
 on:
   workflow_call:

@@ -7,7 +7,7 @@ on:
 jobs:
     soundness:
         name: Soundness
-        uses: ./.github/workflows/pull_request_soundness.yml
+        uses: ./.github/workflows/soundness.yml
         with:
             license_header_check_project_name: "SwiftNIO"
 
@@ -30,7 +30,7 @@ jobs:
 
     integration-tests:
         name: Checks
-        uses: ./.github/workflows/pull_request_swift_matrix.yml
+        uses: ./.github/workflows/swift_matrix.yml
         with:
           name: "Integration tests"
           matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"

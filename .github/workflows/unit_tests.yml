@@ -47,7 +47,7 @@ on:
 jobs:
     unit-tests:
         name: Unit tests
-        uses: ./.github/workflows/pull_request_swift_matrix.yml
+        uses: ./.github/workflows/swift_matrix.yml
         with:
           name: "Unit tests"
           matrix_linux_command: "swift test -Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
