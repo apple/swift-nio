@@ -55,7 +55,7 @@ public struct CopyStrategy: Hashable, Sendable {
         // in CPU came with only moderate gains.
         // Anyone tuning this is encouraged to cover worst case scenarios.
         return .parallel(8)
-        #elseif os(iOS) || os(tvOS) || os(watchOS) || os(Android) || os(visionOS)
+        #elseif os(iOS) || os(tvOS) || os(watchOS) || os(Android)
         // Reduced maximum descriptors in embedded world
         // This is chosen based on biasing to safety, not empirical testing.
         return .parallel(4)
