@@ -453,7 +453,7 @@ extension FileSystemProtocol {
     public func info(forFileAt path: FilePath) async throws -> FileInfo? {
         try await self.info(forFileAt: path, infoAboutSymbolicLink: false)
     }
-    
+
     /// Copies the item at the specified path to a new location.
     ///
     /// The following error codes may be thrown:
@@ -482,7 +482,7 @@ extension FileSystemProtocol {
             true
         }
     }
-    
+
     /// Copies the item at the specified path to a new location.
     ///
     /// The item to be copied must be a:
@@ -514,16 +514,16 @@ extension FileSystemProtocol {
     ///       file should be copied.
     @available(*, deprecated, message: "please use copyItem overload taking CopyStrategy")
     public func copyItem(
-             at sourcePath: FilePath,
-             to destinationPath: FilePath,
-             shouldProceedAfterError: @escaping @Sendable (
-                 _ entry: DirectoryEntry,
-                 _ error: Error
-             ) async throws -> Void,
-             shouldCopyFile: @escaping @Sendable (
-                 _ source: FilePath,
-                 _ destination: FilePath
-             ) async -> Bool
+        at sourcePath: FilePath,
+        to destinationPath: FilePath,
+        shouldProceedAfterError: @escaping @Sendable (
+            _ entry: DirectoryEntry,
+            _ error: Error
+        ) async throws -> Void,
+        shouldCopyFile: @escaping @Sendable (
+            _ source: FilePath,
+            _ destination: FilePath
+        ) async -> Bool
     ) async throws {
         try await self.copyItem(
             at: sourcePath,

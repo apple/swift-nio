@@ -315,7 +315,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
-        strategy copyStrategy : CopyStrategy,
+        strategy copyStrategy: CopyStrategy,
         shouldProceedAfterError: @escaping @Sendable (
             _ source: DirectoryEntry,
             _ error: Error
@@ -334,17 +334,17 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 location: .here()
             )
         }
-        
+
         // By doing this before looking at the type we allow callers to decide whether
         // unanticipated kinds of entries can be safely ignored without needing changes upstream
-        if await shouldCopyItem(.init(path:sourcePath, type:info.type)!, destinationPath) {
+        if await shouldCopyItem(.init(path: sourcePath, type: info.type)!, destinationPath) {
             switch info.type {
             case .regular:
                 try await self.copyRegularFile(from: sourcePath, to: destinationPath)
-                
+
             case .symlink:
                 try await self.copySymbolicLink(from: sourcePath, to: destinationPath)
-                
+
             case .directory:
                 try await self.copyDirectory(
                     from: sourcePath,
@@ -353,7 +353,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                     shouldProceedAfterError: shouldProceedAfterError,
                     shouldCopyItem: shouldCopyItem
                 )
-                
+
             default:
                 throw FileSystemError(
                     code: .unsupported,
@@ -857,26 +857,26 @@ extension FileSystem {
             }
         }
     }
-    
+
     /// Represents an item in a directory that needs copying, or
     /// an explicit indication of the end of items.
     /// The provision of the ``endOfDir`` case significantly simplifies the parallel code
-    enum DirCopyItem : Hashable, Sendable {
+    enum DirCopyItem: Hashable, Sendable {
         case endOfDir
         case toCopy(from: DirectoryEntry, to: FilePath)
     }
-    
+
     /// Creates the directory ``destinationPath`` based on the directory at ``sourcePath``
-    /// including any permissions/attributes. 
+    /// including any permissions/attributes.
     /// It does not copy the contents but does indicate the items directly within ``sourcePath`` which
     /// should be copied
     ///
     /// This is a little cumbersome because it is used by ``copyDirectorySequential`` and
     /// ``copyDirectoryParallel``.
-    /// It is desirable to use the file descriptor for the directory itself for as little time as possible 
+    /// It is desirable to use the file descriptor for the directory itself for as little time as possible
     /// (certainly not across async invocations).
     /// The down stream paths in the parallel and sequential paths are very different
-    /// - Returns: 
+    /// - Returns:
     ///     An array of `DirCopyItem` which have passed the ``shouldCopyItem```filter
     ///     The target file paths will all be in ``destinationPath``
     ///     The array will always finish with an ``DirCopyItem.endOfDir``
@@ -892,7 +892,7 @@ extension FileSystem {
             _ destination: FilePath
         ) async -> Bool
     ) async throws -> [DirCopyItem] {
-        return try await self.withDirectoryHandle(atPath: sourcePath) { dir in
+        try await self.withDirectoryHandle(atPath: sourcePath) { dir in
             // Grab the directory info to copy permissions.
             let info = try await dir.info()
             try await self.createDirectory(
@@ -926,14 +926,14 @@ extension FileSystem {
             // Build a list of items the caller needs to deal with,
             // they then do any further work after closing the current directory
             var contentsToCopy = [DirCopyItem]()
-            
+
             for try await batch in dir.listContents().batched() {
                 for entry in batch {
                     // Any further work is pointless, we are under no obligation to cleanup
                     // so exit as fast and cleanly as possible.
                     try Task.checkCancellation()
                     let entryDestination = destinationPath.appending(entry.name)
-                    
+
                     if await shouldCopyItem(entry, entryDestination) {
                         // Assume there's a good chance of everything in the batch
                         // being included in the common case.
@@ -956,18 +956,18 @@ extension FileSystem {
                                 cause: nil,
                                 location: .here()
                             )
-                            
+
                             try await shouldProceedAfterError(entry, error)
                         }
                     }
                 }
             }
-            
+
             contentsToCopy.append(.endOfDir)
             return contentsToCopy
         }
     }
-    
+
     /// This could be achieved through quite complicated special casing of the parallel copy.
     /// The resulting code is far harder to read and debug though so this is kept as a special case
     private func copyDirectorySequential(
@@ -1011,7 +1011,7 @@ extension FileSystem {
                     } catch {
                         try await shouldProceedAfterError(source, error)
                     }
-                    
+
                 case .symlink:
                     do {
                         try await self.copySymbolicLink(
@@ -1021,7 +1021,7 @@ extension FileSystem {
                     } catch {
                         try await shouldProceedAfterError(source, error)
                     }
-                    
+
                 case .directory:
                     try await self.copyDirectorySequential(
                         from: source.path,
@@ -1029,7 +1029,7 @@ extension FileSystem {
                         shouldProceedAfterError: shouldProceedAfterError,
                         shouldCopyItem: shouldCopyItem
                     )
-                    
+
                 default:
                     let error = FileSystemError(
                         code: .unsupported,
@@ -1040,7 +1040,7 @@ extension FileSystem {
                         cause: nil,
                         location: .here()
                     )
-                    
+
                     try await shouldProceedAfterError(source, error)
                 }
             }
@@ -1067,7 +1067,8 @@ extension FileSystem {
                 from: sourcePath,
                 to: destinationPath,
                 shouldProceedAfterError: shouldProceedAfterError,
-                shouldCopyItem: shouldCopyItem)
+                shouldCopyItem: shouldCopyItem
+            )
         case let .parallel(maxDescriptors):
             // Note that maxDescriptors was validated on construction of CopyStrategy.
             // See notes on CopyStrategy about assumptions on descriptor use.
@@ -1085,7 +1086,7 @@ extension FileSystem {
             )
         }
     }
-    
+
     /// Building block of the parallel directory copy implementation
     /// Each invovation of this is allowed to consume two file descriptors,
     /// any further work (if any) should be sent to `yield` for future processing
@@ -1112,7 +1113,7 @@ extension FileSystem {
             } catch {
                 try await shouldProceedAfterError(from, error)
             }
-            
+
         case .symlink:
             do {
                 try await self.copySymbolicLink(
@@ -1122,26 +1123,27 @@ extension FileSystem {
             } catch {
                 try await shouldProceedAfterError(from, error)
             }
-            
+
         case .directory:
             let toCopy = try await self.prepareDirectoryForRecusiveCopy(
                 from: from.path,
-                    to: to,
-                    shouldProceedAfterError: shouldProceedAfterError,
-                    shouldCopyItem: shouldCopyItem)
+                to: to,
+                shouldProceedAfterError: shouldProceedAfterError,
+                shouldCopyItem: shouldCopyItem
+            )
             yield(toCopy)
-            
+
         default:
             let error = FileSystemError(
                 code: .unsupported,
                 message: """
-                        Can't copy '\(from.path)' of type '\(from.type)'; only regular \
-                        files, symbolic links and directories can be copied.
-                        """,
+                    Can't copy '\(from.path)' of type '\(from.type)'; only regular \
+                    files, symbolic links and directories can be copied.
+                    """,
                 cause: nil,
                 location: .here()
             )
-            
+
             try await shouldProceedAfterError(from, error)
         }
     }

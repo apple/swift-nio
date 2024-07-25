@@ -17,7 +17,7 @@ import NIOCore
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystem {
-    
+
     /// Iterative implementation of a recursive parallel copy of the directory from `sourcePath` to `destinationPath`.
     ///
     /// The parallelism is solely at the level of individual items (so files, symbolic links and directories), a larger file
@@ -49,28 +49,28 @@ extension FileSystem {
             finishOnDeinit: false,
             delegate: .init()
         )
-        
+
         // We ignore the result of yield in all cases because we are not implementing back pressure
         // and cancellation is dealt with separately.
         @Sendable func yield(_ contentsOf: [DirCopyItem]) {
             _ = sequence.source.yield(contentsOf: contentsOf)
         }
-        
+
         // Kick start the procees by enqueuing the root entry,
         // the calling function already validated the root needed copying.
-        _ = sequence.source.yield(.toCopy(from: .init(path: sourcePath, type:.directory)!, to: destinationPath))
-        
+        _ = sequence.source.yield(.toCopy(from: .init(path: sourcePath, type: .directory)!, to: destinationPath))
+
         // The processing of the very first item (the root) will increment this,
         // after than when it hits zero we've finished.
         // This does not need to be a ManagedAtomic or similar because:
         // - All maintenance of state is done in the withThrowingTaskGroup callback
         // - All actual file system work is done by tasks created on the `taskGroup`
         var activeDirCount = 0
-        
+
         // Despite there being no 'result' of each operation we cannot use a discarding task group
         // because we use the 'drain results' queue as a concurrency limiting side effect.
         return try await withThrowingTaskGroup(of: Void.self, returning: Void.self) { taskGroup in
-            
+
             // Code handling each item to process on the current task
             // Side Effects:
             // - Updates activeDirCount and finishes the stream if required.
@@ -94,14 +94,15 @@ extension FileSystem {
                             to: to,
                             yield: yield,
                             shouldProceedAfterError: shouldProceedAfterError,
-                            shouldCopyItem: shouldCopyItem)
+                            shouldCopyItem: shouldCopyItem
+                        )
                     }
                     return true
                 }
             }
-            
+
             let iter = sequence.sequence.makeAsyncIterator()
-            
+
             // inProgress counts the number of tasks we have added to the task group
             // Get up to the maximum concurrency first.
             // We haven't started monitoring for task completion, so inProgress is 'worst case'.
@@ -118,10 +119,10 @@ extension FileSystem {
                     return
                 }
             }
-            
+
             // Then operate one in (finish) -> one out (start another),
             // but only for items that trigger a task.
-            while let _ =  try await taskGroup.next() {
+            while let _ = try await taskGroup.next() {
                 var keepConsuming = true
                 while keepConsuming {
                     try Task.checkCancellation()
@@ -137,10 +138,9 @@ extension FileSystem {
     }
 }
 
-
 /// An 'always ask for more' no  back-pressure strategy for a ``NIOAsyncSequenceProducer``.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-fileprivate struct NoBackPressureStrategy : NIOAsyncSequenceProducerBackPressureStrategy {
+private struct NoBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy {
     public mutating func didYield(bufferDepth: Int) -> Bool { true }
 
     public mutating func didConsume(bufferDepth: Int) -> Bool { true }
@@ -148,7 +148,7 @@ fileprivate struct NoBackPressureStrategy : NIOAsyncSequenceProducerBackPressure
 
 /// We ignore back pressure, the inherent handle limiting in copyDirectoryParallel means it is unnecessary.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-fileprivate final class DirCopyDelegate: NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
+private final class DirCopyDelegate: NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
     @inlinable
     func produceMore() {}
 

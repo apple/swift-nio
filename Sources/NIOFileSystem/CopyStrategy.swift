@@ -12,25 +12,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 /// How to perform copies. Currently only relevant to directory level copies when using
 /// ``FileSystemProtocol.copyItem``
 public struct CopyStrategy: Hashable, Sendable {
     // Avoid exposing to prevent alterations being breaking changes
     internal enum Wrapped: Hashable, Sendable {
         // platformDefault is reified into one of the concrete options below:
-        
+
         case sequential
         // Constraints on this value are enforced only on making `CopyStrategy`,
         // the early error check there is desirable over validating on downstream use.
-        case parallel(_ maxDescriptors : Int)
+        case parallel(_ maxDescriptors: Int)
     }
 
     internal let wrapped: Wrapped
     private init(_ wrapped: Wrapped) {
         self.wrapped = wrapped
     }
-    
+
     // These selections are relatively arbitrary but the rationale is as follows:
     //
     // - Never exceed the default OS limits even if 4 such operations
@@ -48,21 +47,21 @@ public struct CopyStrategy: Hashable, Sendable {
     // This may not result in a faster copy though so things are left simple
     internal static func determinePlatformDefault() -> Wrapped {
         #if os(macOS) || os(Linux) || os(Windows)
-          // 4 concurrent file copies/directory scans.
-          // Avoiding storage system contention is the dominant aspect here.
-          // Empirical testing on an SSD copying to the same volume with a dense directory of small
-          // files and sub directories of similar shape totalling 12GB showed improvements in elapsed
-          // time for (expected) increases in CPU time up to parallel(8), beyond this the increases
-          // in CPU came with only moderate gains.
-          // Anyone tuning this is encouraged to cover worst case scenarios.
-          return .parallel(8)
+        // 4 concurrent file copies/directory scans.
+        // Avoiding storage system contention is the dominant aspect here.
+        // Empirical testing on an SSD copying to the same volume with a dense directory of small
+        // files and sub directories of similar shape totalling 12GB showed improvements in elapsed
+        // time for (expected) increases in CPU time up to parallel(8), beyond this the increases
+        // in CPU came with only moderate gains.
+        // Anyone tuning this is encouraged to cover worst case scenarios.
+        return .parallel(8)
         #elseif os(iOS) || os(tvOS) || os(watchOS) || os(Android) || os(visionOS)
-           // Reduced maximum descriptors in embedded world
-           // This is chosen based on biasing to safety, not empirical testing.
-           return .parallel(4)
+        // Reduced maximum descriptors in embedded world
+        // This is chosen based on biasing to safety, not empirical testing.
+        return .parallel(4)
         #else
-          // Safety first, if we have no view on it keep it simple.
-          return .sequential
+        // Safety first, if we have no view on it keep it simple.
+        return .sequential
         #endif
     }
 }
@@ -71,7 +70,7 @@ extension CopyStrategy {
     // A copy fundamentally can't work without two descriptors unless you copy
     // everything into memory which is infeasible/inefficeint for large copies.
     private static let minDescriptorsAllowed = 2
-    
+
     /// Operate in whatever manner is deemed a reasonable default for the platform.
     /// This will limit the maximum file descriptors usage based on 'reasonable' defaults.
     ///
@@ -79,11 +78,11 @@ extension CopyStrategy {
     /// - Only one copy operation would be performed at once
     /// - The copy operation is not intended to be the primary activity on the device
     public static let platformDefault: Self = Self(Self.determinePlatformDefault())
-    
+
     /// The copy is done asynchronously, but only one operation will occur at a time.
     /// This is the only way to guarantee only one callback to the `shouldCopyItem` will happen at a time
     public static let sequential: Self = Self(.sequential)
-    
+
     /// The minimum possible parallelism supported by ``parallel(maxDescriptors:)``
     /// Using this in your non testing code paths would be an anti pattern, use ``sequential``instead.
     ///
@@ -92,15 +91,15 @@ extension CopyStrategy {
     ///
     /// This is primarily exposed for testing to ensure use of the parallel paths (which are more complex) while keeping actual
     /// parallelism to minimal levels to make debugging simpler.
-    public static let minimalParallel : Self = .init(.parallel(minDescriptorsAllowed))
-    
+    public static let minimalParallel: Self = .init(.parallel(minDescriptorsAllowed))
+
     /// Allow multiple IO operations to run concurrently, including file copies/directory creation and scanning
     ///
     /// - Parameter maxDescriptors: a conservative limit on the number of concurrently open
     ///     file descriptors involved in the copy. This number must be >= 2 though, if you are using a value that low
     ///     you should use ``sequential``
     ///
-    /// - Throws: ``FileSystemError/Code-swift.struct/invalidArgument`` if `maxDescriptors` 
+    /// - Throws: ``FileSystemError/Code-swift.struct/invalidArgument`` if `maxDescriptors`
     /// is less than 2.
     ///
     public static func parallel(maxDescriptors: Int) throws -> Self {

@@ -659,11 +659,11 @@ final class FileSystemTests: XCTestCase {
     func testCopyEmptyDirectorySequential() async throws {
         try await testCopyEmptyDirectory(.sequential)
     }
-    
+
     func testCopyEmptyDirectoryParallelMinimal() async throws {
         try await testCopyEmptyDirectory(.minimalParallel)
     }
-    
+
     func testCopyEmptyDirectoryParallelDefault() async throws {
         try await testCopyEmptyDirectory(.platformDefault)
     }
@@ -679,19 +679,19 @@ final class FileSystemTests: XCTestCase {
 
         try await self.checkDirectoriesMatch(path, copy)
     }
-    
+
     func testCopyOnGeneratedTreeStructureSequential() async throws {
         try await testAnyCopyStrategyOnGeneratedTreeStructure(.sequential)
     }
-    
+
     func testCopyOnGeneratedTreeStructureParallelMinimal() async throws {
         try await testAnyCopyStrategyOnGeneratedTreeStructure(.minimalParallel)
     }
-    
+
     func testCopyOnGeneratedTreeStructureParallelDefault() async throws {
         try await testAnyCopyStrategyOnGeneratedTreeStructure(.platformDefault)
     }
-    
+
     private func testAnyCopyStrategyOnGeneratedTreeStructure(
         _ copyStrategy: CopyStrategy,
         line: UInt = #line
@@ -708,8 +708,10 @@ final class FileSystemTests: XCTestCase {
             try await self.fs.copyItem(at: path, to: copy, strategy: copyStrategy)
         } catch {
             // Leave breadcrumbs to make debugging easier.
-            XCTFail("Using \(copyStrategy) failed to copy \(items) from '\(path)' to '\(copy)'",
-                    line: line)
+            XCTFail(
+                "Using \(copyStrategy) failed to copy \(items) from '\(path)' to '\(copy)'",
+                line: line
+            )
             throw error
         }
 
@@ -717,24 +719,26 @@ final class FileSystemTests: XCTestCase {
             try await self.checkDirectoriesMatch(path, copy)
         } catch {
             // Leave breadcrumbs to make debugging easier.
-            XCTFail("Using \(copyStrategy) failed to validate \(items) copied from '\(path)' to '\(copy)'",
-                    line: line)
+            XCTFail(
+                "Using \(copyStrategy) failed to validate \(items) copied from '\(path)' to '\(copy)'",
+                line: line
+            )
             throw error
         }
     }
-    
+
     func testCopySelectivelySequential() async throws {
         try await testCopySelectively(.sequential)
     }
-    
+
     func testCopySelectivelyParallelMinimal() async throws {
         try await testCopySelectively(.minimalParallel)
     }
-    
+
     func testCopySelectivelyParallelDefault() async throws {
         try await testCopySelectively(.platformDefault)
     }
-    
+
     private func testCopySelectively(
         _ copyStrategy: CopyStrategy,
         line: UInt = #line
@@ -765,20 +769,19 @@ final class FileSystemTests: XCTestCase {
         XCTAssertEqual(paths.count, 1)
         XCTAssertEqual(paths.first?.name, "file-0-regular")
     }
-    
-    
+
     func testCopyCancelledPartWayThroughSequential() async throws {
         try await testCopyCancelledPartWayThrough(.sequential)
     }
-    
+
     func testCopyCancelledPartWayThroughParallelMinimal() async throws {
         try await testCopyCancelledPartWayThrough(.minimalParallel)
     }
-    
+
     func testCopyCancelledPartWayThroughParallelDefault() async throws {
         try await testCopyCancelledPartWayThrough(.platformDefault)
     }
-    
+
     private func testCopyCancelledPartWayThrough(
         _ copyStrategy: CopyStrategy,
         line: UInt = #line
@@ -812,7 +815,7 @@ final class FileSystemTests: XCTestCase {
                             cancelRequested.fulfill()
                             return true
                         }
-                        
+
                         return requested
                     }
                     // Give the cancellation time to kick in, this should be more than plenty.
@@ -830,17 +833,17 @@ final class FileSystemTests: XCTestCase {
                 }
                 return true
             }
-            
+
             return "completed the copy"
         }
-        
+
         await fulfillment(of: [cancelRequested], timeout: 1)
         task.cancel()
         let result = await task.result
         switch result {
-        case let .success(msg) :
+        case let .success(msg):
             XCTFail("expected the cancellation to have happened : \(msg)")
-            
+
         case let .failure(err):
             if err is CancellationError {
                 cancelPropagated.fulfill()
@@ -852,15 +855,15 @@ final class FileSystemTests: XCTestCase {
         // We can't assert anything about the state of the copy,
         // it might happen to all finish in time depending on scheduling.
     }
-    
+
     func testCopyNonExistentFileSequential() async throws {
         try await testCopyNonExistentFile(.sequential)
     }
-    
+
     func testCopyNonExistentFileParallelMinimal() async throws {
         try await testCopyNonExistentFile(.minimalParallel)
     }
-    
+
     func testCopyNonExistentFileParallelDefault() async throws {
         try await testCopyNonExistentFile(.platformDefault)
     }
@@ -878,7 +881,7 @@ final class FileSystemTests: XCTestCase {
             XCTAssertEqual(error.code, .notFound)
         }
     }
-    
+
     func testCopyToExistingDestinationSequential() async throws {
         try await testCopyToExistingDestination(.sequential)
     }
