@@ -73,7 +73,7 @@ jobs:
       uses: actions/checkout@v4
     - name: Run documentation check
       run: |
-        apt-get -qq update && apt-get -qq -y install curl
+        apt-get -qq update && apt-get -qq -y install curl yq
         curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-docs.sh | bash
 
   unacceptable-language-check:
