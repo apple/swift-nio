@@ -450,39 +450,97 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         }
     }
 
-    func testDrainScheduledTasks() async throws {
+    func testShutdownCancelsFutureScheduledTasks() async {
         let eventLoop = NIOAsyncTestingEventLoop()
         let tasksRun = ManagedAtomic(0)
-        let startTime = eventLoop.now
 
-        eventLoop.scheduleTask(in: .nanoseconds(3_141_592)) {
-            XCTAssertEqual(eventLoop.now, startTime + .nanoseconds(3_141_592))
-            tasksRun.wrappingIncrement(ordering: .relaxed)
+        let a = eventLoop.scheduleTask(in: .seconds(1)) { tasksRun.wrappingIncrement(ordering: .relaxed) }
+        let b = eventLoop.scheduleTask(in: .seconds(2)) { tasksRun.wrappingIncrement(ordering: .relaxed) }
+
+        XCTAssertEqual(tasksRun.load(ordering: .relaxed), 0)
+
+        await eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
+
+        XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+        XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
+
+        await eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
+
+        await eventLoop.advanceTime(to: .distantFuture)
+        XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
+
+        XCTAssertNoThrow(try a.futureResult.wait())
+        await XCTAssertThrowsError(try await b.futureResult.get()) { error in
+            XCTAssertEqual(error as? EventLoopError, .cancelled)
+            XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
         }
-
-        eventLoop.scheduleTask(in: .seconds(3_141_592)) {
-            XCTAssertEqual(eventLoop.now, startTime + .seconds(3_141_592))
-            tasksRun.wrappingIncrement(ordering: .relaxed)
-        }
-
-        await eventLoop.shutdownGracefully()
-        XCTAssertEqual(tasksRun.load(ordering: .relaxed), 2)
     }
 
-    func testDrainScheduledTasksDoesNotRunNewlyScheduledTasks() async throws {
+    func testTasksScheduledDuringShutdownAreAutomaticallyCancelled() async throws {
         let eventLoop = NIOAsyncTestingEventLoop()
         let tasksRun = ManagedAtomic(0)
+        var childTasks: [Scheduled<Void>] = []
 
-        func scheduleNowAndIncrement() {
-            eventLoop.scheduleTask(in: .nanoseconds(0)) {
+        func scheduleRecursiveTask(
+            at taskStartTime: NIODeadline,
+            andChildTaskAfter childTaskStartDelay: TimeAmount
+        ) -> Scheduled<Void> {
+            eventLoop.scheduleTask(deadline: taskStartTime) {
                 tasksRun.wrappingIncrement(ordering: .relaxed)
-                scheduleNowAndIncrement()
+                childTasks.append(
+                    scheduleRecursiveTask(
+                        at: eventLoop.now + childTaskStartDelay,
+                        andChildTaskAfter: childTaskStartDelay
+                    )
+                )
             }
         }
 
-        scheduleNowAndIncrement()
-        await eventLoop.shutdownGracefully()
-        XCTAssertEqual(tasksRun.load(ordering: .relaxed), 1)
+        _ = scheduleRecursiveTask(at: .uptimeNanoseconds(1), andChildTaskAfter: .zero)
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await Task.sleep(for: .milliseconds(1))
+                await eventLoop.shutdownGracefully()
+            }
+            group.addTask {
+                await eventLoop.advanceTime(to: .uptimeNanoseconds(1))
+            }
+            try await group.waitForAll()
+        }
+
+        XCTAssertGreaterThan(tasksRun.load(ordering: .relaxed), 1)
+        XCTAssertEqual(childTasks.count, tasksRun.load(ordering: .relaxed))
+    }
+
+    func testShutdownCancelsRemainingScheduledTasks() async {
+        let eventLoop = NIOAsyncTestingEventLoop()
+        var tasksRun = 0
+
+        let a = eventLoop.scheduleTask(in: .seconds(1)) { tasksRun += 1 }
+        let b = eventLoop.scheduleTask(in: .seconds(2)) { tasksRun += 1 }
+
+        XCTAssertEqual(tasksRun, 0)
+
+        await eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(tasksRun, 1)
+
+        XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
+        XCTAssertEqual(tasksRun, 1)
+
+        await eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(tasksRun, 1)
+
+        await eventLoop.advanceTime(to: .distantFuture)
+        XCTAssertEqual(tasksRun, 1)
+
+        XCTAssertNoThrow(try a.futureResult.wait())
+        await XCTAssertThrowsError(try await b.futureResult.get()) { error in
+            XCTAssertEqual(error as? EventLoopError, .cancelled)
+            XCTAssertEqual(tasksRun, 1)
+        }
     }
 
     func testAdvanceTimeToDeadline() async throws {
