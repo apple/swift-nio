@@ -1,43 +1,39 @@
 name: Pull Request
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
+    pull_request:
+      types: [opened, reopened, synchronize]
 
 jobs:
-  call-pull-request-soundness-workflow:
-    name: Soundness
-    uses: ./.github/workflows/pull_request_soundness.yml
-    with:
-      license_header_check_project_name: "SwiftNIO"
+    soundness:
+        name: Soundness
+        uses: ./.github/workflows/soundness.yml
+        with:
+            license_header_check_project_name: "SwiftNIO"
 
-  call-pull-request-unit-tests-workflow:
-    name: Unit tests
-    uses: ./.github/workflows/pull_request_swift_matrix.yml
-    with:
-      name: "Unit tests"
-      matrix_linux_command: "swift test -Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
-      # Disable warnings as errors: Swift 6 emits sendability warnings that haven't been dealt with yet.
-      matrix_linux_nightly_main_command_override: "swift test --explicit-target-dependency-import-check error"
-      matrix_linux_nightly_6_0_command_override: "swift test --explicit-target-dependency-import-check error"
+    unit-tests:
+        name: Checks
+        uses: ./.github/workflows/unit_tests.yml
+        with:
+            linux_5_8_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+            linux_5_9_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+            linux_5_10_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+            linux_nightly_6_0_arguments_override: "--explicit-target-dependency-import-check error"
+            linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
 
-  call-pull-request-benchmark-workflow:
-    name: Benchmarks
-    uses: ./.github/workflows/pull_request_swift_matrix.yml
-    with:
-      name: "Benchmarks"
-      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev && swift package --package-path Benchmarks/ --disable-sandbox benchmark baseline check --check-absolute-path Benchmarks/Thresholds/${SWIFT_VERSION}/"
+    benchmarks:
+        name: Checks
+        uses: ./.github/workflows/benchmarks.yml
+        with:
+            benchmark_package_path: "Benchmarks"
 
-  call-pull-request-cxx-interop-workflow:
-    name: Cxx interop
-    uses: ./.github/workflows/pull_request_swift_matrix.yml
-    with:
-      name: "Cxx interop"
-      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q jq && ./scripts/check-cxx-interop-compatibility.sh"
+    cxx-interop:
+        name: Checks
+        uses: ./.github/workflows/cxx_interop.yml
 
-  call-pull-request-integration-tests-workflow:
-    name: Integration tests
-    uses: ./.github/workflows/pull_request_swift_matrix.yml
-    with:
-      name: "Integration tests"
-      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"
+    integration-tests:
+        name: Checks / Integration Tests
+        uses: ./.github/workflows/swift_matrix.yml
+        with:
+          name: "Integration tests"
+          matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"

@@ -1,0 +1,63 @@
+name: Unit tests
+
+on:
+  workflow_call:
+    inputs:
+        linux_5_8_enabled:
+            type: boolean
+            description: "Boolean to enable the Linux 5.8 Swift version matrix job. Defaults to true."
+            default: true
+        linux_5_8_arguments_override:
+            type: string
+            description: "The arguments passed to swift test in the Linux 5.8 Swift version matrix job."
+            default: ""
+        linux_5_9_enabled:
+            type: boolean
+            description: "Boolean to enable the Linux 5.9 Swift version matrix job. Defaults to true."
+            default: true
+        linux_5_9_arguments_override:
+            type: string
+            description: "The arguments passed to swift test in the Linux 5.9 Swift version matrix job."
+            default: ""
+        linux_5_10_enabled:
+            type: boolean
+            description: "Boolean to enable the Linux 5.10 Swift version matrix job. Defaults to true."
+            default: true
+        linux_5_10_arguments_override:
+            type: string
+            description: "The arguments passed to swift test in the Linux 5.10 Swift version matrix job."
+            default: ""
+        linux_nightly_6_0_enabled:
+            type: boolean
+            description: "Boolean to enable the Linux nightly 6.0 Swift version matrix job. Defaults to true."
+            default: true
+        linux_nightly_6_0_arguments_override:
+            type: string
+            description: "The arguments passed to swift test in the Linux nightly 6.0 Swift version matrix job."
+            default: ""
+        linux_nightly_main_enabled:
+            type: boolean
+            description: "Boolean to enable the Linux nightly main Swift version matrix job. Defaults to true."
+            default: true
+        linux_nightly_main_arguments_override:
+            type: string
+            description: "The arguments passed to swift test in the Linux nightly main Swift version matrix job."
+            default: ""
+ 
+jobs:
+    unit-tests:
+        name: Unit tests
+        uses: ./.github/workflows/swift_matrix.yml
+        with:
+          name: "Unit tests"
+          matrix_linux_command: "swift test"
+          matrix_linux_5_8_enabled: ${{ inputs.linux_5_8_enabled }}
+          matrix_linux_5_8_command_override: "swift test ${{ inputs.linux_5_8_arguments_override }}"
+          matrix_linux_5_9_enabled: ${{ inputs.linux_5_9_enabled }}
+          matrix_linux_5_9_command_override: "swift test ${{ inputs.linux_5_9_arguments_override }}"
+          matrix_linux_5_10_enabled: ${{ inputs.linux_5_10_enabled }}
+          matrix_linux_5_10_command_override: "swift test ${{ inputs.linux_5_10_arguments_override }}"
+          matrix_linux_nightly_6_0_enabled: ${{ inputs.linux_nightly_6_0_enabled }}
+          matrix_linux_nightly_6_0_command_override: "swift test ${{ inputs.linux_nightly_6_0_arguments_override }}"
+          matrix_linux_nightly_main_enabled: ${{ inputs.linux_nightly_main_enabled }}
+          matrix_linux_nightly_main_command_override: "swift test ${{ inputs.linux_nightly_main_arguments_override }}"

@@ -1,4 +1,4 @@
-name: Pull Request
+name: Soundness
 
 on:
   workflow_call:
@@ -126,9 +126,7 @@ jobs:
     - name: Mark the workspace as safe
     # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
-    - name: Format Swift files
-      run: git ls-files -z '*.swift' | xargs -0 swift format format --parallel --in-place
-    - name: Lint Swift files
-      run:  git ls-files -z '*.swift' | xargs -0 swift format lint --strict --parallel
-    - name: Check format produced no diff
-      run: GIT_PAGER= git diff --exit-code '*.swift'
+    - name: Run format check
+      run:  |
+        apt-get -qq update && apt-get -qq -y install curl
+        curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-swift-format.sh | bash
