@@ -89,7 +89,11 @@ public struct NIOScheduledCallback: Sendable {
 }
 
 extension EventLoop {
-    /* package */ public func _scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
+    // This could be package once we drop Swift 5.8.
+    public func _scheduleCallback(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) -> NIOScheduledCallback {
         let task = self.scheduleTask(deadline: deadline) { handler.handleScheduledCallback(eventLoop: self) }
         task.futureResult.whenFailure { error in
             if case .cancelled = error as? EventLoopError {
@@ -128,14 +132,20 @@ extension EventLoop {
     /// The implementation of this default conformance has been further factored out so we can use it in
     /// `NIOAsyncTestingEventLoop`, where the use of `wait()` is _less bad_.
     @discardableResult
-    public func scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
+    public func scheduleCallback(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) -> NIOScheduledCallback {
         self._scheduleCallback(at: deadline, handler: handler)
     }
 
     /// Default implementation of `scheduleCallback(in amount:handler:)`: calls `scheduleCallback(at deadline:handler:)`.
     @discardableResult
     @inlinable
-    public func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) throws -> NIOScheduledCallback {
+    public func scheduleCallback(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
         try self.scheduleCallback(at: .now() + amount, handler: handler)
     }
 

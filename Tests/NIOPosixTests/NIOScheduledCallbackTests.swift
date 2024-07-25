@@ -253,7 +253,7 @@ extension _BaseScheduledCallbackTests {
     }
 }
 
-fileprivate final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler {
+private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler {
     var callbackCount = 0
     var cancelCount = 0
 

@@ -191,7 +191,10 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
         self.scheduleTask(deadline: self.now + `in`, task)
     }
 
-    public func scheduleCallback(at deadline: NIODeadline, handler: some NIOScheduledCallbackHandler) throws -> NIOScheduledCallback {
+    public func scheduleCallback(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
         /// The default implementation of `scheduledCallback(at:handler)` makes two calls to the event loop because it
         /// needs to hook the future of the backing scheduled task, which can lead to lost cancellation callbacks when
         /// callbacks are scheduled close to event loop shutdown.
@@ -210,7 +213,10 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     }
 
     @discardableResult
-    public func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) throws -> NIOScheduledCallback {
+    public func scheduleCallback(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
         /// Even though this type does not implement a custom `scheduleCallback(at:handler)`, it uses a manual clock so
         /// it cannot rely on the default implementation of `scheduleCallback(in:handler:)`, which computes the deadline
         /// as an offset from `NIODeadline.now`. This event loop needs the deadline to be offset from `self.now`.

@@ -156,7 +156,10 @@ public final class EmbeddedEventLoop: EventLoop {
     }
 
     @discardableResult
-    public func scheduleCallback(in amount: TimeAmount, handler: some NIOScheduledCallbackHandler) -> NIOScheduledCallback {
+    public func scheduleCallback(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) -> NIOScheduledCallback {
         /// Even though this type does not implement a custom `scheduleCallback(at:handler)`, it uses a manual clock so
         /// it cannot rely on the default implementation of `scheduleCallback(in:handler:)`, which computes the deadline
         /// as an offset from `NIODeadline.now`. This event loop needs the deadline to be offset from `self._now`.
