@@ -37,5 +37,5 @@ for f in 58 59 510 nightly-6.0 main; do
 
     docker_file=$(ls "$target_repo/docker/docker-compose."*"$f"*".yaml")
 
-    docker-compose -f docker/docker-compose.yaml -f $docker_file run update-benchmark-baseline
+    docker-compose -f docker/docker-compose.yaml -f "$docker_file" run update-benchmark-baseline
 done

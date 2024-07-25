@@ -36,7 +36,9 @@ function plugins_do() {
     done
 }
 
+# shellcheck source=IntegrationTests/plugin_echo.sh
 source "$here/plugin_echo.sh"
+# shellcheck source=/dev/null
 source "$here/plugin_junit_xml.sh"
 
 plugins="echo"
@@ -88,7 +90,7 @@ function run_test() {
     if $verbose; then
         "$@" 2>&1 | tee -a "$out"
         # we need to return the return value of the first command
-        return ${PIPESTATUS[0]}
+        return "${PIPESTATUS[0]}"
     else
         "$@" >> "$out" 2>&1
     fi
@@ -113,13 +115,13 @@ for f in tests_*; do
         plugins_do test_begin "$t" "$f"
         start=$(date +%s)
         if run_test "$here/run-single-test.sh" "$here/$f/$t" "$test_tmp" "$here/.." "$show_info"; then
-            plugins_do test_ok "$(time_diff_to_now $start)"
+            plugins_do test_ok "$(time_diff_to_now "$start")"
             suite_ok=$((suite_ok+1))
             if $verbose; then
                 cat "$out"
             fi
         else
-            plugins_do test_fail "$(time_diff_to_now $start)" "$out"
+            plugins_do test_fail "$(time_diff_to_now "$start")" "$out"
             suite_fail=$((suite_fail+1))
         fi
         if ! $debug; then
@@ -131,7 +133,7 @@ for f in tests_*; do
     cnt_ok=$((cnt_ok + suite_ok))
     cnt_fail=$((cnt_fail + suite_fail))
     cd ..
-    plugins_do test_suite_end "$(time_diff_to_now $start_suite)" "$suite_ok" "$suite_fail"
+    plugins_do test_suite_end "$(time_diff_to_now "$start_suite")" "$suite_ok" "$suite_fail"
 done
 
 if ! $debug; then
@@ -142,7 +144,7 @@ fi
 
 
 # report
-if [[ $cnt_fail > 0 ]]; then
+if [[ $cnt_fail -gt 0 ]]; then
     # terminate leftovers (the whole process group)
     trap '' TERM
     kill 0 # ignore-unacceptable-language
@@ -152,7 +154,7 @@ else
     plugins_do summary_ok "$cnt_ok" "$cnt_fail"
 fi
 
-if [[ $cnt_fail > 0 ]]; then
+if [[ $cnt_fail -gt 0 ]]; then
     exit 1
 else
     exit 0

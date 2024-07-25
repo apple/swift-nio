@@ -58,7 +58,7 @@ function do_netstat() {
 }
 
 function create_token() {
-    mktemp "$tmp/server_token_XXXXXX"
+    mktemp "${tmp:?}/server_token_XXXXXX"
 }
 
 function start_server() {
@@ -84,6 +84,7 @@ function start_server() {
 
     mkdir "$tmp/htdocs"
     swift build
+    # shellcheck disable=SC2086 # Disabled to properly pass the args
     "$(swift build --show-bin-path)/NIOHTTP1Server" $extra_args $maybe_nio_host "$port" "$tmp/htdocs" &
     tmp_server_pid=$!
     case "$type" in
@@ -114,9 +115,11 @@ function start_server() {
     esac
     echo "port: $port"
     echo "curl port: $curl_port"
-    echo "local token_port;   local token_htdocs;         local token_pid;"      >> "$token"
-    echo "      token_port='$port'; token_htdocs='$tmp/htdocs'; token_pid='$!';" >> "$token"
-    echo "      token_type='$type'; token_server_ip='$maybe_nio_host'" >> "$token"
+    {
+        echo "local token_port;   local token_htdocs;         local token_pid;"
+        echo "      token_port='$port'; token_htdocs='$tmp/htdocs'; token_pid='$!';"
+        echo "      token_type='$type'; token_server_ip='$maybe_nio_host'"
+    } >> "$token"
     tmp_server_pid=$(get_server_pid "$token")
     echo "local token_open_fds" >> "$token"
     echo "token_open_fds='$(get_number_of_open_fds_for_pid "$tmp_server_pid")'" >> "$token"
@@ -125,21 +128,25 @@ function start_server() {
 }
 
 function get_htdocs() {
+    # shellcheck source=/dev/null
     source "$1"
-    echo "$token_htdocs"
+    # shellcheck disable=SC2154
+    echo "${token_htdocs:?}"
 }
 
 function get_socket() {
+    # shellcheck source=/dev/null
     source "$1"
-    echo "$token_port"
+    echo "${token_port:?}"
 }
 
 function stop_server() {
+    # shellcheck source=/dev/null
     source "$1"
     sleep 0.5 # just to make sure all the fds could be closed
     if command -v lsof > /dev/null 2> /dev/null; then
-        do_netstat "$token_type"
-        assert_number_of_open_fds_for_pid_equals "$token_pid" "$token_open_fds"
+        do_netstat "${token_type:?}"
+        assert_number_of_open_fds_for_pid_equals "${token_pid:?}" "${token_open_fds:?}"
     fi
     # assert server is still running
     kill -0 "$token_pid" # ignore-unacceptable-language
@@ -149,6 +156,7 @@ function stop_server() {
         if ! kill -0 "$token_pid" 2> /dev/null; then # ignore-unacceptable-language
             break # good, dead
         fi
+        # shellcheck disable=SC2009
         ps auxw | grep "$token_pid" || true
         sleep 0.1
     done
@@ -158,21 +166,26 @@ function stop_server() {
 }
 
 function get_server_pid() {
+    # shellcheck source=/dev/null
     source "$1"
     echo "$token_pid"
 }
 
 function get_server_port() {
+    # shellcheck source=/dev/null
     source "$1"
     echo "$token_port"
 }
 
 function get_server_ip() {
+    # shellcheck source=/dev/null
     source "$1"
+    # shellcheck disable=SC2154
     echo "$token_server_ip"
 }
 
 function do_curl() {
+    # shellcheck source=/dev/null
     source "$1"
     shift
     case "$token_type" in

@@ -13,15 +13,19 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)
 start_server "$token"
+# shellcheck disable=SC2034
 htdocs=$(get_htdocs "$token")
+# shellcheck disable=SC2034
 server_pid=$(get_server_pid "$token")
+# shellcheck disable=SC2034
 socket=$(get_socket "$token")
 
-cat > "$tmp/expected" <<EOF
+cat > "${tmp:?"tmp variable not set"}/expected" <<EOF
 line 1
 line 2
 line 3

@@ -36,12 +36,13 @@ expected_file_header_template="@@===--------------------------------------------
 
 paths_with_missing_license=( )
 
-file_paths=$(git ls-files $(cat .licenseignore | xargs -I% printf ":(exclude)% "))
+file_paths=$(tr '\n' '\0' < .licenseignore | xargs -0 -I% printf '":(exclude)%" '| xargs git ls-files)
 
 while IFS= read -r file_path; do
   file_basename=$(basename -- "${file_path}")
   file_extension="${file_basename##*.}"
 
+  # shellcheck disable=SC2001 # We prefer to use sed here instead of bash search/replace
   case "${file_extension}" in
     swift) expected_file_header=$(sed -e 's|@@|//|g' <<<"${expected_file_header_template}") ;;
     h) expected_file_header=$(sed -e 's|@@|//|g' <<<"${expected_file_header_template}") ;;

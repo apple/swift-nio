@@ -51,4 +51,4 @@ for old_tag in "$@"; do
     swift package diagnose-api-breaking-changes "$old_tag"
 done
 
-echo done
+echo "done"
