@@ -20,12 +20,17 @@ set -x
 set -o pipefail
 
 test="$1"
+# shellcheck disable=SC2034 # Used by whatever we source transpile in
 tmp="$2"
+# shellcheck disable=SC2034 # Used by whatever we source transpile in
 root="$3"
+# shellcheck disable=SC2034 # Used by whatever we source transpile in
 g_show_info="$4"
 here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# shellcheck source=IntegrationTests/test_functions.sh
 source "$here/test_functions.sh"
+# shellcheck source=/dev/null
 source "$test"
 wait
 )

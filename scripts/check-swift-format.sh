@@ -18,22 +18,29 @@ log() { printf -- "** %s\n" "$*" >&2; }
 error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
-excluded_files=""
 
-if [ -f .swiftformatignore ]; then
+if [[ -f .swiftformatignore ]]; then
     log "Found swiftformatignore file..."
-    excluded_files=$(cat .swiftformatignore | xargs -I% printf ":(exclude)% ")
+
+    log "Running swift format format..."
+    tr '\n' '\0' < .swiftformatignore| xargs -0 -I% printf '":(exclude)%" '| xargs git ls-files -z '*.swift' | xargs -0 swift format format --parallel --in-place
+
+    log "Running swift format lint..."
+
+    tr '\n' '\0' < .swiftformatignore | xargs -0 -I% printf '":(exclude)%" '| xargs git ls-files -z '*.swift' | xargs -0 swift format lint --strict --parallel
+else
+    log "Running swift format format..."
+    git ls-files -z '*.swift' | xargs -0 swift format format --parallel --in-place
+
+    log "Running swift format lint..."
+
+    git ls-files -z '*.swift' | xargs -0 swift format lint --strict --parallel
 fi
 
-log "Running swift format format..."
-git ls-files -z '*.swift' $excluded_files | xargs -0 swift format format --parallel --in-place
 
-log "Running swift format lint..."
-
-git ls-files -z '*.swift' $excluded_files | xargs -0 swift format lint --strict --parallel
 
 log "Checking for modified files..."
 
-GIT_PAGER= git diff --exit-code '*.swift'
+GIT_PAGER='' git diff --exit-code '*.swift'
 
 log "✅ Found no formatting issues."

@@ -130,3 +130,17 @@ jobs:
       run:  |
         apt-get -qq update && apt-get -qq -y install curl
         curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-swift-format.sh | bash
+
+  shell-check:
+    name: Shell check
+    if: ${{ inputs.format_check_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Mark the workspace as safe
+    # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+    - name: Run shellcheck
+      run:  git ls-files -z '*.sh' | xargs -0 shellcheck

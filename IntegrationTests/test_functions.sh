@@ -64,6 +64,7 @@ function assert_greater_than_or_equal() {
 g_has_previously_infoed=false
 
 function info() {
+    # shellcheck disable=SC2154 # Defined by an include our by being source transpiled in
     if $g_show_info; then
         if ! $g_has_previously_infoed; then
             echo >&3 || true # echo an extra newline so it looks better

@@ -13,6 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 set -eu
@@ -39,7 +40,7 @@ for test in "${all_tests[@]}"; do
         not_freed_allocations=$(grep "^test_$test_case.remaining_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
         leaked_fds=$(grep "^test_$test_case.leaked_fds:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
         max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test_case"
-        max_allowed=$(jq '.'\"$test_case\" "$here/Thresholds/$SWIFT_VERSION.json")
+        max_allowed=$(jq '.'\""$test_case"\" "$here/Thresholds/$SWIFT_VERSION.json")
 
         info "$test_case: allocations not freed: $not_freed_allocations"
         info "$test_case: total number of mallocs: $total_allocations"
@@ -62,5 +63,5 @@ for test in "${all_tests[@]}"; do
             assert_less_than_or_equal "$total_allocations" "$max_allowed"
             assert_greater_than "$total_allocations" "$(( max_allowed - 1000))"
         fi
-    done < <(grep "^test_$test[^\W]*.total_allocations:" "$tmp/output" | cut -d: -f1 | cut -d. -f1 | sort | uniq)
+    done < <(grep "^test_${test[^\W]}*.total_allocations:" "$tmp/output" | cut -d: -f1 | cut -d. -f1 | sort | uniq)
 done
