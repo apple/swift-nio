@@ -150,7 +150,7 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
 extension Channel {
     /// Default implementation: `NIOSynchronousChannelOptions` are not supported.
     public var syncOptions: NIOSynchronousChannelOptions? {
-        return nil
+        nil
     }
 }
 
@@ -210,7 +210,6 @@ extension Channel {
     }
 }
 
-
 /// Provides special extension to make writing data to the `Channel` easier by removing the need to wrap data in `NIOAny` manually.
 extension Channel {
 
@@ -218,7 +217,7 @@ extension Channel {
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
     public func write<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.write(NIOAny(any))
+        self.write(NIOAny(any))
     }
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
@@ -232,9 +231,8 @@ extension Channel {
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
     public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.writeAndFlush(NIOAny(any))
+        self.writeAndFlush(NIOAny(any))
     }
-
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
@@ -262,7 +260,7 @@ extension ChannelCore {
     /// - returns: The content of the `NIOAny`.
     @inlinable
     public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
-        return data.forceAs()
+        data.forceAs()
     }
 
     /// Attempts to unwrap the given `NIOAny` as a specific concrete type.
@@ -284,7 +282,7 @@ extension ChannelCore {
     ///     are doing something _extremely_ unusual.
     @inlinable
     public func tryUnwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T? {
-        return data.tryAs()
+        data.tryAs()
     }
 
     /// Removes the `ChannelHandler`s from the `ChannelPipeline` belonging to `channel`, and
@@ -384,7 +382,7 @@ extension ChannelError {
     static let _unremovableHandler: any Error = ChannelError.unremovableHandler
 }
 
-extension ChannelError: Equatable { }
+extension ChannelError: Equatable {}
 
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}

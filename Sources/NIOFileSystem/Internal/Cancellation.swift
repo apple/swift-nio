@@ -42,7 +42,7 @@ public func withUncancellableTearDown<R>(
         result = .failure(error)
     }
 
-    let errorOnlyResult: Result<Void, Error> = result.map { _ in return () }
+    let errorOnlyResult: Result<Void, Error> = result.map { _ in () }
     let tearDownResult: Result<Void, Error> = try await withoutCancellation {
         do {
             return .success(try await tearDown(errorOnlyResult))

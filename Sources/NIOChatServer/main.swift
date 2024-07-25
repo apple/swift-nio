@@ -11,9 +11,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+import Dispatch
 import NIOCore
 import NIOPosix
-import Dispatch
 
 private let newLine = "\n".utf8.first!
 
@@ -27,7 +28,7 @@ final class LineDelimiterCodec: ByteToMessageDecoder {
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         let readable = buffer.withUnsafeReadableBytes { $0.firstIndex(of: newLine) }
         if let r = readable {
-            context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: r + 1)!))
+            context.fireChannelRead(Self.wrapInboundOut(buffer.readSlice(length: r + 1)!))
             return .continue
         }
         return .needMoreData
@@ -51,35 +52,43 @@ final class ChatHandler: ChannelInboundHandler {
     // All access to channels is guarded by channelsSyncQueue.
     private let channelsSyncQueue = DispatchQueue(label: "channelsQueue")
     private var channels: [ObjectIdentifier: Channel] = [:]
-    
+
     public func channelActive(context: ChannelHandlerContext) {
         let remoteAddress = context.remoteAddress!
         let channel = context.channel
         self.channelsSyncQueue.async {
             // broadcast the message to all the connected clients except the one that just became active.
-            self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - New client connected with address: \(remoteAddress)\n")
-            
+            self.writeToAll(
+                channels: self.channels,
+                allocator: channel.allocator,
+                message: "(ChatServer) - New client connected with address: \(remoteAddress)\n"
+            )
+
             self.channels[ObjectIdentifier(channel)] = channel
         }
-        
+
         var buffer = channel.allocator.buffer(capacity: 64)
         buffer.writeString("(ChatServer) - Welcome to: \(context.localAddress!)\n")
-        context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+        context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: nil)
     }
-    
+
     public func channelInactive(context: ChannelHandlerContext) {
         let channel = context.channel
         self.channelsSyncQueue.async {
             if self.channels.removeValue(forKey: ObjectIdentifier(channel)) != nil {
                 // Broadcast the message to all the connected clients except the one that just was disconnected.
-                self.writeToAll(channels: self.channels, allocator: channel.allocator, message: "(ChatServer) - Client disconnected\n")
+                self.writeToAll(
+                    channels: self.channels,
+                    allocator: channel.allocator,
+                    message: "(ChatServer) - Client disconnected\n"
+                )
             }
         }
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let id = ObjectIdentifier(context.channel)
-        var read = self.unwrapInboundIn(data)
+        var read = Self.unwrapInboundIn(data)
 
         // 64 should be good enough for the ipaddress
         var buffer = context.channel.allocator.buffer(capacity: read.readableBytes + 64)
@@ -100,12 +109,14 @@ final class ChatHandler: ChannelInboundHandler {
     }
 
     private func writeToAll(channels: [ObjectIdentifier: Channel], allocator: ByteBufferAllocator, message: String) {
-        let buffer =  allocator.buffer(string: message)
+        let buffer = allocator.buffer(string: message)
         self.writeToAll(channels: channels, buffer: buffer)
     }
 
     private func writeToAll(channels: [ObjectIdentifier: Channel], buffer: ByteBuffer) {
-        channels.forEach { $0.value.writeAndFlush(buffer, promise: nil) }
+        for channel in channels {
+            channel.value.writeAndFlush(buffer, promise: nil)
+        }
     }
 }
 
@@ -154,8 +165,8 @@ enum BindTo {
 
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
-    /* we got two arguments, let's interpret that as host and port */
+case (.some(let h), _, .some(let p)):
+    // we got two arguments, let's interpret that as host and port
     bindTarget = .ip(host: h, port: p)
 
 case (let portString?, .none, _):
@@ -180,7 +191,9 @@ let channel = try { () -> Channel in
 }()
 
 guard let localAddress = channel.localAddress else {
-    fatalError("Address was unable to bind. Please check that the socket was not closed or that the address family was understood.")
+    fatalError(
+        "Address was unable to bind. Please check that the socket was not closed or that the address family was understood."
+    )
 }
 print("Server started and listening on \(localAddress)")
 

@@ -11,13 +11,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import XCTest
-@testable import NIOCore
+
 import NIOEmbedded
+import XCTest
+
+@testable import NIOCore
 @testable import NIOHTTP1
 
-private extension ByteBuffer {
-    func assertContainsOnly(_ string: String) {
+extension ByteBuffer {
+    fileprivate func assertContainsOnly(_ string: String) {
         let innerData = self.getString(at: self.readerIndex, length: self.readableBytes)!
         XCTAssertEqual(innerData, string)
     }
@@ -64,7 +66,11 @@ class HTTPRequestEncoderTests: XCTestCase {
     }
 
     func testNoAutoHeadersForPOSTWhenDisabled() throws {
-        let writtenData = try sendRequest(withMethod: .POST, andHeaders: HTTPHeaders(), configuration: .noFramingTransformation)
+        let writtenData = try sendRequest(
+            withMethod: .POST,
+            andHeaders: HTTPHeaders(),
+            configuration: .noFramingTransformation
+        )
         writtenData.assertContainsOnly("POST /uri HTTP/1.1\r\n\r\n")
     }
 
@@ -98,7 +104,11 @@ class HTTPRequestEncoderTests: XCTestCase {
 
     func testAllowContentLengthHeadersWhenForced_forTRACE() throws {
         let headers = HTTPHeaders([("content-length", "0")])
-        let writtenData = try sendRequest(withMethod: .TRACE, andHeaders: headers, configuration: .noFramingTransformation)
+        let writtenData = try sendRequest(
+            withMethod: .TRACE,
+            andHeaders: headers,
+            configuration: .noFramingTransformation
+        )
         writtenData.assertContainsOnly("TRACE /uri HTTP/1.1\r\ncontent-length: 0\r\n\r\n")
     }
 
@@ -110,7 +120,11 @@ class HTTPRequestEncoderTests: XCTestCase {
 
     func testAllowTransferEncodingHeadersWhenForced_forTRACE() throws {
         let headers = HTTPHeaders([("transfer-encoding", "chunked")])
-        let writtenData = try sendRequest(withMethod: .TRACE, andHeaders: headers, configuration: .noFramingTransformation)
+        let writtenData = try sendRequest(
+            withMethod: .TRACE,
+            andHeaders: headers,
+            configuration: .noFramingTransformation
+        )
         writtenData.assertContainsOnly("TRACE /uri HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
     }
 
@@ -175,9 +189,17 @@ class HTTPRequestEncoderTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         var expected = channel.allocator.buffer(capacity: 32)
 
-        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1,
-                                                                                    method: .POST,
-                                                                                    uri: "/"))))
+        XCTAssertNoThrow(
+            try channel.writeOutbound(
+                HTTPClientRequestPart.head(
+                    .init(
+                        version: .http1_1,
+                        method: .POST,
+                        uri: "/"
+                    )
+                )
+            )
+        )
         expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
         XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
 
@@ -207,10 +229,18 @@ class HTTPRequestEncoderTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         var expected = channel.allocator.buffer(capacity: 32)
 
-        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1,
-                                                                                    method: .POST,
-                                                                                    uri: "/",
-                                                                                    headers: ["TrAnSfEr-encoding": "chuNKED"]))))
+        XCTAssertNoThrow(
+            try channel.writeOutbound(
+                HTTPClientRequestPart.head(
+                    .init(
+                        version: .http1_1,
+                        method: .POST,
+                        uri: "/",
+                        headers: ["TrAnSfEr-encoding": "chuNKED"]
+                    )
+                )
+            )
+        )
         expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
         XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
 
@@ -240,9 +270,17 @@ class HTTPRequestEncoderTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         var expected = channel.allocator.buffer(capacity: 32)
 
-        XCTAssertNoThrow(try channel.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1,
-                                                                                    method: .POST,
-                                                                                    uri: "/"))))
+        XCTAssertNoThrow(
+            try channel.writeOutbound(
+                HTTPClientRequestPart.head(
+                    .init(
+                        version: .http1_1,
+                        method: .POST,
+                        uri: "/"
+                    )
+                )
+            )
+        )
         expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
         XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
 
@@ -264,9 +302,16 @@ class HTTPRequestEncoderTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 16)
         var expected = channel.allocator.buffer(capacity: 32)
 
-        channel.write(HTTPClientRequestPart.head(.init(version: .http1_1,
-                                                       method: .POST,
-                                                       uri: "/")), promise: nil)
+        channel.write(
+            HTTPClientRequestPart.head(
+                .init(
+                    version: .http1_1,
+                    method: .POST,
+                    uri: "/"
+                )
+            ),
+            promise: nil
+        )
         channel.flush()
         expected.writeString("POST / HTTP/1.1\r\ntransfer-encoding: chunked\r\n\r\n")
         XCTAssertNoThrow(XCTAssertEqual(expected, try channel.readOutbound(as: ByteBuffer.self)))
@@ -364,7 +409,12 @@ class HTTPRequestEncoderTests: XCTestCase {
         }
 
         try channel.pipeline.addHTTPClientHandlers(encoderConfiguration: .noFramingTransformation).wait()
-        let request = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri", headers: ["transfer-encoding": "chunked"])
+        let request = HTTPRequestHead(
+            version: .http1_1,
+            method: .POST,
+            uri: "/uri",
+            headers: ["transfer-encoding": "chunked"]
+        )
         try channel.writeOutbound(HTTPClientRequestPart.head(request))
         guard let headBuffer = try channel.readOutbound(as: ByteBuffer.self) else {
             XCTFail("Unable to read buffer")
@@ -399,9 +449,13 @@ class HTTPRequestEncoderTests: XCTestCase {
     }
 
     private func assertOutboundContainsOnly(_ channel: EmbeddedChannel, _ expected: String) {
-        XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self).map { buffer in
-            buffer.assertContainsOnly(expected)
-        }, "couldn't read ByteBuffer"))
+        XCTAssertNoThrow(
+            XCTAssertNotNil(
+                try channel.readOutbound(as: ByteBuffer.self).map { buffer in
+                    buffer.assertContainsOnly(expected)
+                },
+                "couldn't read ByteBuffer"
+            )
+        )
     }
 }
-

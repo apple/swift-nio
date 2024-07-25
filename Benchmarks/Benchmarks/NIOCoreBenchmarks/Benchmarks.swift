@@ -18,7 +18,7 @@ import NIOEmbedded
 
 let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [
-        .mallocCountTotal,
+        .mallocCountTotal
     ]
 
     Benchmark(
@@ -28,7 +28,7 @@ let benchmarks = {
         // Elide the cost of the 'EmbeddedChannel'. It's only used for its pipeline.
         var channels: [EmbeddedChannel] = []
         channels.reserveCapacity(benchmark.scaledIterations.count)
-        for _ in 0 ..< benchmark.scaledIterations.count {
+        for _ in 0..<benchmark.scaledIterations.count {
             channels.append(EmbeddedChannel())
         }
 

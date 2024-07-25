@@ -218,16 +218,16 @@ final class BufferedWriterTests: XCTestCase {
             )
         }
         XCTAssertEqual(writtenBytes, 128)
-        
+
         guard let fileInfo = try await fs.info(forFileAt: path) else {
             XCTFail()
             return
         }
-        
+
         // Test that the newly created file contains all the 128 characters.
         XCTAssertEqual(fileInfo.size, 128)
     }
-    
+
     func testBufferedWriterReclaimsStorageAfterLargeWrite() async throws {
         let fs = FileSystem.shared
         let path = try await fs.temporaryFilePath()

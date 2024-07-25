@@ -281,7 +281,7 @@ extension FileSystemProtocol {
     ) async throws -> Result {
         let handle = try await self.openFile(forReadingAt: path, options: options)
         return try await withUncancellableTearDown {
-            return try await execute(handle)
+            try await execute(handle)
         } tearDown: { _ in
             try await handle.close()
         }
@@ -308,7 +308,7 @@ extension FileSystemProtocol {
     ) async throws -> Result {
         let handle = try await self.openFile(forWritingAt: path, options: options)
         return try await withUncancellableTearDown {
-            return try await execute(handle)
+            try await execute(handle)
         } tearDown: { result in
             switch result {
             case .success:
@@ -340,7 +340,7 @@ extension FileSystemProtocol {
     ) async throws -> Result {
         let handle = try await self.openFile(forReadingAndWritingAt: path, options: options)
         return try await withUncancellableTearDown {
-            return try await execute(handle)
+            try await execute(handle)
         } tearDown: { _ in
             try await handle.close()
         }
@@ -361,7 +361,7 @@ extension FileSystemProtocol {
     ) async throws -> Result {
         let handle = try await self.openDirectory(atPath: path, options: options)
         return try await withUncancellableTearDown {
-            return try await execute(handle)
+            try await execute(handle)
         } tearDown: { _ in
             try await handle.close()
         }
@@ -406,7 +406,7 @@ extension FileSystemProtocol {
     ///    - path: The path to get information about.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
     public func info(forFileAt path: FilePath) async throws -> FileInfo? {
-        return try await self.info(forFileAt: path, infoAboutSymbolicLink: false)
+        try await self.info(forFileAt: path, infoAboutSymbolicLink: false)
     }
 
     /// Copies the item at the specified path to a new location.
@@ -429,7 +429,7 @@ extension FileSystemProtocol {
         try await self.copyItem(at: sourcePath, to: destinationPath) { entry, error in
             throw error
         } shouldCopyFile: { source, destination in
-            return true
+            true
         }
     }
 

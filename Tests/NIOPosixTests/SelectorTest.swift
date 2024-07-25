@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIOCore
-@testable import NIOPosix
 import Atomics
+import NIOCore
+import XCTest
+
+@testable import NIOPosix
 
 class SelectorTest: XCTestCase {
 
@@ -56,9 +57,13 @@ class SelectorTest: XCTestCase {
         }
         try socket2.setNonBlocking()
 
-        let serverSocket = try assertNoThrowWithValue(ServerSocket.bootstrap(protocolFamily: .inet,
-                                                                             host: "127.0.0.1",
-                                                                             port: 0))
+        let serverSocket = try assertNoThrowWithValue(
+            ServerSocket.bootstrap(
+                protocolFamily: .inet,
+                host: "127.0.0.1",
+                port: 0
+            )
+        )
         defer {
             XCTAssertNoThrow(try serverSocket.close())
         }
@@ -75,16 +80,25 @@ class SelectorTest: XCTestCase {
         }
 
         // Register both sockets with .write. This will ensure both are ready when calling selector.whenReady.
-        try selector.register(selectable: socket1 , interested: [.reset, .write], makeRegistration: { ev, regID in
-            return TestRegistration(socket: socket1, interested: ev, registrationID: regID)
-        })
+        try selector.register(
+            selectable: socket1,
+            interested: [.reset, .write],
+            makeRegistration: { ev, regID in
+                TestRegistration(socket: socket1, interested: ev, registrationID: regID)
+            }
+        )
 
-        try selector.register(selectable: socket2 , interested: [.reset, .write], makeRegistration: { ev, regID in
-            return TestRegistration(socket: socket2, interested: ev, registrationID: regID)
-        })
+        try selector.register(
+            selectable: socket2,
+            interested: [.reset, .write],
+            makeRegistration: { ev, regID in
+                TestRegistration(socket: socket2, interested: ev, registrationID: regID)
+            }
+        )
 
         var readyCount = 0
-        try selector.whenReady(strategy: .block, onLoopBegin: { }) { ev in
+        try selector.whenReady(strategy: .block) {
+        } _: { ev in
             readyCount += 1
             if socket1 === ev.registration.socket {
                 try selector.deregister(selectable: socket2)
@@ -100,6 +114,7 @@ class SelectorTest: XCTestCase {
                 XCTFail("ev.registration.socket was neither \(socket1) or \(socket2) but \(ev.registration.socket)")
             }
         }
+
         XCTAssertEqual(1, readyCount)
     }
 
@@ -170,7 +185,7 @@ class SelectorTest: XCTestCase {
                 XCTAssertTrue(self.hasReConnectEventLoopTickFinished.value)
 
                 XCTAssertFalse(self.didRead)
-                var buf = self.unwrapInboundIn(data)
+                var buf = Self.unwrapInboundIn(data)
                 XCTAssertEqual(1, buf.readableBytes)
                 XCTAssertEqual("H", buf.readString(length: 1)!)
                 self.didRead = true
@@ -203,10 +218,12 @@ class SelectorTest: XCTestCase {
             private let everythingWasReadPromise: EventLoopPromise<Void>
             private let hasReConnectEventLoopTickFinished: Box<Bool>
 
-            init(allChannels: Box<[Channel]>,
-                 hasReConnectEventLoopTickFinished: Box<Bool>,
-                 serverAddress: SocketAddress,
-                 everythingWasReadPromise: EventLoopPromise<Void>) {
+            init(
+                allChannels: Box<[Channel]>,
+                hasReConnectEventLoopTickFinished: Box<Bool>,
+                serverAddress: SocketAddress,
+                everythingWasReadPromise: EventLoopPromise<Void>
+            ) {
                 self.allChannels = allChannels
                 self.serverAddress = serverAddress
                 self.everythingWasReadPromise = everythingWasReadPromise
@@ -216,8 +233,10 @@ class SelectorTest: XCTestCase {
             func channelActive(context: ChannelHandlerContext) {
                 // collect all the channels
                 context.channel.getOption(ChannelOptions.allowRemoteHalfClosure).whenSuccess { halfClosureAllowed in
-                    precondition(halfClosureAllowed,
-                                 "the test configuration is bogus: half-closure is dis-allowed which breaks the setup of this test")
+                    precondition(
+                        halfClosureAllowed,
+                        "the test configuration is bogus: half-closure is dis-allowed which breaks the setup of this test"
+                    )
                 }
                 self.allChannels.value.append(context.channel)
             }
@@ -225,7 +244,10 @@ class SelectorTest: XCTestCase {
             func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
                 // this is the `.readEOF` that is triggered by the `ServerHandler`'s `close` calls because our channel
                 // supports half-closure
-                guard self.allChannels.value.count == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse else {
+                guard
+                    self.allChannels.value.count
+                        == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse
+                else {
                     return
                 }
                 // all channels are up, so let's construct the situation we want to be in:
@@ -241,7 +263,11 @@ class SelectorTest: XCTestCase {
                 }
                 XCTAssertFalse(self.hasReConnectEventLoopTickFinished.value)
 
-                let everyOtherIndex = stride(from: 0, to: SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse, by: 2)
+                let everyOtherIndex = stride(
+                    from: 0,
+                    to: SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse,
+                    by: 2
+                )
                 for f in everyOtherIndex {
                     XCTAssertTrue(self.allChannels.value[f].isActive)
                     // close will succeed synchronously as we're on the right event loop.
@@ -258,29 +284,35 @@ class SelectorTest: XCTestCase {
                     reconnectedChannelsHaveRead.append(p.futureResult)
                     let newChannel = ClientBootstrap(group: context.eventLoop)
                         .channelInitializer { channel in
-                            channel.pipeline.addHandler(HappyWhenReadHandler(hasReConnectEventLoopTickFinished: self.hasReConnectEventLoopTickFinished,
-                                                                               didReadPromise: p)).map {
-                                                                                hasBeenAdded = true
+                            channel.pipeline.addHandler(
+                                HappyWhenReadHandler(
+                                    hasReConnectEventLoopTickFinished: self.hasReConnectEventLoopTickFinished,
+                                    didReadPromise: p
+                                )
+                            ).map {
+                                hasBeenAdded = true
                             }
                         }
                         .connect(to: self.serverAddress)
                         .map { (channel: Channel) -> Void in
-                            XCTAssertFalse(self.hasReConnectEventLoopTickFinished.value,
-                                           """
-                                               This is bad: the connect of the channels to be re-connected has not
-                                               completed synchronously.
-                                               We assumed that on all platform a UNIX Domain Socket connect is
-                                               synchronous but we must be wrong :(.
-                                               The good news is: Not everything is lost, this test should also work
-                                               if you instead open a regular file (in O_RDWR) and just use this file's
-                                               fd with `ClientBootstrap(group: group).withConnectedSocket(fileFD)`.
-                                               Sure, a file is not a socket but it's always readable and writable and
-                                               that fulfills the requirements we have here.
-                                               I still hope this change will never have to be done.
-                                               Note: if you changed anything about the pipeline's handler adding/removal
-                                               you might also have a bug there.
-                                               """)
-                    }
+                            XCTAssertFalse(
+                                self.hasReConnectEventLoopTickFinished.value,
+                                """
+                                This is bad: the connect of the channels to be re-connected has not
+                                completed synchronously.
+                                We assumed that on all platform a UNIX Domain Socket connect is
+                                synchronous but we must be wrong :(.
+                                The good news is: Not everything is lost, this test should also work
+                                if you instead open a regular file (in O_RDWR) and just use this file's
+                                fd with `ClientBootstrap(group: group).withConnectedSocket(fileFD)`.
+                                Sure, a file is not a socket but it's always readable and writable and
+                                that fulfills the requirements we have here.
+                                I still hope this change will never have to be done.
+                                Note: if you changed anything about the pipeline's handler adding/removal
+                                you might also have a bug there.
+                                """
+                            )
+                        }
                     // just to make sure we got `newChannel` synchronously and we could add our handler to the
                     // pipeline synchronously too.
                     XCTAssertTrue(newChannel.isFulfilled)
@@ -324,11 +356,16 @@ class SelectorTest: XCTestCase {
                 context.channel.writeAndFlush(buf, promise: nil)
                 self.number += 1
                 self.allServerChannels.value.append(context.channel)
-                if self.allServerChannels.value.count == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse {
+                if self.allServerChannels.value.count
+                    == SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse
+                {
                     // just to be sure all of the client channels have connected
-                    XCTAssertEqual(SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse, numberOfConnectedChannels.value)
-                    self.allServerChannels.value.forEach { c in
-                        c.close(promise: nil)
+                    XCTAssertEqual(
+                        SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse,
+                        numberOfConnectedChannels.value
+                    )
+                    for channel in self.allServerChannels.value {
+                        channel.close(promise: nil)
                     }
                 }
             }
@@ -338,40 +375,55 @@ class SelectorTest: XCTestCase {
         defer {
             XCTAssertNoThrow(try elg.syncShutdownGracefully())
         }
-        XCTAssertNoThrow(try withTemporaryUnixDomainSocketPathName { udsPath in
-            let secondServerChannel = try! ServerBootstrap(group: el)
-                .childChannelInitializer { channel in
-                    channel.pipeline.addHandler(ServerHandler(allServerChannels: allServerChannels,
-                                                              numberOfConnectedChannels: numberOfConnectedChannels))
-                }
-                .bind(to: SocketAddress(unixDomainSocketPath: udsPath))
-                .wait()
-
-            let everythingWasReadPromise = el.makePromise(of: Void.self)
-            XCTAssertNoThrow(try el.submit { () -> [EventLoopFuture<Channel>] in
-                (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map { (_: Int) in
-                    ClientBootstrap(group: el)
-                        .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-                        .channelInitializer { channel in
-                            channel.pipeline.addHandler(CloseEveryOtherAndOpenNewOnesHandler(allChannels: allChannels,
-                                                                                             hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
-                                                                                             serverAddress: secondServerChannel.localAddress!,
-                                                                                             everythingWasReadPromise: everythingWasReadPromise))
-                        }
-                        .connect(to: secondServerChannel.localAddress!)
-                        .map { channel in
-                            numberOfConnectedChannels.value += 1
-                            return channel
+        XCTAssertNoThrow(
+            try withTemporaryUnixDomainSocketPathName { udsPath in
+                let secondServerChannel = try! ServerBootstrap(group: el)
+                    .childChannelInitializer { channel in
+                        channel.pipeline.addHandler(
+                            ServerHandler(
+                                allServerChannels: allServerChannels,
+                                numberOfConnectedChannels: numberOfConnectedChannels
+                            )
+                        )
                     }
+                    .bind(to: SocketAddress(unixDomainSocketPath: udsPath))
+                    .wait()
+
+                let everythingWasReadPromise = el.makePromise(of: Void.self)
+                let futures = try el.submit { () -> [EventLoopFuture<Channel>] in
+                    (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map {
+                        (_: Int) in
+                        ClientBootstrap(group: el)
+                            .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+                            .channelInitializer { channel in
+                                channel.pipeline.addHandler(
+                                    CloseEveryOtherAndOpenNewOnesHandler(
+                                        allChannels: allChannels,
+                                        hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
+                                        serverAddress: secondServerChannel.localAddress!,
+                                        everythingWasReadPromise: everythingWasReadPromise
+                                    )
+                                )
+                            }
+                            .connect(to: secondServerChannel.localAddress!)
+                            .map { channel in
+                                numberOfConnectedChannels.value += 1
+                                return channel
+                            }
+                    }
+                }.wait()
+                for future in futures {
+                    XCTAssertNoThrow(try future.wait())
                 }
-                }.wait().forEach { XCTAssertNoThrow(try $0.wait()) } as Void)
-            XCTAssertNoThrow(try everythingWasReadPromise.futureResult.wait())
-        })
+
+                XCTAssertNoThrow(try everythingWasReadPromise.futureResult.wait())
+            }
+        )
     }
 
     func testTimerFDIsLevelTriggered() throws {
         // this is a regression test for https://github.com/apple/swift-nio/issues/872
-        let delayToUseInMicroSeconds: Int64 = 100_000 // needs to be much greater than time it takes to EL.execute
+        let delayToUseInMicroSeconds: Int64 = 100_000  // needs to be much greater than time it takes to EL.execute
 
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -389,35 +441,50 @@ class SelectorTest: XCTestCase {
             }
         }
         var socketFDs: [CInt] = [-1, -1]
-        XCTAssertNoThrow(try Posix.socketpair(domain: .local,
-                                              type: .stream,
-                                              protocolSubtype: .default,
-                                              socketVector: &socketFDs))
+        XCTAssertNoThrow(
+            try Posix.socketpair(
+                domain: .local,
+                type: .stream,
+                protocolSubtype: .default,
+                socketVector: &socketFDs
+            )
+        )
 
         let numberFires = ManagedAtomic(0)
         let el = group.next() as! SelectableEventLoop
         let channelHasBeenClosedPromise = el.makePromise(of: Void.self)
-        let channel = try SocketChannel(socket: FakeSocket(hasBeenClosedPromise: channelHasBeenClosedPromise,
-                                                           socket: socketFDs[0]), eventLoop: el)
-        let sched = el.scheduleRepeatedTask(initialDelay: .microseconds(delayToUseInMicroSeconds),
-                                            delay: .microseconds(delayToUseInMicroSeconds)) { (_: RepeatedTask) in
+        let channel = try SocketChannel(
+            socket: FakeSocket(
+                hasBeenClosedPromise: channelHasBeenClosedPromise,
+                socket: socketFDs[0]
+            ),
+            eventLoop: el
+        )
+        let sched = el.scheduleRepeatedTask(
+            initialDelay: .microseconds(delayToUseInMicroSeconds),
+            delay: .microseconds(delayToUseInMicroSeconds)
+        ) { (_: RepeatedTask) in
             numberFires.wrappingIncrement(ordering: .relaxed)
         }
-        XCTAssertNoThrow(try el.submit {
-            // EL tick 1: this is used to
-            //   - actually arm the timer (timerfd_settime)
-            //   - set the channel registration up
-            if numberFires.load(ordering: .relaxed) > 0 {
-                print("WARNING: This test hit a race and this result doesn't mean it actually worked." +
-                      " This should really only ever happen in very bizarre conditions.")
-            }
-            channel.interestedEvent = [.readEOF, .reset]
-            func workaroundSR9815() {
-                channel.registerAlreadyConfigured0(promise: nil)
-            }
-            workaroundSR9815()
-        }.wait())
-        usleep(10_000) // this makes this repro very stable
+        XCTAssertNoThrow(
+            try el.submit {
+                // EL tick 1: this is used to
+                //   - actually arm the timer (timerfd_settime)
+                //   - set the channel registration up
+                if numberFires.load(ordering: .relaxed) > 0 {
+                    print(
+                        "WARNING: This test hit a race and this result doesn't mean it actually worked."
+                            + " This should really only ever happen in very bizarre conditions."
+                    )
+                }
+                channel.interestedEvent = [.readEOF, .reset]
+                func workaroundSR9815() {
+                    channel.registerAlreadyConfigured0(promise: nil)
+                }
+                workaroundSR9815()
+            }.wait()
+        )
+        usleep(10_000)  // this makes this repro very stable
         el.execute {
             // EL tick 2: this is used to
             //   - close one end of the socketpair so that in EL tick 3, we'll see a EPOLLHUP
@@ -429,7 +496,11 @@ class SelectorTest: XCTestCase {
         // EL tick 3: happens in the background here. We will likely lose the timer signal because of the
         // `deregistrationsHappened` workaround in `Selector.swift` and we expect to pick it up again when we enter
         // `epoll_wait`/`kevent` next. This however only works if the timer event is level triggered.
-        assert(numberFires.load(ordering: .relaxed) > 5, within: .seconds(1), "timer only fired \(numberFires.load(ordering: .relaxed)) times")
+        assert(
+            numberFires.load(ordering: .relaxed) > 5,
+            within: .seconds(1),
+            "timer only fired \(numberFires.load(ordering: .relaxed)) times"
+        )
         sched.cancel()
         XCTAssertNoThrow(try channelHasBeenClosedPromise.futureResult.wait())
     }

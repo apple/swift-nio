@@ -25,6 +25,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
 #endif
 
 /// A file system which interacts with the local system. The file system uses a thread pool to
@@ -85,7 +87,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         let threadPool = NIOThreadPool(numberOfThreads: numberOfThreads)
         threadPool.start()
         // Wait for the thread pool to start.
-        try? await threadPool.runIfActive { }
+        try? await threadPool.runIfActive {}
         self.init(threadPool: threadPool, ownsThreadPool: true)
     }
 
@@ -263,7 +265,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     public func createTemporaryDirectory(
         template: FilePath
     ) async throws -> FilePath {
-        return try await self.threadPool.runIfActive {
+        try await self.threadPool.runIfActive {
             try self._createTemporaryDirectory(template: template).get()
         }
     }
@@ -284,7 +286,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         forFileAt path: FilePath,
         infoAboutSymbolicLink: Bool
     ) async throws -> FileInfo? {
-        return try await self.threadPool.runIfActive {
+        try await self.threadPool.runIfActive {
             try self._info(forFileAt: path, infoAboutSymbolicLink: infoAboutSymbolicLink).get()
         }
     }
@@ -564,7 +566,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at linkPath: FilePath,
         withDestination destinationPath: FilePath
     ) async throws {
-        return try await self.threadPool.runIfActive {
+        try await self.threadPool.runIfActive {
             try self._createSymbolicLink(at: linkPath, withDestination: destinationPath).get()
         }
     }
@@ -595,7 +597,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     public func destinationOfSymbolicLink(
         at path: FilePath
     ) async throws -> FilePath {
-        return try await self.threadPool.runIfActive {
+        try await self.threadPool.runIfActive {
             try self._destinationOfSymbolicLink(at: path).get()
         }
     }
@@ -632,7 +634,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         get async throws {
             #if canImport(Darwin)
             return try await self.threadPool.runIfActive {
-                return try Libc.constr(_CS_DARWIN_USER_TEMP_DIR).map { path in
+                try Libc.constr(_CS_DARWIN_USER_TEMP_DIR).map { path in
                     FilePath(path)
                 }.mapError { errno in
                     FileSystemError.confstr(
@@ -694,7 +696,7 @@ extension NIOSingletons {
 extension FileSystemProtocol where Self == FileSystem {
     /// A global shared instance of ``FileSystem``.
     public static var shared: FileSystem {
-        return FileSystem.shared
+        FileSystem.shared
     }
 }
 
@@ -719,7 +721,7 @@ extension FileSystem {
         forReadingAt path: FilePath,
         options: OpenOptions.Read
     ) -> Result<ReadFileHandle, FileSystemError> {
-        return SystemFileHandle.syncOpen(
+        SystemFileHandle.syncOpen(
             atPath: path,
             mode: .readOnly,
             options: options.descriptorOptions,
@@ -736,7 +738,7 @@ extension FileSystem {
         forWritingAt path: FilePath,
         options: OpenOptions.Write
     ) -> Result<WriteFileHandle, FileSystemError> {
-        return SystemFileHandle.syncOpen(
+        SystemFileHandle.syncOpen(
             atPath: path,
             mode: .writeOnly,
             options: options.descriptorOptions,
@@ -753,7 +755,7 @@ extension FileSystem {
         forReadingAndWritingAt path: FilePath,
         options: OpenOptions.Write
     ) -> Result<ReadWriteFileHandle, FileSystemError> {
-        return SystemFileHandle.syncOpen(
+        SystemFileHandle.syncOpen(
             atPath: path,
             mode: .readWrite,
             options: options.descriptorOptions,
@@ -770,7 +772,7 @@ extension FileSystem {
         at path: FilePath,
         options: OpenOptions.Directory
     ) -> Result<DirectoryFileHandle, FileSystemError> {
-        return SystemFileHandle.syncOpen(
+        SystemFileHandle.syncOpen(
             atPath: path,
             mode: .readOnly,
             options: options.descriptorOptions,
@@ -1001,7 +1003,7 @@ extension FileSystem {
             path: FilePath,
             location: FileSystemError.SourceLocation
         ) -> FileSystemError {
-            return FileSystemError(
+            FileSystemError(
                 code: .closed,
                 message: "Can't copy '\(sourcePath)' to '\(destinationPath)', '\(path)' is closed.",
                 cause: nil,
@@ -1086,7 +1088,7 @@ extension FileSystem {
                         location: .here()
                     )
                 }
-                #elseif canImport(Glibc) || canImport(Musl)
+                #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                 var offset = 0
 
                 while offset < sourceInfo.size {
@@ -1354,7 +1356,7 @@ extension FileSystem {
         at linkPath: FilePath,
         withDestination destinationPath: FilePath
     ) -> Result<Void, FileSystemError> {
-        return Syscall.symlink(to: destinationPath, from: linkPath).mapError { errno in
+        Syscall.symlink(to: destinationPath, from: linkPath).mapError { errno in
             FileSystemError.symlink(
                 errno: errno,
                 link: linkPath,

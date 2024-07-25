@@ -19,10 +19,11 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
 #else
 #error("The File Region module was unable to identify your C library.")
 #endif
-
 
 /// A `FileRegion` represent a readable portion usually created to be sent over the network.
 ///
@@ -47,7 +48,7 @@ public struct FileRegion {
     /// The current reader index of this `FileRegion`
     private(set) public var readerIndex: Int {
         get {
-            return Int(self._readerIndex)
+            Int(self._readerIndex)
         }
         set {
             self._readerIndex = _UInt56(newValue)
@@ -56,7 +57,7 @@ public struct FileRegion {
 
     /// The end index of this `FileRegion`.
     public var endIndex: Int {
-        return Int(self._endIndex)
+        Int(self._endIndex)
     }
 
     /// Create a new `FileRegion` from an open `NIOFileHandle`.
@@ -75,7 +76,7 @@ public struct FileRegion {
 
     /// The number of readable bytes within this FileRegion (taking the `readerIndex` and `endIndex` into account).
     public var readableBytes: Int {
-        return endIndex - readerIndex
+        endIndex - readerIndex
     }
 
     /// Move the readerIndex forward by `offset`.
@@ -106,13 +107,13 @@ extension FileRegion {
 }
 
 extension FileRegion: Equatable {
-    public static func ==(lhs: FileRegion, rhs: FileRegion) -> Bool {
-        return lhs.fileHandle === rhs.fileHandle && lhs.readerIndex == rhs.readerIndex && lhs.endIndex == rhs.endIndex
+    public static func == (lhs: FileRegion, rhs: FileRegion) -> Bool {
+        lhs.fileHandle === rhs.fileHandle && lhs.readerIndex == rhs.readerIndex && lhs.endIndex == rhs.endIndex
     }
 }
 
 extension FileRegion: CustomStringConvertible {
     public var description: String {
-        return "FileRegion { handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex) }"
+        "FileRegion { handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex) }"
     }
 }

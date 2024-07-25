@@ -22,7 +22,7 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
             port: 0
         ) { channel in
             channel.eventLoop.makeCompletedFuture {
-                return try NIOAsyncChannel(
+                try NIOAsyncChannel(
                     wrappingChannelSynchronously: channel,
                     configuration: .init(
                         inboundType: ByteBuffer.self,
@@ -38,7 +38,7 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
             port: serverChannel.channel.localAddress!.port!
         ) { channel in
             channel.eventLoop.makeCompletedFuture {
-                return try NIOAsyncChannel(
+                try NIOAsyncChannel(
                     wrappingChannelSynchronously: channel,
                     configuration: .init(
                         inboundType: ByteBuffer.self,
@@ -55,7 +55,9 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
         group.addTask {
             try await serverChannel.executeThenClose { serverChannelInbound in
                 for try await connectionChannel in serverChannelInbound {
-                    try await connectionChannel.executeThenClose { connectionChannelInbound, connectionChannelOutbound in
+                    try await connectionChannel.executeThenClose {
+                        connectionChannelInbound,
+                        connectionChannelOutbound in
                         for try await inboundData in connectionChannelInbound {
                             try await connectionChannelOutbound.write(inboundData)
                         }
@@ -68,7 +70,7 @@ func runTCPEchoAsyncChannel(numberOfWrites: Int, eventLoop: EventLoop) async thr
             // This child task is collecting the echoed back responses.
             group.addTask {
                 var receivedData = 0
-                for try await inboundData in inbound  {
+                for try await inboundData in inbound {
                     receivedData += inboundData.readableBytes
 
                     if receivedData == numberOfWrites * messageSize {

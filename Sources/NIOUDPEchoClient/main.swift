@@ -21,51 +21,51 @@ private final class EchoHandler: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
     private var numBytes = 0
-    
+
     private let remoteAddressInitializer: () throws -> SocketAddress
-    
+
     init(remoteAddressInitializer: @escaping () throws -> SocketAddress) {
         self.remoteAddressInitializer = remoteAddressInitializer
     }
-    
+
     public func channelActive(context: ChannelHandlerContext) {
-        
+
         do {
             // Channel is available. It's time to send the message to the server to initialize the ping-pong sequence.
-            
+
             // Get the server address.
             let remoteAddress = try self.remoteAddressInitializer()
-            
+
             // Set the transmission data.
             let buffer = context.channel.allocator.buffer(string: line)
             self.numBytes = buffer.readableBytes
-            
+
             // Forward the data.
             let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer)
-            
-            context.writeAndFlush(self.wrapOutboundOut(envelope), promise: nil)
-            
+
+            context.writeAndFlush(Self.wrapOutboundOut(envelope), promise: nil)
+
         } catch {
             print("Could not resolve remote address")
         }
     }
-    
+
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let envelope = self.unwrapInboundIn(data)
+        let envelope = Self.unwrapInboundIn(data)
         let byteBuffer = envelope.data
-        
+
         self.numBytes -= byteBuffer.readableBytes
-        
+
         if self.numBytes <= 0 {
             let string = String(buffer: byteBuffer)
             print("Received: '\(string)' back from the server, closing channel.")
             context.close(promise: nil)
         }
     }
-    
+
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         print("error: ", error)
-        
+
         // As we are not really interested getting notified on success or failure we just pass nil as promise to
         // reduce allocations.
         context.close(promise: nil)
@@ -101,15 +101,15 @@ enum ConnectTo {
 let connectTarget: ConnectTo
 
 switch (arg1, arg1.flatMap(Int.init), arg2, arg2.flatMap(Int.init), arg3.flatMap(Int.init)) {
-case (.some(let h), .none , _, .some(let sp), .some(let lp)):
-    /* We received three arguments (String Int Int), let's interpret that as a server host with a server port and a local listening port */
+case (.some(let h), .none, _, .some(let sp), .some(let lp)):
+    // We received three arguments (String Int Int), let's interpret that as a server host with a server port and a local listening port
     connectTarget = .ip(host: h, sendPort: sp, listeningPort: lp)
-case (.some(let sp), .none , .some(let lp), .none, _):
-    /* We received two arguments (String String), let's interpret that as sending socket path and listening socket path  */
+case (.some(let sp), .none, .some(let lp), .none, _):
+    // We received two arguments (String String), let's interpret that as sending socket path and listening socket path
     assert(sp != lp, "The sending and listening sockets should differ.")
     connectTarget = .unixDomainSocket(sendPath: sp, listeningPath: lp)
 case (_, .some(let sp), _, .some(let lp), _):
-    /* We received two argument (Int Int), let's interpret that as the server port and a listening port on the default host. */
+    // We received two argument (Int Int), let's interpret that as the server port and a listening port on the default host.
     connectTarget = .ip(host: defaultHost, sendPort: sp, listeningPort: lp)
 default:
     connectTarget = .ip(host: defaultHost, sendPort: defaultServerPort, listeningPort: defaultListeningPort)
@@ -130,7 +130,7 @@ let bootstrap = DatagramBootstrap(group: group)
     .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
         channel.pipeline.addHandler(EchoHandler(remoteAddressInitializer: remoteAddress))
-}
+    }
 defer {
     try! group.syncShutdownGracefully()
 }

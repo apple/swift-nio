@@ -114,7 +114,7 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
 
         case .unbuffering, .finished:
             return .forwardWrite
-            
+
         case .modifying:
             fatalError("Internal inconsistency in HTTPClientUpgradeStateMachine")
         }
@@ -156,7 +156,6 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
             fatalError("Internal inconsistency in HTTPServerUpgradeStateMachine")
         }
     }
-
 
     @usableFromInline
     enum ChannelReadResponsePartAction {
@@ -202,7 +201,8 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
                 return .fireErrorCaughtAndRemoveHandler(NIOHTTPClientUpgradeError.responseProtocolNotFound)
             }
 
-            let matchingUpgrader = upgraders
+            let matchingUpgrader =
+                upgraders
                 .first(where: { $0.supportedProtocol.lowercased() == protocolName })
 
             guard let upgrader = matchingUpgrader else {
@@ -219,10 +219,12 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
 
             // We received the response head and decided that we can upgrade.
             // We now need to wait for the response end and then we can perform the upgrade
-            self.state = .awaitingUpgradeResponseEnd(.init(
-                upgrader: upgrader,
-                responseHead: response
-            ))
+            self.state = .awaitingUpgradeResponseEnd(
+                .init(
+                    upgrader: upgrader,
+                    responseHead: response
+                )
+            )
             return .none
 
         case .awaitingUpgradeResponseEnd(let awaitingUpgradeResponseEnd):
@@ -248,7 +250,6 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
         case .upgrading, .unbuffering, .finished:
             fatalError("Internal inconsistency in HTTPClientUpgradeStateMachine")
 
-
         case .modifying:
             fatalError("Internal inconsistency in HTTPClientUpgradeStateMachine")
         }
@@ -263,7 +264,8 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
     }
 
     @inlinable
-    mutating func upgradingHandlerCompleted(_ result: Result<UpgradeResult, Error>) -> UpgradingHandlerCompletedAction? {
+    mutating func upgradingHandlerCompleted(_ result: Result<UpgradeResult, Error>) -> UpgradingHandlerCompletedAction?
+    {
         switch self.state {
         case .initial, .awaitingUpgradeResponseHead, .awaitingUpgradeResponseEnd, .unbuffering:
             fatalError("Internal inconsistency in HTTPClientUpgradeStateMachine")

@@ -14,15 +14,17 @@
 
 import NIOConcurrencyHelpers
 import NIOCore
-@testable import NIOPosix
 import XCTest
+
+@testable import NIOPosix
+
 #if os(Linux)
 import CNIOLinux
 #endif
 
 extension Channel {
     func waitForDatagrams(count: Int) throws -> [AddressedEnvelope<ByteBuffer>] {
-        return try self.pipeline.context(name: "ByteReadRecorder").flatMap { context in
+        try self.pipeline.context(name: "ByteReadRecorder").flatMap { context in
             if let future = (context.handler as? DatagramReadRecorder<ByteBuffer>)?.notifyForDatagrams(count) {
                 return future
             }
@@ -33,15 +35,18 @@ extension Channel {
     }
 
     func readCompleteCount() throws -> Int {
-        return try self.pipeline.context(name: "ByteReadRecorder").map { context in
-            return (context.handler as! DatagramReadRecorder<ByteBuffer>).readCompleteCount
+        try self.pipeline.context(name: "ByteReadRecorder").map { context in
+            (context.handler as! DatagramReadRecorder<ByteBuffer>).readCompleteCount
         }.wait()
     }
 
     func configureForRecvMmsg(messageCount: Int) throws {
         let totalBufferSize = messageCount * 2048
 
-        try self.setOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: totalBufferSize)).flatMap {
+        try self.setOption(
+            ChannelOptions.recvAllocator,
+            value: FixedSizeRecvByteBufferAllocator(capacity: totalBufferSize)
+        ).flatMap {
             self.setOption(ChannelOptions.datagramVectorReadMessageCount, value: messageCount)
         }.wait()
     }
@@ -80,14 +85,14 @@ final class DatagramReadRecorder<DataType>: ChannelInboundHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         XCTAssertEqual(.active, self.state)
-        let data = self.unwrapInboundIn(data)
+        let data = Self.unwrapInboundIn(data)
         reads.append(data)
 
         if let promise = readWaiters.removeValue(forKey: reads.count) {
             promise.succeed(reads)
         }
 
-        context.fireChannelRead(self.wrapInboundOut(data))
+        context.fireChannelRead(Self.wrapInboundOut(data))
     }
 
     func channelReadComplete(context: ChannelHandlerContext) {
@@ -112,7 +117,7 @@ class DatagramChannelTests: XCTestCase {
     private var thirdChannel: Channel! = nil
 
     private func buildChannel(group: EventLoopGroup, host: String = "127.0.0.1") throws -> Channel {
-        return try DatagramBootstrap(group: group)
+        try DatagramBootstrap(group: group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
@@ -192,7 +197,10 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testDatagramChannelHasWatermark() throws {
-        _ = try self.firstChannel.setOption(ChannelOptions.writeBufferWaterMark, value: ChannelOptions.Types.WriteBufferWaterMark(low: 1, high: 1024)).wait()
+        _ = try self.firstChannel.setOption(
+            ChannelOptions.writeBufferWaterMark,
+            value: ChannelOptions.Types.WriteBufferWaterMark(low: 1, high: 1024)
+        ).wait()
 
         var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeBytes([UInt8](repeating: 5, count: 256))
@@ -234,11 +242,11 @@ class DatagramChannelTests: XCTestCase {
         }.wait()
         XCTAssertTrue(fulfilled)
 
-        XCTAssertNoThrow(try promises.forEach {
-            XCTAssertThrowsError(try $0.wait()) { error in
+        for promise in promises {
+            XCTAssertThrowsError(try promise.wait()) { error in
                 XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
             }
-        })
+        }
     }
 
     func testManyManyDatagramWrites() throws {
@@ -278,7 +286,10 @@ class DatagramChannelTests: XCTestCase {
             var written: Int64 = 0
             while written <= lotsOfData {
                 self.firstChannel.write(NIOAny(envelope), promise: myPromise)
-                overall = EventLoopFuture.andAllSucceed([overall, myPromise.futureResult], on: self.firstChannel.eventLoop)
+                overall = EventLoopFuture.andAllSucceed(
+                    [overall, myPromise.futureResult],
+                    on: self.firstChannel.eventLoop
+                )
                 written += Int64(bufferSize)
                 datagrams += 1
             }
@@ -310,7 +321,10 @@ class DatagramChannelTests: XCTestCase {
         buffer.writeRepeatingByte(4, count: bufferSize)
 
         // Now we want two envelopes. The first is small, the second is large.
-        let firstEnvelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer.getSlice(at: buffer.readerIndex, length: 100)!)
+        let firstEnvelope = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: buffer.getSlice(at: buffer.readerIndex, length: 100)!
+        )
         let secondEnvelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
         // Now, three writes. We're sandwiching the big write between two small ones.
@@ -335,7 +349,10 @@ class DatagramChannelTests: XCTestCase {
         buffer.writeRepeatingByte(4, count: bufferSize)
 
         // Now we want two envelopes. The first is small, the second is large.
-        let firstEnvelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer.getSlice(at: buffer.readerIndex, length: 100)!)
+        let firstEnvelope = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: buffer.getSlice(at: buffer.readerIndex, length: 100)!
+        )
         let secondEnvelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
         // Now, three writes. We're sandwiching the big write between two small ones.
@@ -377,7 +394,7 @@ class DatagramChannelTests: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                XCTFail("Should not receive data but got \(self.unwrapInboundIn(data))")
+                XCTFail("Should not receive data but got \(Self.unwrapInboundIn(data))")
             }
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -391,7 +408,7 @@ class DatagramChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        class NonRecvFromSocket : Socket {
+        class NonRecvFromSocket: Socket {
             private var error: Int32?
 
             init(error: Int32) throws {
@@ -399,11 +416,14 @@ class DatagramChannelTests: XCTestCase {
                 try super.init(protocolFamily: .inet, type: .datagram, protocolSubtype: .default)
             }
 
-            override func recvmsg(pointer: UnsafeMutableRawBufferPointer,
-                                  storage: inout sockaddr_storage,
-                                  storageLen: inout socklen_t,
-                                  controlBytes: inout UnsafeReceivedControlBytes)
-                                  throws -> IOResult<(Int)> {
+            override func recvmsg(
+                pointer: UnsafeMutableRawBufferPointer,
+                storage: inout sockaddr_storage,
+                storageLen: inout socklen_t,
+                controlBytes: inout UnsafeReceivedControlBytes
+            )
+                throws -> IOResult<(Int)>
+            {
                 if let err = self.error {
                     self.error = nil
                     throw IOError(errnoCode: err, reason: "recvfrom")
@@ -418,10 +438,13 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(RecvFromHandler(promise)).wait())
         XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
 
-        XCTAssertEqual(active, try channel.eventLoop.submit {
-            channel.readable()
-            return channel.isActive
-        }.wait())
+        XCTAssertEqual(
+            active,
+            try channel.eventLoop.submit {
+                channel.readable()
+                return channel.isActive
+            }.wait()
+        )
 
         if active {
             XCTAssertNoThrow(try channel.close().wait())
@@ -457,7 +480,7 @@ class DatagramChannelTests: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                XCTFail("Should not receive data but got \(self.unwrapInboundIn(data))")
+                XCTFail("Should not receive data but got \(Self.unwrapInboundIn(data))")
             }
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -471,7 +494,7 @@ class DatagramChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        class NonRecvMmsgSocket : Socket {
+        class NonRecvMmsgSocket: Socket {
             private var error: Int32?
 
             init(error: Int32) throws {
@@ -495,10 +518,13 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(try channel.configureForRecvMmsg(messageCount: 10))
         XCTAssertNoThrow(try channel.bind(to: SocketAddress.init(ipAddress: "127.0.0.1", port: 0)).wait())
 
-        XCTAssertEqual(active, try channel.eventLoop.submit {
-            channel.readable()
-            return channel.isActive
-        }.wait())
+        XCTAssertEqual(
+            active,
+            try channel.eventLoop.submit {
+                channel.readable()
+                return channel.isActive
+            }.wait()
+        )
 
         if active {
             XCTAssertNoThrow(try channel.close().wait())
@@ -509,13 +535,20 @@ class DatagramChannelTests: XCTestCase {
     }
 
     public func testSetGetOptionClosedDatagramChannel() throws {
-        try assertSetGetOptionOnOpenAndClosed(channel: firstChannel, option: ChannelOptions.maxMessagesPerRead, value: 1)
+        try assertSetGetOptionOnOpenAndClosed(
+            channel: firstChannel,
+            option: ChannelOptions.maxMessagesPerRead,
+            value: 1
+        )
     }
 
     func testWritesAreAccountedCorrectly() throws {
         var buffer = firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
-        let firstWrite = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer.getSlice(at: buffer.readerIndex, length: 5)!)
+        let firstWrite = AddressedEnvelope(
+            remoteAddress: self.secondChannel.localAddress!,
+            data: buffer.getSlice(at: buffer.readerIndex, length: 5)!
+        )
         let secondWrite = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
         self.firstChannel.write(NIOAny(firstWrite), promise: nil)
         self.firstChannel.write(NIOAny(secondWrite), promise: nil)
@@ -533,11 +566,13 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
-        let channel = try assertNoThrowWithValue(DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .channelOption(ChannelOptions.socketOption(.so_timestamp), value: 1)
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let channel = try assertNoThrowWithValue(
+            DatagramBootstrap(group: group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(ChannelOptions.socketOption(.so_timestamp), value: 1)
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
         defer {
             XCTAssertNoThrow(try channel.close().wait())
         }
@@ -551,9 +586,11 @@ class DatagramChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let channel = try DatagramChannel(eventLoop: group.next() as! SelectableEventLoop,
-                                          protocolFamily: .inet,
-                                          protocolSubtype: .default)
+        let channel = try DatagramChannel(
+            eventLoop: group.next() as! SelectableEventLoop,
+            protocolFamily: .inet,
+            protocolSubtype: .default
+        )
         XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
             if let error = error as? ChannelError {
                 XCTAssertEqual(ChannelError.operationUnsupported, error)
@@ -592,7 +629,12 @@ class DatagramChannelTests: XCTestCase {
         // Setting the recv allocator to 30 bytes forces 3 bytes per message.
         // Sadly, this test only truncates for the platforms with recvmmsg support: the rest don't truncate as 30 bytes is sufficient.
         XCTAssertNoThrow(try self.secondChannel.configureForRecvMmsg(messageCount: 10))
-        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 30)).wait())
+        XCTAssertNoThrow(
+            try self.secondChannel.setOption(
+                ChannelOptions.recvAllocator,
+                value: FixedSizeRecvByteBufferAllocator(capacity: 30)
+            ).wait()
+        )
 
         var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
@@ -657,108 +699,123 @@ class DatagramChannelTests: XCTestCase {
 
     // Mostly to check the types don't go pop as internally converts between bool and int and back.
     func testSetGetEcnNotificationOption() {
-        XCTAssertNoThrow(try {
-            // IPv4
-            try self.firstChannel.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
-            XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
+        XCTAssertNoThrow(
+            try {
+                // IPv4
+                try self.firstChannel.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
+                XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
 
-            try self.secondChannel.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
-            XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
+                try self.secondChannel.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
+                XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
 
-            // IPv6
-            guard self.supportsIPv6 else {
-                // Skip on non-IPv6 systems
-                return
-            }
-
-            do {
-                let channel1 = try buildChannel(group: self.group, host: "::1")
-                try channel1.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
-                XCTAssertTrue(try channel1.getOption(ChannelOptions.explicitCongestionNotification).wait())
-
-                let channel2 = try buildChannel(group: self.group, host: "::1")
-                try channel2.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
-                XCTAssertFalse(try channel2.getOption(ChannelOptions.explicitCongestionNotification).wait())
-            } catch let error as SocketAddressError {
-                switch error {
-                case .unknown:
-                    // IPv6 resolution can fail even if supported.
+                // IPv6
+                guard self.supportsIPv6 else {
+                    // Skip on non-IPv6 systems
                     return
-                case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
-                    throw error
                 }
-            }
-        } ())
+
+                do {
+                    let channel1 = try buildChannel(group: self.group, host: "::1")
+                    try channel1.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
+                    XCTAssertTrue(try channel1.getOption(ChannelOptions.explicitCongestionNotification).wait())
+
+                    let channel2 = try buildChannel(group: self.group, host: "::1")
+                    try channel2.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
+                    XCTAssertFalse(try channel2.getOption(ChannelOptions.explicitCongestionNotification).wait())
+                } catch let error as SocketAddressError {
+                    switch error {
+                    case .unknown:
+                        // IPv6 resolution can fail even if supported.
+                        return
+                    case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
+                        throw error
+                    }
+                }
+            }()
+        )
     }
 
-    private func testEcnAndPacketInfoReceive(address: String, vectorRead: Bool, vectorSend: Bool, receivePacketInfo: Bool = false) {
-        XCTAssertNoThrow(try {
-            // Fake sending packet to self on the loopback interface if requested
-            let expectedPacketInfo = receivePacketInfo ? try constructNIOPacketInfo(address: address) : nil
-            let receiveBootstrap: DatagramBootstrap
-            if vectorRead {
-                receiveBootstrap = DatagramBootstrap(group: group)
-                    .channelOption(ChannelOptions.datagramVectorReadMessageCount, value: 4)
-            } else {
-                receiveBootstrap = DatagramBootstrap(group: group)
-            }
-
-            let receiveChannel = try receiveBootstrap
-                .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
-                .channelOption(ChannelOptions.receivePacketInfo, value: receivePacketInfo)
-                .channelInitializer { channel in
-                    channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
+    private func testEcnAndPacketInfoReceive(
+        address: String,
+        vectorRead: Bool,
+        vectorSend: Bool,
+        receivePacketInfo: Bool = false
+    ) {
+        XCTAssertNoThrow(
+            try {
+                // Fake sending packet to self on the loopback interface if requested
+                let expectedPacketInfo = receivePacketInfo ? try constructNIOPacketInfo(address: address) : nil
+                let receiveBootstrap: DatagramBootstrap
+                if vectorRead {
+                    receiveBootstrap = DatagramBootstrap(group: group)
+                        .channelOption(ChannelOptions.datagramVectorReadMessageCount, value: 4)
+                } else {
+                    receiveBootstrap = DatagramBootstrap(group: group)
                 }
-                .bind(host: address, port: 0)
-                .wait()
-            defer {
-                XCTAssertNoThrow(try receiveChannel.close().wait())
-            }
-            let sendChannel = try DatagramBootstrap(group: group)
-                .bind(host: address, port: 0)
-                .wait()
-            defer {
-                XCTAssertNoThrow(try sendChannel.close().wait())
-            }
 
-            let ecnStates: [NIOExplicitCongestionNotificationState] = [.transportNotCapable,
-                                                                       .congestionExperienced,
-                                                                       .transportCapableFlag0,
-                                                                       .transportCapableFlag1]
-            // Datagrams may be received out-of-order, so we use a sequential integer in the payload.
-            let metadataWrites: [(Int, AddressedEnvelope<ByteBuffer>.Metadata?)] = try ecnStates.enumerated().reduce(into: []) { metadataWrites, ecnState in
-                let writeData = AddressedEnvelope(
-                    remoteAddress: receiveChannel.localAddress!,
-                    data: sendChannel.allocator.buffer(integer: ecnState.offset),
-                    metadata: .init(ecnState: ecnState.element, packetInfo: expectedPacketInfo)
+                let receiveChannel =
+                    try receiveBootstrap
+                    .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
+                    .channelOption(ChannelOptions.receivePacketInfo, value: receivePacketInfo)
+                    .channelInitializer { channel in
+                        channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
+                    }
+                    .bind(host: address, port: 0)
+                    .wait()
+                defer {
+                    XCTAssertNoThrow(try receiveChannel.close().wait())
+                }
+                let sendChannel = try DatagramBootstrap(group: group)
+                    .bind(host: address, port: 0)
+                    .wait()
+                defer {
+                    XCTAssertNoThrow(try sendChannel.close().wait())
+                }
+
+                let ecnStates: [NIOExplicitCongestionNotificationState] = [
+                    .transportNotCapable,
+                    .congestionExperienced,
+                    .transportCapableFlag0,
+                    .transportCapableFlag1,
+                ]
+                // Datagrams may be received out-of-order, so we use a sequential integer in the payload.
+                let metadataWrites: [(Int, AddressedEnvelope<ByteBuffer>.Metadata?)] = try ecnStates.enumerated()
+                    .reduce(into: []) { metadataWrites, ecnState in
+                        let writeData = AddressedEnvelope(
+                            remoteAddress: receiveChannel.localAddress!,
+                            data: sendChannel.allocator.buffer(integer: ecnState.offset),
+                            metadata: .init(ecnState: ecnState.element, packetInfo: expectedPacketInfo)
+                        )
+                        // Sending extra data without flushing should trigger a vector send.
+                        if vectorSend {
+                            sendChannel.write(writeData, promise: nil)
+                            metadataWrites.append((ecnState.offset, writeData.metadata))
+                        }
+                        try sendChannel.writeAndFlush(writeData).wait()
+                        metadataWrites.append((ecnState.offset, writeData.metadata))
+                    }
+
+                let expectedNumReads = metadataWrites.count
+                let metadataReads = try receiveChannel.waitForDatagrams(count: expectedNumReads).map {
+                    ($0.data.getInteger(at: $0.data.readerIndex, as: Int.self)!, $0.metadata)
+                }
+
+                // Datagrams may be received out-of-order, so we order reads and writes by payload.
+                XCTAssertEqual(
+                    metadataReads.sorted { $0.0 < $1.0 }.map { $0.1 },
+                    metadataWrites.sorted { $0.0 < $1.0 }.map { $0.1 }
                 )
-                // Sending extra data without flushing should trigger a vector send.
-                if (vectorSend) {
-                    sendChannel.write(writeData, promise: nil)
-                    metadataWrites.append((ecnState.offset, writeData.metadata))
-                }
-                try sendChannel.writeAndFlush(writeData).wait()
-                metadataWrites.append((ecnState.offset, writeData.metadata))
-            }
-
-            let expectedNumReads = metadataWrites.count
-            let metadataReads = try receiveChannel.waitForDatagrams(count: expectedNumReads).map {
-                ($0.data.getInteger(at: $0.data.readerIndex, as: Int.self)!, $0.metadata)
-            }
-
-            // Datagrams may be received out-of-order, so we order reads and writes by payload.
-            XCTAssertEqual(
-                metadataReads.sorted { $0.0 < $1.0 }.map { $0.1 },
-                metadataWrites.sorted { $0.0 < $1.0 }.map { $0.1 }
-            )
-        } ())
+            }()
+        )
     }
 
     private func constructNIOPacketInfo(address: String) throws -> NIOPacketInfo {
         struct InterfaceIndexNotFound: Error {}
         let destinationAddress = try SocketAddress(ipAddress: address, port: 0)
-        guard let ingressIfaceIndex = try System.enumerateDevices()
-                .first(where: {$0.address == destinationAddress })?.interfaceIndex else {
+        guard
+            let ingressIfaceIndex = try System.enumerateDevices()
+                .first(where: { $0.address == destinationAddress })?.interfaceIndex
+        else {
             throw InterfaceIndexNotFound()
         }
         return NIOPacketInfo(destinationAddress: destinationAddress, interfaceIndex: ingressIfaceIndex)
@@ -770,7 +827,7 @@ class DatagramChannelTests: XCTestCase {
 
     func testEcnSendReceiveIPV6() {
         guard System.supportsIPv6 else {
-            return // need to skip IPv6 tests if we don't support it.
+            return  // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: false, vectorSend: false)
     }
@@ -781,7 +838,7 @@ class DatagramChannelTests: XCTestCase {
 
     func testEcnSendReceiveIPV6VectorRead() {
         guard System.supportsIPv6 else {
-            return // need to skip IPv6 tests if we don't support it.
+            return  // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: false)
     }
@@ -792,7 +849,7 @@ class DatagramChannelTests: XCTestCase {
 
     func testEcnSendReceiveIPV6VectorReadVectorWrite() {
         guard System.supportsIPv6 else {
-            return // need to skip IPv6 tests if we don't support it.
+            return  // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true)
     }
@@ -803,14 +860,19 @@ class DatagramChannelTests: XCTestCase {
             typealias OutboundOut = AddressedEnvelope<ByteBuffer>
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-                let buffer = self.unwrapOutboundIn(data)
-                context.write(self.wrapOutboundOut(AddressedEnvelope(remoteAddress: context.channel.localAddress!, data: buffer)), promise: promise)
+                let buffer = Self.unwrapOutboundIn(data)
+                context.write(
+                    Self.wrapOutboundOut(AddressedEnvelope(remoteAddress: context.channel.localAddress!, data: buffer)),
+                    promise: promise
+                )
             }
         }
 
         let loop = self.group.next()
-        let handler = ReentrantWritabilityChangingHandler(becameUnwritable: loop.makePromise(),
-                                                          becameWritable: loop.makePromise())
+        let handler = ReentrantWritabilityChangingHandler(
+            becameUnwritable: loop.makePromise(),
+            becameWritable: loop.makePromise()
+        )
 
         let channel1Future = DatagramBootstrap(group: self.group)
             .bind(host: "localhost", port: 0)
@@ -836,38 +898,40 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testSetGetPktInfoOption() {
-        XCTAssertNoThrow(try {
-            // IPv4
-            try self.firstChannel.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
-            XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.receivePacketInfo).wait())
+        XCTAssertNoThrow(
+            try {
+                // IPv4
+                try self.firstChannel.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
+                XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.receivePacketInfo).wait())
 
-            try self.secondChannel.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
-            XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.receivePacketInfo).wait())
+                try self.secondChannel.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
+                XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.receivePacketInfo).wait())
 
-            // IPv6
-            guard self.supportsIPv6 else {
-                // Skip on non-IPv6 systems
-                return
-            }
-
-            do {
-                let channel1 = try buildChannel(group: self.group, host: "::1")
-                try channel1.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
-                XCTAssertTrue(try channel1.getOption(ChannelOptions.receivePacketInfo).wait())
-
-                let channel2 = try buildChannel(group: self.group, host: "::1")
-                try channel2.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
-                XCTAssertFalse(try channel2.getOption(ChannelOptions.receivePacketInfo).wait())
-            } catch let error as SocketAddressError {
-                switch error {
-                case .unknown:
-                    // IPv6 resolution can fail even if supported.
+                // IPv6
+                guard self.supportsIPv6 else {
+                    // Skip on non-IPv6 systems
                     return
-                case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
-                    throw error
                 }
-            }
-        } ())
+
+                do {
+                    let channel1 = try buildChannel(group: self.group, host: "::1")
+                    try channel1.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
+                    XCTAssertTrue(try channel1.getOption(ChannelOptions.receivePacketInfo).wait())
+
+                    let channel2 = try buildChannel(group: self.group, host: "::1")
+                    try channel2.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
+                    XCTAssertFalse(try channel2.getOption(ChannelOptions.receivePacketInfo).wait())
+                } catch let error as SocketAddressError {
+                    switch error {
+                    case .unknown:
+                        // IPv6 resolution can fail even if supported.
+                        return
+                    case .unsupported, .unixDomainSocketPathTooLong, .failedToParseIPString:
+                        throw error
+                    }
+                }
+            }()
+        )
     }
 
     private func testSimpleReceivePacketInfo(address: String) throws {
@@ -894,10 +958,14 @@ class DatagramChannelTests: XCTestCase {
         var buffer = sendChannel.allocator.buffer(capacity: 1)
         buffer.writeRepeatingByte(0, count: 1)
 
-        let writeData = AddressedEnvelope(remoteAddress: receiveChannel.localAddress!,
-                                          data: buffer,
-                                          metadata: .init(ecnState: .transportNotCapable,
-                                                          packetInfo: expectedPacketInfo))
+        let writeData = AddressedEnvelope(
+            remoteAddress: receiveChannel.localAddress!,
+            data: buffer,
+            metadata: .init(
+                ecnState: .transportNotCapable,
+                packetInfo: expectedPacketInfo
+            )
+        )
         try sendChannel.writeAndFlush(writeData).wait()
 
         let expectedReads = 1
@@ -912,7 +980,7 @@ class DatagramChannelTests: XCTestCase {
 
     func testSimpleReceivePacketInfoIPV6() throws {
         guard System.supportsIPv6 else {
-            return // need to skip IPv6 tests if we don't support it.
+            return  // need to skip IPv6 tests if we don't support it.
         }
         try testSimpleReceivePacketInfo(address: "::1")
     }
@@ -923,7 +991,7 @@ class DatagramChannelTests: XCTestCase {
 
     func testReceiveEcnAndPacketInfoIPV6() {
         guard System.supportsIPv6 else {
-            return // need to skip IPv6 tests if we don't support it.
+            return  // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: false, vectorSend: false, receivePacketInfo: true)
     }
@@ -934,7 +1002,7 @@ class DatagramChannelTests: XCTestCase {
 
     func testReceiveEcnAndPacketInfoIPV6VectorRead() {
         guard System.supportsIPv6 else {
-            return // need to skip IPv6 tests if we don't support it.
+            return  // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: false, receivePacketInfo: true)
     }
@@ -945,7 +1013,7 @@ class DatagramChannelTests: XCTestCase {
 
     func testReceiveEcnAndPacketInfoIPV6VectorReadVectorWrite() {
         guard System.supportsIPv6 else {
-            return // need to skip IPv6 tests if we don't support it.
+            return  // need to skip IPv6 tests if we don't support it.
         }
         testEcnAndPacketInfoReceive(address: "::1", vectorRead: true, vectorSend: true, receivePacketInfo: true)
     }
@@ -996,11 +1064,11 @@ class DatagramChannelTests: XCTestCase {
                     data: buffer
                 )
 
-                context.writeAndFlush(self.wrapOutboundOut(envelope)).cascadeFailure(to: self.completePromise)
+                context.writeAndFlush(Self.wrapOutboundOut(envelope)).cascadeFailure(to: self.completePromise)
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let envelope = self.unwrapInboundIn(data)
+                let envelope = Self.unwrapInboundIn(data)
 
                 // Complete with the payload.
                 self.completePromise.succeed(envelope.data)
@@ -1032,7 +1100,8 @@ class DatagramChannelTests: XCTestCase {
             // To do that, we have to work out how long that header is. That's held in bottom 4 bits of the first
             // byte, which is the IHL field. This is in "number of 32-bit words".
             guard let firstByte = response.getInteger(at: response.readerIndex, as: UInt8.self),
-                  let _ = response.readSlice(length: Int(firstByte & 0x0F) * 4) else {
+                let _ = response.readSlice(length: Int(firstByte & 0x0F) * 4)
+            else {
                 XCTFail("Insufficient bytes for IPv4 header")
                 return
             }
@@ -1045,9 +1114,12 @@ class DatagramChannelTests: XCTestCase {
             }
 
             // Echo response has type 0, code 0, unpredictable checksum and identifier, same sequence number we sent.
-            XCTAssertEqual(header.0 /* type */, 0)
-            XCTAssertEqual(header.1 /* code */, 0)
-            XCTAssertEqual(header.4 /* sequence number */, 0)
+            // type
+            XCTAssertEqual(header.0, 0)
+            // code
+            XCTAssertEqual(header.1, 0)
+            // sequence number
+            XCTAssertEqual(header.4, 0)
 
             // Remaining payload should have been our string.
             XCTAssertEqual(String(buffer: response), "Hello from NIO")
@@ -1100,7 +1172,9 @@ class DatagramChannelTests: XCTestCase {
             // Check the error is of the expected type.
             XCTAssertThrowsError(try writeResult.wait()) { error in
                 guard type(of: error) == type(of: expectedError) else {
-                    XCTFail("expected error of type \(type(of: expectedError)), but caught other error of type (\(type(of: error)): \(error)")
+                    XCTFail(
+                        "expected error of type \(type(of: expectedError)), but caught other error of type (\(type(of: error)): \(error)"
+                    )
                     return
                 }
             }
@@ -1200,9 +1274,12 @@ class DatagramChannelTests: XCTestCase {
             from: self.firstChannel,
             to: self.thirdChannel,
             wrappingInAddressedEnvelope: true,
-            resultsIn: .failure(DatagramChannelError.WriteOnConnectedSocketWithInvalidAddress(
-                envelopeRemoteAddress: self.thirdChannel.localAddress!,
-                connectedRemoteAddress: self.secondChannel.localAddress!))
+            resultsIn: .failure(
+                DatagramChannelError.WriteOnConnectedSocketWithInvalidAddress(
+                    envelopeRemoteAddress: self.thirdChannel.localAddress!,
+                    connectedRemoteAddress: self.secondChannel.localAddress!
+                )
+            )
         )
     }
 
@@ -1229,14 +1306,22 @@ class DatagramChannelTests: XCTestCase {
 
     func testConnectingSocketFailsBufferedWrites() throws {
         // Buffer message from firstChannel to secondChannel.
-        let bufferedWrite = bufferWriteOfHelloWorld(from: self.firstChannel, to: self.secondChannel, wrappingInAddressedEnvelope: true)
+        let bufferedWrite = bufferWriteOfHelloWorld(
+            from: self.firstChannel,
+            to: self.secondChannel,
+            wrappingInAddressedEnvelope: true
+        )
 
         // Connect firstChannel to thirdChannel.
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.thirdChannel.localAddress!).wait())
 
         // Check that the buffered write was failed.
         XCTAssertThrowsError(try bufferedWrite.wait()) { error in
-            XCTAssertEqual((error as? IOError)?.errnoCode, EISCONN, "expected EISCONN, but caught other error: \(error)")
+            XCTAssertEqual(
+                (error as? IOError)?.errnoCode,
+                EISCONN,
+                "expected EISCONN, but caught other error: \(error)"
+            )
         }
 
         // Send message from firstChannel to thirdChannel.
@@ -1253,14 +1338,22 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait())
 
         // Buffer message from firstChannel to secondChannel.
-        let bufferedWrite = bufferWriteOfHelloWorld(from: self.firstChannel, to: self.secondChannel, wrappingInAddressedEnvelope: false)
+        let bufferedWrite = bufferWriteOfHelloWorld(
+            from: self.firstChannel,
+            to: self.secondChannel,
+            wrappingInAddressedEnvelope: false
+        )
 
         // Connect firstChannel to thirdChannel.
         XCTAssertNoThrow(try self.firstChannel.connect(to: self.thirdChannel.localAddress!).wait())
 
         // Check that the buffered write was failed.
         XCTAssertThrowsError(try bufferedWrite.wait()) { error in
-            XCTAssertEqual((error as? IOError)?.errnoCode, EISCONN, "expected EISCONN, but caught other error: \(error)")
+            XCTAssertEqual(
+                (error as? IOError)?.errnoCode,
+                EISCONN,
+                "expected EISCONN, but caught other error: \(error)"
+            )
         }
 
         // Send message from firstChannel to thirdChannel.
@@ -1292,7 +1385,7 @@ class DatagramChannelTests: XCTestCase {
     func testGetGSOOption() throws {
         let getOption = self.firstChannel.getOption(ChannelOptions.datagramSegmentSize)
         if System.supportsUDPSegmentationOffload {
-            XCTAssertEqual(try getOption.wait(), 0) // not-set
+            XCTAssertEqual(try getOption.wait(), 0)  // not-set
         } else {
             XCTAssertThrowsError(try getOption.wait()) { error in
                 XCTAssertEqual(error as? ChannelError, .operationUnsupported)
@@ -1325,7 +1418,7 @@ class DatagramChannelTests: XCTestCase {
             buffer.writeImmutableBuffer(segment)
         }
 
-        for byte in UInt8(0) ..< UInt8(10) {
+        for byte in UInt8(0)..<UInt8(10) {
             buffer.writeRepeatingByte(byte, count: Int(segmentSize))
         }
 
@@ -1370,7 +1463,7 @@ class DatagramChannelTests: XCTestCase {
             buffer.writeImmutableBuffer(segment)
         }
 
-        for byte in UInt8(0) ..< UInt8(10) {
+        for byte in UInt8(0)..<UInt8(10) {
             buffer.writeRepeatingByte(byte, count: Int(segmentSize))
         }
 
@@ -1464,7 +1557,7 @@ class DatagramChannelTests: XCTestCase {
     func testGetGROOption() throws {
         let getOption = self.firstChannel.getOption(ChannelOptions.datagramReceiveOffload)
         if System.supportsUDPReceiveOffload {
-            XCTAssertEqual(try getOption.wait(), false) // not-set
+            XCTAssertEqual(try getOption.wait(), false)  // not-set
 
             // Now set and check.
             XCTAssertNoThrow(try self.firstChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
@@ -1482,14 +1575,19 @@ class DatagramChannelTests: XCTestCase {
         try XCTSkipUnless(try self.hasGoodGROSupport())
 
         /// Set GSO on the first channel.
-        XCTAssertNoThrow(try self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize)).wait())
+        XCTAssertNoThrow(
+            try self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize)).wait()
+        )
         /// Set GRO on the second channel.
         XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
         /// The third channel has neither set.
 
         // Enable on second channel
         if let vectorReads = vectorReads {
-            XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.datagramVectorReadMessageCount, value: vectorReads).wait())
+            XCTAssertNoThrow(
+                try self.secondChannel.setOption(ChannelOptions.datagramVectorReadMessageCount, value: vectorReads)
+                    .wait()
+            )
         }
 
         /// Increase the size of the read buffer for the second and third channels.
@@ -1504,7 +1602,7 @@ class DatagramChannelTests: XCTestCase {
         // Write to the channel with GRO enabled.
         do {
             let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-            let promises = (0 ..< writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
+            let promises = (0..<writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
             self.firstChannel.flush()
             XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
 
@@ -1518,7 +1616,7 @@ class DatagramChannelTests: XCTestCase {
         // Write to the channel whithout GRO.
         do {
             let writeData = AddressedEnvelope(remoteAddress: self.thirdChannel.localAddress!, data: buffer)
-            let promises = (0 ..< writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
+            let promises = (0..<writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
             self.firstChannel.flush()
             XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
 

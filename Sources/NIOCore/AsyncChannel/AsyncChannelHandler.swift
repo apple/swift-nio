@@ -147,7 +147,6 @@ extension NIOAsyncChannelHandler: ChannelInboundHandler {
         context.fireChannelInactive()
     }
 
-
     @inlinable
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
@@ -176,7 +175,7 @@ extension NIOAsyncChannelHandler: ChannelInboundHandler {
 
     @inlinable
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let unwrapped = self.unwrapInboundIn(data)
+        let unwrapped = Self.unwrapInboundIn(data)
 
         switch self.transformation {
         case .syncWrapping(let transformation):
@@ -298,7 +297,6 @@ extension NIOAsyncChannelHandler {
     }
 }
 
-
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncChannelHandler {
     @inlinable
@@ -341,7 +339,9 @@ struct NIOAsyncChannelHandlerProducerDelegate: @unchecked Sendable, NIOAsyncSequ
     let _produceMore: () -> Void
 
     @inlinable
-    init<InboundIn, ProducerElement, OutboundOut>(handler: NIOAsyncChannelHandler<InboundIn, ProducerElement, OutboundOut>) {
+    init<InboundIn, ProducerElement, OutboundOut>(
+        handler: NIOAsyncChannelHandler<InboundIn, ProducerElement, OutboundOut>
+    ) {
         self.eventLoop = handler.eventLoop
         self._didTerminate = handler._didTerminate
         self._produceMore = handler._produceMore
@@ -477,7 +477,7 @@ extension NIOAsyncChannelHandler {
     @inlinable
     func _doOutboundWrites(context: ChannelHandlerContext, writes: Deque<OutboundOut>) {
         for write in writes {
-            context.write(self.wrapOutboundOut(write), promise: nil)
+            context.write(Self.wrapOutboundOut(write), promise: nil)
         }
 
         context.flush()
@@ -485,7 +485,7 @@ extension NIOAsyncChannelHandler {
 
     @inlinable
     func _doOutboundWrite(context: ChannelHandlerContext, write: OutboundOut) {
-        context.write(self.wrapOutboundOut(write), promise: nil)
+        context.write(Self.wrapOutboundOut(write), promise: nil)
         context.flush()
     }
 }

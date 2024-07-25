@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
+
 @testable import NIOEmbedded
 
 class ChannelLifecycleHandler: ChannelInboundHandler {
@@ -241,29 +242,40 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertTrue(try channel.writeOutbound(ioData).isFull)
         XCTAssertTrue(try channel.writeOutbound(fileHandle).isFull)
         XCTAssertTrue(try channel.writeOutbound(fileRegion).isFull)
-        XCTAssertTrue(try channel.writeOutbound(
-            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
-                                          data: buffer)).isFull)
+        XCTAssertTrue(
+            try channel.writeOutbound(
+                AddressedEnvelope<ByteBuffer>(
+                    remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
+                    data: buffer
+                )
+            ).isFull
+        )
         XCTAssertTrue(try channel.writeOutbound(buffer).isFull)
         XCTAssertTrue(try channel.writeOutbound(ioData).isFull)
         XCTAssertTrue(try channel.writeOutbound(fileRegion).isFull)
-
 
         XCTAssertTrue(try channel.writeInbound(buffer).isFull)
         XCTAssertTrue(try channel.writeInbound(ioData).isFull)
         XCTAssertTrue(try channel.writeInbound(fileHandle).isFull)
         XCTAssertTrue(try channel.writeInbound(fileRegion).isFull)
-        XCTAssertTrue(try channel.writeInbound(
-            AddressedEnvelope<ByteBuffer>(remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
-                                          data: buffer)).isFull)
+        XCTAssertTrue(
+            try channel.writeInbound(
+                AddressedEnvelope<ByteBuffer>(
+                    remoteAddress: SocketAddress(ipAddress: "1.2.3.4", port: 5678),
+                    data: buffer
+                )
+            ).isFull
+        )
         XCTAssertTrue(try channel.writeInbound(buffer).isFull)
         XCTAssertTrue(try channel.writeInbound(ioData).isFull)
         XCTAssertTrue(try channel.writeInbound(fileRegion).isFull)
 
-        func check<Expected, Actual>(expected: Expected.Type,
-                                     actual: Actual.Type,
-                                     file: StaticString = #filePath,
-                                     line: UInt = #line) {
+        func check<Expected, Actual>(
+            expected: Expected.Type,
+            actual: Actual.Type,
+            file: StaticString = #filePath,
+            line: UInt = #line
+        ) {
             do {
                 _ = try channel.readOutbound(as: Expected.self)
                 XCTFail("this should have failed", file: (file), line: line)
@@ -336,7 +348,7 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertFalse(channel.isActive)
     }
 
-    private final class ExceptionThrowingInboundHandler : ChannelInboundHandler {
+    private final class ExceptionThrowingInboundHandler: ChannelInboundHandler {
         typealias InboundIn = String
 
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -344,7 +356,7 @@ class EmbeddedChannelTest: XCTestCase {
         }
     }
 
-    private final class ExceptionThrowingOutboundHandler : ChannelOutboundHandler {
+    private final class ExceptionThrowingOutboundHandler: ChannelOutboundHandler {
         typealias OutboundIn = String
         typealias OutboundOut = Never
 
@@ -466,19 +478,37 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testFinishWithRecursivelyScheduledTasks() throws {
         let channel = EmbeddedChannel()
+        var tasks: [Scheduled<Void>] = []
         var invocations = 0
 
         func recursivelyScheduleAndIncrement() {
-            channel.pipeline.eventLoop.scheduleTask(deadline: .distantFuture) {
+            let task = channel.pipeline.eventLoop.scheduleTask(deadline: .distantFuture) {
                 invocations += 1
                 recursivelyScheduleAndIncrement()
             }
+            tasks.append(task)
         }
 
         recursivelyScheduleAndIncrement()
 
         try XCTAssertNoThrow(channel.finish())
-        XCTAssertEqual(invocations, 1)
+
+        // None of the tasks should have been executed, they were scheduled for distant future.
+        XCTAssertEqual(invocations, 0)
+
+        // Because the root task didn't run, it should be the onnly one scheduled.
+        XCTAssertEqual(tasks.count, 1)
+
+        // Check the task was failed with cancelled error.
+        let taskChecked = expectation(description: "task future fulfilled")
+        tasks.first?.futureResult.whenComplete { result in
+            switch result {
+            case .success: XCTFail("Expected task to be cancelled, not run.")
+            case .failure(let error): XCTAssertEqual(error as? EventLoopError, .cancelled)
+            }
+            taskChecked.fulfill()
+        }
+        wait(for: [taskChecked], timeout: 0)
     }
 
     func testGetChannelOptionAutoReadIsSupported() {

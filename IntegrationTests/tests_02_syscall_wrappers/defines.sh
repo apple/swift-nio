@@ -16,7 +16,7 @@
 set -eu
 
 function make_package() {
-    if [[ ! -d "$tmpdir/syscallwrapper/Sources/syscallwrapper/" ]]; then
+    if [[ ! -d "${tmpdir:?"tmpdir variable not set"}/syscallwrapper/Sources/syscallwrapper/" ]]; then
         mkdir "$tmpdir/syscallwrapper/Sources/syscallwrapper/"
         mv "$tmpdir"/syscallwrapper/Sources/*.swift "$tmpdir/syscallwrapper/Sources/syscallwrapper/"
     fi
@@ -50,7 +50,7 @@ let package = Package(
     ]
 )
 EOF
-    cp "$here/../../Tests/NIOPosixTests/SystemCallWrapperHelpers.swift" \
+    cp "${here:?"here variable not set"}/../../Tests/NIOPosixTests/SystemCallWrapperHelpers.swift" \
         "$here/../../Sources/NIOCore/BSDSocketAPI.swift" \
         "$here/../../Sources/NIOPosix/BSDSocketAPICommon.swift" \
         "$here/../../Sources/NIOPosix/BSDSocketAPIPosix.swift" \

@@ -29,7 +29,7 @@ struct DatagramVectorReadManager {
     /// The number of messages that will be read in each syscall.
     var messageCount: Int {
         get {
-            return self.messageVector.count
+            self.messageVector.count
         }
         set {
             precondition(newValue >= 0)
@@ -38,7 +38,10 @@ struct DatagramVectorReadManager {
             self.sockaddrVector.deinitializeAndDeallocate()
             self.controlMessageStorage.deallocate()
 
-            self.messageVector = .allocateAndInitialize(repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0), count: newValue)
+            self.messageVector = .allocateAndInitialize(
+                repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0),
+                count: newValue
+            )
             self.ioVector = .allocateAndInitialize(repeating: IOVector(), count: newValue)
             self.sockaddrVector = .allocateAndInitialize(repeating: sockaddr_storage(), count: newValue)
             self.controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: newValue)
@@ -60,10 +63,12 @@ struct DatagramVectorReadManager {
     // FIXME(cory): Right now there's no good API for specifying the various parameters of multi-read, especially how
     // it should interact with RecvByteBufferAllocator. For now I'm punting on this to see if I can get it working,
     // but we should design it back.
-    fileprivate init(messageVector: UnsafeMutableBufferPointer<MMsgHdr>,
-                     ioVector: UnsafeMutableBufferPointer<IOVector>,
-                     sockaddrVector: UnsafeMutableBufferPointer<sockaddr_storage>,
-                     controlMessageStorage: UnsafeControlMessageStorage) {
+    fileprivate init(
+        messageVector: UnsafeMutableBufferPointer<MMsgHdr>,
+        ioVector: UnsafeMutableBufferPointer<IOVector>,
+        sockaddrVector: UnsafeMutableBufferPointer<sockaddr_storage>,
+        controlMessageStorage: UnsafeControlMessageStorage
+    ) {
         self.messageVector = messageVector
         self.ioVector = ioVector
         self.sockaddrVector = sockaddrVector
@@ -89,9 +94,11 @@ struct DatagramVectorReadManager {
     ///     - socket: The underlying socket from which to read.
     ///     - buffer: The single large buffer into which reads will be written.
     ///     - parseControlMessages: Should control messages be reported up using metadata.
-    func readFromSocket(socket: Socket,
-                        buffer: inout ByteBuffer,
-                        parseControlMessages: Bool) throws -> ReadResult {
+    func readFromSocket(
+        socket: Socket,
+        buffer: inout ByteBuffer,
+        parseControlMessages: Bool
+    ) throws -> ReadResult {
         assert(buffer.readerIndex == 0, "Buffer was not cleared between calls to readFromSocket!")
 
         let messageSize = buffer.capacity / self.messageCount
@@ -101,8 +108,11 @@ struct DatagramVectorReadManager {
                 // TODO(cory): almost all of this except for the iovec could be done at allocation time. Maybe we should?
 
                 // First we set up the iovec and save it off.
-                self.ioVector[i] = IOVector(iov_base: bufferPointer.baseAddress! + (i * messageSize), iov_len: numericCast(messageSize))
-                
+                self.ioVector[i] = IOVector(
+                    iov_base: bufferPointer.baseAddress! + (i * messageSize),
+                    iov_len: numericCast(messageSize)
+                )
+
                 let controlBytes: UnsafeMutableRawBufferPointer
                 if parseControlMessages {
                     // This will be used in buildMessages below but should not be used beyond return of this function.
@@ -136,10 +146,12 @@ struct DatagramVectorReadManager {
             return .none
         case .processed(let messagesProcessed):
             buffer.moveWriterIndex(to: messageSize * messagesProcessed)
-            return try self.buildMessages(messageCount: messagesProcessed,
-                                          sliceSize: messageSize,
-                                          buffer: &buffer,
-                                          parseControlMessages: parseControlMessages)
+            return try self.buildMessages(
+                messageCount: messagesProcessed,
+                sliceSize: messageSize,
+                buffer: &buffer,
+                parseControlMessages: parseControlMessages
+            )
         }
     }
 
@@ -151,14 +163,16 @@ struct DatagramVectorReadManager {
         self.controlMessageStorage.deallocate()
     }
 
-    private func buildMessages(messageCount: Int,
-                               sliceSize: Int,
-                               buffer: inout ByteBuffer,
-                               parseControlMessages: Bool) throws -> ReadResult {
+    private func buildMessages(
+        messageCount: Int,
+        sliceSize: Int,
+        buffer: inout ByteBuffer,
+        parseControlMessages: Bool
+    ) throws -> ReadResult {
         var sliceOffset = buffer.readerIndex
         var totalReadSize = 0
 
-        var results = Array<AddressedEnvelope<ByteBuffer>>()
+        var results = [AddressedEnvelope<ByteBuffer>]()
         results.reserveCapacity(messageCount)
 
         for i in 0..<messageCount {
@@ -173,13 +187,13 @@ struct DatagramVectorReadManager {
             totalReadSize += readBytes
 
             // Next we extract the remote peer address.
-#if os(Windows)
+            #if os(Windows)
             precondition(self.messageVector[i].msg_hdr.namelen != 0, "Unexpected zero length peer name")
-#else
+            #else
             precondition(self.messageVector[i].msg_hdr.msg_namelen != 0, "Unexpected zero length peer name")
-#endif
+            #endif
             let address: SocketAddress = try self.sockaddrVector[i].convert()
-            
+
             // Extract congestion information if requested.
             let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
             if parseControlMessages {
@@ -205,18 +219,25 @@ extension DatagramVectorReadManager {
     /// - parameters:
     ///     - messageCount: The number of vector reads to support initially.
     static func allocate(messageCount: Int) -> DatagramVectorReadManager {
-        let messageVector = UnsafeMutableBufferPointer.allocateAndInitialize(repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0), count: messageCount)
+        let messageVector = UnsafeMutableBufferPointer.allocateAndInitialize(
+            repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0),
+            count: messageCount
+        )
         let ioVector = UnsafeMutableBufferPointer.allocateAndInitialize(repeating: IOVector(), count: messageCount)
-        let sockaddrVector = UnsafeMutableBufferPointer.allocateAndInitialize(repeating: sockaddr_storage(), count: messageCount)
+        let sockaddrVector = UnsafeMutableBufferPointer.allocateAndInitialize(
+            repeating: sockaddr_storage(),
+            count: messageCount
+        )
         let controlMessageStorage = UnsafeControlMessageStorage.allocate(msghdrCount: messageCount)
 
-        return DatagramVectorReadManager(messageVector: messageVector,
-                                         ioVector: ioVector,
-                                         sockaddrVector: sockaddrVector,
-                                         controlMessageStorage: controlMessageStorage)
+        return DatagramVectorReadManager(
+            messageVector: messageVector,
+            ioVector: ioVector,
+            sockaddrVector: sockaddrVector,
+            controlMessageStorage: controlMessageStorage
+        )
     }
 }
-
 
 extension Optional where Wrapped == DatagramVectorReadManager {
     /// Updates the message count of the wrapped `DatagramVectorReadManager` to the new value.
@@ -239,12 +260,14 @@ extension Optional where Wrapped == DatagramVectorReadManager {
     }
 }
 
-
 extension UnsafeMutableBufferPointer {
     /// Safely creates an UnsafeMutableBufferPointer that can be used by the rest of the code. It ensures that
     /// the memory has been bound, allocated, and initialized, such that other Swift code can use it safely without
     /// worrying.
-    fileprivate static func allocateAndInitialize(repeating element: Element, count: Int) -> UnsafeMutableBufferPointer<Element> {
+    fileprivate static func allocateAndInitialize(
+        repeating element: Element,
+        count: Int
+    ) -> UnsafeMutableBufferPointer<Element> {
         let newPointer = UnsafeMutableBufferPointer.allocate(capacity: count)
         newPointer.initialize(repeating: element)
         return newPointer

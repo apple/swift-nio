@@ -15,63 +15,91 @@
 extension EventLoopFuture {
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func flatMap<NewValue>(file: StaticString = #fileID, line: UInt = #line, _ callback: @escaping (Value) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
-        return self.flatMap(callback)
+    public func flatMap<NewValue>(
+        file: StaticString = #fileID,
+        line: UInt = #line,
+        _ callback: @escaping (Value) -> EventLoopFuture<NewValue>
+    ) -> EventLoopFuture<NewValue> {
+        self.flatMap(callback)
     }
 
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func flatMapThrowing<NewValue>(file: StaticString = #fileID,
-                                line: UInt = #line,
-                                _ callback: @escaping (Value) throws -> NewValue) -> EventLoopFuture<NewValue> {
-        return self.flatMapThrowing(callback)
+    public func flatMapThrowing<NewValue>(
+        file: StaticString = #fileID,
+        line: UInt = #line,
+        _ callback: @escaping (Value) throws -> NewValue
+    ) -> EventLoopFuture<NewValue> {
+        self.flatMapThrowing(callback)
     }
 
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func flatMapErrorThrowing(file: StaticString = #fileID, line: UInt = #line, _ callback: @escaping (Error) throws -> Value) -> EventLoopFuture<Value> {
-        return self.flatMapErrorThrowing(callback)
+    public func flatMapErrorThrowing(
+        file: StaticString = #fileID,
+        line: UInt = #line,
+        _ callback: @escaping (Error) throws -> Value
+    ) -> EventLoopFuture<Value> {
+        self.flatMapErrorThrowing(callback)
     }
 
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func map<NewValue>(file: StaticString = #fileID, line: UInt = #line, _ callback: @escaping (Value) -> (NewValue)) -> EventLoopFuture<NewValue> {
-        return self.map(callback)
+    public func map<NewValue>(
+        file: StaticString = #fileID,
+        line: UInt = #line,
+        _ callback: @escaping (Value) -> (NewValue)
+    ) -> EventLoopFuture<NewValue> {
+        self.map(callback)
     }
 
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func flatMapError(file: StaticString = #fileID, line: UInt = #line, _ callback: @escaping (Error) -> EventLoopFuture<Value>) -> EventLoopFuture<Value> {
-        return self.flatMapError(callback)
+    public func flatMapError(
+        file: StaticString = #fileID,
+        line: UInt = #line,
+        _ callback: @escaping (Error) -> EventLoopFuture<Value>
+    ) -> EventLoopFuture<Value> {
+        self.flatMapError(callback)
     }
 
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func flatMapResult<NewValue, SomeError: Error>(file: StaticString = #fileID,
-                                                          line: UInt = #line,
-                                                          _ body: @escaping (Value) -> Result<NewValue, SomeError>) -> EventLoopFuture<NewValue> {
-        return self.flatMapResult(body)
+    public func flatMapResult<NewValue, SomeError: Error>(
+        file: StaticString = #fileID,
+        line: UInt = #line,
+        _ body: @escaping (Value) -> Result<NewValue, SomeError>
+    ) -> EventLoopFuture<NewValue> {
+        self.flatMapResult(body)
     }
 
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func recover(file: StaticString = #fileID, line: UInt = #line, _ callback: @escaping (Error) -> Value) -> EventLoopFuture<Value> {
-        return self.recover(callback)
+    public func recover(
+        file: StaticString = #fileID,
+        line: UInt = #line,
+        _ callback: @escaping (Error) -> Value
+    ) -> EventLoopFuture<Value> {
+        self.recover(callback)
     }
 
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func and<OtherValue>(_ other: EventLoopFuture<OtherValue>,
-                                file: StaticString = #fileID,
-                                line: UInt = #line) -> EventLoopFuture<(Value, OtherValue)> {
-        return self.and(other)
+    public func and<OtherValue>(
+        _ other: EventLoopFuture<OtherValue>,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) -> EventLoopFuture<(Value, OtherValue)> {
+        self.and(other)
     }
 
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func and<OtherValue>(value: OtherValue,
-                                file: StaticString = #fileID,
-                                line: UInt = #line) -> EventLoopFuture<(Value, OtherValue)> {
-        return self.and(value: value)
+    public func and<OtherValue>(
+        value: OtherValue,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) -> EventLoopFuture<(Value, OtherValue)> {
+        self.and(value: value)
     }
 }

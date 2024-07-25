@@ -144,7 +144,8 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     ///
     /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
     @inlinable
-    public func write<Writes: AsyncSequence>(contentsOf sequence: Writes) async throws where Writes.Element == OutboundOut {
+    public func write<Writes: AsyncSequence>(contentsOf sequence: Writes) async throws
+    where Writes.Element == OutboundOut {
         for try await data in sequence {
             try await self.write(data)
         }

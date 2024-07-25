@@ -46,8 +46,8 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
         if !self.hasUnterminatedResponse {
             let headers = HTTPHeaders([("Connection", "close"), ("Content-Length", "0")])
             let head = HTTPResponseHead(version: .http1_1, status: .badRequest, headers: headers)
-            context.write(self.wrapOutboundOut(.head(head)), promise: nil)
-            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            context.write(Self.wrapOutboundOut(.head(head)), promise: nil)
+            context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
         }
 
         // Now pass the error on in case someone else wants to see it.
@@ -55,7 +55,7 @@ public final class HTTPServerProtocolErrorHandler: ChannelDuplexHandler, Removab
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let res = self.unwrapOutboundIn(data)
+        let res = Self.unwrapOutboundIn(data)
         switch res {
         case .head(let head) where head.isInformational:
             precondition(!self.hasUnterminatedResponse)

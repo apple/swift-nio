@@ -27,7 +27,7 @@ extension Date {
 extension FileInfo.Timespec {
     /// The UTC time of the timestamp.
     public var date: Date {
-        return Date(timespec: self)
+        Date(timespec: self)
     }
 }
 #endif

@@ -13,6 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)

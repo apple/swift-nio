@@ -1,20 +1,8 @@
-name: Pull Request
+name: Soundness
 
 on:
   workflow_call:
     inputs:
-      unit_tests_linux_enabled:
-        type: boolean
-        description: "Boolean to enable the unit tests linux job. Defaults to true."
-        default: true
-      benchmarks_linux_enabled:
-        type: boolean
-        description: "Boolean to enable the benchmarks linux job. Defaults to true."
-        default: true
-      benchmarks_linux_package_path:
-        type: string
-        description: "Path to the package containing the benchmarks. Defaults to the repository root."
-        default: "."
       api_breakage_check_enabled:
         type: boolean
         description: "Boolean to enable the API breakage check job. Defaults to true."
@@ -50,64 +38,10 @@ on:
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-soundness
   cancel-in-progress: true
  
 jobs:
-  unit-tests-linux:
-    name: Unit tests
-    if: ${{ inputs.unit_tests_linux_enabled }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        swift:
-        - image: swift:5.8-jammy
-        - image: swift:5.9-jammy
-        - image: swift:5.10-jammy
-        - image: swiftlang/swift:nightly-6.0-jammy
-        - image: swiftlang/swift:nightly-main-jammy
-    container:
-      image: ${{ matrix.swift.image }}
-    timeout-minutes: 20
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Run tests
-      run: swift test
-  
-  benchmarks-linux:
-    name: Benchmarks
-    if: ${{ inputs.benchmarks_linux_enabled }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        swift:
-        - image: swift:5.8-jammy
-          swift_version: "5.8"
-        - image: swift:5.9-jammy
-          swift_version: "5.9"
-        - image: swift:5.10-jammy
-          swift_version: "5.10"
-        - image: swiftlang/swift:nightly-6.0-jammy
-          swift_version: "nightly-next"
-        - image: swiftlang/swift:nightly-main-jammy
-          swift_version: "nightly-main"
-    container:
-      image: ${{ matrix.swift.image }}
-    timeout-minutes: 20
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-    - name: Run tests
-      env:
-        PACKAGE_PATH: ${{ inputs.benchmarks_linux_package_path }}
-        SWIFT_VERSION: ${{ matrix.swift.swift_version }}
-      run: |
-        apt-get update -y -q && apt-get install -y -q libjemalloc-dev
-        swift package --package-path ${PACKAGE_PATH} --disable-sandbox benchmark baseline check --check-absolute-path ${PACKAGE_PATH}/Thresholds/${SWIFT_VERSION}/
-
   api-breakage-check:
     name: API breakage check
     if: ${{ inputs.api_breakage_check_enabled }}
@@ -189,5 +123,24 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+    - name: Mark the workspace as safe
+    # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
     - name: Run format check
-      run: swift format lint --parallel --recursive --strict
+      run:  |
+        apt-get -qq update && apt-get -qq -y install curl
+        curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-swift-format.sh | bash
+
+  shell-check:
+    name: Shell check
+    if: ${{ inputs.format_check_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Mark the workspace as safe
+    # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+    - name: Run shellcheck
+      run:  git ls-files -z '*.sh' | xargs -0 shellcheck

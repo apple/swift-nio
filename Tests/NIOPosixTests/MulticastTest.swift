@@ -16,7 +16,6 @@ import NIOCore
 import NIOPosix
 import XCTest
 
-
 final class PromiseOnReadHandler: ChannelInboundHandler {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>
 
@@ -27,11 +26,10 @@ final class PromiseOnReadHandler: ChannelInboundHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.promise.succeed(self.unwrapInboundIn(data))
+        self.promise.succeed(Self.unwrapInboundIn(data))
         _ = context.pipeline.removeHandler(context: context)
     }
 }
-
 
 final class MulticastTest: XCTestCase {
     private var group: MultiThreadedEventLoopGroup!
@@ -44,11 +42,11 @@ final class MulticastTest: XCTestCase {
         XCTAssertNoThrow(try self.group.syncShutdownGracefully())
     }
 
-    struct NoSuchInterfaceError: Error { }
+    struct NoSuchInterfaceError: Error {}
 
-    struct MulticastInterfaceMismatchError: Error { }
+    struct MulticastInterfaceMismatchError: Error {}
 
-    struct ReceivedDatagramError: Error { }
+    struct ReceivedDatagramError: Error {}
 
     @available(*, deprecated)
     private func interfaceForAddress(address: String) throws -> NIONetworkInterface {
@@ -68,15 +66,23 @@ final class MulticastTest: XCTestCase {
     }
 
     @available(*, deprecated)
-    private func bindMulticastChannel(host: String, port: Int, multicastAddress: String, interface: NIONetworkInterface) -> EventLoopFuture<MulticastChannel> {
-        return DatagramBootstrap(group: self.group)
+    private func bindMulticastChannel(
+        host: String,
+        port: Int,
+        multicastAddress: String,
+        interface: NIONetworkInterface
+    ) -> EventLoopFuture<MulticastChannel> {
+        DatagramBootstrap(group: self.group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .bind(host: host, port: port)
             .flatMap { channel in
                 let channel = channel as! MulticastChannel
 
                 do {
-                    let multicastAddress = try SocketAddress(ipAddress: multicastAddress, port: channel.localAddress!.port!)
+                    let multicastAddress = try SocketAddress(
+                        ipAddress: multicastAddress,
+                        port: channel.localAddress!.port!
+                    )
                     return channel.joinGroup(multicastAddress, interface: interface).map { channel }
                 } catch {
                     return channel.eventLoop.makeFailedFuture(error)
@@ -95,15 +101,23 @@ final class MulticastTest: XCTestCase {
             }
     }
 
-    private func bindMulticastChannel(host: String, port: Int, multicastAddress: String, device: NIONetworkDevice) -> EventLoopFuture<MulticastChannel> {
-        return DatagramBootstrap(group: self.group)
+    private func bindMulticastChannel(
+        host: String,
+        port: Int,
+        multicastAddress: String,
+        device: NIONetworkDevice
+    ) -> EventLoopFuture<MulticastChannel> {
+        DatagramBootstrap(group: self.group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .bind(host: host, port: port)
             .flatMap { channel in
                 let channel = channel as! MulticastChannel
 
                 do {
-                    let multicastAddress = try SocketAddress(ipAddress: multicastAddress, port: channel.localAddress!.port!)
+                    let multicastAddress = try SocketAddress(
+                        ipAddress: multicastAddress,
+                        port: channel.localAddress!.port!
+                    )
                     return channel.joinGroup(multicastAddress, device: device).map { channel }
                 } catch {
                     return channel.eventLoop.makeFailedFuture(error)
@@ -123,7 +137,10 @@ final class MulticastTest: XCTestCase {
     }
 
     @available(*, deprecated)
-    private func configureSenderMulticastIf(sender: Channel, multicastInterface: NIONetworkInterface) -> EventLoopFuture<Void> {
+    private func configureSenderMulticastIf(
+        sender: Channel,
+        multicastInterface: NIONetworkInterface
+    ) -> EventLoopFuture<Void> {
         let provider = sender as! SocketOptionProvider
 
         switch (sender.localAddress!, multicastInterface.address) {
@@ -132,12 +149,15 @@ final class MulticastTest: XCTestCase {
         case (.v6, .v6):
             return provider.setIPv6MulticastIF(CUnsignedInt(multicastInterface.interfaceIndex))
         default:
-            XCTFail("Cannot join channel bound to \(sender.localAddress!) to interface at \(multicastInterface.address)")
+            XCTFail(
+                "Cannot join channel bound to \(sender.localAddress!) to interface at \(multicastInterface.address)"
+            )
             return sender.eventLoop.makeFailedFuture(MulticastInterfaceMismatchError())
         }
     }
 
-    private func configureSenderMulticastIf(sender: Channel, multicastDevice: NIONetworkDevice) -> EventLoopFuture<Void> {
+    private func configureSenderMulticastIf(sender: Channel, multicastDevice: NIONetworkDevice) -> EventLoopFuture<Void>
+    {
         let provider = sender as! SocketOptionProvider
 
         switch (sender.localAddress!, multicastDevice.address) {
@@ -146,13 +166,19 @@ final class MulticastTest: XCTestCase {
         case (.v6, .some(.v6)):
             return provider.setIPv6MulticastIF(CUnsignedInt(multicastDevice.interfaceIndex))
         default:
-            XCTFail("Cannot join channel bound to \(sender.localAddress!) to interface at \(String(describing: multicastDevice.address))")
+            XCTFail(
+                "Cannot join channel bound to \(sender.localAddress!) to interface at \(String(describing: multicastDevice.address))"
+            )
             return sender.eventLoop.makeFailedFuture(MulticastInterfaceMismatchError())
         }
     }
 
     @available(*, deprecated)
-    private func leaveMulticastGroup(channel: Channel, multicastAddress: String, interface: NIONetworkInterface) -> EventLoopFuture<Void> {
+    private func leaveMulticastGroup(
+        channel: Channel,
+        multicastAddress: String,
+        interface: NIONetworkInterface
+    ) -> EventLoopFuture<Void> {
         let channel = channel as! MulticastChannel
 
         do {
@@ -163,7 +189,11 @@ final class MulticastTest: XCTestCase {
         }
     }
 
-    private func leaveMulticastGroup(channel: Channel, multicastAddress: String, device: NIONetworkDevice) -> EventLoopFuture<Void> {
+    private func leaveMulticastGroup(
+        channel: Channel,
+        multicastAddress: String,
+        device: NIONetworkDevice
+    ) -> EventLoopFuture<Void> {
         let channel = channel as! MulticastChannel
 
         do {
@@ -174,9 +204,17 @@ final class MulticastTest: XCTestCase {
         }
     }
 
-    private func assertDatagramReaches(multicastChannel: Channel, sender: Channel, multicastAddress: SocketAddress, file: StaticString = #filePath, line: UInt = #line) throws {
+    private func assertDatagramReaches(
+        multicastChannel: Channel,
+        sender: Channel,
+        multicastAddress: SocketAddress,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
         let receivedMulticastDatagram = multicastChannel.eventLoop.makePromise(of: AddressedEnvelope<ByteBuffer>.self)
-        XCTAssertNoThrow(try multicastChannel.pipeline.addHandler(PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
+        XCTAssertNoThrow(
+            try multicastChannel.pipeline.addHandler(PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait()
+        )
 
         var messageBuffer = sender.allocator.buffer(capacity: 24)
         messageBuffer.writeStaticString("hello, world!")
@@ -187,19 +225,28 @@ final class MulticastTest: XCTestCase {
             line: line
         )
 
-        let receivedDatagram = try assertNoThrowWithValue(receivedMulticastDatagram.futureResult.wait(), file: (file), line: line)
+        let receivedDatagram = try assertNoThrowWithValue(
+            receivedMulticastDatagram.futureResult.wait(),
+            file: (file),
+            line: line
+        )
         XCTAssertEqual(receivedDatagram.remoteAddress, sender.localAddress!)
         XCTAssertEqual(receivedDatagram.data, messageBuffer)
     }
 
-    private func assertDatagramDoesNotReach(multicastChannel: Channel,
-                                            after timeout: TimeAmount,
-                                            sender: Channel,
-                                            multicastAddress: SocketAddress,
-                                            file: StaticString = #filePath, line: UInt = #line) throws {
+    private func assertDatagramDoesNotReach(
+        multicastChannel: Channel,
+        after timeout: TimeAmount,
+        sender: Channel,
+        multicastAddress: SocketAddress,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws {
         let timeoutPromise = multicastChannel.eventLoop.makePromise(of: Void.self)
         let receivedMulticastDatagram = multicastChannel.eventLoop.makePromise(of: AddressedEnvelope<ByteBuffer>.self)
-        XCTAssertNoThrow(try multicastChannel.pipeline.addHandler(PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait())
+        XCTAssertNoThrow(
+            try multicastChannel.pipeline.addHandler(PromiseOnReadHandler(promise: receivedMulticastDatagram)).wait()
+        )
 
         // If we receive a datagram, or the reader promise fails, we must fail the timeoutPromise.
         receivedMulticastDatagram.futureResult.map { (_: AddressedEnvelope<ByteBuffer>) in
@@ -225,10 +272,14 @@ final class MulticastTest: XCTestCase {
         guard multicastInterface.multicastSupported else {
             // alas, we don't support multicast, let's skip but test the right error is thrown
 
-            XCTAssertThrowsError(try self.bindMulticastChannel(host: "0.0.0.0",
-                                                               port: 0,
-                                                               multicastAddress: "224.0.2.66",
-                                                               interface: multicastInterface).wait()) { error in
+            XCTAssertThrowsError(
+                try self.bindMulticastChannel(
+                    host: "0.0.0.0",
+                    port: 0,
+                    multicastAddress: "224.0.2.66",
+                    interface: multicastInterface
+                ).wait()
+            ) { error in
                 if let error = error as? NIOMulticastNotSupportedError {
                     XCTAssertEqual(NIONetworkDevice(multicastInterface), error.device)
                 } else {
@@ -242,10 +293,14 @@ final class MulticastTest: XCTestCase {
         // group on the loopback.
         let listenerChannel: Channel
         do {
-            listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "0.0.0.0",
-                                                                                   port: 0,
-                                                                                   multicastAddress: "224.0.2.66",
-                                                                                   interface: multicastInterface).wait())
+            listenerChannel = try assertNoThrowWithValue(
+                self.bindMulticastChannel(
+                    host: "0.0.0.0",
+                    port: 0,
+                    multicastAddress: "224.0.2.66",
+                    interface: multicastInterface
+                ).wait()
+            )
             // no error, that's great
         } catch {
             if error is NIOMulticastNotSupportedError {
@@ -260,20 +315,27 @@ final class MulticastTest: XCTestCase {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
 
-        let multicastAddress = try assertNoThrowWithValue(try SocketAddress(ipAddress: "224.0.2.66", port: listenerChannel.localAddress!.port!))
+        let multicastAddress = try assertNoThrowWithValue(
+            try SocketAddress(ipAddress: "224.0.2.66", port: listenerChannel.localAddress!.port!)
+        )
 
         // Now that we've joined the group, let's send to it.
-        let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "127.0.0.1", port: 0)
-            .wait()
+        let sender = try assertNoThrowWithValue(
+            DatagramBootstrap(group: self.group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
         )
         defer {
             XCTAssertNoThrow(try sender.close().wait())
         }
 
         XCTAssertNoThrow(try configureSenderMulticastIf(sender: sender, multicastInterface: multicastInterface).wait())
-        try self.assertDatagramReaches(multicastChannel: listenerChannel, sender: sender, multicastAddress: multicastAddress)
+        try self.assertDatagramReaches(
+            multicastChannel: listenerChannel,
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
     }
 
     @available(*, deprecated)
@@ -287,10 +349,14 @@ final class MulticastTest: XCTestCase {
         guard multicastInterface.multicastSupported else {
             // alas, we don't support multicast, let's skip but test the right error is thrown
 
-            XCTAssertThrowsError(try self.bindMulticastChannel(host: "::1",
-                                                               port: 0,
-                                                               multicastAddress: "ff12::beeb",
-                                                               interface: multicastInterface).wait()) { error in
+            XCTAssertThrowsError(
+                try self.bindMulticastChannel(
+                    host: "::1",
+                    port: 0,
+                    multicastAddress: "ff12::beeb",
+                    interface: multicastInterface
+                ).wait()
+            ) { error in
                 if let error = error as? NIOMulticastNotSupportedError {
                     XCTAssertEqual(NIONetworkDevice(multicastInterface), error.device)
                 } else {
@@ -304,10 +370,14 @@ final class MulticastTest: XCTestCase {
         do {
             // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
             // group on the loopback.
-            listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "::1",
-                                                                                   port: 0,
-                                                                                   multicastAddress: "ff12::beeb",
-                                                                                   interface: multicastInterface).wait())
+            listenerChannel = try assertNoThrowWithValue(
+                self.bindMulticastChannel(
+                    host: "::1",
+                    port: 0,
+                    multicastAddress: "ff12::beeb",
+                    interface: multicastInterface
+                ).wait()
+            )
         } catch {
             if error is NIOMulticastNotSupportedError {
                 XCTFail("network interface (\(multicastInterface))) claims we support multicast but: \(error)")
@@ -320,20 +390,27 @@ final class MulticastTest: XCTestCase {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
 
-        let multicastAddress = try assertNoThrowWithValue(try SocketAddress(ipAddress: "ff12::beeb", port: listenerChannel.localAddress!.port!))
+        let multicastAddress = try assertNoThrowWithValue(
+            try SocketAddress(ipAddress: "ff12::beeb", port: listenerChannel.localAddress!.port!)
+        )
 
         // Now that we've joined the group, let's send to it.
-        let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "::1", port: 0)
-            .wait()
+        let sender = try assertNoThrowWithValue(
+            DatagramBootstrap(group: self.group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "::1", port: 0)
+                .wait()
         )
         defer {
             XCTAssertNoThrow(try sender.close().wait())
         }
 
         XCTAssertNoThrow(try configureSenderMulticastIf(sender: sender, multicastInterface: multicastInterface).wait())
-        try self.assertDatagramReaches(multicastChannel: listenerChannel, sender: sender, multicastAddress: multicastAddress)
+        try self.assertDatagramReaches(
+            multicastChannel: listenerChannel,
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
     }
 
     @available(*, deprecated)
@@ -346,33 +423,55 @@ final class MulticastTest: XCTestCase {
 
         // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
         // group on the loopback.
-        let listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "0.0.0.0",
-                                                                                   port: 0,
-                                                                                   multicastAddress: "224.0.2.66",
-                                                                                   interface: multicastInterface).wait())
+        let listenerChannel = try assertNoThrowWithValue(
+            self.bindMulticastChannel(
+                host: "0.0.0.0",
+                port: 0,
+                multicastAddress: "224.0.2.66",
+                interface: multicastInterface
+            ).wait()
+        )
 
         defer {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
 
-        let multicastAddress = try assertNoThrowWithValue(try SocketAddress(ipAddress: "224.0.2.66", port: listenerChannel.localAddress!.port!))
+        let multicastAddress = try assertNoThrowWithValue(
+            try SocketAddress(ipAddress: "224.0.2.66", port: listenerChannel.localAddress!.port!)
+        )
 
         // Now that we've joined the group, let's send to it.
-        let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "127.0.0.1", port: 0)
-            .wait()
+        let sender = try assertNoThrowWithValue(
+            DatagramBootstrap(group: self.group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
         )
         defer {
             XCTAssertNoThrow(try sender.close().wait())
         }
 
         XCTAssertNoThrow(try configureSenderMulticastIf(sender: sender, multicastInterface: multicastInterface).wait())
-        try self.assertDatagramReaches(multicastChannel: listenerChannel, sender: sender, multicastAddress: multicastAddress)
+        try self.assertDatagramReaches(
+            multicastChannel: listenerChannel,
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
 
         // Now we should *leave* the group.
-        XCTAssertNoThrow(try leaveMulticastGroup(channel: listenerChannel, multicastAddress: "224.0.2.66", interface: multicastInterface).wait())
-        try self.assertDatagramDoesNotReach(multicastChannel: listenerChannel, after: .milliseconds(500), sender: sender, multicastAddress: multicastAddress)
+        XCTAssertNoThrow(
+            try leaveMulticastGroup(
+                channel: listenerChannel,
+                multicastAddress: "224.0.2.66",
+                interface: multicastInterface
+            ).wait()
+        )
+        try self.assertDatagramDoesNotReach(
+            multicastChannel: listenerChannel,
+            after: .milliseconds(500),
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
     }
 
     @available(*, deprecated)
@@ -390,32 +489,54 @@ final class MulticastTest: XCTestCase {
 
         // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
         // group on the loopback.
-        let listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "::1",
-                                                                                   port: 0,
-                                                                                   multicastAddress: "ff12::beeb",
-                                                                                   interface: multicastInterface).wait())
+        let listenerChannel = try assertNoThrowWithValue(
+            self.bindMulticastChannel(
+                host: "::1",
+                port: 0,
+                multicastAddress: "ff12::beeb",
+                interface: multicastInterface
+            ).wait()
+        )
         defer {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
 
-        let multicastAddress = try assertNoThrowWithValue(try SocketAddress(ipAddress: "ff12::beeb", port: listenerChannel.localAddress!.port!))
+        let multicastAddress = try assertNoThrowWithValue(
+            try SocketAddress(ipAddress: "ff12::beeb", port: listenerChannel.localAddress!.port!)
+        )
 
         // Now that we've joined the group, let's send to it.
-        let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "::1", port: 0)
-            .wait()
+        let sender = try assertNoThrowWithValue(
+            DatagramBootstrap(group: self.group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "::1", port: 0)
+                .wait()
         )
         defer {
             XCTAssertNoThrow(try sender.close().wait())
         }
 
         XCTAssertNoThrow(try configureSenderMulticastIf(sender: sender, multicastInterface: multicastInterface).wait())
-        try self.assertDatagramReaches(multicastChannel: listenerChannel, sender: sender, multicastAddress: multicastAddress)
+        try self.assertDatagramReaches(
+            multicastChannel: listenerChannel,
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
 
         // Now we should *leave* the group.
-        XCTAssertNoThrow(try leaveMulticastGroup(channel: listenerChannel, multicastAddress: "ff12::beeb", interface: multicastInterface).wait())
-        try self.assertDatagramDoesNotReach(multicastChannel: listenerChannel, after: .milliseconds(500), sender: sender, multicastAddress: multicastAddress)
+        XCTAssertNoThrow(
+            try leaveMulticastGroup(
+                channel: listenerChannel,
+                multicastAddress: "ff12::beeb",
+                interface: multicastInterface
+            ).wait()
+        )
+        try self.assertDatagramDoesNotReach(
+            multicastChannel: listenerChannel,
+            after: .milliseconds(500),
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
     }
 
     func testCanJoinBasicMulticastGroupIPv4WithDevice() throws {
@@ -423,10 +544,14 @@ final class MulticastTest: XCTestCase {
         guard multicastDevice.multicastSupported else {
             // alas, we don't support multicast, let's skip but test the right error is thrown
 
-            XCTAssertThrowsError(try self.bindMulticastChannel(host: "0.0.0.0",
-                                                               port: 0,
-                                                               multicastAddress: "224.0.2.66",
-                                                               device: multicastDevice).wait()) { error in
+            XCTAssertThrowsError(
+                try self.bindMulticastChannel(
+                    host: "0.0.0.0",
+                    port: 0,
+                    multicastAddress: "224.0.2.66",
+                    device: multicastDevice
+                ).wait()
+            ) { error in
                 if let error = error as? NIOMulticastNotSupportedError {
                     XCTAssertEqual(multicastDevice, error.device)
                 } else {
@@ -440,10 +565,14 @@ final class MulticastTest: XCTestCase {
         // group on the loopback.
         let listenerChannel: Channel
         do {
-            listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "0.0.0.0",
-                                                                                   port: 0,
-                                                                                   multicastAddress: "224.0.2.66",
-                                                                                   device: multicastDevice).wait())
+            listenerChannel = try assertNoThrowWithValue(
+                self.bindMulticastChannel(
+                    host: "0.0.0.0",
+                    port: 0,
+                    multicastAddress: "224.0.2.66",
+                    device: multicastDevice
+                ).wait()
+            )
             // no error, that's great
         } catch {
             if error is NIOMulticastNotSupportedError {
@@ -458,20 +587,27 @@ final class MulticastTest: XCTestCase {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
 
-        let multicastAddress = try assertNoThrowWithValue(try SocketAddress(ipAddress: "224.0.2.66", port: listenerChannel.localAddress!.port!))
+        let multicastAddress = try assertNoThrowWithValue(
+            try SocketAddress(ipAddress: "224.0.2.66", port: listenerChannel.localAddress!.port!)
+        )
 
         // Now that we've joined the group, let's send to it.
-        let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "127.0.0.1", port: 0)
-            .wait()
+        let sender = try assertNoThrowWithValue(
+            DatagramBootstrap(group: self.group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
         )
         defer {
             XCTAssertNoThrow(try sender.close().wait())
         }
 
         XCTAssertNoThrow(try configureSenderMulticastIf(sender: sender, multicastDevice: multicastDevice).wait())
-        try self.assertDatagramReaches(multicastChannel: listenerChannel, sender: sender, multicastAddress: multicastAddress)
+        try self.assertDatagramReaches(
+            multicastChannel: listenerChannel,
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
     }
 
     func testCanJoinBasicMulticastGroupIPv6WithDevice() throws {
@@ -484,10 +620,14 @@ final class MulticastTest: XCTestCase {
         guard multicastDevice.multicastSupported else {
             // alas, we don't support multicast, let's skip but test the right error is thrown
 
-            XCTAssertThrowsError(try self.bindMulticastChannel(host: "::1",
-                                                               port: 0,
-                                                               multicastAddress: "ff12::beeb",
-                                                               device: multicastDevice).wait()) { error in
+            XCTAssertThrowsError(
+                try self.bindMulticastChannel(
+                    host: "::1",
+                    port: 0,
+                    multicastAddress: "ff12::beeb",
+                    device: multicastDevice
+                ).wait()
+            ) { error in
                 if let error = error as? NIOMulticastNotSupportedError {
                     XCTAssertEqual(multicastDevice, error.device)
                 } else {
@@ -501,10 +641,14 @@ final class MulticastTest: XCTestCase {
         do {
             // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
             // group on the loopback.
-            listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "::1",
-                                                                                   port: 0,
-                                                                                   multicastAddress: "ff12::beeb",
-                                                                                   device: multicastDevice).wait())
+            listenerChannel = try assertNoThrowWithValue(
+                self.bindMulticastChannel(
+                    host: "::1",
+                    port: 0,
+                    multicastAddress: "ff12::beeb",
+                    device: multicastDevice
+                ).wait()
+            )
         } catch {
             if error is NIOMulticastNotSupportedError {
                 XCTFail("network interface (\(multicastDevice)) claims we support multicast but: \(error)")
@@ -517,20 +661,27 @@ final class MulticastTest: XCTestCase {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
 
-        let multicastAddress = try assertNoThrowWithValue(try SocketAddress(ipAddress: "ff12::beeb", port: listenerChannel.localAddress!.port!))
+        let multicastAddress = try assertNoThrowWithValue(
+            try SocketAddress(ipAddress: "ff12::beeb", port: listenerChannel.localAddress!.port!)
+        )
 
         // Now that we've joined the group, let's send to it.
-        let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "::1", port: 0)
-            .wait()
+        let sender = try assertNoThrowWithValue(
+            DatagramBootstrap(group: self.group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "::1", port: 0)
+                .wait()
         )
         defer {
             XCTAssertNoThrow(try sender.close().wait())
         }
 
         XCTAssertNoThrow(try configureSenderMulticastIf(sender: sender, multicastDevice: multicastDevice).wait())
-        try self.assertDatagramReaches(multicastChannel: listenerChannel, sender: sender, multicastAddress: multicastAddress)
+        try self.assertDatagramReaches(
+            multicastChannel: listenerChannel,
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
     }
 
     func testCanLeaveAnIPv4MulticastGroupWithDevice() throws {
@@ -542,33 +693,52 @@ final class MulticastTest: XCTestCase {
 
         // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
         // group on the loopback.
-        let listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "0.0.0.0",
-                                                                                   port: 0,
-                                                                                   multicastAddress: "224.0.2.66",
-                                                                                   device: multicastDevice).wait())
+        let listenerChannel = try assertNoThrowWithValue(
+            self.bindMulticastChannel(
+                host: "0.0.0.0",
+                port: 0,
+                multicastAddress: "224.0.2.66",
+                device: multicastDevice
+            ).wait()
+        )
 
         defer {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
 
-        let multicastAddress = try assertNoThrowWithValue(try SocketAddress(ipAddress: "224.0.2.66", port: listenerChannel.localAddress!.port!))
+        let multicastAddress = try assertNoThrowWithValue(
+            try SocketAddress(ipAddress: "224.0.2.66", port: listenerChannel.localAddress!.port!)
+        )
 
         // Now that we've joined the group, let's send to it.
-        let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "127.0.0.1", port: 0)
-            .wait()
+        let sender = try assertNoThrowWithValue(
+            DatagramBootstrap(group: self.group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
         )
         defer {
             XCTAssertNoThrow(try sender.close().wait())
         }
 
         XCTAssertNoThrow(try configureSenderMulticastIf(sender: sender, multicastDevice: multicastDevice).wait())
-        try self.assertDatagramReaches(multicastChannel: listenerChannel, sender: sender, multicastAddress: multicastAddress)
+        try self.assertDatagramReaches(
+            multicastChannel: listenerChannel,
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
 
         // Now we should *leave* the group.
-        XCTAssertNoThrow(try leaveMulticastGroup(channel: listenerChannel, multicastAddress: "224.0.2.66", device: multicastDevice).wait())
-        try self.assertDatagramDoesNotReach(multicastChannel: listenerChannel, after: .milliseconds(500), sender: sender, multicastAddress: multicastAddress)
+        XCTAssertNoThrow(
+            try leaveMulticastGroup(channel: listenerChannel, multicastAddress: "224.0.2.66", device: multicastDevice)
+                .wait()
+        )
+        try self.assertDatagramDoesNotReach(
+            multicastChannel: listenerChannel,
+            after: .milliseconds(500),
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
     }
 
     func testCanLeaveAnIPv6MulticastGroupWithDevice() throws {
@@ -585,31 +755,50 @@ final class MulticastTest: XCTestCase {
 
         // We avoid the risk of interference due to our all-addresses bind by only joining this multicast
         // group on the loopback.
-        let listenerChannel = try assertNoThrowWithValue(self.bindMulticastChannel(host: "::1",
-                                                                                   port: 0,
-                                                                                   multicastAddress: "ff12::beeb",
-                                                                                   device: multicastDevice).wait())
+        let listenerChannel = try assertNoThrowWithValue(
+            self.bindMulticastChannel(
+                host: "::1",
+                port: 0,
+                multicastAddress: "ff12::beeb",
+                device: multicastDevice
+            ).wait()
+        )
         defer {
             XCTAssertNoThrow(try listenerChannel.close().wait())
         }
 
-        let multicastAddress = try assertNoThrowWithValue(try SocketAddress(ipAddress: "ff12::beeb", port: listenerChannel.localAddress!.port!))
+        let multicastAddress = try assertNoThrowWithValue(
+            try SocketAddress(ipAddress: "ff12::beeb", port: listenerChannel.localAddress!.port!)
+        )
 
         // Now that we've joined the group, let's send to it.
-        let sender = try assertNoThrowWithValue(DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "::1", port: 0)
-            .wait()
+        let sender = try assertNoThrowWithValue(
+            DatagramBootstrap(group: self.group)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "::1", port: 0)
+                .wait()
         )
         defer {
             XCTAssertNoThrow(try sender.close().wait())
         }
 
         XCTAssertNoThrow(try configureSenderMulticastIf(sender: sender, multicastDevice: multicastDevice).wait())
-        try self.assertDatagramReaches(multicastChannel: listenerChannel, sender: sender, multicastAddress: multicastAddress)
+        try self.assertDatagramReaches(
+            multicastChannel: listenerChannel,
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
 
         // Now we should *leave* the group.
-        XCTAssertNoThrow(try leaveMulticastGroup(channel: listenerChannel, multicastAddress: "ff12::beeb", device: multicastDevice).wait())
-        try self.assertDatagramDoesNotReach(multicastChannel: listenerChannel, after: .milliseconds(500), sender: sender, multicastAddress: multicastAddress)
+        XCTAssertNoThrow(
+            try leaveMulticastGroup(channel: listenerChannel, multicastAddress: "ff12::beeb", device: multicastDevice)
+                .wait()
+        )
+        try self.assertDatagramDoesNotReach(
+            multicastChannel: listenerChannel,
+            after: .milliseconds(500),
+            sender: sender,
+            multicastAddress: multicastAddress
+        )
     }
 }
