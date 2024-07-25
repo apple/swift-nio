@@ -293,14 +293,14 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
-    /// See ``FileSystemProtocol.copyItem()``
+    /// See ``FileSystemProtocol/copyItem()``
     ///
     /// The item to be copied must be a:
     /// - regular file,
     /// - symbolic link, or
     /// - directory.
     ///
-    /// But ``shouldCopyItem`` can be used to ignore things outside this supported set.
+    /// But `shouldCopyItem` can be used to ignore things outside this supported set.
     ///
     /// #### Errors
     ///
