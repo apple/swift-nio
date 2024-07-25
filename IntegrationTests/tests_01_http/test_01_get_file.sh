@@ -13,6 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)
@@ -22,7 +23,7 @@ echo FOO BAR > "$htdocs/some_file.txt"
 touch "$htdocs/empty"
 for file in some_file.txt empty; do
     for method in sendfile fileio; do
-        do_curl "$token" "http://foobar.com/$method/$file" > "$tmp/out.txt"
+        do_curl "$token" "http://foobar.com/$method/$file" > "${tmp:?"tmp variable not set"}/out.txt"
         assert_equal_files "$htdocs/$file" "$tmp/out.txt"
     done
 done

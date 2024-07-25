@@ -13,6 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)
@@ -21,16 +22,16 @@ htdocs=$(get_htdocs "$token")
 server_pid=$(get_server_pid "$token")
 echo FOO BAR > "$htdocs/some_file.txt"
 
-for f in $(seq 20); do
+for _ in $(seq 20); do
     # send some signals that are usually discarded
     kill -CHLD "$server_pid" # ignore-unacceptable-language
     kill -URG "$server_pid" # ignore-unacceptable-language
     kill -CONT "$server_pid" # ignore-unacceptable-language
     kill -WINCH "$server_pid" # ignore-unacceptable-language
 
-    do_curl "$token" "http://foobar.com/fileio/some_file.txt" > "$tmp/out.txt" &
+    do_curl "$token" "http://foobar.com/fileio/some_file.txt" > "${tmp:?"tmp variable not set"}/out.txt" &
     curl_pid=$!
-    for g in $(seq 20); do
+    for _ in $(seq 20); do
         kill -URG "$server_pid" # ignore-unacceptable-language
     done
     wait $curl_pid

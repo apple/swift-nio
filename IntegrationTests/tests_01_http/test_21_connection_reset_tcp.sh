@@ -13,16 +13,18 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)
 start_server --disable-half-closure "$token" tcp
+# shellcheck disable=SC2034
 htdocs=$(get_htdocs "$token")
 server_pid=$(get_server_pid "$token")
 ip=$(get_server_ip "$token")
 port=$(get_server_port "$token")
 
-kill -0 $server_pid # ignore-unacceptable-language
+kill -0 "$server_pid" # ignore-unacceptable-language
 # try to simulate a TCP connection reset, works really well on Darwin but not on
 # Linux over loopback. On Linux however
 # `test_19_connection_drop_while_waiting_for_response_uds.sh` tests a very

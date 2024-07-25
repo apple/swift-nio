@@ -478,19 +478,37 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testFinishWithRecursivelyScheduledTasks() throws {
         let channel = EmbeddedChannel()
+        var tasks: [Scheduled<Void>] = []
         var invocations = 0
 
         func recursivelyScheduleAndIncrement() {
-            channel.pipeline.eventLoop.scheduleTask(deadline: .distantFuture) {
+            let task = channel.pipeline.eventLoop.scheduleTask(deadline: .distantFuture) {
                 invocations += 1
                 recursivelyScheduleAndIncrement()
             }
+            tasks.append(task)
         }
 
         recursivelyScheduleAndIncrement()
 
         try XCTAssertNoThrow(channel.finish())
-        XCTAssertEqual(invocations, 1)
+
+        // None of the tasks should have been executed, they were scheduled for distant future.
+        XCTAssertEqual(invocations, 0)
+
+        // Because the root task didn't run, it should be the onnly one scheduled.
+        XCTAssertEqual(tasks.count, 1)
+
+        // Check the task was failed with cancelled error.
+        let taskChecked = expectation(description: "task future fulfilled")
+        tasks.first?.futureResult.whenComplete { result in
+            switch result {
+            case .success: XCTFail("Expected task to be cancelled, not run.")
+            case .failure(let error): XCTAssertEqual(error as? EventLoopError, .cancelled)
+            }
+            taskChecked.fulfill()
+        }
+        wait(for: [taskChecked], timeout: 0)
     }
 
     func testGetChannelOptionAutoReadIsSupported() {

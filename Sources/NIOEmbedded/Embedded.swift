@@ -80,6 +80,9 @@ public final class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     internal var _now: NIODeadline = .uptimeNanoseconds(0)
 
+    private enum State { case open, closing, closed }
+    private var state: State = .open
+
     private var scheduledTaskCounter: UInt64 = 0
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>()
 
@@ -110,6 +113,16 @@ public final class EmbeddedEventLoop: EventLoop {
     @discardableResult
     public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
+
+        switch self.state {
+        case .open:
+            break
+        case .closing, .closed:
+            // If the event loop is shut down, or shutting down, immediately cancel the task.
+            promise.fail(EventLoopError.cancelled)
+            return Scheduled(promise: promise, cancellationTask: {})
+        }
+
         self.scheduledTaskCounter += 1
         let task = EmbeddedScheduledTask(
             id: self.scheduledTaskCounter,
@@ -197,28 +210,18 @@ public final class EmbeddedEventLoop: EventLoop {
         self._now = newTime
     }
 
-    internal func drainScheduledTasksByRunningAllCurrentlyScheduledTasks() {
-        var currentlyScheduledTasks = self.scheduledTasks
-        while let nextTask = currentlyScheduledTasks.pop() {
-            self._now = nextTask.readyTime
-            nextTask.task()
-        }
-        // Just fail all the remaining scheduled tasks. Despite having run all the tasks that were
-        // scheduled when we entered the method this may still contain tasks as running the tasks
-        // may have enqueued more tasks.
+    internal func cancelRemainingScheduledTasks() {
         while let task = self.scheduledTasks.pop() {
-            task.fail(EventLoopError.shutdown)
+            task.fail(EventLoopError.cancelled)
         }
-    }
-
-    /// - see: `EventLoop.close`
-    func close() throws {
-        // Nothing to do here
     }
 
     /// - see: `EventLoop.shutdownGracefully`
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        self.state = .closing
         run()
+        cancelRemainingScheduledTasks()
+        self.state = .closed
         queue.sync {
             callback(nil)
         }
@@ -640,8 +643,8 @@ public final class EmbeddedChannel: Channel {
                 throw error
             }
         }
-        self.embeddedEventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
         self.embeddedEventLoop.run()
+        self.embeddedEventLoop.cancelRemainingScheduledTasks()
         try throwIfErrorCaught()
         let c = self.channelcore
         if c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty {

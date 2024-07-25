@@ -19,10 +19,10 @@ here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 case "$(uname -s)" in
     Darwin)
-        sed=gsed
+        sed="gsed"
         ;;
     *)
-        sed=sed
+        sed="sed"
         ;;
 esac
 
@@ -63,9 +63,9 @@ mv "$here/c_nio_sha1.h" "$here/include/CNIOSHA1.h"
 tmp=$(mktemp -d /tmp/.test_compile_XXXXXX)
 
 clang -o "$tmp/test.o" -c "$here/c_nio_sha1.c"
-num_non_nio=$(nm "$tmp/test.o" | grep ' T ' | grep -v c_nio | wc -l)
+num_non_nio=$(nm "$tmp/test.o" | grep ' T ' | grep -vc c_nio)
 
-test 0 -eq $num_non_nio || {
+test 0 -eq "$num_non_nio" || {
     echo "ERROR: $num_non_nio exported non-prefixed symbols found"
     exit 1
 }
