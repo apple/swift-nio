@@ -293,7 +293,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
-    /// See ``FileSystemProtocol/copyItem()``
+    /// See ``FileSystemProtocol/copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``
     ///
     /// The item to be copied must be a:
     /// - regular file,
@@ -674,9 +674,8 @@ private let globalFileSystem: FileSystem = {
 extension NIOSingletons {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
-    /// The file system executes blocking work in a thread pool see
-    /// ``NIOSingletons/blockingPoolThreadCountSuggestion`` for
-    /// the default behaviour and ways to control it.
+    /// The file system executes blocking work in a thread pool see `blockingPoolThreadCountSuggestion`
+    /// for the default behaviour and ways to control it.
     public static var fileSystem: FileSystem { globalFileSystem }
 }
 

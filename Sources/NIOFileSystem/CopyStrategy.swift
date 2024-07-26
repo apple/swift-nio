@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 /// How to perform copies. Currently only relevant to directory level copies when using
-/// ``FileSystemProtocol/copyItem``
+/// ``FileSystemProtocol/copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+/// or  other overloads that use the default behaviour
 public struct CopyStrategy: Hashable, Sendable {
     // Avoid exposing to prevent alterations being breaking changes
     internal enum Wrapped: Hashable, Sendable {

@@ -190,25 +190,25 @@ public protocol FileSystemProtocol: Sendable {
     ///
     /// #### Errors
     ///
-    /// No errors should be throw by implementors without first calling ``shouldProceedAfterError``,
+    /// No errors should be throw by implementors without first calling `shouldProceedAfterError`,
     /// if that returns without throwing this is taken as permission to continue and the error is swallowed.
-    /// If instead the closure throws then ``copyItem`` will throw and copying will stop, though the
-    /// precise semantics of this can depend on the ``strategy``.
+    /// If instead the closure throws then ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+    ///  will throw and copying will stop, though the precise semantics of this can depend on the `strategy`.
     ///
-    /// if using ``CopyStrategy/parallel``
+    /// if using ``CopyStrategy/parallel(maxDescriptors:)``
     /// Already started work may continue for an indefinite period of time. In particular, after throwing an error
-    /// it is possible that invocations of ``shouldCopyItem`` may continue to occur!
+    /// it is possible that invocations of `shouldCopyItem` may continue to occur!
     ///
     /// If using ``CopyStrategy/sequential`` only one invocation of any of the `should*` closures will occur at a time,
     /// and an error will immediately stop further activity.
     ///
     /// The specific error thrown from copyItem is undefined, it does not have to be the same error thrown from
-    /// ``shouldProceedAfterError``.
+    /// `shouldProceedAfterError`.
     /// In the event of any errors (ignored or otherwise) implementations are under no obbligation to
-    /// attempt to 'tidy up' after themselves. The state of the file system within ``destinationPath``
+    /// attempt to 'tidy up' after themselves. The state of the file system within `destinationPath`
     /// after an aborted copy should is undefined
     ///
-    /// When calling ``shouldProceedAfterError`` implementations of this method
+    /// When calling `shouldProceedAfterError` implementations of this method
     /// MUST:
     ///  - Do so once and only once per item.
     ///  - Not hold any locks when doing so.
@@ -217,7 +217,7 @@ public protocol FileSystemProtocol: Sendable {
     ///
     /// #### Filtering
     ///
-    /// When invoking ``shouldCopyItem`` implementations of this method
+    /// When invoking `shouldCopyItem` implementations of this method
     /// MUST:
     ///  - Do so once and only once per item.
     ///  - Do so before attempting any operations related to the copy (including determining if they can do so).
@@ -225,7 +225,7 @@ public protocol FileSystemProtocol: Sendable {
     ///  - Check parent directories *before* items within them,
     ///     * if a parent is ignored no items within it should be considered or checked
     ///  - Skip all contents of a directory which is filtered out.
-    ///  - Invoke it for the ``sourcePath`` itself.
+    ///  - Invoke it for the `sourcePath` itself.
     /// MAY:
     ///  - invoke the function multiple times concurrently (except when using ``CopyStrategy/sequential``)
     ///  - invoke the function an arbitrary point before actually trying to copy the file
@@ -462,8 +462,8 @@ extension FileSystemProtocol {
     ///   exists prior to the copy or its parent directory does not exist.
     ///
     /// Note that other errors may also be thrown. If any error is encountered during the copy
-    /// then the copy is aborted. You can modify the behaviour with the `shouldProceedAfterError`cop
-    /// parameter of ``copyItem(at:to:shouldProceedAfterError:shouldCopyItem:)``.
+    /// then the copy is aborted. You can modify the behaviour with the `shouldProceedAfterError`
+    /// parameter of ``FileSystemProtocol/copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``.
     ///
     /// If the file at `sourcePath` is a symbolic link then only the link is copied to the new path.
     ///
