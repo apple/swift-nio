@@ -795,8 +795,10 @@ final class FileSystemTests: XCTestCase {
 
         let _ = try await self.generateDirectoryStructure(
             root: path,
-            // guarantee parallelism possible in directory scans
-            maxDepth: 3,
+            // Ensure:
+            // - Parallelism is possible in directory scans.
+            // - There are sub directories underneath the point we trigger cancel
+            maxDepth: 4,
             maxFilesPerDirectory: 10,
             directoryProbability: 1.0,
             symbolicLinkProbability: 0.0
@@ -806,7 +808,6 @@ final class FileSystemTests: XCTestCase {
 
         let requestedCancel = NIOLockedValueBox<Bool>(false)
         let cancelRequested = expectation(description: "cancel requested")
-        let cancelPropagated = expectation(description: "cancel propagated")
 
         let task = Task {
             try await self.fs.copyItem(at: path, to: copyPath, strategy: copyStrategy) { _, error in
@@ -842,7 +843,13 @@ final class FileSystemTests: XCTestCase {
             return "completed the copy"
         }
 
-        await fulfillment(of: [cancelRequested], timeout: 1)
+        // Timeout notes: locally this should be fine as a second but on a loaded
+        // CI instance this test can be flaky at that level.
+        // Since testing cancellation is deemed highly desirable this is retained at
+        // quite relaxed thresholds.
+        // If this threshold remains insufficient for stable use then this test is likely
+        // not tenable to run in CI
+        await fulfillment(of: [cancelRequested], timeout: 5)
         task.cancel()
         let result = await task.result
         switch result {
@@ -851,12 +858,11 @@ final class FileSystemTests: XCTestCase {
 
         case let .failure(err):
             if err is CancellationError {
-                cancelPropagated.fulfill()
+                // success
             } else {
                 XCTFail("expected CancellationError not \(err)")
             }
         }
-        await fulfillment(of: [cancelPropagated], timeout: 2)
         // We can't assert anything about the state of the copy,
         // it might happen to all finish in time depending on scheduling.
     }

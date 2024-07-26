@@ -117,7 +117,10 @@ extension FileSystem {
                         inProgress += 1
                     }
                 } else {
-                    // We completed things before we hit the limit
+                    // Either we completed things before we hit the limit or we were cancelled.
+                    // In the latter case we choose to propagate the cancel clearly.
+                    // This makes testing for the cancellation more reliable.
+                    try Task.checkCancellation()
                     return
                 }
             }
