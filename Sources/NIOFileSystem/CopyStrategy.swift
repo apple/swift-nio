@@ -104,7 +104,7 @@ extension CopyStrategy {
     /// is less than 2.
     ///
     public static func parallel(maxDescriptors: Int) throws -> Self {
-        guard maxDescriptors >= minDescriptorsAllowed else {
+        guard maxDescriptors >= Self.minDescriptorsAllowed else {
             // 2 is not quite the same as sequential, you could have two concurrent directory listings for example
             // less than 2 and you can't actually do a _copy_ though so it's non-sensical.
             throw FileSystemError(

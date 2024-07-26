@@ -44,10 +44,11 @@ extension FileSystem {
         // Implemented with NIOAsyncSequenceProducer rather than AsyncStream.
         // It is approximately the same speed in the best case but has significantly less variance.
         // NIOAsyncSequenceProducer also enforces a multi producer single consumer access pattern.
-        let sequence = NIOAsyncSequenceProducer<DirCopyItem, NoBackPressureStrategy, DirCopyDelegate>.makeSequence(
-            backPressureStrategy: .init(),
+        let sequence = NIOAsyncSequenceProducer.makeSequence(
+            elementType: DirCopyItem.self,
+            backPressureStrategy: NoBackPressureStrategy(),
             finishOnDeinit: false,
-            delegate: .init()
+            delegate: DirCopyDelegate()
         )
 
         // We ignore the result of yield in all cases because we are not implementing back pressure
@@ -69,7 +70,7 @@ extension FileSystem {
 
         // Despite there being no 'result' of each operation we cannot use a discarding task group
         // because we use the 'drain results' queue as a concurrency limiting side effect.
-        return try await withThrowingTaskGroup(of: Void.self, returning: Void.self) { taskGroup in
+        try await withThrowingTaskGroup(of: Void.self) { taskGroup in
 
             // Code handling each item to process on the current task
             // Side Effects:
@@ -141,9 +142,9 @@ extension FileSystem {
 /// An 'always ask for more' no  back-pressure strategy for a ``NIOAsyncSequenceProducer``.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 private struct NoBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategy {
-    public mutating func didYield(bufferDepth: Int) -> Bool { true }
+    mutating func didYield(bufferDepth: Int) -> Bool { true }
 
-    public mutating func didConsume(bufferDepth: Int) -> Bool { true }
+    mutating func didConsume(bufferDepth: Int) -> Bool { true }
 }
 
 /// We ignore back pressure, the inherent handle limiting in copyDirectoryParallel means it is unnecessary.

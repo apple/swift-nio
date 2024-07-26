@@ -1062,7 +1062,7 @@ extension FileSystem {
     ) async throws {
         switch copyStrategy.wrapped {
         case .sequential:
-            return try await copyDirectorySequential(
+            return try await self.copyDirectorySequential(
                 from: sourcePath,
                 to: destinationPath,
                 shouldProceedAfterError: shouldProceedAfterError,

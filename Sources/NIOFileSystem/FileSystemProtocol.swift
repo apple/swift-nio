@@ -206,7 +206,7 @@ public protocol FileSystemProtocol: Sendable {
     /// `shouldProceedAfterError`.
     /// In the event of any errors (ignored or otherwise) implementations are under no obbligation to
     /// attempt to 'tidy up' after themselves. The state of the file system within `destinationPath`
-    /// after an aborted copy should is undefined
+    /// after an aborted copy should is undefined.
     ///
     /// When calling `shouldProceedAfterError` implementations of this method
     /// MUST:
