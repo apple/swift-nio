@@ -44,7 +44,7 @@ extension FileSystem {
         // Implemented with NIOAsyncSequenceProducer rather than AsyncStream.
         // It is approximately the same speed in the best case but has significantly less variance.
         // NIOAsyncSequenceProducer also enforces a multi producer single consumer access pattern.
-        let sequence = NIOAsyncSequenceProducer.makeSequence(
+        let copyRequiredQueue = NIOAsyncSequenceProducer.makeSequence(
             elementType: DirCopyItem.self,
             backPressureStrategy: NoBackPressureStrategy(),
             finishOnDeinit: false,
@@ -54,12 +54,12 @@ extension FileSystem {
         // We ignore the result of yield in all cases because we are not implementing back pressure
         // and cancellation is dealt with separately.
         @Sendable func yield(_ contentsOf: [DirCopyItem]) {
-            _ = sequence.source.yield(contentsOf: contentsOf)
+            _ = copyRequiredQueue.source.yield(contentsOf: contentsOf)
         }
 
         // Kick start the procees by enqueuing the root entry,
         // the calling function already validated the root needed copying.
-        _ = sequence.source.yield(.toCopy(from: .init(path: sourcePath, type: .directory)!, to: destinationPath))
+        _ = copyRequiredQueue.source.yield(.toCopy(from: .init(path: sourcePath, type: .directory)!, to: destinationPath))
 
         // The processing of the very first item (the root) will increment this,
         // after than when it hits zero we've finished.
@@ -82,7 +82,7 @@ extension FileSystem {
                 case .endOfDir:
                     activeDirCount -= 1
                     if activeDirCount == 0 {
-                        sequence.source.finish()
+                        copyRequiredQueue.source.finish()
                     }
                     return false
                 case let .toCopy(from: from, to: to):
@@ -102,7 +102,7 @@ extension FileSystem {
                 }
             }
 
-            let iter = sequence.sequence.makeAsyncIterator()
+            let iter = copyRequiredQueue.sequence.makeAsyncIterator()
 
             // inProgress counts the number of tasks we have added to the task group
             // Get up to the maximum concurrency first.

@@ -1124,13 +1124,13 @@ extension FileSystem {
             }
 
         case .directory:
-            let toCopy = try await self.prepareDirectoryForRecusiveCopy(
+            let addToQueue = try await self.prepareDirectoryForRecusiveCopy(
                 from: from.path,
                 to: to,
                 shouldProceedAfterError: shouldProceedAfterError,
                 shouldCopyItem: shouldCopyItem
             )
-            yield(toCopy)
+            yield(addToQueue)
 
         default:
             let error = FileSystemError(
