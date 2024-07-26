@@ -655,7 +655,7 @@ final class FileSystemTests: XCTestCase {
         let destination = try await self.fs.destinationOfSymbolicLink(at: copy)
         XCTAssertEqual(destination, "README.md")
     }
-    
+
     /// This is is not quite the same as sequential, different code paths are used.
     /// Tests using this ensure use of the parallel paths (which are more complex) while keeping actual
     /// parallelism to minimal levels to make debugging simpler.
