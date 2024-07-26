@@ -1,4 +1,4 @@
-name: Pull Request
+name: PR
 
 on:
     pull_request:
@@ -12,7 +12,7 @@ jobs:
             license_header_check_project_name: "SwiftNIO"
 
     unit-tests:
-        name: Checks
+        name: Unit tests
         uses: ./.github/workflows/unit_tests.yml
         with:
             linux_5_8_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
@@ -22,18 +22,22 @@ jobs:
             linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
 
     benchmarks:
-        name: Checks
+        name: Benchmarks
         uses: ./.github/workflows/benchmarks.yml
         with:
             benchmark_package_path: "Benchmarks"
 
     cxx-interop:
-        name: Checks
+        name: Cxx interop
         uses: ./.github/workflows/cxx_interop.yml
 
     integration-tests:
-        name: Checks / Integration Tests
+        name: Integration Tests
         uses: ./.github/workflows/swift_matrix.yml
         with:
           name: "Integration tests"
           matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"
+
+    swift-6-language-mode:
+        name: Swift 6 Language Mode
+        uses: ./.github/workflows/swift_6_language_mode.yml
