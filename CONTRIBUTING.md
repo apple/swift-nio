@@ -67,9 +67,9 @@ The default policy for taking contributions is “Squash and Merge” - because 
 
 ### Make sure your patch works for all supported versions of swift
 
-The CI will do this for you.  Currently all versions of swift >= 5.8 are supported.
+The CI will do this for you.  Currently all versions of Swift >= 5.8 are supported.
 
-If you wish to test this locally you have two options [act](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://github.com/nektos/act) and docker compose files.
+If you wish to test this locally you have two options [act](https://www.google.com/url?sa=t&source=web&rct=j&opi=89978449&url=https://github.com/nektos/act) and Docker Compose files.
 
 #### Act
 
@@ -79,9 +79,9 @@ act pull_request
 ```
 Note that SwiftNIO matrix testing makes use of nightly builds, so you may want to make use of the ```--action-offline-mode``` to avoid repulling those.
 
-#### Doccker compose files
+#### Docker Compose files
 
-You can use the docker-compose files.    For example usage of docker compose see the main [README](./README.md#an-alternative-using-docker-compose)
+You can use the docker-compose files.  For example usage of Docker Compose see the main [README](./README.md#an-alternative-using-docker-compose)
 
 ### Make sure your code is performant
 
@@ -91,9 +91,9 @@ SwiftNIO has been created to be high performance.  The integration tests cover s
 
 Try to keep your lines less than 120 characters long so github can correctly display your changes.
 
-SwiftNIO now uses the [swift-format](https://github.com/swiftlang/swift-format) tool to bring consistency to code formatting.    Their is a specific [.swift-format](./.swift-format) configuration file.    This will be checked and enforced on PRs, note that the check will run on the current most recent stable version target which may not match that in your own local development environment.
+SwiftNIO uses the [swift-format](https://github.com/swiftlang/swift-format) tool to bring consistency to code formatting.  There is a specific [.swift-format](./.swift-format) configuration file.  This will be checked and enforced on PRs.  Note that the check will run on the current most recent stable version target which may not match that in your own local development environment.
 
-If you want to apply the formatting to your local repo before commit then you can either run [check-swift-format.sh](./scripts/check-swift-format.sh) which will use your current tool chain, or to match the CI checks exactly you can use act (see above):
+If you want to apply the formatting to your local repo before you commit then you can either run [check-swift-format.sh](./scripts/check-swift-format.sh) which will use your current toolchain, or to match the CI checks exactly you can use `act` (see above):
 ```
 act --action-offline-mode --bind workflow_call -j format-check --input format_check_enabled=true
 ```
