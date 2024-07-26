@@ -84,16 +84,6 @@ extension CopyStrategy {
     /// This is the only way to guarantee only one callback to the `shouldCopyItem` will happen at a time
     public static let sequential: Self = Self(.sequential)
 
-    /// The minimum possible parallelism supported by ``parallel(maxDescriptors:)``
-    /// Using this in your non testing code paths would be an anti pattern, use ``sequential``instead.
-    ///
-    /// Less than this and you can't do a copy (without pulling an entire file into memory, which is not generally possible, or desirable)
-    /// This is is not quite the same as sequential, different code paths are used.
-    ///
-    /// This is primarily exposed for testing to ensure use of the parallel paths (which are more complex) while keeping actual
-    /// parallelism to minimal levels to make debugging simpler.
-    public static let minimalParallel: Self = .init(.parallel(minDescriptorsAllowed))
-
     /// Allow multiple IO operations to run concurrently, including file copies/directory creation and scanning
     ///
     /// - Parameter maxDescriptors: a conservative limit on the number of concurrently open

@@ -109,7 +109,6 @@ extension FileSystem {
             // We haven't started monitoring for task completion, so inProgress is 'worst case'.
             var inProgress = 0
             while inProgress <= maxConcurrentOperations {
-                try Task.checkCancellation()
                 let item = await iter.next()
                 if let item = item {
                     if onNextItem(item) {
@@ -126,7 +125,6 @@ extension FileSystem {
             while let _ = try await taskGroup.next() {
                 var keepConsuming = true
                 while keepConsuming {
-                    try Task.checkCancellation()
                     let item = await iter.next()
                     if let item = item {
                         keepConsuming = !onNextItem(item)
@@ -149,7 +147,7 @@ private struct NoBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrat
 
 /// We ignore back pressure, the inherent handle limiting in copyDirectoryParallel means it is unnecessary.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-private final struct DirCopyDelegate: NIOAsyncSequenceProducerDelegate, Sendable {
+private struct DirCopyDelegate: NIOAsyncSequenceProducerDelegate, Sendable {
     @inlinable
     func produceMore() {}
 
