@@ -77,7 +77,7 @@ If you wish to test this locally you have two options [act](https://www.google.c
 ```
 act pull_request
 ```
-Note that NIOSwift matrix testing makes use of nightly builds, so you may want to make use of the ```--action-offline-mode``` to avoid repulling those.
+Note that SwiftNIO matrix testing makes use of nightly builds, so you may want to make use of the ```--action-offline-mode``` to avoid repulling those.
 
 #### Doccker compose files
 
