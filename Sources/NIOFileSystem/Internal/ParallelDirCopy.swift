@@ -59,7 +59,9 @@ extension FileSystem {
 
         // Kick start the procees by enqueuing the root entry,
         // the calling function already validated the root needed copying.
-        _ = copyRequiredQueue.source.yield(.toCopy(from: .init(path: sourcePath, type: .directory)!, to: destinationPath))
+        _ = copyRequiredQueue.source.yield(
+            .toCopy(from: .init(path: sourcePath, type: .directory)!, to: destinationPath)
+        )
 
         // The processing of the very first item (the root) will increment this,
         // after then when it hits zero we've finished.
