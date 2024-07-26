@@ -1089,7 +1089,7 @@ extension FileSystem {
     /// Building block of the parallel directory copy implementation
     /// Each invovation of this is allowed to consume two file descriptors,
     /// any further work (if any) should be sent to `yield` for future processing
-    @Sendable func copySelfAndEnqueueChildren(
+    func copySelfAndEnqueueChildren(
         from: DirectoryEntry,
         to: FilePath,
         yield: @Sendable ([DirCopyItem]) -> Void,

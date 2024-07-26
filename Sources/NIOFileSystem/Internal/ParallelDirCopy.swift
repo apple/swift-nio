@@ -62,7 +62,7 @@ extension FileSystem {
         _ = copyRequiredQueue.source.yield(.toCopy(from: .init(path: sourcePath, type: .directory)!, to: destinationPath))
 
         // The processing of the very first item (the root) will increment this,
-        // after than when it hits zero we've finished.
+        // after then when it hits zero we've finished.
         // This does not need to be a ManagedAtomic or similar because:
         // - All maintenance of state is done in the withThrowingTaskGroup callback
         // - All actual file system work is done by tasks created on the `taskGroup`
@@ -149,7 +149,7 @@ private struct NoBackPressureStrategy: NIOAsyncSequenceProducerBackPressureStrat
 
 /// We ignore back pressure, the inherent handle limiting in copyDirectoryParallel means it is unnecessary.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-private final class DirCopyDelegate: NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
+private final struct DirCopyDelegate: NIOAsyncSequenceProducerDelegate, Sendable {
     @inlinable
     func produceMore() {}
 
