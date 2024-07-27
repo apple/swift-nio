@@ -826,7 +826,9 @@ public struct ByteBuffer {
         return true
     }
     
-    /// Shrinks the buffers capacity to a `desiredCapacity` without altering readably bytes.
+    /// The `ByteBuffer` will successfully be shrunk if the requested capacity is less than the current capacity, 
+    /// and the requested capacity is more than the number of readable bytes in the buffer.
+    /// If either condition is not true, the buffer will not be shrunk.
     ///
     /// - Parameter desiredCapacity: The desired capacity for the buffers capacity to be shrunken to
     /// - Returns: Bool indicating whether the buffer capacity has been shrunk to the desiredCapacity.
