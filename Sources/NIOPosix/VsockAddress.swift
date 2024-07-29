@@ -157,7 +157,7 @@ extension ChannelOptions {
 }
 
 extension ChannelOption where Self == ChannelOptions.Types.LocalVsockContextID {
-    public static var localVsockContextID: Self {.init()}
+    public static var localVsockContextID: Self { .init() }
 }
 
 extension ChannelOptions.Types {
