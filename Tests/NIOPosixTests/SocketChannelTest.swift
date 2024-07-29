@@ -62,12 +62,12 @@ public final class SocketChannelTest: XCTestCase {
         let futureA = channelA.eventLoop.submit {
             condition.wrappingIncrement(ordering: .relaxed)
             while condition.load(ordering: .relaxed) < 2 {}
-            _ = channelB.setOption(ChannelOptions.backlog, value: 1)
+            _ = channelB.setOption(.backlog, value: 1)
         }
         let futureB = channelB.eventLoop.submit {
             condition.wrappingIncrement(ordering: .relaxed)
             while condition.load(ordering: .relaxed) < 2 {}
-            _ = channelA.setOption(ChannelOptions.backlog, value: 1)
+            _ = channelA.setOption(.backlog, value: 1)
         }
         try futureA.wait()
         try futureB.wait()
@@ -79,8 +79,8 @@ public final class SocketChannelTest: XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .serverChannelOption(ChannelOptions.backlog, value: 256)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(.backlog, value: 256)
                 .bind(host: "127.0.0.1", port: 0).wait()
         )
 
@@ -212,14 +212,14 @@ public final class SocketChannelTest: XCTestCase {
         XCTAssertNoThrow(
             try assertSetGetOptionOnOpenAndClosed(
                 channel: clientChannel,
-                option: ChannelOptions.allowRemoteHalfClosure,
+                option: .allowRemoteHalfClosure,
                 value: true
             )
         )
         XCTAssertNoThrow(
             try assertSetGetOptionOnOpenAndClosed(
                 channel: serverChannel,
-                option: ChannelOptions.backlog,
+                option: .backlog,
                 value: 100
             )
         )
@@ -645,9 +645,9 @@ public final class SocketChannelTest: XCTestCase {
         let serverPromise = group.next().makePromise(of: IOError.self)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .serverChannelOption(ChannelOptions.backlog, value: 256)
-                .serverChannelOption(ChannelOptions.autoRead, value: false)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(.backlog, value: 256)
+                .serverChannelOption(.autoRead, value: false)
                 .serverChannelInitializer { channel in channel.pipeline.addHandler(ErrorHandler(serverPromise)) }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
@@ -804,8 +804,8 @@ public final class SocketChannelTest: XCTestCase {
                 group: group
             )
         )
-        XCTAssertNoThrow(try serverChan.setOption(ChannelOptions.maxMessagesPerRead, value: 1).wait())
-        XCTAssertNoThrow(try serverChan.setOption(ChannelOptions.autoRead, value: false).wait())
+        XCTAssertNoThrow(try serverChan.setOption(.maxMessagesPerRead, value: 1).wait())
+        XCTAssertNoThrow(try serverChan.setOption(.autoRead, value: false).wait())
         XCTAssertNoThrow(try serverChan.register().wait())
         XCTAssertNoThrow(try serverChan.bind(to: .init(ipAddress: "127.0.0.1", port: 0)).wait())
 
@@ -868,7 +868,7 @@ public final class SocketChannelTest: XCTestCase {
             var numberOfAcceptedChannels = 0
             let server = try assertNoThrowWithValue(
                 ServerBootstrap(group: group)
-                    .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: mode == .halfClosureEnabled)
+                    .childChannelOption(.allowRemoteHalfClosure, value: mode == .halfClosureEnabled)
                     .childChannelInitializer { channel in
                         numberOfAcceptedChannels += 1
                         XCTAssertEqual(1, numberOfAcceptedChannels)
@@ -947,7 +947,7 @@ public final class SocketChannelTest: XCTestCase {
             )
             let client = try assertNoThrowWithValue(
                 ClientBootstrap(group: group)
-                    .channelOption(ChannelOptions.allowRemoteHalfClosure, value: mode == .halfClosureEnabled)
+                    .channelOption(.allowRemoteHalfClosure, value: mode == .halfClosureEnabled)
                     .channelInitializer { channel in
                         channel.pipeline.addHandlers([
                             eventCounter,

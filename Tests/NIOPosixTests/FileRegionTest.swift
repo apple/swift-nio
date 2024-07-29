@@ -37,7 +37,7 @@ class FileRegionTest: XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
@@ -81,7 +81,7 @@ class FileRegionTest: XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
@@ -138,7 +138,7 @@ class FileRegionTest: XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()

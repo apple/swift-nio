@@ -56,7 +56,7 @@ private final class EchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
-    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .channelOption(.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
         channel.pipeline.addHandler(EchoHandler())
     }

@@ -406,11 +406,11 @@ class ChannelNotificationTest: XCTestCase {
 
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .serverChannelInitializer { channel in
                     channel.pipeline.addHandler(ServerSocketChannelLifecycleVerificationHandler())
                 }
-                .childChannelOption(ChannelOptions.autoRead, value: false)
+                .childChannelOption(.autoRead, value: false)
                 .childChannelInitializer { channel in
                     channel.pipeline.addHandler(
                         AcceptedSocketChannelLifecycleVerificationHandler(acceptedChannelPromise)
@@ -496,8 +496,8 @@ class ChannelNotificationTest: XCTestCase {
         let promise = group.next().makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .childChannelOption(ChannelOptions.autoRead, value: true)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                .childChannelOption(.autoRead, value: true)
                 .childChannelInitializer { channel in
                     channel.pipeline.addHandler(OrderVerificationHandler(promise))
                 }

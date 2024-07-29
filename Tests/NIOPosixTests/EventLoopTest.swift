@@ -74,7 +74,7 @@ public final class EventLoopTest: XCTestCase {
         // First, we create a server and client channel, but don't connect them.
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: eventLoopGroup)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "127.0.0.1", port: 0).wait()
         )
         let clientBootstrap = ClientBootstrap(group: eventLoopGroup)
@@ -482,7 +482,7 @@ public final class EventLoopTest: XCTestCase {
         // Create a server channel.
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "127.0.0.1", port: 0).wait()
         )
 
@@ -1274,9 +1274,9 @@ public final class EventLoopTest: XCTestCase {
         var maybeServer: Channel?
         XCTAssertNoThrow(
             maybeServer = try ServerBootstrap(group: elg2)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .serverChannelOption(ChannelOptions.autoRead, value: false)
-                .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+                .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(.autoRead, value: false)
+                .serverChannelOption(.maxMessagesPerRead, value: 1)
                 .childChannelInitializer { channel in
                     channel.pipeline.addHandler(ExecuteSomethingOnEventLoop(groupToNotify: g))
                 }

@@ -27,16 +27,16 @@ class ChannelOptionStorageTest: XCTestCase {
     func testSetTwoOptionsOfDifferentType() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        cos.append(key: ChannelOptions.backlog, value: 2)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 1)
+        cos.append(key: .backlog, value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
     }
 
     func testSetTwoOptionsOfSameType() throws {
         let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [
-            (ChannelOptions.socketOption(.so_reuseaddr), 1),
-            (ChannelOptions.socketOption(.so_rcvtimeo), 2),
+            (.socketOption(.so_reuseaddr), 1),
+            (.socketOption(.so_rcvtimeo), 2),
         ]
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
@@ -62,12 +62,12 @@ class ChannelOptionStorageTest: XCTestCase {
     func testSetOneOptionTwice() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 2)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 1)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(1, optionsCollector.allOptions.count)
         XCTAssertEqual(
-            [ChannelOptions.socketOption(.so_reuseaddr)],
+            [.socketOption(.so_reuseaddr)],
             optionsCollector.allOptions.map { option in
                 option.0 as! ChannelOptions.Types.SocketOption
             }
@@ -83,19 +83,19 @@ class ChannelOptionStorageTest: XCTestCase {
     func testClearingOptions() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 2)
-        cos.append(key: ChannelOptions.socketOption(.so_keepalive), value: 3)
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 4)
-        cos.append(key: ChannelOptions.socketOption(.so_rcvbuf), value: 5)
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 6)
-        cos.remove(key: ChannelOptions.socketOption(.so_reuseaddr))
+        cos.append(key: .socketOption(.so_reuseaddr), value: 1)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 2)
+        cos.append(key: .socketOption(.so_keepalive), value: 3)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 4)
+        cos.append(key: .socketOption(.so_rcvbuf), value: 5)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 6)
+        cos.remove(key: .socketOption(.so_reuseaddr))
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
         XCTAssertEqual(
             [
-                ChannelOptions.socketOption(.so_keepalive),
-                ChannelOptions.socketOption(.so_rcvbuf),
+                .socketOption(.so_keepalive),
+                .socketOption(.so_rcvbuf),
             ],
             optionsCollector.allOptions.map { option in
                 option.0 as! ChannelOptions.Types.SocketOption

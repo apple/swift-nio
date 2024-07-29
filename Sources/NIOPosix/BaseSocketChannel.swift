@@ -1140,7 +1140,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                     //
                     // getOption0 can only fail if the channel is not active anymore but we assert further up that it is. If
                     // that's not the case this is a precondition failure and we would like to know.
-                    let allowRemoteHalfClosure = try! self.getOption0(ChannelOptions.allowRemoteHalfClosure)
+                    let allowRemoteHalfClosure = try! self.getOption0(.allowRemoteHalfClosure)
 
                     // For EOF, we always fire read complete.
                     self.pipeline.syncOperations.fireChannelReadComplete()
