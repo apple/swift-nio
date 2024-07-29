@@ -35,6 +35,10 @@ on:
         type: boolean
         description: "Boolean to enable the format check job. Defaults to true."
         default: true
+      shell_check_enabled:
+        type: boolean
+        description: "Boolean to enable the shell check job. Defaults to true."
+        default: true
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -133,7 +137,7 @@ jobs:
 
   shell-check:
     name: Shell check
-    if: ${{ inputs.format_check_enabled }}
+    if: ${{ inputs.shell_check_enabled }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
