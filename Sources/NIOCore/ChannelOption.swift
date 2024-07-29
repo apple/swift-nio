@@ -360,6 +360,97 @@ public struct ChannelOptions: Sendable {
     public static let receivePacketInfo = Types.ReceivePacketInfo()
 }
 
+/// - seealso: `SocketOption`.
+extension ChannelOption where Self == ChannelOptions.Types.SocketOption {
+    #if !(os(Windows))
+    public static func socket(_ level: SocketOptionLevel, _ name: SocketOptionName) -> Self {
+        .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
+    }
+    #endif
+    
+    public static func socketOption(_ name: NIOBSDSocket.Option) -> Self {
+        .init(level: .socket, name: name)
+    }
+    
+    public static func ipOption(_ name: NIOBSDSocket.Option) -> Self {
+        .init(level: .ip, name: name)
+    }
+    
+    public static func tcpOption(_ name: NIOBSDSocket.Option) -> Self {
+        .init(level: .tcp, name: name)
+    }
+}
+
+/// - seealso: `AllocatorOption`.
+extension ChannelOption where Self == ChannelOptions.Types.AllocatorOption {
+    public static var allocator: Self {.init()}
+}
+
+/// - seealso: `RecvAllocatorOption`.
+extension ChannelOption where Self == ChannelOptions.Types.RecvAllocatorOption {
+    public static var recvAllocator: Self {.init()}
+}
+
+/// - seealso: `AutoReadOption`.
+extension ChannelOption where Self == ChannelOptions.Types.AutoReadOption {
+    public static var autoRead: Self {.init()}
+}
+
+/// - seealso: `MaxMessagesPerReadOption`.
+extension ChannelOption where Self == ChannelOptions.Types.MaxMessagesPerReadOption {
+    public static var maxMessagesPerRead: Self {.init()}
+}
+
+/// - seealso: `BacklogOption`.
+extension ChannelOption where Self == ChannelOptions.Types.BacklogOption {
+    public static var backlog: Self {.init()}
+}
+
+/// - seealso: `WriteSpinOption`.
+extension ChannelOption where Self == ChannelOptions.Types.WriteSpinOption {
+    public static var writeSpin: Self {.init()}
+}
+
+/// - seealso: `WriteBufferWaterMarkOption`.
+extension ChannelOption where Self == ChannelOptions.Types.WriteBufferWaterMarkOption {
+    public static var writeBufferWaterMark: Self {.init()}
+}
+
+/// - seealso: `ConnectTimeoutOption`.
+extension ChannelOption where Self == ChannelOptions.Types.ConnectTimeoutOption {
+    public static var connectTimeout: Self {.init()}
+}
+
+/// - seealso: `AllowRemoteHalfClosureOption`.
+extension ChannelOption where Self == ChannelOptions.Types.AllowRemoteHalfClosureOption {
+    public static var allowRemoteHalfClosure: Self {.init()}
+}
+
+/// - seealso: `DatagramVectorReadMessageCountOption`.
+extension ChannelOption where Self == ChannelOptions.Types.DatagramVectorReadMessageCountOption {
+    public static var datagramVectorReadMessageCount: Self {.init()}
+}
+
+/// - seealso: `DatagramSegmentSize`.
+extension ChannelOption where Self == ChannelOptions.Types.DatagramSegmentSize {
+    public static var datagramSegmentSize: Self {.init()}
+}
+
+/// - seealso: `DatagramReceiveOffload`.
+extension ChannelOption where Self == ChannelOptions.Types.DatagramReceiveOffload {
+    public static var datagramReceiveOffload: Self {.init()}
+}
+
+/// - seealso: `ExplicitCongestionNotificationsOption`.
+extension ChannelOption where Self == ChannelOptions.Types.ExplicitCongestionNotificationsOption {
+    public static var explicitCongestionNotification: Self {.init()}
+}
+
+/// - seealso: `ReceivePacketInfo`.
+extension ChannelOption where Self == ChannelOptions.Types.ReceivePacketInfo {
+    public static var receivePacketInfo: Self {.init()}
+}
+
 extension ChannelOptions {
     /// A type-safe storage facility for `ChannelOption`s. You will only ever need this if you implement your own
     /// `Channel` that needs to store `ChannelOption`s.
