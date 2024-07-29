@@ -73,7 +73,7 @@ If you wish to test this locally you have two options [act](https://github.com/n
 
 #### Act
 
-[Install act](https://nektosact.com) and then you can run the full suite of checks via:
+[Install act](https://nektosact.com/installation/) and then you can run the full suite of checks via:
 ```
 act pull_request
 ```
