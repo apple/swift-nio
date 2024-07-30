@@ -12,22 +12,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
 import NIOTestUtils
-
+import XCTest
 
 private final class ReadRecorder<T: Equatable>: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = T
-    
+
     enum Event: Equatable {
         case channelRead(InboundIn)
         case httpFrameTooLongEvent
         case httpExpectationFailedEvent
-        
-        static func ==(lhs: Event, rhs: Event) -> Bool {
+
+        static func == (lhs: Event, rhs: Event) -> Bool {
             switch (lhs, rhs) {
             case (.channelRead(let b1), .channelRead(let b2)):
                 return b1 == b2
@@ -40,14 +39,14 @@ private final class ReadRecorder<T: Equatable>: ChannelInboundHandler, Removable
             }
         }
     }
-    
+
     public var reads: [Event] = []
-    
+
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.reads.append(.channelRead(self.unwrapInboundIn(data)))
+        self.reads.append(.channelRead(Self.unwrapInboundIn(data)))
         context.fireChannelRead(data)
     }
-    
+
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         switch event {
         case let evt as NIOHTTPObjectAggregatorEvent where evt == NIOHTTPObjectAggregatorEvent.httpFrameTooLong:
@@ -70,7 +69,7 @@ private final class WriteRecorder: ChannelOutboundHandler, RemovableChannelHandl
     public var writes: [HTTPServerResponsePart] = []
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        self.writes.append(self.unwrapOutboundIn(data))
+        self.writes.append(Self.unwrapOutboundIn(data))
 
         context.write(data, promise: promise)
     }
@@ -80,8 +79,8 @@ private final class WriteRecorder: ChannelOutboundHandler, RemovableChannelHandl
     }
 }
 
-private extension ByteBuffer {
-    func assertContainsOnly(_ string: String) {
+extension ByteBuffer {
+    fileprivate func assertContainsOnly(_ string: String) {
         let innerData = self.getString(at: self.readerIndex, length: self.readableBytes)!
         XCTAssertEqual(innerData, string)
     }
@@ -96,7 +95,6 @@ private func asHTTPResponseHead(_ response: HTTPServerResponsePart) -> HTTPRespo
     }
 }
 
-
 class NIOHTTPServerRequestAggregatorTest: XCTestCase {
     var channel: EmbeddedChannel! = nil
     var requestHead: HTTPRequestHead! = nil
@@ -104,13 +102,13 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
     fileprivate var readRecorder: ReadRecorder<NIOHTTPServerRequestFull>! = nil
     fileprivate var writeRecorder: WriteRecorder! = nil
     fileprivate var aggregatorHandler: NIOHTTPServerRequestAggregator! = nil
-    
+
     override func setUp() {
         self.channel = EmbeddedChannel()
         self.readRecorder = ReadRecorder()
         self.writeRecorder = WriteRecorder()
         self.aggregatorHandler = NIOHTTPServerRequestAggregator(maxContentLength: 1024 * 1024)
-        
+
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(HTTPResponseEncoder()))
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.writeRecorder))
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.aggregatorHandler))
@@ -119,10 +117,10 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         self.requestHead = HTTPRequestHead(version: .http1_1, method: .PUT, uri: "/path")
         self.requestHead.headers.add(name: "Host", value: "example.com")
         self.requestHead.headers.add(name: "X-Test", value: "True")
-        
+
         self.responseHead = HTTPResponseHead(version: .http1_1, status: .ok)
         self.responseHead.headers.add(name: "Server", value: "SwiftNIO")
-        
+
         // this activates the channel
         XCTAssertNoThrow(try self.channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 1)).wait())
     }
@@ -135,7 +133,7 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.pipeline.syncOperations.addHandler(self.aggregatorHandler))
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(self.readRecorder))
     }
-    
+
     override func tearDown() {
         if let channel = self.channel {
             XCTAssertNoThrow(try channel.finish(acceptAlreadyClosed: true))
@@ -147,92 +145,160 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         self.writeRecorder = nil
         self.aggregatorHandler = nil
     }
-    
+
     func testAggregateNoBody() {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
         // Only one request should have made it through.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(NIOHTTPServerRequestFull(head: self.requestHead, body: nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [.channelRead(NIOHTTPServerRequestFull(head: self.requestHead, body: nil))]
+        )
     }
-    
+
     func testAggregateWithBody() {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "hello"))))
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.body(
+                    channel.allocator.buffer(string: "hello")
+                )
+            )
+        )
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
-        
+
         // Only one request should have made it through.
-        XCTAssertEqual(self.readRecorder.reads, [
-                        .channelRead(NIOHTTPServerRequestFull(
-                                        head: self.requestHead,
-                                        body: channel.allocator.buffer(string: "hello")))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(
+                    NIOHTTPServerRequestFull(
+                        head: self.requestHead,
+                        body: channel.allocator.buffer(string: "hello")
+                    )
+                )
+            ]
+        )
     }
-    
+
     func testAggregateChunkedBody() {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
-        
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "hello"))))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "world"))))
+
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.body(
+                    channel.allocator.buffer(string: "hello")
+                )
+            )
+        )
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.body(
+                    channel.allocator.buffer(string: "world")
+                )
+            )
+        )
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
-        
+
         // Only one request should have made it through.
-        XCTAssertEqual(self.readRecorder.reads, [
-                        .channelRead(NIOHTTPServerRequestFull(
-                                        head: self.requestHead,
-                                        body: channel.allocator.buffer(string: "helloworld")))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(
+                    NIOHTTPServerRequestFull(
+                        head: self.requestHead,
+                        body: channel.allocator.buffer(string: "helloworld")
+                    )
+                )
+            ]
+        )
     }
-    
+
     func testAggregateWithTrailer() {
         var reqWithChunking: HTTPRequestHead = self.requestHead
         reqWithChunking.headers.add(name: "transfer-encoding", value: "chunked")
         reqWithChunking.headers.add(name: "Trailer", value: "X-Trailer")
-        
+
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(reqWithChunking)))
-        
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "hello"))))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "world"))))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(
-                                                        HTTPHeaders.init([("X-Trailer", "true")]))))
+
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.body(
+                    channel.allocator.buffer(string: "hello")
+                )
+            )
+        )
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.body(
+                    channel.allocator.buffer(string: "world")
+                )
+            )
+        )
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.end(
+                    HTTPHeaders.init([("X-Trailer", "true")])
+                )
+            )
+        )
 
         reqWithChunking.headers.remove(name: "Trailer")
         reqWithChunking.headers.add(name: "X-Trailer", value: "true")
 
         // Trailer headers should get moved to normal ones
-        XCTAssertEqual(self.readRecorder.reads, [
-                        .channelRead(NIOHTTPServerRequestFull(
-                                        head: reqWithChunking,
-                                        body: channel.allocator.buffer(string: "helloworld")))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(
+                    NIOHTTPServerRequestFull(
+                        head: reqWithChunking,
+                        body: channel.allocator.buffer(string: "helloworld")
+                    )
+                )
+            ]
+        )
     }
-    
+
     func testOversizeRequest() {
         resetSmallHandler(maxContentLength: 4)
-        
+
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
         XCTAssertTrue(channel.isActive)
 
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "he"))))
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.body(
+                    channel.allocator.buffer(string: "he")
+                )
+            )
+        )
         XCTAssertEqual(self.writeRecorder.writes, [])
 
-        XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(string: "llo")))) { error in
+        XCTAssertThrowsError(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.body(
+                    channel.allocator.buffer(string: "llo")
+                )
+            )
+        ) { error in
             XCTAssertEqual(NIOHTTPObjectAggregatorError.frameTooLong, error as? NIOHTTPObjectAggregatorError)
         }
 
         let resTooLarge = HTTPResponseHead(
             version: .http1_1,
             status: .payloadTooLarge,
-            headers: HTTPHeaders([("Content-Length", "0"), ("connection", "close")]))
-        
-        XCTAssertEqual(self.writeRecorder.writes, [
-                        HTTPServerResponsePart.head(resTooLarge),
-                        HTTPServerResponsePart.end(nil)])
+            headers: HTTPHeaders([("Content-Length", "0"), ("connection", "close")])
+        )
+
+        XCTAssertEqual(
+            self.writeRecorder.writes,
+            [
+                HTTPServerResponsePart.head(resTooLarge),
+                HTTPServerResponsePart.end(nil),
+            ]
+        )
 
         XCTAssertFalse(channel.isActive)
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
@@ -246,20 +312,27 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         // send an HTTP/1.0 request with no keep-alive header
         let requestHead: HTTPRequestHead = HTTPRequestHead(
             version: .http1_0,
-            method: .PUT, uri: "/path",
+            method: .PUT,
+            uri: "/path",
             headers: HTTPHeaders(
-                [("Host", "example.com"), ("X-Test", "True"), ("content-length", "5")]))
+                [("Host", "example.com"), ("X-Test", "True"), ("content-length", "5")])
+        )
 
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.head(requestHead)))
 
         let resTooLarge = HTTPResponseHead(
             version: .http1_0,
             status: .payloadTooLarge,
-            headers: HTTPHeaders([("Content-Length", "0"), ("connection", "close")]))
+            headers: HTTPHeaders([("Content-Length", "0"), ("connection", "close")])
+        )
 
-        XCTAssertEqual(self.writeRecorder.writes, [
-                        HTTPServerResponsePart.head(resTooLarge),
-                        HTTPServerResponsePart.end(nil)])
+        XCTAssertEqual(
+            self.writeRecorder.writes,
+            [
+                HTTPServerResponsePart.head(resTooLarge),
+                HTTPServerResponsePart.end(nil),
+            ]
+        )
 
         // Connection should be closed right away
         XCTAssertFalse(channel.isActive)
@@ -275,9 +348,11 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         // HTTP/1.1 uses Keep-Alive unless told otherwise
         let requestHead: HTTPRequestHead = HTTPRequestHead(
             version: .http1_1,
-            method: .PUT, uri: "/path",
+            method: .PUT,
+            uri: "/path",
             headers: HTTPHeaders(
-                [("Host", "example.com"), ("X-Test", "True"), ("content-length", "8")]))
+                [("Host", "example.com"), ("X-Test", "True"), ("content-length", "8")])
+        )
 
         resetSmallHandler(maxContentLength: 4)
 
@@ -294,8 +369,8 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
         // An ill-behaved client may continue writing the request
         let requestParts = [
             HTTPServerRequestPart.body(channel.allocator.buffer(bytes: [1, 2, 3, 4])),
-            HTTPServerRequestPart.body(channel.allocator.buffer(bytes: [5,6])),
-            HTTPServerRequestPart.body(channel.allocator.buffer(bytes: [7,8]))
+            HTTPServerRequestPart.body(channel.allocator.buffer(bytes: [5, 6])),
+            HTTPServerRequestPart.body(channel.allocator.buffer(bytes: [7, 8])),
         ]
 
         for requestPart in requestParts {
@@ -314,18 +389,35 @@ class NIOHTTPServerRequestAggregatorTest: XCTestCase {
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(secondReqWithContentLength)))
 
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(bytes: [1]))))
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.body(
+                    channel.allocator.buffer(bytes: [1])
+                )
+            )
+        )
         XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.body(
-                                                        channel.allocator.buffer(bytes: [2]))))
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPServerRequestPart.body(
+                    channel.allocator.buffer(bytes: [2])
+                )
+            )
+        )
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
-        XCTAssertEqual(self.readRecorder.reads, [
-                        .httpFrameTooLongEvent,
-                        .channelRead(NIOHTTPServerRequestFull(
-                                        head: secondReqWithContentLength,
-                                        body: channel.allocator.buffer(bytes: [1, 2])))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .httpFrameTooLongEvent,
+                .channelRead(
+                    NIOHTTPServerRequestFull(
+                        head: secondReqWithContentLength,
+                        body: channel.allocator.buffer(bytes: [1, 2])
+                    )
+                ),
+            ]
+        )
     }
 }
 
@@ -393,68 +485,113 @@ class NIOHTTPClientResponseAggregatorTest: XCTestCase {
         resetSmallHandler(maxContentLength: 5)
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.head(self.responseHead)))
-        XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.body(
-                                                        self.channel.allocator.buffer(string: "hello"))))
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPClientResponsePart.body(
+                    self.channel.allocator.buffer(string: "hello")
+                )
+            )
+        )
 
-        XCTAssertThrowsError(try self.channel.writeInbound(
-                            HTTPClientResponsePart.body(
-                                self.channel.allocator.buffer(string: "world"))))
+        XCTAssertThrowsError(
+            try self.channel.writeInbound(
+                HTTPClientResponsePart.body(
+                    self.channel.allocator.buffer(string: "world")
+                )
+            )
+        )
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
 
         // User event triggered
         XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
     }
 
-
     func testAggregatedResponse() {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.head(self.responseHead)))
-        XCTAssertNoThrow(try self.channel.writeInbound(
-                            HTTPClientResponsePart.body(
-                                self.channel.allocator.buffer(string: "hello"))))
-        XCTAssertNoThrow(try self.channel.writeInbound(
-                            HTTPClientResponsePart.body(
-                                self.channel.allocator.buffer(string: "world"))))
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPClientResponsePart.body(
+                    self.channel.allocator.buffer(string: "hello")
+                )
+            )
+        )
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPClientResponsePart.body(
+                    self.channel.allocator.buffer(string: "world")
+                )
+            )
+        )
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.end(HTTPHeaders([("X-Trail", "true")]))))
 
         var aggregatedHead: HTTPResponseHead = self.responseHead
         aggregatedHead.headers.add(name: "X-Trail", value: "true")
 
-        XCTAssertEqual(self.readRecorder.reads, [
-                        .channelRead(NIOHTTPClientResponseFull(
-                                        head: aggregatedHead,
-                                        body: self.channel.allocator.buffer(string: "helloworld")))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(
+                    NIOHTTPClientResponseFull(
+                        head: aggregatedHead,
+                        body: self.channel.allocator.buffer(string: "helloworld")
+                    )
+                )
+            ]
+        )
     }
 
     func testOkAfterOversized() {
         resetSmallHandler(maxContentLength: 4)
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.head(self.responseHead)))
-        XCTAssertNoThrow(try self.channel.writeInbound(
-                            HTTPClientResponsePart.body(
-                                self.channel.allocator.buffer(string: "hell"))))
-        XCTAssertThrowsError(try self.channel.writeInbound(
-                            HTTPClientResponsePart.body(
-                                self.channel.allocator.buffer(string: "owor"))))
-        XCTAssertThrowsError(try self.channel.writeInbound(
-                            HTTPClientResponsePart.body(
-                                self.channel.allocator.buffer(string: "ld"))))
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPClientResponsePart.body(
+                    self.channel.allocator.buffer(string: "hell")
+                )
+            )
+        )
+        XCTAssertThrowsError(
+            try self.channel.writeInbound(
+                HTTPClientResponsePart.body(
+                    self.channel.allocator.buffer(string: "owor")
+                )
+            )
+        )
+        XCTAssertThrowsError(
+            try self.channel.writeInbound(
+                HTTPClientResponsePart.body(
+                    self.channel.allocator.buffer(string: "ld")
+                )
+            )
+        )
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
 
         // User event triggered
         XCTAssertEqual(self.readRecorder.reads, [.httpFrameTooLongEvent])
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.head(self.responseHead)))
-        XCTAssertNoThrow(try self.channel.writeInbound(
-                            HTTPClientResponsePart.body(
-                                self.channel.allocator.buffer(string: "test"))))
+        XCTAssertNoThrow(
+            try self.channel.writeInbound(
+                HTTPClientResponsePart.body(
+                    self.channel.allocator.buffer(string: "test")
+                )
+            )
+        )
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPClientResponsePart.end(nil)))
 
-        XCTAssertEqual(self.readRecorder.reads, [
-                        .httpFrameTooLongEvent,
-                        .channelRead(NIOHTTPClientResponseFull(
-                                        head: self.responseHead,
-                                        body: self.channel.allocator.buffer(string: "test")))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .httpFrameTooLongEvent,
+                .channelRead(
+                    NIOHTTPClientResponseFull(
+                        head: self.responseHead,
+                        body: self.channel.allocator.buffer(string: "test")
+                    )
+                ),
+            ]
+        )
     }
-
 
 }

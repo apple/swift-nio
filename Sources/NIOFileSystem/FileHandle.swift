@@ -83,6 +83,16 @@ extension _HasFileHandle {
     public func close() async throws {
         try await self.fileHandle.close()
     }
+
+    public func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws {
+        try await self.fileHandle.setTimes(
+            lastAccess: lastAccess,
+            lastDataModification: lastDataModification
+        )
+    }
 }
 
 /// Implements ``FileHandleProtocol`` by making system calls to interact with the local file system.
@@ -148,6 +158,16 @@ public struct FileHandle: FileHandleProtocol {
     public func close() async throws {
         try await self.systemFileHandle.close()
     }
+
+    public func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws {
+        try await self.systemFileHandle.setTimes(
+            lastAccess: lastAccess,
+            lastDataModification: lastDataModification
+        )
+    }
 }
 
 /// Implements ``ReadableFileHandleProtocol`` by making system calls to interact with the local
@@ -172,6 +192,16 @@ public struct ReadFileHandle: ReadableFileHandleProtocol, _HasFileHandle {
 
     public func readChunks(in range: Range<Int64>, chunkLength: ByteCount) -> FileChunks {
         self.fileHandle.systemFileHandle.readChunks(in: range, chunkLength: chunkLength)
+    }
+
+    public func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws {
+        try await self.fileHandle.systemFileHandle.setTimes(
+            lastAccess: lastAccess,
+            lastDataModification: lastDataModification
+        )
     }
 }
 
@@ -202,6 +232,16 @@ public struct WriteFileHandle: WritableFileHandleProtocol, _HasFileHandle {
 
     public func close(makeChangesVisible: Bool) async throws {
         try await self.fileHandle.systemFileHandle.close(makeChangesVisible: makeChangesVisible)
+    }
+
+    public func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws {
+        try await self.fileHandle.systemFileHandle.setTimes(
+            lastAccess: lastAccess,
+            lastDataModification: lastDataModification
+        )
     }
 }
 
@@ -246,6 +286,16 @@ public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFi
 
     public func close(makeChangesVisible: Bool) async throws {
         try await self.fileHandle.systemFileHandle.close(makeChangesVisible: makeChangesVisible)
+    }
+
+    public func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws {
+        try await self.fileHandle.systemFileHandle.setTimes(
+            lastAccess: lastAccess,
+            lastDataModification: lastDataModification
+        )
     }
 }
 

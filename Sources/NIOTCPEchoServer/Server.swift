@@ -95,7 +95,6 @@ struct Server {
     }
 }
 
-
 /// A simple newline based encoder and decoder.
 private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncoder {
     typealias InboundIn = ByteBuffer
@@ -111,7 +110,7 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
         if let firstLine = readableBytes.firstIndex(of: self.newLine).map({ readableBytes[..<$0] }) {
             buffer.moveReaderIndex(forwardBy: firstLine.count + 1)
             // Fire a read without a newline
-            context.fireChannelRead(self.wrapInboundOut(String(buffer: ByteBuffer(firstLine))))
+            context.fireChannelRead(Self.wrapInboundOut(String(buffer: ByteBuffer(firstLine))))
             return .continue
         } else {
             return .needMoreData

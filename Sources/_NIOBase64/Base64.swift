@@ -15,17 +15,17 @@
 // This is a simplified vendored version from:
 // https://github.com/fabianfett/swift-base64-kit
 
-public extension String {
+extension String {
 
     /// Base64 encode a collection of UInt8 to a string, without the use of Foundation.
     @inlinable
-    init<Buffer: Collection>(base64Encoding bytes: Buffer) where Buffer.Element == UInt8 {
+    public init<Buffer: Collection>(base64Encoding bytes: Buffer) where Buffer.Element == UInt8 {
         self = Base64.encode(bytes: bytes)
     }
 
     @inlinable
-    func base64Decoded() throws -> [UInt8] {
-        return try Base64.decode(string: self)
+    public func base64Decoded() throws -> [UInt8] {
+        try Base64.decode(string: self)
     }
 }
 
@@ -46,7 +46,7 @@ internal struct Base64 {
         // In Base64, 3 bytes become 4 output characters, and we pad to the
         // nearest multiple of four.
         let base64StringLength = ((bytes.count + 2) / 3) * 4
-        let alphabet = Base64.encodeBase64
+        let alphabet = Base64.encodingTable
 
         return String(customUnsafeUninitializedCapacity: base64StringLength) { backingStorage in
             var input = bytes.makeIterator()
@@ -56,8 +56,16 @@ internal struct Base64 {
                 let thirdByte = input.next()
 
                 backingStorage[offset] = Base64.encode(alphabet: alphabet, firstByte: firstByte)
-                backingStorage[offset + 1] = Base64.encode(alphabet: alphabet, firstByte: firstByte, secondByte: secondByte)
-                backingStorage[offset + 2] = Base64.encode(alphabet: alphabet, secondByte: secondByte, thirdByte: thirdByte)
+                backingStorage[offset + 1] = Base64.encode(
+                    alphabet: alphabet,
+                    firstByte: firstByte,
+                    secondByte: secondByte
+                )
+                backingStorage[offset + 2] = Base64.encode(
+                    alphabet: alphabet,
+                    secondByte: secondByte,
+                    thirdByte: thirdByte
+                )
                 backingStorage[offset + 3] = Base64.encode(alphabet: alphabet, thirdByte: thirdByte)
                 offset += 4
             }
@@ -77,8 +85,9 @@ internal struct Base64 {
         // Go over the encoded string in groups of 4 characters,
         // and build groups of 3 bytes from them.
         for i in stride(from: 0, to: bytes.count, by: 4) {
-            guard let byte0Index = Base64.encodeBase64.firstIndex(of: bytes[i]),
-                  let byte1Index = Base64.encodeBase64.firstIndex(of: bytes[i+1]) else {
+            guard let byte0Index = Base64.encodingTable.firstIndex(of: bytes[i]),
+                let byte1Index = Base64.encodingTable.firstIndex(of: bytes[i + 1])
+            else {
                 throw Base64Error.invalidCharacter
             }
 
@@ -86,8 +95,8 @@ internal struct Base64 {
             decoded.append(byte0)
 
             // Check if the 3rd char is not a padding character, and decode the 2nd byte
-            if bytes[i+2] != Base64.encodePaddingCharacter {
-                guard let byte2Index = Base64.encodeBase64.firstIndex(of: bytes[i+2]) else {
+            if bytes[i + 2] != Base64.encodePaddingCharacter {
+                guard let byte2Index = Base64.encodingTable.firstIndex(of: bytes[i + 2]) else {
                     throw Base64Error.invalidCharacter
                 }
 
@@ -96,9 +105,10 @@ internal struct Base64 {
             }
 
             // Check if the 4th character is not a padding, and decode the 3rd byte
-            if bytes[i+3] != Base64.encodePaddingCharacter {
-                guard let byte3Index = Base64.encodeBase64.firstIndex(of: bytes[i+3]),
-                      let byte2Index = Base64.encodeBase64.firstIndex(of: bytes[i+2]) else {
+            if bytes[i + 3] != Base64.encodePaddingCharacter {
+                guard let byte3Index = Base64.encodingTable.firstIndex(of: bytes[i + 3]),
+                    let byte2Index = Base64.encodingTable.firstIndex(of: bytes[i + 2])
+                else {
                     throw Base64Error.invalidCharacter
                 }
                 let third = (UInt8(byte2Index) << 6 | UInt8(byte3Index))
@@ -108,12 +118,11 @@ internal struct Base64 {
         return decoded
     }
 
-
     // MARK: Internal
 
     // The base64 unicode table.
     @usableFromInline
-    static let encodeBase64: [UInt8] = [
+    static let encodingTable: [UInt8] = [
         UInt8(ascii: "A"), UInt8(ascii: "B"), UInt8(ascii: "C"), UInt8(ascii: "D"),
         UInt8(ascii: "E"), UInt8(ascii: "F"), UInt8(ascii: "G"), UInt8(ascii: "H"),
         UInt8(ascii: "I"), UInt8(ascii: "J"), UInt8(ascii: "K"), UInt8(ascii: "L"),
@@ -179,8 +188,10 @@ extension String {
     ///
     /// As this API does not exist prior to 5.3 on Linux, or on older Apple platforms, we fake it out with a pointer and accept the extra copy.
     @inlinable
-    init(backportUnsafeUninitializedCapacity capacity: Int,
-         initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows {
+    init(
+        backportUnsafeUninitializedCapacity capacity: Int,
+        initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int
+    ) rethrows {
 
         // The buffer will store zero terminated C string
         let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: capacity + 1)
@@ -205,8 +216,10 @@ extension String {
 extension String {
 
     @inlinable
-    init(customUnsafeUninitializedCapacity capacity: Int,
-         initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int) rethrows {
+    init(
+        customUnsafeUninitializedCapacity capacity: Int,
+        initializingUTF8With initializer: (_ buffer: UnsafeMutableBufferPointer<UInt8>) throws -> Int
+    ) rethrows {
         if #available(macOS 11.0, iOS 14.0, tvOS 14.0, watchOS 7.0, *) {
             try self.init(unsafeUninitializedCapacity: capacity, initializingUTF8With: initializer)
         } else {

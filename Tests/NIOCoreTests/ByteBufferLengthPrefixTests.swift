@@ -17,7 +17,7 @@ import XCTest
 
 final class ByteBufferLengthPrefixTests: XCTestCase {
     private var buffer = ByteBuffer()
-    
+
     // MARK: - writeLengthPrefixed Tests
     func testWriteMessageWithLengthOfZero() throws {
         let bytesWritten = try buffer.writeLengthPrefixed(as: UInt8.self) { buffer in
@@ -39,9 +39,7 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
     }
     func testWriteMessageWithMultipleWrites() throws {
         let bytesWritten = try buffer.writeLengthPrefixed(as: UInt8.self) { buffer in
-            buffer.writeString("Hello") + 
-            buffer.writeString(" ") +
-            buffer.writeString("World")
+            buffer.writeString("Hello") + buffer.writeString(" ") + buffer.writeString("World")
         }
         XCTAssertEqual(bytesWritten, 12)
         XCTAssertEqual(buffer.readInteger(as: UInt8.self), 11)
@@ -86,14 +84,14 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
         XCTAssertEqual(buffer.readString(length: 256), message)
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
-    
+
     // MARK: - readLengthPrefixed Tests
     func testReadMessageWithLengthOfZero() {
         buffer.writeInteger(UInt8(0))
         XCTAssertEqual(
             try buffer.readLengthPrefixed(as: UInt8.self) { buffer in
                 buffer
-            }, 
+            },
             ByteBuffer()
         )
     }
@@ -196,7 +194,7 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
             nil
         )
     }
-    
+
     // MARK: - readLengthPrefixedSlice
     func testReadSliceWithBigEndianInteger() {
         buffer.writeInteger(UInt16(256), endianness: .big)
@@ -216,7 +214,7 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
         )
         XCTAssertTrue(buffer.readableBytes == 0)
     }
-    
+
     // MARK: - getLengthPrefixedSlice
     func testGetSliceWithBigEndianInteger() {
         buffer.writeString("some data before the length prefix")

@@ -43,8 +43,16 @@ final class AddressedEnvelopeTests: XCTestCase {
 
     func testHashable_whenDifferentMetadata() throws {
         let address = try SocketAddress(ipAddress: "127.0.0.0", port: 443)
-        let envelope1 = AddressedEnvelope(remoteAddress: address, data: "foo", metadata: .init(ecnState: .congestionExperienced))
-        let envelope2 = AddressedEnvelope(remoteAddress: address, data: "foo", metadata: .init(ecnState: .transportCapableFlag0))
+        let envelope1 = AddressedEnvelope(
+            remoteAddress: address,
+            data: "foo",
+            metadata: .init(ecnState: .congestionExperienced)
+        )
+        let envelope2 = AddressedEnvelope(
+            remoteAddress: address,
+            data: "foo",
+            metadata: .init(ecnState: .transportCapableFlag0)
+        )
 
         XCTAssertNotEqual(envelope1, envelope2)
     }
@@ -60,8 +68,16 @@ final class AddressedEnvelopeTests: XCTestCase {
 
     func testHashable_whenDifferentData_andDifferentMetadata() throws {
         let address = try SocketAddress(ipAddress: "127.0.0.0", port: 443)
-        let envelope1 = AddressedEnvelope(remoteAddress: address, data: "foo", metadata: .init(ecnState: .congestionExperienced))
-        let envelope2 = AddressedEnvelope(remoteAddress: address, data: "bar", metadata: .init(ecnState: .transportCapableFlag0))
+        let envelope1 = AddressedEnvelope(
+            remoteAddress: address,
+            data: "foo",
+            metadata: .init(ecnState: .congestionExperienced)
+        )
+        let envelope2 = AddressedEnvelope(
+            remoteAddress: address,
+            data: "bar",
+            metadata: .init(ecnState: .transportCapableFlag0)
+        )
 
         XCTAssertNotEqual(envelope1, envelope2)
     }
@@ -69,8 +85,16 @@ final class AddressedEnvelopeTests: XCTestCase {
     func testHashable_whenDifferentAddress_andDifferentMetadata() throws {
         let address1 = try SocketAddress(ipAddress: "127.0.0.0", port: 443)
         let address2 = try SocketAddress(ipAddress: "127.0.0.0", port: 444)
-        let envelope1 = AddressedEnvelope(remoteAddress: address1, data: "foo", metadata: .init(ecnState: .congestionExperienced))
-        let envelope2 = AddressedEnvelope(remoteAddress: address2, data: "bar", metadata: .init(ecnState: .transportCapableFlag0))
+        let envelope1 = AddressedEnvelope(
+            remoteAddress: address1,
+            data: "foo",
+            metadata: .init(ecnState: .congestionExperienced)
+        )
+        let envelope2 = AddressedEnvelope(
+            remoteAddress: address2,
+            data: "bar",
+            metadata: .init(ecnState: .transportCapableFlag0)
+        )
 
         XCTAssertNotEqual(envelope1, envelope2)
     }

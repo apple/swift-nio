@@ -12,13 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIOCore
-import NIOEmbedded
-@testable import NIOPosix
-import NIOConcurrencyHelpers
-import NIOTestUtils
 import Dispatch
+import NIOConcurrencyHelpers
+import NIOEmbedded
+import NIOTestUtils
+import XCTest
+
+@testable import NIOCore
+@testable import NIOPosix
 
 class ChannelLifecycleHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
@@ -81,17 +82,21 @@ public final class ChannelTests: XCTestCase {
 
         let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
         let serverLifecycleHandler = ChannelLifecycleHandler()
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { channel in
-                serverAcceptedChannelPromise.succeed(channel)
-                return channel.pipeline.addHandler(serverLifecycleHandler)
-            }.bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { channel in
+                    serverAcceptedChannelPromise.succeed(channel)
+                    return channel.pipeline.addHandler(serverLifecycleHandler)
+                }.bind(host: "127.0.0.1", port: 0).wait()
+        )
 
         let clientLifecycleHandler = ChannelLifecycleHandler()
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .channelInitializer({ (channel: Channel) in channel.pipeline.addHandler(clientLifecycleHandler) })
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .channelInitializer({ (channel: Channel) in channel.pipeline.addHandler(clientLifecycleHandler) })
+                .connect(to: serverChannel.localAddress!).wait()
+        )
 
         var buffer = clientChannel.allocator.buffer(capacity: 1)
         buffer.writeString("a")
@@ -103,14 +108,26 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try clientChannel.close().wait())
 
         // Wait for the close promises. These fire last.
-        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed([clientChannel.closeFuture,
-                                                           serverAcceptedChannel.closeFuture],
-                                                           on: group.next()).map {
-            XCTAssertEqual(clientLifecycleHandler.currentState, .unregistered)
-            XCTAssertEqual(serverLifecycleHandler.currentState, .unregistered)
-            XCTAssertEqual(clientLifecycleHandler.stateHistory, [.unregistered, .registered, .active, .inactive, .unregistered])
-            XCTAssertEqual(serverLifecycleHandler.stateHistory, [.unregistered, .registered, .active, .inactive, .unregistered])
-        }.wait())
+        XCTAssertNoThrow(
+            try EventLoopFuture.andAllSucceed(
+                [
+                    clientChannel.closeFuture,
+                    serverAcceptedChannel.closeFuture,
+                ],
+                on: group.next()
+            ).map {
+                XCTAssertEqual(clientLifecycleHandler.currentState, .unregistered)
+                XCTAssertEqual(serverLifecycleHandler.currentState, .unregistered)
+                XCTAssertEqual(
+                    clientLifecycleHandler.stateHistory,
+                    [.unregistered, .registered, .active, .inactive, .unregistered]
+                )
+                XCTAssertEqual(
+                    serverLifecycleHandler.stateHistory,
+                    [.unregistered, .registered, .active, .inactive, .unregistered]
+                )
+            }.wait()
+        )
     }
 
     func testManyManyWrites() throws {
@@ -119,12 +136,16 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
 
         // We're going to try to write loads, and loads, and loads of data. In this case, one more
         // write than the iovecs max.
@@ -148,19 +169,22 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
 
         let bufferSize = 1024 * 1024 * 2
         var buffer = clientChannel.allocator.buffer(capacity: bufferSize)
         for _ in 0..<bufferSize {
             buffer.writeStaticString("a")
         }
-
 
         let lotsOfData = Int(Int32.max)
         var written: Int64 = 0
@@ -182,21 +206,25 @@ public final class ChannelTests: XCTestCase {
         }
 
         let childChannelPromise = group.next().makePromise(of: Channel.self)
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { channel in
-                childChannelPromise.succeed(channel)
-                return channel.eventLoop.makeSucceededFuture(())
-            }.bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { channel in
+                    childChannelPromise.succeed(channel)
+                    return channel.eventLoop.makeSucceededFuture(())
+                }.bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
 
         // Check the child channel has a parent, and that that parent is the server channel.
         childChannelPromise.futureResult.map { chan in
-                XCTAssertTrue(chan.parent === serverChannel)
+            XCTAssertTrue(chan.parent === serverChannel)
         }.whenFailure { err in
-                XCTFail("Unexpected error \(err)")
+            XCTFail("Unexpected error \(err)")
         }
         _ = try childChannelPromise.futureResult.wait()
 
@@ -238,117 +266,217 @@ public final class ChannelTests: XCTestCase {
     ///     - expectedVectorWritabilities: The expected buffer lengths for the calls to the vector write operation.
     ///     - returns: The return values of the fakes write operations (both single and vector).
     ///     - promiseStates: The states of the promises _after_ the write operations are done.
-    func assertExpectedWritability(pendingWritesManager pwm: PendingStreamWritesManager,
-                                   promises: [EventLoopPromise<Void>],
-                                   expectedSingleWritabilities: [Int]?,
-                                   expectedVectorWritabilities: [[Int]]?,
-                                   expectedFileWritabilities: [(Int, Int)]?,
-                                   returns: [NIOPosix.IOResult<Int>],
-                                   promiseStates: [[Bool]],
-                                   file: StaticString = #filePath,
-                                   line: UInt = #line) throws -> OverallWriteResult {
+    func assertExpectedWritability(
+        pendingWritesManager pwm: PendingStreamWritesManager,
+        promises: [EventLoopPromise<Void>],
+        expectedSingleWritabilities: [Int]?,
+        expectedVectorWritabilities: [[Int]]?,
+        expectedFileWritabilities: [(Int, Int)]?,
+        returns: [NIOPosix.IOResult<Int>],
+        promiseStates: [[Bool]],
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws -> OverallWriteResult {
         var everythingState = 0
         var singleState = 0
         var multiState = 0
         var fileState = 0
-        let result = try pwm.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { buf in
-            defer {
-                singleState += 1
-                everythingState += 1
-            }
-            if let expected = expectedSingleWritabilities {
-                if expected.count > singleState {
-                    XCTAssertGreaterThan(returns.count, everythingState)
-                    XCTAssertEqual(expected[singleState], buf.count, "in single write \(singleState) (overall \(everythingState)), \(expected[singleState]) bytes expected but \(buf.count) actual")
-                    return returns[everythingState]
+        let result = try pwm.triggerAppropriateWriteOperations(
+            scalarBufferWriteOperation: { buf in
+                defer {
+                    singleState += 1
+                    everythingState += 1
+                }
+                if let expected = expectedSingleWritabilities {
+                    if expected.count > singleState {
+                        XCTAssertGreaterThan(returns.count, everythingState)
+                        XCTAssertEqual(
+                            expected[singleState],
+                            buf.count,
+                            "in single write \(singleState) (overall \(everythingState)), \(expected[singleState]) bytes expected but \(buf.count) actual"
+                        )
+                        return returns[everythingState]
+                    } else {
+                        XCTFail(
+                            "single write call \(singleState) but less than \(expected.count) expected",
+                            file: (file),
+                            line: line
+                        )
+                        return IOResult.wouldBlock(-1 * (everythingState + 1))
+                    }
                 } else {
-                    XCTFail("single write call \(singleState) but less than \(expected.count) expected", file: (file), line: line)
+                    XCTFail("single write called on \(buf) but no single writes expected", file: (file), line: line)
                     return IOResult.wouldBlock(-1 * (everythingState + 1))
                 }
-            } else {
-                XCTFail("single write called on \(buf) but no single writes expected", file: (file), line: line)
-                return IOResult.wouldBlock(-1 * (everythingState + 1))
-            }
-        }, vectorBufferWriteOperation: { ptrs in
-            defer {
-                multiState += 1
-                everythingState += 1
-            }
-            if let expected = expectedVectorWritabilities {
-                if expected.count > multiState {
-                    XCTAssertGreaterThan(returns.count, everythingState)
-                    XCTAssertEqual(expected[multiState], ptrs.map { numericCast($0.iov_len) },
-                                   "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.iov_len }) actual",
-                        file: (file), line: line)
-                    return returns[everythingState]
+            },
+            vectorBufferWriteOperation: { ptrs in
+                defer {
+                    multiState += 1
+                    everythingState += 1
+                }
+                if let expected = expectedVectorWritabilities {
+                    if expected.count > multiState {
+                        XCTAssertGreaterThan(returns.count, everythingState)
+                        XCTAssertEqual(
+                            expected[multiState],
+                            ptrs.map { numericCast($0.iov_len) },
+                            "in vector write \(multiState) (overall \(everythingState)), \(expected[multiState]) byte counts expected but \(ptrs.map { $0.iov_len }) actual",
+                            file: (file),
+                            line: line
+                        )
+                        return returns[everythingState]
+                    } else {
+                        XCTFail(
+                            "vector write call \(multiState) but less than \(expected.count) expected",
+                            file: (file),
+                            line: line
+                        )
+                        return IOResult.wouldBlock(-1 * (everythingState + 1))
+                    }
                 } else {
-                    XCTFail("vector write call \(multiState) but less than \(expected.count) expected", file: (file), line: line)
+                    XCTFail(
+                        "vector write called on \(ptrs) but no vector writes expected",
+                        file: (file),
+                        line: line
+                    )
                     return IOResult.wouldBlock(-1 * (everythingState + 1))
                 }
-            } else {
-                XCTFail("vector write called on \(ptrs) but no vector writes expected",
-                    file: (file), line: line)
-                return IOResult.wouldBlock(-1 * (everythingState + 1))
-            }
-        }, scalarFileWriteOperation: { _, start, end in
-            defer {
-                fileState += 1
-                everythingState += 1
-            }
-            guard let expected = expectedFileWritabilities else {
-                XCTFail("file write (\(start), \(end)) but no file writes expected",
-                    file: (file), line: line)
-                return IOResult.wouldBlock(-1 * (everythingState + 1))
-            }
+            },
+            scalarFileWriteOperation: { _, start, end in
+                defer {
+                    fileState += 1
+                    everythingState += 1
+                }
+                guard let expected = expectedFileWritabilities else {
+                    XCTFail(
+                        "file write (\(start), \(end)) but no file writes expected",
+                        file: (file),
+                        line: line
+                    )
+                    return IOResult.wouldBlock(-1 * (everythingState + 1))
+                }
 
-            if expected.count > fileState {
-                XCTAssertGreaterThan(returns.count, everythingState)
-                XCTAssertEqual(expected[fileState].0, start,
-                               "in file write \(fileState) (overall \(everythingState)), \(expected[fileState].0) expected as start index but \(start) actual",
-                    file: (file), line: line)
-                XCTAssertEqual(expected[fileState].1, end,
-                               "in file write \(fileState) (overall \(everythingState)), \(expected[fileState].1) expected as end index but \(end) actual",
-                    file: (file), line: line)
-                return returns[everythingState]
-            } else {
-                XCTFail("file write call \(fileState) but less than \(expected.count) expected", file: (file), line: line)
-                return IOResult.wouldBlock(-1 * (everythingState + 1))
+                if expected.count > fileState {
+                    XCTAssertGreaterThan(returns.count, everythingState)
+                    XCTAssertEqual(
+                        expected[fileState].0,
+                        start,
+                        "in file write \(fileState) (overall \(everythingState)), \(expected[fileState].0) expected as start index but \(start) actual",
+                        file: (file),
+                        line: line
+                    )
+                    XCTAssertEqual(
+                        expected[fileState].1,
+                        end,
+                        "in file write \(fileState) (overall \(everythingState)), \(expected[fileState].1) expected as end index but \(end) actual",
+                        file: (file),
+                        line: line
+                    )
+                    return returns[everythingState]
+                } else {
+                    XCTFail(
+                        "file write call \(fileState) but less than \(expected.count) expected",
+                        file: (file),
+                        line: line
+                    )
+                    return IOResult.wouldBlock(-1 * (everythingState + 1))
+                }
             }
-        })
+        )
         if everythingState > 0 {
-            XCTAssertEqual(promises.count, promiseStates[everythingState - 1].count,
-                           "number of promises (\(promises.count)) != number of promise states (\(promiseStates[everythingState - 1].count))",
-                file: (file), line: line)
+            XCTAssertEqual(
+                promises.count,
+                promiseStates[everythingState - 1].count,
+                "number of promises (\(promises.count)) != number of promise states (\(promiseStates[everythingState - 1].count))",
+                file: (file),
+                line: line
+            )
             _ = zip(promises, promiseStates[everythingState - 1]).map { p, pState in
-                XCTAssertEqual(p.futureResult.isFulfilled, pState, "promise states incorrect (\(everythingState) callbacks)", file: (file), line: line)
+                XCTAssertEqual(
+                    p.futureResult.isFulfilled,
+                    pState,
+                    "promise states incorrect (\(everythingState) callbacks)",
+                    file: (file),
+                    line: line
+                )
             }
 
-            XCTAssertEqual(everythingState, singleState + multiState + fileState,
-                           "odd, calls the single/vector/file writes: \(singleState)/\(multiState)/\(fileState) but overall \(everythingState+1)", file: (file), line: line)
+            XCTAssertEqual(
+                everythingState,
+                singleState + multiState + fileState,
+                "odd, calls the single/vector/file writes: \(singleState)/\(multiState)/\(fileState) but overall \(everythingState+1)",
+                file: (file),
+                line: line
+            )
 
             if singleState == 0 {
                 XCTAssertNil(expectedSingleWritabilities, "no single writes have been done but we expected some")
             } else {
-                XCTAssertEqual(singleState, (expectedSingleWritabilities?.count ?? Int.min), "different number of single writes than expected", file: (file), line: line)
+                XCTAssertEqual(
+                    singleState,
+                    (expectedSingleWritabilities?.count ?? Int.min),
+                    "different number of single writes than expected",
+                    file: (file),
+                    line: line
+                )
             }
             if multiState == 0 {
                 XCTAssertNil(expectedVectorWritabilities, "no vector writes have been done but we expected some")
             } else {
-                XCTAssertEqual(multiState, (expectedVectorWritabilities?.count ?? Int.min), "different number of vector writes than expected", file: (file), line: line)
+                XCTAssertEqual(
+                    multiState,
+                    (expectedVectorWritabilities?.count ?? Int.min),
+                    "different number of vector writes than expected",
+                    file: (file),
+                    line: line
+                )
             }
             if fileState == 0 {
                 XCTAssertNil(expectedFileWritabilities, "no file writes have been done but we expected some")
             } else {
-                XCTAssertEqual(fileState, (expectedFileWritabilities?.count ?? Int.min), "different number of file writes than expected", file: (file), line: line)
+                XCTAssertEqual(
+                    fileState,
+                    (expectedFileWritabilities?.count ?? Int.min),
+                    "different number of file writes than expected",
+                    file: (file),
+                    line: line
+                )
             }
         } else {
-            XCTAssertEqual(0, returns.count, "no callbacks called but apparently \(returns.count) expected", file: (file), line: line)
-            XCTAssertNil(expectedSingleWritabilities, "no callbacks called but apparently some single writes expected", file: (file), line: line)
-            XCTAssertNil(expectedVectorWritabilities, "no callbacks calles but apparently some vector writes expected", file: (file), line: line)
-            XCTAssertNil(expectedFileWritabilities, "no callbacks calles but apparently some file writes expected", file: (file), line: line)
+            XCTAssertEqual(
+                0,
+                returns.count,
+                "no callbacks called but apparently \(returns.count) expected",
+                file: (file),
+                line: line
+            )
+            XCTAssertNil(
+                expectedSingleWritabilities,
+                "no callbacks called but apparently some single writes expected",
+                file: (file),
+                line: line
+            )
+            XCTAssertNil(
+                expectedVectorWritabilities,
+                "no callbacks calles but apparently some vector writes expected",
+                file: (file),
+                line: line
+            )
+            XCTAssertNil(
+                expectedFileWritabilities,
+                "no callbacks calles but apparently some file writes expected",
+                file: (file),
+                line: line
+            )
 
             _ = zip(promises, promiseStates[0]).map { p, pState in
-                XCTAssertEqual(p.futureResult.isFulfilled, pState, "promise states incorrect (no callbacks)", file: (file), line: line)
+                XCTAssertEqual(
+                    p.futureResult.isFulfilled,
+                    pState,
+                    "promise states incorrect (no callbacks)",
+                    file: (file),
+                    line: line
+                )
             }
         }
         return result
@@ -375,36 +503,42 @@ public final class ChannelTests: XCTestCase {
 
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
 
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                       promises: ps,
-                                                       expectedSingleWritabilities: [0],
-                                                       expectedVectorWritabilities: nil,
-                                                       expectedFileWritabilities: nil,
-                                                       returns: [.processed(0)],
-                                                       promiseStates: [[true, false]])
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [0],
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [.processed(0)],
+                promiseStates: [[true, false]]
+            )
 
             XCTAssertFalse(pwm.isEmpty)
             XCTAssertFalse(pwm.isFlushPending)
             XCTAssertEqual(.writtenCompletely, result.writeResult)
 
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [],
-                                               promiseStates: [[true, false]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [],
+                promiseStates: [[true, false]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
 
             pwm.markFlushCheckpoint()
 
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: [0],
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(0)],
-                                               promiseStates: [[true, true]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [0],
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [.processed(0)],
+                promiseStates: [[true, true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -424,24 +558,28 @@ public final class ChannelTests: XCTestCase {
             pwm.markFlushCheckpoint()
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[2])
 
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [[4, 4]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(8)],
-                                                   promiseStates: [[true, true, false]])
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: [[4, 4]],
+                expectedFileWritabilities: nil,
+                returns: [.processed(8)],
+                promiseStates: [[true, true, false]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
 
             pwm.markFlushCheckpoint()
 
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: [0],
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(0)],
-                                               promiseStates: [[true, true, true]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [0],
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [.processed(0)],
+                promiseStates: [[true, true, true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -461,33 +599,38 @@ public final class ChannelTests: XCTestCase {
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[3])
             pwm.markFlushCheckpoint()
 
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [[4, 4, 4, 4], [3, 4, 4, 4]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(1), .wouldBlock(0)],
-                promiseStates: [[false, false, false, false], [false, false, false, false]])
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: [[4, 4, 4, 4], [3, 4, 4, 4]],
+                expectedFileWritabilities: nil,
+                returns: [.processed(1), .wouldBlock(0)],
+                promiseStates: [[false, false, false, false], [false, false, false, false]]
+            )
 
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: [[3, 4, 4, 4], [4, 4]],
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(7), .wouldBlock(0)],
-                                               promiseStates: [[true, true, false, false], [true, true, false, false]]
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: [[3, 4, 4, 4], [4, 4]],
+                expectedFileWritabilities: nil,
+                returns: [.processed(7), .wouldBlock(0)],
+                promiseStates: [[true, true, false, false], [true, true, false, false]]
 
-                                               )
+            )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
 
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: [[4, 4]],
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(8)],
-                                               promiseStates: [[true, true, true, true], [true, true, true, true]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: [[4, 4]],
+                expectedFileWritabilities: nil,
+                returns: [.processed(8)],
+                promiseStates: [[true, true, true, true], [true, true, true, true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -499,33 +642,41 @@ public final class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
 
         try withPendingStreamWritesManager { pwm in
-            let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
+            let numberOfBytes = Int(
+                1  // first write
+                    + pwm.writeSpinCount  // the spins
+                    + 1  // so one byte remains at the end
+            )
             buffer.clear()
-            buffer.writeBytes(Array<UInt8>(repeating: 0xff, count: numberOfBytes))
+            buffer.writeBytes([UInt8](repeating: 0xff, count: numberOfBytes))
             let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             pwm.markFlushCheckpoint()
 
-            /* below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
-               The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
-               After that, one byte will remain */
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: Array((2...numberOfBytes).reversed()),
-                                                   expectedVectorWritabilities: nil,
-                                                   expectedFileWritabilities: nil,
-                                                   returns: Array(repeating: .processed(1), count: numberOfBytes),
-                                                   promiseStates: Array(repeating: [false], count: numberOfBytes))
+            // below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
+            // The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
+            // After that, one byte will remain
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: Array((2...numberOfBytes).reversed()),
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: Array(repeating: .processed(1), count: numberOfBytes),
+                promiseStates: Array(repeating: [false], count: numberOfBytes)
+            )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
 
-            /* we'll now write the one last byte and assert that all the writes are complete */
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: [1],
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(1)],
-                                               promiseStates: [[true]])
+            // we'll now write the one last byte and assert that all the writes are complete
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [1],
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [.processed(1)],
+                promiseStates: [[true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -537,7 +688,11 @@ public final class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
 
         try withPendingStreamWritesManager { pwm in
-            let numberOfBytes = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
+            let numberOfBytes = Int(
+                1  // first write
+                    + pwm.writeSpinCount  // the spins
+                    + 1  // so one byte remains at the end
+            )
             buffer.clear()
             buffer.writeBytes([0xff] as [UInt8])
             let ps: [EventLoopPromise<Void>] = (0..<numberOfBytes).map { (_: Int) in
@@ -547,40 +702,42 @@ public final class ChannelTests: XCTestCase {
             }
             pwm.markFlushCheckpoint()
 
-            /* this will create an `Array` like this (for `numberOfBytes == 4`)
-             `[[1, 1, 1, 1], [1, 1, 1], [1, 1], [1]]`
-             */
+            // this will create an `Array` like this (for `numberOfBytes == 4`)
+            // `[[1, 1, 1, 1], [1, 1, 1], [1, 1], [1]]`
             let expectedVectorWrites = Array((2...numberOfBytes).reversed()).map { n in
                 Array(repeating: 1, count: n)
             }
 
-            /* this will create an `Array` like this (for `numberOfBytes == 4`)
-               `[[true, false, false, false], [true, true, false, false], [true, true, true, false]`
-            */
+            // this will create an `Array` like this (for `numberOfBytes == 4`)
+            // `[[true, false, false, false], [true, true, false, false], [true, true, true, false]`
             let expectedPromiseStates = Array((2...numberOfBytes).reversed()).map { n in
                 Array(repeating: true, count: numberOfBytes - n + 1) + Array(repeating: false, count: n - 1)
             }
 
-            /* below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
-             The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
-             After that, one byte will remain */
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: expectedVectorWrites,
-                                                   expectedFileWritabilities: nil,
-                                                   returns: Array(repeating: .processed(1), count: numberOfBytes),
-                                                   promiseStates: expectedPromiseStates)
+            // below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
+            // The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
+            // After that, one byte will remain */
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: expectedVectorWrites,
+                expectedFileWritabilities: nil,
+                returns: Array(repeating: .processed(1), count: numberOfBytes),
+                promiseStates: expectedPromiseStates
+            )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
 
-            /* we'll now write the one last byte and assert that all the writes are complete */
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: [1],
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(1)],
-                                               promiseStates: [Array(repeating: true, count: numberOfBytes)])
+            // we'll now write the one last byte and assert that all the writes are complete
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [1],
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [.processed(1)],
+                promiseStates: [Array(repeating: true, count: numberOfBytes)]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -592,17 +749,21 @@ public final class ChannelTests: XCTestCase {
         var buffer = alloc.buffer(capacity: 12)
 
         try withPendingStreamWritesManager { pwm in
-            let numberOfWrites = Int(1 /* first write */ + pwm.writeSpinCount /* the spins */ + 1 /* so one byte remains at the end */)
+            let numberOfWrites = Int(
+                1  // first write
+                    + pwm.writeSpinCount  // the spins
+                    + 1  // so one byte remains at the end
+            )
             buffer.clear()
-            buffer.writeBytes(Array<UInt8>(repeating: 0xff, count: 1))
+            buffer.writeBytes([UInt8](repeating: 0xff, count: 1))
             let handle = NIOFileHandle(descriptor: -1)
             defer {
-                /* fake file handle, so don't actually close */
+                // fake file handle, so don't actually close
                 XCTAssertNoThrow(try handle.takeDescriptorOwnership())
             }
             let fileRegion = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 1)
             let ps: [EventLoopPromise<Void>] = (0..<numberOfWrites).map { _ in el.makePromise() }
-            (0..<numberOfWrites).forEach { i in
+            for i in (0..<numberOfWrites) {
                 _ = pwm.add(data: i % 2 == 0 ? .byteBuffer(buffer) : .fileRegion(fileRegion), promise: ps[i])
             }
             pwm.markFlushCheckpoint()
@@ -610,16 +771,18 @@ public final class ChannelTests: XCTestCase {
             let expectedPromiseStates = Array((1...numberOfWrites).reversed()).map { n in
                 Array(repeating: true, count: numberOfWrites - n + 1) + Array(repeating: false, count: n - 1)
             }
-            /* below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
-             The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
-             After that, one byte will remain */
-            let result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                       promises: ps,
-                                                       expectedSingleWritabilities: Array(repeating: 1, count: numberOfWrites / 2),
-                                                       expectedVectorWritabilities: nil,
-                                                       expectedFileWritabilities: Array(repeating: (0, 1), count: numberOfWrites / 2),
-                                                       returns: Array(repeating: .processed(1), count: numberOfWrites),
-                                                       promiseStates: expectedPromiseStates)
+            // below, we'll write 1 byte at a time. So the number of bytes offered should decrease by one.
+            // The write operation should be repeated until we did it 1 + spin count times and then return `.writtenPartially`.
+            // After that, one byte will remain
+            let result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: Array(repeating: 1, count: numberOfWrites / 2),
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: Array(repeating: (0, 1), count: numberOfWrites / 2),
+                returns: Array(repeating: .processed(1), count: numberOfWrites),
+                promiseStates: expectedPromiseStates
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -639,13 +802,15 @@ public final class ChannelTests: XCTestCase {
             pwm.markFlushCheckpoint()
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[2])
 
-            let result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                       promises: ps,
-                                                       expectedSingleWritabilities: nil,
-                                                       expectedVectorWritabilities: [[4, 4], [2, 4]],
-                                                       expectedFileWritabilities: nil,
-                                                       returns: [.processed(2), .wouldBlock(0)],
-                                                       promiseStates: [[false, false, false], [false, false, false]])
+            let result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: [[4, 4], [2, 4]],
+                expectedFileWritabilities: nil,
+                returns: [.processed(2), .wouldBlock(0)],
+                promiseStates: [[false, false, false], [false, false, false]]
+            )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
 
             pwm.failAll(error: ChannelError.operationUnsupported, close: true)
@@ -657,11 +822,13 @@ public final class ChannelTests: XCTestCase {
     /// Test that with a few massive buffers, we don't offer more than we should to `writev` if the individual chunks fit.
     func testPendingWritesNoMoreThanWritevLimitIsWritten() throws {
         let el = EmbeddedEventLoop()
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-                                        hookedFree: { _ in },
-                                        hookedMemcpy: { _, _, _ in })
-        /* each buffer is half the writev limit */
+        let alloc = ByteBufferAllocator(
+            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            hookedFree: { _ in },
+            hookedMemcpy: { _, _, _ in }
+        )
+        // each buffer is half the writev limit
         let halfTheWriteVLimit = Socket.writevLimitBytes / 2
         var buffer = alloc.buffer(capacity: halfTheWriteVLimit)
         buffer.moveReaderIndex(to: 0)
@@ -669,34 +836,38 @@ public final class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
-            /* add 1.5x the writev limit */
+            // add 1.5x the writev limit
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[2])
             pwm.markFlushCheckpoint()
 
-            let result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: [halfTheWriteVLimit],
-                                                   expectedVectorWritabilities: [[halfTheWriteVLimit, halfTheWriteVLimit]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(2 * halfTheWriteVLimit), .processed(halfTheWriteVLimit)],
-                                                   promiseStates: [[true, true, false], [true, true, true]])
+            let result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [halfTheWriteVLimit],
+                expectedVectorWritabilities: [[halfTheWriteVLimit, halfTheWriteVLimit]],
+                expectedFileWritabilities: nil,
+                returns: [.processed(2 * halfTheWriteVLimit), .processed(halfTheWriteVLimit)],
+                promiseStates: [[true, true, false], [true, true, true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
 
     /// Test that with a massive buffers (bigger than writev size), we don't offer more than we should to `writev`.
     func testPendingWritesNoMoreThanWritevLimitIsWrittenInOneMassiveChunk() throws {
-        if MemoryLayout<Int>.size == MemoryLayout<Int32>.size  { // skip this test on 32bit system
+        if MemoryLayout<Int>.size == MemoryLayout<Int32>.size {  // skip this test on 32bit system
             return
         }
 
         let el = EmbeddedEventLoop()
-        let alloc = ByteBufferAllocator(hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-                                        hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
-                                        hookedFree: { _ in },
-                                        hookedMemcpy: { _, _, _ in })
+        let alloc = ByteBufferAllocator(
+            hookedMalloc: { _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            hookedRealloc: { _, _ in UnsafeMutableRawPointer(bitPattern: 0xdeadbee)! },
+            hookedFree: { _ in },
+            hookedMemcpy: { _, _, _ in }
+        )
 
         let biggerThanWriteV = Socket.writevLimitBytes + 23
         var buffer = alloc.buffer(capacity: biggerThanWriteV)
@@ -705,7 +876,7 @@ public final class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<3).map { (_: Int) in el.makePromise() }
-            /* add 1.5x the writev limit */
+            // add 1.5x the writev limit
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             buffer.moveWriterIndex(to: 100)
@@ -713,22 +884,36 @@ public final class ChannelTests: XCTestCase {
 
             pwm.markFlushCheckpoint()
 
-            let result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [[Socket.writevLimitBytes],
-                                                                                 [23],
-                                                                                 [Socket.writevLimitBytes],
-                                                                                 [23, 100]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [ .processed(Socket.writevLimitBytes),
-                                                    /*Xcode*/ .processed(23),
-                                                    /*needs*/ .processed(Socket.writevLimitBytes),
-                                                    /*help */ .processed(23 + 100)],
-                                                   promiseStates: [[false, false, false],
-                                                    /*  Xcode   */ [true, false, false],
-                                                    /*  needs   */ [true, false, false],
-                                                    /*  help    */ [true, true, true]])
+            let result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: [
+                    [Socket.writevLimitBytes],
+                    [23],
+                    [Socket.writevLimitBytes],
+                    [23, 100],
+                ],
+                expectedFileWritabilities: nil,
+                returns: [
+                    .processed(Socket.writevLimitBytes),
+                    // Xcode
+                    .processed(23),
+                    // needs
+                    .processed(Socket.writevLimitBytes),
+                    // help
+                    .processed(23 + 100),
+                ],
+                promiseStates: [
+                    [false, false, false],
+                    // Xcode
+                    [true, false, false],
+                    // needs
+                    [true, false, false],
+                    // help
+                    [true, true, true],
+                ]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
             pwm.markFlushCheckpoint()
         }
@@ -752,33 +937,39 @@ public final class ChannelTests: XCTestCase {
             pwm.markFlushCheckpoint()
             _ = pwm.add(data: .fileRegion(fr2), promise: ps[1])
 
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: nil,
-                                                   expectedFileWritabilities: [(12, 14)],
-                                                   returns: [.processed(2)],
-                                                   promiseStates: [[true, false]])
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: [(12, 14)],
+                returns: [.processed(2)],
+                promiseStates: [[true, false]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
 
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [],
-                                               promiseStates: [[true, false]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [],
+                promiseStates: [[true, false]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
 
             pwm.markFlushCheckpoint()
 
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: [(0, 2), (1, 2)],
-                                               returns: [.processed(1), .processed(1)],
-                                               promiseStates: [[true, false], [true, true]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: [(0, 2), (1, 2)],
+                returns: [.processed(1), .processed(1)],
+                promiseStates: [[true, false], [true, true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -797,13 +988,15 @@ public final class ChannelTests: XCTestCase {
             _ = pwm.add(data: .fileRegion(fr), promise: ps[0])
             pwm.markFlushCheckpoint()
 
-            let result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: nil,
-                                                   expectedFileWritabilities: [(99, 99)],
-                                                   returns: [.processed(0)],
-                                                   promiseStates: [[true]])
+            let result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: [(99, 99)],
+                returns: [.processed(0)],
+                promiseStates: [[true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -835,30 +1028,39 @@ public final class ChannelTests: XCTestCase {
 
             pwm.markFlushCheckpoint()
 
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: [4, 3, 2, 1],
-                                                   expectedVectorWritabilities: [[4, 4]],
-                                                   expectedFileWritabilities: [(99, 99), (0, 10), (3, 10), (6, 10)],
-                                                   returns: [.processed(8), .processed(0), .processed(1), .processed(1), .processed(1), .processed(1), .wouldBlock(3), .processed(3), .wouldBlock(0)],
-                                                   promiseStates: [[true, true, false, false, false],
-                                                                   [true, true, true, false, false],
-                                                                   [true, true, true, false, false],
-                                                                   [true, true, true, false, false],
-                                                                   [true, true, true, false, false],
-                                                                   [true, true, true, true, false],
-                                                                   [true, true, true, true, false],
-                                                                   [true, true, true, true, false],
-                                                                   [true, true, true, true, false]])
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [4, 3, 2, 1],
+                expectedVectorWritabilities: [[4, 4]],
+                expectedFileWritabilities: [(99, 99), (0, 10), (3, 10), (6, 10)],
+                returns: [
+                    .processed(8), .processed(0), .processed(1), .processed(1), .processed(1), .processed(1),
+                    .wouldBlock(3), .processed(3), .wouldBlock(0),
+                ],
+                promiseStates: [
+                    [true, true, false, false, false],
+                    [true, true, true, false, false],
+                    [true, true, true, false, false],
+                    [true, true, true, false, false],
+                    [true, true, true, false, false],
+                    [true, true, true, true, false],
+                    [true, true, true, true, false],
+                    [true, true, true, true, false],
+                    [true, true, true, true, false],
+                ]
+            )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
 
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: nil,
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: [(6, 10)],
-                                               returns: [.processed(4)],
-                                               promiseStates: [[true, true, true, true, true]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: [(6, 10)],
+                returns: [.processed(4)],
+                promiseStates: [[true, true, true, true, true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -875,16 +1077,18 @@ public final class ChannelTests: XCTestCase {
 
             pwm.markFlushCheckpoint()
 
-            /* let's start with no writes and just a flush */
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                       promises: ps,
-                                                       expectedSingleWritabilities: nil,
-                                                       expectedVectorWritabilities: nil,
-                                                       expectedFileWritabilities: nil,
-                                                       returns: [],
-                                                       promiseStates: [[false, false, false]])
+            // let's start with no writes and just a flush
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [],
+                promiseStates: [[false, false, false]]
+            )
 
-            /* let's add a few writes but still without any promises */
+            // let's add a few writes but still without any promises
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
 
@@ -892,29 +1096,31 @@ public final class ChannelTests: XCTestCase {
 
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[2])
 
-
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [[4, 4]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(8)],
-                                                   promiseStates: [[true, true, false]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: [[4, 4]],
+                expectedFileWritabilities: nil,
+                returns: [.processed(8)],
+                promiseStates: [[true, true, false]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
 
             pwm.markFlushCheckpoint()
 
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: [0],
-                                                   expectedVectorWritabilities: nil,
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(0)],
-                                                   promiseStates: [[true, true, true]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [0],
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [.processed(0)],
+                promiseStates: [[true, true, true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
-
 
     func testPendingWritesWorksWithManyEmptyWrites() throws {
         let el = EmbeddedEventLoop()
@@ -928,24 +1134,28 @@ public final class ChannelTests: XCTestCase {
             pwm.markFlushCheckpoint()
             _ = pwm.add(data: .byteBuffer(emptyBuffer), promise: ps[2])
 
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [[0, 0]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(0)],
-                                                   promiseStates: [[true, true, false]])
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: [[0, 0]],
+                expectedFileWritabilities: nil,
+                returns: [.processed(0)],
+                promiseStates: [[true, true, false]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
 
             pwm.markFlushCheckpoint()
 
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: [0],
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(0)],
-                                               promiseStates: [[true, true, true]])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [0],
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [.processed(0)],
+                promiseStates: [[true, true, true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -967,13 +1177,15 @@ public final class ChannelTests: XCTestCase {
                 pwm.failAll(error: ChannelError.inputClosed, close: true)
             }
 
-            let result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: [[4, 4]],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(4)],
-                                                   promiseStates: [[true, true, true]])
+            let result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: [[4, 4]],
+                expectedFileWritabilities: nil,
+                returns: [.processed(4)],
+                promiseStates: [[true, true, true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
             XCTAssertThrowsError(try ps[1].futureResult.wait())
@@ -989,27 +1201,33 @@ public final class ChannelTests: XCTestCase {
 
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0...Socket.writevLimitIOVectors).map { (_: Int) in el.makePromise() }
-            ps.forEach { p in
+            for p in ps {
                 _ = pwm.add(data: .byteBuffer(buffer), promise: p)
             }
             pwm.markFlushCheckpoint()
 
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: [4],
-                                                   expectedVectorWritabilities: [Array(repeating: 4, count: Socket.writevLimitIOVectors)],
-                                                   expectedFileWritabilities: nil,
-                                                   returns: [.processed(4 * Socket.writevLimitIOVectors), .wouldBlock(0)],
-                                                   promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors) + [false],
-                                                                   Array(repeating: true, count: Socket.writevLimitIOVectors) + [false]])
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [4],
+                expectedVectorWritabilities: [Array(repeating: 4, count: Socket.writevLimitIOVectors)],
+                expectedFileWritabilities: nil,
+                returns: [.processed(4 * Socket.writevLimitIOVectors), .wouldBlock(0)],
+                promiseStates: [
+                    Array(repeating: true, count: Socket.writevLimitIOVectors) + [false],
+                    Array(repeating: true, count: Socket.writevLimitIOVectors) + [false],
+                ]
+            )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                               promises: ps,
-                                               expectedSingleWritabilities: [4],
-                                               expectedVectorWritabilities: nil,
-                                               expectedFileWritabilities: nil,
-                                               returns: [.processed(4)],
-                                               promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors + 1)])
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [4],
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: nil,
+                returns: [.processed(4)],
+                promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors + 1)]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -1029,13 +1247,15 @@ public final class ChannelTests: XCTestCase {
             _ = pwm.add(data: .fileRegion(fr), promise: ps[0])
             pwm.markFlushCheckpoint()
 
-            let result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: nil,
-                                                   expectedVectorWritabilities: nil,
-                                                   expectedFileWritabilities: [(0, 8192)],
-                                                   returns: [.wouldBlock(8192)],
-                                                   promiseStates: [[true]])
+            let result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: nil,
+                expectedVectorWritabilities: nil,
+                expectedFileWritabilities: [(0, 8192)],
+                returns: [.wouldBlock(8192)],
+                promiseStates: [[true]]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
         }
     }
@@ -1058,7 +1278,9 @@ public final class ChannelTests: XCTestCase {
             } else {
                 XCTFail()
             }
-        } catch let err as IOError where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH || err.errnoCode == ECONNREFUSED {
+        } catch let err as IOError
+            where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH || err.errnoCode == ECONNREFUSED
+        {
             // we need to accept those too unfortunately
             print("WARNING: \(#function) did not meaningfully test anything, received \(err)")
         } catch {
@@ -1084,7 +1306,9 @@ public final class ChannelTests: XCTestCase {
             } else {
                 XCTFail()
             }
-        } catch let err as IOError where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH || err.errnoCode == ECONNREFUSED {
+        } catch let err as IOError
+            where err.errnoCode == ENETDOWN || err.errnoCode == ENETUNREACH || err.errnoCode == ECONNREFUSED
+        {
             // we need to accept those too unfortunately
             print("WARNING: \(#function) did not meaningfully test anything, received \(err)")
         } catch {
@@ -1106,7 +1330,10 @@ public final class ChannelTests: XCTestCase {
         try server.listen()
 
         let byteCountingHandler = ByteCountingHandler(numBytes: 4, promise: group.next().makePromise())
-        let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .output, promise: group.next().makePromise())
+        let verificationHandler = ShutdownVerificationHandler(
+            shutdownEvent: .output,
+            promise: group.next().makePromise()
+        )
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(verificationHandler).flatMap {
@@ -1158,7 +1385,7 @@ public final class ChannelTests: XCTestCase {
         try server.bind(to: SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0))
         try server.listen()
 
-        class VerifyNoReadHandler : ChannelInboundHandler {
+        class VerifyNoReadHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
             public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -1166,7 +1393,10 @@ public final class ChannelTests: XCTestCase {
             }
         }
 
-        let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .input, promise: group.next().makePromise())
+        let verificationHandler = ShutdownVerificationHandler(
+            shutdownEvent: .input,
+            promise: group.next().makePromise()
+        )
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(VerifyNoReadHandler()).flatMap {
@@ -1221,7 +1451,10 @@ public final class ChannelTests: XCTestCase {
         try server.bind(to: SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0))
         try server.listen()
 
-        let verificationHandler = ShutdownVerificationHandler(shutdownEvent: .input, promise: group.next().makePromise())
+        let verificationHandler = ShutdownVerificationHandler(
+            shutdownEvent: .input,
+            promise: group.next().makePromise()
+        )
 
         let future = ClientBootstrap(group: group)
             .channelInitializer { channel in
@@ -1286,7 +1519,7 @@ public final class ChannelTests: XCTestCase {
         let serverChildChannelInitPromise: EventLoopPromise<Channel> = group.next().makePromise()
         let serverChildChannelInactivePromise: EventLoopPromise<Void> = group.next().makePromise()
         let serverChannel: Channel = try ServerBootstrap(group: group)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true) // Important!
+            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)  // Important!
             .childChannelInitializer { channel in
                 channel.pipeline.addHandlers(
                     PromiseOnChildChannelInitHandler(promise: serverChildChannelInitPromise),
@@ -1430,20 +1663,24 @@ public final class ChannelTests: XCTestCase {
 
         try {
             let serverChildChannelPromise = group.next().makePromise(of: Channel.self)
-            let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .childChannelInitializer { channel in
-                    serverChildChannelPromise.succeed(channel)
-                    channel.close(promise: nil)
-                    return channel.eventLoop.makeSucceededFuture(())
-                }
-                .bind(host: "127.0.0.1", port: 0).wait())
+            let serverChannel = try assertNoThrowWithValue(
+                ServerBootstrap(group: group)
+                    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                    .childChannelInitializer { channel in
+                        serverChildChannelPromise.succeed(channel)
+                        channel.close(promise: nil)
+                        return channel.eventLoop.makeSucceededFuture(())
+                    }
+                    .bind(host: "127.0.0.1", port: 0).wait()
+            )
 
-            let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-                .channelInitializer {
-                    $0.pipeline.addHandler(StuffHandler(promise: promise))
-                }
-                .connect(to: serverChannel.localAddress!).wait())
+            let clientChannel = try assertNoThrowWithValue(
+                ClientBootstrap(group: group)
+                    .channelInitializer {
+                        $0.pipeline.addHandler(StuffHandler(promise: promise))
+                    }
+                    .connect(to: serverChannel.localAddress!).wait()
+            )
             weakClientChannel = clientChannel
             weakServerChannel = serverChannel
             weakServerChildChannel = try serverChildChannelPromise.futureResult.wait()
@@ -1464,10 +1701,12 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try serverChannel.closeFuture.wait())
         }()
         let pipeline = try promise.futureResult.wait()
-        XCTAssertThrowsError(try pipeline.eventLoop.submit { () -> Channel in
-            XCTAssertTrue(pipeline.channel is DeadChannel)
-            return pipeline.channel
-        }.wait().writeAndFlush(NIOAny(())).wait()) { error in
+        XCTAssertThrowsError(
+            try pipeline.eventLoop.submit { () -> Channel in
+                XCTAssertTrue(pipeline.channel is DeadChannel)
+                return pipeline.channel
+            }.wait().writeAndFlush(NIOAny(())).wait()
+        ) { error in
             XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
         }
 
@@ -1477,7 +1716,11 @@ public final class ChannelTests: XCTestCase {
         // happened in one second, we assume it never will.
         assert(weakClientChannel == nil, within: .seconds(1), "weakClientChannel not nil, looks like we leaked it!")
         assert(weakServerChannel == nil, within: .seconds(1), "weakServerChannel not nil, looks like we leaked it!")
-        assert(weakServerChildChannel == nil, within: .seconds(1), "weakServerChildChannel not nil, looks like we leaked it!")
+        assert(
+            weakServerChildChannel == nil,
+            within: .seconds(1),
+            "weakServerChildChannel not nil, looks like we leaked it!"
+        )
     }
 
     func testAskForLocalAndRemoteAddressesAfterChannelIsClosed() throws {
@@ -1486,12 +1729,16 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
 
         // Start shutting stuff down.
         XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
@@ -1501,11 +1748,16 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try clientChannel.closeFuture.wait())
 
         // Schedule on the EventLoop to ensure we scheduled the cleanup of the cached addresses before.
-        XCTAssertNoThrow(try group.next().submit {
-            for f in [ serverChannel.remoteAddress, serverChannel.localAddress, clientChannel.remoteAddress, clientChannel.localAddress ] {
-                XCTAssertNil(f)
-            }
-        }.wait())
+        XCTAssertNoThrow(
+            try group.next().submit {
+                for f in [
+                    serverChannel.remoteAddress, serverChannel.localAddress, clientChannel.remoteAddress,
+                    clientChannel.localAddress,
+                ] {
+                    XCTAssertNil(f)
+                }
+            }.wait()
+        )
 
     }
 
@@ -1515,7 +1767,7 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        class AddressVerificationHandler : ChannelInboundHandler {
+        class AddressVerificationHandler: ChannelInboundHandler {
             typealias InboundIn = Never
 
             public func channelActive(context: ChannelHandlerContext) {
@@ -1525,15 +1777,19 @@ public final class ChannelTests: XCTestCase {
             }
         }
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { ch in
-                ch.pipeline.addHandler(AddressVerificationHandler())
-            }
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer { ch in
+                    ch.pipeline.addHandler(AddressVerificationHandler())
+                }
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
 
         XCTAssertNoThrow(try clientChannel.closeFuture.wait())
         XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
@@ -1557,7 +1813,7 @@ public final class ChannelTests: XCTestCase {
             }
 
             public func expectRead(loop: EventLoop) -> EventLoopFuture<Void> {
-                return loop.submit {
+                loop.submit {
                     self.waitingForReadPromise = loop.makePromise()
                 }.flatMap {
                     self.waitingForReadPromise!.futureResult
@@ -1589,15 +1845,19 @@ public final class ChannelTests: XCTestCase {
         }
         let readDelayer = ReadDelayer()
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer {
-                $0.pipeline.addHandler(readDelayer)
-            }
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelInitializer {
+                    $0.pipeline.addHandler(readDelayer)
+                }
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
 
         // We send a first write and expect it to arrive.
         var buffer = clientChannel.allocator.buffer(capacity: 12)
@@ -1614,10 +1874,12 @@ public final class ChannelTests: XCTestCase {
         }.futureResult.wait()
 
         // Ok, now let it proceed.
-        XCTAssertNoThrow(try serverChannel.eventLoop.submit {
-            XCTAssertEqual(readDelayer.reads, 2)
-            readDelayer.issueDelayedRead()
-        }.wait())
+        XCTAssertNoThrow(
+            try serverChannel.eventLoop.submit {
+                XCTAssertEqual(readDelayer.reads, 2)
+                readDelayer.issueDelayedRead()
+            }.wait()
+        )
 
         // The read should go through.
         XCTAssertNoThrow(try readFuture.wait())
@@ -1638,29 +1900,33 @@ public final class ChannelTests: XCTestCase {
                 if !self.expectingData {
                     XCTFail("Received data before we expected it.")
                 } else {
-                    let data = self.unwrapInboundIn(data)
+                    let data = Self.unwrapInboundIn(data)
                     XCTAssertEqual(data.getString(at: data.readerIndex, length: data.readableBytes), "test")
                 }
             }
         }
 
         let handler = VerifyNoReadBeforeEOFHandler()
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelOption(ChannelOptions.autoRead, value: false)
-            .childChannelInitializer { ch in
-                ch.pipeline.addHandler(handler)
-            }
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelOption(ChannelOptions.autoRead, value: false)
+                .childChannelInitializer { ch in
+                    ch.pipeline.addHandler(handler)
+                }
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
         var buffer = clientChannel.allocator.buffer(capacity: 8)
         buffer.writeString("test")
         try clientChannel.writeAndFlush(buffer).wait()
 
         // Wait for 100 ms. No data should be delivered.
-        usleep(100 * 1000);
+        usleep(100 * 1000)
 
         // Now we send close. This should deliver data.
         try clientChannel.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
@@ -1691,28 +1957,34 @@ public final class ChannelTests: XCTestCase {
 
             public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if self.seenEOF {
-                    XCTFail("Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))")
+                    XCTFail(
+                        "Should not be called before seeing the EOF as autoRead is false and we did not call read(), but received \(self.unwrapInboundIn(data))"
+                    )
                 }
                 self.numberOfChannelReads += 1
-                let buffer = self.unwrapInboundIn(data)
+                let buffer = Self.unwrapInboundIn(data)
                 XCTAssertLessThanOrEqual(buffer.readableBytes, 8)
                 XCTAssertEqual(1, self.numberOfChannelReads)
                 context.close(mode: .all, promise: nil)
             }
         }
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelOption(ChannelOptions.autoRead, value: false)
-            .childChannelInitializer { ch in
-                ch.pipeline.addHandler(VerifyEOFReadOrderingAndCloseInChannelReadHandler())
-            }
-            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-            .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelOption(ChannelOptions.autoRead, value: false)
+                .childChannelInitializer { ch in
+                    ch.pipeline.addHandler(VerifyEOFReadOrderingAndCloseInChannelReadHandler())
+                }
+                .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+                .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
         var buffer = clientChannel.allocator.buffer(capacity: 8)
         buffer.writeString("01234567")
         for _ in 0..<20 {
@@ -1759,26 +2031,30 @@ public final class ChannelTests: XCTestCase {
         }
 
         let allDone = group.next().makePromise(of: Void.self)
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelOption(ChannelOptions.autoRead, value: false)
-            .childChannelInitializer { ch in
-                ch.pipeline.addHandler(CloseWhenWeGetEOFHandler(allDone: allDone))
-            }
-            // maxMessagesPerRead is large so that we definitely spin and seen the EOF
-            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 10)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-            // that fits the message we prepared
-            .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelOption(ChannelOptions.autoRead, value: false)
+                .childChannelInitializer { ch in
+                    ch.pipeline.addHandler(CloseWhenWeGetEOFHandler(allDone: allDone))
+                }
+                // maxMessagesPerRead is large so that we definitely spin and seen the EOF
+                .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 10)
+                .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+                // that fits the message we prepared
+                .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 8))
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
         var buf = clientChannel.allocator.buffer(capacity: 16)
         buf.writeStaticString("012345678")
         XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
         XCTAssertNoThrow(try clientChannel.writeAndFlush(buf).wait())
-        XCTAssertNoThrow(try clientChannel.close().wait()) // autoRead=off so this EOF will trigger the channelRead
+        XCTAssertNoThrow(try clientChannel.close().wait())  // autoRead=off so this EOF will trigger the channelRead
         XCTAssertNoThrow(try allDone.futureResult.wait())
 
         XCTAssertNoThrow(try serverChannel.close().wait())
@@ -1817,16 +2093,20 @@ public final class ChannelTests: XCTestCase {
         }
 
         let promise = group.next().makePromise(of: Void.self)
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelOption(ChannelOptions.autoRead, value: false)
-            .childChannelInitializer { ch in
-                ch.pipeline.addHandler(ChannelInactiveVerificationHandler(promise))
-            }
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .childChannelOption(ChannelOptions.autoRead, value: false)
+                .childChannelInitializer { ch in
+                    ch.pipeline.addHandler(ChannelInactiveVerificationHandler(promise))
+                }
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!).wait())
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!).wait()
+        )
         var buffer = clientChannel.allocator.buffer(capacity: 8)
         buffer.writeString("test")
         try clientChannel.writeAndFlush(buffer).wait()
@@ -1854,13 +2134,13 @@ public final class ChannelTests: XCTestCase {
 
             func remove(_ channel: Channel) {
                 let removed: Channel? = self.q.sync {
-                    return self.channels.removeValue(forKey: ObjectIdentifier(channel))
+                    self.channels.removeValue(forKey: ObjectIdentifier(channel))
                 }
                 XCTAssertTrue(removed != nil)
             }
 
             func closeAll() -> [EventLoopFuture<Void>] {
-                return q.sync { self.channels.values }.map { channel in
+                q.sync { self.channels.values }.map { channel in
                     channel.close()
                 }
             }
@@ -1904,8 +2184,8 @@ public final class ChannelTests: XCTestCase {
             let collector = ChannelCollector()
             let serverBoot = ServerBootstrap(group: group)
                 .childChannelInitializer { channel in
-                    return channel.pipeline.addHandler(CheckActiveHandler(channelCollector: collector))
-            }
+                    channel.pipeline.addHandler(CheckActiveHandler(channelCollector: collector))
+                }
             let listeningChannel = try serverBoot.bind(host: "127.0.0.1", port: 0).wait()
             let clientBoot = ClientBootstrap(group: group)
             XCTAssertNoThrow(try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait())
@@ -1913,9 +2193,9 @@ public final class ChannelTests: XCTestCase {
             // a stray client
             XCTAssertNoThrow(try clientBoot.connect(to: listeningChannel.localAddress!).wait().close().wait())
             XCTAssertNoThrow(try listeningChannel.close().wait())
-            closeFutures.forEach {
+            for future in closeFutures {
                 do {
-                    try $0.wait()
+                    try future.wait()
                     // No error is okay,
                 } catch ChannelError.alreadyClosed {
                     // as well as already closed.
@@ -1955,7 +2235,11 @@ public final class ChannelTests: XCTestCase {
                 case read
             }
             private var state: State = .start
-            init(hasRegisteredPromise: EventLoopPromise<Void>, hasUnregisteredPromise: EventLoopPromise<Void>, hasReadPromise: EventLoopPromise<Void>) {
+            init(
+                hasRegisteredPromise: EventLoopPromise<Void>,
+                hasUnregisteredPromise: EventLoopPromise<Void>,
+                hasReadPromise: EventLoopPromise<Void>
+            ) {
                 self.hasRegisteredPromise = hasRegisteredPromise
                 self.hasUnregisteredPromise = hasUnregisteredPromise
                 self.hasReadPromise = hasReadPromise
@@ -1986,7 +2270,10 @@ public final class ChannelTests: XCTestCase {
         let serverEL = group.next()
         let clientEL = group.next()
         precondition(serverEL !== clientEL)
-        let sc = try SocketChannel(socket: SocketThatSucceedsOnSecondConnectForPort123(protocolFamily: .inet), eventLoop: clientEL as! SelectableEventLoop)
+        let sc = try SocketChannel(
+            socket: SocketThatSucceedsOnSecondConnectForPort123(protocolFamily: .inet),
+            eventLoop: clientEL as! SelectableEventLoop
+        )
 
         class WriteImmediatelyHandler: ChannelInboundHandler {
             typealias InboundIn = Any
@@ -2010,11 +2297,13 @@ public final class ChannelTests: XCTestCase {
         let clientHasUnregistered = serverEL.next().makePromise(of: Void.self)
         let clientHasRead = serverEL.next().makePromise(of: Void.self)
 
-        let bootstrap = try assertNoThrowWithValue(ServerBootstrap(group: serverEL)
-            .childChannelInitializer { channel in
-                channel.pipeline.addHandler(WriteImmediatelyHandler(writeDonePromise: serverWriteHappenedPromise))
-            }
-            .bind(host: "127.0.0.1", port: 0).wait())
+        let bootstrap = try assertNoThrowWithValue(
+            ServerBootstrap(group: serverEL)
+                .childChannelInitializer { channel in
+                    channel.pipeline.addHandler(WriteImmediatelyHandler(writeDonePromise: serverWriteHappenedPromise))
+                }
+                .bind(host: "127.0.0.1", port: 0).wait()
+        )
 
         // This is a bit ugly, we're trying to fabricate a situation that can happen in the real world which is that
         // a socket is readable straight after becoming registered & connected.
@@ -2023,16 +2312,20 @@ public final class ChannelTests: XCTestCase {
         // again which our special `Socket` subclass will let succeed.
         _ = try sc.socket.connect(to: bootstrap.localAddress!)
         try serverWriteHappenedPromise.futureResult.wait()
-        try sc.pipeline.addHandler(ReadDoesNotHappen(hasRegisteredPromise: clientHasRegistered,
-                                                       hasUnregisteredPromise: clientHasUnregistered,
-                                                       hasReadPromise: clientHasRead)).flatMap {
-                // this will succeed and should not cause the socket to be read even though there'll be something
-                // available to be read immediately
-                sc.register()
-            }.flatMap {
-                // this would normally fail but our special Socket subclass will let it succeed.
-                sc.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 123))
-            }.wait()
+        try sc.pipeline.addHandler(
+            ReadDoesNotHappen(
+                hasRegisteredPromise: clientHasRegistered,
+                hasUnregisteredPromise: clientHasUnregistered,
+                hasReadPromise: clientHasRead
+            )
+        ).flatMap {
+            // this will succeed and should not cause the socket to be read even though there'll be something
+            // available to be read immediately
+            sc.register()
+        }.flatMap {
+            // this would normally fail but our special Socket subclass will let it succeed.
+            sc.connect(to: try! SocketAddress(ipAddress: "127.0.0.1", port: 123))
+        }.wait()
         try clientHasRegistered.futureResult.wait()
         try clientHasRead.futureResult.wait()
         try sc.syncCloseAcceptingAlreadyClosed()
@@ -2040,7 +2333,11 @@ public final class ChannelTests: XCTestCase {
     }
 
     func testAppropriateAndInappropriateOperationsForUnregisteredSockets() throws {
-        func checkThatItThrowsInappropriateOperationForState(file: StaticString = #filePath, line: UInt = #line, _ body: () throws -> Void) {
+        func checkThatItThrowsInappropriateOperationForState(
+            file: StaticString = #filePath,
+            line: UInt = #line,
+            _ body: () throws -> Void
+        ) {
             XCTAssertThrowsError(try body(), file: (file), line: line) { error in
                 XCTAssertEqual(.inappropriateOperationForState, error as? ChannelError)
             }
@@ -2050,17 +2347,34 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try elg.syncShutdownGracefully())
         }
 
-        func withChannel(skipDatagram: Bool = false, skipStream: Bool = false, skipServerSocket: Bool = false, file: StaticString = #filePath, line: UInt = #line,  _ body: (Channel) throws -> Void) {
-            XCTAssertNoThrow(try {
-                let el = elg.next() as! SelectableEventLoop
-                let channels: [Channel] = (skipDatagram ? [] : [try DatagramChannel(eventLoop: el, protocolFamily: .inet, protocolSubtype: .default)]) +
-                    /* Xcode need help */ (skipStream ? []: [try SocketChannel(eventLoop: el, protocolFamily: .inet)]) +
-                    /* Xcode need help */ (skipServerSocket ? []: [try ServerSocketChannel(eventLoop: el, group: elg, protocolFamily: .inet)])
-                for channel in channels {
-                    try body(channel)
-                    XCTAssertNoThrow(try channel.close().wait(), file: (file), line: line)
-                }
-            }(), file: (file), line: line)
+        func withChannel(
+            skipDatagram: Bool = false,
+            skipStream: Bool = false,
+            skipServerSocket: Bool = false,
+            file: StaticString = #filePath,
+            line: UInt = #line,
+            _ body: (Channel) throws -> Void
+        ) {
+            XCTAssertNoThrow(
+                try {
+                    let el = elg.next() as! SelectableEventLoop
+                    let channels: [Channel] =
+                        (skipDatagram
+                            ? []
+                            : [try DatagramChannel(eventLoop: el, protocolFamily: .inet, protocolSubtype: .default)])
+                        // Xcode need help
+                        + (skipStream ? [] : [try SocketChannel(eventLoop: el, protocolFamily: .inet)])
+                        // Xcode need help
+                        + (skipServerSocket
+                            ? [] : [try ServerSocketChannel(eventLoop: el, group: elg, protocolFamily: .inet)])
+                    for channel in channels {
+                        try body(channel)
+                        XCTAssertNoThrow(try channel.close().wait(), file: (file), line: line)
+                    }
+                }(),
+                file: (file),
+                line: line
+            )
         }
         withChannel { channel in
             checkThatItThrowsInappropriateOperationForState {
@@ -2141,7 +2455,7 @@ public final class ChannelTests: XCTestCase {
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 XCTAssertEqual(.active, self.state)
                 self.state = .read
-                var buffer = self.unwrapInboundIn(data)
+                var buffer = Self.unwrapInboundIn(data)
                 XCTAssertEqual(1, buffer.readableBytes)
                 XCTAssertEqual([0xff], buffer.readBytes(length: 1)!)
             }
@@ -2170,35 +2484,42 @@ public final class ChannelTests: XCTestCase {
         let serverEL = group.next()
         let clientEL = group.next()
         precondition(serverEL !== clientEL)
-        let sc = try SocketChannel(socket: SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET(protocolFamily: .inet), eventLoop: clientEL as! SelectableEventLoop)
+        let sc = try SocketChannel(
+            socket: SocketThatHasTheFirstReadSucceedButFailsTheNextWithECONNRESET(protocolFamily: .inet),
+            eventLoop: clientEL as! SelectableEventLoop
+        )
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: serverEL)
-            .childChannelInitializer { channel in
-                var buffer = channel.allocator.buffer(capacity: 4)
-                buffer.writeString("foo")
-                channel.writeAndFlush(NIOAny(buffer), promise: nil)
-                return channel.eventLoop.makeSucceededVoidFuture()
-            }
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: serverEL)
+                .childChannelInitializer { channel in
+                    var buffer = channel.allocator.buffer(capacity: 4)
+                    buffer.writeString("foo")
+                    channel.writeAndFlush(NIOAny(buffer), promise: nil)
+                    return channel.eventLoop.makeSucceededVoidFuture()
+                }
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
         let allDone = clientEL.makePromise(of: Void.self)
 
-        XCTAssertNoThrow(try sc.eventLoop.flatSubmit {
-            // this is pretty delicate at the moment:
-            // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
-            // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `flatMap` on the eventloop that the
-            // `register` will succeed.
+        XCTAssertNoThrow(
+            try sc.eventLoop.flatSubmit {
+                // this is pretty delicate at the moment:
+                // `bind` must be _synchronously_ follow `register`, otherwise in our current implementation, `epoll` will
+                // send us `EPOLLHUP`. To have it run synchronously, we need to invoke the `flatMap` on the eventloop that the
+                // `register` will succeed.
 
-            sc.register().flatMap {
-                sc.pipeline.addHandler(VerifyThingsAreRightHandler(allDone: allDone))
-            }.flatMap {
-                sc.connect(to: serverChannel.localAddress!)
-            }
-        }.wait() as Void)
+                sc.register().flatMap {
+                    sc.pipeline.addHandler(VerifyThingsAreRightHandler(allDone: allDone))
+                }.flatMap {
+                    sc.connect(to: serverChannel.localAddress!)
+                }
+            }.wait() as Void
+        )
         XCTAssertNoThrow(try allDone.futureResult.wait())
         XCTAssertNoThrow(try sc.syncCloseAcceptingAlreadyClosed())
     }
@@ -2227,9 +2548,11 @@ public final class ChannelTests: XCTestCase {
         }
         let sc = try SocketChannel(socket: SocketFailingAsyncConnect(), eventLoop: group.next() as! SelectableEventLoop)
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group.next())
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group.next())
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
@@ -2268,9 +2591,11 @@ public final class ChannelTests: XCTestCase {
         }
         let sc = try SocketChannel(socket: SocketFailingConnect(), eventLoop: group.next() as! SelectableEventLoop)
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group.next())
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group.next())
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
@@ -2336,31 +2661,37 @@ public final class ChannelTests: XCTestCase {
         }
         let sc = try SocketChannel(socket: SocketFailingClose(), eventLoop: group.next() as! SelectableEventLoop)
 
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group.next())
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group.next())
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
         defer {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        XCTAssertNoThrow(try sc.eventLoop.flatSubmit {
-            sc.register().flatMap {
-                sc.connect(to: serverChannel.localAddress!)
-            }
-        }.wait() as Void)
+        XCTAssertNoThrow(
+            try sc.eventLoop.flatSubmit {
+                sc.register().flatMap {
+                    sc.connect(to: serverChannel.localAddress!)
+                }
+            }.wait() as Void
+        )
 
-        XCTAssertThrowsError(try sc.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
-            let p = sc.eventLoop.makePromise(of: Void.self)
-            // this callback must be attached before we call the close
-            let f = p.futureResult.map {
-                XCTFail("shouldn't be reached")
-            }.flatMapError { err in
-                XCTAssertNotNil(err as? DummyError)
-                return sc.close()
-            }
-            sc.close(promise: p)
-            return f
-        }.wait()) { error in
+        XCTAssertThrowsError(
+            try sc.eventLoop.flatSubmit { () -> EventLoopFuture<Void> in
+                let p = sc.eventLoop.makePromise(of: Void.self)
+                // this callback must be attached before we call the close
+                let f = p.futureResult.map {
+                    XCTFail("shouldn't be reached")
+                }.flatMapError { err in
+                    XCTAssertNotNil(err as? DummyError)
+                    return sc.close()
+                }
+                sc.close(promise: p)
+                return f
+            }.wait()
+        ) { error in
             XCTAssertEqual(.alreadyClosed, error as? ChannelError)
         }
     }
@@ -2370,16 +2701,22 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let server = try assertNoThrowWithValue(ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
-                                                                    group: group,
-                                                                    protocolFamily: .inet))
+        let server = try assertNoThrowWithValue(
+            ServerSocketChannel(
+                eventLoop: group.next() as! SelectableEventLoop,
+                group: group,
+                protocolFamily: .inet
+            )
+        )
         defer {
             XCTAssertNoThrow(try server.close().wait())
         }
         XCTAssertNoThrow(try server.register().wait())
-        XCTAssertNoThrow(try server.eventLoop.submit {
-            XCTAssertFalse(server.isActive)
-        }.wait())
+        XCTAssertNoThrow(
+            try server.eventLoop.submit {
+                XCTAssertFalse(server.isActive)
+            }.wait()
+        )
         XCTAssertEqual(0, server.localAddress!.port!)
         XCTAssertNoThrow(try server.bind(to: SocketAddress(ipAddress: "0.0.0.0", port: 0)).wait())
         XCTAssertNotEqual(0, server.localAddress!.port!)
@@ -2390,20 +2727,26 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "localhost", port: 0)
-            .wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "localhost", port: 0)
+                .wait()
+        )
 
-        let client = try SocketChannel(eventLoop: group.next() as! SelectableEventLoop,
-                                       protocolFamily: serverChannel.localAddress!.protocol)
+        let client = try SocketChannel(
+            eventLoop: group.next() as! SelectableEventLoop,
+            protocolFamily: serverChannel.localAddress!.protocol
+        )
         defer {
             XCTAssertNoThrow(try client.close().wait())
         }
         XCTAssertNoThrow(try client.register().wait())
-        XCTAssertNoThrow(try client.eventLoop.submit {
-            XCTAssertFalse(client.isActive)
-        }.wait())
+        XCTAssertNoThrow(
+            try client.eventLoop.submit {
+                XCTAssertFalse(client.isActive)
+            }.wait()
+        )
         XCTAssertNoThrow(try client.connect(to: serverChannel.localAddress!).wait())
         XCTAssertTrue(client.isActive)
         XCTAssertEqual(serverChannel.localAddress!, client.remoteAddress!)
@@ -2414,18 +2757,22 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .bind(host: "localhost", port: 0)
-            .wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .bind(host: "localhost", port: 0)
+                .wait()
+        )
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
-        XCTAssertThrowsError(try ClientBootstrap(group: group)
-            .channelInitializer { channel in
-                channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
-            }
-            .connect(to: serverChannel.localAddress!)
-            .wait()) { error in
+        XCTAssertThrowsError(
+            try ClientBootstrap(group: group)
+                .channelInitializer { channel in
+                    channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
+                }
+                .connect(to: serverChannel.localAddress!)
+                .wait()
+        ) { error in
             XCTAssertEqual(.error, error as? FailRegistrationAndDelayCloseHandler.RegistrationFailedError)
         }
     }
@@ -2435,17 +2782,23 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let serverChannel = try assertNoThrowWithValue(ServerBootstrap(group: group)
-            .childChannelInitializer { channel in
-                channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
-            }
-            .bind(host: "localhost", port: 0).wait())
+        let serverChannel = try assertNoThrowWithValue(
+            ServerBootstrap(group: group)
+                .childChannelInitializer { channel in
+                    channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
+                }
+                .bind(host: "localhost", port: 0).wait()
+        )
         defer {
             XCTAssertNoThrow(try serverChannel.close().wait())
         }
-        let clientChannel = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .connect(to: serverChannel.localAddress!)
-            .wait(), message: "resolver debug info: \(try! resolverDebugInformation(eventLoop: group.next(),host: "localhost", previouslyReceivedResult: serverChannel.localAddress!))")
+        let clientChannel = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .connect(to: serverChannel.localAddress!)
+                .wait(),
+            message:
+                "resolver debug info: \(try! resolverDebugInformation(eventLoop: group.next(),host: "localhost", previouslyReceivedResult: serverChannel.localAddress!))"
+        )
         XCTAssertNoThrow(try clientChannel.closeFuture.wait() as Void)
     }
 
@@ -2454,13 +2807,15 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        XCTAssertThrowsError(try ServerBootstrap(group: group)
+        XCTAssertThrowsError(
+            try ServerBootstrap(group: group)
                 .serverChannelInitializer { channel in
                     channel.pipeline.addHandler(FailRegistrationAndDelayCloseHandler())
                 }
                 .bind(host: "localhost", port: 0)
-                .wait()) { error in
-                    XCTAssertEqual(.error, error as? FailRegistrationAndDelayCloseHandler.RegistrationFailedError)
+                .wait()
+        ) { error in
+            XCTAssertEqual(.error, error as? FailRegistrationAndDelayCloseHandler.RegistrationFailedError)
         }
     }
 
@@ -2483,7 +2838,9 @@ public final class ChannelTests: XCTestCase {
             let serverChannel2 = try ServerBootstrap(group: group)
                 .bind(to: serverChannel1.localAddress!)
                 .wait()
-            XCTFail("shouldn't have succeeded, got two server channels on the same port: \(serverChannel1) and \(serverChannel2)")
+            XCTFail(
+                "shouldn't have succeeded, got two server channels on the same port: \(serverChannel1) and \(serverChannel2)"
+            )
         } catch let e as IOError where e.errnoCode == EADDRINUSE {
             // OK
         } catch {
@@ -2503,14 +2860,16 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let buffer = self.unwrapInboundIn(data)
+                let buffer = Self.unwrapInboundIn(data)
                 XCTFail("unexpected read: \(String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))")
             }
 
             func channelActive(context: ChannelHandlerContext) {
                 var buffer = context.channel.allocator.buffer(capacity: 1)
                 buffer.writeStaticString("X")
-                context.channel.writeAndFlush(self.wrapOutboundOut(buffer)).map { context.channel }.cascade(to: self.channelAvailablePromise)
+                context.channel.writeAndFlush(Self.wrapOutboundOut(buffer)).map { context.channel }.cascade(
+                    to: self.channelAvailablePromise
+                )
             }
         }
 
@@ -2535,8 +2894,10 @@ public final class ChannelTests: XCTestCase {
             let serverChannel: EventLoopFuture<Channel>
             let allDonePromise: EventLoopPromise<Void>
 
-            init(serverChannel: EventLoopFuture<Channel>,
-                 allDonePromise: EventLoopPromise<Void>) {
+            init(
+                serverChannel: EventLoopFuture<Channel>,
+                allDonePromise: EventLoopPromise<Void>
+            ) {
                 self.serverChannel = serverChannel
                 self.allDonePromise = allDonePromise
             }
@@ -2577,16 +2938,21 @@ public final class ChannelTests: XCTestCase {
                             // this test only tests the correct condition if the bytes sent from the other side have already
                             // arrived at the time the write fails. So this is a hack that makes sure they do have arrived.
                             // (https://github.com/apple/swift-nio/issues/657)
-                            XCTAssertNoThrow(try self.veryNasty_blockUntilReadBufferIsNonEmpty(channel: context.channel))
+                            XCTAssertNoThrow(
+                                try self.veryNasty_blockUntilReadBufferIsNonEmpty(channel: context.channel)
+                            )
                         }
                         workaroundSR487()
 
-                        return context.writeAndFlush(self.wrapOutboundOut(buffer))
+                        return context.writeAndFlush(Self.wrapOutboundOut(buffer))
                     }.map {
                         XCTFail("this should have failed")
                     }.whenFailure { error in
-                        XCTAssertEqual(ChannelError.ioOnClosedChannel, error as? ChannelError,
-                                       "unexpected error: \(error)")
+                        XCTAssertEqual(
+                            ChannelError.ioOnClosedChannel,
+                            error as? ChannelError,
+                            "unexpected error: \(error)"
+                        )
                         XCTAssertTrue(inSameStackFrame)
                         self.allDonePromise.succeed(())
                     }
@@ -2594,7 +2960,7 @@ public final class ChannelTests: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let buffer = self.unwrapInboundIn(data)
+                let buffer = Self.unwrapInboundIn(data)
                 XCTAssertEqual("X", String(decoding: buffer.readableBytesView, as: Unicode.UTF8.self))
                 context.close(promise: nil)
             }
@@ -2606,24 +2972,38 @@ public final class ChannelTests: XCTestCase {
         }
         let serverChannelAvailablePromise = singleThreadedELG.next().makePromise(of: Channel.self)
         let allDonePromise = singleThreadedELG.next().makePromise(of: Void.self)
-        let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
-            .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
-            .childChannelInitializer { channel in
-                channel.pipeline.addHandler(WriteWhenActiveHandler(channelAvailablePromise: serverChannelAvailablePromise))
-            }
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let server = try assertNoThrowWithValue(
+            ServerBootstrap(group: singleThreadedELG)
+                .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+                .childChannelInitializer { channel in
+                    channel.pipeline.addHandler(
+                        WriteWhenActiveHandler(channelAvailablePromise: serverChannelAvailablePromise)
+                    )
+                }
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
         defer {
             XCTAssertNoThrow(try server.close().wait())
         }
 
-        let c = try assertNoThrowWithValue(SocketChannel(socket: WriteAlwaysFailingSocket(),
-                                                         parent: nil,
-                                                         eventLoop: singleThreadedELG.next() as! SelectableEventLoop))
+        let c = try assertNoThrowWithValue(
+            SocketChannel(
+                socket: WriteAlwaysFailingSocket(),
+                parent: nil,
+                eventLoop: singleThreadedELG.next() as! SelectableEventLoop
+            )
+        )
         XCTAssertNoThrow(try c.setOption(ChannelOptions.autoRead, value: false).wait())
         XCTAssertNoThrow(try c.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
-        XCTAssertNoThrow(try c.pipeline.addHandler(MakeChannelInactiveInReadCausedByWriteErrorHandler(serverChannel: serverChannelAvailablePromise.futureResult,
-                                                                                                        allDonePromise: allDonePromise)).wait())
+        XCTAssertNoThrow(
+            try c.pipeline.addHandler(
+                MakeChannelInactiveInReadCausedByWriteErrorHandler(
+                    serverChannel: serverChannelAvailablePromise.futureResult,
+                    allDonePromise: allDonePromise
+                )
+            ).wait()
+        )
         XCTAssertNoThrow(try c.register().wait())
         XCTAssertNoThrow(try c.connect(to: server.localAddress!).wait())
 
@@ -2637,47 +3017,57 @@ public final class ChannelTests: XCTestCase {
             XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully())
         }
         var numberOfAcceptedChannel = 0
-        let acceptedChannels: [EventLoopPromise<Channel>] = [singleThreadedELG.next().makePromise(),
-                                                             singleThreadedELG.next().makePromise(),
-                                                             singleThreadedELG.next().makePromise()]
-        let server = try assertNoThrowWithValue(ServerBootstrap(group: singleThreadedELG)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .serverChannelOption(ChannelOptions.socketOption(.so_timestamp), value: 1)
-            .childChannelOption(ChannelOptions.socketOption(.so_keepalive), value: 1)
-            .childChannelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: 0)
-            .childChannelInitializer { channel in
-                acceptedChannels[numberOfAcceptedChannel].succeed(channel)
-                numberOfAcceptedChannel += 1
-                return channel.eventLoop.makeSucceededFuture(())
-            }
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        let acceptedChannels: [EventLoopPromise<Channel>] = [
+            singleThreadedELG.next().makePromise(),
+            singleThreadedELG.next().makePromise(),
+            singleThreadedELG.next().makePromise(),
+        ]
+        let server = try assertNoThrowWithValue(
+            ServerBootstrap(group: singleThreadedELG)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .serverChannelOption(ChannelOptions.socketOption(.so_timestamp), value: 1)
+                .childChannelOption(ChannelOptions.socketOption(.so_keepalive), value: 1)
+                .childChannelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: 0)
+                .childChannelInitializer { channel in
+                    acceptedChannels[numberOfAcceptedChannel].succeed(channel)
+                    numberOfAcceptedChannel += 1
+                    return channel.eventLoop.makeSucceededFuture(())
+                }
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
         defer {
             XCTAssertNoThrow(try server.close().wait())
         }
         XCTAssertTrue(try getBoolSocketOption(channel: server, level: .socket, name: .so_reuseaddr))
         XCTAssertTrue(try getBoolSocketOption(channel: server, level: .socket, name: .so_timestamp))
 
-        let client1 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .channelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: 0)
-            .connect(to: server.localAddress!)
-            .wait())
+        let client1 = try assertNoThrowWithValue(
+            ClientBootstrap(group: singleThreadedELG)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(ChannelOptions.tcpOption(.tcp_nodelay), value: 0)
+                .connect(to: server.localAddress!)
+                .wait()
+        )
         let accepted1 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())
         defer {
             XCTAssertNoThrow(try client1.close().wait())
         }
-        let client2 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .connect(to: server.localAddress!)
-            .wait())
+        let client2 = try assertNoThrowWithValue(
+            ClientBootstrap(group: singleThreadedELG)
+                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .connect(to: server.localAddress!)
+                .wait()
+        )
         let accepted2 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())
         defer {
             XCTAssertNoThrow(try client2.close().wait())
         }
-        let client3 = try assertNoThrowWithValue(ClientBootstrap(group: singleThreadedELG)
-            .connect(to: server.localAddress!)
-            .wait())
+        let client3 = try assertNoThrowWithValue(
+            ClientBootstrap(group: singleThreadedELG)
+                .connect(to: server.localAddress!)
+                .wait()
+        )
         let accepted3 = try assertNoThrowWithValue(acceptedChannels[0].futureResult.wait())
         defer {
             XCTAssertNoThrow(try client3.close().wait())
@@ -2713,8 +3103,11 @@ public final class ChannelTests: XCTestCase {
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        let channel = try ServerSocketChannel(eventLoop: group.next() as! SelectableEventLoop,
-                                              group: group, protocolFamily: .inet)
+        let channel = try ServerSocketChannel(
+            eventLoop: group.next() as! SelectableEventLoop,
+            group: group,
+            protocolFamily: .inet
+        )
         XCTAssertThrowsError(try channel.triggerUserOutboundEvent("event").wait()) { (error: Error) in
             if let error = error as? ChannelError {
                 XCTAssertEqual(ChannelError.operationUnsupported, error)
@@ -2749,19 +3142,23 @@ public final class ChannelTests: XCTestCase {
             }
         }
 
-        let channel = try! assertNoThrowWithValue(ServerBootstrap(group: group).serverChannelInitializer { channel in
-            channel.pipeline.addHandler(MakeFirstCloseFailAndDontActuallyCloseHandler(), position: .first)
-        }.bind(host: "localhost", port: 0).wait())
+        let channel = try! assertNoThrowWithValue(
+            ServerBootstrap(group: group).serverChannelInitializer { channel in
+                channel.pipeline.addHandler(MakeFirstCloseFailAndDontActuallyCloseHandler(), position: .first)
+            }.bind(host: "localhost", port: 0).wait()
+        )
         defer {
             XCTAssertNoThrow(try channel.close().wait())
         }
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(counter).wait())
 
-        XCTAssertNoThrow(try channel.eventLoop.submit {
-            // this will trigger a close (which will fail and also not actually close)
-            channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
-        }.wait())
+        XCTAssertNoThrow(
+            try channel.eventLoop.submit {
+                // this will trigger a close (which will fail and also not actually close)
+                channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
+            }.wait()
+        )
         XCTAssertEqual(["userInboundEventTriggered", "close", "errorCaught"], counter.allTriggeredEvents())
         XCTAssertEqual(1, counter.errorCaughtCalls)
     }
@@ -2779,13 +3176,14 @@ public final class ChannelTests: XCTestCase {
         let acceptedChannel = singleThreadedELG.next().makePromise(of: Channel.self)
         let server = try assertNoThrowWithValue(
             ServerBootstrap(group: singleThreadedELG)
-            .childChannelInitializer { channel in
-                acceptedChannel.succeed(channel)
-                return channel.eventLoop.makeSucceededFuture(())
-            }
-            .bind(to: socketAddress)
-            .wait(),
-            file: file, line: line
+                .childChannelInitializer { channel in
+                    acceptedChannel.succeed(channel)
+                    return channel.eventLoop.makeSucceededFuture(())
+                }
+                .bind(to: socketAddress)
+                .wait(),
+            file: file,
+            line: line
         )
         defer {
             XCTAssertNoThrow(try server.close().wait(), file: file, line: line)
@@ -2793,9 +3191,10 @@ public final class ChannelTests: XCTestCase {
 
         let client = try assertNoThrowWithValue(
             ClientBootstrap(group: singleThreadedELG)
-            .connect(to: server.localAddress!)
-            .wait(),
-            file: file, line: line
+                .connect(to: server.localAddress!)
+                .wait(),
+            file: file,
+            line: line
         )
         let accepted = try assertNoThrowWithValue(acceptedChannel.futureResult.wait(), file: file, line: line)
         defer {
@@ -2805,15 +3204,21 @@ public final class ChannelTests: XCTestCase {
             XCTAssertEqual(
                 try getBoolSocketOption(channel: accepted, level: .tcp, name: .tcp_nodelay),
                 value,
-                file: file, line: line),
-            file: file, line: line
+                file: file,
+                line: line
+            ),
+            file: file,
+            line: line
         )
         XCTAssertNoThrow(
             XCTAssertEqual(
                 try getBoolSocketOption(channel: client, level: .tcp, name: .tcp_nodelay),
                 value,
-                file: file, line: line),
-            file: file, line: line
+                file: file,
+                line: line
+            ),
+            file: file,
+            line: line
         )
     }
 
@@ -2829,20 +3234,22 @@ public final class ChannelTests: XCTestCase {
     func testDescriptionCanBeCalledFromNonEventLoopThreads() {
         // regression test for https://github.com/apple/swift-nio/issues/1141
         let q = DispatchQueue(label: "elsewhere")
-        XCTAssertNoThrow(try forEachActiveChannelType { channel in
-            let g = DispatchGroup()
-            q.async(group: g) {
-                // we spin here for a bit and read
-                for _ in 0..<10_000 {
-                    // this should trigger TSan if there's an issue.
-                    XCTAssert(String(describing: channel).count != 0)
+        XCTAssertNoThrow(
+            try forEachActiveChannelType { channel in
+                let g = DispatchGroup()
+                q.async(group: g) {
+                    // we spin here for a bit and read
+                    for _ in 0..<10_000 {
+                        // this should trigger TSan if there's an issue.
+                        XCTAssert(String(describing: channel).count != 0)
+                    }
                 }
-            }
 
-            // We need to write to BaseSocket's `descriptor` which can only be done by closing the channel.
-            XCTAssertNoThrow(try channel.syncCloseAcceptingAlreadyClosed())
-            g.wait()
-        })
+                // We need to write to BaseSocket's `descriptor` which can only be done by closing the channel.
+                XCTAssertNoThrow(try channel.syncCloseAcceptingAlreadyClosed())
+                g.wait()
+            }
+        )
     }
 
     func testFixedSizeRecvByteBufferAllocatorSizeIsConstant() {
@@ -2863,10 +3270,12 @@ public final class ChannelTests: XCTestCase {
         }
 
         var maybeServer: Channel? = nil
-        XCTAssertNoThrow(maybeServer = try ServerBootstrap(group: group)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(host: "127.0.0.1", port: 0)
-            .wait())
+        XCTAssertNoThrow(
+            maybeServer = try ServerBootstrap(group: group)
+                .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .bind(host: "127.0.0.1", port: 0)
+                .wait()
+        )
         guard let server = maybeServer else {
             XCTFail("couldn't bootstrap server")
             return
@@ -2877,9 +3286,11 @@ public final class ChannelTests: XCTestCase {
 
         for _ in 0..<10 {
             // 10 times so we get a good chance of an asynchronous connect.
-            XCTAssertNoThrow(try ClientBootstrap(group: group).connect(to: server.localAddress!).flatMap { channel in
-                channel.close()
-            }.wait())
+            XCTAssertNoThrow(
+                try ClientBootstrap(group: group).connect(to: server.localAddress!).flatMap { channel in
+                    channel.close()
+                }.wait()
+            )
         }
     }
 
@@ -2890,13 +3301,15 @@ public final class ChannelTests: XCTestCase {
         }
 
         let loop = group.next()
-        let handler = ReentrantWritabilityChangingHandler(becameUnwritable: loop.makePromise(),
-                                                          becameWritable: loop.makePromise())
+        let handler = ReentrantWritabilityChangingHandler(
+            becameUnwritable: loop.makePromise(),
+            becameWritable: loop.makePromise()
+        )
 
         let serverFuture = ServerBootstrap(group: group)
             .childChannelOption(ChannelOptions.writeBufferWaterMark, value: handler.watermark)
             .childChannelInitializer { channel in
-                return channel.pipeline.addHandler(handler)
+                channel.pipeline.addHandler(handler)
             }
             .bind(host: "localhost", port: 0)
 
@@ -2918,7 +3331,7 @@ public final class ChannelTests: XCTestCase {
     }
 }
 
-fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
+private final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
     enum RegistrationFailedError: Error { case error }
 
     typealias OutboundIn = Never
@@ -2928,14 +3341,14 @@ fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHan
     }
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
-        /* for extra nastiness, let's delay close. This makes sure the ChannelPipeline correctly retains the Channel */
+        // for extra nastiness, let's delay close. This makes sure the ChannelPipeline correctly retains the Channel
         _ = context.eventLoop.scheduleTask(in: .milliseconds(10)) {
             context.close(mode: mode, promise: promise)
         }
     }
 }
 
-fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
+private class VerifyConnectionFailureHandler: ChannelInboundHandler {
     typealias InboundIn = Never
     private let allDone: EventLoopPromise<Void>
     enum State {
@@ -2956,7 +3369,9 @@ fileprivate class VerifyConnectionFailureHandler: ChannelInboundHandler {
 
     func channelReadComplete(context: ChannelHandlerContext) { XCTFail("should never readComplete") }
 
-    func errorCaught(context: ChannelHandlerContext, error: Error) { XCTFail("pipeline shouldn't be told about connect error") }
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        XCTFail("pipeline shouldn't be told about connect error")
+    }
 
     func channelRegistered(context: ChannelHandlerContext) {
         XCTAssertEqual(.fresh, self.state)
@@ -2991,12 +3406,12 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
 
     func channelActive(context: ChannelHandlerContext) {
         // We want to enqueue at least two pending writes before flushing. Neither of which
-        // should cause writability to change. However, we'll hang a callback off the first
+        // should cause writability to change. However, we'll chain a callback off the first
         // write which will make the channel unwritable and a writability change to be
         // emitted. The flush for that write should result in the writability flipping back
         // again.
         let b1 = context.channel.allocator.buffer(repeating: 0, count: 50)
-        context.write(self.wrapOutboundOut(b1)).whenSuccess { _ in
+        context.write(Self.wrapOutboundOut(b1)).whenSuccess { _ in
             // We should still be writable.
             XCTAssertTrue(context.channel.isWritable)
             XCTAssertEqual(self.isNotWritableCount, 0)
@@ -3005,7 +3420,7 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
             // Write again. But now breach high water mark. This should cause us to become
             // unwritable.
             let b2 = context.channel.allocator.buffer(repeating: 0, count: 250)
-            context.write(self.wrapOutboundOut(b2), promise: nil)
+            context.write(Self.wrapOutboundOut(b2), promise: nil)
             XCTAssertFalse(context.channel.isWritable)
             XCTAssertEqual(self.isNotWritableCount, 1)
             XCTAssertEqual(self.isWritableCount, 0)
@@ -3015,7 +3430,7 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
         }
 
         // Queue another write and flush.
-        context.writeAndFlush(self.wrapOutboundOut(b1), promise: nil)
+        context.writeAndFlush(Self.wrapOutboundOut(b1), promise: nil)
     }
 
     func channelWritabilityChanged(context: ChannelHandlerContext) {

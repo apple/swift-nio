@@ -13,6 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)
@@ -20,7 +21,7 @@ start_server "$token"
 server_pid=$(get_server_pid "$token")
 echo -n \
     "$server_pid$server_pid$server_pid$server_pid$server_pid$server_pid$server_pid$server_pid$server_pid$server_pid" \
-    > "$tmp/out_expected"
+    > "${tmp:?"tmp variable not set"}/out_expected"
 do_curl "$token" \
     "http://foobar.com/dynamic/pid" \
     "http://foobar.com/dynamic/pid" \

@@ -15,20 +15,20 @@
 import NIOCore
 import NIOPosix
 
-fileprivate let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+private let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
 
 struct LoopBoundTests {
     #if !canImport(Darwin) || os(macOS)
     let testInitChecksEventLoop = CrashTest(
         regex: "NIOCore/NIOLoopBound.swift:[0-9]+: Precondition failed"
     ) {
-        _ = NIOLoopBound(1, eventLoop: group.any()) // BOOM
+        _ = NIOLoopBound(1, eventLoop: group.any())  // BOOM
     }
 
     let testInitOfBoxChecksEventLoop = CrashTest(
         regex: "NIOCore/NIOLoopBound.swift:[0-9]+: Precondition failed"
     ) {
-        _ = NIOLoopBoundBox(1, eventLoop: group.any()) // BOOM
+        _ = NIOLoopBoundBox(1, eventLoop: group.any())  // BOOM
     }
 
     let testGetChecksEventLoop = CrashTest(
@@ -38,7 +38,7 @@ struct LoopBoundTests {
         let sendable = try? loop.submit {
             NIOLoopBound(1, eventLoop: loop)
         }.wait()
-        _ = sendable?.value // BOOM
+        _ = sendable?.value  // BOOM
     }
 
     let testGetOfBoxChecksEventLoop = CrashTest(
@@ -48,7 +48,7 @@ struct LoopBoundTests {
         let sendable = try? loop.submit {
             NIOLoopBoundBox(1, eventLoop: loop)
         }.wait()
-        _ = sendable?.value // BOOM
+        _ = sendable?.value  // BOOM
     }
 
     let testSetChecksEventLoop = CrashTest(

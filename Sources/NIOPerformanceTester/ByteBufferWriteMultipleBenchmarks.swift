@@ -67,7 +67,16 @@ final class ByteBufferMultiReadWriteTenIntegersBenchmark<I: FixedWidthInteger>: 
         for _ in 0..<self.iterations {
             self.buffer.clear()
             self.buffer.writeMultipleIntegers(
-                0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
                 as: (I, I, I, I, I, I, I, I, I, I).self
             )
             let value = self.buffer.readMultipleIntegers(as: (I, I, I, I, I, I, I, I, I, I).self)!

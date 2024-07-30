@@ -22,10 +22,10 @@ public final class MakeFullRequestHandler: ChannelOutboundHandler {
     public typealias OutboundIn = HTTPRequestHead
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let req = self.unwrapOutboundIn(data)
+        let req = Self.unwrapOutboundIn(data)
 
-        context.write(self.wrapOutboundOut(.head(req)), promise: nil)
-        context.write(self.wrapOutboundOut(.end(nil)), promise: promise)
+        context.write(Self.wrapOutboundOut(.head(req)), promise: nil)
+        context.write(Self.wrapOutboundOut(.end(nil)), promise: promise)
     }
 }
 
@@ -63,7 +63,6 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
     private var state: State = .operational
     private var promiseBuffer: CircularBuffer<EventLoopPromise<Response>>
 
-
     /// Create a new `RequestResponseHandler`.
     ///
     /// - parameters:
@@ -83,7 +82,7 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
         case .operational:
             let promiseBuffer = self.promiseBuffer
             self.promiseBuffer.removeAll()
-            promiseBuffer.forEach { promise in
+            for promise in promiseBuffer {
                 promise.fail(ChannelError.eof)
             }
         }
@@ -97,7 +96,7 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
             return
         }
 
-        let response = self.unwrapInboundIn(data)
+        let response = Self.unwrapInboundIn(data)
         let promise = self.promiseBuffer.removeFirst()
 
         promise.succeed(response)
@@ -112,13 +111,13 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
         let promiseBuffer = self.promiseBuffer
         self.promiseBuffer.removeAll()
         context.close(promise: nil)
-        promiseBuffer.forEach {
-            $0.fail(error)
+        for promise in promiseBuffer {
+            promise.fail(error)
         }
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let (request, responsePromise) = self.unwrapOutboundIn(data)
+        let (request, responsePromise) = Self.unwrapOutboundIn(data)
         switch self.state {
         case .error(let error):
             assert(self.promiseBuffer.count == 0)
@@ -126,7 +125,7 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
             promise?.fail(error)
         case .operational:
             self.promiseBuffer.append(responsePromise)
-            context.write(self.wrapOutboundOut(request), promise: promise)
+            context.write(Self.wrapOutboundOut(request), promise: promise)
         }
     }
 }

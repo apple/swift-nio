@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+
 #if !RUNNING_INTEGRATION_TESTS
 @testable import NIOPosix
 #endif
@@ -22,7 +23,7 @@ public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {
         let start = DispatchTime.now().uptimeNanoseconds
         _ = try body()
         let end = DispatchTime.now().uptimeNanoseconds
-        return Double(end - start)/1_000_000
+        return Double(end - start) / 1_000_000
     }
 
     _ = try measureOne(body)
@@ -35,7 +36,7 @@ public func measureRunTime(_ body: () throws -> Int) rethrows -> TimeInterval {
     return measurements.min()!
 }
 
-public func measureRunTimeAndPrint(desc: String, body: () throws -> Int) rethrows -> Void {
+public func measureRunTimeAndPrint(desc: String, body: () throws -> Int) rethrows {
     print("measuring: \(desc)")
     print("\(try measureRunTime(body))s")
 }
@@ -46,7 +47,12 @@ enum TestError: Error {
 }
 
 func runStandalone() {
-    func assertFun(condition: @autoclosure () -> Bool, string: @autoclosure () -> String, file: StaticString, line: UInt) -> Void {
+    func assertFun(
+        condition: @autoclosure () -> Bool,
+        string: @autoclosure () -> String,
+        file: StaticString,
+        line: UInt
+    ) {
         if !condition() {
             fatalError(string(), file: (file), line: line)
         }
@@ -58,8 +64,10 @@ func runStandalone() {
     }
 }
 
-func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () -> Bool, @autoclosure () -> String, StaticString, UInt) -> Void,
-                                         debugModeAllowed: Bool) throws {
+func runSystemCallWrapperPerformanceTest(
+    testAssertFunction: (@autoclosure () -> Bool, @autoclosure () -> String, StaticString, UInt) -> Void,
+    debugModeAllowed: Bool
+) throws {
     let fd = open("/dev/null", O_WRONLY)
     precondition(fd >= 0, "couldn't open /dev/null (\(errno))")
     defer {
@@ -75,7 +83,7 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
     let pointer = UnsafePointer<UInt8>(bitPattern: 0xdeadbee)!
 
     let directCallTime = try measureRunTime { () -> Int in
-        /* imitate what the system call wrappers do to have a fair comparison */
+        // imitate what the system call wrappers do to have a fair comparison
         var preventCompilerOptimisation: Int = 0
         for _ in 0..<iterations {
             while true {
@@ -117,9 +125,14 @@ func runSystemCallWrapperPerformanceTest(testAssertFunction: (@autoclosure () ->
     let allowedOverheadPercent: Int = isDebugMode ? 2000 : 20
     if allowedOverheadPercent > 100 {
         precondition(isDebugMode)
-        print("WARNING: Syscall wrapper test: Over 100% overhead allowed. Running in debug assert configuration which allows \(allowedOverheadPercent)% overhead :(. Consider running in Release mode.")
+        print(
+            "WARNING: Syscall wrapper test: Over 100% overhead allowed. Running in debug assert configuration which allows \(allowedOverheadPercent)% overhead :(. Consider running in Release mode."
+        )
     }
-    testAssertFunction(directCallTime * (1.0 + Double(allowedOverheadPercent)/100) > withSystemCallWrappersTime,
-                       "Posix wrapper adds more than \(allowedOverheadPercent)% overhead (with wrapper: \(withSystemCallWrappersTime), without: \(directCallTime)",
-                       #filePath, #line)
+    testAssertFunction(
+        directCallTime * (1.0 + Double(allowedOverheadPercent) / 100) > withSystemCallWrappersTime,
+        "Posix wrapper adds more than \(allowedOverheadPercent)% overhead (with wrapper: \(withSystemCallWrappersTime), without: \(directCallTime)",
+        #filePath,
+        #line
+    )
 }

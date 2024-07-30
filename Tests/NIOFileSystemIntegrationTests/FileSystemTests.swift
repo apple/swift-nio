@@ -14,9 +14,10 @@
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
-@_spi(Testing) import NIOFileSystem
+@_spi(Testing) import _NIOFileSystem
 @preconcurrency import SystemPackage
 import XCTest
+import NIOConcurrencyHelpers
 
 extension FilePath {
     static let testData = FilePath(#filePath)
@@ -61,7 +62,7 @@ extension FileSystem {
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class FileSystemTests: XCTestCase {
-    var fs: FileSystem { return .shared }
+    var fs: FileSystem { .shared }
 
     func testOpenFileForReading() async throws {
         try await self.fs.withFileHandle(forReadingAt: .testDataReadme) { file in
@@ -256,6 +257,29 @@ final class FileSystemTests: XCTestCase {
             let bytes = try await ByteBuffer(contentsOf: path, maximumSizeAllowed: .megabytes(1))
             XCTAssertEqual(bytes, ByteBuffer(bytes: [0, 1, 2]))
         }
+    }
+
+    func testDetachUnsafeDescriptorForFileOpenedWithMaterialization() async throws {
+        let path = try await self.fs.temporaryFilePath()
+        let descriptor = try await self.fs.withFileHandle(forWritingAt: path) { handle in
+            _ = try await handle.withBufferedWriter { writer in
+                try await writer.write(contentsOf: repeatElement(0, count: 1024))
+            }
+
+            return try handle.detachUnsafeFileDescriptor()
+        }
+
+        try descriptor.writeAll(toAbsoluteOffset: 1024, repeatElement(1, count: 1024))
+
+        var buffer = try await ByteBuffer(
+            contentsOf: path,
+            maximumSizeAllowed: .mebibytes(2),
+            fileSystem: self.fs
+        )
+
+        XCTAssertEqual(buffer.readBytes(length: 1024), Array(repeating: 0, count: 1024))
+        XCTAssertEqual(buffer.readBytes(length: 1024), Array(repeating: 1, count: 1024))
+        XCTAssertEqual(buffer.readableBytes, 0)
     }
 
     func testOpenFileForReadingAndWriting() async throws {
@@ -632,17 +656,51 @@ final class FileSystemTests: XCTestCase {
         XCTAssertEqual(destination, "README.md")
     }
 
-    func testCopyEmptyDirectory() async throws {
+    /// This is is not quite the same as sequential, different code paths are used.
+    /// Tests using this ensure use of the parallel paths (which are more complex) while keeping actual
+    /// parallelism to minimal levels to make debugging simpler.
+    private let minimalParallel: CopyStrategy = try! .parallel(maxDescriptors: 2)
+
+    func testCopyEmptyDirectorySequential() async throws {
+        try await testCopyEmptyDirectory(.sequential)
+    }
+
+    func testCopyEmptyDirectoryParallelMinimal() async throws {
+        try await testCopyEmptyDirectory(minimalParallel)
+    }
+
+    func testCopyEmptyDirectoryParallelDefault() async throws {
+        try await testCopyEmptyDirectory(.platformDefault)
+    }
+
+    private func testCopyEmptyDirectory(
+        _ copyStrategy: CopyStrategy
+    ) async throws {
         let path = try await self.fs.temporaryFilePath()
         try await self.fs.createDirectory(at: path, withIntermediateDirectories: false)
 
         let copy = try await self.fs.temporaryFilePath()
-        try await self.fs.copyItem(at: path, to: copy)
+        try await self.fs.copyItem(at: path, to: copy, strategy: copyStrategy)
 
         try await self.checkDirectoriesMatch(path, copy)
     }
 
-    func testCopyGeneratedTreeStructure() async throws {
+    func testCopyOnGeneratedTreeStructureSequential() async throws {
+        try await testAnyCopyStrategyOnGeneratedTreeStructure(.sequential)
+    }
+
+    func testCopyOnGeneratedTreeStructureParallelMinimal() async throws {
+        try await testAnyCopyStrategyOnGeneratedTreeStructure(minimalParallel)
+    }
+
+    func testCopyOnGeneratedTreeStructureParallelDefault() async throws {
+        try await testAnyCopyStrategyOnGeneratedTreeStructure(.platformDefault)
+    }
+
+    private func testAnyCopyStrategyOnGeneratedTreeStructure(
+        _ copyStrategy: CopyStrategy,
+        line: UInt = #line
+    ) async throws {
         let path = try await self.fs.temporaryFilePath()
         let items = try await self.generateDirectoryStructure(
             root: path,
@@ -652,10 +710,13 @@ final class FileSystemTests: XCTestCase {
 
         let copy = try await self.fs.temporaryFilePath()
         do {
-            try await self.fs.copyItem(at: path, to: copy)
+            try await self.fs.copyItem(at: path, to: copy, strategy: copyStrategy)
         } catch {
             // Leave breadcrumbs to make debugging easier.
-            XCTFail("Failed to copy \(items) from '\(path)' to '\(copy)'")
+            XCTFail(
+                "Using \(copyStrategy) failed to copy \(items) from '\(path)' to '\(copy)'",
+                line: line
+            )
             throw error
         }
 
@@ -663,12 +724,30 @@ final class FileSystemTests: XCTestCase {
             try await self.checkDirectoriesMatch(path, copy)
         } catch {
             // Leave breadcrumbs to make debugging easier.
-            XCTFail("Failed to validate \(items) copied from '\(path)' to '\(copy)'")
+            XCTFail(
+                "Using \(copyStrategy) failed to validate \(items) copied from '\(path)' to '\(copy)'",
+                line: line
+            )
             throw error
         }
     }
 
-    func testCopySelectively() async throws {
+    func testCopySelectivelySequential() async throws {
+        try await testCopySelectively(.sequential)
+    }
+
+    func testCopySelectivelyParallelMinimal() async throws {
+        try await testCopySelectively(minimalParallel)
+    }
+
+    func testCopySelectivelyParallelDefault() async throws {
+        try await testCopySelectively(.platformDefault)
+    }
+
+    private func testCopySelectively(
+        _ copyStrategy: CopyStrategy,
+        line: UInt = #line
+    ) async throws {
         let path = try await self.fs.temporaryFilePath()
 
         // Only generate regular files. They'll be in the format 'file-N-regular'.
@@ -681,11 +760,11 @@ final class FileSystemTests: XCTestCase {
         )
 
         let copyPath = try await self.fs.temporaryFilePath()
-        try await self.fs.copyItem(at: path, to: copyPath) { _, error in
+        try await self.fs.copyItem(at: path, to: copyPath, strategy: copyStrategy) { _, error in
             throw error
-        } shouldCopyFile: { source, destination in
+        } shouldCopyItem: { source, destination in
             // Copy the directory and 'file-1-regular'
-            return (source == path) || (source.lastComponent!.string == "file-0-regular")
+            (source.path == path) || (source.path.lastComponent!.string == "file-0-regular")
         }
 
         let paths = try await self.fs.withDirectoryHandle(atPath: copyPath) { dir in
@@ -696,18 +775,140 @@ final class FileSystemTests: XCTestCase {
         XCTAssertEqual(paths.first?.name, "file-0-regular")
     }
 
-    func testCopyNonExistentFile() async throws {
+    func testCopyCancelledPartWayThroughSequential() async throws {
+        try await testCopyCancelledPartWayThrough(.sequential)
+    }
+
+    func testCopyCancelledPartWayThroughParallelMinimal() async throws {
+        try await testCopyCancelledPartWayThrough(minimalParallel)
+    }
+
+    func testCopyCancelledPartWayThroughParallelDefault() async throws {
+        try await testCopyCancelledPartWayThrough(.platformDefault)
+    }
+
+    private func testCopyCancelledPartWayThrough(
+        _ copyStrategy: CopyStrategy,
+        line: UInt = #line
+    ) async throws {
+        let path = try await self.fs.temporaryFilePath()
+
+        let _ = try await self.generateDirectoryStructure(
+            root: path,
+            // Ensure:
+            // - Parallelism is possible in directory scans.
+            // - There are sub directories underneath the point we trigger cancel
+            maxDepth: 4,
+            maxFilesPerDirectory: 10,
+            directoryProbability: 1.0,
+            symbolicLinkProbability: 0.0
+        )
+
+        let copyPath = try await self.fs.temporaryFilePath()
+
+        let requestedCancel = NIOLockedValueBox<Bool>(false)
+        let cancelRequested = expectation(description: "cancel requested")
+
+        let task = Task {
+            try await self.fs.copyItem(at: path, to: copyPath, strategy: copyStrategy) { _, error in
+                throw error
+            } shouldCopyItem: { source, destination in
+                // Abuse shouldCopy to trigger the cancellation after getting some way in.
+                if source.path != path && source.path.removingLastComponent() != path {
+                    let shouldSleep = requestedCancel.withLockedValue { requested in
+                        if !requested {
+                            requested = true
+                            cancelRequested.fulfill()
+                            return true
+                        }
+
+                        return requested
+                    }
+                    // Give the cancellation time to kick in, this should be more than plenty.
+                    if shouldSleep {
+                        do {
+                            try await Task.sleep(for: .seconds(3))
+                            XCTFail("Should have been cancelled by now!")
+                        } catch is CancellationError {
+                            // This is fine - we got cancelled as desired, let the rest of the in flight
+                            // logic wind down cleanly (we hope/assert)
+                        } catch let error {
+                            XCTFail("just expected a cancellation error not \(error)")
+                        }
+                    }
+                }
+                return true
+            }
+
+            return "completed the copy"
+        }
+
+        // Timeout notes: locally this should be fine as a second but on a loaded
+        // CI instance this test can be flaky at that level.
+        // Since testing cancellation is deemed highly desirable this is retained at
+        // quite relaxed thresholds.
+        // If this threshold remains insufficient for stable use then this test is likely
+        // not tenable to run in CI
+        await fulfillment(of: [cancelRequested], timeout: 5)
+        task.cancel()
+        let result = await task.result
+        switch result {
+        case let .success(msg):
+            XCTFail("expected the cancellation to have happened : \(msg)")
+
+        case let .failure(err):
+            if err is CancellationError {
+                // success
+            } else {
+                XCTFail("expected CancellationError not \(err)")
+            }
+        }
+        // We can't assert anything about the state of the copy,
+        // it might happen to all finish in time depending on scheduling.
+    }
+
+    func testCopyNonExistentFileSequential() async throws {
+        try await testCopyNonExistentFile(.sequential)
+    }
+
+    func testCopyNonExistentFileParallelMinimal() async throws {
+        try await testCopyNonExistentFile(minimalParallel)
+    }
+
+    func testCopyNonExistentFileParallelDefault() async throws {
+        try await testCopyNonExistentFile(.platformDefault)
+    }
+
+    private func testCopyNonExistentFile(
+        _ copyStrategy: CopyStrategy,
+        line: UInt = #line
+    ) async throws {
         let source = try await self.fs.temporaryFilePath()
         let destination = try await self.fs.temporaryFilePath()
 
         await XCTAssertThrowsFileSystemErrorAsync {
-            try await self.fs.copyItem(at: source, to: destination)
+            try await self.fs.copyItem(at: source, to: destination, strategy: copyStrategy)
         } onError: { error in
             XCTAssertEqual(error.code, .notFound)
         }
     }
 
-    func testCopyToExistingDestination() async throws {
+    func testCopyToExistingDestinationSequential() async throws {
+        try await testCopyToExistingDestination(.sequential)
+    }
+
+    func testCopyToExistingDestinationParallelMinimal() async throws {
+        try await testCopyToExistingDestination(minimalParallel)
+    }
+
+    func testCopyToExistingDestinationParallelDefault() async throws {
+        try await testCopyToExistingDestination(.platformDefault)
+    }
+
+    private func testCopyToExistingDestination(
+        _ copyStrategy: CopyStrategy,
+        line: UInt = #line
+    ) async throws {
         let source = try await self.fs.temporaryFilePath()
         let destination = try await self.fs.temporaryFilePath()
 
@@ -720,7 +921,7 @@ final class FileSystemTests: XCTestCase {
         }
 
         await XCTAssertThrowsFileSystemErrorAsync {
-            try await self.fs.copyItem(at: source, to: destination)
+            try await self.fs.copyItem(at: source, to: destination, strategy: copyStrategy)
         } onError: { error in
             XCTAssertEqual(error.code, .fileAlreadyExists)
         }
@@ -1031,6 +1232,55 @@ final class FileSystemTests: XCTestCase {
 
             XCTAssertEqual(names.sorted(), expected.sorted())
         }
+    }
+
+    func testWithTemporaryDirectory() async throws {
+        let fs = FileSystem.shared
+
+        let createdPath = try await fs.withTemporaryDirectory { directory, path in
+            let root = try await fs.temporaryDirectory
+            XCTAssert(path.starts(with: root))
+            return path
+        }
+
+        // Directory shouldn't exist any more.
+        let info = try await fs.info(forFileAt: createdPath)
+        XCTAssertNil(info)
+    }
+
+    func testWithTemporaryDirectoryPrefix() async throws {
+        let fs = FileSystem.shared
+        let prefix = try await fs.currentWorkingDirectory
+
+        let createdPath = try await fs.withTemporaryDirectory(prefix: prefix) { directory, path in
+            XCTAssert(path.starts(with: prefix))
+            return path
+        }
+
+        // Directory shouldn't exist any more.
+        let info = try await fs.info(forFileAt: createdPath)
+        XCTAssertNil(info)
+    }
+
+    func testWithTemporaryDirectoryRemovesContents() async throws {
+        let fs = FileSystem.shared
+        let createdPath = try await fs.withTemporaryDirectory { directory, path in
+            for name in ["foo", "bar", "baz"] {
+                try await directory.withFileHandle(forWritingAt: FilePath(name)) { fh in
+                    _ = try await fh.write(contentsOf: [1, 2, 3], toAbsoluteOffset: 0)
+                }
+            }
+
+            let entries = try await directory.listContents().reduce(into: []) { $0.append($1) }
+            let names = entries.map { $0.name.string }
+            XCTAssertEqual(names.sorted(), ["bar", "baz", "foo"])
+
+            return path
+        }
+
+        // Directory shouldn't exist any more.
+        let info = try await fs.info(forFileAt: createdPath)
+        XCTAssertNil(info)
     }
 }
 
@@ -1435,4 +1685,16 @@ extension FileSystemTests {
         }
     }
 }
+
+#if !canImport(Darwin) && swift(<5.9.2)
+extension XCTestCase {
+    func fulfillment(
+        of expectations: [XCTestExpectation],
+        timeout seconds: TimeInterval,
+        enforceOrder enforceOrderOfFulfillment: Bool = false
+    ) async {
+        wait(for: expectations, timeout: seconds)
+    }
+}
+#endif
 #endif

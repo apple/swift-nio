@@ -13,15 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
+import NIOCore
 
 /// A writer which buffers bytes in memory before writing them to the file system.
 ///
 /// You can create a ``BufferedWriter`` by calling
 /// ``WritableFileHandleProtocol/bufferedWriter(startingAtAbsoluteOffset:capacity:)`` on
 /// ``WritableFileHandleProtocol`` and write bytes to it with one of the following methods:
-/// - ``BufferedWriter/write(contentsOf:)-8dhyg``
-/// - ``BufferedWriter/write(contentsOf:)-2i7d9``
-/// - ``BufferedWriter/write(contentsOf:)-8ukvd`
+/// - ``BufferedWriter/write(contentsOf:)-1rkf6``
+/// - ``BufferedWriter/write(contentsOf:)-7cs3v``
+/// - ``BufferedWriter/write(contentsOf:)-66cts``
 ///
 /// If a call to one of the write functions reaches the buffers ``BufferedWriter/capacity`` the
 /// buffer automatically writes its contents to the file.
@@ -49,13 +50,13 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     ///
     /// You can flush the buffer manually by calling ``flush()``.
     public var bufferedBytes: Int {
-        return self.buffer.count
+        self.buffer.count
     }
 
     /// The capacity of the buffer.
     @_spi(Testing)
     public var bufferCapacity: Int {
-        return self.buffer.capacity
+        self.buffer.capacity
     }
 
     internal init(wrapping writableHandle: Handle, initialOffset: Int64, capacity: Int) {
@@ -94,6 +95,23 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
         return bytesWritten
     }
 
+    /// Write the contents of the `ByteBuffer` into the buffer.
+    ///
+    /// If the number of bytes in the buffer exceeds the size of the buffer then they're
+    /// automatically written to the file system.
+    ///
+    /// - Remark: The writer reclaims the buffer's memory when it grows to more than twice the
+    ///   configured size.
+    ///
+    /// To manually flush bytes use ``flush()``.
+    ///
+    /// - Parameter bytes: The bytes to write to the buffer.
+    /// - Returns: The number of bytes written into the buffered writer.
+    @discardableResult
+    public mutating func write(contentsOf bytes: ByteBuffer) async throws -> Int64 {
+        try await self.write(contentsOf: bytes.readableBytesView)
+    }
+
     /// Write the contents of the `AsyncSequence` of byte chunks to the buffer.
     ///
     /// If appending a chunk to the buffer causes it to exceed the capacity of the buffer then the
@@ -107,7 +125,6 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     /// - Parameter bytes: The `AsyncSequence` of byte chunks to write to the buffer.
     /// - Returns: The number of bytes written into the buffered writer.
     @discardableResult
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public mutating func write<Chunks: AsyncSequence>(
         contentsOf chunks: Chunks
     ) async throws -> Int64 where Chunks.Element: Sequence<UInt8> {
@@ -131,6 +148,25 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
         return bytesWritten
     }
 
+    /// Write the contents of the `AsyncSequence` of `ByteBuffer`s into the buffer.
+    ///
+    /// If appending a chunk to the buffer causes it to exceed the capacity of the buffer then the
+    /// contents of the buffer are automatically written to the file system.
+    ///
+    /// - Remark: The writer reclaims the buffer's memory when it grows to more than twice the
+    ///   configured size.
+    ///
+    /// To manually flush bytes use ``flush()``.
+    ///
+    /// - Parameter bytes: The `AsyncSequence` of `ByteBuffer`s to write.
+    /// - Returns: The number of bytes written into the buffered writer.
+    @discardableResult
+    public mutating func write<Chunks: AsyncSequence>(
+        contentsOf chunks: Chunks
+    ) async throws -> Int64 where Chunks.Element == ByteBuffer {
+        try await self.write(contentsOf: chunks.map { $0.readableBytesView })
+    }
+
     /// Write the contents of the `AsyncSequence` of bytes the buffer.
     ///
     /// If appending a byte to the buffer causes it to exceed the capacity of the buffer then the
@@ -143,7 +179,6 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     ///
     /// - Parameter bytes: The `AsyncSequence` of bytes to write to the buffer.
     @discardableResult
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public mutating func write<Bytes: AsyncSequence>(
         contentsOf bytes: Bytes
     ) async throws -> Int64 where Bytes.Element == UInt8 {
@@ -180,11 +215,33 @@ extension WritableFileHandleProtocol {
         startingAtAbsoluteOffset initialOffset: Int64 = 0,
         capacity: ByteCount = .kibibytes(512)
     ) -> BufferedWriter<Self> {
-        return BufferedWriter(
+        BufferedWriter(
             wrapping: self,
             initialOffset: initialOffset,
             capacity: Int(capacity.bytes)
         )
+    }
+
+    /// Convenience function that creates a buffered reader, executes
+    /// the closure that writes the contents into the buffer and calls 'flush()'.
+    ///
+    /// - Parameters:
+    ///   - initialOffset: The offset to begin writing at, defaults to zero.
+    ///   - capacity: The capacity of the buffer in bytes, as a ``ByteCount``. The writer writes the contents of its
+    ///     buffer to the file system when it exceeds this capacity. Defaults to 512 KiB.
+    ///   - body: The closure that writes the contents to the buffer created in this method.
+    /// - Returns: The result of the executed closure.
+    public func withBufferedWriter<Result>(
+        startingAtAbsoluteOffset initialOffset: Int64 = 0,
+        capacity: ByteCount = .kibibytes(512),
+        execute body: (inout BufferedWriter<Self>) async throws -> Result
+    ) async throws -> Result {
+        var bufferedWriter = self.bufferedWriter(startingAtAbsoluteOffset: initialOffset, capacity: capacity)
+        return try await withUncancellableTearDown {
+            try await body(&bufferedWriter)
+        } tearDown: { _ in
+            try await bufferedWriter.flush()
+        }
     }
 }
 

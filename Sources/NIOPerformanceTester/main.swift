@@ -11,12 +11,15 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOCore
-import NIOPosix
-import NIOEmbedded
-import NIOHTTP1
-import NIOFoundationCompat
+
+// swift-format-ignore: AmbiguousTrailingClosureOverload
+
 import Dispatch
+import NIOCore
+import NIOEmbedded
+import NIOFoundationCompat
+import NIOHTTP1
+import NIOPosix
 import NIOWebSocket
 
 // Use unbuffered stdout to help detect exactly which test was running in the event of a crash.
@@ -25,13 +28,15 @@ setbuf(stdout, nil)
 // MARK: Test Harness
 
 var warning: String = ""
-assert({
-    print("======================================================")
-    print("= YOU ARE RUNNING NIOPerformanceTester IN DEBUG MODE =")
-    print("======================================================")
-    warning = " <<< DEBUG MODE >>>"
-    return true
-    }())
+assert(
+    {
+        print("======================================================")
+        print("= YOU ARE RUNNING NIOPerformanceTester IN DEBUG MODE =")
+        print("======================================================")
+        warning = " <<< DEBUG MODE >>>"
+        return true
+    }()
+)
 
 public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
     func measureOne(_ fn: () throws -> Int) rethrows -> Double {
@@ -41,7 +46,7 @@ public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
         return Double(end - start) / Double(TimeAmount.seconds(1).nanoseconds)
     }
 
-    _ = try measureOne(fn) /* pre-heat and throw away */
+    _ = try measureOne(fn)  // pre-heat and throw away
     var measurements = Array(repeating: 0.0, count: 10)
     for i in 0..<10 {
         measurements[i] = try measureOne(fn)
@@ -52,7 +57,7 @@ public func measure(_ fn: () throws -> Int) rethrows -> [Double] {
 
 let limitSet = CommandLine.arguments.dropFirst()
 
-public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows -> Void {
+public func measureAndPrint(desc: String, fn: () throws -> Int) rethrows {
     if limitSet.isEmpty || limitSet.contains(desc) {
         print("measuring\(warning): \(desc): ", terminator: "")
         let measurements = try measure(fn)
@@ -71,7 +76,7 @@ public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
         return Double(end - start) / Double(TimeAmount.seconds(1).nanoseconds)
     }
 
-    _ = try await measureOne(fn) /* pre-heat and throw away */
+    _ = try await measureOne(fn)  // pre-heat and throw away
     var measurements = Array(repeating: 0.0, count: 10)
     for i in 0..<10 {
         measurements[i] = try await measureOne(fn)
@@ -81,7 +86,7 @@ public func measure(_ fn: () async throws -> Int) async rethrows -> [Double] {
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-public func measureAndPrint(desc: String, fn: () async throws -> Int) async rethrows -> Void {
+public func measureAndPrint(desc: String, fn: () async throws -> Int) async rethrows {
     if limitSet.isEmpty || limitSet.contains(desc) {
         print("measuring\(warning): \(desc): ", terminator: "")
         let measurements = try await measure(fn)
@@ -124,14 +129,14 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        if case .head(let req) = self.unwrapInboundIn(data) {
+        if case .head(let req) = Self.unwrapInboundIn(data) {
             switch req.uri {
             case "/perf-test-1":
                 var buffer = context.channel.allocator.buffer(capacity: self.cachedBody.count)
                 buffer.writeBytes(self.cachedBody)
-                context.write(self.wrapOutboundOut(.head(self.cachedHead)), promise: nil)
-                context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(Self.wrapOutboundOut(.head(self.cachedHead)), promise: nil)
+                context.write(Self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+                context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             case "/perf-test-2":
                 var req = HTTPResponseHead(version: .http1_1, status: .ok)
@@ -139,8 +144,8 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
                     req.headers.add(name: "X-ResponseHeader-\(i)", value: "foo")
                 }
                 req.headers.add(name: "content-length", value: "0")
-                context.write(self.wrapOutboundOut(.head(req)), promise: nil)
-                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(Self.wrapOutboundOut(.head(req)), promise: nil)
+                context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
                 return
             default:
                 fatalError("unknown uri \(req.uri)")
@@ -148,7 +153,6 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
         }
     }
 }
-
 
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 defer {
@@ -197,7 +201,7 @@ final class RepeatedRequests: ChannelInboundHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let reqPart = self.unwrapInboundIn(data)
+        let reqPart = Self.unwrapInboundIn(data)
         if case .end(nil) = reqPart {
             if self.remainingNumberOfRequests <= 0 {
                 context.channel.close().map { self.doneRequests }.cascade(to: self.isDonePromise)
@@ -205,8 +209,8 @@ final class RepeatedRequests: ChannelInboundHandler {
                 self.doneRequests += 1
                 self.remainingNumberOfRequests -= 1
 
-                context.write(self.wrapOutboundOut(.head(head)), promise: nil)
-                context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                context.write(Self.wrapOutboundOut(.head(head)), promise: nil)
+                context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
             }
         }
     }
@@ -276,9 +280,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
     let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
 
-    for _ in 0 ..< 3 {
+    for _ in 0..<3 {
         buffer.clear()
-        for _ in 0 ..< (bufferSize / 4) {
+        for _ in 0..<(bufferSize / 4) {
             buffer.writeString("abcd")
         }
     }
@@ -293,9 +297,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_short_calculated_strings") {
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 4)
 
-    for _ in 0 ..< 1 {
+    for _ in 0..<1 {
         buffer.clear()
-        for _ in  0 ..< (bufferSize / 4) {
+        for _ in 0..<(bufferSize / 4) {
             buffer.writeString(s)
         }
     }
@@ -309,9 +313,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_string_literals") {
     let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
 
-    for _ in 0 ..< 100 {
+    for _ in 0..<100 {
         buffer.clear()
-        for _ in  0 ..< (bufferSize / 24) {
+        for _ in 0..<(bufferSize / 24) {
             buffer.writeString("012345678901234567890123")
         }
     }
@@ -326,9 +330,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_medium_calculated_strings") {
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 24)
 
-    for _ in 0 ..< 5 {
+    for _ in 0..<5 {
         buffer.clear()
-        for _ in 0 ..< (bufferSize / 24) {
+        for _ in 0..<(bufferSize / 24) {
             buffer.writeString(s)
         }
     }
@@ -343,9 +347,9 @@ measureAndPrint(desc: "bytebuffer_write_12MB_large_calculated_strings") {
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)
     let s = someString(size: 1024 * 1024)
 
-    for _ in 0 ..< 5 {
+    for _ in 0..<5 {
         buffer.clear()
-        for _ in 0 ..< 12 {
+        for _ in 0..<12 {
             buffer.writeString(s)
         }
     }
@@ -363,7 +367,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
     let substring = Substring("A")
     @inline(never)
     func doWrites(buffer: inout ByteBuffer, dispatchData: DispatchData, substring: Substring) {
-        /* all of those should be 0 allocations */
+        // all of those should be 0 allocations
 
         // buffer.writeBytes(foundationData) // see SR-7542
         buffer.writeBytes([0x41])
@@ -376,7 +380,7 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
     }
     @inline(never)
     func doReads(buffer: inout ByteBuffer) {
-        /* these ones are zero allocations */
+        // these ones are zero allocations
         let val = buffer.readInteger(as: UInt8.self)
         precondition(0x41 == val, "\(val!)")
         var slice = buffer.readSlice(length: 1)
@@ -386,13 +390,13 @@ measureAndPrint(desc: "bytebuffer_lots_of_rw") {
             precondition(ptr[0] == 0x41)
         }
 
-        /* those down here should be one allocation each */
+        // those down here should be one allocation each
         let arr = buffer.readBytes(length: 1)
         precondition([0x41] == arr!, "\(arr!)")
         let str = buffer.readString(length: 1)
         precondition("A" == str, "\(str!)")
     }
-    for _ in 0 ..< 100_000 {
+    for _ in 0..<100_000 {
         doWrites(buffer: &buffer, dispatchData: dispatchData, substring: substring)
         doReads(buffer: &buffer)
     }
@@ -582,22 +586,24 @@ try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
 
         func handlerAdded(context: ChannelHandlerContext) {
             self.requestBuffer = context.channel.allocator.buffer(capacity: 512)
-            self.requestBuffer.writeString("""
-                                             GET /perf-test-2 HTTP/1.1\r
-                                             Host: example.com\r
-                                             X-Some-Header-1: foo\r
-                                             X-Some-Header-2: foo\r
-                                             X-Some-Header-3: foo\r
-                                             X-Some-Header-4: foo\r
-                                             X-Some-Header-5: foo\r
-                                             X-Some-Header-6: foo\r
-                                             X-Some-Header-7: foo\r
-                                             X-Some-Header-8: foo\r\n\r\n
-                                             """)
+            self.requestBuffer.writeString(
+                """
+                GET /perf-test-2 HTTP/1.1\r
+                Host: example.com\r
+                X-Some-Header-1: foo\r
+                X-Some-Header-2: foo\r
+                X-Some-Header-3: foo\r
+                X-Some-Header-4: foo\r
+                X-Some-Header-5: foo\r
+                X-Some-Header-6: foo\r
+                X-Some-Header-7: foo\r
+                X-Some-Header-8: foo\r\n\r\n
+                """
+            )
         }
 
         func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-            var buf = self.unwrapOutboundIn(data)
+            var buf = Self.unwrapOutboundIn(data)
             if self.expectedResponseBuffer == nil {
                 self.expectedResponseBuffer = buf
             }
@@ -613,7 +619,7 @@ try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
             }
         }
 
-        func kickOff(channel: Channel) -> Void {
+        func kickOff(channel: Channel) {
             try! (channel as! EmbeddedChannel).writeInbound(self.requestBuffer)
         }
     }
@@ -627,8 +633,10 @@ try measureAndPrint(desc: "no-net_http1_1k_reqs_1_conn") {
         requestsDone = reqs
         done = true
     }
-    try channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true,
-                                                     withErrorHandling: true).flatMap {
+    try channel.pipeline.configureHTTPServerPipeline(
+        withPipeliningAssistance: true,
+        withErrorHandling: true
+    ).flatMap {
         channel.pipeline.addHandler(SimpleHTTPServer())
     }.flatMap {
         channel.pipeline.addHandler(measuringHandler, position: .first)
@@ -700,7 +708,7 @@ measureAndPrint(desc: "future_whenallsucceed_100k_immediately_succeeded_on_loop"
     let allSucceeded = try! loop.makeSucceededFuture(()).flatMap { _ -> EventLoopFuture<[Int]> in
         let futures = expected.map { loop.makeSucceededFuture($0) }
         return EventLoopFuture.whenAllSucceed(futures, on: loop)
-        }.wait()
+    }.wait()
     return allSucceeded.count
 }
 
@@ -725,10 +733,9 @@ measureAndPrint(desc: "future_whenallsucceed_10k_deferred_on_loop") {
             promise.succeed(index)
         }
         return result
-        }.wait()
+    }.wait()
     return allSucceeded.count
 }
-
 
 measureAndPrint(desc: "future_whenallcomplete_100k_immediately_succeeded_off_loop") {
     let loop = group.next()
@@ -744,7 +751,7 @@ measureAndPrint(desc: "future_whenallcomplete_100k_immediately_succeeded_on_loop
     let allSucceeded = try! loop.makeSucceededFuture(()).flatMap { _ -> EventLoopFuture<[Result<Int, Error>]> in
         let futures = expected.map { loop.makeSucceededFuture($0) }
         return EventLoopFuture.whenAllComplete(futures, on: loop)
-        }.wait()
+    }.wait()
     return allSucceeded.count
 }
 
@@ -769,7 +776,7 @@ measureAndPrint(desc: "future_whenallcomplete_100k_deferred_on_loop") {
             promise.succeed(index)
         }
         return result
-        }.wait()
+    }.wait()
     return allSucceeded.count
 }
 
@@ -962,7 +969,7 @@ try measureAndPrint(
     desc: "circular_buffer_into_byte_buffer_1mb",
     benchmark: CircularBufferIntoByteBufferBenchmark(
         iterations: 20,
-        bufferSize: 1024*1024
+        bufferSize: 1024 * 1024
     )
 )
 
@@ -970,7 +977,7 @@ try measureAndPrint(
     desc: "byte_buffer_view_iterator_1mb",
     benchmark: ByteBufferViewIteratorBenchmark(
         iterations: 20,
-        bufferSize: 1024*1024
+        bufferSize: 1024 * 1024
     )
 )
 
@@ -978,7 +985,7 @@ try measureAndPrint(
     desc: "byte_buffer_view_contains_12mb",
     benchmark: ByteBufferViewContainsBenchmark(
         iterations: 5,
-        bufferSize: 12*1024*1024
+        bufferSize: 12 * 1024 * 1024
     )
 )
 
@@ -992,9 +999,12 @@ try measureAndPrint(
 
 measureAndPrint(desc: "generate_10k_random_request_keys") {
     let numKeys = 10_000
-    return (0 ..< numKeys).reduce(into: 0, { result, _ in
-        result &+= NIOWebSocketClientUpgrader.randomRequestKey().count
-    })
+    return (0..<numKeys).reduce(
+        into: 0,
+        { result, _ in
+            result &+= NIOWebSocketClientUpgrader.randomRequestKey().count
+        }
+    )
 }
 
 try measureAndPrint(
@@ -1035,7 +1045,6 @@ try measureAndPrint(
         lockOperationsPerThread: 2_500_000
     )
 )
-
 
 try measureAndPrint(
     desc: "lock_8_threads_10M_ops",

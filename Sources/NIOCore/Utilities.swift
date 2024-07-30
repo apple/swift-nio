@@ -17,6 +17,8 @@ import CNIOLinux
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Android)
+import Android
 #endif
 #elseif os(Windows)
 import let WinSDK.RelationProcessorCore
@@ -50,7 +52,12 @@ import WASILibc
 @inlinable
 internal func debugOnly(_ body: () -> Void) {
     // FIXME: duplicated with NIO.
-    assert({ body(); return true }())
+    assert(
+        {
+            body()
+            return true
+        }()
+    )
 }
 
 /// Allows to "box" another value.
@@ -76,15 +83,17 @@ public enum System {
     ///
     /// - returns: The logical core count on the system.
     public static var coreCount: Int {
-#if os(Windows)
+        #if os(Windows)
         var dwLength: DWORD = 0
         _ = GetLogicalProcessorInformation(nil, &dwLength)
 
         let alignment: Int =
             MemoryLayout<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>.alignment
         let pBuffer: UnsafeMutableRawPointer =
-            UnsafeMutableRawPointer.allocate(byteCount: Int(dwLength),
-                                             alignment: alignment)
+            UnsafeMutableRawPointer.allocate(
+                byteCount: Int(dwLength),
+                alignment: alignment
+            )
         defer {
             pBuffer.deallocate()
         }
@@ -92,18 +101,22 @@ public enum System {
         let dwSLPICount: Int =
             Int(dwLength) / MemoryLayout<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>.stride
         let pSLPI: UnsafeMutablePointer<SYSTEM_LOGICAL_PROCESSOR_INFORMATION> =
-            pBuffer.bindMemory(to: SYSTEM_LOGICAL_PROCESSOR_INFORMATION.self,
-                               capacity: dwSLPICount)
+            pBuffer.bindMemory(
+                to: SYSTEM_LOGICAL_PROCESSOR_INFORMATION.self,
+                capacity: dwSLPICount
+            )
 
         let bResult: Bool = GetLogicalProcessorInformation(pSLPI, &dwLength)
         precondition(bResult, "GetLogicalProcessorInformation: \(GetLastError())")
 
-        return UnsafeBufferPointer<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>(start: pSLPI,
-                                                                         count: dwSLPICount)
-            .filter { $0.Relationship == RelationProcessorCore }
-            .map { $0.ProcessorMask.nonzeroBitCount }
-            .reduce(0, +)
-#elseif os(Linux) || os(Android)
+        return UnsafeBufferPointer<SYSTEM_LOGICAL_PROCESSOR_INFORMATION>(
+            start: pSLPI,
+            count: dwSLPICount
+        )
+        .filter { $0.Relationship == RelationProcessorCore }
+        .map { $0.ProcessorMask.nonzeroBitCount }
+        .reduce(0, +)
+        #elseif os(Linux) || os(Android)
         if let quota2 = Linux.coreCountCgroup2Restriction() {
             return quota2
         } else if let quota = Linux.coreCountCgroup1Restriction() {
@@ -113,9 +126,9 @@ public enum System {
         } else {
             return sysconf(CInt(_SC_NPROCESSORS_ONLN))
         }
-#else
+        #else
         return sysconf(CInt(_SC_NPROCESSORS_ONLN))
-#endif
+        #endif
     }
 
 #if !os(Windows) && !os(WASI)
@@ -148,7 +161,7 @@ public enum System {
 
         return interfaces
     }
-#endif
+    #endif
 
     /// A utility function that enumerates the available network devices on this machine.
     ///
@@ -162,7 +175,7 @@ public enum System {
         var devices: [NIONetworkDevice] = []
         devices.reserveCapacity(12)  // Arbitrary choice.
 
-#if os(Windows)
+        #if os(Windows)
         var ulSize: ULONG = 0
         _ = GetAdaptersAddresses(ULONG(AF_UNSPEC), 0, nil, nil, &ulSize)
 
@@ -174,8 +187,13 @@ public enum System {
         }
 
         let ulResult: ULONG =
-            GetAdaptersAddresses(ULONG(AF_UNSPEC), 0, nil, pBuffer.baseAddress,
-                                 &ulSize)
+            GetAdaptersAddresses(
+                ULONG(AF_UNSPEC),
+                0,
+                nil,
+                pBuffer.baseAddress,
+                &ulSize
+            )
         guard ulResult == ERROR_SUCCESS else {
             throw IOError(windows: ulResult, reason: "GetAdaptersAddresses")
         }
@@ -210,7 +228,7 @@ public enum System {
             interface = concreteInterface.pointee.ifa_next
         }
 
-#endif
+        #endif
         return devices
     }
 }

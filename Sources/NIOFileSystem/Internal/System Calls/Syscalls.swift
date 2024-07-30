@@ -24,6 +24,9 @@ import CNIOLinux
 #elseif canImport(Musl)
 import Musl
 import CNIOLinux
+#elseif canImport(Android)
+import Android
+import CNIOLinux
 #endif
 
 // MARK: - system
@@ -175,7 +178,7 @@ internal func system_flistxattr(
     #if canImport(Darwin)
     // The final parameter is 'options'; there is no equivalent on Linux.
     return flistxattr(fd, namebuf, size, 0)
-    #elseif canImport(Glibc) || canImport(Musl)
+    #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return flistxattr(fd, namebuf, size)
     #endif
 }
@@ -197,7 +200,7 @@ internal func system_fgetxattr(
     // Penultimate parameter is position which is reserved and should be zero.
     // The final parameter is 'options'; there is no equivalent on Linux.
     return fgetxattr(fd, name, value, size, 0, 0)
-    #elseif canImport(Glibc) || canImport(Musl)
+    #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fgetxattr(fd, name, value, size)
     #endif
 }
@@ -219,7 +222,7 @@ internal func system_fsetxattr(
     #if canImport(Darwin)
     // Penultimate parameter is position which is reserved and should be zero.
     return fsetxattr(fd, name, value, size, 0, 0)
-    #elseif canImport(Glibc) || canImport(Musl)
+    #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fsetxattr(fd, name, value, size, 0)
     #endif
 }
@@ -238,7 +241,7 @@ internal func system_fremovexattr(
     #if canImport(Darwin)
     // The final parameter is 'options'; there is no equivalent on Linux.
     return fremovexattr(fd, name, 0)
-    #elseif canImport(Glibc) || canImport(Musl)
+    #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     return fremovexattr(fd, name)
     #endif
 }
@@ -271,7 +274,7 @@ internal func system_renamex_np(
 }
 #endif
 
-#if canImport(Glibc) || canImport(Musl)
+#if canImport(Glibc) || canImport(Musl) || canImport(Android)
 internal func system_renameat2(
     _ oldFD: FileDescriptor.RawValue,
     _ old: UnsafePointer<CInterop.PlatformChar>,
@@ -289,7 +292,7 @@ internal func system_renameat2(
 #endif
 
 /// link(2): Creates a new link for a file.
-#if canImport(Glibc) || canImport(Musl)
+#if canImport(Glibc) || canImport(Musl) || canImport(Android)
 internal func system_linkat(
     _ oldFD: FileDescriptor.RawValue,
     _ old: UnsafePointer<CInterop.PlatformChar>,
@@ -306,7 +309,32 @@ internal func system_linkat(
 }
 #endif
 
-#if canImport(Glibc) || canImport(Musl)
+/// link(2): Creates a new link for a file.
+internal func system_link(
+    _ old: UnsafePointer<CInterop.PlatformChar>,
+    _ new: UnsafePointer<CInterop.PlatformChar>
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(old, new)
+    }
+    #endif
+    return link(old, new)
+}
+
+/// unlink(2): Remove a directory entry.
+internal func system_unlink(
+    _ path: UnsafePointer<CInterop.PlatformChar>
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(path)
+    }
+    #endif
+    return unlink(path)
+}
+
+#if canImport(Glibc) || canImport(Musl) || canImport(Android)
 /// sendfile(2): Transfer data between descriptors
 internal func system_sendfile(
     _ outFD: CInt,
@@ -324,27 +352,39 @@ internal func system_sendfile(
 }
 #endif
 
+internal func system_futimens(
+    _ fd: CInt,
+    _ times: UnsafePointer<timespec>?
+) -> CInt {
+    #if ENABLE_MOCKING
+    if mockingEnabled {
+        return mock(fd, times)
+    }
+    #endif
+    return futimens(fd, times)
+}
+
 // MARK: - libc
 
 /// fdopendir(3): Opens a directory stream for the file descriptor
 internal func libc_fdopendir(
     _ fd: FileDescriptor.RawValue
 ) -> CInterop.DirPointer {
-    return fdopendir(fd)!
+    fdopendir(fd)!
 }
 
 /// readdir(3): Returns a pointer to the next directory entry
 internal func libc_readdir(
     _ dir: CInterop.DirPointer
 ) -> UnsafeMutablePointer<CInterop.DirEnt>? {
-    return readdir(dir)
+    readdir(dir)
 }
 
 /// readdir(3): Closes the directory stream and frees associated structures
 internal func libc_closedir(
     _ dir: CInterop.DirPointer
 ) -> CInt {
-    return closedir(dir)
+    closedir(dir)
 }
 
 /// remove(3): Remove directory entry
@@ -381,7 +421,7 @@ internal func libc_getcwd(
     _ buffer: UnsafeMutablePointer<CInterop.PlatformChar>,
     _ size: Int
 ) -> UnsafeMutablePointer<CInterop.PlatformChar>? {
-    return getcwd(buffer, size)
+    getcwd(buffer, size)
 }
 
 /// confstr(3)
@@ -391,7 +431,7 @@ internal func libc_confstr(
     _ buffer: UnsafeMutablePointer<CInterop.PlatformChar>,
     _ size: Int
 ) -> Int {
-    return confstr(name, buffer, size)
+    confstr(name, buffer, size)
 }
 #endif
 
@@ -401,14 +441,14 @@ internal func libc_fts_open(
     _ path: [UnsafeMutablePointer<CInterop.PlatformChar>],
     _ options: CInt
 ) -> UnsafeMutablePointer<CInterop.FTS> {
-    return fts_open(path, options, nil)!
+    fts_open(path, options, nil)!
 }
 #else
 internal func libc_fts_open(
     _ path: [UnsafeMutablePointer<CInterop.PlatformChar>?],
     _ options: CInt
 ) -> UnsafeMutablePointer<CInterop.FTS> {
-    return fts_open(path, options, nil)
+    fts_open(path, options, nil)
 }
 #endif
 
@@ -416,13 +456,13 @@ internal func libc_fts_open(
 internal func libc_fts_read(
     _ fts: UnsafeMutablePointer<CInterop.FTS>
 ) -> UnsafeMutablePointer<CInterop.FTSEnt>? {
-    return fts_read(fts)
+    fts_read(fts)
 }
 
 /// fts(3)
 internal func libc_fts_close(
     _ fts: UnsafeMutablePointer<CInterop.FTS>
 ) -> CInt {
-    return fts_close(fts)
+    fts_close(fts)
 }
 #endif

@@ -235,7 +235,6 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
         case .upgrading, .unbuffering, .finished:
             fatalError("Internal inconsistency in HTTPServerUpgradeStateMachine")
 
-
         case .modifying:
             fatalError("Internal inconsistency in HTTPServerUpgradeStateMachine")
         }
@@ -250,7 +249,8 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
     }
 
     @inlinable
-    mutating func upgradingHandlerCompleted(_ result: Result<UpgradeResult, Error>) -> UpgradingHandlerCompletedAction? {
+    mutating func upgradingHandlerCompleted(_ result: Result<UpgradeResult, Error>) -> UpgradingHandlerCompletedAction?
+    {
         switch self.state {
         case .initial:
             fatalError("Internal inconsistency in HTTPServerUpgradeStateMachine")
@@ -293,7 +293,11 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
 
     @usableFromInline
     enum FindingUpgraderCompletedAction {
-        case startUpgrading(upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders, proto: String)
+        case startUpgrading(
+            upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>,
+            responseHeaders: HTTPHeaders,
+            proto: String
+        )
         case runNotUpgradingInitializer
         case fireErrorCaughtAndStartUnbuffering(Error)
         case fireErrorCaughtAndRemoveHandler(Error)
@@ -302,7 +306,12 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
     @inlinable
     mutating func findingUpgraderCompleted(
         requestHead: HTTPRequestHead,
-        _ result: Result<(upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders, proto: String)?, Error>
+        _ result: Result<
+            (
+                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders,
+                proto: String
+            )?, Error
+        >
     ) -> FindingUpgraderCompletedAction? {
         switch self.state {
         case .initial, .upgraderReady:
@@ -317,13 +326,15 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
                     return .startUpgrading(upgrader: upgrader, responseHeaders: responseHeaders, proto: proto)
                 } else {
                     // We have not yet seen the end so we have to wait until that happens
-                    self.state = .upgraderReady(.init(
-                        upgrader: upgrader,
-                        requestHead: requestHead,
-                        responseHeaders: responseHeaders,
-                        proto: proto,
-                        buffer: awaitingUpgrader.buffer
-                    ))
+                    self.state = .upgraderReady(
+                        .init(
+                            upgrader: upgrader,
+                            requestHead: requestHead,
+                            responseHeaders: responseHeaders,
+                            proto: proto,
+                            buffer: awaitingUpgrader.buffer
+                        )
+                    )
                     return nil
                 }
 
@@ -378,7 +389,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
 
         case .modifying:
             fatalError("Internal inconsistency in HTTPServerUpgradeStateMachine")
-            
+
         }
     }
 

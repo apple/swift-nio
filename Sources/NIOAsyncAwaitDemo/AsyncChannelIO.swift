@@ -24,7 +24,8 @@ struct AsyncChannelIO<Request, Response> {
     }
 
     func start() async throws -> AsyncChannelIO<Request, Response> {
-        try await channel.pipeline.addHandler(RequestResponseHandler<HTTPRequestHead, NIOHTTPClientResponseFull>()).get()
+        try await channel.pipeline.addHandler(RequestResponseHandler<HTTPRequestHead, NIOHTTPClientResponseFull>())
+            .get()
         return self
     }
 

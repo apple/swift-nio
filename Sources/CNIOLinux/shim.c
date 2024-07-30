@@ -33,6 +33,7 @@ void CNIOLinux_i_do_nothing_just_working_around_a_darwin_toolchain_bug(void) {}
 #include <assert.h>
 #include <time.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 
 _Static_assert(sizeof(CNIOLinux_mmsghdr) == sizeof(struct mmsghdr),
                "sizes of CNIOLinux_mmsghdr and struct mmsghdr differ");
@@ -62,7 +63,7 @@ int CNIOLinux_pthread_setname_np(pthread_t thread, const char *name) {
 
 int CNIOLinux_pthread_getname_np(pthread_t thread, char *name, size_t len) {
 #ifdef __ANDROID__
-    // https://android.googlesource.com/platform/bionic/+/master/libc/bionic/pthread_setname_np.cpp#51
+    // https://android.googlesource.com/platform/bionic/+/8a18af52d9b9344497758ed04907a314a083b204/libc/bionic/pthread_setname_np.cpp#51
     if (thread == pthread_self()) {
         return TEMP_FAILURE_RETRY(prctl(PR_GET_NAME, name)) == -1 ? -1 : 0;
     }
@@ -210,5 +211,8 @@ const int CNIOLinux_O_TMPFILE = O_TMPFILE;
 const unsigned int CNIOLinux_RENAME_NOREPLACE = RENAME_NOREPLACE;
 const unsigned int CNIOLinux_RENAME_EXCHANGE = RENAME_EXCHANGE;
 const int CNIOLinux_AT_EMPTY_PATH = AT_EMPTY_PATH;
+
+const unsigned long CNIOLinux_UTIME_OMIT = UTIME_OMIT;
+const unsigned long CNIOLinux_UTIME_NOW = UTIME_NOW;
 
 #endif

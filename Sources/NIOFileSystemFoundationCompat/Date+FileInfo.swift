@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-import NIOFileSystem
+import _NIOFileSystem
 
 import struct Foundation.Date
 
@@ -27,7 +27,7 @@ extension Date {
 extension FileInfo.Timespec {
     /// The UTC time of the timestamp.
     public var date: Date {
-        return Date(timespec: self)
+        Date(timespec: self)
     }
 }
 #endif

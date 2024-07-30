@@ -13,6 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
-"$bin_path/NIOCrashTester" run-all
+"${bin_path:?"bin_path variable not set"}/NIOCrashTester" run-all

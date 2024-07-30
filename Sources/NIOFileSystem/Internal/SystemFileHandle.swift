@@ -15,14 +15,19 @@
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOConcurrencyHelpers
 import NIOCore
+import NIOPosix
 @preconcurrency import SystemPackage
 
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+import CNIOLinux
 #elseif canImport(Musl)
 import Musl
+import CNIOLinux
+#elseif canImport(Bionic)
+import Bionic
 #endif
 
 /// An implementation of ``FileHandleProtocol`` which is backed by system calls and a file
@@ -31,7 +36,7 @@ import Musl
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public final class SystemFileHandle {
     /// The executor on which to execute system calls.
-    internal var executor: IOExecutor { self.sendableView.executor }
+    internal var threadPool: NIOThreadPool { self.sendableView.threadPool }
 
     /// The path used to open this handle.
     internal var path: FilePath { self.sendableView.path }
@@ -52,7 +57,7 @@ public final class SystemFileHandle {
         enum Mode {
             /// Rename the created file to become the desired file.
             case rename
-            #if canImport(Glibc) || canImport(Musl)
+            #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
             /// Link the unnamed file to the desired file using 'linkat(2)'.
             case link
             #endif
@@ -77,7 +82,7 @@ public final class SystemFileHandle {
         fileprivate let lifecycle: NIOLockedValueBox<Lifecycle>
 
         /// The executor on which to execute system calls.
-        internal let executor: IOExecutor
+        internal let threadPool: NIOThreadPool
 
         /// The path used to open this handle.
         internal let path: FilePath
@@ -87,12 +92,12 @@ public final class SystemFileHandle {
 
         fileprivate init(
             lifecycle: Lifecycle,
-            executor: IOExecutor,
+            threadPool: NIOThreadPool,
             path: FilePath,
             materialization: Materialization?
         ) {
             self.lifecycle = NIOLockedValueBox(lifecycle)
-            self.executor = executor
+            self.threadPool = threadPool
             self.path = path
             self.materialization = materialization
         }
@@ -110,11 +115,11 @@ public final class SystemFileHandle {
         takingOwnershipOf descriptor: FileDescriptor,
         path: FilePath,
         materialization: Materialization? = nil,
-        executor: IOExecutor
+        threadPool: NIOThreadPool
     ) {
         self.sendableView = SendableView(
             lifecycle: .open(descriptor),
-            executor: executor,
+            threadPool: threadPool,
             path: path,
             materialization: materialization
         )
@@ -142,7 +147,7 @@ public final class SystemFileHandle {
 extension SystemFileHandle.SendableView {
     /// Returns the file descriptor if it's available; `nil` otherwise.
     internal func descriptorIfAvailable() -> FileDescriptor? {
-        return self.lifecycle.withLockedValue {
+        self.lifecycle.withLockedValue {
             switch $0 {
             case let .open(descriptor):
                 return descriptor
@@ -152,7 +157,7 @@ extension SystemFileHandle.SendableView {
         }
     }
 
-    /// Executes a closure with the file descriptor it it's available otherwise throws the result
+    /// Executes a closure with the file descriptor if it's available otherwise throws the result
     /// of `onUnavailable`.
     internal func _withUnsafeDescriptor<R>(
         _ execute: (FileDescriptor) throws -> R,
@@ -165,8 +170,8 @@ extension SystemFileHandle.SendableView {
         }
     }
 
-    /// Executes a closure with the file descriptor it it's available otherwise throws the result
-    /// of `onUnavailable`.
+    /// Executes a closure with the file descriptor if it's available otherwise returns the result
+    /// of `onUnavailable` as a `Result` Error.
     internal func _withUnsafeDescriptorResult<R>(
         _ execute: (FileDescriptor) -> Result<R, FileSystemError>,
         onUnavailable: () -> FileSystemError
@@ -193,37 +198,37 @@ extension SystemFileHandle: FileHandleProtocol {
     //    currently using.
 
     public func info() async throws -> FileInfo {
-        return try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._info().get()
         }
     }
 
     public func replacePermissions(_ permissions: FilePermissions) async throws {
-        return try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._replacePermissions(permissions)
         }
     }
 
     public func addPermissions(_ permissions: FilePermissions) async throws -> FilePermissions {
-        return try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._addPermissions(permissions)
         }
     }
 
     public func removePermissions(_ permissions: FilePermissions) async throws -> FilePermissions {
-        return try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._removePermissions(permissions)
         }
     }
 
     public func attributeNames() async throws -> [String] {
-        return try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._attributeNames()
         }
     }
 
     public func valueForAttribute(_ name: String) async throws -> [UInt8] {
-        return try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._valueForAttribute(name)
         }
     }
@@ -232,19 +237,19 @@ extension SystemFileHandle: FileHandleProtocol {
         _ bytes: some (Sendable & RandomAccessCollection<UInt8>),
         attribute name: String
     ) async throws {
-        return try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._updateValueForAttribute(bytes, attribute: name)
         }
     }
 
     public func removeValueForAttribute(_ name: String) async throws {
-        return try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._removeValueForAttribute(name)
         }
     }
 
     public func synchronize() async throws {
-        return try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._synchronize()
         }
     }
@@ -252,9 +257,9 @@ extension SystemFileHandle: FileHandleProtocol {
     public func withUnsafeDescriptor<R: Sendable>(
         _ execute: @Sendable @escaping (FileDescriptor) throws -> R
     ) async throws -> R {
-        try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._withUnsafeDescriptor {
-                return try execute($0)
+                try execute($0)
             } onUnavailable: {
                 FileSystemError(
                     code: .closed,
@@ -267,11 +272,55 @@ extension SystemFileHandle: FileHandleProtocol {
     }
 
     public func detachUnsafeFileDescriptor() throws -> FileDescriptor {
-        return try self.sendableView.lifecycle.withLockedValue { lifecycle in
+        try self.sendableView.lifecycle.withLockedValue { lifecycle in
             switch lifecycle {
             case let .open(descriptor):
                 lifecycle = .detached
-                return descriptor
+
+                // We need to be careful handling files which have delayed materialization to avoid
+                // leftover temporary files.
+                //
+                // Where we use the 'link' mode we simply call materialize and return the
+                // descriptor as it will be materialized when closed.
+                //
+                // For the 'rename' mode we create a hard link to the desired file and unlink the
+                // created file.
+                guard let materialization = self.sendableView.materialization else {
+                    // File opened 'normally', just detach and return.
+                    return descriptor
+                }
+
+                switch materialization.mode {
+                #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                case .link:
+                    let result = self.sendableView._materializeLink(
+                        descriptor: descriptor,
+                        from: materialization.created,
+                        to: materialization.desired,
+                        exclusive: materialization.exclusive
+                    )
+                    return try result.map { descriptor }.get()
+                #endif
+
+                case .rename:
+                    let result = Syscall.link(
+                        from: materialization.created,
+                        to: materialization.desired
+                    ).mapError { errno in
+                        FileSystemError.link(
+                            errno: errno,
+                            from: materialization.created,
+                            to: materialization.desired,
+                            location: .here()
+                        )
+                    }.flatMap {
+                        Syscall.unlink(path: materialization.created).mapError { errno in
+                            .unlink(errno: errno, path: materialization.created, location: .here())
+                        }
+                    }
+
+                    return try result.map { descriptor }.get()
+                }
 
             case .detached:
                 throw FileSystemError(
@@ -299,14 +348,26 @@ extension SystemFileHandle: FileHandleProtocol {
     }
 
     public func close() async throws {
-        try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._close(materialize: true).get()
         }
     }
 
     public func close(makeChangesVisible: Bool) async throws {
-        try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._close(materialize: makeChangesVisible).get()
+        }
+    }
+
+    public func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws {
+        try await self.threadPool.runIfActive { [sendableView] in
+            try sendableView._setTimes(
+                lastAccess: lastAccess,
+                lastDataModification: lastDataModification
+            )
         }
     }
 
@@ -318,18 +379,18 @@ extension SystemFileHandle: FileHandleProtocol {
 extension SystemFileHandle.SendableView {
     /// Returns a string in the format: "{message}, the file '{path}' is closed."
     private func fileIsClosed(_ message: String) -> String {
-        return "\(message), the file '\(self.path)' is closed."
+        "\(message), the file '\(self.path)' is closed."
     }
 
     /// Returns a string in the format: "{message} for '{path}'."
     private func unknown(_ message: String) -> String {
-        return "\(message) for '\(self.path)'."
+        "\(message) for '\(self.path)'."
     }
 
     @_spi(Testing)
     public func _info() -> Result<FileInfo, FileSystemError> {
         self._withUnsafeDescriptorResult { descriptor in
-            return descriptor.status().map { stat in
+            descriptor.status().map { stat in
                 FileInfo(platformSpecificStatus: stat)
             }.mapError { errno in
                 .stat("fstat", errno: errno, path: self.path, location: .here())
@@ -448,7 +509,7 @@ extension SystemFileHandle.SendableView {
         operand: FilePermissions,
         descriptor: FileDescriptor
     ) throws {
-        return try descriptor.changeMode(permissions).mapError { errno in
+        try descriptor.changeMode(permissions).mapError { errno in
             FileSystemError.fchmod(
                 operation: operation,
                 operand: operand,
@@ -462,8 +523,8 @@ extension SystemFileHandle.SendableView {
 
     @_spi(Testing)
     public func _attributeNames() throws -> [String] {
-        return try self._withUnsafeDescriptor { descriptor in
-            return try descriptor.listExtendedAttributes().mapError { errno in
+        try self._withUnsafeDescriptor { descriptor in
+            try descriptor.listExtendedAttributes().mapError { errno in
                 FileSystemError.flistxattr(errno: errno, path: self.path, location: .here())
             }.get()
         } onUnavailable: {
@@ -478,8 +539,8 @@ extension SystemFileHandle.SendableView {
 
     @_spi(Testing)
     public func _valueForAttribute(_ name: String) throws -> [UInt8] {
-        return try self._withUnsafeDescriptor { descriptor in
-            return try descriptor.readExtendedAttribute(
+        try self._withUnsafeDescriptor { descriptor in
+            try descriptor.readExtendedAttribute(
                 named: name
             ).flatMapError { errno -> Result<[UInt8], FileSystemError> in
                 switch errno {
@@ -518,7 +579,7 @@ extension SystemFileHandle.SendableView {
         _ bytes: some RandomAccessCollection<UInt8>,
         attribute name: String
     ) throws {
-        return try self._withUnsafeDescriptor { descriptor in
+        try self._withUnsafeDescriptor { descriptor in
             func withUnsafeBufferPointer(_ body: (UnsafeBufferPointer<UInt8>) throws -> Void) throws {
                 try bytes.withContiguousStorageIfAvailable(body)
                     ?? Array(bytes).withUnsafeBufferPointer(body)
@@ -552,7 +613,7 @@ extension SystemFileHandle.SendableView {
 
     @_spi(Testing)
     public func _removeValueForAttribute(_ name: String) throws {
-        return try self._withUnsafeDescriptor { descriptor in
+        try self._withUnsafeDescriptor { descriptor in
             try descriptor.removeExtendedAttribute(name).mapError { errno in
                 FileSystemError.fremovexattr(
                     attribute: name,
@@ -588,7 +649,7 @@ extension SystemFileHandle.SendableView {
     }
 
     internal func _duplicate() -> Result<FileDescriptor, FileSystemError> {
-        return self._withUnsafeDescriptorResult { descriptor in
+        self._withUnsafeDescriptorResult { descriptor in
             Result {
                 try descriptor.duplicate()
             }.mapError { error in
@@ -605,7 +666,7 @@ extension SystemFileHandle.SendableView {
     }
 
     @_spi(Testing)
-    public func _close(materialize: Bool) -> Result<Void, FileSystemError> {
+    public func _close(materialize: Bool, failRenameat2WithEINVAL: Bool = false) -> Result<Void, FileSystemError> {
         let descriptor: FileDescriptor? = self.lifecycle.withLockedValue { lifecycle in
             switch lifecycle {
             case let .open(descriptor):
@@ -621,7 +682,11 @@ extension SystemFileHandle.SendableView {
         }
 
         // Materialize then close.
-        let materializeResult = self._materialize(materialize, descriptor: descriptor)
+        let materializeResult = self._materialize(
+            materialize,
+            descriptor: descriptor,
+            failRenameat2WithEINVAL: failRenameat2WithEINVAL
+        )
 
         return Result {
             try descriptor.close()
@@ -632,9 +697,109 @@ extension SystemFileHandle.SendableView {
         }
     }
 
-    private func _materialize(
+    #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    fileprivate func _materializeLink(
+        descriptor: FileDescriptor,
+        from createdPath: FilePath,
+        to desiredPath: FilePath,
+        exclusive: Bool
+    ) -> Result<Void, FileSystemError> {
+        func linkAtEmptyPath() -> Result<Void, Errno> {
+            Syscall.linkAt(
+                from: "",
+                relativeTo: descriptor,
+                to: desiredPath,
+                relativeTo: .currentWorkingDirectory,
+                flags: [.emptyPath]
+            )
+        }
+
+        func linkAtProcFS() -> Result<Void, Errno> {
+            Syscall.linkAt(
+                from: FilePath("/proc/self/fd/\(descriptor.rawValue)"),
+                relativeTo: .currentWorkingDirectory,
+                to: desiredPath,
+                relativeTo: .currentWorkingDirectory,
+                flags: [.followSymbolicLinks]
+            )
+        }
+
+        let result: Result<Void, FileSystemError>
+
+        switch linkAtEmptyPath() {
+        case .success:
+            result = .success(())
+
+        case .failure(.fileExists) where !exclusive:
+            // File exists and materialization _isn't_ exclusive. Remove the existing
+            // file and try again.
+            let removeResult = Libc.remove(desiredPath).mapError { errno in
+                FileSystemError.remove(errno: errno, path: desiredPath, location: .here())
+            }
+
+            let linkAtResult = linkAtEmptyPath().flatMapError { errno in
+                // ENOENT means we likely didn't have the 'CAP_DAC_READ_SEARCH' capability
+                // so try again by linking to the descriptor via procfs.
+                if errno == .noSuchFileOrDirectory {
+                    return linkAtProcFS()
+                } else {
+                    return .failure(errno)
+                }
+            }.mapError { errno in
+                FileSystemError.link(
+                    errno: errno,
+                    from: createdPath,
+                    to: desiredPath,
+                    location: .here()
+                )
+            }
+
+            result = removeResult.flatMap { linkAtResult }
+
+        case .failure(.noSuchFileOrDirectory):
+            result = linkAtProcFS().flatMapError { errno in
+                if errno == .fileExists, !exclusive {
+                    return Libc.remove(desiredPath).mapError { errno in
+                        FileSystemError.remove(
+                            errno: errno,
+                            path: desiredPath,
+                            location: .here()
+                        )
+                    }.flatMap {
+                        linkAtProcFS().mapError { errno in
+                            FileSystemError.link(
+                                errno: errno,
+                                from: createdPath,
+                                to: desiredPath,
+                                location: .here()
+                            )
+                        }
+                    }
+                } else {
+                    let error = FileSystemError.link(
+                        errno: errno,
+                        from: createdPath,
+                        to: desiredPath,
+                        location: .here()
+                    )
+                    return .failure(error)
+                }
+            }
+
+        case .failure(let errno):
+            result = .failure(
+                .link(errno: errno, from: createdPath, to: desiredPath, location: .here())
+            )
+        }
+
+        return result
+    }
+    #endif
+
+    func _materialize(
         _ materialize: Bool,
-        descriptor: FileDescriptor
+        descriptor: FileDescriptor,
+        failRenameat2WithEINVAL: Bool
     ) -> Result<Void, FileSystemError> {
         guard let materialization = self.materialization else { return .success(()) }
 
@@ -643,94 +808,15 @@ extension SystemFileHandle.SendableView {
 
         let result: Result<Void, FileSystemError>
         switch materialization.mode {
-        #if canImport(Glibc) || canImport(Musl)
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         case .link:
             if materialize {
-                func linkAtEmptyPath() -> Result<Void, Errno> {
-                    Syscall.linkAt(
-                        from: "",
-                        relativeTo: descriptor,
-                        to: desiredPath,
-                        relativeTo: .currentWorkingDirectory,
-                        flags: [.emptyPath]
-                    )
-                }
-
-                func linkAtProcFS() -> Result<Void, Errno> {
-                    Syscall.linkAt(
-                        from: FilePath("/proc/self/fd/\(descriptor.rawValue)"),
-                        relativeTo: .currentWorkingDirectory,
-                        to: desiredPath,
-                        relativeTo: .currentWorkingDirectory,
-                        flags: [.followSymbolicLinks]
-                    )
-                }
-
-                switch linkAtEmptyPath() {
-                case .success:
-                    result = .success(())
-
-                case .failure(.fileExists) where !materialization.exclusive:
-                    // File exists and materialization _isn't_ exclusive. Remove the existing
-                    // file and try again.
-                    let removeResult = Libc.remove(desiredPath).mapError { errno in
-                        FileSystemError.remove(errno: errno, path: desiredPath, location: .here())
-                    }
-
-                    let linkAtResult = linkAtEmptyPath().flatMapError { errno in
-                        // ENOENT means we likely didn't have the 'CAP_DAC_READ_SEARCH' capability
-                        // so try again by linking to the descriptor via procfs.
-                        if errno == .noSuchFileOrDirectory {
-                            return linkAtProcFS()
-                        } else {
-                            return .failure(errno)
-                        }
-                    }.mapError { errno in
-                        FileSystemError.link(
-                            errno: errno,
-                            from: createdPath,
-                            to: desiredPath,
-                            location: .here()
-                        )
-                    }
-
-                    result = removeResult.flatMap { linkAtResult }
-
-                case .failure(.noSuchFileOrDirectory):
-                    result = linkAtProcFS().flatMapError { errno in
-                        if errno == .fileExists, !materialization.exclusive {
-                            return Libc.remove(desiredPath).mapError { errno in
-                                FileSystemError.remove(
-                                    errno: errno,
-                                    path: desiredPath,
-                                    location: .here()
-                                )
-                            }.flatMap {
-                                return linkAtProcFS().mapError { errno in
-                                    FileSystemError.link(
-                                        errno: errno,
-                                        from: createdPath,
-                                        to: desiredPath,
-                                        location: .here()
-                                    )
-                                }
-                            }
-                        } else {
-                            let error = FileSystemError.link(
-                                errno: errno,
-                                from: createdPath,
-                                to: desiredPath,
-                                location: .here()
-                            )
-                            return .failure(error)
-                        }
-                    }
-
-                case .failure(let errno):
-                    result = .failure(
-                        .link(errno: errno, from: createdPath, to: desiredPath, location: .here())
-                    )
-                }
+                result = self._materializeLink(
+                    descriptor: descriptor,
+                    from: createdPath,
+                    to: desiredPath,
+                    exclusive: materialization.exclusive
+                )
             } else {
                 result = .success(())
             }
@@ -738,34 +824,95 @@ extension SystemFileHandle.SendableView {
 
         case .rename:
             if materialize {
-                let renameResult: Result<Void, Errno>
+                var renameResult: Result<Void, Errno>
+                let renameFunction: String
                 #if canImport(Darwin)
+                renameFunction = "renamex_np"
                 renameResult = Syscall.rename(
                     from: createdPath,
                     to: desiredPath,
                     options: materialization.exclusive ? [.exclusive] : []
                 )
-                #elseif canImport(Glibc) || canImport(Musl)
+                #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                 // The created and desired paths are absolute, so the relative descriptors are
                 // ignored. However, they must still be provided to 'rename' in order to pass
                 // flags.
-                renameResult = Syscall.rename(
-                    from: createdPath,
-                    relativeTo: .currentWorkingDirectory,
-                    to: desiredPath,
-                    relativeTo: .currentWorkingDirectory,
-                    flags: materialization.exclusive ? [.exclusive] : []
-                )
+                renameFunction = "renameat2"
+                if materialization.exclusive, failRenameat2WithEINVAL {
+                    renameResult = .failure(.invalidArgument)
+                } else {
+                    renameResult = Syscall.rename(
+                        from: createdPath,
+                        relativeTo: .currentWorkingDirectory,
+                        to: desiredPath,
+                        relativeTo: .currentWorkingDirectory,
+                        flags: materialization.exclusive ? [.exclusive] : []
+                    )
+                }
                 #endif
 
-                // A file exists at the desired path and the user specified exclusive creation,
-                // clear up by removing the file we did create.
-                if materialization.exclusive, case .failure(.fileExists) = renameResult {
-                    _ = Libc.remove(createdPath)
+                if materialization.exclusive {
+                    switch renameResult {
+                    case .failure(.fileExists):
+                        // A file exists at the desired path and the user specified exclusive
+                        // creation, clear up by removing the file that we did create.
+                        _ = Libc.remove(createdPath)
+
+                    case .failure(.invalidArgument):
+                        // If 'renameat2' failed on Linux with EINVAL then in all likelihood the
+                        // 'RENAME_NOREPLACE' option isn't supported. As we're doing an exclusive
+                        // create, check the desired path doesn't exist then do a regular rename.
+                        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+                        switch Syscall.stat(path: desiredPath) {
+                        case .failure(.noSuchFileOrDirectory):
+                            // File doesn't exist, do a 'regular' rename.
+                            renameResult = Syscall.rename(from: createdPath, to: desiredPath)
+
+                        case .success:
+                            // File exists so exclusive create isn't possible. Remove the file
+                            // we did create then throw.
+                            _ = Libc.remove(createdPath)
+                            let error = FileSystemError(
+                                code: .fileAlreadyExists,
+                                message: """
+                                    Couldn't open '\(desiredPath)', it already exists and the \
+                                    file was opened with the 'existingFile' option set to 'none'.
+                                    """,
+                                cause: nil,
+                                location: .here()
+                            )
+                            return .failure(error)
+
+                        case .failure:
+                            // Failed to stat the desired file for reasons unknown. Remove the file
+                            // we did create then throw.
+                            _ = Libc.remove(createdPath)
+                            let error = FileSystemError(
+                                code: .unknown,
+                                message: "Couldn't open '\(desiredPath)'.",
+                                cause: FileSystemError.rename(
+                                    "renameat2",
+                                    errno: .invalidArgument,
+                                    oldName: createdPath,
+                                    newName: desiredPath,
+                                    location: .here()
+                                ),
+                                location: .here()
+                            )
+                            return .failure(error)
+                        }
+                        #else
+                        ()  // Not Linux, use the normal error flow.
+                        #endif
+
+                    case .success, .failure:
+                        ()
+                    }
                 }
 
                 result = renameResult.mapError { errno in
                     .rename(
+                        renameFunction,
                         errno: errno,
                         oldName: createdPath,
                         newName: desiredPath,
@@ -781,6 +928,84 @@ extension SystemFileHandle.SendableView {
         }
 
         return result
+    }
+
+    func _setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) throws {
+        try self._withUnsafeDescriptor { descriptor in
+            let syscallResult: Result<Void, Errno>
+            switch (lastAccess, lastDataModification) {
+            case (.none, .none):
+                // If the timespec array is nil, as per the `futimens` docs,
+                // both the last accessed and last modification times
+                // will be set to now.
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: nil
+                )
+
+            case (.some(let lastAccess), .none):
+                // Don't modify the last modification time.
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: [timespec(lastAccess), timespec(.omit)]
+                )
+
+            case (.none, .some(let lastDataModification)):
+                // Don't modify the last access time.
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: [timespec(.omit), timespec(lastDataModification)]
+                )
+
+            case (.some(let lastAccess), .some(let lastDataModification)):
+                syscallResult = Syscall.futimens(
+                    fileDescriptor: descriptor,
+                    times: [timespec(lastAccess), timespec(lastDataModification)]
+                )
+            }
+
+            try syscallResult.mapError { errno in
+                FileSystemError.futimens(
+                    errno: errno,
+                    path: self.path,
+                    lastAccessTime: lastAccess,
+                    lastDataModificationTime: lastDataModification,
+                    location: .here()
+                )
+            }.get()
+        } onUnavailable: {
+            FileSystemError(
+                code: .closed,
+                message: "Couldn't modify file dates, the file '\(self.path)' is closed.",
+                cause: nil,
+                location: .here()
+            )
+        }
+    }
+}
+
+extension timespec {
+    fileprivate init(_ fileinfoTimespec: FileInfo.Timespec) {
+        // Clamp seconds to be positive
+        let seconds = max(0, fileinfoTimespec.seconds)
+
+        // If nanoseconds are not UTIME_NOW or UTIME_OMIT, clamp to be between
+        // 0 and 1,000 million.
+        let nanoseconds: Int
+        switch fileinfoTimespec {
+        case .now, .omit:
+            nanoseconds = fileinfoTimespec.nanoseconds
+        default:
+            nanoseconds = min(1_000_000_000, max(0, fileinfoTimespec.nanoseconds))
+        }
+
+        self.init(
+            tv_sec: seconds,
+            tv_nsec: nanoseconds
+        )
     }
 }
 
@@ -800,8 +1025,8 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
         fromAbsoluteOffset offset: Int64,
         length: ByteCount
     ) async throws -> ByteBuffer {
-        return try await self.executor.execute { [sendableView] in
-            return try sendableView._withUnsafeDescriptor { descriptor in
+        try await self.threadPool.runIfActive { [sendableView] in
+            try sendableView._withUnsafeDescriptor { descriptor in
                 try descriptor.readChunk(
                     fromAbsoluteOffset: offset,
                     length: length.bytes
@@ -853,7 +1078,7 @@ extension SystemFileHandle: ReadableFileHandleProtocol {
         in range: Range<Int64>,
         chunkLength size: ByteCount
     ) -> FileChunks {
-        return FileChunks(handle: self, chunkLength: size, range: range)
+        FileChunks(handle: self, chunkLength: size, range: range)
     }
 }
 
@@ -866,8 +1091,8 @@ extension SystemFileHandle: WritableFileHandleProtocol {
         contentsOf bytes: some (Sequence<UInt8> & Sendable),
         toAbsoluteOffset offset: Int64
     ) async throws -> Int64 {
-        return try await self.executor.execute { [sendableView] in
-            return try sendableView._withUnsafeDescriptor { descriptor in
+        try await self.threadPool.runIfActive { [sendableView] in
+            try sendableView._withUnsafeDescriptor { descriptor in
                 try descriptor.write(contentsOf: bytes, toAbsoluteOffset: offset)
                     .flatMapError { error in
                         if let errno = error as? Errno, errno == .illegalSeek {
@@ -915,7 +1140,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
     }
 
     public func resize(to size: ByteCount) async throws {
-        try await self.executor.execute { [sendableView] in
+        try await self.threadPool.runIfActive { [sendableView] in
             try sendableView._resize(to: size).get()
         }
     }
@@ -924,7 +1149,7 @@ extension SystemFileHandle: WritableFileHandleProtocol {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension SystemFileHandle.SendableView {
     func _resize(to size: ByteCount) -> Result<(), FileSystemError> {
-        return self._withUnsafeDescriptorResult { descriptor in
+        self._withUnsafeDescriptorResult { descriptor in
             Result {
                 try descriptor.resize(to: size.bytes, retryOnInterrupt: true)
             }.mapError { error in
@@ -950,7 +1175,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     public typealias ReadWriteFileHandle = SystemFileHandle
 
     public func listContents(recursive: Bool) -> DirectoryEntries {
-        return DirectoryEntries(handle: self, recursive: recursive)
+        DirectoryEntries(handle: self, recursive: recursive)
     }
 
     public func openFile(
@@ -958,7 +1183,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         options: OpenOptions.Read
     ) async throws -> SystemFileHandle {
         let opts = options.descriptorOptions.union(.nonBlocking)
-        let handle = try await self.executor.execute { [sendableView] in
+        let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path,
                 mode: .readOnly,
@@ -977,7 +1202,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     ) async throws -> SystemFileHandle {
         let perms = options.permissionsForRegularFile
         let opts = options.descriptorOptions.union(.nonBlocking)
-        let handle = try await self.executor.execute { [sendableView] in
+        let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path,
                 mode: .readWrite,
@@ -997,7 +1222,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
     ) async throws -> SystemFileHandle {
         let perms = options.permissionsForRegularFile
         let opts = options.descriptorOptions.union(.nonBlocking)
-        let handle = try await self.executor.execute { [sendableView] in
+        let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path,
                 mode: .writeOnly,
@@ -1016,7 +1241,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         options: OpenOptions.Directory
     ) async throws -> SystemFileHandle {
         let opts = options.descriptorOptions.union(.nonBlocking)
-        let handle = try await self.executor.execute { [sendableView] in
+        let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
                 atPath: path,
                 mode: .readOnly,
@@ -1048,7 +1273,7 @@ extension SystemFileHandle.SendableView {
                     options: options,
                     permissions: permissions,
                     transactionalIfPossible: transactional,
-                    executor: self.executor
+                    threadPool: self.threadPool
                 )
             } else if self.path.isAbsolute {
                 // The parent path is absolute and the provided path is relative; combine them.
@@ -1058,7 +1283,7 @@ extension SystemFileHandle.SendableView {
                     options: options,
                     permissions: permissions,
                     transactionalIfPossible: transactional,
-                    executor: self.executor
+                    threadPool: self.threadPool
                 )
             }
 
@@ -1079,7 +1304,7 @@ extension SystemFileHandle.SendableView {
                 SystemFileHandle(
                     takingOwnershipOf: newDescriptor,
                     path: self.path.appending(path.components).lexicallyNormalized(),
-                    executor: self.executor
+                    threadPool: self.threadPool
                 )
             }.mapError { errno in
                 .open("openat", error: errno, path: self.path, location: .here())
@@ -1106,7 +1331,7 @@ extension SystemFileHandle {
         options: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
         transactionalIfPossible transactional: Bool,
-        executor: IOExecutor
+        threadPool: NIOThreadPool
     ) -> Result<SystemFileHandle, FileSystemError> {
         let isWritable = (mode == .writeOnly || mode == .readWrite)
         let exclusiveCreate = options.contains(.exclusiveCreate)
@@ -1130,7 +1355,7 @@ extension SystemFileHandle {
                 mode: mode,
                 options: options,
                 permissions: permissions,
-                executor: executor,
+                threadPool: threadPool,
                 useTemporaryFileIfPossible: temporaryHardLink
             )
         } else {
@@ -1139,7 +1364,7 @@ extension SystemFileHandle {
                 mode: mode,
                 options: options,
                 permissions: permissions,
-                executor: executor
+                threadPool: threadPool
             )
         }
     }
@@ -1149,9 +1374,9 @@ extension SystemFileHandle {
         mode: FileDescriptor.AccessMode,
         options: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
-        executor: IOExecutor
+        threadPool: NIOThreadPool
     ) -> Result<SystemFileHandle, FileSystemError> {
-        return Result {
+        Result {
             try FileDescriptor.open(
                 path,
                 mode,
@@ -1162,19 +1387,20 @@ extension SystemFileHandle {
             SystemFileHandle(
                 takingOwnershipOf: descriptor,
                 path: path,
-                executor: executor
+                threadPool: threadPool
             )
         }.mapError { errno in
             FileSystemError.open("open", error: errno, path: path, location: .here())
         }
     }
 
-    static func syncOpenWithMaterialization(
+    @_spi(Testing)
+    public static func syncOpenWithMaterialization(
         atPath path: FilePath,
         mode: FileDescriptor.AccessMode,
         options originalOptions: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
-        executor: IOExecutor,
+        threadPool: NIOThreadPool,
         useTemporaryFileIfPossible: Bool = true
     ) -> Result<SystemFileHandle, FileSystemError> {
         let openedPath: FilePath
@@ -1226,7 +1452,7 @@ extension SystemFileHandle {
             }
 
             func makePath() -> FilePath {
-                #if canImport(Glibc) || canImport(Musl)
+                #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                 if useTemporaryFileIfPossible {
                     return currentWorkingDirectory.appending(path.components.dropLast())
                 }
@@ -1239,7 +1465,7 @@ extension SystemFileHandle {
             desiredPath = currentWorkingDirectory.appending(path.components)
         } else {
             func makePath() -> FilePath {
-                #if canImport(Glibc) || canImport(Musl)
+                #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                 if useTemporaryFileIfPossible {
                     return path.removingLastComponent()
                 }
@@ -1255,7 +1481,7 @@ extension SystemFileHandle {
         let materializationMode: Materialization.Mode
         let options: FileDescriptor.OpenOptions
 
-        #if canImport(Glibc) || canImport(Musl)
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         if useTemporaryFileIfPossible {
             options = [.temporaryFile]
             materializationMode = .link
@@ -1287,12 +1513,12 @@ extension SystemFileHandle {
                 takingOwnershipOf: descriptor,
                 path: openedPath,
                 materialization: materialization,
-                executor: executor
+                threadPool: threadPool
             )
 
             return .success(handle)
         } catch {
-          #if canImport(Glibc) || canImport(Musl)
+            #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
             // 'O_TMPFILE' isn't supported for the current file system, try again but using
             // rename instead.
             if useTemporaryFileIfPossible, let errno = error as? Errno, errno == .notSupported {
@@ -1301,7 +1527,7 @@ extension SystemFileHandle {
                     mode: mode,
                     options: originalOptions,
                     permissions: permissions,
-                    executor: executor,
+                    threadPool: threadPool,
                     useTemporaryFileIfPossible: false
                 )
             }

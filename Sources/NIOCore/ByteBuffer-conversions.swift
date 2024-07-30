@@ -17,7 +17,7 @@ import Dispatch
 #endif
 
 extension Array where Element == UInt8 {
-    
+
     /// Creates a `[UInt8]` from the given buffer. The entire readable portion of the buffer will be read.
     /// - parameter buffer: The buffer to read.
     @inlinable
@@ -25,11 +25,11 @@ extension Array where Element == UInt8 {
         var buffer = buffer
         self = buffer.readBytes(length: buffer.readableBytes)!
     }
-    
+
 }
 
 extension String {
-    
+
     /// Creates a `String` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
     /// - parameter buffer: The buffer to read.
     @inlinable
@@ -52,7 +52,7 @@ extension String {
 
 #if canImport(Dispatch)
 extension DispatchData {
-    
+
     /// Creates a `DispatchData` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
     /// - parameter buffer: The buffer to read.
     @inlinable
@@ -60,6 +60,6 @@ extension DispatchData {
         var buffer = buffer
         self = buffer.readDispatchData(length: buffer.readableBytes)!
     }
-    
+
 }
 #endif

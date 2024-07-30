@@ -19,28 +19,28 @@ import NIOHTTP1
 import NIOWebSocket
 
 let websocketResponse = """
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>Swift NIO WebSocket Test Page</title>
-    <script>
-        var wsconnection = new WebSocket("ws://localhost:8888/websocket");
-        wsconnection.onmessage = function (msg) {
-            var element = document.createElement("p");
-            element.innerHTML = msg.data;
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Swift NIO WebSocket Test Page</title>
+        <script>
+            var wsconnection = new WebSocket("ws://localhost:8888/websocket");
+            wsconnection.onmessage = function (msg) {
+                var element = document.createElement("p");
+                element.innerHTML = msg.data;
 
-            var textDiv = document.getElementById("websocket-stream");
-            textDiv.insertBefore(element, null);
-        };
-    </script>
-  </head>
-  <body>
-    <h1>WebSocket Stream</h1>
-    <div id="websocket-stream"></div>
-  </body>
-</html>
-"""
+                var textDiv = document.getElementById("websocket-stream");
+                textDiv.insertBefore(element, null);
+            };
+        </script>
+      </head>
+      <body>
+        <h1>WebSocket Stream</h1>
+        <div id="websocket-stream"></div>
+      </body>
+    </html>
+    """
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 @main
@@ -70,43 +70,49 @@ struct Server {
 
     /// This method starts the server and handles incoming connections.
     func run() async throws {
-        let channel: NIOAsyncChannel<EventLoopFuture<UpgradeResult>, Never> = try await ServerBootstrap(group: self.eventLoopGroup)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .bind(
-                host: self.host,
-                port: self.port
-            ) { channel in
-                channel.eventLoop.makeCompletedFuture {
-                    let upgrader = NIOTypedWebSocketServerUpgrader<UpgradeResult>(
-                        shouldUpgrade: { (channel, head) in
-                            channel.eventLoop.makeSucceededFuture(HTTPHeaders())
-                        },
-                        upgradePipelineHandler: { (channel, _) in
-                            channel.eventLoop.makeCompletedFuture {
-                                let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(wrappingChannelSynchronously: channel)
-                                return UpgradeResult.websocket(asyncChannel)
-                            }
+        let channel: NIOAsyncChannel<EventLoopFuture<UpgradeResult>, Never> = try await ServerBootstrap(
+            group: self.eventLoopGroup
+        )
+        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .bind(
+            host: self.host,
+            port: self.port
+        ) { channel in
+            channel.eventLoop.makeCompletedFuture {
+                let upgrader = NIOTypedWebSocketServerUpgrader<UpgradeResult>(
+                    shouldUpgrade: { (channel, head) in
+                        channel.eventLoop.makeSucceededFuture(HTTPHeaders())
+                    },
+                    upgradePipelineHandler: { (channel, _) in
+                        channel.eventLoop.makeCompletedFuture {
+                            let asyncChannel = try NIOAsyncChannel<WebSocketFrame, WebSocketFrame>(
+                                wrappingChannelSynchronously: channel
+                            )
+                            return UpgradeResult.websocket(asyncChannel)
                         }
-                    )
+                    }
+                )
 
-                    let serverUpgradeConfiguration = NIOTypedHTTPServerUpgradeConfiguration(
-                        upgraders: [upgrader],
-                        notUpgradingCompletionHandler: { channel in
-                            channel.eventLoop.makeCompletedFuture {
-                                try channel.pipeline.syncOperations.addHandler(HTTPByteBufferResponsePartHandler())
-                                let asyncChannel = try NIOAsyncChannel<HTTPServerRequestPart, HTTPPart<HTTPResponseHead, ByteBuffer>>(wrappingChannelSynchronously: channel)
-                                return UpgradeResult.notUpgraded(asyncChannel)
-                            }
+                let serverUpgradeConfiguration = NIOTypedHTTPServerUpgradeConfiguration(
+                    upgraders: [upgrader],
+                    notUpgradingCompletionHandler: { channel in
+                        channel.eventLoop.makeCompletedFuture {
+                            try channel.pipeline.syncOperations.addHandler(HTTPByteBufferResponsePartHandler())
+                            let asyncChannel = try NIOAsyncChannel<
+                                HTTPServerRequestPart, HTTPPart<HTTPResponseHead, ByteBuffer>
+                            >(wrappingChannelSynchronously: channel)
+                            return UpgradeResult.notUpgraded(asyncChannel)
                         }
-                    )
+                    }
+                )
 
-                    let negotiationResultFuture = try channel.pipeline.syncOperations.configureUpgradableHTTPServerPipeline(
-                        configuration: .init(upgradeConfiguration: serverUpgradeConfiguration)
-                    )
+                let negotiationResultFuture = try channel.pipeline.syncOperations.configureUpgradableHTTPServerPipeline(
+                    configuration: .init(upgradeConfiguration: serverUpgradeConfiguration)
+                )
 
-                    return negotiationResultFuture
-                }
+                return negotiationResultFuture
             }
+        }
 
         // We are handling each incoming connection in a separate child task. It is important
         // to use a discarding task group here which automatically discards finished child tasks.
@@ -208,8 +214,9 @@ struct Server {
         }
     }
 
-
-    private func handleHTTPChannel(_ channel: NIOAsyncChannel<HTTPServerRequestPart, HTTPPart<HTTPResponseHead, ByteBuffer>>) async throws {
+    private func handleHTTPChannel(
+        _ channel: NIOAsyncChannel<HTTPServerRequestPart, HTTPPart<HTTPResponseHead, ByteBuffer>>
+    ) async throws {
         try await channel.executeThenClose { inbound, outbound in
             for try await requestPart in inbound {
                 // We're not interested in request bodies here: we're just serving up GET responses
@@ -238,14 +245,15 @@ struct Server {
                     contentsOf: [
                         .head(responseHead),
                         .body(Self.responseBody),
-                        .end(nil)
+                        .end(nil),
                     ]
                 )
             }
         }
     }
 
-    private func respond405(writer: NIOAsyncChannelOutboundWriter<HTTPPart<HTTPResponseHead, ByteBuffer>>) async throws {
+    private func respond405(writer: NIOAsyncChannelOutboundWriter<HTTPPart<HTTPResponseHead, ByteBuffer>>) async throws
+    {
         var headers = HTTPHeaders()
         headers.add(name: "Connection", value: "close")
         headers.add(name: "Content-Length", value: "0")
@@ -258,7 +266,7 @@ struct Server {
         try await writer.write(
             contentsOf: [
                 .head(head),
-                .end(nil)
+                .end(nil),
             ]
         )
     }
@@ -269,14 +277,14 @@ final class HTTPByteBufferResponsePartHandler: ChannelOutboundHandler {
     typealias OutboundOut = HTTPServerResponsePart
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let part = self.unwrapOutboundIn(data)
+        let part = Self.unwrapOutboundIn(data)
         switch part {
         case .head(let head):
-            context.write(self.wrapOutboundOut(.head(head)), promise: promise)
+            context.write(Self.wrapOutboundOut(.head(head)), promise: promise)
         case .body(let buffer):
-            context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: promise)
+            context.write(Self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: promise)
         case .end(let trailers):
-            context.write(self.wrapOutboundOut(.end(trailers)), promise: promise)
+            context.write(Self.wrapOutboundOut(.end(trailers)), promise: promise)
         }
     }
 }

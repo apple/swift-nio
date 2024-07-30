@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-import DequeModule
 import Atomics
+import DequeModule
+import NIOCore
 
-fileprivate struct NoOpDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
+private struct NoOpDelegate: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
     typealias Element = Int
     let counter = ManagedAtomic(0)
 
@@ -38,7 +38,11 @@ final class NIOAsyncWriterSingleWritesBenchmark: AsyncBenchmark, @unchecked Send
     init(iterations: Int) {
         self.iterations = iterations
         self.delegate = .init()
-        let newWriter = NIOAsyncWriter<Int, NoOpDelegate>.makeWriter(isWritable: true, finishOnDeinit: false, delegate: self.delegate)
+        let newWriter = NIOAsyncWriter<Int, NoOpDelegate>.makeWriter(
+            isWritable: true,
+            finishOnDeinit: false,
+            delegate: self.delegate
+        )
         self.writer = newWriter.writer
         self.sink = newWriter.sink
     }

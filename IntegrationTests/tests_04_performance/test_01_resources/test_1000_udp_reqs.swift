@@ -15,7 +15,7 @@
 import NIOCore
 import NIOPosix
 
-fileprivate final class ServerEchoHandler: ChannelInboundHandler {
+private final class ServerEchoHandler: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
 
@@ -35,19 +35,19 @@ fileprivate final class ServerEchoHandler: ChannelInboundHandler {
     }
 }
 
-fileprivate final class ClientHandler: ChannelInboundHandler {
+private final class ClientHandler: ChannelInboundHandler {
     public typealias InboundIn = AddressedEnvelope<ByteBuffer>
     public typealias OutboundOut = AddressedEnvelope<ByteBuffer>
-    
+
     private let remoteAddress: SocketAddress
-    
+
     init(remoteAddress: SocketAddress) {
         self.remoteAddress = remoteAddress
     }
-    
+
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         // If we still have iterations to do send some more data.
-        if (self.iterationsOutstanding > 0) {
+        if self.iterationsOutstanding > 0 {
             self.iterationsOutstanding -= 1
             sendBytes(clientChannel: context.channel)
         } else {
@@ -63,22 +63,22 @@ fileprivate final class ClientHandler: ChannelInboundHandler {
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         fatalError()
     }
-    
+
     var iterationsOutstanding = 0
     var whenDone: EventLoopPromise<Void>? = nil
-    
+
     private func sendBytes(clientChannel: Channel) {
         var buffer = clientChannel.allocator.buffer(capacity: 1)
         buffer.writeInteger(3, as: UInt8.self)
         // Send the data with ECN
         let metadata = AddressedEnvelope<ByteBuffer>.Metadata(ecnState: .transportCapableFlag1)
         let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: remoteAddress, data: buffer, metadata: metadata)
-        clientChannel.writeAndFlush(self.wrapOutboundOut(envelope), promise: nil)
+        clientChannel.writeAndFlush(Self.wrapOutboundOut(envelope), promise: nil)
     }
-    
+
     func sendBytesAndWaitForReply(clientChannel: Channel) -> Int {
         let numberOfIterations = 1000
-        
+
         // Setup for iteration.
         self.iterationsOutstanding = numberOfIterations
         self.whenDone = clientChannel.eventLoop.makePromise()
@@ -95,7 +95,7 @@ func run(identifier: String) {
         .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
         // Set the handlers that are applied to the bound channel
         .channelInitializer { channel in
-            return channel.pipeline.addHandler(ServerEchoHandler())
+            channel.pipeline.addHandler(ServerEchoHandler())
         }
         .bind(to: localhostPickPort).wait()
     defer {
@@ -114,9 +114,8 @@ func run(identifier: String) {
     defer {
         try! clientChannel.close().wait()
     }
-    
+
     measure(identifier: identifier) {
         clientHandler.sendBytesAndWaitForReply(clientChannel: clientChannel)
     }
 }
-

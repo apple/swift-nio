@@ -16,6 +16,7 @@
 import CNIODarwin
 import CNIOLinux
 import NIOConcurrencyHelpers
+import NIOPosix
 @preconcurrency import SystemPackage
 
 /// An `AsyncSequence` of entries in a directory.
@@ -39,7 +40,7 @@ public struct DirectoryEntries: AsyncSequence {
     }
 
     public func makeAsyncIterator() -> DirectoryIterator {
-        return DirectoryIterator(iterator: self.batchedSequence.makeAsyncIterator())
+        DirectoryIterator(iterator: self.batchedSequence.makeAsyncIterator())
     }
 
     /// Returns a sequence of directory entry batches.
@@ -48,7 +49,7 @@ public struct DirectoryEntries: AsyncSequence {
     /// than `DirectoryEntry`. This can enable better performance by reducing the number of
     /// executor hops.
     public func batched() -> Batched {
-        return self.batchedSequence
+        self.batchedSequence
     }
 
     /// An `AsyncIteratorProtocol` of `DirectoryEntry`.
@@ -110,7 +111,7 @@ extension DirectoryEntries {
         }
 
         public func makeAsyncIterator() -> BatchedIterator {
-            return BatchedIterator(wrapping: self.stream.makeAsyncIterator())
+            BatchedIterator(wrapping: self.stream.makeAsyncIterator())
         }
 
         /// An `AsyncIteratorProtocol` of `Array<DirectoryEntry>`.
@@ -151,16 +152,14 @@ extension BufferedStream where Element == [DirectoryEntry] {
         )
 
         source.onTermination = {
-            guard let executor = protectedState.withLockedValue({ $0.executorForClosing() }) else {
+            guard let threadPool = protectedState.withLockedValue({ $0.threadPoolForClosing() }) else {
                 return
             }
 
-            executor.execute {
+            threadPool.submit { _ in  // always run, even if cancelled
                 protectedState.withLockedValue { state in
                     state.closeIfNecessary()
                 }
-            } onCompletion: { _ in
-                // Ignore the result.
             }
         }
 
@@ -189,22 +188,27 @@ private struct DirectoryEntryProducer {
     /// source it will either produce more or be scheduled to produce more. Stopping production
     /// is signalled via the stream's 'onTermination' handler.
     func produceMore() {
-        let executor = self.state.withLockedValue { state in
+        let threadPool = self.state.withLockedValue { state in
             state.produceMore()
         }
 
-        // No executor means we're done.
-        guard let executor = executor else { return }
+        // No thread pool means we're done.
+        guard let threadPool = threadPool else { return }
 
-        executor.execute {
-            try self.nextBatch()
-        } onCompletion: { result in
+        threadPool.submit {
+            let result: Result<[DirectoryEntry], Error>
+            switch $0 {
+            case .active:
+                result = Result { try self.nextBatch() }
+            case .cancelled:
+                result = .failure(CancellationError())
+            }
             self.onNextBatchResult(result)
         }
     }
 
     private func nextBatch() throws -> [DirectoryEntry] {
-        return try self.state.withLockedValue { state in
+        try self.state.withLockedValue { state in
             try state.next(self.entriesPerBatch)
         }
     }
@@ -261,16 +265,14 @@ private struct DirectoryEntryProducer {
     }
 
     private func close() {
-        guard let executor = self.state.withLockedValue({ $0.executorForClosing() }) else {
+        guard let threadPool = self.state.withLockedValue({ $0.threadPoolForClosing() }) else {
             return
         }
 
-        executor.execute {
+        threadPool.submit { _ in  // always run, even if cancelled
             self.state.withLockedValue { state in
                 state.closeIfNecessary()
             }
-        } onCompletion: { _ in
-            // Ignore.
         }
     }
 }
@@ -283,7 +285,7 @@ private struct DirectoryEnumerator: Sendable {
     private enum State: @unchecked Sendable {
         case modifying
         case idle(SystemFileHandle.SendableView, recursive: Bool)
-        case open(IOExecutor, Source, [DirectoryEntry])
+        case open(NIOThreadPool, Source, [DirectoryEntry])
         case done
     }
 
@@ -351,12 +353,12 @@ private struct DirectoryEnumerator: Sendable {
         self.path = handle.path
     }
 
-    internal func produceMore() -> IOExecutor? {
+    internal func produceMore() -> NIOThreadPool? {
         switch self.state {
         case let .idle(handle, _):
-            return handle.executor
-        case let .open(executor, _, _):
-            return executor
+            return handle.threadPool
+        case let .open(threadPool, _, _):
+            return threadPool
         case .done:
             return nil
         case .modifying:
@@ -364,10 +366,10 @@ private struct DirectoryEnumerator: Sendable {
         }
     }
 
-    internal func executorForClosing() -> IOExecutor? {
+    internal func threadPoolForClosing() -> NIOThreadPool? {
         switch self.state {
-        case let .open(executor, _, _):
-            return executor
+        case let .open(threadPool, _, _):
+            return threadPool
         case .idle, .done:
             // Don't need to close in the idle state: we don't own the handle.
             return nil
@@ -420,7 +422,7 @@ private struct DirectoryEnumerator: Sendable {
     private mutating func makeReaddirSource(
         _ handle: SystemFileHandle.SendableView
     ) -> Result<Source, FileSystemError> {
-        return handle._duplicate().mapError { dupError in
+        handle._duplicate().mapError { dupError in
             FileSystemError(
                 message: "Unable to open directory stream for '\(handle.path)'.",
                 wrapping: dupError
@@ -441,7 +443,7 @@ private struct DirectoryEnumerator: Sendable {
     private mutating func makeFTSSource(
         _ handle: SystemFileHandle.SendableView
     ) -> Result<Source, FileSystemError> {
-        return Libc.ftsOpen(handle.path, options: [.noChangeDir, .physical]).mapError { errno in
+        Libc.ftsOpen(handle.path, options: [.noChangeDir, .physical]).mapError { errno in
             FileSystemError.open("fts_open", error: errno, path: handle.path, location: .here())
         }.map {
             .fts($0)
@@ -449,7 +451,7 @@ private struct DirectoryEnumerator: Sendable {
     }
 
     private mutating func processOpenState(
-        executor: IOExecutor,
+        threadPool: NIOThreadPool,
         dir: CInterop.DirPointer,
         entries: inout [DirectoryEntry],
         count: Int
@@ -499,11 +501,11 @@ private struct DirectoryEnumerator: Sendable {
         }
 
         // We must have hit our 'count' limit.
-        return (.open(executor, .readdir(dir), entries), .yield(.success(entries)))
+        return (.open(threadPool, .readdir(dir), entries), .yield(.success(entries)))
     }
 
     private mutating func processOpenState(
-        executor: IOExecutor,
+        threadPool: NIOThreadPool,
         fts: CInterop.FTSPointer,
         entries: inout [DirectoryEntry],
         count: Int
@@ -580,7 +582,7 @@ private struct DirectoryEnumerator: Sendable {
         }
 
         // We must have hit our 'count' limit.
-        return (.open(executor, .fts(fts), entries), .yield(.success(entries)))
+        return (.open(threadPool, .fts(fts), entries), .yield(.success(entries)))
     }
 
     private mutating func process(_ count: Int) -> ProcessResult {
@@ -596,7 +598,7 @@ private struct DirectoryEnumerator: Sendable {
 
             switch result {
             case let .success(source):
-                self.state = .open(handle.executor, source, [])
+                self.state = .open(handle.threadPool, source, [])
                 return .continue
 
             case let .failure(error):
@@ -604,13 +606,13 @@ private struct DirectoryEnumerator: Sendable {
                 return .yield(.failure(error))
             }
 
-        case .open(let executor, let mode, var entries):
+        case .open(let threadPool, let mode, var entries):
             self.state = .modifying
 
             switch mode {
             case .readdir(let dir):
                 let (state, result) = self.processOpenState(
-                    executor: executor,
+                    threadPool: threadPool,
                     dir: dir,
                     entries: &entries,
                     count: count
@@ -620,7 +622,7 @@ private struct DirectoryEnumerator: Sendable {
 
             case .fts(let fts):
                 let (state, result) = self.processOpenState(
-                    executor: executor,
+                    threadPool: threadPool,
                     fts: fts,
                     entries: &entries,
                     count: count
@@ -650,7 +652,7 @@ private struct DirectoryEnumerator: Sendable {
 
 extension UnsafeMutablePointer<CInterop.FTSEnt> {
     fileprivate var path: FilePath {
-        return FilePath(platformString: self.pointee.fts_path!)
+        FilePath(platformString: self.pointee.fts_path!)
     }
 }
 

@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIOCore
-@testable import NIOPosix
 import Atomics
+import NIOCore
+import XCTest
+
+@testable import NIOPosix
 
 final class SALChannelTest: XCTestCase, SALTest {
     var group: MultiThreadedEventLoopGroup!
@@ -36,12 +37,18 @@ final class SALChannelTest: XCTestCase, SALTest {
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
         let buffer = ByteBuffer(string: "xxx")
 
-        let channel = try self.makeConnectedSocketChannel(localAddress: localAddress,
-                                                          remoteAddress: serverAddress)
+        let channel = try self.makeConnectedSocketChannel(
+            localAddress: localAddress,
+            remoteAddress: serverAddress
+        )
 
         try channel.eventLoop.runSAL(syscallAssertions: {
             try self.assertWrite(expectedFD: .max, expectedBytes: buffer, return: .processed(buffer.readableBytes))
-            try self.assertWritev(expectedFD: .max, expectedBytes: [buffer, buffer], return: .processed(2 * buffer.readableBytes))
+            try self.assertWritev(
+                expectedFD: .max,
+                expectedBytes: [buffer, buffer],
+                return: .processed(2 * buffer.readableBytes)
+            )
             try self.assertDeregister { selectable in
                 try selectable.withUnsafeHandle {
                     XCTAssertEqual(.max, $0)
@@ -85,8 +92,10 @@ final class SALChannelTest: XCTestCase, SALTest {
             func channelWritabilityChanged(context: ChannelHandlerContext) {
                 self.numberOfCalls += 1
 
-                XCTAssertEqual(self.writableNotificationStepExpectation.load(ordering: .relaxed),
-                               numberOfCalls)
+                XCTAssertEqual(
+                    self.writableNotificationStepExpectation.load(ordering: .relaxed),
+                    numberOfCalls
+                )
                 switch self.numberOfCalls {
                 case 1:
                     // First, we should see a `false` here because 2 bytes is above the high watermark.
@@ -100,8 +109,14 @@ final class SALChannelTest: XCTestCase, SALTest {
                     buffer.writeString("ABC")
 
                     // We expect another channelWritabilityChanged notification
-                    XCTAssertTrue(self.writableNotificationStepExpectation.compareExchange(expected: 2, desired: 3, ordering: .relaxed).exchanged)
-                    context.writeAndFlush(self.wrapOutboundOut(buffer), promise: nil)
+                    XCTAssertTrue(
+                        self.writableNotificationStepExpectation.compareExchange(
+                            expected: 2,
+                            desired: 3,
+                            ordering: .relaxed
+                        ).exchanged
+                    )
+                    context.writeAndFlush(Self.wrapOutboundOut(buffer), promise: nil)
                 case 3:
                     // Next, we should go to false because we never send all the bytes.
                     XCTAssertFalse(context.channel.isWritable)
@@ -115,78 +130,108 @@ final class SALChannelTest: XCTestCase, SALTest {
         }
 
         var maybeChannel: SocketChannel? = nil
-        XCTAssertNoThrow(maybeChannel = try self.makeConnectedSocketChannel(localAddress: localAddress,
-                                                                            remoteAddress: serverAddress))
+        XCTAssertNoThrow(
+            maybeChannel = try self.makeConnectedSocketChannel(
+                localAddress: localAddress,
+                remoteAddress: serverAddress
+            )
+        )
         guard let channel = maybeChannel else {
             XCTFail("couldn't construct channel")
             return
         }
 
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            // We get in a write of 2 bytes, and we claim we wrote 1 bytes of that.
-            try self.assertWrite(expectedFD: .max, expectedBytes: buffer, return: .processed(1))
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                // We get in a write of 2 bytes, and we claim we wrote 1 bytes of that.
+                try self.assertWrite(expectedFD: .max, expectedBytes: buffer, return: .processed(1))
 
-            // Next, we expect a reregistration which adds the `.write` notification
-            try self.assertReregister { selectable, eventSet in
-                XCTAssert(selectable as? Socket === channel.socket)
-                XCTAssertEqual([.read, .reset, .readEOF, .write], eventSet)
-                return true
-            }
+                // Next, we expect a reregistration which adds the `.write` notification
+                try self.assertReregister { selectable, eventSet in
+                    XCTAssert(selectable as? Socket === channel.socket)
+                    XCTAssertEqual([.read, .reset, .readEOF, .write], eventSet)
+                    return true
+                }
 
-            // Before sending back the writable notification, we know that that'll trigger a Channel writability change
-            XCTAssertTrue(writableNotificationStepExpectation.compareExchange(expected: 1, desired: 2, ordering: .relaxed).exchanged)
-            let writableEvent = SelectorEvent(io: [.write],
-                                              registration: NIORegistration(channel: .socketChannel(channel),
-                                                                            interested:  [.write],
-                                                                            registrationID: .initialRegistrationID))
-            try self.assertWaitingForNotification(result: writableEvent)
-            try self.assertWrite(expectedFD: .max,
-                                 expectedBytes: buffer.getSlice(at: 1, length: 1)!,
-                                 return: .processed(1))
-            buffer.clear()
-            buffer.writeString("ABC") // expected
+                // Before sending back the writable notification, we know that that'll trigger a Channel writability change
+                XCTAssertTrue(
+                    writableNotificationStepExpectation.compareExchange(expected: 1, desired: 2, ordering: .relaxed)
+                        .exchanged
+                )
+                let writableEvent = SelectorEvent(
+                    io: [.write],
+                    registration: NIORegistration(
+                        channel: .socketChannel(channel),
+                        interested: [.write],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: writableEvent)
+                try self.assertWrite(
+                    expectedFD: .max,
+                    expectedBytes: buffer.getSlice(at: 1, length: 1)!,
+                    return: .processed(1)
+                )
+                buffer.clear()
+                buffer.writeString("ABC")  // expected
 
-            // This time, the write again, just writes one byte, so we should remain registered for writable.
-            try self.assertWrite(expectedFD: .max,
-                                 expectedBytes: buffer,
-                                 return: .processed(1))
-            buffer.moveReaderIndex(forwardBy: 1)
+                // This time, the write again, just writes one byte, so we should remain registered for writable.
+                try self.assertWrite(
+                    expectedFD: .max,
+                    expectedBytes: buffer,
+                    return: .processed(1)
+                )
+                buffer.moveReaderIndex(forwardBy: 1)
 
-            // Let's send them another 'writable' notification:
-            try self.assertWaitingForNotification(result: writableEvent)
+                // Let's send them another 'writable' notification:
+                try self.assertWaitingForNotification(result: writableEvent)
 
-            // This time, we'll make the write write everything which should also lead to a final channelWritability
-            // change.
-            XCTAssertTrue(writableNotificationStepExpectation.compareExchange(expected: 3, desired: 4, ordering: .relaxed).exchanged)
-            try self.assertWrite(expectedFD: .max,
-                                 expectedBytes: buffer,
-                                 return: .processed(2))
+                // This time, we'll make the write write everything which should also lead to a final channelWritability
+                // change.
+                XCTAssertTrue(
+                    writableNotificationStepExpectation.compareExchange(expected: 3, desired: 4, ordering: .relaxed)
+                        .exchanged
+                )
+                try self.assertWrite(
+                    expectedFD: .max,
+                    expectedBytes: buffer,
+                    return: .processed(2)
+                )
 
-            // And lastly, after having written everything, we'd expect to unregister for write
-            try self.assertReregister { selectable, eventSet in
-                XCTAssert(selectable as? Socket === channel.socket)
-                XCTAssertEqual([.read, .reset, .readEOF], eventSet)
-                return true
-            }
+                // And lastly, after having written everything, we'd expect to unregister for write
+                try self.assertReregister { selectable, eventSet in
+                    XCTAssert(selectable as? Socket === channel.socket)
+                    XCTAssertEqual([.read, .reset, .readEOF], eventSet)
+                    return true
+                }
 
-            try self.assertParkedRightNow()
-        }) { () -> EventLoopFuture<Void> in
-            channel.setOption(ChannelOptions.writeSpin, value: 0).flatMap {
-                channel.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1, high: 1))
-            }.flatMap {
-                channel.pipeline.addHandler(DoWriteFromWritabilityChangedNotification(writableNotificationStepExpectation: writableNotificationStepExpectation))
-            }.flatMap {
-                // This write should cause a Channel writability change.
-                XCTAssertTrue(writableNotificationStepExpectation.compareExchange(expected: 0, desired: 1, ordering: .relaxed).exchanged)
-                return channel.writeAndFlush(buffer)
-            }
-        }.salWait())
+                try self.assertParkedRightNow()
+            }) { () -> EventLoopFuture<Void> in
+                channel.setOption(ChannelOptions.writeSpin, value: 0).flatMap {
+                    channel.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1, high: 1))
+                }.flatMap {
+                    channel.pipeline.addHandler(
+                        DoWriteFromWritabilityChangedNotification(
+                            writableNotificationStepExpectation: writableNotificationStepExpectation
+                        )
+                    )
+                }.flatMap {
+                    // This write should cause a Channel writability change.
+                    XCTAssertTrue(
+                        writableNotificationStepExpectation.compareExchange(expected: 0, desired: 1, ordering: .relaxed)
+                            .exchanged
+                    )
+                    return channel.writeAndFlush(buffer)
+                }
+            }.salWait()
+        )
     }
 
     func testWeSurviveIfIgnoringSIGPIPEFails() {
         // We know this sometimes happens on Darwin, so let's test it.
         let expectedError = IOError(errnoCode: EINVAL, reason: "bad")
-        XCTAssertThrowsError(try self.makeSocketChannelInjectingFailures(disableSIGPIPEFailure: expectedError)) { error in
+        XCTAssertThrowsError(try self.makeSocketChannelInjectingFailures(disableSIGPIPEFailure: expectedError)) {
+            error in
             XCTAssertEqual(expectedError.errnoCode, (error as? IOError)?.errnoCode)
         }
     }
@@ -207,8 +252,10 @@ final class SALChannelTest: XCTestCase, SALTest {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 self.numberOfCalls += 1
-                XCTAssertEqual("hello",
-                               String(decoding: self.unwrapInboundIn(data).readableBytesView, as: Unicode.UTF8.self))
+                XCTAssertEqual(
+                    "hello",
+                    String(decoding: Self.unwrapInboundIn(data).readableBytesView, as: Unicode.UTF8.self)
+                )
                 if self.numberOfCalls == 1 {
                     self.group.leave()
                 }
@@ -216,8 +263,12 @@ final class SALChannelTest: XCTestCase, SALTest {
         }
 
         var maybeChannel: SocketChannel? = nil
-        XCTAssertNoThrow(maybeChannel = try self.makeConnectedSocketChannel(localAddress: localAddress,
-                                                                            remoteAddress: serverAddress))
+        XCTAssertNoThrow(
+            maybeChannel = try self.makeConnectedSocketChannel(
+                localAddress: localAddress,
+                remoteAddress: serverAddress
+            )
+        )
         guard let channel = maybeChannel else {
             XCTFail("couldn't construct channel")
             return
@@ -228,16 +279,22 @@ final class SALChannelTest: XCTestCase, SALTest {
         let g = DispatchGroup()
         g.enter()
 
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            let readEvent = SelectorEvent(io: [.read],
-                                          registration: NIORegistration(channel: .socketChannel(channel),
-                                                                        interested: [.read],
-                                                                        registrationID: .initialRegistrationID))
-            try self.assertWaitingForNotification(result: readEvent)
-            try self.assertRead(expectedFD: .max, expectedBufferSpace: 2048, return: buffer)
-        }) {
-            channel.pipeline.addHandler(SignalGroupOnRead(group: g))
-        })
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                let readEvent = SelectorEvent(
+                    io: [.read],
+                    registration: NIORegistration(
+                        channel: .socketChannel(channel),
+                        interested: [.read],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: readEvent)
+                try self.assertRead(expectedFD: .max, expectedBufferSpace: 2048, return: buffer)
+            }) {
+                channel.pipeline.addHandler(SignalGroupOnRead(group: g))
+            }
+        )
 
         g.wait()
     }
@@ -249,33 +306,35 @@ final class SALChannelTest: XCTestCase, SALTest {
         }
         let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
-                return (value as? SocketOptionValue) == 1
-            }
-            try self.assertConnect(expectedAddress: serverAddress, result: true)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: localAddress)
-            try self.assertRegister { selectable, event, Registration in
-                XCTAssertEqual([.reset], event)
-                return true
-            }
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF], event)
-                return true
-            }
-            try self.assertDeregister { selectable in
-                return true
-            }
-            try self.assertClose(expectedFD: .max)
-        }) {
-            ClientBootstrap(group: channel.eventLoop)
-                .channelOption(ChannelOptions.autoRead, value: false)
-                .testOnly_connect(injectedChannel: channel, to: serverAddress)
-                .flatMap { channel in
-                    channel.close()
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                    (value as? SocketOptionValue) == 1
                 }
-        }.salWait())
+                try self.assertConnect(expectedAddress: serverAddress, result: true)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: localAddress)
+                try self.assertRegister { selectable, event, Registration in
+                    XCTAssertEqual([.reset], event)
+                    return true
+                }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF], event)
+                    return true
+                }
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
+            }) {
+                ClientBootstrap(group: channel.eventLoop)
+                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                    .flatMap { channel in
+                        channel.close()
+                    }
+            }.salWait()
+        )
     }
 
     func testClientBootstrapBindIsDoneAfterSocketOptions() {
@@ -285,42 +344,44 @@ final class SALChannelTest: XCTestCase, SALTest {
         }
         let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
         let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
-                return (value as? SocketOptionValue) == 1
-            }
-            // This is the important bit: We need to apply the socket options _before_ ...
-            try self.assertSetOption(expectedLevel: .socket, expectedOption: .so_reuseaddr) { value in
-                return (value as? SocketOptionValue) == 1
-            }
-            // ... we call bind.
-            try self.assertBind(expectedAddress: localAddress)
-            try self.assertLocalAddress(address: nil) // this is an inefficiency in `bind0`.
-            try self.assertConnect(expectedAddress: serverAddress, result: true)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: localAddress)
-            try self.assertRegister { selectable, event, Registration in
-                XCTAssertEqual([.reset], event)
-                return true
-            }
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF], event)
-                return true
-            }
-            try self.assertDeregister { selectable in
-                return true
-            }
-            try self.assertClose(expectedFD: .max)
-        }) {
-            ClientBootstrap(group: channel.eventLoop)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .channelOption(ChannelOptions.autoRead, value: false)
-                .bind(to: localAddress)
-                .testOnly_connect(injectedChannel: channel, to: serverAddress)
-                .flatMap { channel in
-                    channel.close()
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                    (value as? SocketOptionValue) == 1
                 }
-        }.salWait())
+                // This is the important bit: We need to apply the socket options _before_ ...
+                try self.assertSetOption(expectedLevel: .socket, expectedOption: .so_reuseaddr) { value in
+                    (value as? SocketOptionValue) == 1
+                }
+                // ... we call bind.
+                try self.assertBind(expectedAddress: localAddress)
+                try self.assertLocalAddress(address: nil)  // this is an inefficiency in `bind0`.
+                try self.assertConnect(expectedAddress: serverAddress, result: true)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: localAddress)
+                try self.assertRegister { selectable, event, Registration in
+                    XCTAssertEqual([.reset], event)
+                    return true
+                }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF], event)
+                    return true
+                }
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
+            }) {
+                ClientBootstrap(group: channel.eventLoop)
+                    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .bind(to: localAddress)
+                    .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                    .flatMap { channel in
+                        channel.close()
+                    }
+            }.salWait()
+        )
     }
 
     func testAcceptingInboundConnections() throws {
@@ -343,47 +404,54 @@ final class SALChannelTest: XCTestCase, SALTest {
         let socket = try self.makeSocket()
 
         let readRecorder = ConnectionRecorder()
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            let readEvent = SelectorEvent(io: [.read],
-                                          registration: NIORegistration(channel: .serverSocketChannel(channel),
-                                                                        interested: [.read],
-                                                                        registrationID: .initialRegistrationID))
-            try self.assertWaitingForNotification(result: readEvent)
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: remoteAddress)
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                let readEvent = SelectorEvent(
+                    io: [.read],
+                    registration: NIORegistration(
+                        channel: .serverSocketChannel(channel),
+                        interested: [.read],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: readEvent)
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: remoteAddress)
 
-            // This accept is expected: we delay inbound channel registration by one EL tick.
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: nil)
+                // This accept is expected: we delay inbound channel registration by one EL tick.
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: nil)
 
-            // Then we register the inbound channel.
-            try self.assertRegister { selectable, eventSet, registration in
-                if case (.socketChannel(let channel), let registrationEventSet) =
-                    (registration.channel, registration.interested) {
+                // Then we register the inbound channel.
+                try self.assertRegister { selectable, eventSet, registration in
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
 
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
-                } else {
-                    return false
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
+                        return false
+                    }
                 }
-            }
-            try self.assertReregister { selectable, eventSet in
-                XCTAssertEqual([.reset, .readEOF], eventSet)
-                return true
-            }
-            // because autoRead is on by default
-            try self.assertReregister { selectable, eventSet in
-                XCTAssertEqual([.reset, .readEOF, .read], eventSet)
-                return true
-            }
+                try self.assertReregister { selectable, eventSet in
+                    XCTAssertEqual([.reset, .readEOF], eventSet)
+                    return true
+                }
+                // because autoRead is on by default
+                try self.assertReregister { selectable, eventSet in
+                    XCTAssertEqual([.reset, .readEOF, .read], eventSet)
+                    return true
+                }
 
-            try self.assertParkedRightNow()
-        }) {
-            channel.pipeline.addHandler(readRecorder)
-        })
+                try self.assertParkedRightNow()
+            }) {
+                channel.pipeline.addHandler(readRecorder)
+            }
+        )
 
         XCTAssertEqual(readRecorder.readCount.load(ordering: .sequentiallyConsistent), 1)
     }
@@ -408,50 +476,57 @@ final class SALChannelTest: XCTestCase, SALTest {
         let socket = try self.makeSocket()
 
         let readRecorder = ConnectionRecorder()
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            let readEvent = SelectorEvent(io: [.read],
-                                          registration: NIORegistration(channel: .serverSocketChannel(channel),
-                                                                        interested: [.read],
-                                                                        registrationID: .initialRegistrationID))
-            try self.assertWaitingForNotification(result: readEvent)
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: remoteAddress)
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                let readEvent = SelectorEvent(
+                    io: [.read],
+                    registration: NIORegistration(
+                        channel: .serverSocketChannel(channel),
+                        interested: [.read],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: readEvent)
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: remoteAddress)
 
-            // This accept is expected: we delay inbound channel registration by one EL tick. This one throws.
-            // We throw a deliberate error here: this one hits the buggy codepath.
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, throwing: NIOFcntlFailedError())
+                // This accept is expected: we delay inbound channel registration by one EL tick. This one throws.
+                // We throw a deliberate error here: this one hits the buggy codepath.
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, throwing: NIOFcntlFailedError())
 
-            // Then we register the inbound channel from the first accept.
-            try self.assertRegister { selectable, eventSet, registration in
-                if case (.socketChannel(let channel), let registrationEventSet) =
-                    (registration.channel, registration.interested) {
+                // Then we register the inbound channel from the first accept.
+                try self.assertRegister { selectable, eventSet, registration in
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
 
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
-                } else {
-                    return false
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
+                        return false
+                    }
                 }
-            }
-            try self.assertReregister { selectable, eventSet in
-                XCTAssertEqual([.reset, .readEOF], eventSet)
-                return true
-            }
-            // because autoRead is on by default
-            try self.assertReregister { selectable, eventSet in
-                XCTAssertEqual([.reset, .readEOF, .read], eventSet)
-                return true
-            }
+                try self.assertReregister { selectable, eventSet in
+                    XCTAssertEqual([.reset, .readEOF], eventSet)
+                    return true
+                }
+                // because autoRead is on by default
+                try self.assertReregister { selectable, eventSet in
+                    XCTAssertEqual([.reset, .readEOF, .read], eventSet)
+                    return true
+                }
 
-            // Importantly, we should now be _parked_. This test is mostly testing in the absence:
-            // we expect not to see a reregister that removes readable.
-            try self.assertParkedRightNow()
-        }) {
-            channel.pipeline.addHandler(readRecorder)
-        })
+                // Importantly, we should now be _parked_. This test is mostly testing in the absence:
+                // we expect not to see a reregister that removes readable.
+                try self.assertParkedRightNow()
+            }) {
+                channel.pipeline.addHandler(readRecorder)
+            }
+        )
 
         XCTAssertEqual(readRecorder.readCount.load(ordering: .sequentiallyConsistent), 1)
     }
@@ -466,55 +541,65 @@ final class SALChannelTest: XCTestCase, SALTest {
         let firstWrite = ByteBuffer(string: "foo")
         let secondWrite = ByteBuffer(string: "bar")
 
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
-                return (value as? SocketOptionValue) == 1
-            }
-            try self.assertConnect(expectedAddress: serverAddress, result: false)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRegister { selectable, event, Registration in
-                XCTAssertEqual([.reset], event)
-                return true
-            }
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .write], event)
-                return true
-            }
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                    (value as? SocketOptionValue) == 1
+                }
+                try self.assertConnect(expectedAddress: serverAddress, result: false)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRegister { selectable, event, Registration in
+                    XCTAssertEqual([.reset], event)
+                    return true
+                }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .write], event)
+                    return true
+                }
 
-            let writeEvent = SelectorEvent(io: [.write],
-                                          registration: NIORegistration(channel: .socketChannel(channel),
-                                                                        interested: [.reset, .write],
-                                                                        registrationID: .initialRegistrationID))
-            try self.assertWaitingForNotification(result: writeEvent)
-            try self.assertGetOption(expectedLevel: .socket, expectedOption: .so_error, value: CInt(0))
-            try self.assertRemoteAddress(address: serverAddress)
+                let writeEvent = SelectorEvent(
+                    io: [.write],
+                    registration: NIORegistration(
+                        channel: .socketChannel(channel),
+                        interested: [.reset, .write],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: writeEvent)
+                try self.assertGetOption(expectedLevel: .socket, expectedOption: .so_error, value: CInt(0))
+                try self.assertRemoteAddress(address: serverAddress)
 
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF, .write], event)
-                return true
-            }
-            try self.assertWritev(expectedFD: .max, expectedBytes: [firstWrite, secondWrite], return: .processed(6))
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF, .write], event)
+                    return true
+                }
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [firstWrite, secondWrite],
+                    return: .processed(6)
+                )
 
-            try self.assertDeregister { selectable in
-                return true
-            }
-            try self.assertClose(expectedFD: .max)
-        }) {
-            ClientBootstrap(group: channel.eventLoop)
-                .channelOption(ChannelOptions.autoRead, value: false)
-                .channelInitializer { channel in
-                    channel.write(firstWrite, promise: nil)
-                    channel.write(secondWrite).whenComplete { _ in
-                        channel.close(promise: nil)
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
+            }) {
+                ClientBootstrap(group: channel.eventLoop)
+                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .channelInitializer { channel in
+                        channel.write(firstWrite, promise: nil)
+                        channel.write(secondWrite).whenComplete { _ in
+                            channel.close(promise: nil)
+                        }
+                        channel.flush()
+                        return channel.eventLoop.makeSucceededVoidFuture()
                     }
-                    channel.flush()
-                    return channel.eventLoop.makeSucceededVoidFuture()
-                }
-                .testOnly_connect(injectedChannel: channel, to: serverAddress)
-                .flatMap {
-                    $0.closeFuture
-                }
-        }.salWait())
+                    .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                    .flatMap {
+                        $0.closeFuture
+                    }
+            }.salWait()
+        )
     }
 
     func testWriteBeforeChannelActiveClientStreamInstantConnect() {
@@ -527,43 +612,49 @@ final class SALChannelTest: XCTestCase, SALTest {
         let firstWrite = ByteBuffer(string: "foo")
         let secondWrite = ByteBuffer(string: "bar")
 
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
-                return (value as? SocketOptionValue) == 1
-            }
-            try self.assertConnect(expectedAddress: serverAddress, result: true)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: serverAddress)
-            try self.assertRegister { selectable, event, Registration in
-                XCTAssertEqual([.reset], event)
-                return true
-            }
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF], event)
-                return true
-            }
-            try self.assertWritev(expectedFD: .max, expectedBytes: [firstWrite, secondWrite], return: .processed(6))
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                    (value as? SocketOptionValue) == 1
+                }
+                try self.assertConnect(expectedAddress: serverAddress, result: true)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: serverAddress)
+                try self.assertRegister { selectable, event, Registration in
+                    XCTAssertEqual([.reset], event)
+                    return true
+                }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF], event)
+                    return true
+                }
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [firstWrite, secondWrite],
+                    return: .processed(6)
+                )
 
-            try self.assertDeregister { selectable in
-                return true
-            }
-            try self.assertClose(expectedFD: .max)
-        }) {
-            ClientBootstrap(group: channel.eventLoop)
-                .channelOption(ChannelOptions.autoRead, value: false)
-                .channelInitializer { channel in
-                    channel.write(firstWrite, promise: nil)
-                    channel.write(secondWrite).whenComplete { _ in
-                        channel.close(promise: nil)
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
+            }) {
+                ClientBootstrap(group: channel.eventLoop)
+                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .channelInitializer { channel in
+                        channel.write(firstWrite, promise: nil)
+                        channel.write(secondWrite).whenComplete { _ in
+                            channel.close(promise: nil)
+                        }
+                        channel.flush()
+                        return channel.eventLoop.makeSucceededVoidFuture()
                     }
-                    channel.flush()
-                    return channel.eventLoop.makeSucceededVoidFuture()
-                }
-                .testOnly_connect(injectedChannel: channel, to: serverAddress)
-                .flatMap {
-                    $0.closeFuture
-                }
-        }.salWait())
+                    .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                    .flatMap {
+                        $0.closeFuture
+                    }
+            }.salWait()
+        )
     }
 
     func testWriteBeforeChannelActiveClientStreamInstantConnect_shortWriteLeadsToWritable() {
@@ -576,53 +667,59 @@ final class SALChannelTest: XCTestCase, SALTest {
         let firstWrite = ByteBuffer(string: "foo")
         let secondWrite = ByteBuffer(string: "bar")
 
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
-                return (value as? SocketOptionValue) == 1
-            }
-            try self.assertConnect(expectedAddress: serverAddress, result: true)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: serverAddress)
-            try self.assertRegister { selectable, event, Registration in
-                XCTAssertEqual([.reset], event)
-                return true
-            }
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF], event)
-                return true
-            }
-            try self.assertWritev(expectedFD: .max, expectedBytes: [firstWrite, secondWrite], return: .processed(3))
-            try self.assertWrite(expectedFD: .max, expectedBytes: secondWrite, return: .wouldBlock(0))
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF, .write], event)
-                return true
-            }
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                    (value as? SocketOptionValue) == 1
+                }
+                try self.assertConnect(expectedAddress: serverAddress, result: true)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: serverAddress)
+                try self.assertRegister { selectable, event, Registration in
+                    XCTAssertEqual([.reset], event)
+                    return true
+                }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF], event)
+                    return true
+                }
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [firstWrite, secondWrite],
+                    return: .processed(3)
+                )
+                try self.assertWrite(expectedFD: .max, expectedBytes: secondWrite, return: .wouldBlock(0))
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF, .write], event)
+                    return true
+                }
 
-            try self.assertDeregister { selectable in
-                return true
-            }
-            try self.assertClose(expectedFD: .max)
-        }) {
-            ClientBootstrap(group: channel.eventLoop)
-                .channelOption(ChannelOptions.autoRead, value: false)
-                .channelOption(ChannelOptions.writeSpin, value: 1)
-                .channelInitializer { channel in
-                    channel.write(firstWrite).whenComplete { _ in
-                        // An extra EL spin here to ensure that the close doesn't
-                        // beat the writable
-                        channel.eventLoop.execute {
-                            channel.close(promise: nil)
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
+            }) {
+                ClientBootstrap(group: channel.eventLoop)
+                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .channelOption(ChannelOptions.writeSpin, value: 1)
+                    .channelInitializer { channel in
+                        channel.write(firstWrite).whenComplete { _ in
+                            // An extra EL spin here to ensure that the close doesn't
+                            // beat the writable
+                            channel.eventLoop.execute {
+                                channel.close(promise: nil)
+                            }
                         }
+                        channel.write(secondWrite, promise: nil)
+                        channel.flush()
+                        return channel.eventLoop.makeSucceededVoidFuture()
                     }
-                    channel.write(secondWrite, promise: nil)
-                    channel.flush()
-                    return channel.eventLoop.makeSucceededVoidFuture()
-                }
-                .testOnly_connect(injectedChannel: channel, to: serverAddress)
-                .flatMap {
-                    $0.closeFuture
-                }
-        }.salWait())
+                    .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                    .flatMap {
+                        $0.closeFuture
+                    }
+            }.salWait()
+        )
     }
 
     func testWriteBeforeChannelActiveClientStreamInstantConnect_shortWriteLeadsToWritable_instantClose() {
@@ -635,45 +732,51 @@ final class SALChannelTest: XCTestCase, SALTest {
         let firstWrite = ByteBuffer(string: "foo")
         let secondWrite = ByteBuffer(string: "bar")
 
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
-                return (value as? SocketOptionValue) == 1
-            }
-            try self.assertConnect(expectedAddress: serverAddress, result: true)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: serverAddress)
-            try self.assertRegister { selectable, event, Registration in
-                XCTAssertEqual([.reset], event)
-                return true
-            }
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF], event)
-                return true
-            }
-            try self.assertWritev(expectedFD: .max, expectedBytes: [firstWrite, secondWrite], return: .processed(3))
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                    (value as? SocketOptionValue) == 1
+                }
+                try self.assertConnect(expectedAddress: serverAddress, result: true)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: serverAddress)
+                try self.assertRegister { selectable, event, Registration in
+                    XCTAssertEqual([.reset], event)
+                    return true
+                }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF], event)
+                    return true
+                }
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [firstWrite, secondWrite],
+                    return: .processed(3)
+                )
 
-            try self.assertDeregister { selectable in
-                return true
-            }
-            try self.assertClose(expectedFD: .max)
-        }) {
-            ClientBootstrap(group: channel.eventLoop)
-                .channelOption(ChannelOptions.autoRead, value: false)
-                .channelOption(ChannelOptions.writeSpin, value: 1)
-                .channelInitializer { channel in
-                    channel.write(firstWrite).whenComplete { _ in
-                        // No EL spin here so the close happens in the middle of the write spin.
-                        channel.close(promise: nil)
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
+            }) {
+                ClientBootstrap(group: channel.eventLoop)
+                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .channelOption(ChannelOptions.writeSpin, value: 1)
+                    .channelInitializer { channel in
+                        channel.write(firstWrite).whenComplete { _ in
+                            // No EL spin here so the close happens in the middle of the write spin.
+                            channel.close(promise: nil)
+                        }
+                        channel.write(secondWrite, promise: nil)
+                        channel.flush()
+                        return channel.eventLoop.makeSucceededVoidFuture()
                     }
-                    channel.write(secondWrite, promise: nil)
-                    channel.flush()
-                    return channel.eventLoop.makeSucceededVoidFuture()
-                }
-                .testOnly_connect(injectedChannel: channel, to: serverAddress)
-                .flatMap {
-                    $0.closeFuture
-                }
-        }.salWait())
+                    .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                    .flatMap {
+                        $0.closeFuture
+                    }
+            }.salWait()
+        )
     }
 
     func testWriteBeforeChannelActiveServerStream() throws {
@@ -685,61 +788,73 @@ final class SALChannelTest: XCTestCase, SALTest {
         let firstWrite = ByteBuffer(string: "foo")
         let secondWrite = ByteBuffer(string: "bar")
 
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            let readEvent = SelectorEvent(io: [.read],
-                                          registration: NIORegistration(channel: .serverSocketChannel(channel),
-                                                                        interested: [.read],
-                                                                        registrationID: .initialRegistrationID))
-            try self.assertWaitingForNotification(result: readEvent)
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: remoteAddress)
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                let readEvent = SelectorEvent(
+                    io: [.read],
+                    registration: NIORegistration(
+                        channel: .serverSocketChannel(channel),
+                        interested: [.read],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: readEvent)
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: remoteAddress)
 
-            // This accept is expected: we delay inbound channel registration by one EL tick.
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: nil)
+                // This accept is expected: we delay inbound channel registration by one EL tick.
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: nil)
 
-            // Then we register the inbound channel.
-            try self.assertRegister { selectable, eventSet, registration in
-                if case (.socketChannel(let channel), let registrationEventSet) =
-                    (registration.channel, registration.interested) {
+                // Then we register the inbound channel.
+                try self.assertRegister { selectable, eventSet, registration in
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
 
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
-                } else {
-                    return false
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
+                        return false
+                    }
                 }
-            }
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF], event)
-                return true
-            }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF], event)
+                    return true
+                }
 
-            // We then get an immediate write which completes, then a close.
-            try self.assertWritev(expectedFD: .max, expectedBytes: [firstWrite, secondWrite], return: .processed(6))
+                // We then get an immediate write which completes, then a close.
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [firstWrite, secondWrite],
+                    return: .processed(6)
+                )
 
-            try self.assertDeregister { selectable in
-                return true
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
+
+                try self.assertParkedRightNow()
+            }) {
+                channel.pipeline.addHandler(
+                    ServerBootstrap.AcceptHandler(
+                        childChannelInitializer: { channel in
+                            channel.write(firstWrite, promise: nil)
+                            channel.write(secondWrite).whenComplete { _ in
+                                channel.close(promise: nil)
+                            }
+                            channel.flush()
+                            return channel.eventLoop.makeSucceededVoidFuture()
+                        },
+                        childChannelOptions: .init()
+                    )
+                )
             }
-            try self.assertClose(expectedFD: .max)
-
-            try self.assertParkedRightNow()
-        }) {
-            channel.pipeline.addHandler(
-                ServerBootstrap.AcceptHandler(
-                    childChannelInitializer: { channel in
-                        channel.write(firstWrite, promise: nil)
-                        channel.write(secondWrite).whenComplete { _ in
-                            channel.close(promise: nil)
-                        }
-                        channel.flush()
-                        return channel.eventLoop.makeSucceededVoidFuture()
-                    },
-                    childChannelOptions: .init()
-                ))
-        })
+        )
     }
 
     func testWriteBeforeChannelActiveServerStream_shortWriteLeadsToWritable() throws {
@@ -753,69 +868,81 @@ final class SALChannelTest: XCTestCase, SALTest {
         var childChannelOptions = ChannelOptions.Storage()
         childChannelOptions.append(key: ChannelOptions.autoRead, value: false)
 
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            let readEvent = SelectorEvent(io: [.read],
-                                          registration: NIORegistration(channel: .serverSocketChannel(channel),
-                                                                        interested: [.read],
-                                                                        registrationID: .initialRegistrationID))
-            try self.assertWaitingForNotification(result: readEvent)
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: remoteAddress)
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                let readEvent = SelectorEvent(
+                    io: [.read],
+                    registration: NIORegistration(
+                        channel: .serverSocketChannel(channel),
+                        interested: [.read],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: readEvent)
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: remoteAddress)
 
-            // This accept is expected: we delay inbound channel registration by one EL tick.
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: nil)
+                // This accept is expected: we delay inbound channel registration by one EL tick.
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: nil)
 
-            // Then we register the inbound channel.
-            try self.assertRegister { selectable, eventSet, registration in
-                if case (.socketChannel(let channel), let registrationEventSet) =
-                    (registration.channel, registration.interested) {
+                // Then we register the inbound channel.
+                try self.assertRegister { selectable, eventSet, registration in
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
 
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
-                } else {
-                    return false
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
+                        return false
+                    }
                 }
-            }
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF], event)
-                return true
-            }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF], event)
+                    return true
+                }
 
-            try self.assertWritev(expectedFD: .max, expectedBytes: [firstWrite, secondWrite], return: .processed(3))
-            try self.assertWrite(expectedFD: .max, expectedBytes: secondWrite, return: .wouldBlock(0))
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF, .write], event)
-                return true
-            }
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [firstWrite, secondWrite],
+                    return: .processed(3)
+                )
+                try self.assertWrite(expectedFD: .max, expectedBytes: secondWrite, return: .wouldBlock(0))
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF, .write], event)
+                    return true
+                }
 
-            try self.assertDeregister { selectable in
-                return true
-            }
-            try self.assertClose(expectedFD: .max)
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
 
-            try self.assertParkedRightNow()
-        }) {
-            channel.pipeline.addHandler(
-                ServerBootstrap.AcceptHandler(
-                    childChannelInitializer: { channel in
-                        channel.write(firstWrite).whenComplete { _ in
-                            // An extra EL spin here to ensure that the close doesn't
-                            // beat the writable
-                            channel.eventLoop.execute {
-                                channel.close(promise: nil)
+                try self.assertParkedRightNow()
+            }) {
+                channel.pipeline.addHandler(
+                    ServerBootstrap.AcceptHandler(
+                        childChannelInitializer: { channel in
+                            channel.write(firstWrite).whenComplete { _ in
+                                // An extra EL spin here to ensure that the close doesn't
+                                // beat the writable
+                                channel.eventLoop.execute {
+                                    channel.close(promise: nil)
+                                }
                             }
-                        }
-                        channel.write(secondWrite, promise: nil)
-                        channel.flush()
-                        return channel.eventLoop.makeSucceededVoidFuture()
-                    },
-                    childChannelOptions: childChannelOptions
-                ))
-        })
+                            channel.write(secondWrite, promise: nil)
+                            channel.flush()
+                            return channel.eventLoop.makeSucceededVoidFuture()
+                        },
+                        childChannelOptions: childChannelOptions
+                    )
+                )
+            }
+        )
     }
 
     func testWriteBeforeChannelActiveServerStream_shortWriteLeadsToWritable_instantClose() throws {
@@ -829,58 +956,70 @@ final class SALChannelTest: XCTestCase, SALTest {
         var childChannelOptions = ChannelOptions.Storage()
         childChannelOptions.append(key: ChannelOptions.autoRead, value: false)
 
-        XCTAssertNoThrow(try channel.eventLoop.runSAL(syscallAssertions: {
-            let readEvent = SelectorEvent(io: [.read],
-                                          registration: NIORegistration(channel: .serverSocketChannel(channel),
-                                                                        interested: [.read],
-                                                                        registrationID: .initialRegistrationID))
-            try self.assertWaitingForNotification(result: readEvent)
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
-            try self.assertLocalAddress(address: localAddress)
-            try self.assertRemoteAddress(address: remoteAddress)
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                let readEvent = SelectorEvent(
+                    io: [.read],
+                    registration: NIORegistration(
+                        channel: .serverSocketChannel(channel),
+                        interested: [.read],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: readEvent)
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: socket)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRemoteAddress(address: remoteAddress)
 
-            // This accept is expected: we delay inbound channel registration by one EL tick.
-            try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: nil)
+                // This accept is expected: we delay inbound channel registration by one EL tick.
+                try self.assertAccept(expectedFD: .max, expectedNonBlocking: true, return: nil)
 
-            // Then we register the inbound channel.
-            try self.assertRegister { selectable, eventSet, registration in
-                if case (.socketChannel(let channel), let registrationEventSet) =
-                    (registration.channel, registration.interested) {
+                // Then we register the inbound channel.
+                try self.assertRegister { selectable, eventSet, registration in
+                    if case (.socketChannel(let channel), let registrationEventSet) =
+                        (registration.channel, registration.interested)
+                    {
 
-                    XCTAssertEqual(localAddress, channel.localAddress)
-                    XCTAssertEqual(remoteAddress, channel.remoteAddress)
-                    XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
-                    return true
-                } else {
-                    return false
+                        XCTAssertEqual(localAddress, channel.localAddress)
+                        XCTAssertEqual(remoteAddress, channel.remoteAddress)
+                        XCTAssertEqual(eventSet, registrationEventSet)
+                        XCTAssertEqual(.reset, eventSet)
+                        return true
+                    } else {
+                        return false
+                    }
                 }
-            }
-            try self.assertReregister { selectable, event in
-                XCTAssertEqual([.reset, .readEOF], event)
-                return true
-            }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF], event)
+                    return true
+                }
 
-            try self.assertWritev(expectedFD: .max, expectedBytes: [firstWrite, secondWrite], return: .processed(3))
-            try self.assertDeregister { selectable in
-                return true
-            }
-            try self.assertClose(expectedFD: .max)
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [firstWrite, secondWrite],
+                    return: .processed(3)
+                )
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
 
-            try self.assertParkedRightNow()
-        }) {
-            channel.pipeline.addHandler(
-                ServerBootstrap.AcceptHandler(
-                    childChannelInitializer: { channel in
-                        channel.write(firstWrite).whenComplete { _ in
-                            channel.close(promise: nil)
-                        }
-                        channel.write(secondWrite, promise: nil)
-                        channel.flush()
-                        return channel.eventLoop.makeSucceededVoidFuture()
-                    },
-                    childChannelOptions: childChannelOptions
-                ))
-        })
+                try self.assertParkedRightNow()
+            }) {
+                channel.pipeline.addHandler(
+                    ServerBootstrap.AcceptHandler(
+                        childChannelInitializer: { channel in
+                            channel.write(firstWrite).whenComplete { _ in
+                                channel.close(promise: nil)
+                            }
+                            channel.write(secondWrite, promise: nil)
+                            channel.flush()
+                            return channel.eventLoop.makeSucceededVoidFuture()
+                        },
+                        childChannelOptions: childChannelOptions
+                    )
+                )
+            }
+        )
     }
 }

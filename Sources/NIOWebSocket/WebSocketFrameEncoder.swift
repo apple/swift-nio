@@ -48,7 +48,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     /// for a mask key.
     private static let maximumFrameHeaderLength: Int = (2 + 4 + 8)
 
-    public init() { }
+    public init() {}
 
     public func handlerAdded(context: ChannelHandlerContext) {
         self.headerBuffer = context.channel.allocator.buffer(capacity: WebSocketFrameEncoder.maximumFrameHeaderLength)
@@ -59,11 +59,15 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let data = self.unwrapOutboundIn(data)
+        let data = Self.unwrapOutboundIn(data)
 
         // First, we explode the frame structure and apply the mask.
         let frameHeader = FrameHeader(frame: data)
-        var (extensionData, applicationData) = self.mask(key: frameHeader.maskKey, extensionData: data.extensionData, applicationData: data.data)
+        var (extensionData, applicationData) = self.mask(
+            key: frameHeader.maskKey,
+            extensionData: data.extensionData,
+            applicationData: data.data
+        )
 
         // Now we attempt to prepend the frame header to the first buffer. If we can't, we'll write to the header buffer. If we have
         // an extension data buffer, that's the first buffer, and we'll also write it here.
@@ -73,17 +77,21 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
             if !unwrappedExtensionData.prependFrameHeaderIfPossible(frameHeader) {
                 self.writeSeparateHeaderBuffer(frameHeader, context: context)
             }
-            context.write(self.wrapOutboundOut(unwrappedExtensionData), promise: nil)
+            context.write(Self.wrapOutboundOut(unwrappedExtensionData), promise: nil)
         } else if !applicationData.prependFrameHeaderIfPossible(frameHeader) {
             self.writeSeparateHeaderBuffer(frameHeader, context: context)
         }
 
         // Ok, now we need to write the application data buffer.
-        context.write(self.wrapOutboundOut(applicationData), promise: promise)
+        context.write(Self.wrapOutboundOut(applicationData), promise: promise)
     }
 
     /// Applies the websocket masking operation based on the passed byte buffers.
-    private func mask(key: WebSocketMaskingKey?, extensionData: ByteBuffer?, applicationData: ByteBuffer) -> (ByteBuffer?, ByteBuffer) {
+    private func mask(
+        key: WebSocketMaskingKey?,
+        extensionData: ByteBuffer?,
+        applicationData: ByteBuffer
+    ) -> (ByteBuffer?, ByteBuffer) {
         guard let key = key else {
             return (extensionData, applicationData)
         }
@@ -111,7 +119,7 @@ public final class WebSocketFrameEncoder: ChannelOutboundHandler {
 
         // Ok, frame header away! Before we send it we save it back onto ourselves in case we get recursively called.
         self.headerBuffer = buffer
-        context.write(self.wrapOutboundOut(buffer), promise: nil)
+        context.write(Self.wrapOutboundOut(buffer), promise: nil)
     }
 }
 
@@ -181,9 +189,8 @@ extension ByteBuffer {
     }
 }
 
-
 /// A helper object that holds only a websocket frame header. Used to avoid accidentally CoWing on some paths.
-fileprivate struct FrameHeader {
+private struct FrameHeader {
     var length: Int
     var maskKey: WebSocketMaskingKey?
     var firstByte: UInt8 = 0
@@ -213,7 +220,6 @@ fileprivate struct FrameHeader {
         if maskKey != nil {
             size += 4  // Masking key
         }
-
 
         return size
     }

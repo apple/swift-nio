@@ -1,4 +1,4 @@
-# ``NIOFileSystem/FileSystemProtocol``
+# ``_NIOFileSystem/FileSystemProtocol``
 
 ## Topics
 
@@ -43,3 +43,4 @@ closing it to avoid leaking resources.
 
 - ``currentWorkingDirectory``
 - ``temporaryDirectory``
+- ``withTemporaryDirectory(prefix:options:execute:)``

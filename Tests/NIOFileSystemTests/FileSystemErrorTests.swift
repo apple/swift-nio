@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-@_spi(Testing) import NIOFileSystem
+@_spi(Testing) import _NIOFileSystem
 import XCTest
 
 final class FileSystemErrorTests: XCTestCase {
@@ -148,41 +148,6 @@ final class FileSystemErrorTests: XCTestCase {
     }
 
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    func testCopyOnWrite() throws {
-        let error1 = FileSystemError(
-            code: .io,
-            message: "a message",
-            cause: nil,
-            location: .init(function: "fn(_:)", file: "file.swift", line: 42)
-        )
-
-        var error2 = error1
-        error2.code = .invalidArgument
-        XCTAssertEqual(error1.code, .io)
-        XCTAssertEqual(error2.code, .invalidArgument)
-
-        var error3 = error1
-        error3.message = "a different message"
-        XCTAssertEqual(error1.message, "a message")
-        XCTAssertEqual(error3.message, "a different message")
-
-        var error4 = error1
-        error4.cause = CancellationError()
-        XCTAssertNil(error1.cause)
-        XCTAssert(error4.cause is CancellationError)
-
-        var error5 = error1
-        error5.location.file = "different-file.swift"
-        XCTAssertEqual(error1.location.function, "fn(_:)")
-        XCTAssertEqual(error1.location.file, "file.swift")
-        XCTAssertEqual(error1.location.line, 42)
-
-        XCTAssertEqual(error5.location.function, "fn(_:)")
-        XCTAssertEqual(error5.location.file, "different-file.swift")
-        XCTAssertEqual(error5.location.line, 42)
-    }
-
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     func testErrorsMapToCorrectSyscallCause() throws {
         let here = FileSystemError.SourceLocation(function: "fn", file: "file", line: 42)
         let path = FilePath("/foo")
@@ -265,7 +230,7 @@ final class FileSystemErrorTests: XCTestCase {
         }
 
         assertCauseIsSyscall("rename", here) {
-            .rename(errno: .badFileDescriptor, oldName: "old", newName: "new", location: here)
+            .rename("rename", errno: .badFileDescriptor, oldName: "old", newName: "new", location: here)
         }
 
         assertCauseIsSyscall("remove", here) {
@@ -274,6 +239,10 @@ final class FileSystemErrorTests: XCTestCase {
 
         assertCauseIsSyscall("symlink", here) {
             .symlink(errno: .badFileDescriptor, link: "link", target: "target", location: here)
+        }
+
+        assertCauseIsSyscall("unlink", here) {
+            .unlink(errno: .badFileDescriptor, path: "unlink", location: here)
         }
 
         assertCauseIsSyscall("readlink", here) {
@@ -496,7 +465,7 @@ final class FileSystemErrorTests: XCTestCase {
                 .ioError: .io,
             ]
         ) { errno in
-            .rename(errno: errno, oldName: "old", newName: "new", location: .fixed)
+            .rename("rename", errno: errno, oldName: "old", newName: "new", location: .fixed)
         }
     }
 
@@ -525,6 +494,19 @@ final class FileSystemErrorTests: XCTestCase {
             ]
         ) { errno in
             .symlink(errno: errno, link: "link", target: "target", location: .fixed)
+        }
+    }
+
+    func testErrnoMapping_unlink() {
+        self.testErrnoToErrorCode(
+            expected: [
+                .permissionDenied: .permissionDenied,
+                .notPermitted: .permissionDenied,
+                .noSuchFileOrDirectory: .notFound,
+                .ioError: .io,
+            ]
+        ) { errno in
+            .unlink(errno: errno, path: "path", location: .fixed)
         }
     }
 
@@ -573,6 +555,19 @@ final class FileSystemErrorTests: XCTestCase {
             ]
         ) { errno in
             .ftruncate(error: errno, path: "", location: .fixed)
+        }
+    }
+
+    func testErrnoMapping_futimens() {
+        self.testErrnoToErrorCode(
+            expected: [
+                .permissionDenied: .permissionDenied,
+                .notPermitted: .permissionDenied,
+                .readOnlyFileSystem: .unsupported,
+                .badFileDescriptor: .closed,
+            ]
+        ) { errno in
+            .futimens(errno: errno, path: "", lastAccessTime: nil, lastDataModificationTime: nil, location: .fixed)
         }
     }
 

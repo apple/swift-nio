@@ -15,7 +15,7 @@
 import NIOCore
 import NIOEmbedded
 
-fileprivate final class SimpleHandler: ChannelInboundHandler {
+private final class SimpleHandler: ChannelInboundHandler {
     typealias InboundIn = NIOAny
 }
 
@@ -28,8 +28,8 @@ func run(identifier: String) {
                 _ = try! channel.finish()
             }
             try! channel.pipeline.syncOperations.addHandlers([
-              SimpleHandler(),
-              SimpleHandler()
+                SimpleHandler(),
+                SimpleHandler(),
             ])
         }
         return iterations

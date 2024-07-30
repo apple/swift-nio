@@ -19,7 +19,7 @@
 public struct NIOIPProtocol: RawRepresentable, Hashable, Sendable {
     public typealias RawValue = UInt8
     public var rawValue: RawValue
-    
+
     @inlinable
     public init(rawValue: RawValue) {
         self.rawValue = rawValue
@@ -169,7 +169,7 @@ extension NIOIPProtocol: CustomStringConvertible {
         default: return nil
         }
     }
-    
+
     public var description: String {
         let name = self.name ?? "Unknown Protocol"
         return "\(name) - \(rawValue)"

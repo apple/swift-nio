@@ -13,9 +13,10 @@
 //===----------------------------------------------------------------------===//
 import Atomics
 import NIOConcurrencyHelpers
-@testable import NIOCore
 import NIOEmbedded
 import XCTest
+
+@testable import NIOCore
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncChannelTests: XCTestCase {
@@ -78,6 +79,24 @@ final class AsyncChannelTests: XCTestCase {
 
             XCTAssertEqual(firstRead, "hello")
             XCTAssertEqual(secondRead, "world")
+        }
+    }
+
+    func testAsyncChannelThrowsWhenChannelClosed() async throws {
+        let channel = NIOAsyncTestingChannel()
+        let wrapped = try await channel.testingEventLoop.executeInContext {
+            try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
+        }
+
+        try await channel.close(mode: .all)
+
+        do {
+            try await wrapped.executeThenClose { _, outbound in
+                try await outbound.write("Test")
+            }
+            XCTFail("Expected an error to be thrown")
+        } catch {
+            XCTAssertEqual(error as? ChannelError, ChannelError.ioOnClosedChannel)
         }
     }
 
@@ -233,7 +252,9 @@ final class AsyncChannelTests: XCTestCase {
         do {
             let strongSentinel: Sentinel? = Sentinel()
             sentinel = strongSentinel!
-            try await XCTAsyncAssertNotNil(await channel.pipeline.handler(type: NIOAsyncChannelInboundStreamChannelHandler<Sentinel, Sentinel>.self).get())
+            try await XCTAsyncAssertNotNil(
+                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).get()
+            )
             try await channel.writeInbound(strongSentinel!)
             _ = try await channel.readInbound(as: Sentinel.self)
         }

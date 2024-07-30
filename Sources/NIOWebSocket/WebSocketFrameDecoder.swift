@@ -33,7 +33,7 @@ extension WebSocketErrorCode {
         case .invalidFrameLength:
             self = .messageTooLarge
         case .fragmentedControlFrame,
-             .multiByteControlFrameLength:
+            .multiByteControlFrameLength:
             self = .protocolError
         }
     }
@@ -169,7 +169,11 @@ struct WSParser {
                 return .insufficientData
             }
 
-            self.state = .waitingForData(firstByte: firstByte, length: length, maskingKey: WebSocketMaskingKey(networkRepresentation: maskingKey))
+            self.state = .waitingForData(
+                firstByte: firstByte,
+                length: length,
+                maskingKey: WebSocketMaskingKey(networkRepresentation: maskingKey)
+            )
             return .continueParsing
 
         case .waitingForData(let firstByte, let length, let maskingKey):
@@ -226,7 +230,7 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     public typealias OutboundOut = WebSocketFrame
 
     /// The maximum frame size the decoder is willing to tolerate from the remote peer.
-    /* private but tests */ let maxFrameSize: Int
+    let maxFrameSize: Int
 
     /// Our parser state.
     private var parser = WSParser()
@@ -251,18 +255,18 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
         self.maxFrameSize = maxFrameSize
     }
 
-    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState  {
+    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         // Even though the calling code will loop around calling us in `decode`, we can't quite
         // rely on that: sometimes we have zero-length elements to parse, and the caller doesn't
         // guarantee to call us with zero-length bytes.
         while true {
             switch parser.parseStep(&buffer) {
             case .result(let frame):
-                context.fireChannelRead(self.wrapInboundOut(frame))
+                context.fireChannelRead(Self.wrapInboundOut(frame))
                 return .continue
             case .continueParsing:
                 try self.parser.validateState(maxFrameSize: self.maxFrameSize)
-                // loop again, might be 'waiting' for 0 bytes
+            // loop again, might be 'waiting' for 0 bytes
             case .insufficientData:
                 return .needMoreData
             }

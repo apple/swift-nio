@@ -26,10 +26,10 @@ public final class NIOHTTPRequestHeadersValidator: ChannelOutboundHandler, Remov
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = HTTPClientRequestPart
 
-    public init() { }
+    public init() {}
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(let head):
             guard head.headers.areValidToSend else {
                 promise?.fail(HTTPParserError.invalidHeaderToken)
@@ -50,7 +50,6 @@ public final class NIOHTTPRequestHeadersValidator: ChannelOutboundHandler, Remov
     }
 }
 
-
 /// A ChannelHandler to validate that outbound response headers are spec-compliant.
 ///
 /// The HTTP RFCs constrain the bytes that are validly present within a HTTP/1.1 header block.
@@ -64,10 +63,10 @@ public final class NIOHTTPResponseHeadersValidator: ChannelOutboundHandler, Remo
     public typealias OutboundIn = HTTPServerResponsePart
     public typealias OutboundOut = HTTPServerResponsePart
 
-    public init() { }
+    public init() {}
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(let head):
             guard head.headers.areValidToSend else {
                 promise?.fail(HTTPParserError.invalidHeaderToken)

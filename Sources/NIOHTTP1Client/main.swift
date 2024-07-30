@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIOPosix
 import NIOHTTP1
+import NIOPosix
 
 print("Please enter line to send to the server")
 let line = readLine(strippingNewline: true)!
@@ -21,38 +21,40 @@ let line = readLine(strippingNewline: true)!
 private final class HTTPEchoHandler: ChannelInboundHandler {
     public typealias InboundIn = HTTPClientResponsePart
     public typealias OutboundOut = HTTPClientRequestPart
-    
+
     public func channelActive(context: ChannelHandlerContext) {
         print("Client connected to \(context.remoteAddress!)")
-        
+
         // We are connected. It's time to send the message to the server to initialize the ping-pong sequence.
-        
+
         let buffer = context.channel.allocator.buffer(string: line)
 
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(buffer.readableBytes)")
-        
+
         // This sample only sends an echo request.
         // The sample server has more functionality which can be easily tested by playing with the URI.
         // For example, try "/dynamic/count-to-ten" or "/dynamic/client-ip"
-        
-        let requestHead = HTTPRequestHead(version: .http1_1,
-                                          method: .GET,
-                                          uri: "/dynamic/echo",
-                                          headers: headers)
-        
-        context.write(self.wrapOutboundOut(.head(requestHead)), promise: nil)
-        
-        context.write(self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
-        
-        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+
+        let requestHead = HTTPRequestHead(
+            version: .http1_1,
+            method: .GET,
+            uri: "/dynamic/echo",
+            headers: headers
+        )
+
+        context.write(Self.wrapOutboundOut(.head(requestHead)), promise: nil)
+
+        context.write(Self.wrapOutboundOut(.body(.byteBuffer(buffer))), promise: nil)
+
+        context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
 
-        let clientResponse = self.unwrapInboundIn(data)
-        
+        let clientResponse = Self.unwrapInboundIn(data)
+
         switch clientResponse {
         case .head(let responseHead):
             print("Received status: \(responseHead.status)")
@@ -79,8 +81,10 @@ let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
     .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.addHTTPClientHandlers(position: .first,
-                                               leftOverBytesStrategy: .fireError).flatMap {
+        channel.pipeline.addHTTPClientHandlers(
+            position: .first,
+            leftOverBytesStrategy: .fireError
+        ).flatMap {
             channel.pipeline.addHandler(HTTPEchoHandler())
         }
     }
@@ -103,14 +107,14 @@ enum ConnectTo {
 
 let connectTarget: ConnectTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
-case (.some(let h), _ , .some(let p)):
-    /* we got two arguments, let's interpret that as host and port */
+case (.some(let h), _, .some(let p)):
+    // we got two arguments, let's interpret that as host and port
     connectTarget = .ip(host: h, port: p)
 case (.some(let portString), .none, _):
-    /* couldn't parse as number, expecting unix domain socket path */
+    // couldn't parse as number, expecting unix domain socket path
     connectTarget = .unixDomainSocket(path: portString)
 case (_, .some(let p), _):
-    /* only one argument --> port */
+    // only one argument --> port
     connectTarget = .ip(host: defaultHost, port: p)
 default:
     connectTarget = .ip(host: defaultHost, port: defaultPort)
