@@ -109,7 +109,7 @@ private final class SimpleHTTPServer: ChannelInboundHandler {
 
 func doRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
     let serverChannel = try ServerBootstrap(group: group)
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
         .childChannelInitializer { channel in
             channel.pipeline.configureHTTPServerPipeline(
                 withPipeliningAssistance: true,

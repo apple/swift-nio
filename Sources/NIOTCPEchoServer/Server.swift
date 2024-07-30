@@ -38,7 +38,7 @@ struct Server {
     /// This method starts the server and handles incoming connections.
     func run() async throws {
         let channel = try await ServerBootstrap(group: self.eventLoopGroup)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
             .bind(
                 host: self.host,
                 port: self.port
