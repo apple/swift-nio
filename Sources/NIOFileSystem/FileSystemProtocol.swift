@@ -535,7 +535,7 @@ extension FileSystemProtocol {
             }
         )
     }
-    
+
     /// Copies the item at the specified path to a new location.
     ///
     /// The following error codes may be thrown:
@@ -579,7 +579,8 @@ extension FileSystemProtocol {
             to: destinationPath,
             strategy: .platformDefault,
             shouldProceedAfterError: shouldProceedAfterError,
-            shouldCopyItem: shouldCopyItem)
+            shouldCopyItem: shouldCopyItem
+        )
     }
 
     /// Deletes the file or directory (and its contents) at `path`.
