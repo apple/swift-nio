@@ -535,6 +535,52 @@ extension FileSystemProtocol {
             }
         )
     }
+    
+    /// Copies the item at the specified path to a new location.
+    ///
+    /// The following error codes may be thrown:
+    /// - ``FileSystemError/Code-swift.struct/notFound`` if the item at `sourcePath` does not exist,
+    /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if an item at `destinationPath`
+    ///   exists prior to the copy or its parent directory does not exist.
+    ///
+    /// Note that other errors may also be thrown.
+    ///
+    /// If `sourcePath` is a symbolic link then only the link is copied. The copied file will
+    /// preserve permissions and any extended attributes (if supported by the file system).
+    ///
+    /// - Parameters:
+    ///   - sourcePath: The path to the item to copy.
+    ///   - destinationPath: The path at which to place the copy.
+    ///   - shouldProceedAfterError: A closure which is executed to determine whether to continue
+    ///       copying files if an error is encountered during the operation. See Errors section for full details.
+    ///   - shouldCopyItem: A closure which is executed before each copy to determine whether each
+    ///       item should be copied. See Filtering section for full details
+    ///
+    /// #### Parallelism
+    ///
+    /// This overload uses ``CopyStrategy/platformDefault`` which is likely to result in multiple concurrency domains being used
+    /// in the event of copying a directory.
+    /// See the detailed description on ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+    /// for the implications of this with respect to the `shouldProceedAfterError` and `shouldCopyItem` callbacks
+    func copyItem(
+        at sourcePath: FilePath,
+        to destinationPath: FilePath,
+        shouldProceedAfterError: @escaping @Sendable (
+            _ source: DirectoryEntry,
+            _ error: Error
+        ) async throws -> Void,
+        shouldCopyItem: @escaping @Sendable (
+            _ source: DirectoryEntry,
+            _ destination: FilePath
+        ) async -> Bool
+    ) async throws {
+        try await self.copyItem(
+            at: sourcePath,
+            to: destinationPath,
+            strategy: .platformDefault,
+            shouldProceedAfterError: shouldProceedAfterError,
+            shouldCopyItem: shouldCopyItem)
+    }
 
     /// Deletes the file or directory (and its contents) at `path`.
     ///
