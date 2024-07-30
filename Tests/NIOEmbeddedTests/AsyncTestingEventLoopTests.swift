@@ -502,7 +502,7 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                try await Task.sleep(for: .milliseconds(1))
+                try await Task.sleep(nanoseconds: 1_000_000)
                 await eventLoop.shutdownGracefully()
             }
             group.addTask {
