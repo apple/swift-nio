@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+import _NIOBase64
+
 #if canImport(Dispatch)
 import Dispatch
 #endif
-import _NIOBase64
 
 extension ByteBuffer {
 
@@ -275,7 +276,7 @@ extension ByteBuffer {
         }
     }
 
-#if canImport(Dispatch)
+    #if canImport(Dispatch)
     // MARK: DispatchData APIs
     /// Write `dispatchData` into this `ByteBuffer`, moving the writer index forward appropriately.
     ///
@@ -340,7 +341,7 @@ extension ByteBuffer {
         self._moveReaderIndex(forwardBy: length)
         return result
     }
-#endif
+    #endif
 
     // MARK: Other APIs
 
@@ -678,7 +679,7 @@ extension ByteBuffer {
         self = ByteBufferAllocator().buffer(buffer: buffer)
     }
 
-#if canImport(Dispatch)
+    #if canImport(Dispatch)
     /// Create a fresh `ByteBuffer` containing the bytes contained in the given `DispatchData`.
     ///
     /// This will allocate a new `ByteBuffer` with enough space to fit the bytes of the `DispatchData` and potentially
@@ -693,7 +694,7 @@ extension ByteBuffer {
     public init(dispatchData: DispatchData) {
         self = ByteBufferAllocator().buffer(dispatchData: dispatchData)
     }
-#endif
+    #endif
 }
 
 extension ByteBuffer: Codable {
@@ -807,7 +808,7 @@ extension ByteBufferAllocator {
         return newBuffer
     }
 
-#if canImport(Dispatch)
+    #if canImport(Dispatch)
     /// Create a fresh `ByteBuffer` containing the bytes contained in the given `DispatchData`.
     ///
     /// This will allocate a new `ByteBuffer` with enough space to fit the bytes of the `DispatchData` and potentially
@@ -820,7 +821,7 @@ extension ByteBufferAllocator {
         buffer.writeDispatchData(dispatchData)
         return buffer
     }
-#endif
+    #endif
 }
 
 extension Optional where Wrapped == ByteBuffer {

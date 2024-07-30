@@ -166,7 +166,7 @@ extension SocketOptionProvider {
 //
 // You are welcome to add more helper methods here, but each helper method you add must be tested.
 extension SocketOptionProvider {
-#if !os(WASI)
+    #if !os(WASI)
     /// Sets the socket option SO_LINGER to `value`.
     ///
     /// - parameters:
@@ -184,7 +184,7 @@ extension SocketOptionProvider {
     public func getSoLinger() -> EventLoopFuture<linger> {
         self.unsafeGetSocketOption(level: .socket, name: .so_linger)
     }
-#endif
+    #endif
 
     /// Sets the socket option IP_MULTICAST_IF to `value`.
     ///

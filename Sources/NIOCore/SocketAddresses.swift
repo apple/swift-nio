@@ -180,11 +180,11 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         case .v6:
             return .inet6
         case .unixDomainSocket:
-        #if os(WASI)
+            #if os(WASI)
             fatalError("unix domain sockets are currently not supported by WASILibc")
-        #else
+            #else
             return .unix
-        #endif
+            #endif
         }
     }
 
@@ -238,9 +238,9 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// Get the pathname of a UNIX domain socket as a string
     public var pathname: String? {
-#if os(WASI)
+        #if os(WASI)
         return nil
-#else
+        #else
         switch self {
         case .v4:
             return nil
@@ -256,7 +256,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             }
             return pathname
         }
-#endif
+        #endif
     }
 
     /// Calls the given function with a pointer to a `sockaddr` structure and the associated size
@@ -330,13 +330,13 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
 
-#if !os(WASI)
+        #if !os(WASI)
         pathBytes.withUnsafeBytes { srcBuffer in
             withUnsafeMutableBytes(of: &addr.sun_path) { dstPtr in
                 dstPtr.copyMemory(from: srcBuffer)
             }
         }
-#endif
+        #endif
 
         self = .unixDomainSocket(.init(address: addr))
     }
@@ -458,7 +458,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         self = .v6(.init(address: ipv6Addr, host: ""))
     }
 
-#if !os(WASI)
+    #if !os(WASI)
     /// Creates a new `SocketAddress` for the given host (which will be resolved) and port.
     ///
     /// - warning: This is a blocking call, so please avoid calling this from an `EventLoop`.
@@ -526,7 +526,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         }
         #endif
     }
-#endif
+    #endif
 }
 
 /// We define an extension on `SocketAddress` that gives it an elementwise equatable conformance, using
@@ -562,9 +562,9 @@ extension SocketAddress: Equatable {
                 return false
             }
 
-#if os(WASI)
+            #if os(WASI)
             return true
-#else
+            #else
             let bufferSize = MemoryLayout.size(ofValue: addr1.address.sun_path)
 
             // Swift implicitly binds the memory for homogeneous tuples to both the tuple type and the element type.
@@ -579,7 +579,7 @@ extension SocketAddress: Equatable {
                     return strncmp(typedSunpath1, typedSunpath2, bufferSize) == 0
                 }
             }
-#endif
+            #endif
         case (.v4, _), (.v6, _), (.unixDomainSocket, _):
             return false
         }
@@ -598,7 +598,7 @@ extension SocketAddress: Hashable {
             hasher.combine(0)
             hasher.combine(uds.address.sun_family)
 
-#if !os(WASI)
+            #if !os(WASI)
             let pathSize = MemoryLayout.size(ofValue: uds.address.sun_path)
 
             // Swift implicitly binds the memory of homogeneous tuples to both the tuple type and the element type.
@@ -611,7 +611,7 @@ extension SocketAddress: Hashable {
                 let bytes = UnsafeRawBufferPointer(start: UnsafeRawPointer(typedPathPointer), count: length)
                 hasher.combine(bytes: bytes)
             }
-#endif
+            #endif
         case .v4(let v4Addr):
             hasher.combine(1)
             hasher.combine(v4Addr.address.sin_family)

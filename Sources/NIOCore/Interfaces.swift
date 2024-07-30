@@ -97,10 +97,10 @@ public final class NIONetworkInterface: Sendable {
     /// The index of the interface, as provided by `if_nametoindex`.
     public let interfaceIndex: Int
 
-#if os(WASI)
+    #if os(WASI)
     @available(*, unavailable)
     init() { fatalError() }
-#endif
+    #endif
 
     #if os(Windows)
     internal init?(
@@ -134,7 +134,7 @@ public final class NIONetworkInterface: Sendable {
         self.pointToPointDestinationAddress = nil
         self.multicastSupported = false
     }
-#elseif !os(WASI)
+    #elseif !os(WASI)
     internal init?(_ caddr: ifaddrs) {
         self.name = String(cString: caddr.ifa_name!)
 
@@ -315,7 +315,7 @@ public struct NIONetworkDevice {
         }
         self.backing = backing
     }
-#elseif !os(WASI)
+    #elseif !os(WASI)
     internal init?(_ caddr: ifaddrs) {
         guard let backing = Backing(caddr) else {
             return nil
@@ -325,7 +325,7 @@ public struct NIONetworkDevice {
     }
     #endif
 
-#if !os(Windows) && !os(WASI)
+    #if !os(Windows) && !os(WASI)
     /// Convert a `NIONetworkInterface` to a `NIONetworkDevice`. As `NIONetworkDevice`s are a superset of `NIONetworkInterface`s,
     /// it is always possible to perform this conversion.
     @available(*, deprecated, message: "This is a compatibility helper, and will be removed in a future release")
@@ -431,7 +431,7 @@ extension NIONetworkDevice {
             self.pointToPointDestinationAddress = nil
             self.multicastSupported = false
         }
-#elseif !os(WASI)
+        #elseif !os(WASI)
         internal init?(_ caddr: ifaddrs) {
             self.name = String(cString: caddr.ifa_name!)
             self.address = caddr.ifa_addr.flatMap { $0.convert() }

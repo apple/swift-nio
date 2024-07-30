@@ -62,7 +62,7 @@ public final class NIOFileHandle: FileDescriptor {
         )
     }
 
-#if !os(WASI)
+    #if !os(WASI)
     /// Duplicates this `NIOFileHandle`. This means that a new `NIOFileHandle` object with a new underlying file descriptor
     /// is returned. The caller takes ownership of the returned `NIOFileHandle` and is responsible for closing it.
     ///
@@ -74,7 +74,7 @@ public final class NIOFileHandle: FileDescriptor {
             NIOFileHandle(descriptor: try SystemCalls.dup(descriptor: fd))
         }
     }
-#endif
+    #endif
 
     /// Take the ownership of the underlying file descriptor. This is similar to `close()` but the underlying file
     /// descriptor remains open. The caller is responsible for closing the file descriptor by some other means.
@@ -144,9 +144,9 @@ extension NIOFileHandle {
 
         #if os(Windows)
         public static let defaultPermissions = _S_IREAD | _S_IWRITE
-#elseif os(WASI)
+        #elseif os(WASI)
         public static let defaultPermissions = WASILibc.S_IWUSR | WASILibc.S_IRUSR | WASILibc.S_IRGRP | WASILibc.S_IROTH
-#else
+        #else
         public static let defaultPermissions = S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH
         #endif
 

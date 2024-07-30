@@ -131,7 +131,7 @@ public enum System {
         #endif
     }
 
-#if !os(Windows) && !os(WASI)
+    #if !os(Windows) && !os(WASI)
     /// A utility function that enumerates the available network interfaces on this machine.
     ///
     /// This function returns values that are true for a brief snapshot in time. These results can
@@ -213,7 +213,7 @@ public enum System {
             }
             pAdapter = pAdapter!.pointee.Next
         }
-#elseif !os(WASI)
+        #elseif !os(WASI)
         var interface: UnsafeMutablePointer<ifaddrs>? = nil
         try SystemCalls.getifaddrs(&interface)
         let originalInterface = interface

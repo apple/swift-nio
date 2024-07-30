@@ -14,12 +14,13 @@
 
 import Atomics
 import DequeModule
-#if canImport(Dispatch)
-import Dispatch
-#endif
 import NIOConcurrencyHelpers
 import NIOCore
 import _NIODataStructures
+
+#if canImport(Dispatch)
+import Dispatch
+#endif
 
 internal struct EmbeddedScheduledTask {
     let id: UInt64
@@ -218,7 +219,7 @@ public final class EmbeddedEventLoop: EventLoop {
         }
     }
 
-#if canImport(Dispatch)
+    #if canImport(Dispatch)
     /// - see: `EventLoop.shutdownGracefully`
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
         self.state = .closing
@@ -229,7 +230,7 @@ public final class EmbeddedEventLoop: EventLoop {
             callback(nil)
         }
     }
-#endif
+    #endif
 
     public func _preconditionSafeToWait(file: StaticString, line: UInt) {
         // EmbeddedEventLoop always allows a wait, as waiting will essentially always block

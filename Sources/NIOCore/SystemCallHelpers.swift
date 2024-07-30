@@ -101,10 +101,10 @@ internal func syscall<T: FixedWidthInteger>(
             switch (err, blocking) {
             case (EINTR, _):
                 continue
-#if !os(WASI)
+            #if !os(WASI)
             case (EWOULDBLOCK, true):
                 return .wouldBlock(0)
-#endif
+            #endif
             default:
                 preconditionIsNotUnacceptableErrno(err: err, where: function)
                 throw IOError(errnoCode: err, reason: function)
@@ -115,7 +115,7 @@ internal func syscall<T: FixedWidthInteger>(
 }
 
 enum SystemCalls {
-#if !os(WASI)
+    #if !os(WASI)
     @discardableResult
     @inline(never)
     internal static func dup(descriptor: CInt) throws -> CInt {
@@ -123,7 +123,7 @@ enum SystemCalls {
             sysDup(descriptor)
         }.result
     }
-#endif
+    #endif
 
     @inline(never)
     internal static func close(descriptor: CInt) throws {
@@ -187,7 +187,7 @@ enum SystemCalls {
             sysRead(descriptor, pointer, size)
         }
     }
-#elseif !os(WASI)
+    #elseif !os(WASI)
     @inline(never)
     internal static func read(
         descriptor: CInt,
@@ -200,7 +200,7 @@ enum SystemCalls {
     }
     #endif
 
-#if !os(WASI)
+    #if !os(WASI)
     @inline(never)
     internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
         try syscall(blocking: false) {
@@ -216,5 +216,5 @@ enum SystemCalls {
         }
     }
     #endif
-#endif // !os(WASI)
+    #endif  // !os(WASI)
 }

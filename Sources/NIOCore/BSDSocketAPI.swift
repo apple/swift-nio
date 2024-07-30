@@ -90,7 +90,9 @@ private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMut
 #elseif canImport(WASILibc)
 import WASILibc
 
-private let sysInet_ntop: @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? = inet_ntop
+private let sysInet_ntop:
+    @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? =
+        inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 #else
 #error("The BSD Socket module was unable to identify your C library.")
@@ -217,19 +219,19 @@ extension NIOBSDSocket.ProtocolFamily {
     public static let inet6: NIOBSDSocket.ProtocolFamily =
         NIOBSDSocket.ProtocolFamily(rawValue: PF_INET6)
 
-#if !os(WASI)
+    #if !os(WASI)
     /// UNIX local to the host.
     public static let unix: NIOBSDSocket.ProtocolFamily =
         NIOBSDSocket.ProtocolFamily(rawValue: PF_UNIX)
-#endif
+    #endif
 }
 
 #if !os(Windows) && !os(WASI)
-    extension NIOBSDSocket.ProtocolFamily {
-        /// UNIX local to the host, alias for `PF_UNIX` (`.unix`)
-        public static let local: NIOBSDSocket.ProtocolFamily =
-                NIOBSDSocket.ProtocolFamily(rawValue: PF_LOCAL)
-    }
+extension NIOBSDSocket.ProtocolFamily {
+    /// UNIX local to the host, alias for `PF_UNIX` (`.unix`)
+    public static let local: NIOBSDSocket.ProtocolFamily =
+        NIOBSDSocket.ProtocolFamily(rawValue: PF_LOCAL)
+}
 #endif
 
 // Option Level

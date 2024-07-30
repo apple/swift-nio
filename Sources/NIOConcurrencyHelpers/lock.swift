@@ -49,7 +49,7 @@ public final class Lock {
     public init() {
         #if os(Windows)
         InitializeSRWLock(self.mutex)
-#elseif !os(WASI)
+        #elseif !os(WASI)
         var attr = pthread_mutexattr_t()
         pthread_mutexattr_init(&attr)
         debugOnly {
@@ -64,7 +64,7 @@ public final class Lock {
     deinit {
         #if os(Windows)
         // SRWLOCK does not need to be free'd
-#elseif !os(WASI)
+        #elseif !os(WASI)
         let err = pthread_mutex_destroy(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #endif
@@ -78,7 +78,7 @@ public final class Lock {
     public func lock() {
         #if os(Windows)
         AcquireSRWLockExclusive(self.mutex)
-#elseif !os(WASI)
+        #elseif !os(WASI)
         let err = pthread_mutex_lock(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #endif
@@ -91,7 +91,7 @@ public final class Lock {
     public func unlock() {
         #if os(Windows)
         ReleaseSRWLockExclusive(self.mutex)
-#elseif !os(WASI)
+        #elseif !os(WASI)
         let err = pthread_mutex_unlock(self.mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #endif
@@ -131,7 +131,7 @@ public final class ConditionLock<T: Equatable> {
     #if os(Windows)
     private let cond: UnsafeMutablePointer<CONDITION_VARIABLE> =
         UnsafeMutablePointer.allocate(capacity: 1)
-#elseif !os(WASI)
+    #elseif !os(WASI)
     private let cond: UnsafeMutablePointer<pthread_cond_t> =
         UnsafeMutablePointer.allocate(capacity: 1)
     #endif
@@ -144,7 +144,7 @@ public final class ConditionLock<T: Equatable> {
         self.mutex = NIOLock()
         #if os(Windows)
         InitializeConditionVariable(self.cond)
-#elseif !os(WASI)
+        #elseif !os(WASI)
         let err = pthread_cond_init(self.cond, nil)
         precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
         #endif
@@ -153,13 +153,13 @@ public final class ConditionLock<T: Equatable> {
     deinit {
         #if os(Windows)
         // condition variables do not need to be explicitly destroyed
-#elseif !os(WASI)
+        #elseif !os(WASI)
         let err = pthread_cond_destroy(self.cond)
         precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
-#endif
-#if !os(WASI)
+        #endif
+        #if !os(WASI)
         self.cond.deallocate()
-#endif
+        #endif
     }
 
     /// Acquire the lock, regardless of the value of the state variable.
@@ -199,7 +199,7 @@ public final class ConditionLock<T: Equatable> {
                 #if os(Windows)
                 let result = SleepConditionVariableSRW(self.cond, mutex, INFINITE, 0)
                 precondition(result, "\(#function) failed in SleepConditionVariableSRW with error \(GetLastError())")
-#elseif !os(WASI)
+                #elseif !os(WASI)
                 let err = pthread_cond_wait(self.cond, mutex)
                 precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
                 #endif
@@ -245,9 +245,9 @@ public final class ConditionLock<T: Equatable> {
             // NOTE: this may be a spurious wakeup, adjust the timeout accordingly
             dwMilliseconds = dwMilliseconds - (timeGetTime() - dwWaitStart)
         }
-#elseif os(WASI)
+        #elseif os(WASI)
         return true
-#else
+        #else
         let nsecPerSec: Int64 = 1_000_000_000
         self.lock()
         // the timeout as a (seconds, nano seconds) pair
@@ -291,7 +291,7 @@ public final class ConditionLock<T: Equatable> {
         self.unlock()
         #if os(Windows)
         WakeAllConditionVariable(self.cond)
-#elseif !os(WASI)
+        #elseif !os(WASI)
         let err = pthread_cond_broadcast(self.cond)
         precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
         #endif
