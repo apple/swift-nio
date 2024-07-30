@@ -562,7 +562,7 @@ extension FileSystemProtocol {
     /// in the event of copying a directory.
     /// See the detailed description on ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
     /// for the implications of this with respect to the `shouldProceedAfterError` and `shouldCopyItem` callbacks
-    func copyItem(
+    public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
         shouldProceedAfterError: @escaping @Sendable (
