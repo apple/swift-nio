@@ -282,7 +282,7 @@ private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler {
         XCTAssertEqual(self.cancelCount, cancelCount, "Unexpected cancel count", file: file, line: line)
     }
 
-    func waitForCallback(timeout: Duration, file: StaticString = #file, line: UInt = #line) async throws {
+    func waitForCallback(timeout: TimeAmount, file: StaticString = #file, line: UInt = #line) async throws {
         try await XCTWithTimeout(timeout, file: file, line: line) { await self.callbackStream.first { _ in true } }
     }
 }
@@ -301,7 +301,7 @@ private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler {
 ///
 /// This function is probably a good balance of pragmatism and clarity.
 func XCTWithTimeout<Result>(
-    _ timeout: Duration,
+    _ timeout: TimeAmount,
     file: StaticString = #file,
     line: UInt = #line,
     operation: @escaping @Sendable () async throws -> Result
@@ -315,12 +315,12 @@ func XCTWithTimeout<Result>(
 }
 
 func withTimeout<Result>(
-    _ timeout: Duration,
+    _ timeout: TimeAmount,
     operation: @escaping @Sendable () async throws -> Result
 ) async throws -> Result where Result: Sendable {
     try await withThrowingTaskGroup(of: Result.self) { group in
         group.addTask {
-            try await Task.sleep(for: timeout)
+            try await Task.sleep(nanoseconds: UInt64(timeout.nanoseconds))
             throw CancellationError()
         }
         group.addTask(operation: operation)
