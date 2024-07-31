@@ -78,6 +78,6 @@ class VsockAddressTest: XCTestCase {
             eventLoop: eventLoop as! SelectableEventLoop,
             group: singleThreadedELG
         )
-        XCTAssertEqual(try channel.getOption(ChannelOptions.localVsockContextID).wait(), localCID)
+        XCTAssertEqual(try channel.getOption(.localVsockContextID).wait(), localCID)
     }
 }

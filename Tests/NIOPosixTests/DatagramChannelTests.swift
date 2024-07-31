@@ -44,10 +44,10 @@ extension Channel {
         let totalBufferSize = messageCount * 2048
 
         try self.setOption(
-            ChannelOptions.recvAllocator,
+            .recvAllocator,
             value: FixedSizeRecvByteBufferAllocator(capacity: totalBufferSize)
         ).flatMap {
-            self.setOption(ChannelOptions.datagramVectorReadMessageCount, value: messageCount)
+            self.setOption(.datagramVectorReadMessageCount, value: messageCount)
         }.wait()
     }
 }
@@ -118,7 +118,7 @@ class DatagramChannelTests: XCTestCase {
 
     private func buildChannel(group: EventLoopGroup, host: String = "127.0.0.1") throws -> Channel {
         try DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .channelOption(.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
@@ -198,7 +198,7 @@ class DatagramChannelTests: XCTestCase {
 
     func testDatagramChannelHasWatermark() throws {
         _ = try self.firstChannel.setOption(
-            ChannelOptions.writeBufferWaterMark,
+            .writeBufferWaterMark,
             value: ChannelOptions.Types.WriteBufferWaterMark(low: 1, high: 1024)
         ).wait()
 
@@ -537,7 +537,7 @@ class DatagramChannelTests: XCTestCase {
     public func testSetGetOptionClosedDatagramChannel() throws {
         try assertSetGetOptionOnOpenAndClosed(
             channel: firstChannel,
-            option: ChannelOptions.maxMessagesPerRead,
+            option: .maxMessagesPerRead,
             value: 1
         )
     }
@@ -568,8 +568,8 @@ class DatagramChannelTests: XCTestCase {
     func testSettingTwoDistinctChannelOptionsWorksForDatagramChannel() throws {
         let channel = try assertNoThrowWithValue(
             DatagramBootstrap(group: group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                .channelOption(ChannelOptions.socketOption(.so_timestamp), value: 1)
+                .channelOption(.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(.socketOption(.so_timestamp), value: 1)
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
         )
@@ -631,7 +631,7 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(try self.secondChannel.configureForRecvMmsg(messageCount: 10))
         XCTAssertNoThrow(
             try self.secondChannel.setOption(
-                ChannelOptions.recvAllocator,
+                .recvAllocator,
                 value: FixedSizeRecvByteBufferAllocator(capacity: 30)
             ).wait()
         )
@@ -666,8 +666,8 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(try self.secondChannel.configureForRecvMmsg(messageCount: 10))
 
         // We now turn off autoread.
-        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.autoRead, value: false).wait())
-        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.maxMessagesPerRead, value: 3).wait())
+        XCTAssertNoThrow(try self.secondChannel.setOption(.autoRead, value: false).wait())
+        XCTAssertNoThrow(try self.secondChannel.setOption(.maxMessagesPerRead, value: 3).wait())
 
         var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("data")
@@ -680,7 +680,7 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
 
         // Now we read. Rather than issue many read() calls, we'll turn autoread back on.
-        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.autoRead, value: true).wait())
+        XCTAssertNoThrow(try self.secondChannel.setOption(.autoRead, value: true).wait())
 
         // Wait for all 30 datagrams to come through. There should be no loss here, as this is small datagrams on loopback.
         let reads = try self.secondChannel.waitForDatagrams(count: 30)
@@ -702,11 +702,11 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(
             try {
                 // IPv4
-                try self.firstChannel.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
-                XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
+                try self.firstChannel.setOption(.explicitCongestionNotification, value: true).wait()
+                XCTAssertTrue(try self.firstChannel.getOption(.explicitCongestionNotification).wait())
 
-                try self.secondChannel.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
-                XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.explicitCongestionNotification).wait())
+                try self.secondChannel.setOption(.explicitCongestionNotification, value: false).wait()
+                XCTAssertFalse(try self.secondChannel.getOption(.explicitCongestionNotification).wait())
 
                 // IPv6
                 guard self.supportsIPv6 else {
@@ -716,12 +716,12 @@ class DatagramChannelTests: XCTestCase {
 
                 do {
                     let channel1 = try buildChannel(group: self.group, host: "::1")
-                    try channel1.setOption(ChannelOptions.explicitCongestionNotification, value: true).wait()
-                    XCTAssertTrue(try channel1.getOption(ChannelOptions.explicitCongestionNotification).wait())
+                    try channel1.setOption(.explicitCongestionNotification, value: true).wait()
+                    XCTAssertTrue(try channel1.getOption(.explicitCongestionNotification).wait())
 
                     let channel2 = try buildChannel(group: self.group, host: "::1")
-                    try channel2.setOption(ChannelOptions.explicitCongestionNotification, value: false).wait()
-                    XCTAssertFalse(try channel2.getOption(ChannelOptions.explicitCongestionNotification).wait())
+                    try channel2.setOption(.explicitCongestionNotification, value: false).wait()
+                    XCTAssertFalse(try channel2.getOption(.explicitCongestionNotification).wait())
                 } catch let error as SocketAddressError {
                     switch error {
                     case .unknown:
@@ -748,15 +748,15 @@ class DatagramChannelTests: XCTestCase {
                 let receiveBootstrap: DatagramBootstrap
                 if vectorRead {
                     receiveBootstrap = DatagramBootstrap(group: group)
-                        .channelOption(ChannelOptions.datagramVectorReadMessageCount, value: 4)
+                        .channelOption(.datagramVectorReadMessageCount, value: 4)
                 } else {
                     receiveBootstrap = DatagramBootstrap(group: group)
                 }
 
                 let receiveChannel =
                     try receiveBootstrap
-                    .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
-                    .channelOption(ChannelOptions.receivePacketInfo, value: receivePacketInfo)
+                    .channelOption(.explicitCongestionNotification, value: true)
+                    .channelOption(.receivePacketInfo, value: receivePacketInfo)
                     .channelInitializer { channel in
                         channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
                     }
@@ -882,7 +882,7 @@ class DatagramChannelTests: XCTestCase {
         }
 
         let channel2Future = DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.writeBufferWaterMark, value: handler.watermark)
+            .channelOption(.writeBufferWaterMark, value: handler.watermark)
             .channelInitializer { channel in
                 channel.pipeline.addHandlers([EnvelopingHandler(), handler])
             }
@@ -901,11 +901,11 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertNoThrow(
             try {
                 // IPv4
-                try self.firstChannel.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
-                XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.receivePacketInfo).wait())
+                try self.firstChannel.setOption(.receivePacketInfo, value: true).wait()
+                XCTAssertTrue(try self.firstChannel.getOption(.receivePacketInfo).wait())
 
-                try self.secondChannel.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
-                XCTAssertFalse(try self.secondChannel.getOption(ChannelOptions.receivePacketInfo).wait())
+                try self.secondChannel.setOption(.receivePacketInfo, value: false).wait()
+                XCTAssertFalse(try self.secondChannel.getOption(.receivePacketInfo).wait())
 
                 // IPv6
                 guard self.supportsIPv6 else {
@@ -915,12 +915,12 @@ class DatagramChannelTests: XCTestCase {
 
                 do {
                     let channel1 = try buildChannel(group: self.group, host: "::1")
-                    try channel1.setOption(ChannelOptions.receivePacketInfo, value: true).wait()
-                    XCTAssertTrue(try channel1.getOption(ChannelOptions.receivePacketInfo).wait())
+                    try channel1.setOption(.receivePacketInfo, value: true).wait()
+                    XCTAssertTrue(try channel1.getOption(.receivePacketInfo).wait())
 
                     let channel2 = try buildChannel(group: self.group, host: "::1")
-                    try channel2.setOption(ChannelOptions.receivePacketInfo, value: false).wait()
-                    XCTAssertFalse(try channel2.getOption(ChannelOptions.receivePacketInfo).wait())
+                    try channel2.setOption(.receivePacketInfo, value: false).wait()
+                    XCTAssertFalse(try channel2.getOption(.receivePacketInfo).wait())
                 } catch let error as SocketAddressError {
                     switch error {
                     case .unknown:
@@ -939,7 +939,7 @@ class DatagramChannelTests: XCTestCase {
         let expectedPacketInfo = try constructNIOPacketInfo(address: address)
 
         let receiveChannel = try DatagramBootstrap(group: group)
-            .channelOption(ChannelOptions.receivePacketInfo, value: true)
+            .channelOption(.receivePacketInfo, value: true)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
@@ -1372,7 +1372,7 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testSetGSOOption() throws {
-        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: 1024)
+        let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: 1024)
         if System.supportsUDPSegmentationOffload {
             XCTAssertNoThrow(try didSet.wait())
         } else {
@@ -1383,7 +1383,7 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testGetGSOOption() throws {
-        let getOption = self.firstChannel.getOption(ChannelOptions.datagramSegmentSize)
+        let getOption = self.firstChannel.getOption(.datagramSegmentSize)
         if System.supportsUDPSegmentationOffload {
             XCTAssertEqual(try getOption.wait(), 0)  // not-set
         } else {
@@ -1404,7 +1404,7 @@ class DatagramChannelTests: XCTestCase {
         let segments = 10
 
         // Enable GSO
-        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: segmentSize)
+        let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: segmentSize)
         XCTAssertNoThrow(try didSet.wait())
 
         // Form a handful of segments
@@ -1449,7 +1449,7 @@ class DatagramChannelTests: XCTestCase {
         let segments = 10
 
         // Enable GSO
-        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: segmentSize)
+        let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: segmentSize)
         XCTAssertNoThrow(try didSet.wait())
 
         // Form a handful of segments
@@ -1497,7 +1497,7 @@ class DatagramChannelTests: XCTestCase {
 
         var segments = 64
         let segmentSize = 10
-        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
+        let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize))
         XCTAssertNoThrow(try didSet.wait())
 
         func send(byteCount: Int) throws {
@@ -1512,7 +1512,7 @@ class DatagramChannelTests: XCTestCase {
             // Some older kernel versions report EINVAL with 64 segments. Tolerate that
             // failure and try again with a lower limit.
             self.firstChannel = try self.buildChannel(group: self.group)
-            let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
+            let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize))
             XCTAssertNoThrow(try didSet.wait())
             segments = 61
             try send(byteCount: segments * segmentSize)
@@ -1526,7 +1526,7 @@ class DatagramChannelTests: XCTestCase {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
 
         let segmentSize = 10
-        let didSet = self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize))
+        let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize))
         XCTAssertNoThrow(try didSet.wait())
 
         let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * 65)
@@ -1544,7 +1544,7 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testSetGROOption() throws {
-        let didSet = self.firstChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true)
+        let didSet = self.firstChannel.setOption(.datagramReceiveOffload, value: true)
         if System.supportsUDPReceiveOffload {
             XCTAssertNoThrow(try didSet.wait())
         } else {
@@ -1555,13 +1555,13 @@ class DatagramChannelTests: XCTestCase {
     }
 
     func testGetGROOption() throws {
-        let getOption = self.firstChannel.getOption(ChannelOptions.datagramReceiveOffload)
+        let getOption = self.firstChannel.getOption(.datagramReceiveOffload)
         if System.supportsUDPReceiveOffload {
             XCTAssertEqual(try getOption.wait(), false)  // not-set
 
             // Now set and check.
-            XCTAssertNoThrow(try self.firstChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
-            XCTAssertTrue(try self.firstChannel.getOption(ChannelOptions.datagramReceiveOffload).wait())
+            XCTAssertNoThrow(try self.firstChannel.setOption(.datagramReceiveOffload, value: true).wait())
+            XCTAssertTrue(try self.firstChannel.getOption(.datagramReceiveOffload).wait())
         } else {
             XCTAssertThrowsError(try getOption.wait()) { error in
                 XCTAssertEqual(error as? ChannelError, .operationUnsupported)
@@ -1576,24 +1576,24 @@ class DatagramChannelTests: XCTestCase {
 
         /// Set GSO on the first channel.
         XCTAssertNoThrow(
-            try self.firstChannel.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize)).wait()
+            try self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize)).wait()
         )
         /// Set GRO on the second channel.
-        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+        XCTAssertNoThrow(try self.secondChannel.setOption(.datagramReceiveOffload, value: true).wait())
         /// The third channel has neither set.
 
         // Enable on second channel
         if let vectorReads = vectorReads {
             XCTAssertNoThrow(
-                try self.secondChannel.setOption(ChannelOptions.datagramVectorReadMessageCount, value: vectorReads)
+                try self.secondChannel.setOption(.datagramVectorReadMessageCount, value: vectorReads)
                     .wait()
             )
         }
 
         /// Increase the size of the read buffer for the second and third channels.
         let fixed = FixedSizeRecvByteBufferAllocator(capacity: 1 << 16)
-        XCTAssertNoThrow(try self.secondChannel.setOption(ChannelOptions.recvAllocator, value: fixed).wait())
-        XCTAssertNoThrow(try self.thirdChannel.setOption(ChannelOptions.recvAllocator, value: fixed).wait())
+        XCTAssertNoThrow(try self.secondChannel.setOption(.recvAllocator, value: fixed).wait())
+        XCTAssertNoThrow(try self.thirdChannel.setOption(.recvAllocator, value: fixed).wait())
 
         // Write a large datagrams on the first channel. They should be split and then accumulated on the receive side.
         // Form a large buffer to write from the first channel.
@@ -1672,10 +1672,10 @@ class DatagramChannelTests: XCTestCase {
         let segments = 2
         let segmentSize = 1000
 
-        XCTAssertNoThrow(try sender.setOption(ChannelOptions.datagramSegmentSize, value: CInt(segmentSize)).wait())
-        XCTAssertNoThrow(try receiver.setOption(ChannelOptions.datagramReceiveOffload, value: true).wait())
+        XCTAssertNoThrow(try sender.setOption(.datagramSegmentSize, value: CInt(segmentSize)).wait())
+        XCTAssertNoThrow(try receiver.setOption(.datagramReceiveOffload, value: true).wait())
         let allocator = FixedSizeRecvByteBufferAllocator(capacity: 1 << 16)
-        XCTAssertNoThrow(try receiver.setOption(ChannelOptions.recvAllocator, value: allocator).wait())
+        XCTAssertNoThrow(try receiver.setOption(.recvAllocator, value: allocator).wait())
 
         let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * segments)
         let writeData = AddressedEnvelope(remoteAddress: receiver.localAddress!, data: buffer)

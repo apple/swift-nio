@@ -156,6 +156,10 @@ extension ChannelOptions {
     public static let localVsockContextID = Types.LocalVsockContextID()
 }
 
+extension ChannelOption where Self == ChannelOptions.Types.LocalVsockContextID {
+    public static var localVsockContextID: Self { .init() }
+}
+
 extension ChannelOptions.Types {
     /// This get-only option is used on channels backed by vsock sockets to get the local VSOCK context ID.
     public struct LocalVsockContextID: ChannelOption, Sendable {
