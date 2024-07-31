@@ -92,7 +92,7 @@ private final class ClientHandler: ChannelInboundHandler {
 
 func run(identifier: String) {
     let serverChannel = try! DatagramBootstrap(group: group)
-        .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
+        .channelOption(.explicitCongestionNotification, value: true)
         // Set the handlers that are applied to the bound channel
         .channelInitializer { channel in
             channel.pipeline.addHandler(ServerEchoHandler())
@@ -106,7 +106,7 @@ func run(identifier: String) {
     let clientHandler = ClientHandler(remoteAddress: remoteAddress)
 
     let clientChannel = try! DatagramBootstrap(group: group)
-        .channelOption(ChannelOptions.explicitCongestionNotification, value: true)
+        .channelOption(.explicitCongestionNotification, value: true)
         .channelInitializer { channel in
             channel.pipeline.addHandler(clientHandler)
         }

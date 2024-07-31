@@ -120,8 +120,8 @@ private final class PongHandler: ChannelInboundHandler {
 
 func doPingPongRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
     let serverChannel = try ServerBootstrap(group: group)
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
+        .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+        .childChannelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
         .childChannelInitializer { channel in
             channel.pipeline.addHandler(ByteToMessageHandler(PongDecoder())).flatMap {
                 channel.pipeline.addHandler(PongHandler())
@@ -137,7 +137,7 @@ func doPingPongRequests(group: EventLoopGroup, number numberOfRequests: Int) thr
         .channelInitializer { channel in
             channel.pipeline.addHandler(pingHandler)
         }
-        .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
+        .channelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
         .connect(to: serverChannel.localAddress!)
         .wait()
 

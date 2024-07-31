@@ -46,8 +46,8 @@ internal enum NIOOnSocketsBootstraps {
 ///     }
 ///     let bootstrap = ServerBootstrap(group: group)
 ///         // Specify backlog and enable SO_REUSEADDR for the server itself
-///         .serverChannelOption(ChannelOptions.backlog, value: 256)
-///         .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+///         .serverChannelOption(.backlog, value: 256)
+///         .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
 ///
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
@@ -60,9 +60,9 @@ internal enum NIOOnSocketsBootstraps {
 ///         }
 ///
 ///         // Enable SO_REUSEADDR for the accepted Channels
-///         .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-///         .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
-///         .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
+///         .childChannelOption(.socketOption(.so_reuseaddr), value: 1)
+///         .childChannelOption(.maxMessagesPerRead, value: 16)
+///         .childChannelOption(.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
 ///     let channel = try! bootstrap.bind(host: host, port: port).wait()
 ///     /* the server will now be accepting connections */
 ///
@@ -150,7 +150,7 @@ public final class ServerBootstrap {
         self._childChannelOptions = ChannelOptions.Storage()
         self.serverChannelInit = nil
         self.childChannelInit = nil
-        self._serverChannelOptions.append(key: ChannelOptions.tcpOption(.tcp_nodelay), value: 1)
+        self._serverChannelOptions.append(key: .tcpOption(.tcp_nodelay), value: 1)
         self.enableMPTCP = false
     }
 
@@ -240,7 +240,7 @@ public final class ServerBootstrap {
         // This is a temporary workaround until we get some stable Linux kernel
         // versions that support TCP_NODELAY and MPTCP.
         if value {
-            self._serverChannelOptions.remove(key: ChannelOptions.tcpOption(.tcp_nodelay))
+            self._serverChannelOptions.remove(key: .tcpOption(.tcp_nodelay))
         }
 
         return self
@@ -839,7 +839,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         }
         self.group = group
         self._channelOptions = ChannelOptions.Storage()
-        self._channelOptions.append(key: ChannelOptions.tcpOption(.tcp_nodelay), value: 1)
+        self._channelOptions.append(key: .tcpOption(.tcp_nodelay), value: 1)
         self._channelInitializer = { channel in channel.eventLoop.makeSucceededFuture(()) }
         self.protocolHandlers = nil
         self.resolver = nil
@@ -930,7 +930,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         // This is a temporary workaround until we get some stable Linux kernel
         // versions that support TCP_NODELAY and MPTCP.
         if value {
-            self._channelOptions.remove(key: ChannelOptions.tcpOption(.tcp_nodelay))
+            self._channelOptions.remove(key: .tcpOption(.tcp_nodelay))
         }
 
         return self

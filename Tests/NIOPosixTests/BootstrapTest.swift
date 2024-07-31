@@ -255,7 +255,7 @@ class BootstrapTest: XCTestCase {
             let serverAcceptedChannelPromise = group.next().makePromise(of: Channel.self)
             let serverChannel = try assertNoThrowWithValue(
                 ServerBootstrap(group: group)
-                    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                    .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                     .childChannelInitializer { channel in
                         serverAcceptedChannelPromise.succeed(channel)
                         return channel.eventLoop.makeSucceededFuture(())
@@ -313,9 +313,9 @@ class BootstrapTest: XCTestCase {
         var channel: Channel? = nil
         XCTAssertNoThrow(
             channel = try ServerBootstrap(group: self.group)
-                .serverChannelOption(ChannelOptions.autoRead, value: false)
+                .serverChannelOption(.autoRead, value: false)
                 .serverChannelInitializer { channel in
-                    channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                    channel.getOption(.autoRead).whenComplete { result in
                         func workaround() {
                             XCTAssertNoThrow(XCTAssertFalse(try result.get()))
                         }
@@ -336,9 +336,9 @@ class BootstrapTest: XCTestCase {
                 var channel: Channel? = nil
                 XCTAssertNoThrow(
                     channel = try ClientBootstrap(group: self.group)
-                        .channelOption(ChannelOptions.autoRead, value: false)
+                        .channelOption(.autoRead, value: false)
                         .channelInitializer { channel in
-                            channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                            channel.getOption(.autoRead).whenComplete { result in
                                 func workaround() {
                                     XCTAssertNoThrow(XCTAssertFalse(try result.get()))
                                 }
@@ -371,9 +371,9 @@ class BootstrapTest: XCTestCase {
                 var channel: Channel? = nil
                 XCTAssertNoThrow(
                     channel = try ClientBootstrap(group: self.group)
-                        .channelOption(ChannelOptions.autoRead, value: false)
+                        .channelOption(.autoRead, value: false)
                         .channelInitializer { channel in
-                            channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                            channel.getOption(.autoRead).whenComplete { result in
                                 func workaround() {
                                     XCTAssertNoThrow(XCTAssertFalse(try result.get()))
                                 }
@@ -394,9 +394,9 @@ class BootstrapTest: XCTestCase {
         var channel: Channel? = nil
         XCTAssertNoThrow(
             channel = try DatagramBootstrap(group: self.group)
-                .channelOption(ChannelOptions.autoRead, value: false)
+                .channelOption(.autoRead, value: false)
                 .channelInitializer { channel in
-                    channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                    channel.getOption(.autoRead).whenComplete { result in
                         func workaround() {
                             XCTAssertNoThrow(XCTAssertFalse(try result.get()))
                         }
@@ -425,9 +425,9 @@ class BootstrapTest: XCTestCase {
                 var channel: Channel? = nil
                 XCTAssertNoThrow(
                     channel = try NIOPipeBootstrap(group: self.group)
-                        .channelOption(ChannelOptions.autoRead, value: false)
+                        .channelOption(.autoRead, value: false)
                         .channelInitializer { channel in
-                            channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+                            channel.getOption(.autoRead).whenComplete { result in
                                 func workaround() {
                                     XCTAssertNoThrow(XCTAssertFalse(try result.get()))
                                 }
@@ -671,17 +671,17 @@ class BootstrapTest: XCTestCase {
         }
 
         try checkOptionEquivalence(
-            longOption: ChannelOptions.socketOption(.so_reuseaddr),
+            longOption: .socketOption(.so_reuseaddr),
             setValue: 1,
             shortOption: .allowLocalEndpointReuse
         )
         try checkOptionEquivalence(
-            longOption: ChannelOptions.allowRemoteHalfClosure,
+            longOption: .allowRemoteHalfClosure,
             setValue: true,
             shortOption: .allowRemoteHalfClosure
         )
         try checkOptionEquivalence(
-            longOption: ChannelOptions.autoRead,
+            longOption: .autoRead,
             setValue: false,
             shortOption: .disableAutoRead
         )
@@ -697,14 +697,14 @@ class BootstrapTest: XCTestCase {
                 let clientLocalAddressWholeInterface = try? SocketAddress(ipAddress: localIP, port: 0),
                 let server1 =
                     (try? ServerBootstrap(group: self.group)
-                        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                        .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+                        .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                        .serverChannelOption(.maxMessagesPerRead, value: 1)
                         .bind(to: serverLocalAddressChoice)
                         .wait()),
                 let server2 =
                     (try? ServerBootstrap(group: self.group)
-                        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                        .serverChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
+                        .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+                        .serverChannelOption(.maxMessagesPerRead, value: 1)
                         .bind(to: serverLocalAddressChoice)
                         .wait()),
                 let server1LocalAddress = server1.localAddress,
@@ -721,7 +721,7 @@ class BootstrapTest: XCTestCase {
             // Try 1: Directly connect to 127.0.0.1, this won't do Happy Eyeballs.
             XCTAssertNoThrow(
                 try ClientBootstrap(group: self.group)
-                    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                    .channelOption(.socketOption(.so_reuseaddr), value: 1)
                     .bind(to: clientLocalAddressWholeInterface)
                     .connect(to: server1LocalAddress)
                     .wait()
@@ -744,7 +744,7 @@ class BootstrapTest: XCTestCase {
 
             XCTAssertNoThrow(
                 maybeChannel1 = try ClientBootstrap(group: self.group)
-                    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                    .channelOption(.socketOption(.so_reuseaddr), value: 1)
                     .bind(to: clientLocalAddressWholeInterface)
                     .connect(host: localhost, port: server1LocalAddress.port!)
                     .wait()
@@ -757,7 +757,7 @@ class BootstrapTest: XCTestCase {
             // Try 3: Bind the client to the same address/port as in try 2 but to server 2.
             XCTAssertNoThrow(
                 try ClientBootstrap(group: self.group)
-                    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                    .channelOption(.socketOption(.so_reuseaddr), value: 1)
                     .connectTimeout(.hours(2))
                     .bind(to: myChannel1Address)
                     .connect(to: server2LocalAddress)
@@ -822,7 +822,7 @@ private final class MakeSureAutoReadIsOffInChannelInitializer: ChannelInboundHan
     typealias InboundIn = Channel
 
     func channelActive(context: ChannelHandlerContext) {
-        context.channel.getOption(ChannelOptions.autoRead).whenComplete { result in
+        context.channel.getOption(.autoRead).whenComplete { result in
             func workaround() {
                 XCTAssertNoThrow(XCTAssertFalse(try result.get()))
             }
