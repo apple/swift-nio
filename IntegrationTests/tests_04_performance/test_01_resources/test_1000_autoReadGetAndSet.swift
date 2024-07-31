@@ -32,8 +32,8 @@ func run(identifier: String) {
         let iterations = 1000
 
         for _ in 0..<iterations {
-            let autoReadOption = try! server.getOption(ChannelOptions.autoRead).wait()
-            try! server.setOption(ChannelOptions.autoRead, value: !autoReadOption).wait()
+            let autoReadOption = try! server.getOption(.autoRead).wait()
+            try! server.setOption(.autoRead, value: !autoReadOption).wait()
         }
 
         return iterations

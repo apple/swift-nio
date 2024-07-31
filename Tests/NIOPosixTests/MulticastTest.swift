@@ -73,7 +73,7 @@ final class MulticastTest: XCTestCase {
         interface: NIONetworkInterface
     ) -> EventLoopFuture<MulticastChannel> {
         DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .channelOption(.socketOption(.so_reuseaddr), value: 1)
             .bind(host: host, port: port)
             .flatMap { channel in
                 let channel = channel as! MulticastChannel
@@ -108,7 +108,7 @@ final class MulticastTest: XCTestCase {
         device: NIONetworkDevice
     ) -> EventLoopFuture<MulticastChannel> {
         DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .channelOption(.socketOption(.so_reuseaddr), value: 1)
             .bind(host: host, port: port)
             .flatMap { channel in
                 let channel = channel as! MulticastChannel
@@ -322,7 +322,7 @@ final class MulticastTest: XCTestCase {
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(
             DatagramBootstrap(group: self.group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
         )
@@ -397,7 +397,7 @@ final class MulticastTest: XCTestCase {
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(
             DatagramBootstrap(group: self.group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "::1", port: 0)
                 .wait()
         )
@@ -443,7 +443,7 @@ final class MulticastTest: XCTestCase {
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(
             DatagramBootstrap(group: self.group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
         )
@@ -508,7 +508,7 @@ final class MulticastTest: XCTestCase {
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(
             DatagramBootstrap(group: self.group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "::1", port: 0)
                 .wait()
         )
@@ -594,7 +594,7 @@ final class MulticastTest: XCTestCase {
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(
             DatagramBootstrap(group: self.group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
         )
@@ -668,7 +668,7 @@ final class MulticastTest: XCTestCase {
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(
             DatagramBootstrap(group: self.group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "::1", port: 0)
                 .wait()
         )
@@ -713,7 +713,7 @@ final class MulticastTest: XCTestCase {
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(
             DatagramBootstrap(group: self.group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
         )
@@ -774,7 +774,7 @@ final class MulticastTest: XCTestCase {
         // Now that we've joined the group, let's send to it.
         let sender = try assertNoThrowWithValue(
             DatagramBootstrap(group: self.group)
-                .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+                .channelOption(.socketOption(.so_reuseaddr), value: 1)
                 .bind(host: "::1", port: 0)
                 .wait()
         )

@@ -146,7 +146,7 @@ final class RawSocketBootstrapTests: XCTestCase {
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try elg.syncShutdownGracefully()) }
         let channel = try NIORawSocketBootstrap(group: elg)
-            .channelOption(ChannelOptions.ipOption(.ip_hdrincl), value: 1)
+            .channelOption(.ipOption(.ip_hdrincl), value: 1)
             .channelInitializer {
                 $0.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }

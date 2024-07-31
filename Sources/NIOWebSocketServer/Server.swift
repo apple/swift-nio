@@ -73,7 +73,7 @@ struct Server {
         let channel: NIOAsyncChannel<EventLoopFuture<UpgradeResult>, Never> = try await ServerBootstrap(
             group: self.eventLoopGroup
         )
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
         .bind(
             host: self.host,
             port: self.port

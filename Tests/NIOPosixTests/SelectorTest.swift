@@ -232,7 +232,7 @@ class SelectorTest: XCTestCase {
 
             func channelActive(context: ChannelHandlerContext) {
                 // collect all the channels
-                context.channel.getOption(ChannelOptions.allowRemoteHalfClosure).whenSuccess { halfClosureAllowed in
+                context.channel.getOption(.allowRemoteHalfClosure).whenSuccess { halfClosureAllowed in
                     precondition(
                         halfClosureAllowed,
                         "the test configuration is bogus: half-closure is dis-allowed which breaks the setup of this test"
@@ -394,7 +394,7 @@ class SelectorTest: XCTestCase {
                     (0..<SelectorTest.testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse).map {
                         (_: Int) in
                         ClientBootstrap(group: el)
-                            .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+                            .channelOption(.allowRemoteHalfClosure, value: true)
                             .channelInitializer { channel in
                                 channel.pipeline.addHandler(
                                     CloseEveryOtherAndOpenNewOnesHandler(
