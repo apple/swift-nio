@@ -15,12 +15,24 @@ import NIOCore
 
 extension BaseSocketChannel: SocketOptionProvider {
     #if !os(Windows)
-        func unsafeSetSocketOption<Value>(level: SocketOptionLevel, name: SocketOptionName, value: Value) -> EventLoopFuture<Void> {
-            return unsafeSetSocketOption(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)), value: value)
-        }
+    func unsafeSetSocketOption<Value>(
+        level: SocketOptionLevel,
+        name: SocketOptionName,
+        value: Value
+    ) -> EventLoopFuture<Void> {
+        unsafeSetSocketOption(
+            level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)),
+            name: NIOBSDSocket.Option(rawValue: CInt(name)),
+            value: value
+        )
+    }
     #endif
 
-    func unsafeSetSocketOption<Value>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: Value) -> EventLoopFuture<Void> {
+    func unsafeSetSocketOption<Value>(
+        level: NIOBSDSocket.OptionLevel,
+        name: NIOBSDSocket.Option,
+        value: Value
+    ) -> EventLoopFuture<Void> {
         if eventLoop.inEventLoop {
             let promise = eventLoop.makePromise(of: Void.self)
             executeAndComplete(promise) {
@@ -35,12 +47,18 @@ extension BaseSocketChannel: SocketOptionProvider {
     }
 
     #if !os(Windows)
-        func unsafeGetSocketOption<Value>(level: SocketOptionLevel, name: SocketOptionName) -> EventLoopFuture<Value> {
-            return unsafeGetSocketOption(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
-        }
+    func unsafeGetSocketOption<Value>(level: SocketOptionLevel, name: SocketOptionName) -> EventLoopFuture<Value> {
+        unsafeGetSocketOption(
+            level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)),
+            name: NIOBSDSocket.Option(rawValue: CInt(name))
+        )
+    }
     #endif
 
-    func unsafeGetSocketOption<Value>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) -> EventLoopFuture<Value> {
+    func unsafeGetSocketOption<Value>(
+        level: NIOBSDSocket.OptionLevel,
+        name: NIOBSDSocket.Option
+    ) -> EventLoopFuture<Value> {
         if eventLoop.inEventLoop {
             let promise = eventLoop.makePromise(of: Value.self)
             executeAndComplete(promise) {
@@ -59,6 +77,6 @@ extension BaseSocketChannel: SocketOptionProvider {
     }
 
     func getSocketOption0<Value>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> Value {
-        return try self.socket.getOption(level: level, name: name)
+        try self.socket.getOption(level: level, name: name)
     }
 }

@@ -19,12 +19,12 @@ import PackageDescription
 let package = Package(
     name: "HookedFunctions",
     products: [
-        .library(name: "HookedFunctions", type: .dynamic, targets: ["HookedFunctions"]),
+        .library(name: "HookedFunctions", type: .dynamic, targets: ["HookedFunctions"])
     ],
     dependencies: [
-        .package(url: "../AtomicCounter/", branch: "main"),
+        .package(url: "../AtomicCounter/", branch: "main")
     ],
     targets: [
-        .target(name: "HookedFunctions", dependencies: ["AtomicCounter"]),
+        .target(name: "HookedFunctions", dependencies: ["AtomicCounter"])
     ]
 )

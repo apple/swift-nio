@@ -39,17 +39,22 @@ import NIOCore
 /// specify a type that must be returned from the supplied closure. The result will then be used to succeed the ``NIOTypedApplicationProtocolNegotiationHandler/protocolNegotiationResult``
 /// promise. This allows us to construct pipelines that include protocol negotiation handlers and be able to bridge them into `NIOAsyncChannel`
 /// based bootstraps.
-public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>: ChannelInboundHandler, RemovableChannelHandler {
+public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>: ChannelInboundHandler,
+    RemovableChannelHandler
+{
     public typealias InboundIn = Any
 
     public typealias InboundOut = Any
 
     public var protocolNegotiationResult: EventLoopFuture<NegotiationResult> {
-        return self.negotiatedPromise.futureResult
+        self.negotiatedPromise.futureResult
     }
 
     private var negotiatedPromise: EventLoopPromise<NegotiationResult> {
-        precondition(self._negotiatedPromise != nil, "Tried to access the protocol negotiation result before the handler was added to a pipeline")
+        precondition(
+            self._negotiatedPromise != nil,
+            "Tried to access the protocol negotiation result before the handler was added to a pipeline"
+        )
         return self._negotiatedPromise!
     }
     private var _negotiatedPromise: EventLoopPromise<NegotiationResult>?
@@ -113,7 +118,7 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
 
     public func channelInactive(context: ChannelHandlerContext) {
         self.stateMachine.channelInactive()
-        
+
         self.negotiatedPromise.fail(ChannelError.outputClosed)
         context.fireChannelInactive()
     }

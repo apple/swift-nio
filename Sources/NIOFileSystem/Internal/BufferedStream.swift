@@ -527,12 +527,12 @@ extension BufferedStream {
 
         func didYield(bufferDepth: Int) -> Bool {
             // We are demanding more until we reach the high watermark
-            return bufferDepth < self._high
+            bufferDepth < self._high
         }
 
         func didConsume(bufferDepth: Int) -> Bool {
             // We start demanding again once we are below the low watermark
-            return bufferDepth < self._low
+            bufferDepth < self._low
         }
     }
 
@@ -656,7 +656,7 @@ extension BufferedStream {
             contentsOf sequence: some Sequence<Element>
         ) throws -> Source.WriteResult {
             let action = self._stateMachine.withCriticalRegion {
-                return $0.write(sequence)
+                $0.write(sequence)
             }
 
             switch action {
@@ -781,8 +781,8 @@ extension BufferedStream {
         }
 
         func suspendNext() async throws -> Element? {
-            return try await withTaskCancellationHandler {
-                return try await withCheckedThrowingContinuation { continuation in
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { continuation in
                     let action = self._stateMachine.withCriticalRegion {
                         $0.suspendNext(continuation: continuation)
                     }

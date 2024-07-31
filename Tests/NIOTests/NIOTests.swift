@@ -11,8 +11,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import XCTest
+
 import NIO
+import XCTest
 
 /// This test suite is focused just on confirming that the umbrella NIO module behaves as expected.
 final class NIOTests: XCTestCase {

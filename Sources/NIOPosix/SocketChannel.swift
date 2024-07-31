@@ -28,7 +28,9 @@ import struct WinSDK.socklen_t
 #endif
 
 extension ByteBuffer {
-    mutating func withMutableWritePointer(body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>) rethrows -> IOResult<Int> {
+    mutating func withMutableWritePointer(
+        body: (UnsafeMutableRawBufferPointer) throws -> IOResult<Int>
+    ) rethrows -> IOResult<Int> {
         var singleResult: IOResult<Int>!
         _ = try self.writeWithUnsafeMutableBytes(minimumWritableBytes: 0) { ptr in
             let localWriteResult = try body(ptr)
@@ -50,32 +52,53 @@ extension ByteBuffer {
 final class SocketChannel: BaseStreamSocketChannel<Socket> {
     private var connectTimeout: TimeAmount? = nil
 
-    init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
+    init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws
+    {
         var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
             guard let subtype = NIOBSDSocket.ProtocolSubtype.mptcp else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             protocolSubtype = subtype
         }
-        let socket = try Socket(protocolFamily: protocolFamily, type: .stream, protocolSubtype: protocolSubtype, setNonBlocking: true)
-        try super.init(socket: socket, parent: nil, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
+        let socket = try Socket(
+            protocolFamily: protocolFamily,
+            type: .stream,
+            protocolSubtype: protocolSubtype,
+            setNonBlocking: true
+        )
+        try super.init(
+            socket: socket,
+            parent: nil,
+            eventLoop: eventLoop,
+            recvAllocator: AdaptiveRecvByteBufferAllocator()
+        )
     }
 
     init(eventLoop: SelectableEventLoop, socket: NIOBSDSocket.Handle) throws {
         let sock = try Socket(socket: socket, setNonBlocking: true)
-        try super.init(socket: sock, parent: nil, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
+        try super.init(
+            socket: sock,
+            parent: nil,
+            eventLoop: eventLoop,
+            recvAllocator: AdaptiveRecvByteBufferAllocator()
+        )
     }
 
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
-        try super.init(socket: socket, parent: parent, eventLoop: eventLoop, recvAllocator: AdaptiveRecvByteBufferAllocator())
+        try super.init(
+            socket: socket,
+            parent: parent,
+            eventLoop: eventLoop,
+            recvAllocator: AdaptiveRecvByteBufferAllocator()
+        )
     }
 
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -90,7 +113,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -104,9 +127,11 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
     }
 
     func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .socketChannel(self),
-                               interested: interested,
-                               registrationID: registrationID)
+        NIORegistration(
+            channel: .socketChannel(self),
+            interested: interested,
+            registrationID: registrationID
+        )
     }
 
     private func scheduleConnectTimeout() {
@@ -145,11 +170,12 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
         try self.socket.finishConnect()
     }
 
-
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.socket,
-                              interested: interested,
-                              makeRegistration: self.registrationFor)
+        try selector.register(
+            selectable: self.socket,
+            interested: interested,
+            makeRegistration: self.registrationFor
+        )
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
@@ -172,17 +198,30 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     /// The server socket channel is never writable.
     // This is `Channel` API so must be thread-safe.
-    override public var isWritable: Bool { return false }
+    override public var isWritable: Bool { false }
 
-    convenience init(eventLoop: SelectableEventLoop, group: EventLoopGroup, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws {
+    convenience init(
+        eventLoop: SelectableEventLoop,
+        group: EventLoopGroup,
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        enableMPTCP: Bool = false
+    ) throws {
         var protocolSubtype = NIOBSDSocket.ProtocolSubtype.default
         if enableMPTCP {
             guard let subtype = NIOBSDSocket.ProtocolSubtype.mptcp else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             protocolSubtype = subtype
         }
-        try self.init(serverSocket: try ServerSocket(protocolFamily: protocolFamily, protocolSubtype: protocolSubtype, setNonBlocking: true), eventLoop: eventLoop, group: group)
+        try self.init(
+            serverSocket: try ServerSocket(
+                protocolFamily: protocolFamily,
+                protocolSubtype: protocolSubtype,
+                setNonBlocking: true
+            ),
+            eventLoop: eventLoop,
+            group: group
+        )
     }
 
     init(serverSocket: ServerSocket, eventLoop: SelectableEventLoop, group: EventLoopGroup) throws {
@@ -203,16 +242,18 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .serverSocketChannel(self),
-                               interested: interested,
-                               registrationID: registrationID)
+        NIORegistration(
+            channel: .serverSocketChannel(self),
+            interested: interested,
+            registrationID: registrationID
+        )
     }
 
     override func setOption0<Option: ChannelOption>(_ option: Option, value: Option.Value) throws {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -227,7 +268,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -249,12 +290,12 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            promise?.fail(ChannelError.ioOnClosedChannel)
+            promise?.fail(ChannelError._ioOnClosedChannel)
             return
         }
 
         guard self.isRegistered else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError._inappropriateOperationForState)
             return
         }
 
@@ -262,7 +303,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         p.futureResult.map {
             // It's important to call the methods before we actually notify the original promise for ordering reasons.
             self.becomeActive0(promise: promise)
-        }.whenFailure{ error in
+        }.whenFailure { error in
             promise?.fail(error)
         }
         executeAndComplete(p) {
@@ -282,26 +323,28 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func finishConnectSocket() throws {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func readFromSocket() throws -> ReadResult {
         var result = ReadResult.none
         for _ in 1...maxMessagesPerRead {
             guard self.isOpen else {
-                throw ChannelError.eof
+                throw ChannelError._eof
             }
             if let accepted = try self.socket.accept(setNonBlocking: true) {
                 readPending = false
                 result = .some
                 do {
-                    let chan = try SocketChannel(socket: accepted,
-                                                 parent: self,
-                                                 eventLoop: group.next() as! SelectableEventLoop)
+                    let chan = try SocketChannel(
+                        socket: accepted,
+                        parent: self,
+                        eventLoop: group.next() as! SelectableEventLoop
+                    )
                     assert(self.isActive)
                     self.pipeline.syncOperations.fireChannelRead(NIOAny(chan))
                 } catch {
@@ -328,10 +371,10 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
         switch err.errnoCode {
         case ECONNABORTED,
-             EMFILE,
-             ENFILE,
-             ENOBUFS,
-             ENOMEM:
+            EMFILE,
+            ENFILE,
+            ENOBUFS,
+            ENOMEM:
             // These are errors we may be able to recover from. The user may just want to stop accepting connections for example
             // or provide some other means of back-pressure. This could be achieved by a custom ChannelDuplexHandler.
             return false
@@ -352,7 +395,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         ch.eventLoop.execute {
             ch.register().flatMapThrowing {
                 guard ch.isOpen else {
-                    throw ChannelError.ioOnClosedChannel
+                    throw ChannelError._ioOnClosedChannel
                 }
                 ch.becomeActive0(promise: nil)
             }.whenFailure { error in
@@ -362,11 +405,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func hasFlushedPendingWrites() -> Bool {
-        return false
+        false
     }
 
     override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.operationUnsupported)
+        promise?.fail(ChannelError._operationUnsupported)
     }
 
     override func markFlushPoint() {
@@ -374,13 +417,15 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
     }
 
     override func flushNow() -> IONotificationState {
-        return IONotificationState.unregister
+        IONotificationState.unregister
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.socket,
-                              interested: interested,
-                              makeRegistration: self.registrationFor)
+        try selector.register(
+            selectable: self.socket,
+            interested: interested,
+            makeRegistration: self.registrationFor
+        )
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
@@ -397,7 +442,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
         case let event as VsockChannelEvents.BindToAddress:
             self.bind0(to: .vsockAddress(event.address), promise: promise)
         default:
-            promise?.fail(ChannelError.operationUnsupported)
+            promise?.fail(ChannelError._operationUnsupported)
         }
     }
 }
@@ -416,7 +461,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     private var vectorReadManager: Optional<DatagramVectorReadManager>
     // This is `Channel` API so must be thread-safe.
     override public var isWritable: Bool {
-        return pendingWrites.isWritable
+        pendingWrites.isWritable
     }
 
     override var isOpen: Bool {
@@ -461,8 +506,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             throw err
         }
 
-        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
-                                                          msgBufferPool: eventLoop.msgBufferPool)
+        self.pendingWrites = PendingDatagramWritesManager(
+            bufferPool: eventLoop.bufferPool,
+            msgBufferPool: eventLoop.msgBufferPool
+        )
 
         try super.init(
             socket: socket,
@@ -476,8 +523,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     init(socket: Socket, parent: Channel? = nil, eventLoop: SelectableEventLoop) throws {
         self.vectorReadManager = nil
         try socket.setNonBlocking()
-        self.pendingWrites = PendingDatagramWritesManager(bufferPool: eventLoop.bufferPool,
-                                                          msgBufferPool: eventLoop.msgBufferPool)
+        self.pendingWrites = PendingDatagramWritesManager(
+            bufferPool: eventLoop.bufferPool,
+            msgBufferPool: eventLoop.msgBufferPool
+        )
         try super.init(
             socket: socket,
             parent: parent,
@@ -493,7 +542,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -513,44 +562,52 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             switch self.localAddress?.protocol {
             case .some(.inet):
                 self.reportExplicitCongestionNotifications = true
-                try self.socket.setOption(level: .ip,
-                                          name: .ip_recv_tos,
-                                          value: valueAsInt)
+                try self.socket.setOption(
+                    level: .ip,
+                    name: .ip_recv_tos,
+                    value: valueAsInt
+                )
             case .some(.inet6):
                 self.reportExplicitCongestionNotifications = true
-                try self.socket.setOption(level: .ipv6,
-                                          name: .ipv6_recv_tclass,
-                                          value: valueAsInt)
+                try self.socket.setOption(
+                    level: .ipv6,
+                    name: .ipv6_recv_tclass,
+                    value: valueAsInt
+                )
             default:
                 // Explicit congestion notification is only supported for IP
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
             let valueAsInt: CInt = value as! Bool ? 1 : 0
             switch self.localAddress?.protocol {
             case .some(.inet):
                 self.receivePacketInfo = true
-                try self.socket.setOption(level: .ip,
-                                          name: .ip_recv_pktinfo,
-                                          value: valueAsInt)
+                try self.socket.setOption(
+                    level: .ip,
+                    name: .ip_recv_pktinfo,
+                    value: valueAsInt
+                )
             case .some(.inet6):
                 self.receivePacketInfo = true
-                try self.socket.setOption(level: .ipv6,
-                                          name: .ipv6_recv_pktinfo,
-                                          value: valueAsInt)
+                try self.socket.setOption(
+                    level: .ipv6,
+                    name: .ipv6_recv_pktinfo,
+                    value: valueAsInt
+                )
             default:
                 // Receiving packet info is only supported for IP
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.DatagramSegmentSize:
             guard System.supportsUDPSegmentationOffload else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             let segmentSize = value as! ChannelOptions.Types.DatagramSegmentSize.Value
             try self.socket.setUDPSegmentSize(segmentSize)
         case _ as ChannelOptions.Types.DatagramReceiveOffload:
             guard System.supportsUDPReceiveOffload else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             let enable = value as! ChannelOptions.Types.DatagramReceiveOffload.Value
             try self.socket.setUDPReceiveOffload(enable)
@@ -563,7 +620,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         self.eventLoop.assertInEventLoop()
 
         guard isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -576,35 +633,47 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         case _ as ChannelOptions.Types.ExplicitCongestionNotificationsOption:
             switch self.localAddress?.protocol {
             case .some(.inet):
-                return try (self.socket.getOption(level: .ip,
-                                                  name: .ip_recv_tos) != 0) as! Option.Value
+                return try
+                    (self.socket.getOption(
+                        level: .ip,
+                        name: .ip_recv_tos
+                    ) != 0) as! Option.Value
             case .some(.inet6):
-                return try (self.socket.getOption(level: .ipv6,
-                                                  name: .ipv6_recv_tclass) != 0) as! Option.Value
+                return try
+                    (self.socket.getOption(
+                        level: .ipv6,
+                        name: .ipv6_recv_tclass
+                    ) != 0) as! Option.Value
             default:
                 // Explicit congestion notification is only supported for IP
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.ReceivePacketInfo:
             switch self.localAddress?.protocol {
             case .some(.inet):
-                return try (self.socket.getOption(level: .ip,
-                                                  name: .ip_recv_pktinfo) != 0) as! Option.Value
+                return try
+                    (self.socket.getOption(
+                        level: .ip,
+                        name: .ip_recv_pktinfo
+                    ) != 0) as! Option.Value
             case .some(.inet6):
-                return try (self.socket.getOption(level: .ipv6,
-                                                  name: .ipv6_recv_pktinfo) != 0) as! Option.Value
+                return try
+                    (self.socket.getOption(
+                        level: .ipv6,
+                        name: .ipv6_recv_pktinfo
+                    ) != 0) as! Option.Value
             default:
                 // Receiving packet info is only supported for IP
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
         case _ as ChannelOptions.Types.DatagramSegmentSize:
             guard System.supportsUDPSegmentationOffload else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             return try self.socket.getUDPSegmentSize() as! Option.Value
         case _ as ChannelOptions.Types.DatagramReceiveOffload:
             guard System.supportsUDPReceiveOffload else {
-                throw ChannelError.operationUnsupported
+                throw ChannelError._operationUnsupported
             }
             return try self.socket.getUDPReceiveOffload() as! Option.Value
         default:
@@ -613,9 +682,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     func registrationFor(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .datagramChannel(self),
-                               interested: interested,
-                               registrationID: registrationID)
+        NIORegistration(
+            channel: .datagramChannel(self),
+            interested: interested,
+            registrationID: registrationID
+        )
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
@@ -624,8 +695,10 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             self.pendingWrites.failAll(
                 error: IOError(
                     errnoCode: EISCONN,
-                    reason: "Socket was connected before flushing pending write."),
-                close: false)
+                    reason: "Socket was connected before flushing pending write."
+                ),
+                close: false
+            )
         }
         if try self.socket.connect(to: address) {
             self.pendingWrites.markConnected(to: address)
@@ -636,12 +709,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func connectSocket(to address: VsockAddress) throws -> Bool {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func finishConnectSocket() throws {
         // This is not required for connected datagram channels connect is a synchronous operation.
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func readFromSocket() throws -> ReadResult {
@@ -651,10 +724,12 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             let pooledMsgBuffer = self.selectableEventLoop.msgBufferPool.get()
             defer { self.selectableEventLoop.msgBufferPool.put(pooledMsgBuffer) }
             return try pooledMsgBuffer.withUnsafePointers { _, _, controlMessageStorage in
-                return try self.singleReadFromSocket(controlBytesBuffer: controlMessageStorage[0])
+                try self.singleReadFromSocket(controlBytesBuffer: controlMessageStorage[0])
             }
         } else {
-            return try self.singleReadFromSocket(controlBytesBuffer: UnsafeMutableRawBufferPointer(start: nil, count: 0))
+            return try self.singleReadFromSocket(
+                controlBytesBuffer: UnsafeMutableRawBufferPointer(start: nil, count: 0)
+            )
         }
     }
 
@@ -665,17 +740,19 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
-                throw ChannelError.eof
+                throw ChannelError._eof
             }
 
             var controlBytes = UnsafeReceivedControlBytes(controlBytesBuffer: controlBytesBuffer)
 
             let (buffer, result) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer in
-                return try buffer.withMutableWritePointer { pointer in
-                    try self.socket.recvmsg(pointer: pointer,
-                                            storage: &rawAddress,
-                                            storageLen: &rawAddressLength,
-                                            controlBytes: &controlBytes)
+                try buffer.withMutableWritePointer { pointer in
+                    try self.socket.recvmsg(
+                        pointer: pointer,
+                        storage: &rawAddress,
+                        storageLen: &rawAddressLength,
+                        controlBytes: &controlBytes
+                    )
                 }
             }
 
@@ -689,15 +766,18 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
                 let metadata: AddressedEnvelope<ByteBuffer>.Metadata?
                 if self.reportExplicitCongestionNotifications || self.receivePacketInfo,
-                   let controlMessagesReceived = controlBytes.receivedControlMessages {
+                    let controlMessagesReceived = controlBytes.receivedControlMessages
+                {
                     metadata = .init(from: controlMessagesReceived)
                 } else {
                     metadata = nil
                 }
 
-                let msg = AddressedEnvelope(remoteAddress: remoteAddress,
-                                            data: buffer,
-                                            metadata: metadata)
+                let msg = AddressedEnvelope(
+                    remoteAddress: remoteAddress,
+                    data: buffer,
+                    metadata: metadata
+                )
                 assert(self.isActive)
                 self.pipeline.syncOperations.fireChannelRead(NIOAny(msg))
                 readResult = .some
@@ -715,7 +795,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
         readLoop: for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen else {
-                throw ChannelError.eof
+                throw ChannelError._eof
             }
             guard let vectorReadManager = self.vectorReadManager else {
                 // The vector read manager went away. This happens if users unset the vector read manager
@@ -723,12 +803,14 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 break readLoop
             }
 
-            let (_, result) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer -> DatagramVectorReadManager.ReadResult in
+            let (_, result) = try self.recvBufferPool.buffer(allocator: self.allocator) {
+                buffer -> DatagramVectorReadManager.ReadResult in
                 // This force-unwrap is safe, as we checked whether this is nil in the caller.
                 try vectorReadManager.readFromSocket(
                     socket: self.socket,
                     buffer: &buffer,
-                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo)
+                    parseControlMessages: self.reportExplicitCongestionNotifications || self.receivePacketInfo
+                )
             }
 
             switch result {
@@ -765,7 +847,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
         // -    https://lists.gt.net/linux/kernel/39575
         case ECONNREFUSED,
-             ENOMEM:
+            ENOMEM:
             // These are errors we may be able to recover from.
             return false
         default:
@@ -806,13 +888,17 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     /// Buffer a write in preparation for a flush.
-    private func bufferPendingAddressedWrite(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) {
+    private func bufferPendingAddressedWrite(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?)
+    {
         // If the socket is connected, check the remote provided matches the connected address.
         if let connectedRemoteAddress = self.remoteAddress {
             guard envelope.remoteAddress == connectedRemoteAddress else {
-                promise?.fail(DatagramChannelError.WriteOnConnectedSocketWithInvalidAddress(
-                    envelopeRemoteAddress: envelope.remoteAddress,
-                    connectedRemoteAddress: connectedRemoteAddress))
+                promise?.fail(
+                    DatagramChannelError.WriteOnConnectedSocketWithInvalidAddress(
+                        envelopeRemoteAddress: envelope.remoteAddress,
+                        connectedRemoteAddress: connectedRemoteAddress
+                    )
+                )
                 return
             }
         }
@@ -824,7 +910,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override final func hasFlushedPendingWrites() -> Bool {
-        return self.pendingWrites.isFlushPending
+        self.pendingWrites.isFlushPending
     }
 
     /// Mark a flush point. This is called when flush is received, and instructs
@@ -848,16 +934,20 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 defer { self.selectableEventLoop.msgBufferPool.put(msgBuffer) }
                 return try msgBuffer.withUnsafePointers { _, _, controlMessageStorage in
                     var controlBytes = UnsafeOutboundControlBytes(controlBytes: controlMessageStorage[0])
-                    controlBytes.appendExplicitCongestionState(metadata: metadata,
-                                                            protocolFamily: self.localAddress?.protocol)
-                    return try self.socket.sendmsg(pointer: ptr,
-                                                   destinationPtr: destinationPtr,
-                                                   destinationSize: destinationSize,
-                                                   controlBytes: controlBytes.validControlBytes)
+                    controlBytes.appendExplicitCongestionState(
+                        metadata: metadata,
+                        protocolFamily: self.localAddress?.protocol
+                    )
+                    return try self.socket.sendmsg(
+                        pointer: ptr,
+                        destinationPtr: destinationPtr,
+                        destinationSize: destinationSize,
+                        controlBytes: controlBytes.validControlBytes
+                    )
                 }
             },
             vectorWriteOperation: { msgs in
-                return try self.socket.sendmmsg(msgs: msgs)
+                try self.socket.sendmmsg(msgs: msgs)
             }
         )
         return result
@@ -868,7 +958,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     override func bind0(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.eventLoop.assertInEventLoop()
         guard self.isRegistered else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError._inappropriateOperationForState)
             return
         }
         do {
@@ -881,9 +971,11 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        try selector.register(selectable: self.socket,
-                              interested: interested,
-                              makeRegistration: self.registrationFor)
+        try selector.register(
+            selectable: self.socket,
+            interested: interested,
+            makeRegistration: self.registrationFor
+        )
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
@@ -898,19 +990,19 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
 extension SocketChannel: CustomStringConvertible {
     var description: String {
-        return "SocketChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+        "SocketChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
     }
 }
 
 extension ServerSocketChannel: CustomStringConvertible {
     var description: String {
-        return "ServerSocketChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+        "ServerSocketChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
     }
 }
 
 extension DatagramChannel: CustomStringConvertible {
     var description: String {
-        return "DatagramChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+        "DatagramChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
     }
 }
 
@@ -948,14 +1040,24 @@ extension DatagramChannel: MulticastChannel {
         }
     }
 
-#if !os(Windows)
+    #if !os(Windows)
     @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
     func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
+            self.performGroupOperation0(
+                group,
+                device: interface.map { NIONetworkDevice($0) },
+                promise: promise,
+                operation: .join
+            )
         } else {
             eventLoop.execute {
-                self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .join)
+                self.performGroupOperation0(
+                    group,
+                    device: interface.map { NIONetworkDevice($0) },
+                    promise: promise,
+                    operation: .join
+                )
             }
         }
     }
@@ -963,14 +1065,24 @@ extension DatagramChannel: MulticastChannel {
     @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
     func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+            self.performGroupOperation0(
+                group,
+                device: interface.map { NIONetworkDevice($0) },
+                promise: promise,
+                operation: .leave
+            )
         } else {
             eventLoop.execute {
-                self.performGroupOperation0(group, device: interface.map { NIONetworkDevice($0) }, promise: promise, operation: .leave)
+                self.performGroupOperation0(
+                    group,
+                    device: interface.map { NIONetworkDevice($0) },
+                    promise: promise,
+                    operation: .leave
+                )
             }
         }
     }
-#endif
+    #endif
 
     func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
@@ -995,14 +1107,16 @@ extension DatagramChannel: MulticastChannel {
     /// The implementation of `joinGroup` and `leaveGroup`.
     ///
     /// Joining and leaving a multicast group ultimately corresponds to a single, carefully crafted, socket option.
-    private func performGroupOperation0(_ group: SocketAddress,
-                                        device: NIONetworkDevice?,
-                                        promise: EventLoopPromise<Void>?,
-                                        operation: GroupOperation) {
+    private func performGroupOperation0(
+        _ group: SocketAddress,
+        device: NIONetworkDevice?,
+        promise: EventLoopPromise<Void>?,
+        operation: GroupOperation
+    ) {
         self.eventLoop.assertInEventLoop()
 
         guard self.isActive else {
-            promise?.fail(ChannelError.inappropriateOperationForState)
+            promise?.fail(ChannelError._inappropriateOperationForState)
             return
         }
 
@@ -1017,12 +1131,12 @@ extension DatagramChannel: MulticastChannel {
         // We need to check that we have the appropriate address types in all cases. They all need to overlap with
         // the address type of this channel, or this cannot work.
         guard let localAddress = self.localAddress else {
-            promise?.fail(ChannelError.unknownLocalAddress)
+            promise?.fail(ChannelError._unknownLocalAddress)
             return
         }
 
         guard localAddress.protocol == group.protocol else {
-            promise?.fail(ChannelError.badMulticastGroupAddressFamily)
+            promise?.fail(ChannelError._badMulticastGroupAddressFamily)
             return
         }
 
@@ -1039,23 +1153,40 @@ extension DatagramChannel: MulticastChannel {
                 preconditionFailure("Should not be reachable, UNIX sockets are never multicast addresses")
             case (.v4(let groupAddress), .some(.v4(let interfaceAddress))):
                 // IPv4Binding with specific target interface.
-                let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: interfaceAddress.address.sin_addr)
+                let multicastRequest = ip_mreq(
+                    imr_multiaddr: groupAddress.address.sin_addr,
+                    imr_interface: interfaceAddress.address.sin_addr
+                )
                 try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
             case (.v4(let groupAddress), .none):
                 // IPv4 binding without target interface.
-                let multicastRequest = ip_mreq(imr_multiaddr: groupAddress.address.sin_addr, imr_interface: in_addr(s_addr: INADDR_ANY))
+                let multicastRequest = ip_mreq(
+                    imr_multiaddr: groupAddress.address.sin_addr,
+                    imr_interface: in_addr(s_addr: INADDR_ANY)
+                )
                 try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
             case (.v6(let groupAddress), .some(.v6)):
                 // IPv6 binding with specific target interface.
-                let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: UInt32(device!.interfaceIndex))
-                try self.socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)
+                let multicastRequest = ipv6_mreq(
+                    ipv6mr_multiaddr: groupAddress.address.sin6_addr,
+                    ipv6mr_interface: UInt32(device!.interfaceIndex)
+                )
+                try self.socket.setOption(
+                    level: .ipv6,
+                    name: operation.optionName(level: .ipv6),
+                    value: multicastRequest
+                )
             case (.v6(let groupAddress), .none):
                 // IPv6 binding with no specific interface requested.
                 let multicastRequest = ipv6_mreq(ipv6mr_multiaddr: groupAddress.address.sin6_addr, ipv6mr_interface: 0)
-                try self.socket.setOption(level: .ipv6, name: operation.optionName(level: .ipv6), value: multicastRequest)
+                try self.socket.setOption(
+                    level: .ipv6,
+                    name: operation.optionName(level: .ipv6),
+                    value: multicastRequest
+                )
             case (.v4, .some(.v6)), (.v6, .some(.v4)), (.v4, .some(.unixDomainSocket)), (.v6, .some(.unixDomainSocket)):
                 // Mismatched group and interface address: this is an error.
-                throw ChannelError.badInterfaceAddressFamily
+                throw ChannelError._badInterfaceAddressFamily
             }
 
             promise?.succeed(())

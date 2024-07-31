@@ -28,15 +28,19 @@ private final class PongDecoder: ByteToMessageDecoder {
 
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) -> DecodingState {
         if let ping = buffer.readInteger(as: UInt8.self) {
-            context.fireChannelRead(self.wrapInboundOut(ping))
+            context.fireChannelRead(Self.wrapInboundOut(ping))
             return .continue
         } else {
             return .needMoreData
         }
     }
 
-    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
-        return .needMoreData
+    public func decodeLast(
+        context: ChannelHandlerContext,
+        buffer: inout ByteBuffer,
+        seenEOF: Bool
+    ) throws -> DecodingState {
+        .needMoreData
     }
 }
 
@@ -65,16 +69,15 @@ private final class PingHandler: ChannelInboundHandler {
         self.pingBuffer = context.channel.allocator.buffer(capacity: 1)
         self.pingBuffer.writeInteger(PingHandler.pingCode)
 
-        context.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+        context.writeAndFlush(Self.wrapOutboundOut(self.pingBuffer), promise: nil)
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var buf = self.unwrapInboundIn(data)
-        if buf.readableBytes == 1 &&
-            buf.readInteger(as: UInt8.self) == PongHandler.pongCode {
+        if buf.readableBytes == 1 && buf.readInteger(as: UInt8.self) == PongHandler.pongCode {
             if self.remainingNumberOfRequests > 0 {
                 self.remainingNumberOfRequests -= 1
-                context.writeAndFlush(self.wrapOutboundOut(self.pingBuffer), promise: nil)
+                context.writeAndFlush(Self.wrapOutboundOut(self.pingBuffer), promise: nil)
             } else {
                 context.close(promise: self.allDone)
             }
@@ -102,7 +105,7 @@ private final class PongHandler: ChannelInboundHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let data = self.unwrapInboundIn(data)
+        let data = Self.unwrapInboundIn(data)
         if data == PingHandler.pingCode {
             context.writeAndFlush(NIOAny(self.pongBuffer), promise: nil)
         } else {
@@ -117,8 +120,8 @@ private final class PongHandler: ChannelInboundHandler {
 
 func doPingPongRequests(group: EventLoopGroup, number numberOfRequests: Int) throws -> Int {
     let serverChannel = try ServerBootstrap(group: group)
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        .childChannelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
+        .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+        .childChannelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
         .childChannelInitializer { channel in
             channel.pipeline.addHandler(ByteToMessageHandler(PongDecoder())).flatMap {
                 channel.pipeline.addHandler(PongHandler())
@@ -134,7 +137,7 @@ func doPingPongRequests(group: EventLoopGroup, number numberOfRequests: Int) thr
         .channelInitializer { channel in
             channel.pipeline.addHandler(pingHandler)
         }
-        .channelOption(ChannelOptions.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
+        .channelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 4))
         .connect(to: serverChannel.localAddress!)
         .wait()
 

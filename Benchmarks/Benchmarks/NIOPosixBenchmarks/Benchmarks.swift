@@ -19,7 +19,7 @@ private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 
 let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [
-        .mallocCountTotal,
+        .mallocCountTotal
     ]
 
     Benchmark(

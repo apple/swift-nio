@@ -15,7 +15,7 @@
 import NIOCore
 import NIOEmbedded
 
-fileprivate final class RemovableHandler: ChannelInboundHandler, RemovableChannelHandler {
+private final class RemovableHandler: ChannelInboundHandler, RemovableChannelHandler {
     typealias InboundIn = NIOAny
 
     static let name: String = "RemovableHandler"
@@ -32,7 +32,10 @@ fileprivate final class RemovableHandler: ChannelInboundHandler, RemovableChanne
 }
 
 @inline(__always)
-private func addRemoveBench(iterations: Int, _ removalOperation: (Channel, RemovableHandler) -> EventLoopFuture<Void>) -> Int {
+private func addRemoveBench(
+    iterations: Int,
+    _ removalOperation: (Channel, RemovableHandler) -> EventLoopFuture<Void>
+) -> Int {
     let channel = EmbeddedChannel()
     defer {
         _ = try! channel.finish()

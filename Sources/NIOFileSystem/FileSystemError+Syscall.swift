@@ -541,7 +541,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func fdopendir(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unknown,
             message: "Unable to open directory stream for '\(path)'.",
             systemCall: "fdopendir",
@@ -552,7 +552,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func readdir(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unknown,
             message: "Unable to read directory stream for '\(path)'.",
             systemCall: "readdir",
@@ -563,7 +563,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func ftsRead(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unknown,
             message: "Unable to read FTS stream for '\(path)'.",
             systemCall: "fts_read",
@@ -966,7 +966,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func getcwd(errno: Errno, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unavailable,
             message: "Can't get current working directory.",
             systemCall: "getcwd",
@@ -977,7 +977,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func confstr(name: String, errno: Errno, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unavailable,
             message: "Can't get configuration value for '\(name)'.",
             systemCall: "confstr",
@@ -1085,7 +1085,8 @@ extension FileSystemError {
 
         case .readOnlyFileSystem:
             code = .unsupported
-            message = "Not permitted to change last access or last data modification times for \(path): this is a read-only file system."
+            message =
+                "Not permitted to change last access or last data modification times for \(path): this is a read-only file system."
 
         case .badFileDescriptor:
             code = .closed

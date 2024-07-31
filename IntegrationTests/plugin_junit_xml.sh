@@ -44,9 +44,9 @@ function junit_output_replace() {
 
 function plugin_junit_xml_test_suite_begin() {
     junit_testsuite_time=0
-    junit_output_write "<testsuite name='$1' hostname='$(hostname)' "\
-"timestamp='$(date -u +"%Y-%m-%dT%H:%M:%S")' tests='XXX-TESTS-XXX' "\
-"failures='XXX-FAILURES-XXX' time='XXX-TIME-XXX' errors='0' id='$(date +%s)'"\
+    junit_output_write "<testsuite name='$1' hostname='$(hostname)' " \
+"timestamp='$(date -u +"%Y-%m-%dT%H:%M:%S")' tests='XXX-TESTS-XXX' " \
+"failures='XXX-FAILURES-XXX' time='XXX-TIME-XXX' errors='0' id='$(date +%s)'" \
 " package='NIOIntegrationTests.$1'>"
 }
 

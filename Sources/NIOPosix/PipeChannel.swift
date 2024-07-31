@@ -36,27 +36,32 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
     }
 
     func registrationForInput(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .pipeChannel(self, .input),
-                               interested: interested,
-                               registrationID: registrationID)
+        NIORegistration(
+            channel: .pipeChannel(self, .input),
+            interested: interested,
+            registrationID: registrationID
+        )
     }
 
-    func registrationForOutput(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration {
-        return NIORegistration(channel: .pipeChannel(self, .output),
-                               interested: interested,
-                               registrationID: registrationID)
+    func registrationForOutput(interested: SelectorEventSet, registrationID: SelectorRegistrationID) -> NIORegistration
+    {
+        NIORegistration(
+            channel: .pipeChannel(self, .output),
+            interested: interested,
+            registrationID: registrationID
+        )
     }
 
     override func connectSocket(to address: SocketAddress) throws -> Bool {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func connectSocket(to address: VsockAddress) throws -> Bool {
-        throw ChannelError.operationUnsupported
+        throw ChannelError._operationUnsupported
     }
 
     override func finishConnectSocket() throws {
-        throw ChannelError.inappropriateOperationForState
+        throw ChannelError._inappropriateOperationForState
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
@@ -133,6 +138,6 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
 
 extension PipeChannel: CustomStringConvertible {
     var description: String {
-        return "PipeChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
+        "PipeChannel { \(self.socketDescription), active = \(self.isActive), localAddress = \(self.localAddress.debugDescription), remoteAddress = \(self.remoteAddress.debugDescription) }"
     }
 }

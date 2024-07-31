@@ -102,14 +102,17 @@ internal struct PooledRecvBufferAllocator {
         }
     }
 
-    private mutating func reuseExistingBuffer<Result>(_ body: (inout ByteBuffer) throws -> Result) rethrows -> (ByteBuffer, Result)? {
+    private mutating func reuseExistingBuffer<Result>(
+        _ body: (inout ByteBuffer) throws -> Result
+    ) rethrows -> (ByteBuffer, Result)? {
         if let nextBufferSize = self.recvAllocator.nextBufferSize() {
             if let result = try self.buffer?.modifyIfUniquelyOwned(minimumCapacity: nextBufferSize, body) {
                 // `result` can only be non-nil if `buffer` is non-nil.
                 return (self.buffer!, result)
             } else {
                 // Cycle through the buffers starting at the last used buffer.
-                let resultAndIndex = try self.buffers.loopingFirstIndexWithResult(startingAt: self.lastUsedIndex) { buffer in
+                let resultAndIndex = try self.buffers.loopingFirstIndexWithResult(startingAt: self.lastUsedIndex) {
+                    buffer in
                     try buffer.modifyIfUniquelyOwned(minimumCapacity: nextBufferSize, body)
                 }
 
@@ -131,8 +134,10 @@ internal struct PooledRecvBufferAllocator {
         return nil
     }
 
-    private mutating func allocateNewBuffer<Result>(using allocator: ByteBufferAllocator,
-                                                    _ body: (inout ByteBuffer) throws -> Result) rethrows -> (ByteBuffer, Result) {
+    private mutating func allocateNewBuffer<Result>(
+        using allocator: ByteBufferAllocator,
+        _ body: (inout ByteBuffer) throws -> Result
+    ) rethrows -> (ByteBuffer, Result) {
         // Couldn't reuse a buffer; create a new one and store it if there's capacity.
         var newBuffer = self.recvAllocator.buffer(allocator: allocator)
 
@@ -173,17 +178,21 @@ internal struct PooledRecvBufferAllocator {
         }
     }
 
-    private mutating func modifyBuffer<Result>(atIndex index: Int,
-                                               _ body: (inout ByteBuffer) throws -> Result) rethrows -> (ByteBuffer, Result) {
+    private mutating func modifyBuffer<Result>(
+        atIndex index: Int,
+        _ body: (inout ByteBuffer) throws -> Result
+    ) rethrows -> (ByteBuffer, Result) {
         let result = try body(&self.buffers[index])
         return (self.buffers[index], result)
     }
 }
 
 extension ByteBuffer {
-    fileprivate mutating func modifyIfUniquelyOwned<Result>(minimumCapacity: Int,
-                                                            _ body: (inout ByteBuffer) throws -> Result) rethrows -> Result? {
-        return try self.modifyIfUniquelyOwned { buffer in
+    fileprivate mutating func modifyIfUniquelyOwned<Result>(
+        minimumCapacity: Int,
+        _ body: (inout ByteBuffer) throws -> Result
+    ) rethrows -> Result? {
+        try self.modifyIfUniquelyOwned { buffer in
             buffer.clear(minimumCapacity: minimumCapacity)
             return try body(&buffer)
         }
@@ -197,17 +206,21 @@ extension Array {
     ///
     /// - Returns: The result and index of the first element passed to `body` which returned
     ///   non-nil, or `nil` if no such element exists.
-    fileprivate mutating func loopingFirstIndexWithResult<Result>(startingAt middleIndex: Index,
-                                                                  whereNonNil body: (inout Element) throws -> Result?) rethrows -> (Result, Index)? {
-        if let result = try self.firstIndexWithResult(in: middleIndex ..< self.endIndex, whereNonNil: body) {
+    fileprivate mutating func loopingFirstIndexWithResult<Result>(
+        startingAt middleIndex: Index,
+        whereNonNil body: (inout Element) throws -> Result?
+    ) rethrows -> (Result, Index)? {
+        if let result = try self.firstIndexWithResult(in: middleIndex..<self.endIndex, whereNonNil: body) {
             return result
         }
 
-        return try self.firstIndexWithResult(in: self.startIndex ..< middleIndex, whereNonNil: body)
+        return try self.firstIndexWithResult(in: self.startIndex..<middleIndex, whereNonNil: body)
     }
 
-    private mutating func firstIndexWithResult<Result>(in indices: Range<Index>,
-                                                       whereNonNil body: (inout Element) throws -> Result?) rethrows -> (Result, Index)? {
+    private mutating func firstIndexWithResult<Result>(
+        in indices: Range<Index>,
+        whereNonNil body: (inout Element) throws -> Result?
+    ) rethrows -> (Result, Index)? {
         for index in indices {
             if let result = try body(&self[index]) {
                 return (result, index)

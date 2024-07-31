@@ -16,12 +16,14 @@
 import NIOPosix
 import Foundation
 
-fileprivate let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+private let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 
 struct SystemCrashTests {
     let testEBADFIsUnacceptable = CrashTest(
-        regex: "Precondition failed: unacceptable errno \(EBADF) Bad file descriptor in", {
+        regex: "Precondition failed: unacceptable errno \(EBADF) Bad file descriptor in",
+        {
             _ = try? NIOPipeBootstrap(group: group).takingOwnershipOfDescriptors(input: .max, output: .max - 1).wait()
-        })
+        }
+    )
 }
 #endif

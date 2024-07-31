@@ -33,7 +33,7 @@ extension Swift.Duration {
 }
 
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-internal extension Swift.Duration {
+extension Swift.Duration {
     /// The duration represented as nanoseconds, clamped to maximum expressible value.
     var nanosecondsClamped: Int64 {
         let components = self.components

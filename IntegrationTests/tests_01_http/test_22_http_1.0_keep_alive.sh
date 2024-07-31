@@ -13,12 +13,13 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)
 start_server "$token"
 do_curl "$token" -H 'connection: keep-alive' -v --http1.0 \
-    "http://foobar.com/dynamic/info" > "$tmp/out_actual" 2>&1
+    "http://foobar.com/dynamic/info" > "${tmp:?"tmp variable not set"}/out_actual" 2>&1
 grep -qi '< Connection: keep-alive' "$tmp/out_actual"
 grep -qi '< HTTP/1.0 200 OK' "$tmp/out_actual"
 stop_server "$token"

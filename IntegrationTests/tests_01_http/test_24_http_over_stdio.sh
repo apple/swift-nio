@@ -13,11 +13,12 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 swift build
-echo -ne "::: HELLO\n::: WORLD\n:::\n" > "$tmp/file"
-lines_in_file="$(cat "$tmp/file" | wc -l | tr -d '\t ')"
+echo -ne "::: HELLO\n::: WORLD\n:::\n" > "${tmp:?"tmp variable not set"}/file"
+lines_in_file="$(wc -l < "$tmp/file"  | tr -d '\t ')"
 function echo_request_close() {
     echo -e 'GET /fileio/file HTTP/1.1\r\nconnection: close\r\nhost: stdio\r\n\r\n'
 }
@@ -33,7 +34,7 @@ assert_equal_files "$tmp/file" "$tmp/output-just-file"
 
 how_many=100
 {
-    for f in $(seq "$(( how_many - 1 ))" ); do
+    for _ in $(seq "$(( how_many - 1 ))" ); do
         echo_request_keep_alive
     done
     echo_request_close

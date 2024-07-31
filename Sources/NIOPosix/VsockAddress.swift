@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+
 #if canImport(Darwin)
 import CNIODarwin
 #elseif os(Linux) || os(Android)
@@ -23,7 +24,7 @@ import Musl
 #endif
 import CNIOLinux
 #endif
-fileprivate let vsockUnimplemented = "VSOCK support is not implemented for this platform"
+private let vsockUnimplemented = "VSOCK support is not implemented for this platform"
 
 // MARK: - Public API that's available on all platforms.
 
@@ -155,6 +156,10 @@ extension ChannelOptions {
     public static let localVsockContextID = Types.LocalVsockContextID()
 }
 
+extension ChannelOption where Self == ChannelOptions.Types.LocalVsockContextID {
+    public static var localVsockContextID: Self { .init() }
+}
+
 extension ChannelOptions.Types {
     /// This get-only option is used on channels backed by vsock sockets to get the local VSOCK context ID.
     public struct LocalVsockContextID: ChannelOption, Sendable {
@@ -168,32 +173,32 @@ extension ChannelOptions.Types {
 extension NIOBSDSocket.AddressFamily {
     /// Address for vsock.
     public static var vsock: NIOBSDSocket.AddressFamily {
-#if canImport(Darwin) || os(Linux) || os(Android)
+        #if canImport(Darwin) || os(Linux) || os(Android)
         NIOBSDSocket.AddressFamily(rawValue: AF_VSOCK)
-#else
+        #else
         fatalError(vsockUnimplemented)
-#endif
+        #endif
     }
 }
 
 extension NIOBSDSocket.ProtocolFamily {
     /// Address for vsock.
     public static var vsock: NIOBSDSocket.ProtocolFamily {
-#if canImport(Darwin) || os(Linux) || os(Android)
+        #if canImport(Darwin) || os(Linux) || os(Android)
         NIOBSDSocket.ProtocolFamily(rawValue: PF_VSOCK)
-#else
+        #else
         fatalError(vsockUnimplemented)
-#endif
+        #endif
     }
 }
 
 extension VsockAddress {
     public func withSockAddr<T>(_ body: (UnsafePointer<sockaddr>, Int) throws -> T) rethrows -> T {
-#if canImport(Darwin) || os(Linux) || os(Android)
+        #if canImport(Darwin) || os(Linux) || os(Android)
         return try self.address.withSockAddr({ try body($0, $1) })
-#else
+        #else
         fatalError(vsockUnimplemented)
-#endif
+        #endif
     }
 }
 
@@ -215,14 +220,14 @@ extension VsockAddress.ContextID {
     ///
     /// - Note: On Linux, ``local`` may be a better choice.
     static func getLocalContextID(_ socketFD: NIOBSDSocket.Handle) throws -> Self {
-#if canImport(Darwin)
+        #if canImport(Darwin)
         let request = CNIODarwin_IOCTL_VM_SOCKETS_GET_LOCAL_CID
         let fd = socketFD
-#elseif os(Linux) || os(Android)
+        #elseif os(Linux) || os(Android)
         let request = CNIOLinux_IOCTL_VM_SOCKETS_GET_LOCAL_CID
         let fd = try Posix.open(file: "/dev/vsock", oFlag: O_RDONLY | O_CLOEXEC)
         defer { try! Posix.close(descriptor: fd) }
-#endif
+        #endif
         var cid = Self.any.rawValue
         try Posix.ioctl(fd: fd, request: request, ptr: &cid)
         return Self(rawValue: cid)
@@ -231,7 +236,7 @@ extension VsockAddress.ContextID {
 
 extension sockaddr_vm {
     func withSockAddr<R>(_ body: (UnsafePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        return try withUnsafeBytes(of: self) { p in
+        try withUnsafeBytes(of: self) { p in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }

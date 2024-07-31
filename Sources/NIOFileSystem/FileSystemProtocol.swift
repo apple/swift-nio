@@ -176,24 +176,69 @@ public protocol FileSystemProtocol: Sendable {
     ///
     /// Note that other errors may also be thrown.
     ///
-    /// If the file at `sourcePath` is a symbolic link then only the link is copied to the new path.
+    /// If `sourcePath` is a symbolic link then only the link is copied. The copied file will
+    /// preserve permissions and any extended attributes (if supported by the file system).
     ///
     /// - Parameters:
     ///   - sourcePath: The path to the item to copy.
     ///   - destinationPath: The path at which to place the copy.
+    ///   - strategy: How to deal with concurrent aspects of the copy, only relevant to directories.
     ///   - shouldProceedAfterError: A closure which is executed to determine whether to continue
-    ///       copying files if an error is encountered during the operation.
-    ///   - shouldCopyFile: A closure which is executed before each copy to determine whether each
-    ///       file should be copied.
+    ///       copying files if an error is encountered during the operation. See Errors section for full details.
+    ///   - shouldCopyItem: A closure which is executed before each copy to determine whether each
+    ///       item should be copied. See Filtering section for full details
+    ///
+    /// #### Errors
+    ///
+    /// No errors should be throw by implementors without first calling `shouldProceedAfterError`,
+    /// if that returns without throwing this is taken as permission to continue and the error is swallowed.
+    /// If instead the closure throws then ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+    ///  will throw and copying will stop, though the precise semantics of this can depend on the `strategy`.
+    ///
+    /// if using ``CopyStrategy/parallel(maxDescriptors:)``
+    /// Already started work may continue for an indefinite period of time. In particular, after throwing an error
+    /// it is possible that invocations of `shouldCopyItem` may continue to occur!
+    ///
+    /// If using ``CopyStrategy/sequential`` only one invocation of any of the `should*` closures will occur at a time,
+    /// and an error will immediately stop further activity.
+    ///
+    /// The specific error thrown from copyItem is undefined, it does not have to be the same error thrown from
+    /// `shouldProceedAfterError`.
+    /// In the event of any errors (ignored or otherwise) implementations are under no obbligation to
+    /// attempt to 'tidy up' after themselves. The state of the file system within `destinationPath`
+    /// after an aborted copy should is undefined.
+    ///
+    /// When calling `shouldProceedAfterError` implementations of this method
+    /// MUST:
+    ///  - Do so once and only once per item.
+    ///  - Not hold any locks when doing so.
+    /// MAY:
+    ///  - invoke the function multiple times concurrently (except when using ``CopyStrategy/sequential``)
+    ///
+    /// #### Filtering
+    ///
+    /// When invoking `shouldCopyItem` implementations of this method
+    /// MUST:
+    ///  - Do so once and only once per item.
+    ///  - Do so before attempting any operations related to the copy (including determining if they can do so).
+    ///  - Not hold any locks when doing so.
+    ///  - Check parent directories *before* items within them,
+    ///     * if a parent is ignored no items within it should be considered or checked
+    ///  - Skip all contents of a directory which is filtered out.
+    ///  - Invoke it for the `sourcePath` itself.
+    /// MAY:
+    ///  - invoke the function multiple times concurrently (except when using ``CopyStrategy/sequential``)
+    ///  - invoke the function an arbitrary point before actually trying to copy the file
     func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
+        strategy copyStrategy: CopyStrategy,
         shouldProceedAfterError: @escaping @Sendable (
-            _ path: DirectoryEntry,
+            _ source: DirectoryEntry,
             _ error: Error
         ) async throws -> Void,
-        shouldCopyFile: @escaping @Sendable (
-            _ source: FilePath,
+        shouldCopyItem: @escaping @Sendable (
+            _ source: DirectoryEntry,
             _ destination: FilePath
         ) async -> Bool
     ) async throws
@@ -281,7 +326,7 @@ extension FileSystemProtocol {
     ) async throws -> Result {
         let handle = try await self.openFile(forReadingAt: path, options: options)
         return try await withUncancellableTearDown {
-            return try await execute(handle)
+            try await execute(handle)
         } tearDown: { _ in
             try await handle.close()
         }
@@ -308,7 +353,7 @@ extension FileSystemProtocol {
     ) async throws -> Result {
         let handle = try await self.openFile(forWritingAt: path, options: options)
         return try await withUncancellableTearDown {
-            return try await execute(handle)
+            try await execute(handle)
         } tearDown: { result in
             switch result {
             case .success:
@@ -340,7 +385,7 @@ extension FileSystemProtocol {
     ) async throws -> Result {
         let handle = try await self.openFile(forReadingAndWritingAt: path, options: options)
         return try await withUncancellableTearDown {
-            return try await execute(handle)
+            try await execute(handle)
         } tearDown: { _ in
             try await handle.close()
         }
@@ -361,7 +406,7 @@ extension FileSystemProtocol {
     ) async throws -> Result {
         let handle = try await self.openDirectory(atPath: path, options: options)
         return try await withUncancellableTearDown {
-            return try await execute(handle)
+            try await execute(handle)
         } tearDown: { _ in
             try await handle.close()
         }
@@ -406,7 +451,7 @@ extension FileSystemProtocol {
     ///    - path: The path to get information about.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
     public func info(forFileAt path: FilePath) async throws -> FileInfo? {
-        return try await self.info(forFileAt: path, infoAboutSymbolicLink: false)
+        try await self.info(forFileAt: path, infoAboutSymbolicLink: false)
     }
 
     /// Copies the item at the specified path to a new location.
@@ -418,19 +463,77 @@ extension FileSystemProtocol {
     ///
     /// Note that other errors may also be thrown. If any error is encountered during the copy
     /// then the copy is aborted. You can modify the behaviour with the `shouldProceedAfterError`
-    /// parameter of ``copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``.
+    /// parameter of ``FileSystemProtocol/copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``.
     ///
     /// If the file at `sourcePath` is a symbolic link then only the link is copied to the new path.
     ///
     /// - Parameters:
     ///   - sourcePath: The path to the item to copy.
     ///   - destinationPath: The path at which to place the copy.
-    public func copyItem(at sourcePath: FilePath, to destinationPath: FilePath) async throws {
-        try await self.copyItem(at: sourcePath, to: destinationPath) { entry, error in
+    ///   - copyStrategy: This controls the concurrency used if the file at `sourcePath` is a directory.
+    public func copyItem(
+        at sourcePath: FilePath,
+        to destinationPath: FilePath,
+        strategy copyStrategy: CopyStrategy = .platformDefault
+    ) async throws {
+        try await self.copyItem(at: sourcePath, to: destinationPath, strategy: copyStrategy) { path, error in
             throw error
-        } shouldCopyFile: { source, destination in
-            return true
+        } shouldCopyItem: { source, destination in
+            true
         }
+    }
+
+    /// Copies the item at the specified path to a new location.
+    ///
+    /// The item to be copied must be a:
+    /// - regular file,
+    /// - symbolic link, or
+    /// - directory.
+    ///
+    /// If `sourcePath` is a symbolic link then only the link is copied. The copied file will
+    /// preserve permissions and any extended attributes (if supported by the file system).
+    ///
+    /// #### Errors
+    ///
+    /// Error codes thrown include:
+    /// - ``FileSystemError/Code-swift.struct/notFound`` if `sourcePath` doesn't exist.
+    /// - ``FileSystemError/Code-swift.struct/fileAlreadyExists`` if `destinationPath` exists.
+    ///
+    /// #### Backward Compatibility details
+    ///
+    /// This is implemented in terms of ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+    /// using ``CopyStrategy/sequential`` to avoid changing the concurrency semantics of the should callbacks
+    ///
+    /// - Parameters:
+    ///   - sourcePath: The path to the item to copy.
+    ///   - destinationPath: The path at which to place the copy.
+    ///   - shouldProceedAfterError: Determines whether to continue copying files if an error is
+    ///       thrown during the operation. This error does not have to match the error passed
+    ///       to the closure.
+    ///   - shouldCopyFile: A closure which is executed before each file to determine whether the
+    ///       file should be copied.
+    @available(*, deprecated, message: "please use copyItem overload taking CopyStrategy")
+    public func copyItem(
+        at sourcePath: FilePath,
+        to destinationPath: FilePath,
+        shouldProceedAfterError: @escaping @Sendable (
+            _ entry: DirectoryEntry,
+            _ error: Error
+        ) async throws -> Void,
+        shouldCopyFile: @escaping @Sendable (
+            _ source: FilePath,
+            _ destination: FilePath
+        ) async -> Bool
+    ) async throws {
+        try await self.copyItem(
+            at: sourcePath,
+            to: destinationPath,
+            strategy: .sequential,
+            shouldProceedAfterError: shouldProceedAfterError,
+            shouldCopyItem: { (source, destination) in
+                await shouldCopyFile(source.path, destination)
+            }
+        )
     }
 
     /// Deletes the file or directory (and its contents) at `path`.

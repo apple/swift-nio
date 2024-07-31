@@ -46,7 +46,7 @@ private final class EchoRequestChannelHandler: ChannelInboundHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let buffer = self.unwrapInboundIn(data)
+        let buffer = Self.unwrapInboundIn(data)
         self.receivedData += buffer.readableBytes
 
         if self.receivedData == self.numberOfWrites * self.messageSize {

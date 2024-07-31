@@ -646,7 +646,7 @@ final class BufferedStreamTests: XCTestCase {
 
         try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await stream.first { _ in true }
+                try await stream.first { _ in true }
             }
 
             // This is always going to be a bit racy since we need the call to next() suspend
@@ -666,7 +666,7 @@ final class BufferedStreamTests: XCTestCase {
 
         try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await stream.first { _ in true }
+                try await stream.first { _ in true }
             }
 
             // This is always going to be a bit racy since we need the call to next() suspend
@@ -916,7 +916,7 @@ final class BufferedStreamTests: XCTestCase {
 
         try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await stream.first { $0 == 2 }
+                try await stream.first { $0 == 2 }
             }
 
             // This is always going to be a bit racy since we need the call to next() suspend

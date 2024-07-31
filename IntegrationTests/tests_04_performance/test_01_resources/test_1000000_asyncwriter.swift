@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 import DequeModule
+import NIOCore
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-fileprivate struct Delegate: NIOAsyncWriterSinkDelegate, Sendable {
+private struct Delegate: NIOAsyncWriterSinkDelegate, Sendable {
     typealias Element = Int
 
     func didYield(contentsOf sequence: Deque<Int>) {}
@@ -33,10 +33,10 @@ func run(identifier: String) {
         let newWriter = NIOAsyncWriter<Int, Delegate>.makeWriter(isWritable: true, delegate: delegate)
         let writer = newWriter.writer
 
-        for i in 0..<1000000 {
+        for i in 0..<1_000_000 {
             try! await writer.yield(i)
         }
 
-        return 1000000
+        return 1_000_000
     }
 }

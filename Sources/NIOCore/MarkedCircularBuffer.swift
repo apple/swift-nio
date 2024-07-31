@@ -19,7 +19,7 @@
 /// safe to write.
 public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     @usableFromInline internal var _buffer: CircularBuffer<Element>
-    @usableFromInline internal var _markedIndexOffset: Int? /* nil: nothing marked */
+    @usableFromInline internal var _markedIndexOffset: Int?  // nil: nothing marked
 
     /// Create a new instance.
     ///
@@ -60,24 +60,24 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     /// The first element in the buffer.
     @inlinable
     public var first: Element? {
-        return self._buffer.first
+        self._buffer.first
     }
 
     /// If the buffer is empty.
     @inlinable
     public var isEmpty: Bool {
-        return self._buffer.isEmpty
+        self._buffer.isEmpty
     }
 
     /// The number of elements in the buffer.
     @inlinable
     public var count: Int {
-        return self._buffer.count
+        self._buffer.count
     }
 
     @inlinable
     public var description: String {
-        return self._buffer.description
+        self._buffer.description
     }
 
     // MARK: Marking
@@ -119,13 +119,13 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
     /// Returns the marked element.
     @inlinable
     public var markedElement: Element? {
-        return self.markedElementIndex.map { self._buffer[$0] }
+        self.markedElementIndex.map { self._buffer[$0] }
     }
 
     /// Returns true if the buffer has been marked at all.
     @inlinable
     public var hasMark: Bool {
-        return self._markedIndexOffset != nil
+        self._markedIndexOffset != nil
     }
 }
 
@@ -136,20 +136,20 @@ extension MarkedCircularBuffer: Collection, MutableCollection {
 
     @inlinable
     public func index(after i: Index) -> Index {
-        return self._buffer.index(after: i)
+        self._buffer.index(after: i)
     }
 
     @inlinable
-    public var startIndex: Index { return self._buffer.startIndex }
+    public var startIndex: Index { self._buffer.startIndex }
 
     @inlinable
-    public var endIndex: Index { return self._buffer.endIndex }
+    public var endIndex: Index { self._buffer.endIndex }
 
     /// Retrieves the element at the given index from the buffer, without removing it.
     @inlinable
     public subscript(index: Index) -> Element {
         get {
-            return self._buffer[index]
+            self._buffer[index]
         }
         set {
             self._buffer[index] = newValue
@@ -159,7 +159,7 @@ extension MarkedCircularBuffer: Collection, MutableCollection {
     @inlinable
     public subscript(bounds: Range<Index>) -> SubSequence {
         get {
-            return self._buffer[bounds]
+            self._buffer[bounds]
         }
         set {
             var index = bounds.lowerBound
@@ -176,17 +176,17 @@ extension MarkedCircularBuffer: Collection, MutableCollection {
 extension MarkedCircularBuffer: RandomAccessCollection {
     @inlinable
     public func index(_ i: Index, offsetBy distance: Int) -> Index {
-        return self._buffer.index(i, offsetBy: distance)
+        self._buffer.index(i, offsetBy: distance)
     }
 
     @inlinable
     public func distance(from start: Index, to end: Index) -> Int {
-        return self._buffer.distance(from: start, to: end)
+        self._buffer.distance(from: start, to: end)
     }
 
     @inlinable
     public func index(before i: Index) -> Index {
-        return self._buffer.index(before: i)
+        self._buffer.index(before: i)
     }
 
 }
