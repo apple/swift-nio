@@ -1,0 +1,29 @@
+name: Scheduled
+
+on:
+    schedule:
+        - cron: "0 9,12,15 * * *"
+
+jobs:
+    unit-tests:
+        name: Unit tests
+        uses: ./.github/workflows/unit_tests.yml
+        with:
+            linux_5_8_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+            linux_5_9_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+            linux_5_10_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
+            linux_nightly_6_0_arguments_override: "--explicit-target-dependency-import-check error"
+            linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
+
+    benchmarks:
+        name: Benchmarks
+        uses: ./.github/workflows/benchmarks.yml
+        with:
+            benchmark_package_path: "Benchmarks"
+
+    integration-tests:
+        name: Integration Tests
+        uses: ./.github/workflows/swift_matrix.yml
+        with:
+          name: "Integration tests"
+          matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"
