@@ -259,6 +259,8 @@ public struct EventLoopPromise<Value> {
     }
 }
 
+extension EventLoopPromise: Equatable {}
+
 /// Holder for a result that will be provided later.
 ///
 /// Functions that promise to do work asynchronously can return an `EventLoopFuture<Value>`.
