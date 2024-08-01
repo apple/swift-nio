@@ -458,7 +458,6 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         self = .v6(.init(address: ipv6Addr, host: ""))
     }
 
-    #if !os(WASI)
     /// Creates a new `SocketAddress` for the given host (which will be resolved) and port.
     ///
     /// - warning: This is a blocking call, so please avoid calling this from an `EventLoop`.
@@ -469,6 +468,10 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     /// - returns: the `SocketAddress` for the host / port pair.
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
+        #if os(WASI)
+        throw SocketAddressError.unsupported
+        #endif
+
         #if os(Windows)
         return try host.withCString(encodedAs: UTF16.self) { wszHost in
             try String(port).withCString(encodedAs: UTF16.self) { wszPort in
@@ -526,7 +529,6 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         }
         #endif
     }
-    #endif
 }
 
 /// We define an extension on `SocketAddress` that gives it an elementwise equatable conformance, using
