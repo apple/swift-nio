@@ -110,14 +110,14 @@ let package = Package(
         .target(
             name: "_NIOConcurrency",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ]
         ),
         .target(
             name: "NIOFoundationCompat",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ]
         ),
@@ -173,7 +173,7 @@ let package = Package(
         .target(
             name: "NIOWebSocket",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 "NIOHTTP1",
                 "CNIOSHA1",
@@ -190,7 +190,7 @@ let package = Package(
         .target(
             name: "NIOTLS",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 swiftCollections,
             ]

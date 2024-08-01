@@ -33,7 +33,7 @@ extension EventLoopFuture {
     }
 }
 
-#if !os(WASI)
+#if canImport(Dispatch)
 extension EventLoopGroup {
     /// Shuts down the event loop gracefully.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)

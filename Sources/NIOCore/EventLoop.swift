@@ -16,10 +16,13 @@ import NIOConcurrencyHelpers
 
 #if canImport(Dispatch)
 import Dispatch
-#elseif canImport(WASILibc)
+#endif
+
+#if canImport(WASILibc)
 import WASILibc
 import CNIOWASI
 #endif
+
 #if os(Linux)
 import CNIOLinux
 #endif  // os(Linux)
