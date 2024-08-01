@@ -158,6 +158,16 @@ extension SocketOptionProvider {
 }
 #endif
 
+enum SocketOptionProviderError: Swift.Error {
+    case unsupported
+}
+
+#if canImport(WASILibc)
+public typealias NIOLinger = Never
+#else
+public typealias NIOLinger = linger
+#endif
+
 // MARK:- Safe helper methods.
 // Hello code reader! All the methods in this extension are "safe" wrapper methods that define the correct
 // types for `setSocketOption` and `getSocketOption` and call those methods on behalf of the user. These
@@ -166,7 +176,6 @@ extension SocketOptionProvider {
 //
 // You are welcome to add more helper methods here, but each helper method you add must be tested.
 extension SocketOptionProvider {
-    #if !os(WASI)
     /// Sets the socket option SO_LINGER to `value`.
     ///
     /// - parameters:
@@ -174,17 +183,24 @@ extension SocketOptionProvider {
     /// - returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     public func setSoLinger(_ value: linger) -> EventLoopFuture<Void> {
+        #if os(WASI)
+        self.eventLoop.makeFailedFuture(SocketOptionProviderError.unsupported)
+        #else
         self.unsafeSetSocketOption(level: .socket, name: .so_linger, value: value)
+        #endif
     }
 
     /// Gets the value of the socket option SO_LINGER.
     ///
     /// - returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
-    public func getSoLinger() -> EventLoopFuture<linger> {
+    public func getSoLinger() -> EventLoopFuture<NIOLinger> {
+        #if os(WASI)
+        self.eventLoop.makeFailedFuture(SocketOptionProviderError.unsupported)
+        #else
         self.unsafeGetSocketOption(level: .socket, name: .so_linger)
+        #endif
     }
-    #endif
 
     /// Sets the socket option IP_MULTICAST_IF to `value`.
     ///
