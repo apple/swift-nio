@@ -1183,7 +1183,7 @@ extension FileSystem {
             state: nil,
             flags: flags
         ).mapError { errno in
-            FileSystemError.fcopyfile(
+            FileSystemError.copyfile(
                 errno: errno,
                 from: sourcePath,
                 to: destinationPath,

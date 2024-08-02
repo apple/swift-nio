@@ -400,7 +400,7 @@ internal func libc_remove(
 }
 
 #if canImport(Darwin)
-/// copyfile(3): Copy a file from one file to another. (fcopyfile)
+/// fcopyfile(3): Copy a file from one file to another.
 internal func libc_fcopyfile(
     _ from: CInt,
     _ to: CInt,
@@ -417,7 +417,7 @@ internal func libc_fcopyfile(
 #endif
 
 #if canImport(Darwin)
-/// copyfile(3): Copy a file from one file to another. (copyfile)
+/// copyfile(3): Copy a file from one file to another.
 internal func libc_copyfile(
     _ from: UnsafePointer<CInterop.PlatformChar>,
     _ to: UnsafePointer<CInterop.PlatformChar>,

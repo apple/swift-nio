@@ -993,6 +993,38 @@ extension FileSystemError {
         to destinationPath: FilePath,
         location: SourceLocation
     ) -> Self {
+        Self._copyfile(
+            "fcopyfile",
+            errno: errno,
+            from: sourcePath,
+            to: destinationPath,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
+    public static func copyfile(
+        errno: Errno,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        Self._copyfile(
+            "copyfile",
+            errno: errno,
+            from: sourcePath,
+            to: destinationPath,
+            location: location
+        )
+    }
+
+    private static func _copyfile(
+        _ name: String,
+        errno: Errno,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        location: SourceLocation
+    ) -> Self {
         let code: Code
         let message: String
 
@@ -1043,7 +1075,7 @@ extension FileSystemError {
         return FileSystemError(
             code: code,
             message: message,
-            systemCall: "fcopyfile",
+            systemCall: name,
             errno: errno,
             location: location
         )
