@@ -1172,6 +1172,27 @@ extension FileSystem {
             )
         }
 
+        #if canImport(Darwin)
+        // COPYFILE_CLONE clones the file if possible and will fallback to doing a copy.
+        // COPYFILE_ALL is shorthand for:
+        //    COPYFILE_STAT | COPYFILE_ACL | COPYFILE_XATTR | COPYFILE_DATA
+        let flags = copyfile_flags_t(COPYFILE_CLONE) | copyfile_flags_t(COPYFILE_ALL)
+        return Libc.copyfile(
+            from: sourcePath,
+            to: destinationPath,
+            state: nil,
+            flags: flags
+        ).mapError { errno in
+            FileSystemError.fcopyfile(
+                errno: errno,
+                from: sourcePath,
+                to: destinationPath,
+                location: .here()
+            )
+        }
+
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+
         let openSourceResult = self._openFile(
             forReadingAt: sourcePath,
             options: OpenOptions.Read(followSymbolicLinks: true)
@@ -1231,25 +1252,6 @@ extension FileSystem {
         let copyResult: Result<Void, FileSystemError>
         copyResult = source.fileHandle.systemFileHandle.sendableView._withUnsafeDescriptorResult { sourceFD in
             destination.fileHandle.systemFileHandle.sendableView._withUnsafeDescriptorResult { destinationFD in
-                #if canImport(Darwin)
-                // COPYFILE_CLONE clones the file if possible and will fallback to doing a copy.
-                // COPYFILE_ALL is shorthand for:
-                //    COPYFILE_STAT | COPYFILE_ACL | COPYFILE_XATTR | COPYFILE_DATA
-                let flags = copyfile_flags_t(COPYFILE_CLONE) | copyfile_flags_t(COPYFILE_ALL)
-                return Libc.fcopyfile(
-                    from: sourceFD,
-                    to: destinationFD,
-                    state: nil,
-                    flags: flags
-                ).mapError { errno in
-                    FileSystemError.fcopyfile(
-                        errno: errno,
-                        from: sourcePath,
-                        to: destinationPath,
-                        location: .here()
-                    )
-                }
-                #elseif canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                 var offset = 0
 
                 while offset < sourceInfo.size {
@@ -1277,7 +1279,6 @@ extension FileSystem {
                     }
                 }
                 return .success(())
-                #endif
             } onUnavailable: {
                 makeOnUnavailableError(path: destinationPath, location: .here())
             }
@@ -1287,6 +1288,7 @@ extension FileSystem {
 
         let closeResult = destination.fileHandle.systemFileHandle.sendableView._close(materialize: true)
         return copyResult.flatMap { closeResult }
+        #endif
     }
 
     private func copySymbolicLink(
