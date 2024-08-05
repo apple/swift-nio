@@ -2,7 +2,7 @@ name: Scheduled
 
 on:
     schedule:
-        - cron: "0 9,12,15 * * *"
+        - cron: "0 8,20 * * *"
 
 jobs:
     unit-tests:
