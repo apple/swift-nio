@@ -365,9 +365,8 @@ class StreamChannelTest: XCTestCase {
             )
 
             // We will immediately send exactly the amount of data that fits in the receiver's receive buffer.
-            let receiveBufferSize = Int(
-                (try? receiver.getOption(ChannelOptions.socketOption(.so_rcvbuf)).wait()) ?? 8192
-            )
+            let opt = try? receiver.getOption(.socketOption(.so_rcvbuf)).wait()
+            let receiveBufferSize = Int(opt ?? 8192)
             var buffer = sender.allocator.buffer(capacity: receiveBufferSize)
             buffer.writeBytes(Array(repeating: UInt8(ascii: "X"), count: receiveBufferSize))
 
