@@ -12,14 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-import DequeModule
 import Atomics
-
+import DequeModule
+import NIOCore
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class NIOAsyncSequenceProducerBenchmark: AsyncBenchmark, NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
-    fileprivate typealias SequenceProducer = NIOThrowingAsyncSequenceProducer<Int, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncSequenceProducerBenchmark>
+    fileprivate typealias SequenceProducer = NIOThrowingAsyncSequenceProducer<
+        Int, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncSequenceProducerBenchmark
+    >
 
     private let iterations: Int
     private var iterator: SequenceProducer.AsyncIterator!

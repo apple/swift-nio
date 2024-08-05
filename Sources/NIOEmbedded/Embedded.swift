@@ -13,20 +13,26 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
-import NIOConcurrencyHelpers
-import Dispatch
-import _NIODataStructures
-import NIOCore
 import DequeModule
+import Dispatch
+import NIOConcurrencyHelpers
+import NIOCore
+import _NIODataStructures
 
 internal struct EmbeddedScheduledTask {
     let id: UInt64
     let task: () -> Void
-    let failFn: (Error) -> ()
+    let failFn: (Error) -> Void
     let readyTime: NIODeadline
     let insertOrder: UInt64
 
-    init(id: UInt64, readyTime: NIODeadline, insertOrder: UInt64, task: @escaping () -> Void, _ failFn: @escaping (Error) -> ()) {
+    init(
+        id: UInt64,
+        readyTime: NIODeadline,
+        insertOrder: UInt64,
+        task: @escaping () -> Void,
+        _ failFn: @escaping (Error) -> Void
+    ) {
         self.id = id
         self.readyTime = readyTime
         self.insertOrder = insertOrder
@@ -49,7 +55,7 @@ extension EmbeddedScheduledTask: Comparable {
     }
 
     static func == (lhs: EmbeddedScheduledTask, rhs: EmbeddedScheduledTask) -> Bool {
-        return lhs.id == rhs.id
+        lhs.id == rhs.id
     }
 }
 
@@ -72,7 +78,10 @@ extension EmbeddedScheduledTask: Comparable {
 ///     unsynchronized fashion.
 public final class EmbeddedEventLoop: EventLoop {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
-    /* private but tests */ internal var _now: NIODeadline = .uptimeNanoseconds(0)
+    internal var _now: NIODeadline = .uptimeNanoseconds(0)
+
+    private enum State { case open, closing, closed }
+    private var state: State = .open
 
     private var scheduledTaskCounter: UInt64 = 0
     private var scheduledTasks = PriorityQueue<EmbeddedScheduledTask>()
@@ -94,29 +103,48 @@ public final class EmbeddedEventLoop: EventLoop {
 
     /// - see: `EventLoop.inEventLoop`
     public var inEventLoop: Bool {
-        return true
+        true
     }
 
     /// Initialize a new `EmbeddedEventLoop`.
-    public init() { }
+    public init() {}
 
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
     public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = makePromise()
+
+        switch self.state {
+        case .open:
+            break
+        case .closing, .closed:
+            // If the event loop is shut down, or shutting down, immediately cancel the task.
+            promise.fail(EventLoopError.cancelled)
+            return Scheduled(promise: promise, cancellationTask: {})
+        }
+
         self.scheduledTaskCounter += 1
-        let task = EmbeddedScheduledTask(id: self.scheduledTaskCounter, readyTime: deadline, insertOrder: self.nextTaskNumber(), task: {
-            do {
-                promise.succeed(try task())
-            } catch let err {
-                promise.fail(err)
-            }
-        }, promise.fail)
+        let task = EmbeddedScheduledTask(
+            id: self.scheduledTaskCounter,
+            readyTime: deadline,
+            insertOrder: self.nextTaskNumber(),
+            task: {
+                do {
+                    promise.succeed(try task())
+                } catch let err {
+                    promise.fail(err)
+                }
+            },
+            promise.fail
+        )
 
         let taskId = task.id
-        let scheduled = Scheduled(promise: promise, cancellationTask: {
-            self.scheduledTasks.removeFirst { $0.id == taskId }
-        })
+        let scheduled = Scheduled(
+            promise: promise,
+            cancellationTask: {
+                self.scheduledTasks.removeFirst { $0.id == taskId }
+            }
+        )
         scheduledTasks.push(task)
         return scheduled
     }
@@ -124,7 +152,7 @@ public final class EmbeddedEventLoop: EventLoop {
     /// - see: `EventLoop.scheduleTask(in:_:)`
     @discardableResult
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        return scheduleTask(deadline: self._now + `in`, task)
+        scheduleTask(deadline: self._now + `in`, task)
     }
 
     /// On an `EmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that
@@ -163,7 +191,7 @@ public final class EmbeddedEventLoop: EventLoop {
 
             // Now we want to grab all tasks that are ready to execute at the same
             // time as the first.
-            var tasks = Array<EmbeddedScheduledTask>()
+            var tasks = [EmbeddedScheduledTask]()
             while let candidateTask = self.scheduledTasks.peek(), candidateTask.readyTime == nextTask.readyTime {
                 tasks.append(candidateTask)
                 self.scheduledTasks.pop()
@@ -182,28 +210,18 @@ public final class EmbeddedEventLoop: EventLoop {
         self._now = newTime
     }
 
-    internal func drainScheduledTasksByRunningAllCurrentlyScheduledTasks() {
-        var currentlyScheduledTasks = self.scheduledTasks
-        while let nextTask = currentlyScheduledTasks.pop() {
-            self._now = nextTask.readyTime
-            nextTask.task()
-        }
-        // Just fail all the remaining scheduled tasks. Despite having run all the tasks that were
-        // scheduled when we entered the method this may still contain tasks as running the tasks
-        // may have enqueued more tasks.
+    internal func cancelRemainingScheduledTasks() {
         while let task = self.scheduledTasks.pop() {
-            task.fail(EventLoopError.shutdown)
+            task.fail(EventLoopError.cancelled)
         }
-    }
-
-    /// - see: `EventLoop.close`
-    func close() throws {
-        // Nothing to do here
     }
 
     /// - see: `EventLoop.shutdownGracefully`
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        self.state = .closing
         run()
+        cancelRemainingScheduledTasks()
+        self.state = .closed
         queue.sync {
             callback(nil)
         }
@@ -220,7 +238,8 @@ public final class EmbeddedEventLoop: EventLoop {
         self._promiseCreationStore[futureIdentifier] = (file: file, line: line)
     }
 
-    public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)? {
+    public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
+    {
         precondition(_isDebugAssertConfiguration())
         return self._promiseCreationStore.removeValue(forKey: futureIdentifier)
     }
@@ -237,7 +256,9 @@ public final class EmbeddedEventLoop: EventLoop {
     #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public var executor: any SerialExecutor {
-        fatalError("EmbeddedEventLoop is not thread safe and cannot be used as a SerialExecutor. Use NIOAsyncTestingEventLoop instead.")
+        fatalError(
+            "EmbeddedEventLoop is not thread safe and cannot be used as a SerialExecutor. Use NIOAsyncTestingEventLoop instead."
+        )
     }
     #endif
 }
@@ -246,7 +267,7 @@ public final class EmbeddedEventLoop: EventLoop {
 class EmbeddedChannelCore: ChannelCore {
     var isOpen: Bool {
         get {
-            return self._isOpen.load(ordering: .sequentiallyConsistent)
+            self._isOpen.load(ordering: .sequentiallyConsistent)
         }
         set {
             self._isOpen.store(newValue, ordering: .sequentiallyConsistent)
@@ -255,7 +276,7 @@ class EmbeddedChannelCore: ChannelCore {
 
     var isActive: Bool {
         get {
-            return self._isActive.load(ordering: .sequentiallyConsistent)
+            self._isActive.load(ordering: .sequentiallyConsistent)
         }
         set {
             self._isActive.store(newValue, ordering: .sequentiallyConsistent)
@@ -264,7 +285,7 @@ class EmbeddedChannelCore: ChannelCore {
 
     var allowRemoteHalfClosure: Bool {
         get {
-            return self._allowRemoteHalfClosure.load(ordering: .sequentiallyConsistent)
+            self._allowRemoteHalfClosure.load(ordering: .sequentiallyConsistent)
         }
         set {
             self._allowRemoteHalfClosure.store(newValue, ordering: .sequentiallyConsistent)
@@ -289,8 +310,10 @@ class EmbeddedChannelCore: ChannelCore {
     }
 
     deinit {
-        assert(!self.isOpen && !self.isActive,
-               "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?")
+        assert(
+            !self.isOpen && !self.isActive,
+            "leaked an open EmbeddedChannel, maybe forgot to call channel.finish()?"
+        )
         isOpen = false
         closePromise.succeed(())
     }
@@ -305,7 +328,9 @@ class EmbeddedChannelCore: ChannelCore {
 
     /// Contains the unflushed items that went into the `Channel`
     @usableFromInline
-    var pendingOutboundBuffer: MarkedCircularBuffer<(NIOAny, EventLoopPromise<Void>?)> = MarkedCircularBuffer(initialCapacity: 16)
+    var pendingOutboundBuffer: MarkedCircularBuffer<(NIOAny, EventLoopPromise<Void>?)> = MarkedCircularBuffer(
+        initialCapacity: 16
+    )
 
     /// Contains the items that travelled the `ChannelPipeline` all the way and hit the tail channel handler. On a
     /// regular `Channel` these items would be lost.
@@ -509,7 +534,7 @@ public final class EmbeddedChannel: Channel {
         /// `true` if the `EmbeddedChannel` if there was unconsumed inbound, outbound, or pending outbound data left
         /// on the `Channel` when it was `finish`ed.
         public var hasLeftOvers: Bool {
-            return !self.isClean
+            !self.isClean
         }
     }
 
@@ -538,7 +563,7 @@ public final class EmbeddedChannel: Channel {
 
         /// Returns `true` if the buffer was non-empty.
         public var isFull: Bool {
-            return !self.isEmpty
+            !self.isEmpty
         }
     }
 
@@ -557,7 +582,7 @@ public final class EmbeddedChannel: Channel {
         }
 
         public static func == (lhs: WrongTypeError, rhs: WrongTypeError) -> Bool {
-            return lhs.expected == rhs.expected && lhs.actual == rhs.actual
+            lhs.expected == rhs.expected && lhs.actual == rhs.actual
         }
     }
 
@@ -566,12 +591,12 @@ public final class EmbeddedChannel: Channel {
     /// An active `EmbeddedChannel` can be closed by calling `close` or `finish` on the `EmbeddedChannel`.
     ///
     /// - note: An `EmbeddedChannel` starts _inactive_ and can be activated, for example by calling `connect`.
-    public var isActive: Bool { return channelcore.isActive }
+    public var isActive: Bool { channelcore.isActive }
 
     /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
     public var allowRemoteHalfClosure: Bool {
         get {
-            return channelcore.allowRemoteHalfClosure
+            channelcore.allowRemoteHalfClosure
         }
         set {
             channelcore.allowRemoteHalfClosure = newValue
@@ -579,19 +604,22 @@ public final class EmbeddedChannel: Channel {
     }
 
     /// - see: `Channel.closeFuture`
-    public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
+    public var closeFuture: EventLoopFuture<Void> { channelcore.closePromise.futureResult }
 
     @usableFromInline
-    /*private but usableFromInline */ lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(pipeline: self._pipeline, eventLoop: self.eventLoop)
+    lazy var channelcore: EmbeddedChannelCore = EmbeddedChannelCore(
+        pipeline: self._pipeline,
+        eventLoop: self.eventLoop
+    )
 
     /// - see: `Channel._channelCore`
     public var _channelCore: ChannelCore {
-        return channelcore
+        channelcore
     }
 
     /// - see: `Channel.pipeline`
     public var pipeline: ChannelPipeline {
-        return _pipeline
+        _pipeline
     }
 
     /// - see: `Channel.isWritable`
@@ -615,16 +643,18 @@ public final class EmbeddedChannel: Channel {
                 throw error
             }
         }
-        self.embeddedEventLoop.drainScheduledTasksByRunningAllCurrentlyScheduledTasks()
         self.embeddedEventLoop.run()
+        self.embeddedEventLoop.cancelRemainingScheduledTasks()
         try throwIfErrorCaught()
         let c = self.channelcore
         if c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty {
             return .clean
         } else {
-            return .leftOvers(inbound: Array(c.inboundBuffer),
-                              outbound: Array(c.outboundBuffer),
-                              pendingOutbound: c.pendingOutboundBuffer.map { $0.0 })
+            return .leftOvers(
+                inbound: Array(c.inboundBuffer),
+                outbound: Array(c.outboundBuffer),
+                pendingOutbound: c.pendingOutboundBuffer.map { $0.0 }
+            )
         }
     }
 
@@ -638,7 +668,7 @@ public final class EmbeddedChannel: Channel {
     ///            writes) this will be `.clean`. If there are any unconsumed inbound, outbound, or pending outbound
     ///            events, the `EmbeddedChannel` will returns those as `.leftOvers(inbound:outbound:pendingOutbound:)`.
     public func finish() throws -> LeftOverState {
-        return try self.finish(acceptAlreadyClosed: false)
+        try self.finish(acceptAlreadyClosed: false)
     }
 
     private var _pipeline: ChannelPipeline!
@@ -648,7 +678,7 @@ public final class EmbeddedChannel: Channel {
 
     /// - see: `Channel.eventLoop`
     public var eventLoop: EventLoop {
-        return self.embeddedEventLoop
+        self.embeddedEventLoop
     }
 
     /// Returns the `EmbeddedEventLoop` that this `EmbeddedChannel` uses. This will return the same instance as
@@ -692,7 +722,7 @@ public final class EmbeddedChannel: Channel {
     ///         `ChannelHandler`.
     @inlinable
     public func readOutbound<T>(as type: T.Type = T.self) throws -> T? {
-        return try _readFromBuffer(buffer: &channelcore.outboundBuffer)
+        try _readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
 
     /// If available, this method reads one element of type `T` out of the `EmbeddedChannel`'s inbound buffer. If the
@@ -707,7 +737,7 @@ public final class EmbeddedChannel: Channel {
     /// - note: `EmbeddedChannel.writeInbound` will fire data through the `ChannelPipeline` using `fireChannelRead`.
     @inlinable
     public func readInbound<T>(as type: T.Type = T.self) throws -> T? {
-        return try _readFromBuffer(buffer: &channelcore.inboundBuffer)
+        try _readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
     /// Sends an inbound `channelRead` event followed by a `channelReadComplete` event through the `ChannelPipeline`.
@@ -760,7 +790,10 @@ public final class EmbeddedChannel: Channel {
         }
         let elem = buffer.removeFirst()
         guard let t = self._channelCore.tryUnwrapData(elem, as: T.self) else {
-            throw WrongTypeError(expected: T.self, actual: type(of: self._channelCore.tryUnwrapData(elem, as: Any.self)!))
+            throw WrongTypeError(
+                expected: T.self,
+                actual: type(of: self._channelCore.tryUnwrapData(elem, as: Any.self)!)
+            )
         }
         return t
     }
@@ -813,8 +846,8 @@ public final class EmbeddedChannel: Channel {
 
     /// - see: `Channel.getOption`
     @inlinable
-    public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value>  {
-        return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
+    public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
+        self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
     }
 
     @inlinable
@@ -873,12 +906,12 @@ extension EmbeddedChannel {
 
         @inlinable
         public func getOption<Option: ChannelOption>(_ option: Option) throws -> Option.Value {
-            return self.channel.getOptionSync(option)
+            self.channel.getOptionSync(option)
         }
     }
 
     public final var syncOptions: NIOSynchronousChannelOptions? {
-        return SynchronousOptions(channel: self)
+        SynchronousOptions(channel: self)
     }
 }
 

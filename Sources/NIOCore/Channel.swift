@@ -150,7 +150,7 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
 extension Channel {
     /// Default implementation: `NIOSynchronousChannelOptions` are not supported.
     public var syncOptions: NIOSynchronousChannelOptions? {
-        return nil
+        nil
     }
 }
 
@@ -202,14 +202,13 @@ extension Channel {
     }
 
     public func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.operationUnsupported)
+        promise?.fail(ChannelError._operationUnsupported)
     }
 
     public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
         pipeline.triggerUserOutboundEvent(event, promise: promise)
     }
 }
-
 
 /// Provides special extension to make writing data to the `Channel` easier by removing the need to wrap data in `NIOAny` manually.
 extension Channel {
@@ -218,7 +217,7 @@ extension Channel {
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
     public func write<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.write(NIOAny(any))
+        self.write(NIOAny(any))
     }
 
     /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
@@ -232,9 +231,8 @@ extension Channel {
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
     public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.writeAndFlush(NIOAny(any))
+        self.writeAndFlush(NIOAny(any))
     }
-
 
     /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
@@ -262,7 +260,7 @@ extension ChannelCore {
     /// - returns: The content of the `NIOAny`.
     @inlinable
     public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
-        return data.forceAs()
+        data.forceAs()
     }
 
     /// Attempts to unwrap the given `NIOAny` as a specific concrete type.
@@ -284,7 +282,7 @@ extension ChannelCore {
     ///     are doing something _extremely_ unusual.
     @inlinable
     public func tryUnwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T? {
-        return data.tryAs()
+        data.tryAs()
     }
 
     /// Removes the `ChannelHandler`s from the `ChannelPipeline` belonging to `channel`, and
@@ -373,7 +371,18 @@ public enum ChannelError: Error {
     case unremovableHandler
 }
 
-extension ChannelError: Equatable { }
+extension ChannelError {
+    // 'any Error' is unconditionally boxed, avoid allocating per use by statically boxing them.
+    static let _alreadyClosed: any Error = ChannelError.alreadyClosed
+    static let _inputClosed: any Error = ChannelError.inputClosed
+    @usableFromInline
+    static let _ioOnClosedChannel: any Error = ChannelError.ioOnClosedChannel
+    static let _operationUnsupported: any Error = ChannelError.operationUnsupported
+    static let _outputClosed: any Error = ChannelError.outputClosed
+    static let _unremovableHandler: any Error = ChannelError.unremovableHandler
+}
+
+extension ChannelError: Equatable {}
 
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}

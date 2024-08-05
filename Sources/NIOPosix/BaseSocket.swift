@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 
 #if os(Windows)
 import let WinSDK.EAFNOSUPPORT
@@ -38,7 +38,7 @@ protocol Registration {
 // only our rebinding copy here is allowed.
 extension sockaddr_storage {
     mutating func withMutableSockAddr<R>(_ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> R) rethrows -> R {
-        return try withUnsafeMutableBytes(of: &self) { p in
+        try withUnsafeMutableBytes(of: &self) { p in
             try body(p.baseAddress!.assumingMemoryBound(to: sockaddr.self), p.count)
         }
     }
@@ -117,9 +117,9 @@ class BaseSocket: BaseSocketProtocol {
     private var descriptor: NIOBSDSocket.Handle
     public var isOpen: Bool {
         #if os(Windows)
-            return descriptor != NIOBSDSocket.invalidHandle
+        return descriptor != NIOBSDSocket.invalidHandle
         #else
-            return descriptor >= 0
+        return descriptor >= 0
         #endif
     }
 
@@ -128,7 +128,7 @@ class BaseSocket: BaseSocketProtocol {
     /// - returns: The local bound address.
     /// - throws: An `IOError` if the retrieval of the address failed.
     func localAddress() throws -> SocketAddress {
-        return try get_addr {
+        try get_addr {
             try NIOBSDSocket.getsockname(socket: $0, address: $1, address_len: $2)
         }
     }
@@ -138,13 +138,15 @@ class BaseSocket: BaseSocketProtocol {
     /// - returns: The connected address.
     /// - throws: An `IOError` if the retrieval of the address failed.
     func remoteAddress() throws -> SocketAddress {
-        return try get_addr {
+        try get_addr {
             try NIOBSDSocket.getpeername(socket: $0, address: $1, address_len: $2)
         }
     }
 
     /// Internal helper function for retrieval of a `SocketAddress`.
-    private func get_addr(_ body: (NIOBSDSocket.Handle, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) throws -> Void) throws -> SocketAddress {
+    private func get_addr(
+        _ body: (NIOBSDSocket.Handle, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) throws -> Void
+    ) throws -> SocketAddress {
         var addr = sockaddr_storage()
 
         try addr.withMutableSockAddr { addressPtr, size in
@@ -177,9 +179,11 @@ class BaseSocket: BaseSocketProtocol {
             sockType = type.rawValue | Linux.SOCK_NONBLOCK
         }
         #endif
-        let sock = try NIOBSDSocket.socket(domain: protocolFamily,
-                                           type: NIOBSDSocket.SocketType(rawValue: sockType),
-                                           protocolSubtype: protocolSubtype)
+        let sock = try NIOBSDSocket.socket(
+            domain: protocolFamily,
+            type: NIOBSDSocket.SocketType(rawValue: sockType),
+            protocolSubtype: protocolSubtype
+        )
         #if !os(Linux)
         if setNonBlocking {
             do {
@@ -194,21 +198,27 @@ class BaseSocket: BaseSocketProtocol {
         if protocolFamily == .inet6 {
             var zero: Int32 = 0
             do {
-                try NIOBSDSocket.setsockopt(socket: sock, level: .ipv6, option_name: .ipv6_v6only, option_value: &zero, option_len: socklen_t(MemoryLayout.size(ofValue: zero)))
+                try NIOBSDSocket.setsockopt(
+                    socket: sock,
+                    level: .ipv6,
+                    option_name: .ipv6_v6only,
+                    option_value: &zero,
+                    option_len: socklen_t(MemoryLayout.size(ofValue: zero))
+                )
             } catch let e as IOError {
                 if e.errnoCode != EAFNOSUPPORT {
                     // Ignore error that may be thrown by close.
                     _ = try? NIOBSDSocket.close(socket: sock)
                     throw e
                 }
-                /* we couldn't enable dual IP4/6 support, that's okay too. */
+                // we couldn't enable dual IP4/6 support, that's okay too.
             } catch let e {
                 fatalError("Unexpected error type \(e)")
             }
         }
         return sock
     }
-    
+
     /// Cleanup the unix domain socket.
     ///
     /// Deletes the associated file if it exists and has socket type. Does nothing if pathname does not exist.
@@ -229,15 +239,16 @@ class BaseSocket: BaseSocketProtocol {
     ///     - descriptor: The file descriptor to wrap.
     init(socket descriptor: NIOBSDSocket.Handle) throws {
         #if os(Windows)
-            precondition(descriptor != NIOBSDSocket.invalidHandle, "invalid socket")
+        precondition(descriptor != NIOBSDSocket.invalidHandle, "invalid socket")
         #else
-            precondition(descriptor >= 0, "invalid socket")
+        precondition(descriptor >= 0, "invalid socket")
         #endif
         self.descriptor = descriptor
         do {
             try self.ignoreSIGPIPE()
         } catch {
-            self.descriptor = NIOBSDSocket.invalidHandle // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
+            // We have to unset the fd here, otherwise we'll crash with "leaking open BaseSocket"
+            self.descriptor = NIOBSDSocket.invalidHandle
             throw error
         }
     }
@@ -256,7 +267,7 @@ class BaseSocket: BaseSocketProtocol {
     ///
     /// throws: An `IOError` if the operation failed.
     final func setNonBlocking() throws {
-        return try self.withUnsafeHandle {
+        try self.withUnsafeHandle {
             try NIOBSDSocket.setNonBlocking(socket: $0)
         }
     }
@@ -288,7 +299,8 @@ class BaseSocket: BaseSocketProtocol {
                     level: level,
                     option_name: name,
                     option_value: valueBuffer.baseAddress!,
-                    option_len: socklen_t(valueBuffer.count))
+                    option_len: socklen_t(valueBuffer.count)
+                )
             }
         }
     }
@@ -302,10 +314,12 @@ class BaseSocket: BaseSocketProtocol {
     ///     - name: The name of the option to set.
     /// - throws: An `IOError` if the operation failed.
     func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T {
-        return try self.withUnsafeHandle { fd in
+        try self.withUnsafeHandle { fd in
             var length = socklen_t(MemoryLayout<T>.size)
-            let storage = UnsafeMutableRawBufferPointer.allocate(byteCount: MemoryLayout<T>.stride,
-                                                                 alignment: MemoryLayout<T>.alignment)
+            let storage = UnsafeMutableRawBufferPointer.allocate(
+                byteCount: MemoryLayout<T>.stride,
+                alignment: MemoryLayout<T>.alignment
+            )
             // write zeroes into the memory as Linux's getsockopt doesn't zero them out
             storage.initializeMemory(as: UInt8.self, repeating: 0)
             let val = storage.bindMemory(to: T.self).baseAddress!
@@ -315,7 +329,13 @@ class BaseSocket: BaseSocketProtocol {
                 storage.deallocate()
             }
 
-            try NIOBSDSocket.getsockopt(socket: fd, level: level, option_name: name, option_value: val, option_len: &length)
+            try NIOBSDSocket.getsockopt(
+                socket: fd,
+                level: level,
+                option_name: name,
+                option_value: val,
+                option_len: &length
+            )
             return val.pointee
         }
     }
@@ -349,7 +369,7 @@ class BaseSocket: BaseSocketProtocol {
     ///
     /// - throws: An `IOError` if the operation failed.
     final func takeDescriptorOwnership() throws -> NIOBSDSocket.Handle {
-        return try self.withUnsafeHandle {
+        try self.withUnsafeHandle {
             self.descriptor = NIOBSDSocket.invalidHandle
             return $0
         }
@@ -367,7 +387,7 @@ extension BaseSocket: Selectable {
 
 extension BaseSocket: CustomStringConvertible {
     var description: String {
-        return "BaseSocket { fd=\(self.descriptor) }"
+        "BaseSocket { fd=\(self.descriptor) }"
     }
 }
 
@@ -376,23 +396,24 @@ extension BaseSocket: CustomStringConvertible {
 // the compiler falls over when we try to access them from test code. As these functions
 // exist purely to make the behaviours accessible from test code, we name them truly awfully.
 func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_in {
-    return addr.convert()
+    addr.convert()
 }
 
 func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_in6 {
-    return addr.convert()
+    addr.convert()
 }
 
 func __testOnly_convertSockAddr(_ addr: sockaddr_storage) -> sockaddr_un {
-    return addr.convert()
+    addr.convert()
 }
 
 func __testOnly_convertSockAddr(_ addr: sockaddr_storage) throws -> SocketAddress {
-    return try addr.convert()
+    try addr.convert()
 }
 
 func __testOnly_withMutableSockAddr<ReturnType>(
-    _ addr: inout sockaddr_storage, _ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> ReturnType
+    _ addr: inout sockaddr_storage,
+    _ body: (UnsafeMutablePointer<sockaddr>, Int) throws -> ReturnType
 ) rethrows -> ReturnType {
-    return try addr.withMutableSockAddr(body)
+    try addr.withMutableSockAddr(body)
 }

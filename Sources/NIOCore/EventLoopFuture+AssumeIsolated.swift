@@ -120,7 +120,7 @@ struct IsolatedEventLoop {
     /// Returns the wrapped event loop.
     @inlinable
     func nonisolated() -> any EventLoop {
-        return self._wrapped
+        self._wrapped
     }
 }
 extension EventLoop {
@@ -421,8 +421,8 @@ extension EventLoopFuture {
         @inlinable
         func unwrap<NewValue>(
             orReplace replacement: NewValue
-        ) -> EventLoopFuture<NewValue>.Isolated where Value == Optional<NewValue> {
-            return self.map { (value) -> NewValue in
+        ) -> EventLoopFuture<NewValue>.Isolated where Value == NewValue? {
+            self.map { (value) -> NewValue in
                 guard let value = value else {
                     return replacement
                 }
@@ -447,8 +447,8 @@ extension EventLoopFuture {
         @inlinable
         func unwrap<NewValue>(
             orElse callback: @escaping () -> NewValue
-        ) -> EventLoopFuture<NewValue>.Isolated where Value == Optional<NewValue> {
-            return self.map { (value) -> NewValue in
+        ) -> EventLoopFuture<NewValue>.Isolated where Value == NewValue? {
+            self.map { (value) -> NewValue in
                 guard let value = value else {
                     return callback()
                 }
@@ -459,7 +459,7 @@ extension EventLoopFuture {
         /// Returns the wrapped event loop future.
         @inlinable
         func nonisolated() -> EventLoopFuture<Value> {
-            return self._wrapped
+            self._wrapped
         }
     }
 
@@ -471,7 +471,6 @@ extension EventLoopFuture {
     }
 }
 
-
 extension EventLoopPromise {
     /// A struct wrapping an ``EventLoopPromise`` that ensures all calls to any method on this struct
     /// are coming from the event loop of the promise.
@@ -479,7 +478,6 @@ extension EventLoopPromise {
     struct Isolated {
         @usableFromInline
         let _wrapped: EventLoopPromise<Value>
-
 
         /// Deliver a successful result to the associated `EventLoopFuture<Value>` object.
         ///
@@ -514,7 +512,7 @@ extension EventLoopPromise {
         /// Returns the wrapped event loop promise.
         @inlinable
         func nonisolated() -> EventLoopPromise<Value> {
-            return self._wrapped
+            self._wrapped
         }
     }
 
@@ -525,4 +523,3 @@ extension EventLoopPromise {
         return Isolated(_wrapped: self)
     }
 }
-

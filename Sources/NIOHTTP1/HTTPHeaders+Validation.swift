@@ -67,7 +67,7 @@ extension String {
     /// ```
     ///
     /// We implement this check directly.
-    fileprivate var isValidHeaderFieldName: Bool  {
+    fileprivate var isValidHeaderFieldName: Bool {
         let fastResult = self.utf8.withContiguousStorageIfAvailable { ptr in
             ptr.allSatisfy { $0.isValidHeaderFieldNameByte }
         }
@@ -124,7 +124,7 @@ extension UInt8 {
     @inline(__always)
     fileprivate var isValidHeaderFieldNameByte: Bool {
         switch self {
-        case UInt8(ascii: "0")...UInt8(ascii: "9"), // DIGIT
+        case UInt8(ascii: "0")...UInt8(ascii: "9"),  // DIGIT
             UInt8(ascii: "a")...UInt8(ascii: "z"),
             UInt8(ascii: "A")...UInt8(ascii: "Z"),  // ALPHA
             UInt8(ascii: "!"), UInt8(ascii: "#"),

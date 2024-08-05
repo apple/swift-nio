@@ -11,18 +11,25 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-import NIOCore
-import NIOPosix
-import NIOHTTP1
+
 import Dispatch
+import NIOCore
+import NIOHTTP1
+import NIOPosix
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-func makeHTTPChannel(host: String, port: Int, group: EventLoopGroup) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
+func makeHTTPChannel(
+    host: String,
+    port: Int,
+    group: EventLoopGroup
+) async throws -> AsyncChannelIO<HTTPRequestHead, NIOHTTPClientResponseFull> {
     let channel = try await ClientBootstrap(group: group)
         .channelInitializer { channel in
             channel.eventLoop.makeCompletedFuture {
                 try channel.pipeline.syncOperations.addHTTPClientHandlers()
-                try channel.pipeline.syncOperations.addHandler(NIOHTTPClientResponseAggregator(maxContentLength: 1_000_000))
+                try channel.pipeline.syncOperations.addHandler(
+                    NIOHTTPClientResponseAggregator(maxContentLength: 1_000_000)
+                )
                 try channel.pipeline.syncOperations.addHandler(MakeFullRequestHandler())
             }
         }
@@ -39,17 +46,25 @@ func main() async {
         print("OK, connected to \(channel)")
 
         print("Sending request 1", terminator: "")
-        let response1 = try await channel.sendRequest(HTTPRequestHead(version: .http1_1,
-                                                                     method: .GET,
-                                                                     uri: "/base64/SGVsbG8gV29ybGQsIGZyb20gSFRUUEJpbiEgCg==",
-                                                                     headers: ["host": "httpbin.org"]))
+        let response1 = try await channel.sendRequest(
+            HTTPRequestHead(
+                version: .http1_1,
+                method: .GET,
+                uri: "/base64/SGVsbG8gV29ybGQsIGZyb20gSFRUUEJpbiEgCg==",
+                headers: ["host": "httpbin.org"]
+            )
+        )
         print(", response:", String(buffer: response1.body ?? ByteBuffer()))
 
         print("Sending request 2", terminator: "")
-        let response2 = try await channel.sendRequest(HTTPRequestHead(version: .http1_1,
-                                                                     method: .GET,
-                                                                     uri: "/get",
-                                                                     headers: ["host": "httpbin.org"]))
+        let response2 = try await channel.sendRequest(
+            HTTPRequestHead(
+                version: .http1_1,
+                method: .GET,
+                uri: "/get",
+                headers: ["host": "httpbin.org"]
+            )
+        )
         print(", response:", String(buffer: response2.body ?? ByteBuffer()))
 
         try await channel.close()

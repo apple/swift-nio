@@ -25,9 +25,9 @@ import Glibc
 typealias EnqueueGlobalHook = @convention(thin) (UnownedJob, @convention(thin) (UnownedJob) -> Void) -> Void
 
 var swiftTaskEnqueueGlobalHook: EnqueueGlobalHook? {
-  get { _swiftTaskEnqueueGlobalHook.pointee }
-  set { _swiftTaskEnqueueGlobalHook.pointee = newValue }
+    get { _swiftTaskEnqueueGlobalHook.pointee }
+    set { _swiftTaskEnqueueGlobalHook.pointee = newValue }
 }
 
 private let _swiftTaskEnqueueGlobalHook: UnsafeMutablePointer<EnqueueGlobalHook?> =
-  dlsym(dlopen(nil, RTLD_LAZY), "swift_task_enqueueGlobal_hook").assumingMemoryBound(to: EnqueueGlobalHook?.self)
+    dlsym(dlopen(nil, RTLD_LAZY), "swift_task_enqueueGlobal_hook").assumingMemoryBound(to: EnqueueGlobalHook?.self)

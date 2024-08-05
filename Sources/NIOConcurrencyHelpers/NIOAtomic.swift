@@ -33,145 +33,153 @@ public protocol NIOAtomicPrimitive {
 extension Bool: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic__Bool
     public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic__Bool_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic__Bool_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic__Bool_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic__Bool_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic__Bool_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic__Bool_load
-    public static let nio_atomic_store                        = catmc_nio_atomic__Bool_store
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic__Bool_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic__Bool_add
+    public static let nio_atomic_sub = catmc_nio_atomic__Bool_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic__Bool_exchange
+    public static let nio_atomic_load = catmc_nio_atomic__Bool_load
+    public static let nio_atomic_store = catmc_nio_atomic__Bool_store
 }
 
 extension Int8: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_int_least8_t
-    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_int_least8_t_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_int_least8_t_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_int_least8_t_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_int_least8_t_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_int_least8_t_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_int_least8_t_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_int_least8_t_store
+    public static let nio_atomic_create_with_existing_storage =
+        catmc_nio_atomic_int_least8_t_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_int_least8_t_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_int_least8_t_add
+    public static let nio_atomic_sub = catmc_nio_atomic_int_least8_t_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_int_least8_t_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_int_least8_t_load
+    public static let nio_atomic_store = catmc_nio_atomic_int_least8_t_store
 }
 
 extension UInt8: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_uint_least8_t
-    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_uint_least8_t_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_uint_least8_t_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_uint_least8_t_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_uint_least8_t_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_uint_least8_t_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_uint_least8_t_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_uint_least8_t_store
+    public static let nio_atomic_create_with_existing_storage =
+        catmc_nio_atomic_uint_least8_t_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_uint_least8_t_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_uint_least8_t_add
+    public static let nio_atomic_sub = catmc_nio_atomic_uint_least8_t_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_uint_least8_t_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_uint_least8_t_load
+    public static let nio_atomic_store = catmc_nio_atomic_uint_least8_t_store
 }
 
 extension Int16: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_int_least16_t
-    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_int_least16_t_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_int_least16_t_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_int_least16_t_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_int_least16_t_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_int_least16_t_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_int_least16_t_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_int_least16_t_store
+    public static let nio_atomic_create_with_existing_storage =
+        catmc_nio_atomic_int_least16_t_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_int_least16_t_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_int_least16_t_add
+    public static let nio_atomic_sub = catmc_nio_atomic_int_least16_t_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_int_least16_t_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_int_least16_t_load
+    public static let nio_atomic_store = catmc_nio_atomic_int_least16_t_store
 }
 
 extension UInt16: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_uint_least16_t
-    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_uint_least16_t_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_uint_least16_t_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_uint_least16_t_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_uint_least16_t_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_uint_least16_t_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_uint_least16_t_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_uint_least16_t_store
+    public static let nio_atomic_create_with_existing_storage =
+        catmc_nio_atomic_uint_least16_t_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_uint_least16_t_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_uint_least16_t_add
+    public static let nio_atomic_sub = catmc_nio_atomic_uint_least16_t_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_uint_least16_t_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_uint_least16_t_load
+    public static let nio_atomic_store = catmc_nio_atomic_uint_least16_t_store
 }
 
 extension Int32: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_int_least32_t
-    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_int_least32_t_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_int_least32_t_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_int_least32_t_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_int_least32_t_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_int_least32_t_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_int_least32_t_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_int_least32_t_store
+    public static let nio_atomic_create_with_existing_storage =
+        catmc_nio_atomic_int_least32_t_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_int_least32_t_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_int_least32_t_add
+    public static let nio_atomic_sub = catmc_nio_atomic_int_least32_t_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_int_least32_t_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_int_least32_t_load
+    public static let nio_atomic_store = catmc_nio_atomic_int_least32_t_store
 }
 
 extension UInt32: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_uint_least32_t
-    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_uint_least32_t_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_uint_least32_t_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_uint_least32_t_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_uint_least32_t_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_uint_least32_t_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_uint_least32_t_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_uint_least32_t_store
+    public static let nio_atomic_create_with_existing_storage =
+        catmc_nio_atomic_uint_least32_t_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_uint_least32_t_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_uint_least32_t_add
+    public static let nio_atomic_sub = catmc_nio_atomic_uint_least32_t_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_uint_least32_t_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_uint_least32_t_load
+    public static let nio_atomic_store = catmc_nio_atomic_uint_least32_t_store
 }
 
 extension Int64: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_long_long
     public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_long_long_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_long_long_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_long_long_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_long_long_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_long_long_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_long_long_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_long_long_store
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_long_long_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_long_long_add
+    public static let nio_atomic_sub = catmc_nio_atomic_long_long_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_long_long_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_long_long_load
+    public static let nio_atomic_store = catmc_nio_atomic_long_long_store
 }
 
 extension UInt64: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_unsigned_long_long
-    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_unsigned_long_long_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_unsigned_long_long_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_unsigned_long_long_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_unsigned_long_long_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_unsigned_long_long_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_unsigned_long_long_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_unsigned_long_long_store
+    public static let nio_atomic_create_with_existing_storage =
+        catmc_nio_atomic_unsigned_long_long_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_unsigned_long_long_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_unsigned_long_long_add
+    public static let nio_atomic_sub = catmc_nio_atomic_unsigned_long_long_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_unsigned_long_long_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_unsigned_long_long_load
+    public static let nio_atomic_store = catmc_nio_atomic_unsigned_long_long_store
 }
 
 #if os(Windows)
 extension Int: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_intptr_t
     public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_intptr_t_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_intptr_t_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_intptr_t_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_intptr_t_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_intptr_t_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_intptr_t_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_intptr_t_store
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_intptr_t_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_intptr_t_add
+    public static let nio_atomic_sub = catmc_nio_atomic_intptr_t_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_intptr_t_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_intptr_t_load
+    public static let nio_atomic_store = catmc_nio_atomic_intptr_t_store
 }
 
 extension UInt: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_uintptr_t
     public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_uintptr_t_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_uintptr_t_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_uintptr_t_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_uintptr_t_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_uintptr_t_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_uintptr_t_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_uintptr_t_store
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_uintptr_t_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_uintptr_t_add
+    public static let nio_atomic_sub = catmc_nio_atomic_uintptr_t_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_uintptr_t_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_uintptr_t_load
+    public static let nio_atomic_store = catmc_nio_atomic_uintptr_t_store
 }
 #else
 extension Int: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_long
     public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_long_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_long_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_long_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_long_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_long_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_long_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_long_store
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_long_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_long_add
+    public static let nio_atomic_sub = catmc_nio_atomic_long_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_long_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_long_load
+    public static let nio_atomic_store = catmc_nio_atomic_long_store
 }
 
 extension UInt: NIOAtomicPrimitive {
     public typealias AtomicWrapper = catmc_nio_atomic_unsigned_long
-    public static let nio_atomic_create_with_existing_storage = catmc_nio_atomic_unsigned_long_create_with_existing_storage
-    public static let nio_atomic_compare_and_exchange         = catmc_nio_atomic_unsigned_long_compare_and_exchange
-    public static let nio_atomic_add                          = catmc_nio_atomic_unsigned_long_add
-    public static let nio_atomic_sub                          = catmc_nio_atomic_unsigned_long_sub
-    public static let nio_atomic_exchange                     = catmc_nio_atomic_unsigned_long_exchange
-    public static let nio_atomic_load                         = catmc_nio_atomic_unsigned_long_load
-    public static let nio_atomic_store                        = catmc_nio_atomic_unsigned_long_store
+    public static let nio_atomic_create_with_existing_storage =
+        catmc_nio_atomic_unsigned_long_create_with_existing_storage
+    public static let nio_atomic_compare_and_exchange = catmc_nio_atomic_unsigned_long_compare_and_exchange
+    public static let nio_atomic_add = catmc_nio_atomic_unsigned_long_add
+    public static let nio_atomic_sub = catmc_nio_atomic_unsigned_long_sub
+    public static let nio_atomic_exchange = catmc_nio_atomic_unsigned_long_exchange
+    public static let nio_atomic_load = catmc_nio_atomic_unsigned_long_load
+    public static let nio_atomic_store = catmc_nio_atomic_unsigned_long_store
 }
 #endif
 
@@ -193,7 +201,7 @@ extension UInt: NIOAtomicPrimitive {
 /// By necessity, all atomic values are references: after all, it makes no
 /// sense to talk about managing an atomic value when each time it's modified
 /// the thread that modified it gets a local copy!
-@available(*, deprecated, message:"please use ManagedAtomic from https://github.com/apple/swift-atomics instead")
+@available(*, deprecated, message: "please use ManagedAtomic from https://github.com/apple/swift-atomics instead")
 public final class NIOAtomic<T: NIOAtomicPrimitive> {
     @usableFromInline
     typealias Manager = ManagedBufferPointer<Void, T.AtomicWrapper>
@@ -225,8 +233,8 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     ///     match the current value and so no exchange occurred.
     @inlinable
     public func compareAndExchange(expected: T, desired: T) -> Bool {
-        return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
-            return T.nio_atomic_compare_and_exchange($0, expected, desired)
+        Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
+            T.nio_atomic_compare_and_exchange($0, expected, desired)
         }
     }
 
@@ -241,8 +249,8 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     @inlinable
     @discardableResult
     public func add(_ rhs: T) -> T {
-        return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
-            return T.nio_atomic_add($0, rhs)
+        Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
+            T.nio_atomic_add($0, rhs)
         }
     }
 
@@ -257,8 +265,8 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     @inlinable
     @discardableResult
     public func sub(_ rhs: T) -> T {
-        return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
-            return T.nio_atomic_sub($0, rhs)
+        Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
+            T.nio_atomic_sub($0, rhs)
         }
     }
 
@@ -272,8 +280,8 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     /// - Returns: The value previously held by this object.
     @inlinable
     public func exchange(with value: T) -> T {
-        return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
-            return T.nio_atomic_exchange($0, value)
+        Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
+            T.nio_atomic_exchange($0, value)
         }
     }
 
@@ -286,8 +294,8 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     /// - Returns: The value of this object
     @inlinable
     public func load() -> T {
-        return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
-            return T.nio_atomic_load($0)
+        Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
+            T.nio_atomic_load($0)
         }
     }
 
@@ -299,9 +307,9 @@ public final class NIOAtomic<T: NIOAtomicPrimitive> {
     ///
     /// - Parameter value: The new value to set the object to.
     @inlinable
-    public func store(_ value: T) -> Void {
-        return Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
-            return T.nio_atomic_store($0, value)
+    public func store(_ value: T) {
+        Manager(unsafeBufferObject: self).withUnsafeMutablePointerToElements {
+            T.nio_atomic_store($0, value)
         }
     }
 

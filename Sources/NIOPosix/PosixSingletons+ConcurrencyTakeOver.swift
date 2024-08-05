@@ -41,7 +41,8 @@ extension NIOSingletons {
     /// - warning: You may only call this method once.
     @discardableResult
     public static func unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor() -> Bool {
-        #if /* minimum supported */ compiler(>=5.9) && /* maximum tested */ compiler(<6.1)
+        // Guard between the minimum and maximum supported version for the hook
+        #if compiler(>=5.9) && compiler(<6.1)
         guard #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) else {
             return false
         }
@@ -106,11 +107,13 @@ extension NIOSingletons {
             ) { enqueueOnNIOPtr in
                 // Unsafe 4: We just pretend that we're the only ones in the world pulling this trick (or at least
                 // that the others also use a `compareExchange`)...
-                guard concurrencyEnqueueGlobalHookAtomic.compareExchange(
-                    expected: nil,
-                    desired: enqueueOnNIOPtr.pointee,
-                    ordering: .relaxed
-                ).exchanged else {
+                guard
+                    concurrencyEnqueueGlobalHookAtomic.compareExchange(
+                        expected: nil,
+                        desired: enqueueOnNIOPtr.pointee,
+                        ordering: .relaxed
+                    ).exchanged
+                else {
                     return false
                 }
 

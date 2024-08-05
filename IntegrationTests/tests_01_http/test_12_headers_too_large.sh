@@ -13,12 +13,13 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)
 start_server "$token"
 htdocs=$(get_htdocs "$token")
-touch "$tmp/empty"
+touch "${tmp:?"tmp variable not set"}/empty"
 cr=$(echo -e '\r')
 cat > "$tmp/headers_expected" <<EOF
 HTTP/1.1 400 Bad Request$cr
@@ -49,7 +50,7 @@ if ! grep -q 'Connection: close' "$tmp/headers_actual"; then
 fi
 
 linecount=$(wc "$tmp/headers_actual")
-if [ $linecount -ne 4 ]; then
+if [ "$linecount" -ne 4 ]; then
     fail "overlong response"
 fi
 stop_server "$token"

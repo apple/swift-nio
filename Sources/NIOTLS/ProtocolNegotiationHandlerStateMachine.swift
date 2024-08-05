@@ -53,7 +53,7 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
 
     @inlinable
     mutating func userInboundEventTriggered(event: Any) -> UserInboundEventTriggeredAction {
-        if case .handshakeCompleted(let negotiated) = event as? TLSUserEvent  {
+        if case .handshakeCompleted(let negotiated) = event as? TLSUserEvent {
             switch self.state {
             case .initial:
                 self.state = .waitingForUser(buffer: .init())
@@ -171,7 +171,7 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
         switch self.state {
         case .initial, .unbuffering, .waitingForUser:
             self.state = .finished
-            
+
         case .finished:
             break
         }

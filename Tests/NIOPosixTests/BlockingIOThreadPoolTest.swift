@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIOPosix
 import Dispatch
 import Foundation
+import NIOPosix
+import XCTest
 
 class BlockingIOThreadPoolTest: XCTestCase {
     func testDoubleShutdownWorks() throws {
@@ -96,7 +96,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
             XCTAssertNil(error)
             allDone.signal()
         }
-        blockOneThreadSem.signal() // that'll unblock the thread in the pool
+        blockOneThreadSem.signal()  // that'll unblock the thread in the pool
         allDone.wait()
     }
 

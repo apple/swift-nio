@@ -40,7 +40,7 @@ public struct DirectoryEntries: AsyncSequence {
     }
 
     public func makeAsyncIterator() -> DirectoryIterator {
-        return DirectoryIterator(iterator: self.batchedSequence.makeAsyncIterator())
+        DirectoryIterator(iterator: self.batchedSequence.makeAsyncIterator())
     }
 
     /// Returns a sequence of directory entry batches.
@@ -49,7 +49,7 @@ public struct DirectoryEntries: AsyncSequence {
     /// than `DirectoryEntry`. This can enable better performance by reducing the number of
     /// executor hops.
     public func batched() -> Batched {
-        return self.batchedSequence
+        self.batchedSequence
     }
 
     /// An `AsyncIteratorProtocol` of `DirectoryEntry`.
@@ -111,7 +111,7 @@ extension DirectoryEntries {
         }
 
         public func makeAsyncIterator() -> BatchedIterator {
-            return BatchedIterator(wrapping: self.stream.makeAsyncIterator())
+            BatchedIterator(wrapping: self.stream.makeAsyncIterator())
         }
 
         /// An `AsyncIteratorProtocol` of `Array<DirectoryEntry>`.
@@ -208,7 +208,7 @@ private struct DirectoryEntryProducer {
     }
 
     private func nextBatch() throws -> [DirectoryEntry] {
-        return try self.state.withLockedValue { state in
+        try self.state.withLockedValue { state in
             try state.next(self.entriesPerBatch)
         }
     }
@@ -422,7 +422,7 @@ private struct DirectoryEnumerator: Sendable {
     private mutating func makeReaddirSource(
         _ handle: SystemFileHandle.SendableView
     ) -> Result<Source, FileSystemError> {
-        return handle._duplicate().mapError { dupError in
+        handle._duplicate().mapError { dupError in
             FileSystemError(
                 message: "Unable to open directory stream for '\(handle.path)'.",
                 wrapping: dupError
@@ -443,7 +443,7 @@ private struct DirectoryEnumerator: Sendable {
     private mutating func makeFTSSource(
         _ handle: SystemFileHandle.SendableView
     ) -> Result<Source, FileSystemError> {
-        return Libc.ftsOpen(handle.path, options: [.noChangeDir, .physical]).mapError { errno in
+        Libc.ftsOpen(handle.path, options: [.noChangeDir, .physical]).mapError { errno in
             FileSystemError.open("fts_open", error: errno, path: handle.path, location: .here())
         }.map {
             .fts($0)
@@ -652,7 +652,7 @@ private struct DirectoryEnumerator: Sendable {
 
 extension UnsafeMutablePointer<CInterop.FTSEnt> {
     fileprivate var path: FilePath {
-        return FilePath(platformString: self.pointee.fts_path!)
+        FilePath(platformString: self.pointee.fts_path!)
     }
 }
 

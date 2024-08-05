@@ -85,6 +85,9 @@ class HTTPResponseStatusTests: XCTestCase {
     func testHTTPResponseStatusCodeAndReason() {
         XCTAssertEqual("\(HTTPResponseStatus.ok)", "200 OK")
         XCTAssertEqual("\(HTTPResponseStatus.imATeapot)", "418 I'm a teapot")
-        XCTAssertEqual("\(HTTPResponseStatus.custom(code: 347, reasonPhrase: "I like ice cream"))", "347 I like ice cream")
+        XCTAssertEqual(
+            "\(HTTPResponseStatus.custom(code: 347, reasonPhrase: "I like ice cream"))",
+            "347 I like ice cream"
+        )
     }
 }

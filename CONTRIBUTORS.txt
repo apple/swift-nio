@@ -110,6 +110,7 @@ needs to be listed here.
 - Markus Kieselmann <markus@kieselmann.eu>
 - Marli Oshlack <marli.oshlack@apple.com>
 - Matt Eaton <agnosticdev@gmail.com>
+- Matt Hope <matt_hope@apple.com>
 - Matteo Comisso <matteo.comisso@me.com>
 - Max Desiatov <m_desiatov@apple.com>
 - Max Desiatov <max@desiatov.com>

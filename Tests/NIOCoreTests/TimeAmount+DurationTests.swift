@@ -11,8 +11,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-@testable import NIOCore
+
 import XCTest
+
+@testable import NIOCore
 
 class TimeAmountDurationTests: XCTestCase {
     func testTimeAmountFromDurationConversion() throws {

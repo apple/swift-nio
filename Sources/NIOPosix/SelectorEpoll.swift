@@ -74,8 +74,8 @@ extension SelectorEventSet {
         if epollFilters.contains(.readHangup) {
             filter |= Epoll.EPOLLRDHUP
         }
-        assert(filter & Epoll.EPOLLHUP != 0) // both of these are reported
-        assert(filter & Epoll.EPOLLERR != 0) // always and can't be masked.
+        assert(filter & Epoll.EPOLLHUP != 0)  // both of these are reported
+        assert(filter & Epoll.EPOLLERR != 0)  // always and can't be masked.
         return filter
     }
 
@@ -128,21 +128,32 @@ extension Selector: _SelectorBackendProtocol {
     func initialiseState0() throws {
         self.selectorFD = try Epoll.epoll_create(size: 128)
         self.eventFD = try EventFd.eventfd(initval: 0, flags: Int32(EventFd.EFD_CLOEXEC | EventFd.EFD_NONBLOCK))
-        self.timerFD = try TimerFd.timerfd_create(clockId: CLOCK_MONOTONIC, flags: Int32(TimerFd.TFD_CLOEXEC | TimerFd.TFD_NONBLOCK))
+        self.timerFD = try TimerFd.timerfd_create(
+            clockId: CLOCK_MONOTONIC,
+            flags: Int32(TimerFd.TFD_CLOEXEC | TimerFd.TFD_NONBLOCK)
+        )
 
         self.lifecycleState = .open
 
         var ev = Epoll.epoll_event()
         ev.events = SelectorEventSet.read.epollEventSet
-        ev.data.u64 = UInt64(EPollUserData(registrationID: .initialRegistrationID,
-                                           fileDescriptor: self.eventFD))
+        ev.data.u64 = UInt64(
+            EPollUserData(
+                registrationID: .initialRegistrationID,
+                fileDescriptor: self.eventFD
+            )
+        )
 
         try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: self.eventFD, event: &ev)
 
         var timerev = Epoll.epoll_event()
         timerev.events = Epoll.EPOLLIN | Epoll.EPOLLERR | Epoll.EPOLLRDHUP
-        timerev.data.u64 = UInt64(EPollUserData(registrationID: .initialRegistrationID,
-                                                fileDescriptor: self.timerFD))
+        timerev.data.u64 = UInt64(
+            EPollUserData(
+                registrationID: .initialRegistrationID,
+                fileDescriptor: self.timerFD
+            )
+        )
         try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: self.timerFD, event: &timerev)
     }
 
@@ -151,10 +162,12 @@ extension Selector: _SelectorBackendProtocol {
         assert(self.timerFD == -1, "self.timerFD == \(self.timerFD) in deinitAssertions0, forgot close?")
     }
 
-    func register0<S: Selectable>(selectable: S,
-                                  fileDescriptor: CInt,
-                                  interested: SelectorEventSet,
-                                  registrationID: SelectorRegistrationID) throws {
+    func register0<S: Selectable>(
+        selectable: S,
+        fileDescriptor: CInt,
+        interested: SelectorEventSet,
+        registrationID: SelectorRegistrationID
+    ) throws {
         var ev = Epoll.epoll_event()
         ev.events = interested.epollEventSet
         ev.data.u64 = UInt64(EPollUserData(registrationID: registrationID, fileDescriptor: fileDescriptor))
@@ -162,11 +175,13 @@ extension Selector: _SelectorBackendProtocol {
         try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: fileDescriptor, event: &ev)
     }
 
-    func reregister0<S: Selectable>(selectable: S,
-                                    fileDescriptor: CInt,
-                                    oldInterested: SelectorEventSet,
-                                    newInterested: SelectorEventSet,
-                                    registrationID: SelectorRegistrationID) throws {
+    func reregister0<S: Selectable>(
+        selectable: S,
+        fileDescriptor: CInt,
+        oldInterested: SelectorEventSet,
+        newInterested: SelectorEventSet,
+        registrationID: SelectorRegistrationID
+    ) throws {
         var ev = Epoll.epoll_event()
         ev.events = newInterested.epollEventSet
         ev.data.u64 = UInt64(EPollUserData(registrationID: registrationID, fileDescriptor: fileDescriptor))
@@ -174,17 +189,26 @@ extension Selector: _SelectorBackendProtocol {
         _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: fileDescriptor, event: &ev)
     }
 
-    func deregister0<S: Selectable>(selectable: S, fileDescriptor: CInt, oldInterested: SelectorEventSet, registrationID: SelectorRegistrationID) throws {
+    func deregister0<S: Selectable>(
+        selectable: S,
+        fileDescriptor: CInt,
+        oldInterested: SelectorEventSet,
+        registrationID: SelectorRegistrationID
+    ) throws {
         var ev = Epoll.epoll_event()
         _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_DEL, fd: fileDescriptor, event: &ev)
     }
-    
+
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///
     /// - parameters:
     ///     - strategy: The `SelectorStrategy` to apply
     ///     - body: The function to execute for each `SelectorEvent` that was produced.
-    func whenReady0(strategy: SelectorStrategy, onLoopBegin loopStart: () -> Void, _ body: (SelectorEvent<R>) throws -> Void) throws -> Void {
+    func whenReady0(
+        strategy: SelectorStrategy,
+        onLoopBegin loopStart: () -> Void,
+        _ body: (SelectorEvent<R>) throws -> Void
+    ) throws {
         assert(self.myThread == NIOThread.current)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
@@ -193,7 +217,14 @@ extension Selector: _SelectorBackendProtocol {
 
         switch strategy {
         case .now:
-            ready = Int(try Epoll.epoll_wait(epfd: self.selectorFD, events: events, maxevents: Int32(eventsCapacity), timeout: 0))
+            ready = Int(
+                try Epoll.epoll_wait(
+                    epfd: self.selectorFD,
+                    events: events,
+                    maxevents: Int32(eventsCapacity),
+                    timeout: 0
+                )
+            )
         case .blockUntilTimeout(let timeAmount):
             // Only call timerfd_settime if we're not already scheduled one that will cover it.
             // This guards against calling timerfd_settime if not needed as this is generally speaking
@@ -208,7 +239,14 @@ extension Selector: _SelectorBackendProtocol {
             }
             fallthrough
         case .block:
-            ready = Int(try Epoll.epoll_wait(epfd: self.selectorFD, events: events, maxevents: Int32(eventsCapacity), timeout: -1))
+            ready = Int(
+                try Epoll.epoll_wait(
+                    epfd: self.selectorFD,
+                    events: events,
+                    maxevents: Int32(eventsCapacity),
+                    timeout: -1
+                )
+            )
         }
 
         loopStart()
@@ -240,7 +278,10 @@ extension Selector: _SelectorBackendProtocol {
 
                     var selectorEvent = SelectorEventSet(epollEvent: ev)
                     // we can only verify the events for i == 0 as for i > 0 the user might have changed the registrations since then.
-                    assert(i != 0 || selectorEvent.isSubset(of: registration.interested), "selectorEvent: \(selectorEvent), registration: \(registration)")
+                    assert(
+                        i != 0 || selectorEvent.isSubset(of: registration.interested),
+                        "selectorEvent: \(selectorEvent), registration: \(registration)"
+                    )
 
                     // in any case we only want what the user is currently registered for & what we got
                     selectorEvent = selectorEvent.intersection(registration.interested)
@@ -259,7 +300,7 @@ extension Selector: _SelectorBackendProtocol {
     /// Close the `Selector`.
     ///
     /// After closing the `Selector` it's no longer possible to use it.
-     public func close0() throws {
+    public func close0() throws {
         self.externalSelectorFDLock.withLock {
             // We try! all of the closes because close can only fail in the following ways:
             // - EINTR, which we eat in Posix.close
@@ -267,26 +308,26 @@ extension Selector: _SelectorBackendProtocol {
             // - EBADF, which can't happen here because we would crash as EBADF is marked unacceptable
             // Therefore, we assert here that close will always succeed and if not, that's a NIO bug we need to know
             // about.
-            
+
             try! Posix.close(descriptor: self.timerFD)
             self.timerFD = -1
-            
+
             try! Posix.close(descriptor: self.eventFD)
             self.eventFD = -1
-            
+
             try! Posix.close(descriptor: self.selectorFD)
             self.selectorFD = -1
         }
     }
 
-    /* attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`) */
+    // attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`)
     func wakeup0() throws {
         assert(NIOThread.current != self.myThread)
         try self.externalSelectorFDLock.withLock {
-                guard self.eventFD >= 0 else {
-                    throw EventLoopError.shutdown
-                }
-                _ = try EventFd.eventfd_write(fd: self.eventFD, value: 1)
+            guard self.eventFD >= 0 else {
+                throw EventLoopError.shutdown
+            }
+            _ = try EventFd.eventfd_write(fd: self.eventFD, value: 1)
         }
     }
 }

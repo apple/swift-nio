@@ -15,10 +15,12 @@
 import NIOCore
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-fileprivate typealias SequenceProducer = NIOAsyncSequenceProducer<Int, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, Delegate>
+private typealias SequenceProducer = NIOAsyncSequenceProducer<
+    Int, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, Delegate
+>
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-fileprivate final class Delegate: NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
+private final class Delegate: NIOAsyncSequenceProducerDelegate, @unchecked Sendable {
     private let elements = Array(repeating: 1, count: 1000)
 
     var source: SequenceProducer.Source!
@@ -36,7 +38,10 @@ func run(identifier: String) {
     }
     measure(identifier: identifier) {
         let delegate = Delegate()
-        let producer = SequenceProducer.makeSequence(backPressureStrategy: .init(lowWatermark: 100, highWatermark: 500), delegate: delegate)
+        let producer = SequenceProducer.makeSequence(
+            backPressureStrategy: .init(lowWatermark: 100, highWatermark: 500),
+            delegate: delegate
+        )
         let sequence = producer.sequence
         delegate.source = producer.source
 
@@ -44,7 +49,7 @@ func run(identifier: String) {
         for await i in sequence {
             counter += i
 
-            if counter == 10000000 {
+            if counter == 10_000_000 {
                 return counter
             }
         }

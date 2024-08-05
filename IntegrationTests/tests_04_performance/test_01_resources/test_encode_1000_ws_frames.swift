@@ -16,7 +16,13 @@ import NIOCore
 import NIOEmbedded
 import NIOWebSocket
 
-func doSendFramesHoldingBuffer(channel: EmbeddedChannel, number numberOfFrameSends: Int, data originalData: [UInt8], spareBytesAtFront: Int, mask: WebSocketMaskingKey? = nil) throws -> Int {
+func doSendFramesHoldingBuffer(
+    channel: EmbeddedChannel,
+    number numberOfFrameSends: Int,
+    data originalData: [UInt8],
+    spareBytesAtFront: Int,
+    mask: WebSocketMaskingKey? = nil
+) throws -> Int {
     var data = channel.allocator.buffer(capacity: originalData.count + spareBytesAtFront)
     data.moveWriterIndex(forwardBy: spareBytesAtFront)
     data.moveReaderIndex(forwardBy: spareBytesAtFront)
@@ -35,8 +41,13 @@ func doSendFramesHoldingBuffer(channel: EmbeddedChannel, number numberOfFrameSen
     return numberOfFrameSends
 }
 
-
-func doSendFramesNewBuffer(channel: EmbeddedChannel, number numberOfFrameSends: Int, data originalData: [UInt8], spareBytesAtFront: Int, mask: WebSocketMaskingKey? = nil) throws -> Int {
+func doSendFramesNewBuffer(
+    channel: EmbeddedChannel,
+    number numberOfFrameSends: Int,
+    data originalData: [UInt8],
+    spareBytesAtFront: Int,
+    mask: WebSocketMaskingKey? = nil
+) throws -> Int {
     for _ in 0..<numberOfFrameSends {
         // We need a new allocation every time to drop the original data ref.
         var data = channel.allocator.buffer(capacity: originalData.count + spareBytesAtFront)
@@ -55,7 +66,6 @@ func doSendFramesNewBuffer(channel: EmbeddedChannel, number numberOfFrameSends: 
     return numberOfFrameSends
 }
 
-
 func run(identifier: String) {
     let maskKey: WebSocketMaskingKey = [1, 2, 3, 4]
     let channel = EmbeddedChannel()
@@ -63,25 +73,47 @@ func run(identifier: String) {
     let data = Array(repeating: UInt8(0), count: 1024)
 
     measure(identifier: identifier + "_holding_buffer") {
-        let numberDone = try! doSendFramesHoldingBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 0)
+        let numberDone = try! doSendFramesHoldingBuffer(
+            channel: channel,
+            number: 1000,
+            data: data,
+            spareBytesAtFront: 0
+        )
         precondition(numberDone == 1000)
         return numberDone
     }
 
     measure(identifier: identifier + "_holding_buffer_with_space") {
-        let numberDone = try! doSendFramesHoldingBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 8)
+        let numberDone = try! doSendFramesHoldingBuffer(
+            channel: channel,
+            number: 1000,
+            data: data,
+            spareBytesAtFront: 8
+        )
         precondition(numberDone == 1000)
         return numberDone
     }
 
     measure(identifier: identifier + "_holding_buffer_with_mask") {
-        let numberDone = try! doSendFramesHoldingBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 0, mask: maskKey)
+        let numberDone = try! doSendFramesHoldingBuffer(
+            channel: channel,
+            number: 1000,
+            data: data,
+            spareBytesAtFront: 0,
+            mask: maskKey
+        )
         precondition(numberDone == 1000)
         return numberDone
     }
 
     measure(identifier: identifier + "_holding_buffer_with_space_with_mask") {
-        let numberDone = try! doSendFramesHoldingBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 8, mask: maskKey)
+        let numberDone = try! doSendFramesHoldingBuffer(
+            channel: channel,
+            number: 1000,
+            data: data,
+            spareBytesAtFront: 8,
+            mask: maskKey
+        )
         precondition(numberDone == 1000)
         return numberDone
     }
@@ -99,13 +131,25 @@ func run(identifier: String) {
     }
 
     measure(identifier: identifier + "_new_buffer_with_mask") {
-        let numberDone = try! doSendFramesNewBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 0, mask: maskKey)
+        let numberDone = try! doSendFramesNewBuffer(
+            channel: channel,
+            number: 1000,
+            data: data,
+            spareBytesAtFront: 0,
+            mask: maskKey
+        )
         precondition(numberDone == 1000)
         return numberDone
     }
 
     measure(identifier: identifier + "_new_buffer_with_space_with_mask") {
-        let numberDone = try! doSendFramesNewBuffer(channel: channel, number: 1000, data: data, spareBytesAtFront: 8, mask: maskKey)
+        let numberDone = try! doSendFramesNewBuffer(
+            channel: channel,
+            number: 1000,
+            data: data,
+            spareBytesAtFront: 8,
+            mask: maskKey
+        )
         precondition(numberDone == 1000)
         return numberDone
     }

@@ -14,7 +14,8 @@
 ##===----------------------------------------------------------------------===##
 
 here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-pushd "$here/../.."
+pushd "$here/../.." || exit
 swift build
+# shellcheck disable=SC2034 # Used by imports
 bin_path=$(swift build --show-bin-path)
-popd
+popd || exit

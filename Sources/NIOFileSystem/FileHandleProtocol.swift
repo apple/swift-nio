@@ -220,7 +220,7 @@ extension ReadableFileHandleProtocol {
         in range: ClosedRange<Int64>,
         chunkLength: ByteCount = .kibibytes(128)
     ) -> FileChunks {
-        return self.readChunks(in: Range(range), chunkLength: chunkLength)
+        self.readChunks(in: Range(range), chunkLength: chunkLength)
     }
 
     /// Returns an asynchronous sequence of chunks read from the file.
@@ -235,7 +235,7 @@ extension ReadableFileHandleProtocol {
         in range: Range<Int64>,
         chunkLength: ByteCount = .kibibytes(128)
     ) -> FileChunks {
-        return self.readChunks(in: range, chunkLength: chunkLength)
+        self.readChunks(in: range, chunkLength: chunkLength)
     }
 
     /// Returns an asynchronous sequence of chunks read from the file.
@@ -298,7 +298,7 @@ extension ReadableFileHandleProtocol {
         in range: UnboundedRange,
         chunkLength: ByteCount = .kibibytes(128)
     ) -> FileChunks {
-        return self.readChunks(in: 0..<Int64.max, chunkLength: chunkLength)
+        self.readChunks(in: 0..<Int64.max, chunkLength: chunkLength)
     }
 
     /// Returns an asynchronous sequence of chunks read from the file.
@@ -312,7 +312,7 @@ extension ReadableFileHandleProtocol {
     public func readChunks(
         chunkLength: ByteCount = .kibibytes(128)
     ) -> FileChunks {
-        return self.readChunks(in: ..., chunkLength: chunkLength)
+        self.readChunks(in: ..., chunkLength: chunkLength)
     }
 }
 
@@ -514,7 +514,7 @@ extension WritableFileHandleProtocol {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileHandleProtocol {
     /// Sets the file's last access time to the given time.
-    /// 
+    ///
     /// - Parameter time: The time to which the file's last access time should be set.
     ///
     /// - Throws: If there's an error updating the time. If this happens, the original value won't be modified.
@@ -630,7 +630,7 @@ extension DirectoryFileHandleProtocol {
     /// The current (".") and parent ("..") directory entries are not included. The order of entries
     /// is arbitrary and should not be relied upon.
     public func listContents() -> DirectoryEntries {
-        return self.listContents(recursive: false)
+        self.listContents(recursive: false)
     }
 }
 
@@ -663,7 +663,7 @@ extension DirectoryFileHandleProtocol {
         let handle = try await self.openFile(forReadingAt: path, options: options)
 
         return try await withUncancellableTearDown {
-            return try await body(handle)
+            try await body(handle)
         } tearDown: { _ in
             try await handle.close()
         }
@@ -694,7 +694,7 @@ extension DirectoryFileHandleProtocol {
         let handle = try await self.openFile(forWritingAt: path, options: options)
 
         return try await withUncancellableTearDown {
-            return try await body(handle)
+            try await body(handle)
         } tearDown: { result in
             switch result {
             case .success:
@@ -729,7 +729,7 @@ extension DirectoryFileHandleProtocol {
         let handle = try await self.openFile(forReadingAndWritingAt: path, options: options)
 
         return try await withUncancellableTearDown {
-            return try await body(handle)
+            try await body(handle)
         } tearDown: { result in
             switch result {
             case .success:
@@ -755,7 +755,7 @@ extension DirectoryFileHandleProtocol {
         let handle = try await self.openDirectory(atPath: path, options: options)
 
         return try await withUncancellableTearDown {
-            return try await body(handle)
+            try await body(handle)
         } tearDown: { _ in
             try await handle.close()
         }

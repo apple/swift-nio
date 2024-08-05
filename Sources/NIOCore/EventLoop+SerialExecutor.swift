@@ -19,7 +19,7 @@
 /// Implementers of `EventLoop` should consider conforming to this protocol as
 /// well on Swift 5.9 and later.
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
-public protocol NIOSerialEventLoopExecutor: EventLoop, SerialExecutor { }
+public protocol NIOSerialEventLoopExecutor: EventLoop, SerialExecutor {}
 
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
 extension NIOSerialEventLoopExecutor {
