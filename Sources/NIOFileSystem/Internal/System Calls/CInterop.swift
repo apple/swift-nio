@@ -24,6 +24,9 @@ import CNIOLinux
 #elseif canImport(Musl)
 import Musl
 import CNIOLinux
+#elseif canImport(Android)
+import Android
+import CNIOLinux
 #endif
 
 /// Aliases for platform-dependent types used for system calls.
@@ -34,6 +37,8 @@ extension CInterop {
     public typealias Stat = Glibc.stat
     #elseif canImport(Musl)
     public typealias Stat = Musl.stat
+    #elseif canImport(Android)
+    public typealias Stat = Android.stat
     #endif
 
     #if canImport(Darwin)
@@ -45,11 +50,14 @@ extension CInterop {
     #elseif canImport(Musl)
     @_spi(Testing)
     public static let maxPathLength = Musl.PATH_MAX
+    #elseif canImport(Android)
+    @_spi(Testing)
+    public static let maxPathLength = Android.PATH_MAX
     #endif
 
     #if canImport(Darwin)
     typealias DirPointer = UnsafeMutablePointer<Darwin.DIR>
-    #elseif canImport(Glibc) || canImport(Musl)
+    #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     typealias DirPointer = OpaquePointer
     #endif
 
@@ -59,12 +67,14 @@ extension CInterop {
     typealias DirEnt = Glibc.dirent
     #elseif canImport(Musl)
     typealias DirEnt = Musl.dirent
+    #elseif canImport(Android)
+    typealias DirEnt = Android.dirent
     #endif
 
     #if canImport(Darwin)
     typealias FTS = CNIODarwin.FTS
     typealias FTSEnt = CNIODarwin.FTSENT
-    #elseif canImport(Glibc) || canImport(Musl)
+    #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
     typealias FTS = CNIOLinux.FTS
     typealias FTSEnt = CNIOLinux.FTSENT
     #endif

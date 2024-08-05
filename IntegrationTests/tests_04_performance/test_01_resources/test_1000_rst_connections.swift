@@ -35,7 +35,7 @@ func run(identifier: String) {
     let serverConnection = try! ServerBootstrap(group: group)
         .bind(host: "localhost", port: 0)
         .wait()
-    
+
     let serverAddress = serverConnection.localAddress!
     let clientBootstrap = ClientBootstrap(group: group)
         .channelInitializer { channel in
@@ -48,7 +48,7 @@ func run(identifier: String) {
         let iterations = 1000
         for _ in 0..<iterations {
             let conn = clientBootstrap.connect(to: serverAddress)
-            
+
             let _: Void? = try? conn.flatMap { channel in
                 (channel as! SocketOptionProvider).setSoLinger(linger(l_onoff: 1, l_linger: 0)).flatMap {
                     channel.closeFuture

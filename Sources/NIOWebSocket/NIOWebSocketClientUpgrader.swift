@@ -21,7 +21,7 @@ public typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader
 
 /// A `HTTPClientProtocolUpgrader` that knows how to do the WebSocket upgrade dance.
 ///
-/// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request. 
+/// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request.
 /// This upgrader also assumes that the `HTTPClientUpgradeHandler` will appropriately mutate the
 /// pipeline to remove the HTTP `ChannelHandler`s.
 public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
@@ -29,7 +29,7 @@ public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
     public let supportedProtocol: String = "websocket"
     /// None of the websocket headers are actually defined as 'required'.
     public let requiredUpgradeHeaders: [String] = []
-    
+
     private let requestKey: String
     private let maxFrameSize: Int
     private let automaticErrorHandling: Bool
@@ -141,7 +141,7 @@ extension NIOWebSocketClientUpgrader {
     @inlinable
     public static func randomRequestKey<Generator>(
         using generator: inout Generator
-    ) -> String where Generator: RandomNumberGenerator{
+    ) -> String where Generator: RandomNumberGenerator {
         var buffer = ByteBuffer()
         buffer.reserveCapacity(minimumWritableBytes: 16)
         /// we may want to use `randomBytes(count:)` once the proposal is accepted: https://forums.swift.org/t/pitch-requesting-larger-amounts-of-randomness-from-systemrandomnumbergenerator/27226
@@ -193,9 +193,11 @@ private func _upgrade<UpgradeResult>(
     enableAutomaticErrorHandling: Bool,
     upgradePipelineHandler: @escaping @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
 ) -> EventLoopFuture<UpgradeResult> {
-    return channel.eventLoop.makeCompletedFuture {
+    channel.eventLoop.makeCompletedFuture {
         try channel.pipeline.syncOperations.addHandler(WebSocketFrameEncoder())
-        try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: maxFrameSize)))
+        try channel.pipeline.syncOperations.addHandler(
+            ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: maxFrameSize))
+        )
         if enableAutomaticErrorHandling {
             try channel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler())
         }

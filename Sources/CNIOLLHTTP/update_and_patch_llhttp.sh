@@ -19,10 +19,10 @@ here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 case "$(uname -s)" in
     Darwin)
-        sed=gsed
+        sed="gsed"
         ;;
     *)
-        sed=sed
+        sed="sed"
         ;;
 esac
 
@@ -104,9 +104,9 @@ compiletmp=$(mktemp -d /tmp/.test_compile_XXXXXX)
 
 for f in *.c; do
     clang -o "$compiletmp/$f.o" -c "$here/$f"
-    num_non_nio=$(nm "$compiletmp/$f.o" | grep ' T ' | grep -v c_nio | wc -l)
+    num_non_nio=$(nm "$compiletmp/$f.o" | grep ' T ' | grep -cv c_nio)
 
-    test 0 -eq $num_non_nio || {
+    test 0 -eq "$num_non_nio" || {
         echo "ERROR: $num_non_nio exported non-prefixed symbols found"
         nm "$compiletmp/$f.o" | grep ' T ' | grep -v c_nio
         exit 1

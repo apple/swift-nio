@@ -48,7 +48,7 @@ public struct HTTPRequestHead: Equatable {
         }
 
         func copy() -> _Storage {
-            return .init(method: self.method, uri: self.uri, version: self.version)
+            .init(method: self.method, uri: self.uri, version: self.version)
         }
     }
 
@@ -61,7 +61,7 @@ public struct HTTPRequestHead: Equatable {
     /// The HTTP method for this request.
     public var method: HTTPMethod {
         get {
-            return self._storage.method
+            self._storage.method
         }
         set {
             self.copyStorageIfNotUniquelyReferenced()
@@ -72,7 +72,7 @@ public struct HTTPRequestHead: Equatable {
     // This request's URI.
     public var uri: String {
         get {
-            return self._storage.uri
+            self._storage.uri
         }
         set {
             self.copyStorageIfNotUniquelyReferenced()
@@ -83,7 +83,7 @@ public struct HTTPRequestHead: Equatable {
     /// The version for this HTTP request.
     public var version: HTTPVersion {
         get {
-            return self._storage.version
+            self._storage.version
         }
         set {
             self.copyStorageIfNotUniquelyReferenced()
@@ -112,11 +112,11 @@ public struct HTTPRequestHead: Equatable {
         self.init(version: version, method: method, uri: uri, headers: HTTPHeaders())
     }
 
-    public static func ==(lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
-        return lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version && lhs.headers == rhs.headers
+    public static func == (lhs: HTTPRequestHead, rhs: HTTPRequestHead) -> Bool {
+        lhs.method == rhs.method && lhs.uri == rhs.uri && lhs.version == rhs.version && lhs.headers == rhs.headers
     }
 
-    private mutating func copyStorageIfNotUniquelyReferenced () {
+    private mutating func copyStorageIfNotUniquelyReferenced() {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.copy()
         }
@@ -125,15 +125,30 @@ public struct HTTPRequestHead: Equatable {
 
 extension HTTPRequestHead: @unchecked Sendable {}
 
-/// The parts of a complete HTTP message, either request or response.
+/// The parts of a complete HTTP message, representing either a request or a response.
 ///
-/// A HTTP message is made up of a request or status line with several headers,
-/// encoded by `.head`, zero or more body parts, and optionally some trailers. To
-/// indicate that a complete HTTP message has been sent or received, we use `.end`,
-/// which may also contain any trailers that make up the message.
+/// An HTTP message is made up of:
+/// - a request or status line with several headers, encoded by a single ``HTTPPart/head(_:)`` part,
+/// - zero or more ``HTTPPart/body(_:)`` parts,
+/// - and some optional trailers (represented as headers) in a single ``HTTPPart/end(_:)`` part.
+///
+/// To indicate that a complete HTTP message has been sent or received,
+/// an ``HTTPPart/end(_:)`` part must be used, even when no trailers are included.
 public enum HTTPPart<HeadT: Equatable, BodyT: Equatable> {
+    /// The headers of an HTTP request or response.
+    ///
+    /// A single part is always used to encode all headers.
     case head(HeadT)
+
+    /// A part of an HTTP request or response's body.
+    ///
+    /// Zero or more body parts can be sent or received. The stream is finished when
+    /// an ``HTTPPart/end(_:)`` part is received.
     case body(BodyT)
+
+    /// The end of an HTTP request or response, optionally containing trailers.
+    ///
+    /// A single part is always used to encode all trailers.
     case end(HTTPHeaders?)
 }
 
@@ -157,7 +172,7 @@ extension HTTPRequestHead {
     /// Whether this HTTP request is a keep-alive request: that is, whether the
     /// connection should remain open after the request is complete.
     public var isKeepAlive: Bool {
-        return headers.isKeepAlive(version: version)
+        headers.isKeepAlive(version: version)
     }
 }
 
@@ -165,7 +180,7 @@ extension HTTPResponseHead {
     /// Whether this HTTP response is a keep-alive request: that is, whether the
     /// connection should remain open after the request is complete.
     public var isKeepAlive: Bool {
-        return self.headers.isKeepAlive(version: self.version)
+        self.headers.isKeepAlive(version: self.version)
     }
 }
 
@@ -179,7 +194,7 @@ public struct HTTPResponseHead: Equatable {
             self.version = version
         }
         func copy() -> _Storage {
-            return .init(status: self.status, version: self.version)
+            .init(status: self.status, version: self.version)
         }
     }
 
@@ -192,7 +207,7 @@ public struct HTTPResponseHead: Equatable {
     /// The HTTP response status.
     public var status: HTTPResponseStatus {
         get {
-            return self._storage.status
+            self._storage.status
         }
         set {
             self.copyStorageIfNotUniquelyReferenced()
@@ -203,7 +218,7 @@ public struct HTTPResponseHead: Equatable {
     /// The HTTP version that corresponds to this response.
     public var version: HTTPVersion {
         get {
-            return self._storage.version
+            self._storage.version
         }
         set {
             self.copyStorageIfNotUniquelyReferenced()
@@ -221,11 +236,11 @@ public struct HTTPResponseHead: Equatable {
         self._storage = _Storage(status: status, version: version)
     }
 
-    public static func ==(lhs: HTTPResponseHead, rhs: HTTPResponseHead) -> Bool {
-        return lhs.status == rhs.status && lhs.version == rhs.version && lhs.headers == rhs.headers
+    public static func == (lhs: HTTPResponseHead, rhs: HTTPResponseHead) -> Bool {
+        lhs.status == rhs.status && lhs.version == rhs.version && lhs.headers == rhs.headers
     }
 
-    private mutating func copyStorageIfNotUniquelyReferenced () {
+    private mutating func copyStorageIfNotUniquelyReferenced() {
         if !isKnownUniquelyReferenced(&self._storage) {
             self._storage = self._storage.copy()
         }
@@ -242,9 +257,9 @@ extension HTTPResponseHead {
     }
 }
 
-private extension UInt8 {
-    var isASCII: Bool {
-        return self <= 127
+extension UInt8 {
+    fileprivate var isASCII: Bool {
+        self <= 127
     }
 }
 
@@ -298,11 +313,11 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     internal var keepAliveState: KeepAliveState = .unknown
 
     public var description: String {
-        return self.headers.description
+        self.headers.description
     }
 
     internal var names: [String] {
-        return self.headers.map { $0.0 }
+        self.headers.map { $0.0 }
     }
 
     internal init(_ headers: [(String, String)], keepAliveState: KeepAliveState) {
@@ -311,7 +326,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     }
 
     internal func isConnectionHeader(_ name: String) -> Bool {
-        return name.utf8.compareCaseInsensitiveASCIIBytes(to: "connection".utf8)
+        name.utf8.compareCaseInsensitiveASCIIBytes(to: "connection".utf8)
     }
 
     /// Construct a `HTTPHeaders` structure.
@@ -427,7 +442,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// - Parameter name: The header field name whose values are to be retrieved.
     /// - Returns: A list of the values for that header field name.
     public subscript(name: String) -> [String] {
-        return self.headers.reduce(into: []) { target, lr in
+        self.headers.reduce(into: []) { target, lr in
             let (key, value) = lr
             if key.utf8.compareCaseInsensitiveASCIIBytes(to: name.utf8) {
                 target.append(value)
@@ -497,7 +512,7 @@ extension HTTPHeaders {
 
     /// The total number of headers that can be contained without allocating new storage.
     public var capacity: Int {
-        return self.headers.capacity
+        self.headers.capacity
     }
 
     /// Reserves enough space to store the specified number of headers.
@@ -531,28 +546,28 @@ extension HTTPHeaders: RandomAccessCollection {
     public struct Index: Comparable {
         fileprivate let base: Array<(String, String)>.Index
         public static func < (lhs: Index, rhs: Index) -> Bool {
-            return lhs.base < rhs.base
+            lhs.base < rhs.base
         }
     }
 
     public var startIndex: HTTPHeaders.Index {
-        return .init(base: self.headers.startIndex)
+        .init(base: self.headers.startIndex)
     }
 
     public var endIndex: HTTPHeaders.Index {
-        return .init(base: self.headers.endIndex)
+        .init(base: self.headers.endIndex)
     }
 
     public func index(before i: HTTPHeaders.Index) -> HTTPHeaders.Index {
-        return .init(base: self.headers.index(before: i.base))
+        .init(base: self.headers.index(before: i.base))
     }
 
     public func index(after i: HTTPHeaders.Index) -> HTTPHeaders.Index {
-        return .init(base: self.headers.index(after: i.base))
+        .init(base: self.headers.index(after: i.base))
     }
 
     public subscript(position: HTTPHeaders.Index) -> Element {
-        return self.headers[position.base]
+        self.headers[position.base]
     }
 }
 
@@ -560,26 +575,26 @@ extension UTF8.CodeUnit {
     var isASCIIWhitespace: Bool {
         switch self {
         case UInt8(ascii: " "),
-             UInt8(ascii: "\t"):
-          return true
+            UInt8(ascii: "\t"):
+            return true
 
         default:
-          return false
+            return false
         }
     }
 }
 
 extension String {
     func trimASCIIWhitespace() -> Substring {
-        return Substring(self).trimWhitespace()
+        Substring(self).trimWhitespace()
     }
 }
 
 extension Substring {
     fileprivate func trimWhitespace() -> Substring {
         guard let firstNonWhitespace = self.utf8.firstIndex(where: { !$0.isASCIIWhitespace }) else {
-          // The whole substring is ASCII whitespace.
-          return Substring()
+            // The whole substring is ASCII whitespace.
+            return Substring()
         }
 
         // There must be at least one non-ascii whitespace character, so banging here is safe.
@@ -589,7 +604,7 @@ extension Substring {
 }
 
 extension HTTPHeaders: Equatable {
-    public static func ==(lhs: HTTPHeaders, rhs: HTTPHeaders) -> Bool {
+    public static func == (lhs: HTTPHeaders, rhs: HTTPHeaders) -> Bool {
         guard lhs.headers.count == rhs.headers.count else {
             return false
         }
@@ -684,7 +699,7 @@ public struct HTTPVersion: Equatable, Sendable {
     /// The major version number.
     public var major: Int {
         get {
-            return Int(self._major)
+            Int(self._major)
         }
         set {
             self._major = UInt16(newValue)
@@ -694,7 +709,7 @@ public struct HTTPVersion: Equatable, Sendable {
     /// The minor version number.
     public var minor: Int {
         get {
-            return Int(self._minor)
+            Int(self._minor)
         }
         set {
             self._minor = UInt16(newValue)
@@ -741,7 +756,7 @@ extension HTTPParserError: CustomDebugStringConvertible {
         case .invalidHost:
             return "invalid host"
         case .invalidPort:
-            return  "invalid port"
+            return "invalid port"
         case .invalidPath:
             return "invalid path"
         case .invalidQueryString:
@@ -776,7 +791,7 @@ extension HTTPParserError: CustomDebugStringConvertible {
 public enum HTTPParserError: Error {
     case invalidCharactersUsed
     case trailingGarbage
-    /* from CHTTPParser */
+    // from CHTTPParser
     case invalidEOFState
     case headerOverflow
     case closedConnection
@@ -936,7 +951,7 @@ extension HTTPResponseStatus {
                 return 510
             case .networkAuthenticationRequired:
                 return 511
-            case .custom(code: let code, reasonPhrase: _):
+            case .custom(let code, reasonPhrase: _):
                 return code
             }
         }
@@ -1075,11 +1090,11 @@ extension HTTPResponseStatus {
 
 /// A HTTP response status code.
 public enum HTTPResponseStatus: Sendable {
-    /* use custom if you want to use a non-standard response code or
-     have it available in a (UInt, String) pair from a higher-level web framework. */
+    // use custom if you want to use a non-standard response code or
+    // have it available in a (UInt, String) pair from a higher-level web framework.
     case custom(code: UInt, reasonPhrase: String)
 
-    /* all the codes from http://www.iana.org/assignments/http-status-codes */
+    // all the codes from http://www.iana.org/assignments/http-status-codes
 
     // 1xx
     case `continue`
@@ -1156,11 +1171,11 @@ public enum HTTPResponseStatus: Sendable {
     public var mayHaveResponseBody: Bool {
         switch self {
         case .`continue`,
-             .switchingProtocols,
-             .processing,
-             .noContent,
-             .notModified,
-             .custom where (code < 200) && (code >= 100):
+            .switchingProtocols,
+            .processing,
+            .noContent,
+            .notModified,
+            .custom where (code < 200) && (code >= 100):
             return false
         default:
             return true
@@ -1306,194 +1321,194 @@ extension HTTPResponseStatus: Hashable {}
 
 extension HTTPRequestHead: CustomStringConvertible {
     public var description: String {
-        return "HTTPRequestHead { method: \(self.method), uri: \"\(self.uri)\", version: \(self.version), headers: \(self.headers) }"
+        "HTTPRequestHead { method: \(self.method), uri: \"\(self.uri)\", version: \(self.version), headers: \(self.headers) }"
     }
 }
 
 extension HTTPResponseStatus: CustomStringConvertible {
     public var description: String {
-        return "\(self.code) \(self.reasonPhrase)"
+        "\(self.code) \(self.reasonPhrase)"
     }
 }
 
 extension HTTPResponseHead: CustomStringConvertible {
     public var description: String {
-        return "HTTPResponseHead { version: \(self.version), status: \(self.status), headers: \(self.headers) }"
+        "HTTPResponseHead { version: \(self.version), status: \(self.status), headers: \(self.headers) }"
     }
 }
 
 extension HTTPVersion: CustomStringConvertible {
     public var description: String {
-        return "HTTP/\(self.major).\(self.minor)"
+        "HTTP/\(self.major).\(self.minor)"
     }
 }
 
 extension HTTPMethod: RawRepresentable {
     public var rawValue: String {
         switch self {
-            case .GET:
-                return "GET"
-            case .PUT:
-                return "PUT"
-            case .ACL:
-                return "ACL"
-            case .HEAD:
-                return "HEAD"
-            case .POST:
-                return "POST"
-            case .COPY:
-                return "COPY"
-            case .LOCK:
-                return "LOCK"
-            case .MOVE:
-                return "MOVE"
-            case .BIND:
-                return "BIND"
-            case .LINK:
-                return "LINK"
-            case .PATCH:
-                return "PATCH"
-            case .TRACE:
-                return "TRACE"
-            case .MKCOL:
-                return "MKCOL"
-            case .MERGE:
-                return "MERGE"
-            case .PURGE:
-                return "PURGE"
-            case .NOTIFY:
-                return "NOTIFY"
-            case .SEARCH:
-                return "SEARCH"
-            case .UNLOCK:
-                return "UNLOCK"
-            case .REBIND:
-                return "REBIND"
-            case .UNBIND:
-                return "UNBIND"
-            case .REPORT:
-                return "REPORT"
-            case .DELETE:
-                return "DELETE"
-            case .UNLINK:
-                return "UNLINK"
-            case .CONNECT:
-                return "CONNECT"
-            case .MSEARCH:
-                return "MSEARCH"
-            case .OPTIONS:
-                return "OPTIONS"
-            case .PROPFIND:
-                return "PROPFIND"
-            case .CHECKOUT:
-                return "CHECKOUT"
-            case .PROPPATCH:
-                return "PROPPATCH"
-            case .SUBSCRIBE:
-                return "SUBSCRIBE"
-            case .MKCALENDAR:
-                return "MKCALENDAR"
-            case .MKACTIVITY:
-                return "MKACTIVITY"
-            case .UNSUBSCRIBE:
-                return "UNSUBSCRIBE"
-            case .SOURCE:
-                return "SOURCE"
-            case let .RAW(value):
-                return value
+        case .GET:
+            return "GET"
+        case .PUT:
+            return "PUT"
+        case .ACL:
+            return "ACL"
+        case .HEAD:
+            return "HEAD"
+        case .POST:
+            return "POST"
+        case .COPY:
+            return "COPY"
+        case .LOCK:
+            return "LOCK"
+        case .MOVE:
+            return "MOVE"
+        case .BIND:
+            return "BIND"
+        case .LINK:
+            return "LINK"
+        case .PATCH:
+            return "PATCH"
+        case .TRACE:
+            return "TRACE"
+        case .MKCOL:
+            return "MKCOL"
+        case .MERGE:
+            return "MERGE"
+        case .PURGE:
+            return "PURGE"
+        case .NOTIFY:
+            return "NOTIFY"
+        case .SEARCH:
+            return "SEARCH"
+        case .UNLOCK:
+            return "UNLOCK"
+        case .REBIND:
+            return "REBIND"
+        case .UNBIND:
+            return "UNBIND"
+        case .REPORT:
+            return "REPORT"
+        case .DELETE:
+            return "DELETE"
+        case .UNLINK:
+            return "UNLINK"
+        case .CONNECT:
+            return "CONNECT"
+        case .MSEARCH:
+            return "MSEARCH"
+        case .OPTIONS:
+            return "OPTIONS"
+        case .PROPFIND:
+            return "PROPFIND"
+        case .CHECKOUT:
+            return "CHECKOUT"
+        case .PROPPATCH:
+            return "PROPPATCH"
+        case .SUBSCRIBE:
+            return "SUBSCRIBE"
+        case .MKCALENDAR:
+            return "MKCALENDAR"
+        case .MKACTIVITY:
+            return "MKACTIVITY"
+        case .UNSUBSCRIBE:
+            return "UNSUBSCRIBE"
+        case .SOURCE:
+            return "SOURCE"
+        case let .RAW(value):
+            return value
         }
     }
 
     public init(rawValue: String) {
         switch rawValue {
-            case "GET":
-                self = .GET
-            case "PUT":
-                self = .PUT
-            case "ACL":
-                self = .ACL
-            case "HEAD":
-                self = .HEAD
-            case "POST":
-                self = .POST
-            case "COPY":
-                self = .COPY
-            case "LOCK":
-                self = .LOCK
-            case "MOVE":
-                self = .MOVE
-            case "BIND":
-                self = .BIND
-            case "LINK":
-                self = .LINK
-            case "PATCH":
-                self = .PATCH
-            case "TRACE":
-                self = .TRACE
-            case "MKCOL":
-                self = .MKCOL
-            case "MERGE":
-                self = .MERGE
-            case "PURGE":
-                self = .PURGE
-            case "NOTIFY":
-                self = .NOTIFY
-            case "SEARCH":
-                self = .SEARCH
-            case "UNLOCK":
-                self = .UNLOCK
-            case "REBIND":
-                self = .REBIND
-            case "UNBIND":
-                self = .UNBIND
-            case "REPORT":
-                self = .REPORT
-            case "DELETE":
-                self = .DELETE
-            case "UNLINK":
-                self = .UNLINK
-            case "CONNECT":
-                self = .CONNECT
-            case "MSEARCH":
-                self = .MSEARCH
-            case "OPTIONS":
-                self = .OPTIONS
-            case "PROPFIND":
-                self = .PROPFIND
-            case "CHECKOUT":
-                self = .CHECKOUT
-            case "PROPPATCH":
-                self = .PROPPATCH
-            case "SUBSCRIBE":
-                self = .SUBSCRIBE
-            case "MKCALENDAR":
-                self = .MKCALENDAR
-            case "MKACTIVITY":
-                self = .MKACTIVITY
-            case "UNSUBSCRIBE":
-                self = .UNSUBSCRIBE
-            case "SOURCE":
-                self = .SOURCE
-            default:
-                self = .RAW(value: rawValue)
+        case "GET":
+            self = .GET
+        case "PUT":
+            self = .PUT
+        case "ACL":
+            self = .ACL
+        case "HEAD":
+            self = .HEAD
+        case "POST":
+            self = .POST
+        case "COPY":
+            self = .COPY
+        case "LOCK":
+            self = .LOCK
+        case "MOVE":
+            self = .MOVE
+        case "BIND":
+            self = .BIND
+        case "LINK":
+            self = .LINK
+        case "PATCH":
+            self = .PATCH
+        case "TRACE":
+            self = .TRACE
+        case "MKCOL":
+            self = .MKCOL
+        case "MERGE":
+            self = .MERGE
+        case "PURGE":
+            self = .PURGE
+        case "NOTIFY":
+            self = .NOTIFY
+        case "SEARCH":
+            self = .SEARCH
+        case "UNLOCK":
+            self = .UNLOCK
+        case "REBIND":
+            self = .REBIND
+        case "UNBIND":
+            self = .UNBIND
+        case "REPORT":
+            self = .REPORT
+        case "DELETE":
+            self = .DELETE
+        case "UNLINK":
+            self = .UNLINK
+        case "CONNECT":
+            self = .CONNECT
+        case "MSEARCH":
+            self = .MSEARCH
+        case "OPTIONS":
+            self = .OPTIONS
+        case "PROPFIND":
+            self = .PROPFIND
+        case "CHECKOUT":
+            self = .CHECKOUT
+        case "PROPPATCH":
+            self = .PROPPATCH
+        case "SUBSCRIBE":
+            self = .SUBSCRIBE
+        case "MKCALENDAR":
+            self = .MKCALENDAR
+        case "MKACTIVITY":
+            self = .MKACTIVITY
+        case "UNSUBSCRIBE":
+            self = .UNSUBSCRIBE
+        case "SOURCE":
+            self = .SOURCE
+        default:
+            self = .RAW(value: rawValue)
         }
     }
 }
 
 extension HTTPResponseHead {
     internal var contentLength: Int? {
-        return headers.contentLength
+        headers.contentLength
     }
 }
 
 extension HTTPRequestHead {
     internal var contentLength: Int? {
-        return headers.contentLength
+        headers.contentLength
     }
 }
 
 extension HTTPHeaders {
     internal var contentLength: Int? {
-        return self.first(name: "content-length").flatMap { Int($0) }
+        self.first(name: "content-length").flatMap { Int($0) }
     }
 }

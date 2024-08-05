@@ -18,7 +18,12 @@
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     @usableFromInline
-    typealias Producer = NIOThrowingAsyncSequenceProducer<Inbound, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate>
+    typealias Producer = NIOThrowingAsyncSequenceProducer<
+        Inbound,
+        Error,
+        NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark,
+        NIOAsyncChannelHandlerProducerDelegate
+    >
 
     /// A source used for driving a ``NIOAsyncChannelInboundStream`` during tests.
     public struct TestSource {
@@ -77,13 +82,13 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     }
 
     @inlinable
-    init<HandlerInbound: Sendable>(
-        channel: Channel,
+    init<ProducerElement: Sendable, Outbound: Sendable>(
+        eventLoop: any EventLoop,
+        handler: NIOAsyncChannelHandler<ProducerElement, Inbound, Outbound>,
         backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeOnDeinit: Bool,
-        handler: NIOAsyncChannelInboundStreamChannelHandler<HandlerInbound, Inbound>
+        closeOnDeinit: Bool
     ) throws {
-        channel.eventLoop.preconditionInEventLoop()
+        eventLoop.preconditionInEventLoop()
         let strategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark
 
         if let userProvided = backPressureStrategy {
@@ -97,51 +102,11 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
         let sequence = Producer.makeSequence(
             backPressureStrategy: strategy,
             finishOnDeinit: closeOnDeinit,
-            delegate: NIOAsyncChannelInboundStreamChannelHandlerProducerDelegate(handler: handler)
+            delegate: NIOAsyncChannelHandlerProducerDelegate(handler: handler)
         )
+
         handler.source = sequence.source
-        try channel.pipeline.syncOperations.addHandler(handler)
         self._backing = .producer(sequence.sequence)
-    }
-
-    /// Creates a new ``NIOAsyncChannelInboundStream`` which is used when the pipeline got synchronously wrapped.
-    @inlinable
-    static func makeWrappingHandler(
-        channel: Channel,
-        backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeOnDeinit: Bool
-    ) throws -> NIOAsyncChannelInboundStream {
-        let handler = NIOAsyncChannelInboundStreamChannelHandler<Inbound, Inbound>.makeHandler(
-            eventLoop: channel.eventLoop
-        )
-
-        return try .init(
-            channel: channel,
-            backPressureStrategy: backPressureStrategy,
-            closeOnDeinit: closeOnDeinit,
-            handler: handler
-        )
-    }
-
-    /// Creates a new ``NIOAsyncChannelInboundStream`` which has hooks for transformations.
-    @inlinable
-    static func makeTransformationHandler(
-        channel: Channel,
-        backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark?,
-        closeOnDeinit: Bool,
-        channelReadTransformation: @Sendable @escaping (Channel) -> EventLoopFuture<Inbound>
-    ) throws -> NIOAsyncChannelInboundStream {
-        let handler = NIOAsyncChannelInboundStreamChannelHandler<Channel, Inbound>.makeHandlerWithTransformations(
-            eventLoop: channel.eventLoop,
-            channelReadTransformation: channelReadTransformation
-        )
-
-        return try .init(
-            channel: channel,
-            backPressureStrategy: backPressureStrategy,
-            closeOnDeinit: closeOnDeinit,
-            handler: handler
-        )
     }
 }
 
@@ -186,7 +151,7 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
 
     @inlinable
     public func makeAsyncIterator() -> AsyncIterator {
-        return AsyncIterator(self._backing)
+        AsyncIterator(self._backing)
     }
 }
 

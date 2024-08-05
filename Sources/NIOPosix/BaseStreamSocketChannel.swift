@@ -47,7 +47,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -66,7 +66,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         self.eventLoop.assertInEventLoop()
 
         guard self.isOpen else {
-            throw ChannelError.ioOnClosedChannel
+            throw ChannelError._ioOnClosedChannel
         }
 
         switch option {
@@ -98,7 +98,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     // MARK: BaseSocketChannel's must override API that cannot be further refined by subclasses
     // This is `Channel` API so must be thread-safe.
     final override public var isWritable: Bool {
-        return self.pendingWrites.isWritable
+        self.pendingWrites.isWritable
     }
 
     final override var isOpen: Bool {
@@ -112,7 +112,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         var result = ReadResult.none
         for _ in 1...self.maxMessagesPerRead {
             guard self.isOpen && !self.inputShutdown else {
-                throw ChannelError.eof
+                throw ChannelError._eof
             }
 
             let (buffer, readResult) = try self.recvBufferPool.buffer(allocator: self.allocator) { buffer in
@@ -148,7 +148,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                         return result
                     }
                     // end-of-file
-                    throw ChannelError.eof
+                    throw ChannelError._eof
                 }
             case .wouldBlock(let bytesRead):
                 assert(bytesRead == 0)
@@ -159,19 +159,23 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func writeToSocket() throws -> OverallWriteResult {
-        let result = try self.pendingWrites.triggerAppropriateWriteOperations(scalarBufferWriteOperation: { ptr in
-            guard ptr.count > 0 else {
-                // No need to call write if the buffer is empty.
-                return .processed(0)
+        let result = try self.pendingWrites.triggerAppropriateWriteOperations(
+            scalarBufferWriteOperation: { ptr in
+                guard ptr.count > 0 else {
+                    // No need to call write if the buffer is empty.
+                    return .processed(0)
+                }
+                // normal write
+                return try self.socket.write(pointer: ptr)
+            },
+            vectorBufferWriteOperation: { ptrs in
+                // Gathering write
+                try self.socket.writev(iovecs: ptrs)
+            },
+            scalarFileWriteOperation: { descriptor, index, endIndex in
+                try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
             }
-            // normal write
-            return try self.socket.write(pointer: ptr)
-        }, vectorBufferWriteOperation: { ptrs in
-            // Gathering write
-            try self.socket.writev(iovecs: ptrs)
-        }, scalarFileWriteOperation: { descriptor, index, endIndex in
-            try self.socket.sendFile(fd: descriptor, offset: index, count: endIndex - index)
-        })
+        )
         return result
     }
 
@@ -180,7 +184,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
             switch mode {
             case .output:
                 if self.outputShutdown {
-                    promise?.fail(ChannelError.outputClosed)
+                    promise?.fail(ChannelError._outputClosed)
                     return
                 }
                 if self.inputShutdown {
@@ -197,7 +201,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
             case .input:
                 if self.inputShutdown {
-                    promise?.fail(ChannelError.inputClosed)
+                    promise?.fail(ChannelError._inputClosed)
                     return
                 }
                 if self.outputShutdown {
@@ -231,7 +235,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func hasFlushedPendingWrites() -> Bool {
-        return self.pendingWrites.isFlushPending
+        self.pendingWrites.isFlushPending
     }
 
     final override func markFlushPoint() {
@@ -261,7 +265,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
 
     final override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if self.outputShutdown {
-            promise?.fail(ChannelError.outputClosed)
+            promise?.fail(ChannelError._outputClosed)
             return
         }
 

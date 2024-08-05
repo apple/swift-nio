@@ -13,11 +13,16 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-set -eu
+set -euo pipefail
 
-raw_targets=$(sed -E -n -e 's/^.* - documentation_targets: \[(.*)\].*$/\1/p' .spi.yml)
-targets=(${raw_targets//,/ })
+log() { printf -- "** %s\n" "$*" >&2; }
+error() { printf -- "** ERROR: %s\n" "$*" >&2; }
+fatal() { error "$@"; exit 1; }
 
-for target in "${targets[@]}"; do
+log "Checking documentation targets..."
+for target in $(yq -r '.builder.configs[].documentation_targets[]' .spi.yml); do
+  log "Checking target $target..."
   swift package plugin generate-documentation --target "$target" --warnings-as-errors --analyze --level detailed
 done
+
+log "✅ Found no documentation issues."

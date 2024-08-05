@@ -66,12 +66,12 @@ final class NIOThread {
     ///     - body: The closure that will accept the `pthread_t`.
     /// - returns: The value returned by `body`.
     internal func withUnsafeThreadHandle<T>(_ body: (ThreadOpsSystem.ThreadHandle) throws -> T) rethrows -> T {
-        return try body(self.handle)
+        try body(self.handle)
     }
 
     /// Get current name of the `NIOThread` or `nil` if not set.
     var currentName: String? {
-        return ThreadOpsSystem.threadName(self.handle)
+        ThreadOpsSystem.threadName(self.handle)
     }
 
     func join() {
@@ -84,8 +84,11 @@ final class NIOThread {
     ///     - name: The name of the `NIOThread` or `nil` if no specific name should be set.
     ///     - body: The function to execute within the spawned `NIOThread`.
     ///     - detach: Whether to detach the thread. If the thread is not detached it must be `join`ed.
-    static func spawnAndRun(name: String? = nil, detachThread: Bool = true,
-                            body: @escaping (NIOThread) -> Void) {
+    static func spawnAndRun(
+        name: String? = nil,
+        detachThread: Bool = true,
+        body: @escaping (NIOThread) -> Void
+    ) {
         var handle: ThreadOpsSystem.ThreadHandle? = nil
 
         // Store everything we want to pass into the c function in a Box so we
@@ -98,7 +101,7 @@ final class NIOThread {
 
     /// Returns `true` if the calling thread is the same as this one.
     var isCurrent: Bool {
-        return ThreadOpsSystem.isCurrentThread(self.handle)
+        ThreadOpsSystem.isCurrentThread(self.handle)
     }
 
     /// Returns the current running `NIOThread`.
@@ -143,7 +146,7 @@ extension NIOThread: CustomStringConvertible {
 /// `ThreadSpecificVariable` is thread-safe so it can be used with multiple threads at the same time but the value
 /// returned by `currentValue` is defined per thread.
 public final class ThreadSpecificVariable<Value: AnyObject> {
-    /* the actual type in there is `Box<(ThreadSpecificVariable<T>, T)>` but we can't use that as C functions can't capture (even types) */
+    // the actual type in there is `Box<(ThreadSpecificVariable<T>, T)>` but we can't use that as C functions can't capture (even types)
     private typealias BoxedType = Box<(AnyObject, AnyObject)>
 
     internal class Key {
@@ -158,7 +161,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         }
 
         public func get() -> UnsafeMutableRawPointer? {
-            return ThreadOpsSystem.getThreadSpecificValue(self.underlyingKey)
+            ThreadOpsSystem.getThreadSpecificValue(self.underlyingKey)
         }
 
         public func set(value: UnsafeMutableRawPointer?) {
@@ -171,7 +174,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     /// Initialize a new `ThreadSpecificVariable` without a current value (`currentValue == nil`).
     public init() {
         self.key = Key(destructor: {
-          Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
+            Unmanaged<BoxedType>.fromOpaque(($0 as UnsafeMutableRawPointer?)!).release()
         })
     }
 
@@ -185,9 +188,12 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
         self.currentValue = value
     }
 
-
     /// The value for the current thread.
-    @available(*, noasync, message: "threads can change between suspension points and therefore the thread specific value too")
+    @available(
+        *,
+        noasync,
+        message: "threads can change between suspension points and therefore the thread specific value too"
+    )
     public var currentValue: Value? {
         get {
             self.get()
@@ -201,10 +207,11 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     func get() -> Value? {
         guard let raw = self.key.get() else { return nil }
         // parenthesize the return value to silence the cast warning
-        return (Unmanaged<BoxedType>
-                 .fromOpaque(raw)
-                 .takeUnretainedValue()
-                 .value.1 as! Value)
+        return
+            (Unmanaged<BoxedType>
+            .fromOpaque(raw)
+            .takeUnretainedValue()
+            .value.1 as! Value)
     }
 
     /// Set the current value for the calling threads. The `currentValue` for all other threads remains unchanged.
@@ -219,8 +226,8 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
 extension ThreadSpecificVariable: @unchecked Sendable where Value: Sendable {}
 
 extension NIOThread: Equatable {
-    static func ==(lhs: NIOThread, rhs: NIOThread) -> Bool {
-        return lhs.withUnsafeThreadHandle { lhs in
+    static func == (lhs: NIOThread, rhs: NIOThread) -> Bool {
+        lhs.withUnsafeThreadHandle { lhs in
             rhs.withUnsafeThreadHandle { rhs in
                 ThreadOpsSystem.compareThreads(lhs, rhs)
             }

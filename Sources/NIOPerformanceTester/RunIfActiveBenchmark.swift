@@ -40,13 +40,13 @@ final class RunIfActiveBenchmark: Benchmark {
         let semaphore = DispatchSemaphore(value: 0)
         let eventLoop = MultiThreadedEventLoopGroup.singleton.any()
         let futures = (0..<self.numTasks).map { _ in
-            return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            self.threadPool.runIfActive(eventLoop: eventLoop) {
                 // Hold back all the work items, until they all got scheduled
                 semaphore.wait()
             }
         }
 
-        (0..<self.numTasks).forEach { _ in
+        for _ in (0..<self.numTasks) {
             semaphore.signal()
         }
 
@@ -61,7 +61,7 @@ final class RunIfActiveBenchmark: Benchmark {
         let eventLoop = MultiThreadedEventLoopGroup.singleton.any()
 
         let futures = (0..<self.numTasks).map { _ in
-            return self.threadPool.runIfActive(eventLoop: eventLoop) {
+            self.threadPool.runIfActive(eventLoop: eventLoop) {
                 // Empty work item body
             }
         }

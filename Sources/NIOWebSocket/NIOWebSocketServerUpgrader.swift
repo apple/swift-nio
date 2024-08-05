@@ -41,8 +41,8 @@ public struct NIOWebSocketUpgradeError: Error, Equatable {
     public static let unsupportedWebSocketTarget = NIOWebSocketUpgradeError(actualError: .unsupportedWebSocketTarget)
 }
 
-fileprivate extension HTTPHeaders {
-    func nonListHeader(_ name: String) throws -> String {
+extension HTTPHeaders {
+    fileprivate func nonListHeader(_ name: String) throws -> String {
         let fields = self[canonicalForm: name]
         guard fields.count == 1 else {
             throw NIOWebSocketUpgradeError.invalidUpgradeHeader
@@ -103,8 +103,12 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
         shouldUpgrade: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>,
         upgradePipelineHandler: @escaping @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
     ) {
-        self.init(maxFrameSize: 1 << 14, automaticErrorHandling: automaticErrorHandling,
-                  shouldUpgrade: shouldUpgrade, upgradePipelineHandler: upgradePipelineHandler)
+        self.init(
+            maxFrameSize: 1 << 14,
+            automaticErrorHandling: automaticErrorHandling,
+            shouldUpgrade: shouldUpgrade,
+            upgradePipelineHandler: upgradePipelineHandler
+        )
     }
 
     /// Create a new `NIOWebSocketServerUpgrader`.
@@ -155,8 +159,12 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
         self.automaticErrorHandling = automaticErrorHandling
     }
 
-    public func buildUpgradeResponse(channel: Channel, upgradeRequest: HTTPRequestHead, initialResponseHeaders: HTTPHeaders) -> EventLoopFuture<HTTPHeaders> {
-        return _buildUpgradeResponse(
+    public func buildUpgradeResponse(
+        channel: Channel,
+        upgradeRequest: HTTPRequestHead,
+        initialResponseHeaders: HTTPHeaders
+    ) -> EventLoopFuture<HTTPHeaders> {
+        _buildUpgradeResponse(
             channel: channel,
             upgradeRequest: upgradeRequest,
             initialResponseHeaders: initialResponseHeaders,
@@ -186,7 +194,9 @@ public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unch
 ///
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
-public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIOTypedHTTPServerProtocolUpgrader, Sendable {
+public final class NIOTypedWebSocketServerUpgrader<UpgradeResult: Sendable>: NIOTypedHTTPServerProtocolUpgrader,
+    Sendable
+{
     private typealias ShouldUpgrade = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
     private typealias UpgradePipelineHandler = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<UpgradeResult>
 

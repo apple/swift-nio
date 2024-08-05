@@ -13,9 +13,10 @@
 //===----------------------------------------------------------------------===//
 import Atomics
 import NIOConcurrencyHelpers
-@testable import NIOCore
 import NIOEmbedded
 import XCTest
+
+@testable import NIOCore
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncChannelTests: XCTestCase {
@@ -84,7 +85,7 @@ final class AsyncChannelTests: XCTestCase {
     func testAsyncChannelThrowsWhenChannelClosed() async throws {
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
-            return try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
+            try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
         }
 
         try await channel.close(mode: .all)
@@ -251,7 +252,9 @@ final class AsyncChannelTests: XCTestCase {
         do {
             let strongSentinel: Sentinel? = Sentinel()
             sentinel = strongSentinel!
-            try await XCTAsyncAssertNotNil(await channel.pipeline.handler(type: NIOAsyncChannelInboundStreamChannelHandler<Sentinel, Sentinel>.self).get())
+            try await XCTAsyncAssertNotNil(
+                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).get()
+            )
             try await channel.writeInbound(strongSentinel!)
             _ = try await channel.readInbound(as: Sentinel.self)
         }

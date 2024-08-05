@@ -28,7 +28,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     public let _eventLoop: EventLoop
 
     @usableFromInline
-    /* private */ var _value: Value
+    var _value: Value
 
     /// Initialise a ``NIOLoopBound`` to `value` with the precondition that the code is running on `eventLoop`.
     @inlinable
@@ -47,9 +47,9 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
             self._eventLoop.preconditionInEventLoop()
             return self._value
         }
-        set {
+        _modify {
             self._eventLoop.preconditionInEventLoop()
-            self._value = newValue
+            yield &self._value
         }
     }
 }
@@ -75,7 +75,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     public let _eventLoop: EventLoop
 
     @usableFromInline
-    /* private */var _value: Value
+    var _value: Value
 
     @inlinable
     internal init(_value value: Value, uncheckedEventLoop eventLoop: EventLoop) {
@@ -96,7 +96,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     public static func makeEmptyBox<NonOptionalValue>(
         valueType: NonOptionalValue.Type = NonOptionalValue.self,
         eventLoop: EventLoop
-    ) -> NIOLoopBoundBox<Value> where Optional<NonOptionalValue> == Value {
+    ) -> NIOLoopBoundBox<Value> where NonOptionalValue? == Value {
         // Here, we -- possibly surprisingly -- do not precondition being on the EventLoop. This is okay for a few
         // reasons:
         // - We write the `Optional.none` value which we know is _not_ a value of the potentially non-Sendable type
@@ -104,7 +104,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         // - Because of Swift's Definitive Initialisation (DI), we know that we did write `self._value` before `init`
         //   returns.
         // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
-        return .init(_value: nil, uncheckedEventLoop: eventLoop)
+        .init(_value: nil, uncheckedEventLoop: eventLoop)
     }
 
     /// Initialise a ``NIOLoopBoundBox`` by sending a `Sendable` value, validly callable off `eventLoop`.
@@ -124,7 +124,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         // - Because of Swift's Definitive Initialisation (DI), we know that we did write `self._value` before `init`
         //   returns.
         // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
-        return .init(_value: value, uncheckedEventLoop: eventLoop)
+        .init(_value: value, uncheckedEventLoop: eventLoop)
     }
 
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
@@ -136,10 +136,9 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
             self._eventLoop.preconditionInEventLoop()
             return self._value
         }
-        set {
+        _modify {
             self._eventLoop.preconditionInEventLoop()
-            self._value = newValue
+            yield &self._value
         }
     }
 }
-

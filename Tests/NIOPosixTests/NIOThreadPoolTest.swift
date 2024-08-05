@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIOPosix
 import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
 import NIOEmbedded
+import XCTest
+
+@testable import NIOPosix
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class NIOThreadPoolTest: XCTestCase {
@@ -51,11 +52,11 @@ class NIOThreadPoolTest: XCTestCase {
         }
 
         // now, let's wait for all the threads to have done their work
-        (0..<numberOfThreads).forEach { _ in
+        for _ in (0..<numberOfThreads) {
             threadNameCollectionSem.wait()
         }
         // and finally, let them exit
-        (0..<numberOfThreads).forEach { _ in
+        for _ in (0..<numberOfThreads) {
             threadBlockingSem.signal()
         }
 

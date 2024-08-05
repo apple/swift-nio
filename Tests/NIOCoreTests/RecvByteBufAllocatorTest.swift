@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
 
 final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
@@ -90,8 +90,20 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
         }
     }
 
-    private func testActualReadBytes(mayGrow: Bool, actualReadBytes: Int, expectedCapacity: Int, file: StaticString = #filePath, line: UInt = #line) {
-        XCTAssertEqual(mayGrow, adaptive.record(actualReadBytes: actualReadBytes), "unexpected value for mayGrow", file: file, line: line)
+    private func testActualReadBytes(
+        mayGrow: Bool,
+        actualReadBytes: Int,
+        expectedCapacity: Int,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertEqual(
+            mayGrow,
+            adaptive.record(actualReadBytes: actualReadBytes),
+            "unexpected value for mayGrow",
+            file: file,
+            line: line
+        )
         let buffer = adaptive.buffer(allocator: allocator)
         XCTAssertEqual(expectedCapacity, buffer.capacity, "unexpected capacity", file: file, line: line)
     }
@@ -135,7 +147,11 @@ final class AdaptiveRecvByteBufferAllocatorTest: XCTestCase {
             return
         }
 
-        let adaptive = AdaptiveRecvByteBufferAllocator(minimum: targetValue, initial: targetValue + 1, maximum: targetValue + 2)
+        let adaptive = AdaptiveRecvByteBufferAllocator(
+            minimum: targetValue,
+            initial: targetValue + 1,
+            maximum: targetValue + 2
+        )
         XCTAssertEqual(adaptive.minimum, 1 << 30)
         XCTAssertEqual(adaptive.maximum, 1 << 30)
         XCTAssertEqual(adaptive.initial, 1 << 30)

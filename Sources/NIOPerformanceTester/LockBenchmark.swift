@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-import NIOPosix
 import Dispatch
 import NIOConcurrencyHelpers
+import NIOCore
+import NIOPosix
 
 final class NIOLockBenchmark: Benchmark {
     private let numberOfThreads: Int
@@ -28,23 +28,23 @@ final class NIOLockBenchmark: Benchmark {
     private var opsDone = 0
 
     private let lock = NIOLock()
-    
+
     init(numberOfThreads: Int, lockOperationsPerThread: Int) {
         self.numberOfThreads = numberOfThreads
         self.lockOperationsPerThread = lockOperationsPerThread
         self.threadPool = NIOThreadPool(numberOfThreads: numberOfThreads)
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
     }
-    
+
     func setUp() throws {
         self.threadPool.start()
     }
-    
+
     func tearDown() {
         try! self.threadPool.syncShutdownGracefully()
         try! self.group.syncShutdownGracefully()
     }
-    
+
     func run() throws -> Int {
         self.lock.withLock {
             self.opsDone = 0
@@ -53,13 +53,13 @@ final class NIOLockBenchmark: Benchmark {
             _ = self.threadPool.runIfActive(eventLoop: self.group.next()) {
                 self.sem1.signal()
                 self.sem2.wait()
-                
-                for _ in 0 ..< self.lockOperationsPerThread {
+
+                for _ in 0..<self.lockOperationsPerThread {
                     self.lock.withLock {
                         self.opsDone &+= 1
                     }
                 }
-                
+
                 self.sem3.signal()
             }
         }
@@ -75,7 +75,7 @@ final class NIOLockBenchmark: Benchmark {
         for _ in 0..<self.numberOfThreads {
             self.sem3.wait()
         }
-        
+
         let done = self.lock.withLock { self.opsDone }
         precondition(done == self.numberOfThreads * self.lockOperationsPerThread)
         return done

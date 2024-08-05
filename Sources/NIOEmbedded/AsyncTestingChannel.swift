@@ -110,7 +110,7 @@ public final class NIOAsyncTestingChannel: Channel {
         /// `true` if the ``NIOAsyncTestingChannel`` if there was unconsumed inbound, outbound, or pending outbound data left
         /// on the `Channel` when it was `finish`ed.
         public var hasLeftOvers: Bool {
-            return !self.isClean
+            !self.isClean
         }
     }
 
@@ -140,7 +140,7 @@ public final class NIOAsyncTestingChannel: Channel {
 
         /// Returns `true` if the buffer was non-empty.
         public var isFull: Bool {
-            return !self.isEmpty
+            !self.isEmpty
         }
     }
 
@@ -159,7 +159,7 @@ public final class NIOAsyncTestingChannel: Channel {
         }
 
         public static func == (lhs: WrongTypeError, rhs: WrongTypeError) -> Bool {
-            return lhs.expected == rhs.expected && lhs.actual == rhs.actual
+            lhs.expected == rhs.expected && lhs.actual == rhs.actual
         }
     }
 
@@ -168,12 +168,12 @@ public final class NIOAsyncTestingChannel: Channel {
     /// An active ``NIOAsyncTestingChannel`` can be closed by calling `close` or ``finish()`` on the ``NIOAsyncTestingChannel``.
     ///
     /// - note: An ``NIOAsyncTestingChannel`` starts _inactive_ and can be activated, for example by calling `connect`.
-    public var isActive: Bool { return channelcore.isActive }
+    public var isActive: Bool { channelcore.isActive }
 
     /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
     public var allowRemoteHalfClosure: Bool {
         get {
-            return channelcore.allowRemoteHalfClosure
+            channelcore.allowRemoteHalfClosure
         }
         set {
             channelcore.allowRemoteHalfClosure = newValue
@@ -181,14 +181,14 @@ public final class NIOAsyncTestingChannel: Channel {
     }
 
     /// - see: `Channel.closeFuture`
-    public var closeFuture: EventLoopFuture<Void> { return channelcore.closePromise.futureResult }
+    public var closeFuture: EventLoopFuture<Void> { channelcore.closePromise.futureResult }
 
     /// - see: `Channel.allocator`
     public let allocator: ByteBufferAllocator = ByteBufferAllocator()
 
     /// - see: `Channel.eventLoop`
     public var eventLoop: EventLoop {
-        return self.testingEventLoop
+        self.testingEventLoop
     }
 
     /// Returns the ``NIOAsyncTestingEventLoop`` that this ``NIOAsyncTestingChannel`` uses. This will return the same instance as
@@ -201,7 +201,7 @@ public final class NIOAsyncTestingChannel: Channel {
     // This is only written once, from a single thread, and never written again, so it's _technically_ thread-safe. Most methods cannot safely
     // be used from multiple threads, but `isActive`, `isOpen`, `eventLoop`, and `closeFuture` can all safely be used from any thread. Just.
     @usableFromInline
-    /*private but usableFromInline */ var channelcore: EmbeddedChannelCore!
+    var channelcore: EmbeddedChannelCore!
 
     /// Guards any of the getters/setters that can be accessed from any thread.
     private let stateLock: NIOLock = NIOLock()
@@ -219,18 +219,18 @@ public final class NIOAsyncTestingChannel: Channel {
 
     /// - see: `Channel._channelCore`
     public var _channelCore: ChannelCore {
-        return channelcore
+        channelcore
     }
 
     /// - see: `Channel.pipeline`
     public var pipeline: ChannelPipeline {
-        return _pipeline
+        _pipeline
     }
 
     /// - see: `Channel.isWritable`
     public var isWritable: Bool {
         get {
-            return self.stateLock.withLock { self._isWritable }
+            self.stateLock.withLock { self._isWritable }
         }
         set {
             self.stateLock.withLock { () -> Void in
@@ -242,7 +242,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.localAddress`
     public var localAddress: SocketAddress? {
         get {
-            return self.stateLock.withLock { self._localAddress }
+            self.stateLock.withLock { self._localAddress }
         }
         set {
             self.stateLock.withLock { () -> Void in
@@ -254,7 +254,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.remoteAddress`
     public var remoteAddress: SocketAddress? {
         get {
-            return self.stateLock.withLock { self._remoteAddress }
+            self.stateLock.withLock { self._remoteAddress }
         }
         set {
             self.stateLock.withLock { () -> Void in
@@ -282,7 +282,8 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - parameters:
     ///     - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register.
     ///     - loop: The ``NIOAsyncTestingEventLoop`` to use.
-    public convenience init(handler: ChannelHandler, loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) async {
+    public convenience init(handler: ChannelHandler, loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) async
+    {
         await self.init(handlers: [handler], loop: loop)
     }
 
@@ -293,7 +294,10 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - parameters:
     ///     - handlers: The `ChannelHandler`s to add to the `ChannelPipeline` before register.
     ///     - loop: The ``NIOAsyncTestingEventLoop`` to use.
-    public convenience init(handlers: [ChannelHandler], loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) async {
+    public convenience init(
+        handlers: [ChannelHandler],
+        loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()
+    ) async {
         self.init(loop: loop)
 
         try! await self._pipeline.addHandlers(handlers)
@@ -334,9 +338,11 @@ public final class NIOAsyncTestingChannel: Channel {
             if c.outboundBuffer.isEmpty && c.inboundBuffer.isEmpty && c.pendingOutboundBuffer.isEmpty {
                 return .clean
             } else {
-                return .leftOvers(inbound: c.inboundBuffer,
-                                  outbound: c.outboundBuffer,
-                                  pendingOutbound: c.pendingOutboundBuffer.map { $0.0 })
+                return .leftOvers(
+                    inbound: c.inboundBuffer,
+                    outbound: c.outboundBuffer,
+                    pendingOutbound: c.pendingOutboundBuffer.map { $0.0 }
+                )
             }
         }
     }
@@ -351,7 +357,7 @@ public final class NIOAsyncTestingChannel: Channel {
     ///            writes) this will be ``LeftOverState/clean``. If there are any unconsumed inbound, outbound, or pending outbound
     ///            events, the ``NIOAsyncTestingChannel`` will returns those as ``LeftOverState/leftOvers(inbound:outbound:pendingOutbound:)``.
     public func finish() async throws -> LeftOverState {
-        return try await self.finish(acceptAlreadyClosed: false)
+        try await self.finish(acceptAlreadyClosed: false)
     }
 
     /// If available, this method reads one element of type `T` out of the ``NIOAsyncTestingChannel``'s outbound buffer. If the
@@ -395,9 +401,11 @@ public final class NIOAsyncTestingChannel: Channel {
                         return
                     }
                     self.channelcore.outboundBufferConsumer.append { element in
-                        continuation.resume(with: Result {
-                            try self._cast(element)
-                        })
+                        continuation.resume(
+                            with: Result {
+                                try self._cast(element)
+                            }
+                        )
                     }
                 } catch {
                     continuation.resume(throwing: error)
@@ -443,9 +451,11 @@ public final class NIOAsyncTestingChannel: Channel {
                         return
                     }
                     self.channelcore.inboundBufferConsumer.append { element in
-                        continuation.resume(with: Result {
-                            try self._cast(element)
-                        })
+                        continuation.resume(
+                            with: Result {
+                                try self._cast(element)
+                            }
+                        )
                     }
                 } catch {
                     continuation.resume(throwing: error)
@@ -488,7 +498,7 @@ public final class NIOAsyncTestingChannel: Channel {
         try await self.writeAndFlush(NIOAny(data))
 
         return try await self.testingEventLoop.executeInContext {
-            return self.channelcore.outboundBuffer.isEmpty ? .empty : .full(self.channelcore.outboundBuffer)
+            self.channelcore.outboundBuffer.isEmpty ? .empty : .full(self.channelcore.outboundBuffer)
         }
     }
 
@@ -510,7 +520,6 @@ public final class NIOAsyncTestingChannel: Channel {
         }
     }
 
-
     @inlinable
     func _readFromBuffer<T>(buffer: inout CircularBuffer<NIOAny>) throws -> T? {
         self.testingEventLoop.preconditionInEventLoop()
@@ -524,7 +533,10 @@ public final class NIOAsyncTestingChannel: Channel {
     @inlinable
     func _cast<T>(_ element: NIOAny, to: T.Type = T.self) throws -> T {
         guard let t = self._channelCore.tryUnwrapData(element, as: T.self) else {
-            throw WrongTypeError(expected: T.self, actual: type(of: self._channelCore.tryUnwrapData(element, as: Any.self)!))
+            throw WrongTypeError(
+                expected: T.self,
+                actual: type(of: self._channelCore.tryUnwrapData(element, as: Any.self)!)
+            )
         }
         return t
     }
@@ -552,7 +564,7 @@ public final class NIOAsyncTestingChannel: Channel {
 
     /// - see: `Channel.getOption`
     @inlinable
-    public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value>  {
+    public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
         if self.eventLoop.inEventLoop {
             return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
         } else {
@@ -633,7 +645,7 @@ public final class NIOAsyncTestingChannel: Channel {
     }
 
     public final var syncOptions: NIOSynchronousChannelOptions? {
-        return SynchronousOptions(channel: self)
+        SynchronousOptions(channel: self)
     }
 }
 
@@ -645,7 +657,7 @@ public final class NIOAsyncTestingChannel: Channel {
 // in a channel pipeline _are_ `Sendable`, and because these objects only carry NIOAnys in cases
 // where the `Channel` itself no longer holds a reference to these objects.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension NIOAsyncTestingChannel.LeftOverState: @unchecked Sendable { }
+extension NIOAsyncTestingChannel.LeftOverState: @unchecked Sendable {}
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable { }
+extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable {}

@@ -126,10 +126,12 @@ public final class NIOThreadPool {
             case .running(let items):
                 self.state = .modifying
                 queue.async {
-                    items.forEach { $0.workItem(.cancelled) }
+                    for item in items {
+                        item.workItem(.cancelled)
+                    }
                 }
                 self.state = .shuttingDown(Array(repeating: true, count: numberOfThreads))
-                (0..<numberOfThreads).forEach { _ in
+                for _ in (0..<numberOfThreads) {
                     self.semaphore.signal()
                 }
                 let threads = self.threads!
@@ -145,7 +147,9 @@ public final class NIOThreadPool {
         }
 
         DispatchQueue(label: "io.swiftnio.NIOThreadPool.shutdownGracefully").async {
-            threadsToJoin.forEach { $0.join() }
+            for thread in threadsToJoin {
+                thread.join()
+            }
             queue.async {
                 callback(nil)
             }
@@ -178,7 +182,7 @@ public final class NIOThreadPool {
                 fatalError(".modifying state misuse")
             }
         }
-        /* if item couldn't be added run it immediately indicating that it couldn't be run */
+        // if item couldn't be added run it immediately indicating that it couldn't be run
         item.map { $0(.cancelled) }
     }
 
@@ -208,7 +212,7 @@ public final class NIOThreadPool {
         var itemAndState: (item: WorkItem, state: WorkItemState)? = nil
 
         repeat {
-            /* wait until work has become available */
+            // wait until work has become available
             itemAndState = nil  // ensure previous work item is not retained for duration of semaphore wait
             self.semaphore.wait()
 
@@ -238,7 +242,7 @@ public final class NIOThreadPool {
                     fatalError(".modifying state misuse")
                 }
             }
-            /* if there was a work item popped, run it */
+            // if there was a work item popped, run it
             itemAndState.map { item, state in item(state) }
         } while itemAndState != nil
     }
@@ -301,7 +305,8 @@ public final class NIOThreadPool {
     deinit {
         assert(
             self.canBeStopped,
-            "Perpetual NIOThreadPool has been deinited, you must make sure that perpetual pools don't deinit")
+            "Perpetual NIOThreadPool has been deinited, you must make sure that perpetual pools don't deinit"
+        )
         switch self.state {
         case .stopped, .shuttingDown:
             ()
@@ -383,7 +388,7 @@ extension NIOThreadPool {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func shutdownGracefully() async throws {
-        return try await withCheckedThrowingContinuation { cont in
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             self.shutdownGracefully { error in
                 if let error = error {
                     cont.resume(throwing: error)
