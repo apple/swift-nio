@@ -42,7 +42,7 @@ extension String {
     ///
     /// - parameters:
     ///     - radix: radix base to use for conversion.
-    ///     - padding: the desired lenght of the resulting string.
+    ///     - padding: the desired length of the resulting string.
     @inlinable
     internal init<Value>(_ value: Value, radix: Int, padding: Int) where Value: BinaryInteger {
         let formatted = String(value, radix: radix)

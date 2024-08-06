@@ -91,6 +91,24 @@ extension ByteBuffer {
         )
     }
 
+    // MARK: Hex encoded string APIs
+    /// Write `hex encoded string` into this `ByteBuffer`, moving the writer index forward appropriately.
+    ///
+    /// - parameters:
+    ///     - string: The hex encoded string to write.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    @inlinable
+    public mutating func writeHexEncodedBytes(_ string: String) -> Int {
+        let hexPlainDecodedBytes = string.hexPlainDecodedBytes
+        guard !hexPlainDecodedBytes.isEmpty else {
+            return 0
+        }
+        let written = self.setBytes(hexPlainDecodedBytes, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
+    }
+
     // MARK: String APIs
     /// Write `string` into this `ByteBuffer` using UTF-8 encoding, moving the writer index forward appropriately.
     ///

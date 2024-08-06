@@ -14,6 +14,26 @@
 
 extension ByteBuffer {
 
+    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from  the string representation of `hexEncodedBytes`.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit the hex decoded `bytes` and potentially some extra space
+    /// using the default allocator.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(integer:)`. Or if you want to write multiple items into the
+    ///         buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeHexEncodedBytes` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    init(hexEncodedBytes string: String) {
+        let hexPlainDecodedBytes = string.hexPlainDecodedBytes
+        guard !hexPlainDecodedBytes.isEmpty else {
+            self = ByteBufferAllocator.zeroCapacityWithDefaultAllocator
+            return
+        }
+
+        self = ByteBufferAllocator().buffer(bytes: hexPlainDecodedBytes)
+    }
+
     /// Describes a ByteBuffer hexDump format.
     /// Can be either xxd output compatible, or hexdump compatible.
     public struct HexDumpFormat: Hashable, Sendable {
@@ -339,5 +359,25 @@ extension ByteBuffer {
                 return self.hexdumpDetailed()
             }
         }
+    }
+}
+
+extension String {
+    /// Plain decode a string representing a hexadecimal sequence them into an UInt8 sequence
+    /// - Complexity: O(n)
+    public var hexPlainDecodedBytes: [UInt8] {
+        let stringWithoutWhiteSpaces = self.filter { !$0.isWhitespace }
+        return sequence(
+            state: stringWithoutWhiteSpaces,
+            next: { remainder in
+                guard remainder.count >= 2 else {
+                    precondition(remainder.count == 0, "Uneven number of hex encoded bytes within string")
+                    return nil
+                }
+                let nextTwo = remainder.prefix(2)
+                remainder.removeFirst(2)
+                return UInt8(nextTwo, radix: 16)
+            }
+        ).map { $0 }
     }
 }

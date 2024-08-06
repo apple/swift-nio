@@ -1069,6 +1069,17 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(self.buf.getString(at: 0, length: capacity + 1))
     }
 
+    func testWriteEmptyByteArray() throws {
+        var buffer = ByteBufferAllocator().buffer(capacity: 32)
+        buffer.moveWriterIndex(to: 16)
+        buffer.moveReaderIndex(to: 16)
+        XCTAssertEqual(buffer.setBytes([], at: 16), 0)
+        XCTAssertEqual(buffer.readableBytes, 0)
+        XCTAssertEqual(buffer.writableBytes, 16)
+        XCTAssertEqual(buffer.writerIndex, 16)
+        XCTAssertEqual(buffer.readerIndex, 16)
+    }
+
     func testSetGetBytesAllFine() throws {
         self.buf.moveReaderIndex(to: 0)
         self.buf.setBytes([1, 2, 3, 4], at: 0)
@@ -1932,6 +1943,29 @@ class ByteBufferTest: XCTestCase {
             e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 fa fb fc fd fe ff ]
             """
         XCTAssertEqual(expected, actual)
+    }
+
+    func testWriteHexEncodedBytes() throws {
+        var buffer = ByteBuffer(hexEncodedBytes: "68 65 6c 6c 6f 20 77 6f 72 6c 64 0a")
+        XCTAssertEqual(buffer.writeHexEncodedBytes("68656c6c6f20776f726c64"), 11)
+        XCTAssertEqual(buffer.writeHexEncodedBytes("     0a    "), 1)
+        XCTAssertEqual(buffer.writeHexEncodedBytes(""), 0)
+        XCTAssertEqual(buffer.writeHexEncodedBytes("      "), 0)
+        XCTAssertEqual(ByteBuffer(string: "hello world\nhello world\n"), buffer)
+    }
+
+    func testHexInitialiser() {
+        var allBytes = ByteBufferAllocator().buffer(capacity: Int(UInt8.max))
+        for x in UInt8.min...UInt8.max {
+            allBytes.writeInteger(x)
+        }
+
+        let allBytesHex = allBytes.hexDump(format: .plain)
+        let allBytesDecoded = ByteBuffer(hexEncodedBytes: allBytesHex)
+        XCTAssertEqual(allBytes, allBytesDecoded)
+
+        // Edge case
+        XCTAssertEqual(ByteBuffer(hexEncodedBytes: " "), ByteBufferAllocator.zeroCapacityWithDefaultAllocator)
     }
 
     func testHexDumpPlain() {
