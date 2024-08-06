@@ -993,6 +993,38 @@ extension FileSystemError {
         to destinationPath: FilePath,
         location: SourceLocation
     ) -> Self {
+        Self._copyfile(
+            "fcopyfile",
+            errno: errno,
+            from: sourcePath,
+            to: destinationPath,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
+    public static func copyfile(
+        errno: Errno,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        Self._copyfile(
+            "copyfile",
+            errno: errno,
+            from: sourcePath,
+            to: destinationPath,
+            location: location
+        )
+    }
+
+    private static func _copyfile(
+        _ name: String,
+        errno: Errno,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        location: SourceLocation
+    ) -> Self {
         let code: Code
         let message: String
 
@@ -1016,6 +1048,25 @@ extension FileSystemError {
                 Can't copy file from '\(sourcePath)' to '\(destinationPath)', the destination \
                 path already exists.
                 """
+        case .fileExists:
+            code = .fileAlreadyExists
+            message = """
+                Unable to create file at path '\(destinationPath)', no existing file options were set \
+                which implies that no file should exist but a file already exists at the \
+                specified path.
+                """
+        case .tooManyOpenFiles:
+            code = .unavailable
+            message = """
+                Unable to open the source ('\(sourcePath)') or destination ('\(destinationPath)') files, \
+                too many file descriptors are open.
+                """
+        case .noSuchFileOrDirectory:
+            code = .notFound
+            message = """
+                Unable to open or create file at path '\(sourcePath)', either a component of the \
+                path did not exist or the named file to be opened did not exist.
+                """
         default:
             code = .unknown
             message = "Can't copy file from '\(sourcePath)' to '\(destinationPath)'."
@@ -1024,7 +1075,7 @@ extension FileSystemError {
         return FileSystemError(
             code: code,
             message: message,
-            systemCall: "fcopyfile",
+            systemCall: name,
             errno: errno,
             location: location
         )

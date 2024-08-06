@@ -261,6 +261,10 @@ final class FileSystemErrorTests: XCTestCase {
             .fcopyfile(errno: .badFileDescriptor, from: "src", to: "dst", location: here)
         }
 
+        assertCauseIsSyscall("copyfile", here) {
+            .copyfile(errno: .badFileDescriptor, from: "src", to: "dst", location: here)
+        }
+
         assertCauseIsSyscall("sendfile", here) {
             .sendfile(errno: .badFileDescriptor, from: "src", to: "dst", location: here)
         }
@@ -520,6 +524,21 @@ final class FileSystemErrorTests: XCTestCase {
             ]
         ) { errno in
             .readlink(errno: errno, path: "", location: .fixed)
+        }
+    }
+
+    func testErrnoMapping_copyfile() {
+        self.testErrnoToErrorCode(
+            expected: [
+                .notSupported: .invalidArgument,
+                .permissionDenied: .permissionDenied,
+                .invalidArgument: .invalidArgument,
+                .fileExists: .fileAlreadyExists,
+                .tooManyOpenFiles: .unavailable,
+                .noSuchFileOrDirectory: .notFound,
+            ]
+        ) { errno in
+            .copyfile(errno: errno, from: "src", to: "dst", location: .fixed)
         }
     }
 

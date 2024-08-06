@@ -1,4 +1,4 @@
-name: PR
+name: PR label
 
 on:
     pull_request:
@@ -6,9 +6,11 @@ on:
 
 jobs:
     semver-label-check:
-        name: Semver label check
+        name: Semantic Version label check
         runs-on: ubuntu-latest
         timeout-minutes: 1
         steps:
-            - name: Check for semver label
-              uses: ./github/actions/pull_request_label_checker.yml
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Check for Semantic Version label
+              uses: ./.github/actions/pull_request_semver_label_checker/

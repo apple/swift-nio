@@ -659,14 +659,14 @@ final class FileSystemTests: XCTestCase {
     /// This is is not quite the same as sequential, different code paths are used.
     /// Tests using this ensure use of the parallel paths (which are more complex) while keeping actual
     /// parallelism to minimal levels to make debugging simpler.
-    private let minimalParallel: CopyStrategy = try! .parallel(maxDescriptors: 2)
+    private static let minimalParallel: CopyStrategy = try! .parallel(maxDescriptors: 2)
 
     func testCopyEmptyDirectorySequential() async throws {
         try await testCopyEmptyDirectory(.sequential)
     }
 
     func testCopyEmptyDirectoryParallelMinimal() async throws {
-        try await testCopyEmptyDirectory(minimalParallel)
+        try await testCopyEmptyDirectory(Self.minimalParallel)
     }
 
     func testCopyEmptyDirectoryParallelDefault() async throws {
@@ -690,7 +690,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyOnGeneratedTreeStructureParallelMinimal() async throws {
-        try await testAnyCopyStrategyOnGeneratedTreeStructure(minimalParallel)
+        try await testAnyCopyStrategyOnGeneratedTreeStructure(Self.minimalParallel)
     }
 
     func testCopyOnGeneratedTreeStructureParallelDefault() async throws {
@@ -737,7 +737,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopySelectivelyParallelMinimal() async throws {
-        try await testCopySelectively(minimalParallel)
+        try await testCopySelectively(Self.minimalParallel)
     }
 
     func testCopySelectivelyParallelDefault() async throws {
@@ -780,7 +780,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyCancelledPartWayThroughParallelMinimal() async throws {
-        try await testCopyCancelledPartWayThrough(minimalParallel)
+        try await testCopyCancelledPartWayThrough(Self.minimalParallel)
     }
 
     func testCopyCancelledPartWayThroughParallelDefault() async throws {
@@ -927,7 +927,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyNonExistentFileParallelMinimal() async throws {
-        try await testCopyNonExistentFile(minimalParallel)
+        try await testCopyNonExistentFile(Self.minimalParallel)
     }
 
     func testCopyNonExistentFileParallelDefault() async throws {
@@ -953,7 +953,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyToExistingDestinationParallelMinimal() async throws {
-        try await testCopyToExistingDestination(minimalParallel)
+        try await testCopyToExistingDestination(Self.minimalParallel)
     }
 
     func testCopyToExistingDestinationParallelDefault() async throws {
