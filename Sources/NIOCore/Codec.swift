@@ -797,7 +797,7 @@ public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelO
 
     public init(_ encoder: Encoder, desiredBufferCapacity: Int) {
         self.encoder = encoder
-        self.desiredBufferCapacity = desiredBufferCapacity.nextPowerOf2()
+        self.desiredBufferCapacity = desiredBufferCapacity
     }
     
     public init(_ encoder: Encoder) {

@@ -1891,6 +1891,11 @@ class ByteBufferTest: XCTestCase {
         XCTAssertTrue(buffer.shrinkBufferCapacity(to: desiredCapacity))
         XCTAssertEqual(buffer.capacity, 1024)
     }
+    
+    func testExpansionOfCapacityWithPadding() throws {
+        XCTAssertEqual(ByteBuffer.addPaddingTo(12), 16)
+        XCTAssertEqual(ByteBuffer.addPaddingTo(0), 0)
+    }
 
     func testDumpBytesFormat() throws {
         self.buf.clear()
