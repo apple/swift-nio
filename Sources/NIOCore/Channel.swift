@@ -360,9 +360,11 @@ public enum ChannelError: Error {
     /// address.
     case illegalMulticastAddress(SocketAddress)
 
+    #if !os(WASI)
     /// Multicast is not supported on Interface
     @available(*, deprecated, renamed: "NIOMulticastNotSupportedError")
     case multicastNotSupported(NIONetworkInterface)
+    #endif
 
     /// An operation that was inappropriate given the current `Channel` state was attempted.
     case inappropriateOperationForState

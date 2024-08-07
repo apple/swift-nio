@@ -21,6 +21,8 @@ import Glibc
 import Musl
 #elseif canImport(Bionic)
 import Bionic
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("The File Region module was unable to identify your C library.")
 #endif

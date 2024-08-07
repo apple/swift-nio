@@ -12,8 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
 import NIOConcurrencyHelpers
+
+#if canImport(Dispatch)
+import Dispatch
+#endif
+
+#if canImport(WASILibc)
+import WASILibc
+import CNIOWASI
+#endif
 
 #if os(Linux)
 import CNIOLinux
@@ -616,7 +624,14 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
         /// and the odds that this code will still be running 530 years from now is very, very low,
         /// so as a practical matter this will never overflow.
         return UInt64(ts.tv_sec) &* 1_000_000_000 &+ UInt64(ts.tv_nsec)
-        #else  // os(Linux)
+        #elseif os(WASI)
+        var ts = timespec()
+        CNIOWASI_gettime(&ts)
+        /// We use unsafe arithmetic here because `UInt64.max` nanoseconds is more than 580 years,
+        /// and the odds that this code will still be running 530 years from now is very, very low,
+        /// so as a practical matter this will never overflow.
+        return UInt64(ts.tv_sec) &* 1_000_000_000 &+ UInt64(ts.tv_nsec)
+        #else
         return DispatchTime.now().uptimeNanoseconds
         #endif  // os(Linux)
     }
@@ -1148,11 +1163,13 @@ public protocol EventLoopGroup: AnyObject, _NIOPreconcurrencySendable {
     /// future or kick off some operation, use `any()`.
     func any() -> EventLoop
 
+    #if canImport(Dispatch)
     /// Shuts down the eventloop gracefully. This function is clearly an outlier in that it uses a completion
     /// callback instead of an EventLoopFuture. The reason for that is that NIO's EventLoopFutures will call back on an event loop.
     /// The virtue of this function is to shut the event loop down. To work around that we call back on a DispatchQueue
     /// instead.
     @preconcurrency func shutdownGracefully(queue: DispatchQueue, _ callback: @Sendable @escaping (Error?) -> Void)
+    #endif
 
     /// Returns an `EventLoopIterator` over the `EventLoop`s in this `EventLoopGroup`.
     ///
@@ -1174,6 +1191,7 @@ extension EventLoopGroup {
     }
 }
 
+#if canImport(Dispatch)
 extension EventLoopGroup {
     @preconcurrency public func shutdownGracefully(_ callback: @escaping @Sendable (Error?) -> Void) {
         self.shutdownGracefully(queue: .global(), callback)
@@ -1208,6 +1226,7 @@ extension EventLoopGroup {
         return
     }
 }
+#endif
 
 /// This type is intended to be used by libraries which use NIO, and offer their users either the option
 /// to `.share` an existing event loop group or create (and manage) a new one (`.createNew`) and let it be

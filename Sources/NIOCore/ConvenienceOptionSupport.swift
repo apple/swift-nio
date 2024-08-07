@@ -175,9 +175,11 @@ extension ChannelOptions {
 
         mutating func applyFallbackMapping(_ universalBootstrap: NIOClientTCPBootstrap) -> NIOClientTCPBootstrap {
             var result = universalBootstrap
+            #if !os(WASI)
             if self.consumeAllowLocalEndpointReuse().isSet {
                 result = result.channelOption(.socketOption(.so_reuseaddr), value: 1)
             }
+            #endif
             if self.consumeAllowRemoteHalfClosure().isSet {
                 result = result.channelOption(.allowRemoteHalfClosure, value: true)
             }

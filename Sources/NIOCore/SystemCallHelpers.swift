@@ -25,6 +25,8 @@ import Darwin.C
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(WASILibc)
+import WASILibc
 #elseif os(Windows)
 import CNIOWindows
 #elseif canImport(Android)
@@ -39,7 +41,9 @@ private let sysClose: @convention(c) (CInt) -> CInt = _close
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = _lseek
 private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, CUnsignedInt) -> CInt = _read
 #else
+#if !os(WASI)
 private let sysDup: @convention(c) (CInt) -> CInt = dup
+#endif
 private let sysClose: @convention(c) (CInt) -> CInt = close
 private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, NIOPOSIXFileMode) -> CInt = open
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
@@ -49,7 +53,7 @@ private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t) -> 
 #if os(Android)
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>) -> CUnsignedInt = if_nametoindex
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) -> CInt = getifaddrs
-#else
+#elseif !os(WASI)
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 #if !os(Windows)
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
@@ -97,8 +101,10 @@ internal func syscall<T: FixedWidthInteger>(
             switch (err, blocking) {
             case (EINTR, _):
                 continue
+            #if !os(WASI)
             case (EWOULDBLOCK, true):
                 return .wouldBlock(0)
+            #endif
             default:
                 preconditionIsNotUnacceptableErrno(err: err, where: function)
                 throw IOError(errnoCode: err, reason: function)
@@ -109,6 +115,7 @@ internal func syscall<T: FixedWidthInteger>(
 }
 
 enum SystemCalls {
+    #if !os(WASI)
     @discardableResult
     @inline(never)
     internal static func dup(descriptor: CInt) throws -> CInt {
@@ -116,6 +123,7 @@ enum SystemCalls {
             sysDup(descriptor)
         }.result
     }
+    #endif
 
     @inline(never)
     internal static func close(descriptor: CInt) throws {
@@ -179,7 +187,7 @@ enum SystemCalls {
             sysRead(descriptor, pointer, size)
         }
     }
-    #else
+    #elseif !os(WASI)
     @inline(never)
     internal static func read(
         descriptor: CInt,
@@ -192,6 +200,7 @@ enum SystemCalls {
     }
     #endif
 
+    #if !os(WASI)
     @inline(never)
     internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
         try syscall(blocking: false) {
@@ -207,4 +216,5 @@ enum SystemCalls {
         }
     }
     #endif
+    #endif  // !os(WASI)
 }

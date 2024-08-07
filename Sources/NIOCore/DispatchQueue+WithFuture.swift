@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Dispatch)
 import Dispatch
 
 extension DispatchQueue {
@@ -45,3 +46,4 @@ extension DispatchQueue {
         return promise.futureResult
     }
 }
+#endif
