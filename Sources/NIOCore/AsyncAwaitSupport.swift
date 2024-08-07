@@ -240,8 +240,21 @@ extension ChannelPipeline {
     }
 }
 
+/// An error that is thrown when the number of bytes in an AsyncSequence exceeds the limit.
+///
+/// When collecting the bytes from an AsyncSequence, there is a limit up to where the content
+/// exceeds a certain threshold beyond which the content isn't matching the expected maximum size.
+/// that will be processed. This error is generally thrown when it is discovered that there are
+/// more bytes in a sequence than what was specified as the maximum. It could be that this upTo
+/// limit should be increased, or that the sequence has unexpected content in it.
+///
+/// - maxBytes: the maximum number of bytes to be collected
 public struct NIOTooManyBytesError: Error, Hashable {
-    public init() {}
+    let maxBytes: Int
+
+    public init(maxBytes: Int) {
+        self.maxBytes = maxBytes
+    }
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
@@ -262,7 +275,7 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
         for try await fragment in self {
             bytesRead += fragment.count
             guard bytesRead <= maxBytes else {
-                throw NIOTooManyBytesError()
+                throw NIOTooManyBytesError(maxBytes: maxBytes)
             }
             accumulationBuffer.writeBytes(fragment)
         }
@@ -305,7 +318,7 @@ extension AsyncSequence where Element == ByteBuffer {
         for try await fragment in self {
             bytesRead += fragment.readableBytes
             guard bytesRead <= maxBytes else {
-                throw NIOTooManyBytesError()
+                throw NIOTooManyBytesError(maxBytes: maxBytes)
             }
             accumulationBuffer.writeImmutableBuffer(fragment)
         }
@@ -328,7 +341,7 @@ extension AsyncSequence where Element == ByteBuffer {
             return ByteBuffer()
         }
         guard head.readableBytes <= maxBytes else {
-            throw NIOTooManyBytesError()
+            throw NIOTooManyBytesError(maxBytes: maxBytes)
         }
 
         let tail = AsyncSequenceFromIterator(iterator)
