@@ -317,7 +317,7 @@ First make sure you have [Docker](https://www.docker.com/community-edition) inst
 
 - `docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.2204.57.yaml run test`
 
-  Will create a base image using Ubuntu 22.04 and Swift 5.7, compile SwiftNIO and run the unit and integration tests.  Files exist for other ubuntu and swift versions in the docker directory.
+  Will create a base image using Ubuntu 22.04 and Swift 5.7, compile SwiftNIO and run the unit and integration tests.  Files exist for other Ubuntu and swift versions in the docker directory.
 
 
 ## Developing SwiftNIO
