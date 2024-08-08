@@ -80,9 +80,9 @@ class StreamChannelTest: XCTestCase {
                     return
                 }
 
-                XCTAssertTrue(try syncOptions.getOption(ChannelOptions.autoRead))
-                XCTAssertNoThrow(try syncOptions.setOption(ChannelOptions.autoRead, value: false))
-                XCTAssertFalse(try syncOptions.getOption(ChannelOptions.autoRead))
+                XCTAssertTrue(try syncOptions.getOption(.autoRead))
+                XCTAssertNoThrow(try syncOptions.setOption(.autoRead, value: false))
+                XCTAssertFalse(try syncOptions.getOption(.autoRead))
             }
         }
 
@@ -193,7 +193,7 @@ class StreamChannelTest: XCTestCase {
             let allDonePromise = chan1.eventLoop.makePromise(of: ByteBuffer.self)
             let writabilityFalsePromise = chan1.eventLoop.makePromise(of: Void.self)
             let writeFullyDonePromise = chan1.eventLoop.makePromise(of: Void.self)
-            XCTAssertNoThrow(try chan2.setOption(ChannelOptions.autoRead, value: false).wait())
+            XCTAssertNoThrow(try chan2.setOption(.autoRead, value: false).wait())
             XCTAssertNoThrow(try chan2.pipeline.addHandler(AccumulateAllReads(allDonePromise: allDonePromise)).wait())
             XCTAssertNoThrow(
                 try chan1.pipeline.addHandler(
@@ -207,7 +207,7 @@ class StreamChannelTest: XCTestCase {
             // Writability should turn false because we're writing lots of data and we aren't reading.
             XCTAssertNoThrow(try writabilityFalsePromise.futureResult.wait())
             // Ok, let's read.
-            XCTAssertNoThrow(try chan2.setOption(ChannelOptions.autoRead, value: true).wait())
+            XCTAssertNoThrow(try chan2.setOption(.autoRead, value: true).wait())
             // Which should lead to the write to complete.
             XCTAssertNoThrow(try writeFullyDonePromise.futureResult.wait())
             // To finish up, let's just tear this down.
@@ -222,7 +222,7 @@ class StreamChannelTest: XCTestCase {
             let readPromise = chan2.eventLoop.makePromise(of: Void.self)
             let eofPromise = chan1.eventLoop.makePromise(of: Void.self)
 
-            XCTAssertNoThrow(try chan1.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+            XCTAssertNoThrow(try chan1.setOption(.allowRemoteHalfClosure, value: true).wait())
             XCTAssertNoThrow(
                 try chan1.pipeline.addHandler(FulfillOnFirstEventHandler(userInboundEventTriggeredPromise: eofPromise))
                     .wait()
@@ -254,7 +254,7 @@ class StreamChannelTest: XCTestCase {
 
             let readPromise = chan1.eventLoop.makePromise(of: Void.self)
 
-            XCTAssertNoThrow(try chan2.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+            XCTAssertNoThrow(try chan2.setOption(.allowRemoteHalfClosure, value: true).wait())
             // let's close chan2's input
             XCTAssertNoThrow(try chan2.close(mode: .input).wait())
 
@@ -277,7 +277,7 @@ class StreamChannelTest: XCTestCase {
 
     func testDoubleShutdownInput() {
         func runTest(chan1: Channel, chan2: Channel) throws {
-            XCTAssertNoThrow(try chan1.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+            XCTAssertNoThrow(try chan1.setOption(.allowRemoteHalfClosure, value: true).wait())
             XCTAssertNoThrow(try chan1.close(mode: .input).wait())
             XCTAssertThrowsError(try chan1.close(mode: .input).wait()) { error in
                 XCTAssertEqual(ChannelError.inputClosed, error as? ChannelError, "\(chan1)")
@@ -288,7 +288,7 @@ class StreamChannelTest: XCTestCase {
 
     func testDoubleShutdownOutput() {
         func runTest(chan1: Channel, chan2: Channel) throws {
-            XCTAssertNoThrow(try chan2.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+            XCTAssertNoThrow(try chan2.setOption(.allowRemoteHalfClosure, value: true).wait())
             XCTAssertNoThrow(try chan1.close(mode: .output).wait())
             XCTAssertThrowsError(try chan1.close(mode: .output).wait()) { error in
                 XCTAssertEqual(ChannelError.outputClosed, error as? ChannelError, "\(chan1)")
@@ -299,7 +299,7 @@ class StreamChannelTest: XCTestCase {
 
     func testWriteFailsAfterOutputClosed() {
         func runTest(chan1: Channel, chan2: Channel) throws {
-            XCTAssertNoThrow(try chan2.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+            XCTAssertNoThrow(try chan2.setOption(.allowRemoteHalfClosure, value: true).wait())
             XCTAssertNoThrow(try chan1.close(mode: .output).wait())
             var buffer = chan1.allocator.buffer(capacity: 10)
             buffer.writeString("helloworld")
@@ -358,7 +358,7 @@ class StreamChannelTest: XCTestCase {
                 receiver.eventLoop !== sender.eventLoop,
                 "this test cannot run if sender and receiver live on the same EventLoop. \(receiver)"
             )
-            XCTAssertNoThrow(try receiver.setOption(ChannelOptions.autoRead, value: false).wait())
+            XCTAssertNoThrow(try receiver.setOption(.autoRead, value: false).wait())
             let areReadsOkayNow = ManagedAtomic(false)
             XCTAssertNoThrow(
                 try receiver.pipeline.addHandler(FailOnReadHandler(areReadOkayNow: areReadsOkayNow)).wait()
@@ -442,7 +442,7 @@ class StreamChannelTest: XCTestCase {
 
         func runTest(receiver: Channel, sender: Channel) throws {
             let allDonePromise = receiver.eventLoop.makePromise(of: Void.self)
-            XCTAssertNoThrow(try sender.setOption(ChannelOptions.writeSpin, value: 0).wait())
+            XCTAssertNoThrow(try sender.setOption(.writeSpin, value: 0).wait())
             XCTAssertNoThrow(
                 try receiver.pipeline.addHandler(WaitForTwoBytesHandler(allDonePromise: allDonePromise)).wait()
             )
@@ -486,7 +486,7 @@ class StreamChannelTest: XCTestCase {
                     // raise the high water mark so we don't get another call straight away.
                     var buffer = context.channel.allocator.buffer(capacity: 5)
                     buffer.writeString("hello")
-                    context.channel.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1024, high: 1024))
+                    context.channel.setOption(.writeBufferWaterMark, value: .init(low: 1024, high: 1024))
                         .flatMap {
                             context.writeAndFlush(Self.wrapOutboundOut(buffer))
                         }.whenFailure { error in
@@ -525,10 +525,10 @@ class StreamChannelTest: XCTestCase {
 
         func runTest(receiver: Channel, sender: Channel) throws {
             // Write spin might just disturb this test so let's switch it off
-            XCTAssertNoThrow(try sender.setOption(ChannelOptions.writeSpin, value: 0).wait())
+            XCTAssertNoThrow(try sender.setOption(.writeSpin, value: 0).wait())
             // Writing more than the high water mark will cause the channel to become unwritable very easily
             XCTAssertNoThrow(
-                try sender.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1, high: 1)).wait()
+                try sender.setOption(.writeBufferWaterMark, value: .init(low: 1, high: 1)).wait()
             )
 
             let sevenBytesReceived = receiver.eventLoop.makePromise(of: Void.self)
@@ -624,7 +624,7 @@ class StreamChannelTest: XCTestCase {
                 // We set the high watermark such that if we can't write something immediately, we'll get a
                 // writabilityChanged notification.
                 context.channel.setOption(
-                    ChannelOptions.writeBufferWaterMark,
+                    .writeBufferWaterMark,
                     value: .init(
                         low: self.chunkSize,
                         high: self.chunkSize + 1
@@ -634,7 +634,7 @@ class StreamChannelTest: XCTestCase {
                 }
 
                 // Write spin count would make the test less deterministic, so let's switch it off.
-                context.channel.setOption(ChannelOptions.writeSpin, value: 0).whenFailure { error in
+                context.channel.setOption(.writeSpin, value: 0).whenFailure { error in
                     XCTFail("unexpected error \(error)")
                 }
 
@@ -754,7 +754,7 @@ class StreamChannelTest: XCTestCase {
             var state: State = .waitingForInitialOutsideReadCall
 
             func handlerAdded(context: ChannelHandlerContext) {
-                context.channel.setOption(ChannelOptions.autoRead, value: false).whenFailure { error in
+                context.channel.setOption(.autoRead, value: false).whenFailure { error in
                     XCTFail("unexpected error \(error)")
                 }
             }
@@ -824,7 +824,7 @@ class StreamChannelTest: XCTestCase {
 
             // We need to not read automatically from the receiving end to be able to force writability notifications
             // for the sender.
-            XCTAssertNoThrow(try receiver.setOption(ChannelOptions.autoRead, value: false).wait())
+            XCTAssertNoThrow(try receiver.setOption(.autoRead, value: false).wait())
 
             XCTAssertNoThrow(try receiver.pipeline.addHandler(ReadChunksUntilWeSee1Handler()).wait())
 
@@ -859,7 +859,7 @@ class StreamChannelTest: XCTestCase {
             // Let's prepare the receiver's allocator to allocate exactly the right amount of bytes :), ...
             XCTAssertNoThrow(
                 try receiver.setOption(
-                    ChannelOptions.recvAllocator,
+                    .recvAllocator,
                     value: FixedSizeRecvByteBufferAllocator(capacity: bytes)
                 ).wait()
             )
@@ -875,7 +875,7 @@ class StreamChannelTest: XCTestCase {
             XCTAssertNoThrow(try beganBigWritePromise.futureResult.wait())
 
             // We now just set autoRead to true and let the receiver receive everything to tear everything down.
-            XCTAssertNoThrow(try receiver.setOption(ChannelOptions.autoRead, value: true).wait())
+            XCTAssertNoThrow(try receiver.setOption(.autoRead, value: true).wait())
 
             XCTAssertNoThrow(try finishedBigWritePromise.futureResult.wait())
         }
@@ -922,7 +922,7 @@ class StreamChannelTest: XCTestCase {
             XCTAssertNoThrow(try sender.pipeline.addHandler(CloseInWritabilityChanged(amount: amount)).wait())
             XCTAssertNoThrow(
                 try sender.setOption(
-                    ChannelOptions.writeBufferWaterMark,
+                    .writeBufferWaterMark,
                     value: .init(
                         low: amount - 1,
                         high: amount - 1

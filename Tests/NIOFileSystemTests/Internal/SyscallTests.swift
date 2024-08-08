@@ -389,6 +389,20 @@ final class SyscallTests: XCTestCase {
         #endif
     }
 
+    func test_copyfile() throws {
+        #if canImport(Darwin)
+
+        let testCases: [MockTestCase] = [
+            MockTestCase(name: "copyfile", .noInterrupt, "foo", "bar", "nil", 0) { _ in
+                try Libc.copyfile(from: "foo", to: "bar", state: nil, flags: 0).get()
+            }
+        ]
+        testCases.run()
+        #else
+        throw XCTSkip("'copyfile' is only supported on Darwin")
+        #endif
+    }
+
     func test_remove() throws {
         let testCases: [MockTestCase] = [
             MockTestCase(name: "remove", .noInterrupt, "somepath") { _ in

@@ -98,7 +98,7 @@ final class PipeChannelTest: XCTestCase {
     }
 
     func testWriteErrorsCloseChannel() {
-        XCTAssertNoThrow(try self.channel.setOption(ChannelOptions.allowRemoteHalfClosure, value: true).wait())
+        XCTAssertNoThrow(try self.channel.setOption(.allowRemoteHalfClosure, value: true).wait())
         self.fromChannel.closeFile()
         var buffer = self.channel.allocator.buffer(capacity: 1)
         buffer.writeString("X")

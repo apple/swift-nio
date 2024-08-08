@@ -1,16 +1,10 @@
-name: PR
+name: Scheduled
 
 on:
-    pull_request:
-      types: [opened, reopened, synchronize]
+    schedule:
+        - cron: "0 8,20 * * *"
 
 jobs:
-    soundness:
-        name: Soundness
-        uses: ./.github/workflows/soundness.yml
-        with:
-            license_header_check_project_name: "SwiftNIO"
-
     unit-tests:
         name: Unit tests
         uses: ./.github/workflows/unit_tests.yml
@@ -27,17 +21,9 @@ jobs:
         with:
             benchmark_package_path: "Benchmarks"
 
-    cxx-interop:
-        name: Cxx interop
-        uses: ./.github/workflows/cxx_interop.yml
-
     integration-tests:
         name: Integration Tests
         uses: ./.github/workflows/swift_matrix.yml
         with:
           name: "Integration tests"
           matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"
-
-    swift-6-language-mode:
-        name: Swift 6 Language Mode
-        uses: ./.github/workflows/swift_6_language_mode.yml

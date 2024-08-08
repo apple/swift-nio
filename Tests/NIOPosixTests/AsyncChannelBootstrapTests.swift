@@ -220,8 +220,8 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         }
 
         let channel = try await ServerBootstrap(group: eventLoopGroup)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelOption(ChannelOptions.autoRead, value: true)
+            .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+            .childChannelOption(.autoRead, value: true)
             .bind(
                 host: "127.0.0.1",
                 port: 0
@@ -281,8 +281,8 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         let channel: NIOAsyncChannel<EventLoopFuture<NegotiationResult>, Never> = try await ServerBootstrap(
             group: eventLoopGroup
         )
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        .childChannelOption(ChannelOptions.autoRead, value: true)
+        .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+        .childChannelOption(.autoRead, value: true)
         .bind(
             host: "127.0.0.1",
             port: 0
@@ -367,7 +367,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         let channel: NIOAsyncChannel<EventLoopFuture<EventLoopFuture<NegotiationResult>>, Never> =
             try await ServerBootstrap(group: eventLoopGroup)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
             .bind(
                 host: "127.0.0.1",
                 port: 0
@@ -506,13 +506,13 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         let channel: NIOAsyncChannel<EventLoopFuture<NegotiationResult>, Never> = try await ServerBootstrap(
             group: eventLoopGroup
         )
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
         .serverChannelInitializer { channel in
             channel.eventLoop.makeCompletedFuture {
                 try channel.pipeline.syncOperations.addHandler(CollectingHandler(channels: channels))
             }
         }
-        .childChannelOption(ChannelOptions.autoRead, value: true)
+        .childChannelOption(.autoRead, value: true)
         .bind(
             host: "127.0.0.1",
             port: 0

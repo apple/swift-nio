@@ -1,4 +1,4 @@
-name: Pull Request
+name: Matrix
 
 on:
   workflow_call:
@@ -54,7 +54,7 @@ concurrency:
  
 jobs:
   linux:
-    name: ${{ matrix.swift.swift_version }}
+    name: Linux (${{ matrix.swift.swift_version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

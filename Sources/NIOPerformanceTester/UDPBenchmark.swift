@@ -45,7 +45,7 @@ extension UDPBenchmark: Benchmark {
         let address = try SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0)
         self.server = try DatagramBootstrap(group: group)
             // zero is the same as not applying the option.
-            .channelOption(ChannelOptions.datagramVectorReadMessageCount, value: self.vectorReads)
+            .channelOption(.datagramVectorReadMessageCount, value: self.vectorReads)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(EchoHandler())
             }
@@ -56,7 +56,7 @@ extension UDPBenchmark: Benchmark {
 
         self.client = try DatagramBootstrap(group: group)
             // zero is the same as not applying the option.
-            .channelOption(ChannelOptions.datagramVectorReadMessageCount, value: self.vectorReads)
+            .channelOption(.datagramVectorReadMessageCount, value: self.vectorReads)
             .channelInitializer { channel in
                 let handler = EchoHandlerClient(
                     eventLoop: channel.eventLoop,

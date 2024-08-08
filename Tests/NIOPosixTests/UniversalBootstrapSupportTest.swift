@@ -85,7 +85,7 @@ class UniversalBootstrapSupportTest: XCTestCase {
                     .channelInitializer { channel in
                         channel.pipeline.addHandlers(counter1, DropChannelReadsHandler(), counter2)
                     }
-                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .channelOption(.autoRead, value: false)
                     .connectTimeout(.hours(1))
                     .enableTLS()
                     .connect(to: server.localAddress!)
