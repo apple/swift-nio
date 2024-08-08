@@ -166,7 +166,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
 }
 
 @available(*, deprecated)
-extension UnsafeEmbeddedAtomic: @unchecked Sendable where T: Sendable { }
+extension UnsafeEmbeddedAtomic: @unchecked Sendable where T: Sendable {}
 
 /// An encapsulation of an atomic primitive object.
 ///
