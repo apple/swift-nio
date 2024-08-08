@@ -165,6 +165,9 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     }
 }
 
+@available(*, deprecated)
+extension UnsafeEmbeddedAtomic: @unchecked Sendable where T: Sendable {}
+
 /// An encapsulation of an atomic primitive object.
 ///
 /// Atomic objects support a wide range of atomic operations:
@@ -284,11 +287,27 @@ public final class Atomic<T: AtomicPrimitive> {
     }
 }
 
+@available(*, deprecated)
+extension Atomic: @unchecked Sendable where T: Sendable {}
+
 /// The protocol that all types that can be made atomic must conform to.
 ///
 /// **Do not add conformance to this protocol for arbitrary types**. Only a small range
 /// of types have appropriate atomic operations supported by the CPU, and those types
 /// already have conformances implemented.
+#if compiler(>=6.0)
+@preconcurrency
+public protocol AtomicPrimitive {
+    static var atomic_create: @Sendable (Self) -> OpaquePointer { get }
+    static var atomic_destroy: @Sendable (OpaquePointer) -> Void { get }
+    static var atomic_compare_and_exchange: @Sendable (OpaquePointer, Self, Self) -> Bool { get }
+    static var atomic_add: @Sendable (OpaquePointer, Self) -> Self { get }
+    static var atomic_sub: @Sendable (OpaquePointer, Self) -> Self { get }
+    static var atomic_exchange: @Sendable (OpaquePointer, Self) -> Self { get }
+    static var atomic_load: @Sendable (OpaquePointer) -> Self { get }
+    static var atomic_store: @Sendable (OpaquePointer, Self) -> Void { get }
+}
+#else
 public protocol AtomicPrimitive {
     static var atomic_create: (Self) -> OpaquePointer { get }
     static var atomic_destroy: (OpaquePointer) -> Void { get }
@@ -299,6 +318,7 @@ public protocol AtomicPrimitive {
     static var atomic_load: (OpaquePointer) -> Self { get }
     static var atomic_store: (OpaquePointer, Self) -> Void { get }
 }
+#endif
 
 extension Bool: AtomicPrimitive {
     public static let atomic_create = catmc_atomic__Bool_create
@@ -597,3 +617,6 @@ public final class AtomicBox<T: AnyObject> {
         _ = self.exchange(with: value)
     }
 }
+
+@available(*, deprecated)
+extension AtomicBox: @unchecked Sendable where T: Sendable {}
