@@ -288,7 +288,7 @@ public final class Atomic<T: AtomicPrimitive> {
 }
 
 @available(*, deprecated)
-extension Atomic: @unchecked Sendable where T: Sendable { }
+extension Atomic: @unchecked Sendable where T: Sendable {}
 
 /// The protocol that all types that can be made atomic must conform to.
 ///
@@ -619,4 +619,4 @@ public final class AtomicBox<T: AnyObject> {
 }
 
 @available(*, deprecated)
-extension AtomicBox: @unchecked Sendable where T: Sendable { }
+extension AtomicBox: @unchecked Sendable where T: Sendable {}

@@ -23,8 +23,12 @@ import CNIOAtomics
 @preconcurrency
 public protocol NIOAtomicPrimitive {
     associatedtype AtomicWrapper
-    static var nio_atomic_create_with_existing_storage: @Sendable (UnsafeMutablePointer<AtomicWrapper>, Self) -> Void { get }
-    static var nio_atomic_compare_and_exchange: @Sendable (UnsafeMutablePointer<AtomicWrapper>, Self, Self) -> Bool { get }
+    static var nio_atomic_create_with_existing_storage: @Sendable (UnsafeMutablePointer<AtomicWrapper>, Self) -> Void {
+        get
+    }
+    static var nio_atomic_compare_and_exchange: @Sendable (UnsafeMutablePointer<AtomicWrapper>, Self, Self) -> Bool {
+        get
+    }
     static var nio_atomic_add: @Sendable (UnsafeMutablePointer<AtomicWrapper>, Self) -> Self { get }
     static var nio_atomic_sub: @Sendable (UnsafeMutablePointer<AtomicWrapper>, Self) -> Self { get }
     static var nio_atomic_exchange: @Sendable (UnsafeMutablePointer<AtomicWrapper>, Self) -> Self { get }
