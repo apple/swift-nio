@@ -28,6 +28,12 @@ let strictConcurrencySettings: [SwiftSetting] = [
     .enableUpcomingFeature("InferSendableFromCaptures"),
 ]
 
+// Add these Swift settings to targets that need to be validated
+// for strict concurrency.
+let diagnosticSettings: [SwiftSetting] = [
+    .unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"]),
+]
+
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
 // Foundation will be linked. This is, however, strictly better than unconditionally adding the
 // resource.
@@ -71,7 +77,8 @@ let package = Package(
             ]
         ),
         .target(
-            name: "_NIODataStructures"
+            name: "_NIODataStructures",
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "_NIOBase64"
