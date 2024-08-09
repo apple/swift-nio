@@ -31,7 +31,7 @@ let strictConcurrencySettings: [SwiftSetting] = [
 // Add these Swift settings to targets that need to be validated
 // for strict concurrency.
 let diagnosticSettings: [SwiftSetting] = [
-    .unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"]),
+    .unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"])
 ]
 
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
