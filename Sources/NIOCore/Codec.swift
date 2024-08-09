@@ -793,9 +793,16 @@ public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelO
     private var state: State = .notInChannelYet
     private let encoder: Encoder
     private var buffer: ByteBuffer? = nil
+    private let desiredBufferCapacity: Int?
 
+    public init(_ encoder: Encoder, desiredBufferCapacity: Int) {
+        self.encoder = encoder
+        self.desiredBufferCapacity = desiredBufferCapacity
+    }
+    
     public init(_ encoder: Encoder) {
         self.encoder = encoder
+        self.desiredBufferCapacity = nil
     }
 }
 
@@ -842,6 +849,13 @@ extension MessageToByteHandler {
             self.state = .error(error)
             promise?.fail(error)
             context.fireErrorCaught(error)
+        }
+    }
+    
+    public func flush(context: ChannelHandlerContext) {
+        context.flush()
+        if let desiredBufferCapacity {
+            self.buffer?.shrinkBufferCapacity(to: desiredBufferCapacity)
         }
     }
 }

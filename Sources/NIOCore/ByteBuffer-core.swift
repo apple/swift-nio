@@ -884,6 +884,34 @@ public struct ByteBuffer {
         }
         return true
     }
+    
+    /// The `ByteBuffer` will successfully be shrunk if the requested capacity is less than the current capacity, 
+    /// and the requested capacity is more than the number of readable bytes in the buffer.
+    /// If either condition is not true, the buffer will not be shrunk.
+    ///
+    /// - Parameter desiredCapacity: The desired capacity for the buffers capacity to be shrunken to
+    /// - Returns: Bool indicating whether the buffer capacity has been shrunk to the desiredCapacity.
+    @inlinable
+    @discardableResult public mutating func shrinkBufferCapacity(to desiredCapacity: Int) -> Bool {
+        let desiredCapacity = ByteBuffer.addPaddingTo(desiredCapacity)
+        guard desiredCapacity < capacity, desiredCapacity > readableBytes else {
+            return false
+        }
+        
+        let shrunkenCapacity = _toCapacity(desiredCapacity)
+        self._storage = self._storage.reallocSlice(self._slice.lowerBound..<self._slice.lowerBound + shrunkenCapacity, capacity: shrunkenCapacity)
+        self._slice = self._storage.fullSlice
+
+        return true
+    }
+    
+    /// Returns size of capacity with optimal padding
+    /// - Parameter initialCapacity: Capacity that needs expansion with padding
+    /// - Returns: Capacity with calculated padding 
+    @inlinable
+    static func addPaddingTo(_ initialCapacity: Int) -> Int {
+        initialCapacity == 0 ? 0 : initialCapacity.nextPowerOf2()
+    }
 
     /// The reader index or the number of bytes previously read from this `ByteBuffer`. `readerIndex` is `0` for a
     /// newly allocated `ByteBuffer`.
