@@ -23,6 +23,11 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(
     condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
 
+let strictConcurrencySettings: [SwiftSetting] = [
+    .enableUpcomingFeature("StrictConcurrency"),
+    .enableUpcomingFeature("InferSendableFromCaptures"),
+]
+
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
 // Foundation will be linked. This is, however, strictly better than unconditionally adding the
 // resource.
@@ -150,7 +155,8 @@ let package = Package(
             name: "NIOConcurrencyHelpers",
             dependencies: [
                 "CNIOAtomics"
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOHTTP1",
