@@ -305,6 +305,10 @@ final class PendingStreamWritesManager: PendingWritesManager {
     var isEmpty: Bool {
         return self.state.isEmpty
     }
+    
+    var bufferedBytes: Int64 {
+        return self.state.bytes
+    }
 
     /// Add a pending write alongside its promise.
     ///
@@ -459,6 +463,7 @@ internal protocol PendingWritesManager: AnyObject {
     var writeSpinCount: UInt { get }
     var currentBestWriteMechanism: WriteMechanism { get }
     var channelWritabilityFlag: ManagedAtomic<Bool> { get }
+    var bufferedBytes: Int64 { get }
 
     /// Represents the writability state the last time we published a writability change to the `Channel`.
     /// This is used in `triggerWriteOperations` to determine whether we need to trigger a writability

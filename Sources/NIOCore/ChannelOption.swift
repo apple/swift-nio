@@ -287,6 +287,13 @@ extension ChannelOptions {
             public typealias Value = Bool
             public init() {}
         }
+        
+        /// `BufferedWritableBytesOption` allows users to know the number of writable bytes currently buffered in the `Channel`.
+        public struct BufferedWritableBytesOption: ChannelOption, Sendable {
+            public typealias Value = Int64
+            
+            public init() {}
+        }
     }
 }
 
@@ -354,6 +361,9 @@ public struct ChannelOptions: Sendable {
 
     /// - seealso: `ReceivePacketInfo`
     public static let receivePacketInfo = Types.ReceivePacketInfo()
+    
+    /// - seealso: `BufferedWritableBytesOption`
+    public static let bufferedWritableBytes = Types.BufferedWritableBytesOption()
 }
 
 extension ChannelOptions {
