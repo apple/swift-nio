@@ -799,7 +799,7 @@ public final class MessageToByteHandler<Encoder: MessageToByteEncoder>: ChannelO
         self.encoder = encoder
         self.desiredBufferCapacity = desiredBufferCapacity
     }
-    
+
     public init(_ encoder: Encoder) {
         self.encoder = encoder
         self.desiredBufferCapacity = nil
@@ -851,11 +851,11 @@ extension MessageToByteHandler {
             context.fireErrorCaught(error)
         }
     }
-    
+
     public func flush(context: ChannelHandlerContext) {
-        context.flush()
-        if let desiredBufferCapacity {
+        if let desiredBufferCapacity = self.desiredBufferCapacity {
             self.buffer?.shrinkBufferCapacity(to: desiredBufferCapacity)
         }
+        context.flush()
     }
 }

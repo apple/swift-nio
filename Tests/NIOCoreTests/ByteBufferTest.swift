@@ -1858,31 +1858,31 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0xaa, buffer.getInteger(at: 0, as: UInt8.self))
         XCTAssertEqual(0, buffer2.readableBytes)
     }
-    
-    func testShrinkBufferCapacity() {
+
+    func testShrinkBufferCapacityWithNoLeadingUnwrittenBytes() {
         let desiredCapacity = 1024
         var buffer = self.allocator.buffer(capacity: 512)
-        
+
         // For any item, it should not shrink buffer capacity to a value larger than the current buffer capacity
         buffer.clear()
         buffer.writeString("Any item")
         XCTAssertFalse(buffer.shrinkBufferCapacity(to: 2048))
         XCTAssertEqual(buffer.capacity, 512)
-        
+
         // If desired capacity are less than or equal to buffer capacity, should not shrink
         buffer.clear()
         buffer.writeString(String(repeating: "x", count: desiredCapacity))
-        XCTAssertEqual(buffer.capacity, 1024) // Before
+        XCTAssertEqual(buffer.capacity, 1024)  // Before
         XCTAssertFalse(buffer.shrinkBufferCapacity(to: desiredCapacity))
-        XCTAssertEqual(buffer.capacity, 1024) // After
-        
+        XCTAssertEqual(buffer.capacity, 1024)  // After
+
         // If desiredCapacity is less than readable bytes, do not shrink
         buffer.clear()
         buffer.writeString(String(repeating: "x", count: desiredCapacity + 1))
         XCTAssertEqual(buffer.capacity, 2048)
         XCTAssertFalse(buffer.shrinkBufferCapacity(to: desiredCapacity))
         XCTAssertEqual(buffer.capacity, 2048)
-        
+
         // If desired capacity is greater than the readable bytes and less than buffer capacity, should shrink to desiredCapacity.nextPowerOf2Clamp
         // Where desiredCapacity.nextPowerOf2Clamp == desiredCapacity as desiredCapacity should already be a power of 2 value
         buffer.clear()
@@ -1891,7 +1891,24 @@ class ByteBufferTest: XCTestCase {
         XCTAssertTrue(buffer.shrinkBufferCapacity(to: desiredCapacity))
         XCTAssertEqual(buffer.capacity, 1024)
     }
-    
+
+    func testShrinkBufferCapacityWithLeadingUnwrittenBytes() {
+        var buffer = self.allocator.buffer(capacity: 16384)
+        buffer.moveWriterIndex(to: 16000)
+        buffer.moveReaderIndex(to: 16000)
+        buffer.writeString("WW")
+        buffer.shrinkBufferCapacity(to: 4)
+        XCTAssertEqual("WW", String(buffer: buffer))
+
+        // If readable bytes is exactly the same as buffer capacity shrunken to
+        buffer = self.allocator.buffer(capacity: 16)
+        buffer.moveWriterIndex(to: 8)
+        buffer.moveReaderIndex(to: 8)
+        buffer.writeString("WWWWWWWW")  // 8 bytes written
+        buffer.shrinkBufferCapacity(to: 4)  // Invisible padding makes this 8 bytes
+        XCTAssertEqual("WWWWWWWW", String(buffer: buffer))  // All 8 bytes are returned!
+    }
+
     func testExpansionOfCapacityWithPadding() throws {
         XCTAssertEqual(ByteBuffer.addPaddingTo(12), 16)
         XCTAssertEqual(ByteBuffer.addPaddingTo(0), 0)

@@ -369,11 +369,12 @@ public struct ByteBuffer {
     @inline(never)
     mutating func _copyStorageAndRebase(capacity: _Capacity, resetIndices: Bool = false) {
         // This math has to be very careful, because we already know that in some call paths _readerIndex exceeds 1 << 24, and lots of this math
-        // is in UInt32 space. It's not hard for us to trip some of these conditions. As a result, I've heavily commented this
-        // fairly heavily to explain the math.
+        // is in UInt32 space. It's not hard for us to trip some of these conditions.
+        // As a result, I've heavily commented this function to explain the math.
 
         // Step 1: If we are resetting the indices, we need to slide the allocation by at least the current value of _readerIndex, so the new
         // value of _readerIndex will be 0. Otherwise we can leave them as they are.
+        // Resetting the indices will also ensure that leading unwritten bytes are not copied.
         let indexRebaseAmount = resetIndices ? self._readerIndex : 0
 
         // Step 2: We also want to only copy the bytes within the slice, and move them to index 0. As a result, we have this
@@ -884,8 +885,8 @@ public struct ByteBuffer {
         }
         return true
     }
-    
-    /// The `ByteBuffer` will successfully be shrunk if the requested capacity is less than the current capacity, 
+
+    /// The `ByteBuffer` will successfully be shrunk if the requested capacity is less than the current capacity,
     /// and the requested capacity is more than the number of readable bytes in the buffer.
     /// If either condition is not true, the buffer will not be shrunk.
     ///
@@ -894,20 +895,16 @@ public struct ByteBuffer {
     @inlinable
     @discardableResult public mutating func shrinkBufferCapacity(to desiredCapacity: Int) -> Bool {
         let desiredCapacity = ByteBuffer.addPaddingTo(desiredCapacity)
-        guard desiredCapacity < capacity, desiredCapacity > readableBytes else {
+        guard desiredCapacity < self.capacity, desiredCapacity > self.readableBytes else {
             return false
         }
-        
-        let shrunkenCapacity = _toCapacity(desiredCapacity)
-        self._storage = self._storage.reallocSlice(self._slice.lowerBound..<self._slice.lowerBound + shrunkenCapacity, capacity: shrunkenCapacity)
-        self._slice = self._storage.fullSlice
-
+        self._copyStorageAndRebase(capacity: _toCapacity(desiredCapacity), resetIndices: true)
         return true
     }
-    
+
     /// Returns size of capacity with optimal padding
     /// - Parameter initialCapacity: Capacity that needs expansion with padding
-    /// - Returns: Capacity with calculated padding 
+    /// - Returns: Capacity with calculated padding
     @inlinable
     static func addPaddingTo(_ initialCapacity: Int) -> Int {
         initialCapacity == 0 ? 0 : initialCapacity.nextPowerOf2()
