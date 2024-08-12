@@ -34,13 +34,13 @@ let strictConcurrencySettings: [SwiftSetting] = {
         .enableUpcomingFeature("InferSendableFromCaptures"),
     ])
 
-#if compiler(>=6.0)
+    #if compiler(>=6.0)
     if ProcessInfo.processInfo.environment["CI"] != nil {
         // -warnings-as-errors here is a workaround so that IDE-based development can
         // get tripped up on -require-explicit-sendable.
         initialSettings.append(.unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"]))
     }
-#endif
+    #endif
 
     return initialSettings
 }()
