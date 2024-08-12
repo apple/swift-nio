@@ -1256,14 +1256,15 @@ final class FileHandleTests: XCTestCase {
                 lastAccess: nil,
                 lastDataModification: nil
             )
-            let estimatedCurrentTime = Date.now.timeIntervalSince1970
+            let estimatedCurrentTimeInSeconds = Date.now.timeIntervalSince1970
 
-            // Assert that the times are equal to the current time, with up to a second difference (to avoid timing flakiness).
+            // Assert that the times are equal to the current time, with up to 10 seconds difference
+            // to avoid timing flakiness. Both the last accessed and last modification times should
+            // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
-            XCTAssertEqual(Float(actualLastAccessTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
-
+            XCTAssertEqual(Double(actualLastAccessTime.seconds), estimatedCurrentTimeInSeconds, accuracy: 1)
             actualLastDataModificationTime = try await handle.info().lastDataModificationTime
-            XCTAssertEqual(Float(actualLastDataModificationTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+            XCTAssertEqual(actualLastDataModificationTime.seconds, actualLastAccessTime.seconds)
         }
     }
 
@@ -1283,14 +1284,15 @@ final class FileHandleTests: XCTestCase {
             XCTAssertEqual(actualLastDataModificationTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
 
             try await handle.touch()
-            let estimatedCurrentTime = Date.now.timeIntervalSince1970
+            let estimatedCurrentTimeInSeconds = Date.now.timeIntervalSince1970
 
-            // Assert that the times are equal to the current time, with up to a second difference (to avoid timing flakiness).
+            // Assert that the times are equal to the current time, with up to 10 seconds difference
+            // to avoid timing flakiness. Both the last accessed and last modification times should
+            // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
-            XCTAssertEqual(Float(actualLastAccessTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
-
+            XCTAssertEqual(Double(actualLastAccessTime.seconds), estimatedCurrentTimeInSeconds, accuracy: 1)
             actualLastDataModificationTime = try await handle.info().lastDataModificationTime
-            XCTAssertEqual(Float(actualLastDataModificationTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+            XCTAssertEqual(actualLastDataModificationTime.seconds, actualLastAccessTime.seconds)
         }
     }
 }
