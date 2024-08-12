@@ -440,15 +440,18 @@ let package = Package(
             dependencies: [
                 "NIOConcurrencyHelpers",
                 "NIOCore",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIODataStructuresTests",
-            dependencies: ["_NIODataStructures"]
+            dependencies: ["_NIODataStructures"],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOBase64Tests",
-            dependencies: ["_NIOBase64"]
+            dependencies: ["_NIOBase64"],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOHTTP1Tests",
