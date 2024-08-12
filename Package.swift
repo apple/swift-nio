@@ -27,6 +27,8 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(
     condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
 
+let strictConcurrencyDevelopment = false
+
 let strictConcurrencySettings: [SwiftSetting] = {
     var initialSettings: [SwiftSetting] = []
     initialSettings.append(contentsOf: [
@@ -34,13 +36,11 @@ let strictConcurrencySettings: [SwiftSetting] = {
         .enableUpcomingFeature("InferSendableFromCaptures"),
     ])
 
-    #if compiler(>=6.0)
-    if ProcessInfo.processInfo.environment["CI"] != nil {
+    if strictConcurrencyDevelopment {
         // -warnings-as-errors here is a workaround so that IDE-based development can
         // get tripped up on -require-explicit-sendable.
         initialSettings.append(.unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"]))
     }
-    #endif
 
     return initialSettings
 }()
