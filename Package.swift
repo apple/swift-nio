@@ -15,6 +15,10 @@
 
 import PackageDescription
 
+// Used only for environment variables, does not make its way
+// into the product code.
+import class Foundation.ProcessInfo
+
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(
@@ -23,16 +27,23 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(
     condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
 
-let strictConcurrencySettings: [SwiftSetting] = [
-    .enableUpcomingFeature("StrictConcurrency"),
-    .enableUpcomingFeature("InferSendableFromCaptures"),
-]
+let strictConcurrencyDevelopment = false
 
-// Add these Swift settings to targets that need to be validated
-// for strict concurrency.
-let diagnosticSettings: [SwiftSetting] = [
-    .unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"])
-]
+let strictConcurrencySettings: [SwiftSetting] = {
+    var initialSettings: [SwiftSetting] = []
+    initialSettings.append(contentsOf: [
+        .enableUpcomingFeature("StrictConcurrency"),
+        .enableUpcomingFeature("InferSendableFromCaptures"),
+    ])
+
+    if strictConcurrencyDevelopment {
+        // -warnings-as-errors here is a workaround so that IDE-based development can
+        // get tripped up on -require-explicit-sendable.
+        initialSettings.append(.unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"]))
+    }
+
+    return initialSettings
+}()
 
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
 // Foundation will be linked. This is, however, strictly better than unconditionally adding the
@@ -81,7 +92,8 @@ let package = Package(
             swiftSettings: strictConcurrencySettings
         ),
         .target(
-            name: "_NIOBase64"
+            name: "_NIOBase64",
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOEmbedded",
