@@ -1258,7 +1258,7 @@ final class FileHandleTests: XCTestCase {
             )
             let estimatedCurrentTimeInSeconds = Date.now.timeIntervalSince1970
 
-            // Assert that the times are equal to the current time, with up to 10 seconds difference
+            // Assert that the times are equal to the current time, with up to a second difference
             // to avoid timing flakiness. Both the last accessed and last modification times should
             // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
@@ -1286,7 +1286,7 @@ final class FileHandleTests: XCTestCase {
             try await handle.touch()
             let estimatedCurrentTimeInSeconds = Date.now.timeIntervalSince1970
 
-            // Assert that the times are equal to the current time, with up to 10 seconds difference
+            // Assert that the times are equal to the current time, with up to a second difference
             // to avoid timing flakiness. Both the last accessed and last modification times should
             // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
