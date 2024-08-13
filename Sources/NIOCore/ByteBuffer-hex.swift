@@ -25,13 +25,9 @@ extension ByteBuffer {
     ///         size followed by a `writeHexEncodedBytes` instead of using this method. This allows SwiftNIO to do
     ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
     init(hexEncodedBytes string: String) {
-        let hexPlainDecodedBytes = string.hexPlainDecodedBytes
-        guard !hexPlainDecodedBytes.isEmpty else {
-            self = ByteBufferAllocator.zeroCapacityWithDefaultAllocator
-            return
-        }
-
-        self = ByteBufferAllocator().buffer(bytes: hexPlainDecodedBytes)
+        var buffer = ByteBuffer()
+        buffer.writeHexEncodedBytes(string)
+        self = buffer
     }
 
     /// Describes a ByteBuffer hexDump format.
@@ -365,7 +361,8 @@ extension ByteBuffer {
 extension String {
     /// Plain decode a string representing a hexadecimal sequence them into an UInt8 sequence
     /// - Complexity: O(n)
-    public var hexPlainDecodedBytes: [UInt8] {
+    @inlinable
+    var hexPlainDecodedBytes: UnfoldSequence<UInt8, String> {
         let stringWithoutWhiteSpaces = self.filter { !$0.isWhitespace }
         return sequence(
             state: stringWithoutWhiteSpaces,
@@ -378,6 +375,6 @@ extension String {
                 remainder.removeFirst(2)
                 return UInt8(nextTwo, radix: 16)
             }
-        ).map { $0 }
+        )
     }
 }
