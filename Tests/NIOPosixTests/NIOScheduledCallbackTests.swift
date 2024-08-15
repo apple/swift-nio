@@ -273,7 +273,7 @@ private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler {
         self.callbackStreamContinuation.yield()
     }
 
-    func onCancelScheduledCallback(eventLoop: some EventLoop) {
+    func didCancelScheduledCallback(eventLoop: some EventLoop) {
         self.cancelCount += 1
     }
 

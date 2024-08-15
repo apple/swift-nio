@@ -27,12 +27,12 @@ public protocol NIOScheduledCallbackHandler {
     /// implicitly, if it was still pending when the event loop was shut down.
     ///
     /// - Parameter eventLoop: The event loop on which the callback was scheduled.
-    func onCancelScheduledCallback(eventLoop: some EventLoop)
+    func didCancelScheduledCallback(eventLoop: some EventLoop)
 }
 
 extension NIOScheduledCallbackHandler {
-    /// Default implementation of `onCancelScheduledCallback(eventLoop:)`: does nothing.
-    public func onCancelScheduledCallback(eventLoop: some EventLoop) {}
+    /// Default implementation of `didCancelScheduledCallback(eventLoop:)`: does nothing.
+    public func didCancelScheduledCallback(eventLoop: some EventLoop) {}
 }
 
 /// An opaque handle that can be used to cancel a scheduled callback.
@@ -97,7 +97,7 @@ extension EventLoop {
         let task = self.scheduleTask(deadline: deadline) { handler.handleScheduledCallback(eventLoop: self) }
         task.futureResult.whenFailure { error in
             if case .cancelled = error as? EventLoopError {
-                handler.onCancelScheduledCallback(eventLoop: self)
+                handler.didCancelScheduledCallback(eventLoop: self)
             }
         }
         return NIOScheduledCallback(self, task)

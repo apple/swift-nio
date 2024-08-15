@@ -702,7 +702,7 @@ internal final class SelectableEventLoop: EventLoop {
                         failFn(EventLoopError._shutdown)
                     // Call the cancellation handler for all the scheduled callbacks.
                     case .callback(let handler):
-                        handler.onCancelScheduledCallback(eventLoop: self)
+                        handler.didCancelScheduledCallback(eventLoop: self)
                     }
                 }
 
@@ -955,7 +955,7 @@ extension SelectableEventLoop {
             guard case .callback(let handler) = scheduledTask.kind else {
                 preconditionFailure("Incorrect task kind for callback")
             }
-            handler.onCancelScheduledCallback(eventLoop: self)
+            handler.didCancelScheduledCallback(eventLoop: self)
         }
     }
 }
