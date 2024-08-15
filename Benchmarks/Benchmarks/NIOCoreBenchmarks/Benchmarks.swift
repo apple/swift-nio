@@ -23,7 +23,12 @@ let benchmarks = {
 
     Benchmark(
         "NIOAsyncChannel.init",
-        configuration: Benchmark.Configuration(metrics: defaultMetrics)
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 10
+        )
     ) { benchmark in
         // Elide the cost of the 'EmbeddedChannel'. It's only used for its pipeline.
         var channels: [EmbeddedChannel] = []
