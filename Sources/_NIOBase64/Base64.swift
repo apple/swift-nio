@@ -35,7 +35,7 @@ public enum Base64Error: Error {
 }
 
 @usableFromInline
-internal struct Base64 {
+internal enum Base64: Sendable {
 
     @inlinable
     static func encode<Buffer: Collection>(bytes: Buffer) -> String where Buffer.Element == UInt8 {
