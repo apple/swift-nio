@@ -120,7 +120,7 @@ private func serverHTTPChannelWithAutoremoval(
 ) throws -> (Channel, EventLoopFuture<Channel>) {
     let p = group.next().makePromise(of: Channel.self)
     let c = try ServerBootstrap(group: group)
-        .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+        .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
         .childChannelInitializer { channel in
             p.succeed(channel)
             let upgradeConfig = (upgraders: upgraders, completionHandler: upgradeCompletionHandler)
@@ -1774,7 +1774,7 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
     ) throws -> (Channel, Channel, Channel) {
         let connectionChannelPromise = Self.eventLoop.makePromise(of: Channel.self)
         let serverChannelFuture = ServerBootstrap(group: Self.eventLoop)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
             .childChannelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
                     connectionChannelPromise.succeed(channel)

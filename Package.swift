@@ -15,6 +15,10 @@
 
 import PackageDescription
 
+// Used only for environment variables, does not make its way
+// into the product code.
+import class Foundation.ProcessInfo
+
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(
@@ -22,6 +26,24 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(
     package: "swift-system",
     condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
+
+let strictConcurrencyDevelopment = false
+
+let strictConcurrencySettings: [SwiftSetting] = {
+    var initialSettings: [SwiftSetting] = []
+    initialSettings.append(contentsOf: [
+        .enableUpcomingFeature("StrictConcurrency"),
+        .enableUpcomingFeature("InferSendableFromCaptures"),
+    ])
+
+    if strictConcurrencyDevelopment {
+        // -warnings-as-errors here is a workaround so that IDE-based development can
+        // get tripped up on -require-explicit-sendable.
+        initialSettings.append(.unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"]))
+    }
+
+    return initialSettings
+}()
 
 // This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
 // Foundation will be linked. This is, however, strictly better than unconditionally adding the
@@ -66,10 +88,12 @@ let package = Package(
             ]
         ),
         .target(
-            name: "_NIODataStructures"
+            name: "_NIODataStructures",
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
-            name: "_NIOBase64"
+            name: "_NIOBase64",
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOEmbedded",
@@ -150,7 +174,8 @@ let package = Package(
             name: "NIOConcurrencyHelpers",
             dependencies: [
                 "CNIOAtomics"
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOHTTP1",
@@ -415,15 +440,18 @@ let package = Package(
             dependencies: [
                 "NIOConcurrencyHelpers",
                 "NIOCore",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIODataStructuresTests",
-            dependencies: ["_NIODataStructures"]
+            dependencies: ["_NIODataStructures"],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOBase64Tests",
-            dependencies: ["_NIOBase64"]
+            dependencies: ["_NIOBase64"],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOHTTP1Tests",

@@ -43,7 +43,7 @@ private final class EchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 var bootstrap = DatagramBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR
-    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .channelOption(.socketOption(.so_reuseaddr), value: 1)
 
     // Set the handlers that are applied to the bound channel
     .channelInitializer { channel in
@@ -57,9 +57,9 @@ defer {
 
 var arguments = CommandLine.arguments.dropFirst(0)  // just to get an ArraySlice<String> from [String]
 if arguments.dropFirst().first == .some("--enable-gathering-reads") {
-    bootstrap = bootstrap.channelOption(ChannelOptions.datagramVectorReadMessageCount, value: 30)
+    bootstrap = bootstrap.channelOption(.datagramVectorReadMessageCount, value: 30)
     bootstrap = bootstrap.channelOption(
-        ChannelOptions.recvAllocator,
+        .recvAllocator,
         value: FixedSizeRecvByteBufferAllocator(capacity: 30 * 2048)
     )
     arguments = arguments.dropFirst()

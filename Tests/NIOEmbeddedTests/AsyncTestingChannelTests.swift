@@ -514,7 +514,7 @@ class AsyncTestingChannelTests: XCTestCase {
             let options = channel.syncOptions
             XCTAssertNotNil(options)
             // Unconditionally returns true.
-            XCTAssertEqual(try options?.getOption(ChannelOptions.autoRead), true)
+            XCTAssertEqual(try options?.getOption(.autoRead), true)
             // (Setting options isn't supported.)
         }.wait()
     }
@@ -525,7 +525,7 @@ class AsyncTestingChannelTests: XCTestCase {
             let options = channel.syncOptions
             XCTAssertNotNil(options)
             // Unconditionally returns true.
-            XCTAssertEqual(try options?.getOption(ChannelOptions.autoRead), true)
+            XCTAssertEqual(try options?.getOption(.autoRead), true)
         }.wait()
     }
 
@@ -536,13 +536,13 @@ class AsyncTestingChannelTests: XCTestCase {
             XCTAssertNotNil(options)
 
             // allowRemoteHalfClosure should be false by default
-            XCTAssertEqual(try options?.getOption(ChannelOptions.allowRemoteHalfClosure), false)
+            XCTAssertEqual(try options?.getOption(.allowRemoteHalfClosure), false)
 
             channel.allowRemoteHalfClosure = true
-            XCTAssertEqual(try options?.getOption(ChannelOptions.allowRemoteHalfClosure), true)
+            XCTAssertEqual(try options?.getOption(.allowRemoteHalfClosure), true)
 
-            XCTAssertNoThrow(try options?.setOption(ChannelOptions.allowRemoteHalfClosure, value: false))
-            XCTAssertEqual(try options?.getOption(ChannelOptions.allowRemoteHalfClosure), false)
+            XCTAssertNoThrow(try options?.setOption(.allowRemoteHalfClosure, value: false))
+            XCTAssertEqual(try options?.getOption(.allowRemoteHalfClosure), false)
         }.wait()
     }
 

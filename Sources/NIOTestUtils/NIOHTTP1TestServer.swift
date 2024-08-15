@@ -226,7 +226,7 @@ public final class NIOHTTP1TestServer {
         }.flatMap {
             channel.pipeline.addHandler(WebServerHandler(webServer: self))
         }.whenSuccess {
-            _ = channel.setOption(ChannelOptions.autoRead, value: true)
+            _ = channel.setOption(.autoRead, value: true)
         }
     }
 
@@ -239,7 +239,7 @@ public final class NIOHTTP1TestServer {
         self.aggregateBody = aggregateBody
 
         self.serverChannel = try! ServerBootstrap(group: self.eventLoop)
-            .childChannelOption(ChannelOptions.autoRead, value: false)
+            .childChannelOption(.autoRead, value: false)
             .childChannelInitializer { channel in
                 switch self.state {
                 case .channelsAvailable(var channels):

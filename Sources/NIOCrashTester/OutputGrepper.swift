@@ -29,7 +29,7 @@ internal struct OutputGrepper {
 
         // We gotta `dup` everything because Pipe is bad and closes file descriptors on `deinit` :(
         let channelFuture = NIOPipeBootstrap(group: group)
-            .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .channelOption(.allowRemoteHalfClosure, value: true)
             .channelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandlers([

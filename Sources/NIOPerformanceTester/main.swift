@@ -160,7 +160,7 @@ defer {
 }
 
 let serverChannel = try ServerBootstrap(group: group)
-    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
     .childChannelInitializer { channel in
         channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
             channel.pipeline.addHandler(SimpleHTTPServer())

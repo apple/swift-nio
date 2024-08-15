@@ -207,8 +207,8 @@ final class SALChannelTest: XCTestCase, SALTest {
 
                 try self.assertParkedRightNow()
             }) { () -> EventLoopFuture<Void> in
-                channel.setOption(ChannelOptions.writeSpin, value: 0).flatMap {
-                    channel.setOption(ChannelOptions.writeBufferWaterMark, value: .init(low: 1, high: 1))
+                channel.setOption(.writeSpin, value: 0).flatMap {
+                    channel.setOption(.writeBufferWaterMark, value: .init(low: 1, high: 1))
                 }.flatMap {
                     channel.pipeline.addHandler(
                         DoWriteFromWritabilityChangedNotification(
@@ -328,7 +328,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertClose(expectedFD: .max)
             }) {
                 ClientBootstrap(group: channel.eventLoop)
-                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .channelOption(.autoRead, value: false)
                     .testOnly_connect(injectedChannel: channel, to: serverAddress)
                     .flatMap { channel in
                         channel.close()
@@ -373,8 +373,8 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertClose(expectedFD: .max)
             }) {
                 ClientBootstrap(group: channel.eventLoop)
-                    .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .channelOption(.socketOption(.so_reuseaddr), value: 1)
+                    .channelOption(.autoRead, value: false)
                     .bind(to: localAddress)
                     .testOnly_connect(injectedChannel: channel, to: serverAddress)
                     .flatMap { channel in
@@ -585,7 +585,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertClose(expectedFD: .max)
             }) {
                 ClientBootstrap(group: channel.eventLoop)
-                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .channelOption(.autoRead, value: false)
                     .channelInitializer { channel in
                         channel.write(firstWrite, promise: nil)
                         channel.write(secondWrite).whenComplete { _ in
@@ -640,7 +640,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertClose(expectedFD: .max)
             }) {
                 ClientBootstrap(group: channel.eventLoop)
-                    .channelOption(ChannelOptions.autoRead, value: false)
+                    .channelOption(.autoRead, value: false)
                     .channelInitializer { channel in
                         channel.write(firstWrite, promise: nil)
                         channel.write(secondWrite).whenComplete { _ in
@@ -700,8 +700,8 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertClose(expectedFD: .max)
             }) {
                 ClientBootstrap(group: channel.eventLoop)
-                    .channelOption(ChannelOptions.autoRead, value: false)
-                    .channelOption(ChannelOptions.writeSpin, value: 1)
+                    .channelOption(.autoRead, value: false)
+                    .channelOption(.writeSpin, value: 1)
                     .channelInitializer { channel in
                         channel.write(firstWrite).whenComplete { _ in
                             // An extra EL spin here to ensure that the close doesn't
@@ -760,8 +760,8 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertClose(expectedFD: .max)
             }) {
                 ClientBootstrap(group: channel.eventLoop)
-                    .channelOption(ChannelOptions.autoRead, value: false)
-                    .channelOption(ChannelOptions.writeSpin, value: 1)
+                    .channelOption(.autoRead, value: false)
+                    .channelOption(.writeSpin, value: 1)
                     .channelInitializer { channel in
                         channel.write(firstWrite).whenComplete { _ in
                             // No EL spin here so the close happens in the middle of the write spin.
@@ -866,7 +866,7 @@ final class SALChannelTest: XCTestCase, SALTest {
         let firstWrite = ByteBuffer(string: "foo")
         let secondWrite = ByteBuffer(string: "bar")
         var childChannelOptions = ChannelOptions.Storage()
-        childChannelOptions.append(key: ChannelOptions.autoRead, value: false)
+        childChannelOptions.append(key: .autoRead, value: false)
 
         XCTAssertNoThrow(
             try channel.eventLoop.runSAL(syscallAssertions: {
@@ -954,7 +954,7 @@ final class SALChannelTest: XCTestCase, SALTest {
         let firstWrite = ByteBuffer(string: "foo")
         let secondWrite = ByteBuffer(string: "bar")
         var childChannelOptions = ChannelOptions.Storage()
-        childChannelOptions.append(key: ChannelOptions.autoRead, value: false)
+        childChannelOptions.append(key: .autoRead, value: false)
 
         XCTAssertNoThrow(
             try channel.eventLoop.runSAL(syscallAssertions: {

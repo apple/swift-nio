@@ -604,22 +604,22 @@ func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
 let fileIO = NonBlockingFileIO(threadPool: .singleton)
 let socketBootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup.singleton)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .serverChannelOption(ChannelOptions.backlog, value: 256)
-    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .serverChannelOption(.backlog, value: 256)
+    .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
 
     // Set the handlers that are applied to the accepted Channels
     .childChannelInitializer(childChannelInitializer(channel:))
 
     // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-    .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-    .childChannelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
+    .childChannelOption(.socketOption(.so_reuseaddr), value: 1)
+    .childChannelOption(.maxMessagesPerRead, value: 1)
+    .childChannelOption(.allowRemoteHalfClosure, value: allowHalfClosure)
 let pipeBootstrap = NIOPipeBootstrap(group: MultiThreadedEventLoopGroup.singleton)
     // Set the handlers that are applied to the accepted Channels
     .channelInitializer(childChannelInitializer(channel:))
 
-    .channelOption(ChannelOptions.maxMessagesPerRead, value: 1)
-    .channelOption(ChannelOptions.allowRemoteHalfClosure, value: allowHalfClosure)
+    .channelOption(.maxMessagesPerRead, value: 1)
+    .channelOption(.allowRemoteHalfClosure, value: allowHalfClosure)
 print("htdocs = \(htdocs)")
 
 let channel = try { () -> Channel in

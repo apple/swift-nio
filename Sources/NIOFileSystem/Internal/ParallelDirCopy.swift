@@ -134,6 +134,8 @@ extension FileSystem {
                     if let item = item {
                         keepConsuming = !onNextItem(item)
                     } else {
+                        // To accurately propagate the cancellation we must check here too
+                        try Task.checkCancellation()
                         keepConsuming = false
                     }
                 }

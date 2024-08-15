@@ -313,6 +313,24 @@ public enum Libc {
     }
     #endif
 
+    #if canImport(Darwin)
+    @_spi(Testing)
+    public static func copyfile(
+        from source: FilePath,
+        to destination: FilePath,
+        state: copyfile_state_t?,
+        flags: copyfile_flags_t
+    ) -> Result<Void, Errno> {
+        source.withPlatformString { sourcePath in
+            destination.withPlatformString { destinationPath in
+                nothingOrErrno(retryOnInterrupt: false) {
+                    libc_copyfile(sourcePath, destinationPath, state, flags)
+                }
+            }
+        }
+    }
+    #endif
+
     @_spi(Testing)
     public static func remove(
         _ path: FilePath

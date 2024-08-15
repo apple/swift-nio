@@ -14,7 +14,7 @@
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
-@_spi(Testing) import _NIOFileSystem
+@_spi(Testing) @testable import _NIOFileSystem
 @preconcurrency import SystemPackage
 import XCTest
 import NIOConcurrencyHelpers
@@ -659,14 +659,14 @@ final class FileSystemTests: XCTestCase {
     /// This is is not quite the same as sequential, different code paths are used.
     /// Tests using this ensure use of the parallel paths (which are more complex) while keeping actual
     /// parallelism to minimal levels to make debugging simpler.
-    private let minimalParallel: CopyStrategy = try! .parallel(maxDescriptors: 2)
+    private static let minimalParallel: CopyStrategy = try! .parallel(maxDescriptors: 2)
 
     func testCopyEmptyDirectorySequential() async throws {
         try await testCopyEmptyDirectory(.sequential)
     }
 
     func testCopyEmptyDirectoryParallelMinimal() async throws {
-        try await testCopyEmptyDirectory(minimalParallel)
+        try await testCopyEmptyDirectory(Self.minimalParallel)
     }
 
     func testCopyEmptyDirectoryParallelDefault() async throws {
@@ -690,7 +690,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyOnGeneratedTreeStructureParallelMinimal() async throws {
-        try await testAnyCopyStrategyOnGeneratedTreeStructure(minimalParallel)
+        try await testAnyCopyStrategyOnGeneratedTreeStructure(Self.minimalParallel)
     }
 
     func testCopyOnGeneratedTreeStructureParallelDefault() async throws {
@@ -737,7 +737,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopySelectivelyParallelMinimal() async throws {
-        try await testCopySelectively(minimalParallel)
+        try await testCopySelectively(Self.minimalParallel)
     }
 
     func testCopySelectivelyParallelDefault() async throws {
@@ -780,7 +780,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyCancelledPartWayThroughParallelMinimal() async throws {
-        try await testCopyCancelledPartWayThrough(minimalParallel)
+        try await testCopyCancelledPartWayThrough(Self.minimalParallel)
     }
 
     func testCopyCancelledPartWayThroughParallelDefault() async throws {
@@ -791,10 +791,49 @@ final class FileSystemTests: XCTestCase {
         _ copyStrategy: CopyStrategy,
         line: UInt = #line
     ) async throws {
-        let path = try await self.fs.temporaryFilePath()
+        // Whitebox testing to cover specific scenarios
+        switch copyStrategy.wrapped {
+        case let .parallel(maxDescriptors):
+            // The use of nested directories here allows us to rely on deterministic ordering
+            // of the shouldCopy calls that are used to trigger the cancel. If we used files then directory
+            // listing is not deterministic in general and that could make tests unreliable.
+            // If maxDescriptors gets too high the resulting recursion might result in the test failing.
+            // At that stage the tests would need some rework, but it's not viewed as likely given that
+            // the maxDescriptors defaults should remain small.
 
+            // Each dir consumes two descriptors, so this source can cover all scenarios.
+            let depth = maxDescriptors + 1
+            let path = try await self.fs.temporaryFilePath()
+            try await self.generateDeterministicDirectoryStructure(
+                root: path,
+                structure: TestFileStructure.makeNestedDirs(depth) {
+                    .init("dir-\(depth - $0)")!
+                }
+            )
+
+            // This covers cancelling before/at the point we reach the limit.
+            // If the maxDescriptors is sufficiently low we simply can't trigger
+            // inside that phase so don't try.
+            if maxDescriptors >= 4 {
+                try await testCopyCancelledPartWayThrough(copyStrategy, "early_complete", path) {
+                    $0.path.lastComponent!.string == "dir-0"
+                }
+            }
+
+            // This covers completing after we reach the steady state phase.
+            let triggerAt = "dir-\(maxDescriptors / 2 + 1)"
+            try await testCopyCancelledPartWayThrough(copyStrategy, "late_complete", path) {
+                $0.path.lastComponent!.string == triggerAt
+            }
+        case .sequential:
+            // nothing much to whitebox test here
+            break
+        }
+        // Keep doing random ones as a sort of fuzzing, it previously highlighted some interesting cases
+        // that are now covered in the whitebox tests above
+        let randomPath = try await self.fs.temporaryFilePath()
         let _ = try await self.generateDirectoryStructure(
-            root: path,
+            root: randomPath,
             // Ensure:
             // - Parallelism is possible in directory scans.
             // - There are sub directories underneath the point we trigger cancel
@@ -803,6 +842,22 @@ final class FileSystemTests: XCTestCase {
             directoryProbability: 1.0,
             symbolicLinkProbability: 0.0
         )
+        try await testCopyCancelledPartWayThrough(
+            copyStrategy,
+            "randomly generated",
+            randomPath
+        ) { source in
+            source.path != randomPath && source.path.removingLastComponent() != randomPath
+        }
+    }
+
+    private func testCopyCancelledPartWayThrough(
+        _ copyStrategy: CopyStrategy,
+        _ description: String,
+        _ path: FilePath,
+        triggerCancel: @escaping (DirectoryEntry) -> Bool,
+        line: UInt = #line
+    ) async throws {
 
         let copyPath = try await self.fs.temporaryFilePath()
 
@@ -814,7 +869,7 @@ final class FileSystemTests: XCTestCase {
                 throw error
             } shouldCopyItem: { source, destination in
                 // Abuse shouldCopy to trigger the cancellation after getting some way in.
-                if source.path != path && source.path.removingLastComponent() != path {
+                if triggerCancel(source) {
                     let shouldSleep = requestedCancel.withLockedValue { requested in
                         if !requested {
                             requested = true
@@ -827,13 +882,13 @@ final class FileSystemTests: XCTestCase {
                     // Give the cancellation time to kick in, this should be more than plenty.
                     if shouldSleep {
                         do {
-                            try await Task.sleep(for: .seconds(3))
-                            XCTFail("Should have been cancelled by now!")
+                            try await Task.sleep(nanoseconds: 3_000_000_000)
+                            XCTFail("\(description) Should have been cancelled by now!")
                         } catch is CancellationError {
                             // This is fine - we got cancelled as desired, let the rest of the in flight
                             // logic wind down cleanly (we hope/assert)
                         } catch let error {
-                            XCTFail("just expected a cancellation error not \(error)")
+                            XCTFail("\(description) just expected a cancellation error not \(error)")
                         }
                     }
                 }
@@ -854,13 +909,13 @@ final class FileSystemTests: XCTestCase {
         let result = await task.result
         switch result {
         case let .success(msg):
-            XCTFail("expected the cancellation to have happened : \(msg)")
+            XCTFail("\(description) expected the cancellation to have happened : \(msg)")
 
         case let .failure(err):
             if err is CancellationError {
                 // success
             } else {
-                XCTFail("expected CancellationError not \(err)")
+                XCTFail("\(description) expected CancellationError not \(err)")
             }
         }
         // We can't assert anything about the state of the copy,
@@ -872,7 +927,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyNonExistentFileParallelMinimal() async throws {
-        try await testCopyNonExistentFile(minimalParallel)
+        try await testCopyNonExistentFile(Self.minimalParallel)
     }
 
     func testCopyNonExistentFileParallelDefault() async throws {
@@ -898,7 +953,7 @@ final class FileSystemTests: XCTestCase {
     }
 
     func testCopyToExistingDestinationParallelMinimal() async throws {
-        try await testCopyToExistingDestination(minimalParallel)
+        try await testCopyToExistingDestination(Self.minimalParallel)
     }
 
     func testCopyToExistingDestinationParallelDefault() async throws {
@@ -1359,6 +1414,92 @@ extension FileSystemTests {
         XCTAssertEqual(destination1, destination2)
     }
 
+    /// Declare a directory structure in code to make with ``generateDeterministicDirectoryStructure``
+    fileprivate enum TestFileStructure {
+        case dir(_ name: FilePath.Component, _ contents: [TestFileStructure] = [])
+        case file(_ name: FilePath.Component)
+        // don't care about the destination yet
+        case symbolicLink(_ name: FilePath.Component)
+
+        static func makeNestedDirs(
+            _ depth: Int,
+            namer: (Int) -> FilePath.Component = { .init("dir-\($0)")! }
+        ) -> [TestFileStructure] {
+            let name = namer(depth)
+            guard depth > 0 else {
+                return []
+            }
+            return [.dir(name, makeNestedDirs(depth - 1, namer: namer))]
+        }
+
+        static func makeManyFiles(
+            _ num: Int,
+            namer: (Int) -> FilePath.Component = { .init("file-\($0)")! }
+        ) -> [TestFileStructure] {
+            (0..<num).map { .file(namer($0)) }
+        }
+    }
+
+    /// This generates a directory structure to cover specific scenarios easily
+    private func generateDeterministicDirectoryStructure(
+        root: FilePath,
+        structure: [TestFileStructure]
+    ) async throws {
+        // always make root
+        try await self.fs.createDirectory(
+            at: root,
+            withIntermediateDirectories: false,
+            permissions: nil
+        )
+
+        for item in structure {
+            switch item {
+            case let .dir(name, contents):
+                try await self.generateDeterministicDirectoryStructure(
+                    root: root.appending(name),
+                    structure: contents
+                )
+            case let .file(name):
+                try await self.makeTestFile(root.appending(name))
+            case let .symbolicLink(name):
+                try await self.fs.createSymbolicLink(
+                    at: root.appending(name),
+                    withDestination: "nonexistent-destination"
+                )
+            }
+        }
+    }
+
+    fileprivate func makeTestFile(
+        _ path: FilePath,
+        tryAddAttribute: String? = .none
+    ) async throws {
+        try await self.fs.withFileHandle(
+            forWritingAt: path,
+            options: .newFile(replaceExisting: false)
+        ) { file in
+            if let tryAddAttribute {
+                let byteCount = (32...128).randomElement()!
+                do {
+                    try await file.updateValueForAttribute(
+                        Array(repeating: 0, count: byteCount),
+                        attribute: tryAddAttribute
+                    )
+                } catch let error as FileSystemError where error.code == .unsupported {
+                    // Extended attributes are not supported on all platforms. Ignore
+                    // errors if that's the case.
+                    ()
+                }
+            }
+
+            let byteCount = (512...1024).randomElement()!
+            try await file.write(
+                contentsOf: Array(repeating: 0, count: byteCount),
+                toAbsoluteOffset: 0
+            )
+        }
+    }
+
     private func generateDirectoryStructure(
         root: FilePath,
         maxDepth: Int,
@@ -1404,30 +1545,8 @@ extension FileSystemTests {
                     itemsCreated += 1
                 } else {
                     let path = root.appending("file-\(i)-regular")
-                    try await self.fs.withFileHandle(
-                        forWritingAt: path,
-                        options: .newFile(replaceExisting: false)
-                    ) { file in
-                        if Bool.random() {
-                            let byteCount = (32...128).randomElement()!
-                            do {
-                                try await file.updateValueForAttribute(
-                                    Array(repeating: 0, count: byteCount),
-                                    attribute: "attribute-\(i)"
-                                )
-                            } catch let error as FileSystemError where error.code == .unsupported {
-                                // Extended attributes are not supported on all platforms. Ignore
-                                // errors if that's the case.
-                                ()
-                            }
-                        }
-
-                        let byteCount = (512...1024).randomElement()!
-                        try await file.write(
-                            contentsOf: Array(repeating: 0, count: byteCount),
-                            toAbsoluteOffset: 0
-                        )
-                    }
+                    let attribute: String? = Bool.random() ? .some("attribute-{\(i)}") : .none
+                    try await makeTestFile(path, tryAddAttribute: attribute)
                     itemsCreated += 1
                 }
             }

@@ -479,7 +479,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testLockMutualExclusion() {
         let l = NIOLock()
 
+        #if compiler(>=5.10)
+        nonisolated(unsafe) var x = 1
+        #else
         var x = 1
+        #endif
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
@@ -513,7 +517,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testWithLockMutualExclusion() {
         let l = NIOLock()
 
+        #if compiler(>=5.10)
+        nonisolated(unsafe) var x = 1
+        #else
         var x = 1
+        #endif
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
@@ -545,7 +553,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testConditionLockMutualExclusion() {
         let l = ConditionLock(value: 0)
 
+        #if compiler(>=5.10)
+        nonisolated(unsafe) var x = 1
+        #else
         var x = 1
+        #endif
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
@@ -788,7 +800,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
         let sem2 = DispatchSemaphore(value: 0)
-        class SomeClass {}
+        final class SomeClass: Sendable {}
         weak var weakInstance: SomeClass?
         ({
             let instance = SomeClass()
@@ -824,15 +836,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         let go = DispatchSemaphore(value: 0)
         let iterations = 100_000
 
-        class Foo {
-            var x: Int
+        final class Foo: Sendable {
+            let x: Int
 
             init(_ x: Int) {
                 self.x = x
-            }
-
-            deinit {
-                self.x = -1
             }
         }
 
@@ -1067,7 +1075,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     }
 }
 
-func spawnAndJoinRacingThreads(count: Int, _ body: @escaping (Int) -> Void) {
+func spawnAndJoinRacingThreads(count: Int, _ body: @Sendable @escaping (Int) -> Void) {
     let go = DispatchSemaphore(value: 0)  // will be incremented when the threads are supposed to run (and race).
     let arrived = Array(repeating: DispatchSemaphore(value: 0), count: count)  // waiting for all threads to arrive
 
@@ -1113,8 +1121,8 @@ func assert(
 }
 
 @available(*, deprecated, message: "deprecated because it is used to test deprecated functionality")
-private class IntHolderWithDeallocationTracking {
-    private(set) var value: Int
+private final class IntHolderWithDeallocationTracking: Sendable {
+    let value: Int
     let allDeallocations: NIOAtomic<Int>
 
     init(_ x: Int, allDeallocations: NIOAtomic<Int>) {
@@ -1123,7 +1131,6 @@ private class IntHolderWithDeallocationTracking {
     }
 
     deinit {
-        self.value = -1
         self.allDeallocations.add(1)
     }
 }
