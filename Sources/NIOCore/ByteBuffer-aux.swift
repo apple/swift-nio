@@ -776,6 +776,18 @@ extension ByteBufferAllocator {
         return buffer
     }
 
+    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from the ASCII `hexEncodedBytes` string .
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `bytes` and potentially some extra space.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    @inlinable
+    public func buffer(hexEncodedBytes string: String) -> ByteBuffer {
+        var buffer = self.buffer(capacity: string.hexPlainDecodedBytes.underestimatedCount)
+        buffer.writeBytes(string.hexPlainDecodedBytes)
+        return buffer
+    }
+    
     /// Create a fresh `ByteBuffer` containing the bytes of the byte representation in the given `endianness` of
     /// `integer`.
     ///

@@ -25,9 +25,7 @@ extension ByteBuffer {
     ///         size followed by a `writeHexEncodedBytes` instead of using this method. This allows SwiftNIO to do
     ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
     init(hexEncodedBytes string: String) {
-        var buffer = ByteBuffer()
-        buffer.writeHexEncodedBytes(string)
-        self = buffer
+        self = ByteBufferAllocator().buffer(hexEncodedBytes: string)
     }
 
     /// Describes a ByteBuffer hexDump format.
