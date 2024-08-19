@@ -383,6 +383,9 @@ extension NIOBSDSocket.Option {
 
     /// Specifies the total per-socket buffer space reserved for receives.
     public static let so_rcvbuf = Self(rawValue: SO_RCVBUF)
+    
+    /// Specifies the total per-socket buffer space reserved for sends.
+    public static let so_sndbuf = Self(rawValue: SO_SNDBUF)
 
     /// Specifies the receive timeout.
     public static let so_rcvtimeo = Self(rawValue: SO_RCVTIMEO)

@@ -2988,6 +2988,66 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try handler.becameUnwritable.futureResult.wait())
         XCTAssertNoThrow(try handler.becameWritable.futureResult.wait())
     }
+    
+    func testChannelCanReportWritableBufferedBytes() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        
+        let server = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .bind(host: "localhost", port: 0)
+            .wait()
+        
+        let client = try ClientBootstrap(group: group)
+            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .connect(to: server.localAddress!)
+            .wait()
+        
+        let buffer = client.allocator.buffer(string: "abcd")
+        let writeCount = 3
+        
+        let promises = (0..<writeCount).map {_ in client.write(NIOAny(buffer))}
+        let bufferedAmount = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(bufferedAmount, Int64(buffer.readableBytes * writeCount))
+        client.flush()
+        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: client.eventLoop).wait())
+        let bufferedAmountAfterFlush = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(bufferedAmountAfterFlush, 0)
+    }
+    
+    func testChannelCanReportWritableBufferedBytesWhenSendBufferWouldBlock() throws {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        
+        let server = try ServerBootstrap(group: group)
+            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .bind(host: "localhost", port: 0)
+            .wait()
+        
+        let client = try ClientBootstrap(group: group)
+            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .channelOption(ChannelOptions.socketOption(.so_sndbuf), value: 8)
+            .connect(to: server.localAddress!)
+            .wait()
+        
+        let buffer = client.allocator.buffer(string: "abcd")
+        let writeCount = 20
+        
+        var promises = (0..<writeCount).map {_ in client.writeAndFlush(NIOAny(buffer))}
+        var bufferedAmount = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertTrue(bufferedAmount >= 0 && bufferedAmount <= Int64(buffer.readableBytes * writeCount))
+        promises.append(client.write(NIOAny(buffer)))
+        bufferedAmount = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertTrue(bufferedAmount >= buffer.readableBytes && bufferedAmount <= Int64(buffer.readableBytes * (writeCount + 1)))
+        client.flush()
+        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: client.eventLoop).wait())
+        let bufferedAmountAfterFlush = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(bufferedAmountAfterFlush, 0)
+    }
 }
 
 fileprivate final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler {
