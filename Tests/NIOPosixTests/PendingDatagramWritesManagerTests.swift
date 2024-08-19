@@ -486,8 +486,10 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         buffer.writeBytes([UInt8](repeating: 0xff, count: 12))
 
         try withPendingDatagramWritesManager { pwm in
-            let ps: [EventLoopPromise<Void>] = (0...pwm.writeSpinCount+1).map { (_: UInt) in el.makePromise() }
-            ps.forEach { _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: $0) }
+            let ps: [EventLoopPromise<Void>] = (0...pwm.writeSpinCount + 1).map { (_: UInt) in el.makePromise() }
+            for promise in ps {
+                _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: promise)
+            }
             let totalBytes = ps.count * buffer.readableBytes
             let maxVectorWritabilities = ps.map { (_: EventLoopPromise<Void>) in (buffer.readableBytes, address) }
             let actualVectorWritabilities = maxVectorWritabilities.indices.dropLast().map {
