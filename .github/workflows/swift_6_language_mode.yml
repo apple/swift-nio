@@ -17,6 +17,8 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
+              with:
+                  persist-credentials: false
             - name: Set the language mode
               run: swift package tools-version --set 6.0
             - name: Build with Swift 6 language mode
