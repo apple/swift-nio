@@ -1664,10 +1664,9 @@ class DatagramChannelTests: XCTestCase {
     }
     
     func testChannelCanReportWritableBufferedBytesWithDataLargerThanSendBuffer() throws {
-        let sendBufferSize: Int32 = 16
         self.firstChannel = try DatagramBootstrap(group: self.group)
-            .channelOption(ChannelOptions.socketOption(.so_sndbuf), value: sendBufferSize)
-            .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .channelOption(.socketOption(.so_sndbuf), value: 16)
+            .channelOption(.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
                 channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
             }
@@ -1679,7 +1678,7 @@ class DatagramChannelTests: XCTestCase {
         var promises: [EventLoopFuture<Void>] = []
         
         let sendBuffer = try self.firstChannel.getOption(ChannelOptions.socketOption(.so_sndbuf)).wait()
-        XCTAssertEqual(sendBuffer, sendBufferSize)
+        XCTAssertEqual(sendBuffer, 16)
         
         (0..<writeCount).forEach { i in
             let promise = self.firstChannel.write(NIOAny(data))
