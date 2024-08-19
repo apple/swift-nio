@@ -44,15 +44,15 @@ private enum InternalSNIErrors: Error {
     case recordIncomplete
 }
 
-private extension ByteBuffer {
-    mutating func moveReaderIndexIfPossible(forwardBy distance: Int) throws {
+extension ByteBuffer {
+    fileprivate mutating func moveReaderIndexIfPossible(forwardBy distance: Int) throws {
         guard self.readableBytes >= distance else {
             throw InternalSNIErrors.invalidLengthInRecord
         }
         self.moveReaderIndex(forwardBy: distance)
     }
 
-    mutating func readIntegerIfPossible<T: FixedWidthInteger>() throws -> T {
+    fileprivate mutating func readIntegerIfPossible<T: FixedWidthInteger>() throws -> T {
         guard let integer: T = self.readInteger() else {
             throw InternalSNIErrors.invalidLengthInRecord
         }
@@ -60,8 +60,8 @@ private extension ByteBuffer {
     }
 }
 
-private extension Sequence where Element == UInt8 {
-    func decodeStringValidatingASCII() -> String? {
+extension Sequence where Element == UInt8 {
+    fileprivate func decodeStringValidatingASCII() -> String? {
         var bytesIterator = self.makeIterator()
         var scalars: [Unicode.Scalar] = []
         scalars.reserveCapacity(self.underestimatedCount)
@@ -101,14 +101,18 @@ public final class SNIHandler: ByteToMessageDecoder {
 
     private let completionHandler: (SNIResult) -> EventLoopFuture<Void>
     private var waitingForUser: Bool
-    
+
     public init(sniCompleteHandler: @escaping (SNIResult) -> EventLoopFuture<Void>) {
         self.cumulationBuffer = nil
         self.completionHandler = sniCompleteHandler
         self.waitingForUser = false
     }
 
-    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+    public func decodeLast(
+        context: ChannelHandlerContext,
+        buffer: inout ByteBuffer,
+        seenEOF: Bool
+    ) throws -> DecodingState {
         context.fireChannelRead(NIOAny(buffer))
         return .needMoreData
     }
@@ -165,7 +169,9 @@ public final class SNIHandler: ByteToMessageDecoder {
         //
         // From this point onwards if we don't have enough data to satisfy a read, this is an error and
         // we will fall back to let the upper layers handle it.
-        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))! // length check above
+
+        // length check above
+        tempBuffer = tempBuffer.getSlice(at: tempBuffer.readerIndex, length: Int(contentLength))!
 
         // Now parse the handshake header. If the length of the handshake message is not exactly the
         // length of this record, something has gone wrong and we should give up.
@@ -198,7 +204,7 @@ public final class SNIHandler: ByteToMessageDecoder {
         }
 
         // Check the content type.
-        let contentType: UInt8 = buffer.readInteger()! // length check above
+        let contentType: UInt8 = buffer.readInteger()!  // length check above
         guard contentType == tlsContentTypeHandshake else {
             // Whatever this is, it's not a handshake message, so something has gone
             // wrong. We're going to fall back to the default handler here and let
@@ -207,7 +213,7 @@ public final class SNIHandler: ByteToMessageDecoder {
         }
 
         // Now, check the major version.
-        let majorVersion: UInt8 = buffer.readInteger()! // length check above
+        let majorVersion: UInt8 = buffer.readInteger()!  // length check above
         guard majorVersion == 3 else {
             // A major version of 3 is the major version used for SSLv3 and all subsequent versions
             // of the protocol. If that's not what this is, we don't know what's happening here.
@@ -217,7 +223,7 @@ public final class SNIHandler: ByteToMessageDecoder {
 
         // Skip the minor version byte, then grab the content length.
         buffer.moveReaderIndex(forwardBy: 1)
-        let contentLength: UInt16 = buffer.readInteger()! // length check above
+        let contentLength: UInt16 = buffer.readInteger()!  // length check above
         return Int(contentLength)
     }
 
@@ -254,8 +260,8 @@ public final class SNIHandler: ByteToMessageDecoder {
         }
 
         let handshakeTypeAndLength: UInt32 = buffer.readInteger()!
-        let handshakeType: UInt8 = UInt8((handshakeTypeAndLength & 0xFF000000) >> 24)
-        let handshakeLength: UInt32 = handshakeTypeAndLength & 0x00FFFFFF
+        let handshakeType: UInt8 = UInt8((handshakeTypeAndLength & 0xFF00_0000) >> 24)
+        let handshakeLength: UInt32 = handshakeTypeAndLength & 0x00FF_FFFF
         guard handshakeType == handshakeTypeClientHello else {
             throw InternalSNIErrors.invalidRecord
         }

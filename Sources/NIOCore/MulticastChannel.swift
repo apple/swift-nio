@@ -25,7 +25,7 @@ public protocol MulticastChannel: Channel {
     ///         `nil` if you are not interested in the result of the operation.
     func joinGroup(_ group: SocketAddress, promise: EventLoopPromise<Void>?)
 
-#if !os(Windows)
+    #if !os(Windows)
     /// Request that the `MulticastChannel` join the multicast group given by `group` on the interface
     /// given by `interface`.
     ///
@@ -36,7 +36,7 @@ public protocol MulticastChannel: Channel {
     ///         `nil` if you are not interested in the result of the operation.
     @available(*, deprecated, renamed: "joinGroup(_:device:promise:)")
     func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?)
-#endif
+    #endif
 
     /// Request that the `MulticastChannel` join the multicast group given by `group` on the device
     /// given by `device`.
@@ -56,7 +56,7 @@ public protocol MulticastChannel: Channel {
     ///         `nil` if you are not interested in the result of the operation.
     func leaveGroup(_ group: SocketAddress, promise: EventLoopPromise<Void>?)
 
-#if !os(Windows)
+    #if !os(Windows)
     /// Request that the `MulticastChannel` leave the multicast group given by `group` on the interface
     /// given by `interface`.
     ///
@@ -67,7 +67,7 @@ public protocol MulticastChannel: Channel {
     ///         `nil` if you are not interested in the result of the operation.
     @available(*, deprecated, renamed: "leaveGroup(_:device:promise:)")
     func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?, promise: EventLoopPromise<Void>?)
-#endif
+    #endif
 
     /// Request that the `MulticastChannel` leave the multicast group given by `group` on the device
     /// given by `device`.
@@ -79,7 +79,6 @@ public protocol MulticastChannel: Channel {
     ///         `nil` if you are not interested in the result of the operation.
     func leaveGroup(_ group: SocketAddress, device: NIONetworkDevice?, promise: EventLoopPromise<Void>?)
 }
-
 
 // MARK:- Default implementations for MulticastChannel
 extension MulticastChannel {
@@ -93,14 +92,14 @@ extension MulticastChannel {
         return promise.futureResult
     }
 
-#if !os(Windows)
+    #if !os(Windows)
     @available(*, deprecated, renamed: "joinGroup(_:device:)")
     public func joinGroup(_ group: SocketAddress, interface: NIONetworkInterface?) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
         self.joinGroup(group, interface: interface, promise: promise)
         return promise.futureResult
     }
-#endif
+    #endif
 
     public func joinGroup(_ group: SocketAddress, device: NIONetworkDevice?) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
@@ -118,14 +117,14 @@ extension MulticastChannel {
         return promise.futureResult
     }
 
-#if !os(Windows)
+    #if !os(Windows)
     @available(*, deprecated, renamed: "leaveGroup(_:device:)")
     public func leaveGroup(_ group: SocketAddress, interface: NIONetworkInterface?) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
         self.leaveGroup(group, interface: interface, promise: promise)
         return promise.futureResult
     }
-#endif
+    #endif
 
     public func leaveGroup(_ group: SocketAddress, device: NIONetworkDevice?) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
@@ -176,4 +175,3 @@ public struct NIOMulticastNotSupportedError: Error {
 public struct NIOMulticastNotImplementedError: Error {
     public init() {}
 }
-

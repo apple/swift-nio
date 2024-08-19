@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-import NIOCore
-@testable import NIOPosix
-import NIOConcurrencyHelpers
 import Dispatch
+import NIOConcurrencyHelpers
+import NIOCore
+import XCTest
+
+@testable import NIOPosix
 
 final class SALEventLoopTests: XCTestCase, SALTest {
     var group: MultiThreadedEventLoopGroup!
@@ -74,7 +75,7 @@ final class SALEventLoopTests: XCTestCase, SALTest {
                 // Now we can unblock the semaphore.
                 semaphore.signal()
             }
-            
+
             return promise.futureResult
         }.salWait()
     }

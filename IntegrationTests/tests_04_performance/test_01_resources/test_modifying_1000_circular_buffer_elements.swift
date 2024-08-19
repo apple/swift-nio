@@ -15,7 +15,7 @@
 import NIOCore
 
 func run(identifier: String) {
-    var buffer = CircularBuffer<Array<Int>>(initialCapacity: 100)
+    var buffer = CircularBuffer<[Int]>(initialCapacity: 100)
     for _ in 0..<100 {
         buffer.append([])
     }

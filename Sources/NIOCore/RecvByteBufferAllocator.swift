@@ -31,7 +31,7 @@ public protocol RecvByteBufferAllocator: _NIOPreconcurrencySendable {
 extension RecvByteBufferAllocator {
     // Default implementation to maintain API compatability.
     public func nextBufferSize() -> Int? {
-        return nil
+        nil
     }
 }
 
@@ -46,17 +46,17 @@ public struct FixedSizeRecvByteBufferAllocator: RecvByteBufferAllocator {
 
     public mutating func record(actualReadBytes: Int) -> Bool {
         // Returns false as we always allocate the same size of buffers.
-        return false
+        false
     }
 
     public func buffer(allocator: ByteBufferAllocator) -> ByteBuffer {
-        return allocator.buffer(capacity: self.capacity)
+        allocator.buffer(capacity: self.capacity)
     }
 }
 
 extension FixedSizeRecvByteBufferAllocator {
     public func nextBufferSize() -> Int? {
-        return self.capacity
+        self.capacity
     }
 }
 
@@ -91,7 +91,7 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
     }
 
     public func buffer(allocator: ByteBufferAllocator) -> ByteBuffer {
-        return allocator.buffer(capacity: self.nextReceiveBufferSize)
+        allocator.buffer(capacity: self.nextReceiveBufferSize)
     }
 
     public mutating func record(actualReadBytes: Int) -> Bool {
@@ -116,8 +116,9 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
             } else {
                 self.decreaseNow = true
             }
-        } else if actualReadBytes >= self.nextReceiveBufferSize && upperBound <= self.maximum &&
-                  self.nextReceiveBufferSize != upperBound {
+        } else if actualReadBytes >= self.nextReceiveBufferSize && upperBound <= self.maximum
+            && self.nextReceiveBufferSize != upperBound
+        {
             self.nextReceiveBufferSize = upperBound
             self.decreaseNow = false
             mayGrow = true
@@ -131,6 +132,6 @@ public struct AdaptiveRecvByteBufferAllocator: RecvByteBufferAllocator {
 
 extension AdaptiveRecvByteBufferAllocator {
     public func nextBufferSize() -> Int? {
-        return self.nextReceiveBufferSize
+        self.nextReceiveBufferSize
     }
 }

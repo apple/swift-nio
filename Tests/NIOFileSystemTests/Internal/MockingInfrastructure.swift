@@ -12,14 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-/*
- This source file is part of the Swift System open source project
-
- Copyright (c) 2020 Apple Inc. and the Swift System project authors
- Licensed under Apache License v2.0 with Runtime Library Exception
-
- See https://swift.org/LICENSE.txt for license information
- */
+//This source file is part of the Swift System open source project
+//
+//Copyright (c) 2020 Apple Inc. and the Swift System project authors
+//Licensed under Apache License v2.0 with Runtime Library Exception
+//
+//See https://swift.org/LICENSE.txt for license information
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 @_spi(Testing) import _NIOFileSystem
@@ -158,7 +156,7 @@ internal struct MockTestCase: TestCase {
     var expected: Trace.Entry
     var interruptBehavior: InterruptBehavior
 
-    var interruptable: Bool { return interruptBehavior == .interruptable }
+    var interruptable: Bool { interruptBehavior == .interruptable }
 
     internal enum InterruptBehavior {
         // Retry the syscall on EINTR

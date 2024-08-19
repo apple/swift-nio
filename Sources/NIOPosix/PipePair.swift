@@ -17,7 +17,7 @@ struct SelectableFileHandle {
     var handle: NIOFileHandle
 
     var isOpen: Bool {
-        return handle.isOpen
+        handle.isOpen
     }
 
     init(_ handle: NIOFileHandle) {
@@ -31,7 +31,7 @@ struct SelectableFileHandle {
 
 extension SelectableFileHandle: Selectable {
     func withUnsafeHandle<T>(_ body: (CInt) throws -> T) throws -> T {
-        return try self.handle.withUnsafeFileDescriptor(body)
+        try self.handle.withUnsafeFileDescriptor(body)
     }
 }
 
@@ -61,7 +61,7 @@ final class PipePair: SocketProtocol {
     }
 
     var description: String {
-        return "PipePair { in=\(String(describing: inputFD)), out=\(String(describing: inputFD)) }"
+        "PipePair { in=\(String(describing: inputFD)), out=\(String(describing: inputFD)) }"
     }
 
     func connect(to address: SocketAddress) throws -> Bool {
@@ -99,17 +99,21 @@ final class PipePair: SocketProtocol {
         }
     }
 
-    func recvmsg(pointer: UnsafeMutableRawBufferPointer,
-                 storage: inout sockaddr_storage,
-                 storageLen: inout socklen_t,
-                 controlBytes: inout UnsafeReceivedControlBytes) throws -> IOResult<Int> {
+    func recvmsg(
+        pointer: UnsafeMutableRawBufferPointer,
+        storage: inout sockaddr_storage,
+        storageLen: inout socklen_t,
+        controlBytes: inout UnsafeReceivedControlBytes
+    ) throws -> IOResult<Int> {
         throw ChannelError._operationUnsupported
     }
 
-    func sendmsg(pointer: UnsafeRawBufferPointer,
-                 destinationPtr: UnsafePointer<sockaddr>?,
-                 destinationSize: socklen_t,
-                 controlBytes: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
+    func sendmsg(
+        pointer: UnsafeRawBufferPointer,
+        destinationPtr: UnsafePointer<sockaddr>?,
+        destinationSize: socklen_t,
+        controlBytes: UnsafeMutableRawBufferPointer
+    ) throws -> IOResult<Int> {
         throw ChannelError._operationUnsupported
     }
 
@@ -137,7 +141,7 @@ final class PipePair: SocketProtocol {
     }
 
     var isOpen: Bool {
-        return self.inputFD?.isOpen ?? false || self.outputFD?.isOpen ?? false
+        self.inputFD?.isOpen ?? false || self.outputFD?.isOpen ?? false
     }
 
     func close() throws {

@@ -12,25 +12,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import NIOCore
 import XCTest
+
+@testable import NIOCore
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     private var backPressureStrategy: MockNIOElementStreamBackPressureStrategy!
     private var delegate: MockNIOBackPressuredStreamSourceDelegate!
-    private var sequence: NIOThrowingAsyncSequenceProducer<
-        Int,
-        Error,
-        MockNIOElementStreamBackPressureStrategy,
-        MockNIOBackPressuredStreamSourceDelegate
-    >!
-    private var source: NIOThrowingAsyncSequenceProducer<
-        Int,
-        Error,
-        MockNIOElementStreamBackPressureStrategy,
-        MockNIOBackPressuredStreamSourceDelegate
-    >.Source!
+    private var sequence:
+        NIOThrowingAsyncSequenceProducer<
+            Int,
+            Error,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >!
+    private var source:
+        NIOThrowingAsyncSequenceProducer<
+            Int,
+            Error,
+            MockNIOElementStreamBackPressureStrategy,
+            MockNIOBackPressuredStreamSourceDelegate
+        >.Source!
 
     override func setUp() {
         super.setUp()
@@ -107,7 +110,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 try await sequence.first { _ in true }
@@ -135,7 +138,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 try await sequence.first { _ in true }
@@ -163,7 +166,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         await withThrowingTaskGroup(of: Void.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 _ = try await sequence.first { _ in true }
@@ -188,7 +191,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         await withThrowingTaskGroup(of: Void.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 _ = try await sequence.first { _ in true }
@@ -214,7 +217,10 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let result = self.source.yield(contentsOf: [1])
 
         XCTAssertEqual(result, .stopProducing)
-        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didYield])
+        XCTAssertEqualWithoutAutoclosure(
+            await self.backPressureStrategy.events.prefix(2).collect(),
+            [.didYield, .didYield]
+        )
     }
 
     func testYield_whenStreaming_andNotSuspended_andProduceMore() async throws {
@@ -225,7 +231,10 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let result = self.source.yield(contentsOf: [1])
 
         XCTAssertEqual(result, .produceMore)
-        XCTAssertEqualWithoutAutoclosure(await self.backPressureStrategy.events.prefix(2).collect(), [.didYield, .didYield])
+        XCTAssertEqualWithoutAutoclosure(
+            await self.backPressureStrategy.events.prefix(2).collect(),
+            [.didYield, .didYield]
+        )
     }
 
     func testYield_whenSourceFinished() async throws {
@@ -247,7 +256,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+            sequence._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 let element = try await sequence.first { _ in true }
@@ -273,7 +282,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence.first { _ in true }
+                try await sequence.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -291,7 +300,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence.first { _ in true }
+                try await sequence.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -304,7 +313,6 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
     func testFinish_whenFinished() async throws {
         self.source.finish()
-
 
         _ = try await self.sequence.first { _ in true }
 
@@ -327,21 +335,23 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
     func testFinishError_whenStreaming_andSuspended() async throws {
         let sequence = try XCTUnwrap(self.sequence)
-        await XCTAssertThrowsError(try await withThrowingTaskGroup(of: Void.self) { group in
+        await XCTAssertThrowsError(
+            try await withThrowingTaskGroup(of: Void.self) { group in
 
-            let suspended = expectation(description: "task suspended")
-            sequence._storage._didSuspend = { suspended.fulfill() }
+                let suspended = expectation(description: "task suspended")
+                sequence._storage._setDidSuspend { suspended.fulfill() }
 
-            group.addTask {
-                _ = try await sequence.first { _ in true }
+                group.addTask {
+                    _ = try await sequence.first { _ in true }
+                }
+
+                await fulfillment(of: [suspended], timeout: 1)
+
+                self.source.finish(ChannelError.alreadyClosed)
+
+                try await group.next()
             }
-
-            await fulfillment(of: [suspended], timeout: 1)
-
-            self.source.finish(ChannelError.alreadyClosed)
-
-            try await group.next()
-        }) { error in
+        ) { error in
             XCTAssertEqual(error as? ChannelError, .alreadyClosed)
         }
 
@@ -354,13 +364,15 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         self.source.finish(ChannelError.alreadyClosed)
 
         let sequence = try XCTUnwrap(self.sequence)
-        await XCTAssertThrowsError(try await withThrowingTaskGroup(of: Void.self) { group in
-            group.addTask {
-                _ = try await sequence.first { _ in true }
-            }
+        await XCTAssertThrowsError(
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    _ = try await sequence.first { _ in true }
+                }
 
-            try await group.next()
-        }) { error in
+                try await group.next()
+            }
+        ) { error in
             XCTAssertEqual(error as? ChannelError, .alreadyClosed)
         }
 
@@ -374,11 +386,13 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         var elements = [Int]()
 
-        await XCTAssertThrowsError(try await {
-            for try await element in self.sequence {
-                elements.append(element)
-            }
-        }()) { error in
+        await XCTAssertThrowsError(
+            try await {
+                for try await element in self.sequence {
+                    elements.append(element)
+                }
+            }()
+        ) { error in
             XCTAssertEqual(error as? ChannelError, .alreadyClosed)
         }
 
@@ -402,39 +416,41 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     // MARK: - Source Deinited
 
     func testSourceDeinited_whenInitial() async {
-        var newSequence: NIOThrowingAsyncSequenceProducer<
-            Int,
-            any Error,
-            MockNIOElementStreamBackPressureStrategy,
-            MockNIOBackPressuredStreamSourceDelegate
-        >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
-            elementType: Int.self,
-            backPressureStrategy: self.backPressureStrategy,
-            finishOnDeinit: true,
-            delegate: self.delegate
-        )
+        var newSequence:
+            NIOThrowingAsyncSequenceProducer<
+                Int,
+                any Error,
+                MockNIOElementStreamBackPressureStrategy,
+                MockNIOBackPressuredStreamSourceDelegate
+            >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
+                elementType: Int.self,
+                backPressureStrategy: self.backPressureStrategy,
+                finishOnDeinit: true,
+                delegate: self.delegate
+            )
         let sequence = newSequence?.sequence
         var source = newSequence?.source
         newSequence = nil
 
         source = nil
-        
+
         XCTAssertNil(source)
         XCTAssertNotNil(sequence)
     }
 
     func testSourceDeinited_whenStreaming_andSuspended() async throws {
-        var newSequence: NIOThrowingAsyncSequenceProducer<
-            Int,
-            any Error,
-            MockNIOElementStreamBackPressureStrategy,
-            MockNIOBackPressuredStreamSourceDelegate
-        >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
-            elementType: Int.self,
-            backPressureStrategy: self.backPressureStrategy,
-            finishOnDeinit: true,
-            delegate: self.delegate
-        )
+        var newSequence:
+            NIOThrowingAsyncSequenceProducer<
+                Int,
+                any Error,
+                MockNIOElementStreamBackPressureStrategy,
+                MockNIOBackPressuredStreamSourceDelegate
+            >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
+                elementType: Int.self,
+                backPressureStrategy: self.backPressureStrategy,
+                finishOnDeinit: true,
+                delegate: self.delegate
+            )
         let sequence = newSequence?.sequence
         var source = newSequence?.source
         newSequence = nil
@@ -442,7 +458,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
 
             let suspended = expectation(description: "task suspended")
-            sequence!._storage._didSuspend = { suspended.fulfill() }
+            sequence!._storage._setDidSuspend { suspended.fulfill() }
 
             group.addTask {
                 let element = try await sequence!.first { _ in true }
@@ -462,17 +478,18 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferEmpty() async throws {
-        var newSequence: NIOThrowingAsyncSequenceProducer<
-            Int,
-            any Error,
-            MockNIOElementStreamBackPressureStrategy,
-            MockNIOBackPressuredStreamSourceDelegate
-        >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
-            elementType: Int.self,
-            backPressureStrategy: self.backPressureStrategy,
-            finishOnDeinit: true,
-            delegate: self.delegate
-        )
+        var newSequence:
+            NIOThrowingAsyncSequenceProducer<
+                Int,
+                any Error,
+                MockNIOElementStreamBackPressureStrategy,
+                MockNIOBackPressuredStreamSourceDelegate
+            >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
+                elementType: Int.self,
+                backPressureStrategy: self.backPressureStrategy,
+                finishOnDeinit: true,
+                delegate: self.delegate
+            )
         let sequence = newSequence?.sequence
         var source = newSequence?.source
         newSequence = nil
@@ -483,7 +500,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence!.first { _ in true }
+                try await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -494,17 +511,18 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
     }
 
     func testSourceDeinited_whenStreaming_andNotSuspended_andBufferNotEmpty() async throws {
-        var newSequence: NIOThrowingAsyncSequenceProducer<
-            Int,
-            any Error,
-            MockNIOElementStreamBackPressureStrategy,
-            MockNIOBackPressuredStreamSourceDelegate
-        >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
-            elementType: Int.self,
-            backPressureStrategy: self.backPressureStrategy,
-            finishOnDeinit: true,
-            delegate: self.delegate
-        )
+        var newSequence:
+            NIOThrowingAsyncSequenceProducer<
+                Int,
+                any Error,
+                MockNIOElementStreamBackPressureStrategy,
+                MockNIOBackPressuredStreamSourceDelegate
+            >.NewSequence? = NIOThrowingAsyncSequenceProducer.makeSequence(
+                elementType: Int.self,
+                backPressureStrategy: self.backPressureStrategy,
+                finishOnDeinit: true,
+                delegate: self.delegate
+            )
         let sequence = newSequence?.sequence
         var source = newSequence?.source
         newSequence = nil
@@ -515,7 +533,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
         let element: Int? = try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await sequence!.first { _ in true }
+                try await sequence!.first { _ in true }
             }
 
             return try await group.next() ?? nil
@@ -532,7 +550,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -548,7 +566,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             XCTAssertTrue(error is CancellationError)
         }
     }
-    
+
     @available(*, deprecated, message: "tests the deprecated custom generic failure type")
     func testTaskCancel_whenStreaming_andSuspended_withCustomErrorType() async throws {
         struct CustomError: Error {}
@@ -563,7 +581,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = new.sequence
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -575,7 +593,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         task.cancel()
         let result = await task.result
         XCTAssertEqualWithoutAutoclosure(await delegate.events.prefix(1).collect(), [.didTerminate])
-        
+
         try withExtendedLifetime(new.source) {
             XCTAssertNil(try result.get())
         }
@@ -587,7 +605,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let resumed = expectation(description: "task resumed")
         let cancelled = expectation(description: "task cancelled")
 
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -615,7 +633,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         let task: Task<Int?, Error> = Task {
             let iterator = sequence.makeAsyncIterator()
@@ -651,7 +669,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             XCTAssertTrue(error is CancellationError, "unexpected error \(error)")
         }
     }
-    
+
     @available(*, deprecated, message: "tests the deprecated custom generic failure type")
     func testTaskCancel_whenStreaming_andTaskIsAlreadyCancelled_withCustomErrorType() async throws {
         struct CustomError: Error {}
@@ -689,7 +707,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
@@ -707,7 +725,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
@@ -727,7 +745,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
@@ -747,7 +765,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let sequence = try XCTUnwrap(self.sequence)
 
         let suspended = expectation(description: "task suspended")
-        sequence._storage._didSuspend = { suspended.fulfill() }
+        sequence._storage._setDidSuspend { suspended.fulfill() }
 
         Task {
             // Would prefer to use async let _ here but that is not allowed yet
@@ -891,7 +909,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 }
 
 // This is needed until async let is supported to be used in autoclosures
-fileprivate func XCTAssertEqualWithoutAutoclosure<T>(
+private func XCTAssertEqualWithoutAutoclosure<T>(
     _ expression1: T,
     _ expression2: T,
     _ message: @autoclosure () -> String = "",

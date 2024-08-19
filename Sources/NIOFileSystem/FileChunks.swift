@@ -63,7 +63,7 @@ public struct FileChunks: AsyncSequence {
     }
 
     public func makeAsyncIterator() -> FileChunkIterator {
-        return FileChunkIterator(wrapping: self.stream.makeAsyncIterator())
+        FileChunkIterator(wrapping: self.stream.makeAsyncIterator())
     }
 
     public struct FileChunkIterator: AsyncIteratorProtocol {
@@ -161,7 +161,7 @@ private struct FileChunkProducer: Sendable {
     }
 
     private func readNextChunk() throws -> ByteBuffer {
-        return try self.state.withLockedValue { state in
+        try self.state.withLockedValue { state in
             state.produceMore()
         }.flatMap {
             if let (descriptor, range) = $0 {

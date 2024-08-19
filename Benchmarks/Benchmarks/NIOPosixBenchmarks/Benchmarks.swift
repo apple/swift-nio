@@ -19,15 +19,16 @@ private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 
 let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [
-        .mallocCountTotal,
+        .mallocCountTotal
     ]
 
     Benchmark(
         "TCPEcho",
         configuration: .init(
             metrics: defaultMetrics,
-            timeUnits: .milliseconds,
-            scalingFactor: .mega
+            scalingFactor: .mega,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5
         )
     ) { benchmark in
         try runTCPEcho(
@@ -43,8 +44,9 @@ let benchmarks = {
         "TCPEchoAsyncChannel",
         configuration: .init(
             metrics: defaultMetrics,
-            timeUnits: .milliseconds,
             scalingFactor: .mega,
+            maxDuration: .seconds(10_000_000),
+            maxIterations: 5,
             // We are expecting a bit of allocation variance due to an allocation
             // in the Concurrency runtime which happens when resuming a continuation.
             thresholds: [.mallocCountTotal: .init(absolute: [.p90: 2000])],

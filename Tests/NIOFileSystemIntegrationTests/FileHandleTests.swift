@@ -28,7 +28,7 @@ final class FileHandleTests: XCTestCase {
         .lexicallyNormalized()
 
     private static func temporaryFileName() -> FilePath {
-        return FilePath("swift-filesystem-tests-\(UInt64.random(in: .min ... .max))")
+        FilePath("swift-filesystem-tests-\(UInt64.random(in: .min ... .max))")
     }
 
     func withTemporaryFile(
@@ -223,7 +223,7 @@ final class FileHandleTests: XCTestCase {
         try await self.withTemporaryFile { handle in
             // Check we can successfully return a value.
             let value = try await handle.withUnsafeDescriptor { descriptor in
-                return 42
+                42
             }
             XCTAssertEqual(value, 42)
         }
@@ -306,7 +306,7 @@ final class FileHandleTests: XCTestCase {
     func testWriteAndReadUnseekableFile() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
-           try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
+            try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
         guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
@@ -327,7 +327,7 @@ final class FileHandleTests: XCTestCase {
     func testWriteAndReadUnseekableFileOverMaximumSizeAllowedThrowsError() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
-           try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
+            try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
         guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
@@ -351,7 +351,7 @@ final class FileHandleTests: XCTestCase {
     func testWriteAndReadUnseekableFileWithOffsetsThrows() async throws {
         let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
-           try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
+            try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
         guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
@@ -1020,7 +1020,7 @@ final class FileHandleTests: XCTestCase {
         // creating a temporary file and then renaming it using 'renameat2' and then takes a further
         // fallback path where 'renameat2' returns EINVAL so the 'rename' is used in combination
         // with 'stat'. This path is only reachable on Linux.
-        #if canImport(Glibc) || canImport(Musl)
+        #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
         let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
         let path = temporaryDirectory.appending(Self.temporaryFileName().components)
         let handle = try SystemFileHandle.syncOpenWithMaterialization(
@@ -1256,14 +1256,15 @@ final class FileHandleTests: XCTestCase {
                 lastAccess: nil,
                 lastDataModification: nil
             )
-            let estimatedCurrentTime = Date.now.timeIntervalSince1970
+            let estimatedCurrentTimeInSeconds = Date.now.timeIntervalSince1970
 
-            // Assert that the times are equal to the current time, with up to a second difference (to avoid timing flakiness).
+            // Assert that the times are equal to the current time, with up to a second difference
+            // to avoid timing flakiness. Both the last accessed and last modification times should
+            // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
-            XCTAssertEqual(Float(actualLastAccessTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
-
+            XCTAssertEqual(Double(actualLastAccessTime.seconds), estimatedCurrentTimeInSeconds, accuracy: 1)
             actualLastDataModificationTime = try await handle.info().lastDataModificationTime
-            XCTAssertEqual(Float(actualLastDataModificationTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+            XCTAssertEqual(actualLastDataModificationTime.seconds, actualLastAccessTime.seconds)
         }
     }
 
@@ -1283,14 +1284,15 @@ final class FileHandleTests: XCTestCase {
             XCTAssertEqual(actualLastDataModificationTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
 
             try await handle.touch()
-            let estimatedCurrentTime = Date.now.timeIntervalSince1970
+            let estimatedCurrentTimeInSeconds = Date.now.timeIntervalSince1970
 
-            // Assert that the times are equal to the current time, with up to a second difference (to avoid timing flakiness).
+            // Assert that the times are equal to the current time, with up to a second difference
+            // to avoid timing flakiness. Both the last accessed and last modification times should
+            // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
-            XCTAssertEqual(Float(actualLastAccessTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
-
+            XCTAssertEqual(Double(actualLastAccessTime.seconds), estimatedCurrentTimeInSeconds, accuracy: 1)
             actualLastDataModificationTime = try await handle.info().lastDataModificationTime
-            XCTAssertEqual(Float(actualLastDataModificationTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+            XCTAssertEqual(actualLastDataModificationTime.seconds, actualLastAccessTime.seconds)
         }
     }
 }

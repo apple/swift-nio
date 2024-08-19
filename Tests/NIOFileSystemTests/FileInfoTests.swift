@@ -20,6 +20,8 @@ import XCTest
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Bionic)
+import Bionic
 #endif
 
 final class FileInfoTests: XCTestCase {
@@ -43,7 +45,7 @@ final class FileInfoTests: XCTestCase {
         status.st_birthtimespec = timespec(tv_sec: 3, tv_nsec: 0)
         status.st_flags = 11
         status.st_gen = 12
-        #elseif canImport(Glibc)
+        #elseif canImport(Glibc) || canImport(Bionic)
         status.st_atim = timespec(tv_sec: 0, tv_nsec: 0)
         status.st_mtim = timespec(tv_sec: 1, tv_nsec: 0)
         status.st_ctim = timespec(tv_sec: 2, tv_nsec: 0)
@@ -97,7 +99,7 @@ final class FileInfoTests: XCTestCase {
         assertNotEqualAfterMutation { $0.platformSpecificStatus!.st_birthtimespec.tv_sec += 1 }
         assertNotEqualAfterMutation { $0.platformSpecificStatus!.st_flags += 1 }
         assertNotEqualAfterMutation { $0.platformSpecificStatus!.st_gen += 1 }
-        #elseif canImport(Glibc)
+        #elseif canImport(Glibc) || canImport(Bionic)
         assertNotEqualAfterMutation { $0.platformSpecificStatus!.st_atim.tv_sec += 1 }
         assertNotEqualAfterMutation { $0.platformSpecificStatus!.st_mtim.tv_sec += 1 }
         assertNotEqualAfterMutation { $0.platformSpecificStatus!.st_ctim.tv_sec += 1 }
@@ -150,7 +152,7 @@ final class FileInfoTests: XCTestCase {
         }
         assertDifferentHashValueAfterMutation { $0.platformSpecificStatus!.st_flags += 1 }
         assertDifferentHashValueAfterMutation { $0.platformSpecificStatus!.st_gen += 1 }
-        #elseif canImport(Glibc)
+        #elseif canImport(Glibc) || canImport(Bionic)
         assertDifferentHashValueAfterMutation { $0.platformSpecificStatus!.st_atim.tv_sec += 1 }
         assertDifferentHashValueAfterMutation { $0.platformSpecificStatus!.st_mtim.tv_sec += 1 }
         assertDifferentHashValueAfterMutation { $0.platformSpecificStatus!.st_ctim.tv_sec += 1 }

@@ -124,7 +124,7 @@ public enum OpenOptions {
             replaceExisting: Bool,
             permissions: FilePermissions? = nil
         ) -> Self {
-            return Write(
+            Write(
                 existingFile: replaceExisting ? .truncate : .none,
                 newFile: NewFile(permissions: permissions)
             )
@@ -143,7 +143,7 @@ public enum OpenOptions {
             createIfNecessary: Bool,
             permissions: FilePermissions? = nil
         ) -> Self {
-            return Write(
+            Write(
                 existingFile: .open,
                 newFile: createIfNecessary ? NewFile(permissions: permissions) : nil
             )

@@ -223,7 +223,9 @@ extension ChannelPipeline.SynchronousOperations {
         self.eventLoop.assertInEventLoop()
 
         let requestEncoder = HTTPRequestEncoder(configuration: configuration.encoderConfiguration)
-        let responseDecoder = ByteToMessageHandler(HTTPResponseDecoder(leftOverBytesStrategy: configuration.leftOverBytesStrategy))
+        let responseDecoder = ByteToMessageHandler(
+            HTTPResponseDecoder(leftOverBytesStrategy: configuration.leftOverBytesStrategy)
+        )
         var httpHandlers = [RemovableChannelHandler]()
         httpHandlers.reserveCapacity(3)
         httpHandlers.append(requestEncoder)

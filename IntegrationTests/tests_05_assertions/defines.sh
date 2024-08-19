@@ -16,7 +16,7 @@
 set -eu
 
 function make_package() {
-    cat > "$tmpdir/syscallwrapper/Package.swift" <<"EOF"
+    cat > "${tmpdir:?"tmpdir variable not set"}/syscallwrapper/Package.swift" <<"EOF"
 // swift-tools-version:5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
@@ -45,7 +45,7 @@ let package = Package(
     ]
 )
 EOF
-    cp "$here/../../Tests/NIOTests/SystemCallWrapperHelpers.swift" \
+    cp "${here:?"here variable not set"}/../../Tests/NIOTests/SystemCallWrapperHelpers.swift" \
         "$here/../../Sources/NIOPosix/System.swift" \
         "$here/../../Sources/NIOPosix/IO.swift" \
         "$tmpdir/syscallwrapper/Sources/syscallwrapper"

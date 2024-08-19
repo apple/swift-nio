@@ -226,7 +226,7 @@ while getopts "ns:p:m:d:t:" opt; do
             do_hooking=false
             ;;
         s)
-            shared_files+=( $(abs_path "$OPTARG") )
+            shared_files+=( "$(abs_path "$OPTARG")" )
             ;;
         p)
             pkg_root=$(abs_path "$OPTARG")

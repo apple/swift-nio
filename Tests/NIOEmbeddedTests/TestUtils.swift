@@ -13,19 +13,26 @@
 //===----------------------------------------------------------------------===//
 import Atomics
 import Foundation
-import XCTest
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
+import XCTest
 
 // FIXME: Duplicated with NIO
-func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #filePath, line: UInt = #line) {
+func assert(
+    _ condition: @autoclosure () -> Bool,
+    within time: TimeAmount,
+    testInterval: TimeAmount? = nil,
+    _ message: String = "condition not satisfied in time",
+    file: StaticString = #filePath,
+    line: UInt = #line
+) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
     repeat {
         if condition() { return }
         usleep(UInt32(testInterval.nanoseconds / 1000))
-    } while (NIODeadline.now() < endTime)
+    } while NIODeadline.now() < endTime
 
     if !condition() {
         XCTFail(message, file: (file), line: line)
@@ -45,17 +52,17 @@ extension EventLoopFuture {
         } else {
             let lock = NIOLock()
             let group = DispatchGroup()
-            var fulfilled = false // protected by lock
+            var fulfilled = false  // protected by lock
 
             group.enter()
             self.eventLoop.execute {
-                let isFulfilled = self.isFulfilled // This will now enter the above branch.
+                let isFulfilled = self.isFulfilled  // This will now enter the above branch.
                 lock.withLock {
                     fulfilled = isFulfilled
                 }
                 group.leave()
             }
-            group.wait() // this is very nasty but this is for tests only, so...
+            group.wait()  // this is very nasty but this is for tests only, so...
             return lock.withLock { fulfilled }
         }
     }

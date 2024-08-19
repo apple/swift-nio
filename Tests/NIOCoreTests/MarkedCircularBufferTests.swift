@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
 
 class MarkedCircularBufferTests: XCTestCase {
     func testEmptyMark() throws {
@@ -124,7 +124,7 @@ class MarkedCircularBufferTests: XCTestCase {
         }
         let range = buf.startIndex..<buf.index(buf.startIndex, offsetBy: 2)
         XCTAssertEqual(buf[range].count, 2)
-        buf[range] = [0,1]
+        buf[range] = [0, 1]
         XCTAssertEqual(buf.firstIndex(of: 2), nil)
         XCTAssertEqual(buf.count, 4)
     }

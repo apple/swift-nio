@@ -17,9 +17,9 @@ set -eu
 
 sourcedir=$(pwd)
 workingdir=$(mktemp -d)
-projectname=$(basename $workingdir)
+projectname=$(basename "$workingdir")
 
-cd $workingdir
+cd "$workingdir"
 swift package init
 
 cat << EOF > Package.swift
@@ -62,7 +62,7 @@ let package = Package(
 )
 EOF
 
-cat << EOF > Sources/$projectname/$(echo $projectname | tr . _).swift
+cat << EOF > Sources/"$projectname"/"$(echo "$projectname" | tr . _)".swift
 import NIO
 import NIOCore
 import NIOConcurrencyHelpers

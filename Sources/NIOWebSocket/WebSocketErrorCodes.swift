@@ -25,7 +25,7 @@ public enum WebSocketErrorCode: Sendable {
     /// Corresponds to code 1000.
     case normalClosure
 
-    /// Ondicates that an endpoint is "going away", such as a server
+    /// Indicates that an endpoint is "going away", such as a server
     /// going down or a browser having navigated away from a page.
     /// Corresponds to code 1001.
     case goingAway
@@ -132,7 +132,7 @@ extension ByteBuffer {
     ///
     /// - returns: The error code, or `nil` if there were not enough readable bytes.
     public mutating func readWebSocketErrorCode() -> WebSocketErrorCode? {
-        return self.readInteger(as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
+        self.readInteger(as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
     }
 
     /// Get a websocket error code from a byte buffer.
@@ -144,7 +144,7 @@ extension ByteBuffer {
     ///     - index: The index into the buffer to read the error code from.
     /// - returns: The error code, or `nil` if there were not enough bytes at that index.
     public func getWebSocketErrorCode(at index: Int) -> WebSocketErrorCode? {
-        return self.getInteger(at: index, as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
+        self.getInteger(at: index, as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
     }
 
     /// Write the given error code to the buffer.

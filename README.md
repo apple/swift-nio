@@ -71,7 +71,12 @@ Redis | ✅ | ❌ | [swift-server/RediStack](https://github.com/swift-server/Red
 
 This is the current version of SwiftNIO and will be supported for the foreseeable future.
 
-The most recent versions of SwiftNIO support Swift 5.7 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
+### Swift Versions
+
+We commit to support the most recently released swift version (currently 5.10) and the last two minor releases before that unless this is impossible to do in one codebase.
+In addition checks are run against the latest beta release (if any) as well as the nightly swift builds and the intent is that these should pass. 
+
+The most recent versions of SwiftNIO support Swift 5.8 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
 
 SwiftNIO            | Minimum Swift Version
 --------------------|----------------------
@@ -104,7 +109,6 @@ SwiftNIO follows [SemVer 2.0.0](https://semver.org/#semantic-versioning-200) wit
 What this means for you is that you should depend on SwiftNIO with a version range that covers everything from the minimum SwiftNIO version you require up to the next major version.
 In SwiftPM that can be easily done specifying for example `from: "2.0.0"` meaning that you support SwiftNIO in every version starting from 2.0.0 up to (excluding) 3.0.0.
 SemVer and SwiftNIO's Public API guarantees should result in a working program without having to worry about testing every single version for compatibility.
-
 
 
 ## Conceptual Overview
@@ -198,7 +202,7 @@ One major difference between writing concurrent code and writing synchronous cod
 
 An [`EventLoopFuture<T>`][elf] is essentially a container for the return value of a function that will be populated *at some time in the future*. Each [`EventLoopFuture<T>`][elf] has a corresponding [`EventLoopPromise<T>`][elp], which is the object that the result will be put into. When the promise is succeeded, the future will be fulfilled.
 
-If you had to poll the future to detect when it completed that would be quite inefficient, so [`EventLoopFuture<T>`][elf] is designed to have managed callbacks. Essentially, you can hang callbacks off the future that will be executed when a result is available. The [`EventLoopFuture<T>`][elf] will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around [`EventLoopFuture<T>`][elf] callbacks.
+If you had to poll the future to detect when it completed that would be quite inefficient, so [`EventLoopFuture<T>`][elf] is designed to have managed callbacks. Essentially, you can chain callbacks off the future that will be executed when a result is available. The [`EventLoopFuture<T>`][elf] will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around [`EventLoopFuture<T>`][elf] callbacks.
 
 Another important topic for consideration is the difference between how the promise passed to `close` works as opposed to `closeFuture` on a [`Channel`][c]. For example, the promise passed into `close` will succeed after the [`Channel`][c] is closed down but before the [`ChannelPipeline`][cp] is completely cleared out. This will allow you to take action on the [`ChannelPipeline`][cp] before it is completely cleared out, if needed. If it is desired to wait for the [`Channel`][c] to close down and the [`ChannelPipeline`][cp] to be cleared out without any further action, then the better option would be to wait for the `closeFuture` to succeed.
 
@@ -313,7 +317,7 @@ First make sure you have [Docker](https://www.docker.com/community-edition) inst
 
 - `docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.2204.57.yaml run test`
 
-  Will create a base image using Ubuntu 22.04 and Swift 5.7, compile SwiftNIO and run the unit and integration tests.  Files exist for other ubuntu and swift versions in the docker directory.
+  Will create a base image using Ubuntu 22.04 and Swift 5.7, compile SwiftNIO and run the unit and integration tests.  Files exist for other Ubuntu and swift versions in the docker directory.
 
 
 ## Developing SwiftNIO

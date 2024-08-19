@@ -35,20 +35,10 @@ This product is heavily influenced by Netty.
 
 ---
 
-This product contains a derivation of the Tony Stone's 'process_test_files.rb'.
-
-  * LICENSE (Apache License 2.0):
-    * https://www.apache.org/licenses/LICENSE-2.0
-  * HOMEPAGE:
-    * https://github.com/tonystone/build-tools/commit/6c417b7569df24597a48a9aa7b505b636e8f73a1
-    * https://github.com/tonystone/build-tools/blob/master/source/xctest_tool.rb
-
----
-
 This product contains NodeJS's llhttp.
 
   * LICENSE (MIT):
-    * https://github.com/nodejs/llhttp/blob/master/LICENSE-MIT
+    * https://github.com/nodejs/llhttp/blob/1e1c5b43326494e97cf8244ff57475eb72a1b62c/LICENSE-MIT
   * HOMEPAGE:
     * https://github.com/nodejs/llhttp
 
@@ -57,7 +47,7 @@ This product contains NodeJS's llhttp.
 This product contains "cpp_magic.h" from Thomas Nixon & Jonathan Heathcote's uSHET
 
   * LICENSE (MIT):
-    * https://github.com/18sg/uSHET/blob/master/LICENSE
+    * https://github.com/18sg/uSHET/blob/c09e0acafd86720efe42dc15c63e0cc228244c32/lib/cpp_magic.h
   * HOMEPAGE:
     * https://github.com/18sg/uSHET
 
@@ -68,14 +58,14 @@ This product contains "sha1.c" and "sha1.h" from FreeBSD (Copyright (C) 1995, 19
   * LICENSE (BSD-3):
     * https://opensource.org/licenses/BSD-3-Clause
   * HOMEPAGE:
-    * https://github.com/freebsd/freebsd/tree/master/sys/crypto
+    * https://github.com/freebsd/freebsd-src
 
 ---
 
 This product contains a derivation of Fabian Fett's 'Base64.swift'.
 
   * LICENSE (Apache License 2.0):
-    * https://github.com/fabianfett/swift-base64-kit/blob/master/LICENSE
+    * https://github.com/swift-extras/swift-extras-base64/blob/b8af49699d59ad065b801715a5009619100245ca/LICENSE
   * HOMEPAGE:
     * https://github.com/fabianfett/swift-base64-kit
 

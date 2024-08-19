@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOWebSocket
+import XCTest
 
 extension EmbeddedChannel {
     func readAllOutboundBuffers() throws -> ByteBuffer {
@@ -33,13 +33,11 @@ extension EmbeddedChannel {
     }
 }
 
-
 extension ByteBuffer {
     mutating func readAllBytes() -> [UInt8] {
-        return self.readBytes(length: self.readableBytes)!
+        self.readBytes(length: self.readableBytes)!
     }
 }
-
 
 public final class WebSocketFrameEncoderTest: XCTestCase {
     public var channel: EmbeddedChannel!
@@ -103,12 +101,16 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         let dataBytes: [UInt8] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
         self.buffer.writeBytes(dataBytes)
 
-        let frame = WebSocketFrame(fin: false,
-                                   opcode: .text,
-                                   data: self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!,
-                                   extensionData: self.buffer.getSlice(at: self.buffer.readerIndex + 5, length: 5)!)
-        assertFrameEncodes(frame: frame,
-                           expectedBytes: [0x01, 0x0A, 0x6, 0x7, 0x8, 0x9, 0xA, 0x1, 0x2, 0x3, 0x4, 0x5])
+        let frame = WebSocketFrame(
+            fin: false,
+            opcode: .text,
+            data: self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!,
+            extensionData: self.buffer.getSlice(at: self.buffer.readerIndex + 5, length: 5)!
+        )
+        assertFrameEncodes(
+            frame: frame,
+            expectedBytes: [0x01, 0x0A, 0x6, 0x7, 0x8, 0x9, 0xA, 0x1, 0x2, 0x3, 0x4, 0x5]
+        )
     }
 
     func testMasksDataCorrectly() throws {
@@ -116,13 +118,19 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         let maskKey: WebSocketMaskingKey = [0x80, 0x08, 0x10, 0x01]
         self.buffer.writeBytes(dataBytes)
 
-        let frame = WebSocketFrame(fin: true,
-                                   opcode: .binary,
-                                   maskKey: maskKey,
-                                   data: self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!,
-                                   extensionData: self.buffer.getSlice(at: self.buffer.readerIndex + 5, length: 5)!)
-        assertFrameEncodes(frame: frame,
-                           expectedBytes: [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01, 0x86, 0x0F, 0x18, 0x08, 0x8A, 0x09, 0x12, 0x02, 0x84, 0x0D])
+        let frame = WebSocketFrame(
+            fin: true,
+            opcode: .binary,
+            maskKey: maskKey,
+            data: self.buffer.getSlice(at: self.buffer.readerIndex, length: 5)!,
+            extensionData: self.buffer.getSlice(at: self.buffer.readerIndex + 5, length: 5)!
+        )
+        assertFrameEncodes(
+            frame: frame,
+            expectedBytes: [
+                0x82, 0x8A, 0x80, 0x08, 0x10, 0x01, 0x86, 0x0F, 0x18, 0x08, 0x8A, 0x09, 0x12, 0x02, 0x84, 0x0D,
+            ]
+        )
     }
 
     func testFrameEncoderReusesHeaderBufferWherePossible() {
@@ -170,8 +178,10 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         XCTAssertNoThrow(result = try self.channel.readOutbound(as: ByteBuffer.self))
         XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
 
-        XCTAssertEqual(result?.readAllBytes(),
-                       [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01, 0x81, 0x0A, 0x13, 0x05, 0x85, 0x0E, 0x17, 0x09, 0x89, 0x02])
+        XCTAssertEqual(
+            result?.readAllBytes(),
+            [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01, 0x81, 0x0A, 0x13, 0x05, 0x85, 0x0E, 0x17, 0x09, 0x89, 0x02]
+        )
     }
 
     func testFrameEncoderCanPrependHeaderToExtensionBuffer() {
@@ -189,7 +199,13 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         // We need an extra buffer for application data, but it'll be empty.
         let applicationOriginalBuffer = ByteBufferAllocator().buffer(capacity: 1024)
 
-        let frame = WebSocketFrame(fin: true, opcode: .binary, maskKey: maskKey, data: applicationOriginalBuffer, extensionData: originalBuffer)
+        let frame = WebSocketFrame(
+            fin: true,
+            opcode: .binary,
+            maskKey: maskKey,
+            data: applicationOriginalBuffer,
+            extensionData: originalBuffer
+        )
         self.channel.writeAndFlush(frame, promise: nil)
 
         var extensionBuffer: ByteBuffer? = nil
@@ -198,8 +214,10 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         XCTAssertNoThrow(applicationBuffer = try self.channel.readOutbound(as: ByteBuffer.self))
         XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
 
-        XCTAssertEqual(extensionBuffer?.readAllBytes(),
-                       [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01, 0x81, 0x0A, 0x13, 0x05, 0x85, 0x0E, 0x17, 0x09, 0x89, 0x02])
+        XCTAssertEqual(
+            extensionBuffer?.readAllBytes(),
+            [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01, 0x81, 0x0A, 0x13, 0x05, 0x85, 0x0E, 0x17, 0x09, 0x89, 0x02]
+        )
         XCTAssertEqual(applicationBuffer?.readAllBytes(), [])
     }
 
@@ -222,8 +240,10 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
 
         // The header size should be 8 bytes: leading byte, length, 2 extra length bytes, 4 byte mask.
-        XCTAssertEqual(result?.readBytes(length: 8),
-                       [0x82, 0xFE, 0x00, 0x7E, 0x80, 0x08, 0x10, 0x01,])
+        XCTAssertEqual(
+            result?.readBytes(length: 8),
+            [0x82, 0xFE, 0x00, 0x7E, 0x80, 0x08, 0x10, 0x01]
+        )
     }
 
     func testFrameEncoderCanPrependLargeHeader() {
@@ -245,8 +265,10 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
 
         // The header size should be 14 bytes: leading byte, length, 8 extra length bytes, 4 byte mask.
-        XCTAssertEqual(result?.readBytes(length: 14),
-                       [0x82, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x80, 0x08, 0x10, 0x01,])
+        XCTAssertEqual(
+            result?.readBytes(length: 14),
+            [0x82, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x80, 0x08, 0x10, 0x01]
+        )
     }
 
     func testFrameEncoderFailsToPrependHeaderWithInsufficientSpace() {
@@ -270,8 +292,10 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
 
         // This will only be the frame header.
-        XCTAssertEqual(result?.readAllBytes(),
-                       [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01])
+        XCTAssertEqual(
+            result?.readAllBytes(),
+            [0x82, 0x8A, 0x80, 0x08, 0x10, 0x01]
+        )
     }
 
     func testFrameEncoderFailsToPrependMediumHeaderWithInsufficientSpace() {
@@ -294,8 +318,10 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
 
         // This will only be the frame header.
-        XCTAssertEqual(result?.readAllBytes(),
-                       [0x82, 0xFE, 0x00, 0x7E, 0x80, 0x08, 0x10, 0x01,])
+        XCTAssertEqual(
+            result?.readAllBytes(),
+            [0x82, 0xFE, 0x00, 0x7E, 0x80, 0x08, 0x10, 0x01]
+        )
     }
 
     func testFrameEncoderFailsToPrependLargeHeaderWithInsufficientSpace() {
@@ -318,7 +344,9 @@ public final class WebSocketFrameEncoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertNil(try self.channel.readOutbound(as: ByteBuffer.self)))
 
         // This will only be the frame header.
-        XCTAssertEqual(result?.readAllBytes(),
-                       [0x82, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x80, 0x08, 0x10, 0x01,])
+        XCTAssertEqual(
+            result?.readAllBytes(),
+            [0x82, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x80, 0x08, 0x10, 0x01]
+        )
     }
 }

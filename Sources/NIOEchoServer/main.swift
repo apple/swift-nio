@@ -40,8 +40,8 @@ private final class EchoHandler: ChannelInboundHandler {
 let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
 let bootstrap = ServerBootstrap(group: group)
     // Specify backlog and enable SO_REUSEADDR for the server itself
-    .serverChannelOption(ChannelOptions.backlog, value: 256)
-    .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+    .serverChannelOption(.backlog, value: 256)
+    .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
 
     // Set the handlers that are appled to the accepted Channels
     .childChannelInitializer { channel in
@@ -53,9 +53,9 @@ let bootstrap = ServerBootstrap(group: group)
     }
 
     // Enable SO_REUSEADDR for the accepted Channels
-    .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-    .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
-    .childChannelOption(ChannelOptions.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
+    .childChannelOption(.socketOption(.so_reuseaddr), value: 1)
+    .childChannelOption(.maxMessagesPerRead, value: 16)
+    .childChannelOption(.recvAllocator, value: AdaptiveRecvByteBufferAllocator())
 defer {
     try! group.syncShutdownGracefully()
 }
@@ -77,19 +77,21 @@ enum BindTo {
 let bindTarget: BindTo
 switch (arg1, arg1.flatMap(Int.init), arg2.flatMap(Int.init)) {
 case (_, .some(let cid), .some(let port)):
-    /* we got two arguments (Int, Int), let's interpret that as vsock cid and port */
-    bindTarget = .vsock(VsockAddress(
-        cid: VsockAddress.ContextID(cid),
-        port: VsockAddress.Port(port)
-    ))
+    // we got two arguments (Int, Int), let's interpret that as vsock cid and port
+    bindTarget = .vsock(
+        VsockAddress(
+            cid: VsockAddress.ContextID(cid),
+            port: VsockAddress.Port(port)
+        )
+    )
 case (.some(let h), _, .some(let p)):
-    /* we got two arguments (String, Int), let's interpret that as host and port */
+    // we got two arguments (String, Int), let's interpret that as host and port
     bindTarget = .ip(host: h, port: p)
 case (.some(let pathString), .none, .none):
-    /* we got one argument (String), let's interpret that unix domain socket path */
+    // we got one argument (String), let's interpret that unix domain socket path
     bindTarget = .unixDomainSocket(path: pathString)
 case (_, .some(let p), .none):
-    /* we got one argument (Int), let's interpret that as port on default host */
+    // we got one argument (Int), let's interpret that as port on default host
     bindTarget = .ip(host: defaultHost, port: p)
 default:
     bindTarget = .ip(host: defaultHost, port: defaultPort)

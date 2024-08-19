@@ -13,12 +13,14 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)
 start_server "$token" tcp
+# shellcheck disable=SC2034
 htdocs=$(get_htdocs "$token")
-echo -n '[IPv4]127.0.0.1' > "$tmp/expected_ipv4"
+echo -n '[IPv4]127.0.0.1' > "${tmp:?"tmp variable not set"}/expected_ipv4"
 echo -n '[IPv6]::1' > "$tmp/expected_ipv6"
 do_curl "$token" "http://localhost:$(get_server_port "$token")/dynamic/client-ip" > "$tmp/actual"
 if grep -q '\[IPv4\]127.0.0.1' "$tmp/actual"; then

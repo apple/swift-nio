@@ -355,7 +355,7 @@ function analyse_process() {
     output "## Analysing pid $pid"
     output
 
-    if ! kill -0 "$pid" 2> /dev/null; then
+    if ! kill -0 "$pid" 2> /dev/null; then # ignore-unacceptable-language
         output "pid $pid is dead, skipping"
         return 0
     fi

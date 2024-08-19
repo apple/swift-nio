@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 import NIOCore
 
 // 'any Error' is unconditionally boxed, avoid allocating per use by statically boxing them.

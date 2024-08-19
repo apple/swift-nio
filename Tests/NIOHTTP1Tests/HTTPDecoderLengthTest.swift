@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
+import XCTest
 
 private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboundHandler {
     typealias InboundIn = HTTPPart<Head, Body>
@@ -25,7 +25,7 @@ private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboun
     var seenHead = false
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        switch self.unwrapInboundIn(data) {
+        switch Self.unwrapInboundIn(data) {
         case .head:
             XCTAssertFalse(self.seenHead)
             self.seenHead = true
@@ -45,7 +45,7 @@ private class MessageEndHandler<Head: Equatable, Body: Equatable>: ChannelInboun
 class HTTPDecoderLengthTest: XCTestCase {
     private var channel: EmbeddedChannel!
     private var loop: EmbeddedEventLoop {
-        return self.channel.embeddedEventLoop
+        self.channel.embeddedEventLoop
     }
 
     override func setUp() {
@@ -70,7 +70,8 @@ class HTTPDecoderLengthTest: XCTestCase {
         case neither
     }
 
-    private func assertSemanticEOFOnChannelInactiveResponse(version: HTTPVersion, how eofMechanism: EOFMechanism) throws {
+    private func assertSemanticEOFOnChannelInactiveResponse(version: HTTPVersion, how eofMechanism: EOFMechanism) throws
+    {
         class ChannelInactiveHandler: ChannelInboundHandler {
             typealias InboundIn = HTTPClientResponsePart
             var response: HTTPResponseHead?
@@ -84,7 +85,7 @@ class HTTPDecoderLengthTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                switch self.unwrapInboundIn(data) {
+                switch Self.unwrapInboundIn(data) {
                 case .head(let h):
                     self.response = h
                 case .end:
@@ -127,7 +128,11 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Prime the decoder with a GET and consume it.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: version, method: .GET, uri: "/"))).isFull)
+        XCTAssertTrue(
+            try channel.writeOutbound(
+                HTTPClientRequestPart.head(HTTPRequestHead(version: version, method: .GET, uri: "/"))
+            ).isFull
+        )
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // We now want to send a HTTP/1.1 response. This response has no content-length, no transfer-encoding,
@@ -144,7 +149,9 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertFalse(handler.eof)
 
         // Send a body chunk. This should be immediately passed on. Still no end or EOF.
-        XCTAssertNoThrow(try channel.writeInbound(IOData.byteBuffer(channel.allocator.buffer(string: "some body data"))))
+        XCTAssertNoThrow(
+            try channel.writeInbound(IOData.byteBuffer(channel.allocator.buffer(string: "some body data")))
+        )
         XCTAssertNotNil(handler.response)
         XCTAssertEqual(handler.body!, Array("some body data".utf8))
         XCTAssertFalse(handler.receivedEnd)
@@ -180,9 +187,11 @@ class HTTPDecoderLengthTest: XCTestCase {
         try assertSemanticEOFOnChannelInactiveResponse(version: .http1_0, how: .halfClosure)
     }
 
-    private func assertIgnoresLengthFields(requestMethod: HTTPMethod,
-                                           responseStatus: HTTPResponseStatus,
-                                           responseFramingField: FramingField) throws {
+    private func assertIgnoresLengthFields(
+        requestMethod: HTTPMethod,
+        responseStatus: HTTPResponseStatus,
+        responseFramingField: FramingField
+    ) throws {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(HTTPRequestEncoder()))
         let decoder = HTTPResponseDecoder(leftOverBytesStrategy: .dropBytes, informationalResponseStrategy: .forward)
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(decoder)))
@@ -191,9 +200,17 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Prime the decoder with a request and consume it.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http1_1,
-                                                                                           method: requestMethod,
-                                                                                           uri: "/"))).isFull)
+        XCTAssertTrue(
+            try channel.writeOutbound(
+                HTTPClientRequestPart.head(
+                    HTTPRequestHead(
+                        version: .http1_1,
+                        method: requestMethod,
+                        uri: "/"
+                    )
+                )
+            ).isFull
+        )
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // We now want to send a HTTP/1.1 response. This response may contain some length framing fields that RFC 7230 says MUST
@@ -221,21 +238,29 @@ class HTTPDecoderLengthTest: XCTestCase {
             // follow. For this reason, we don't expect an `.end` here.
             XCTAssertFalse(handler.seenBody)
             XCTAssertFalse(handler.seenEnd)
-            
+
         default:
             XCTAssertFalse(handler.seenBody)
             XCTAssert(handler.seenEnd)
         }
-        
+
         XCTAssertTrue(try channel.finish().isClean)
     }
 
     func testIgnoresTransferEncodingFieldOnCONNECTResponses() throws {
-        try assertIgnoresLengthFields(requestMethod: .CONNECT, responseStatus: .ok, responseFramingField: .transferEncoding)
+        try assertIgnoresLengthFields(
+            requestMethod: .CONNECT,
+            responseStatus: .ok,
+            responseFramingField: .transferEncoding
+        )
     }
 
     func testIgnoresContentLengthFieldOnCONNECTResponses() throws {
-        try assertIgnoresLengthFields(requestMethod: .CONNECT, responseStatus: .ok, responseFramingField: .contentLength)
+        try assertIgnoresLengthFields(
+            requestMethod: .CONNECT,
+            responseStatus: .ok,
+            responseFramingField: .contentLength
+        )
     }
 
     func testEarlyFinishWithoutLengthAtAllOnCONNECTResponses() throws {
@@ -243,7 +268,11 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     func testIgnoresTransferEncodingFieldOnHEADResponses() throws {
-        try assertIgnoresLengthFields(requestMethod: .HEAD, responseStatus: .ok, responseFramingField: .transferEncoding)
+        try assertIgnoresLengthFields(
+            requestMethod: .HEAD,
+            responseStatus: .ok,
+            responseFramingField: .transferEncoding
+        )
     }
 
     func testIgnoresContentLengthFieldOnHEADResponses() throws {
@@ -255,29 +284,43 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     func testIgnoresTransferEncodingFieldOn1XXResponses() throws {
-        try assertIgnoresLengthFields(requestMethod: .GET,
-                                      responseStatus: .custom(code: 103, reasonPhrase: "Early Hints"),
-                                      responseFramingField: .transferEncoding)
+        try assertIgnoresLengthFields(
+            requestMethod: .GET,
+            responseStatus: .custom(code: 103, reasonPhrase: "Early Hints"),
+            responseFramingField: .transferEncoding
+        )
     }
 
     func testIgnoresContentLengthFieldOn1XXResponses() throws {
-        try assertIgnoresLengthFields(requestMethod: .GET,
-                                      responseStatus: .custom(code: 103, reasonPhrase: "Early Hints"),
-                                      responseFramingField: .contentLength)
+        try assertIgnoresLengthFields(
+            requestMethod: .GET,
+            responseStatus: .custom(code: 103, reasonPhrase: "Early Hints"),
+            responseFramingField: .contentLength
+        )
     }
 
     func testEarlyFinishWithoutLengthAtAllOn1XXResponses() throws {
-        try assertIgnoresLengthFields(requestMethod: .GET,
-                                      responseStatus: .custom(code: 103, reasonPhrase: "Early Hints"),
-                                      responseFramingField: .neither)
+        try assertIgnoresLengthFields(
+            requestMethod: .GET,
+            responseStatus: .custom(code: 103, reasonPhrase: "Early Hints"),
+            responseFramingField: .neither
+        )
     }
 
     func testIgnoresTransferEncodingFieldOn204Responses() throws {
-        try assertIgnoresLengthFields(requestMethod: .GET, responseStatus: .noContent, responseFramingField: .transferEncoding)
+        try assertIgnoresLengthFields(
+            requestMethod: .GET,
+            responseStatus: .noContent,
+            responseFramingField: .transferEncoding
+        )
     }
 
     func testIgnoresContentLengthFieldOn204Responses() throws {
-        try assertIgnoresLengthFields(requestMethod: .GET, responseStatus: .noContent, responseFramingField: .contentLength)
+        try assertIgnoresLengthFields(
+            requestMethod: .GET,
+            responseStatus: .noContent,
+            responseFramingField: .contentLength
+        )
     }
 
     func testEarlyFinishWithoutLengthAtAllOn204Responses() throws {
@@ -285,11 +328,19 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     func testIgnoresTransferEncodingFieldOn304Responses() throws {
-        try assertIgnoresLengthFields(requestMethod: .GET, responseStatus: .notModified, responseFramingField: .transferEncoding)
+        try assertIgnoresLengthFields(
+            requestMethod: .GET,
+            responseStatus: .notModified,
+            responseFramingField: .transferEncoding
+        )
     }
 
     func testIgnoresContentLengthFieldOn304Responses() throws {
-        try assertIgnoresLengthFields(requestMethod: .GET, responseStatus: .notModified, responseFramingField: .contentLength)
+        try assertIgnoresLengthFields(
+            requestMethod: .GET,
+            responseStatus: .notModified,
+            responseFramingField: .contentLength
+        )
     }
 
     func testEarlyFinishWithoutLengthAtAllOn304Responses() throws {
@@ -303,7 +354,13 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Send a GET with the appropriate Transfer Encoding header.
-        XCTAssertThrowsError(try channel.writeInbound(channel.allocator.buffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n"))) { error in
+        XCTAssertThrowsError(
+            try channel.writeInbound(
+                channel.allocator.buffer(
+                    string: "POST / HTTP/1.1\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n"
+                )
+            )
+        ) { error in
             XCTAssertEqual(error as? HTTPParserError, .unknown)
         }
     }
@@ -315,7 +372,11 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Send a GET with the appropriate Transfer Encoding header.
-        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\n")))
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                channel.allocator.buffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: gzip, chunked\r\n\r\n0\r\n\r\n")
+            )
+        )
 
         // We should have a request, no body, and immediately see end of request.
         XCTAssert(handler.seenHead)
@@ -333,7 +394,10 @@ class HTTPDecoderLengthTest: XCTestCase {
         try assertRequestTransferEncodingInError(transferEncodingHeader: "gzip, chunked, deflate")
     }
 
-    private func assertResponseTransferEncodingHasBodyTerminatedByEOF(transferEncodingHeader: String, eofMechanism: EOFMechanism) throws {
+    private func assertResponseTransferEncodingHasBodyTerminatedByEOF(
+        transferEncodingHeader: String,
+        eofMechanism: EOFMechanism
+    ) throws {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(HTTPRequestEncoder()))
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPResponseDecoder())))
 
@@ -341,14 +405,28 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Prime the decoder with a request and consume it.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http1_1,
-                                                                                           method: .GET,
-                                                                                           uri: "/"))).isFull)
+        XCTAssertTrue(
+            try channel.writeOutbound(
+                HTTPClientRequestPart.head(
+                    HTTPRequestHead(
+                        version: .http1_1,
+                        method: .GET,
+                        uri: "/"
+                    )
+                )
+            ).isFull
+        )
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // Send a 200 with the appropriate Transfer Encoding header. We should see the request,
         // but no body or end.
-        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n")))
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                channel.allocator.buffer(
+                    string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n"
+                )
+            )
+        )
         XCTAssert(handler.seenHead)
         XCTAssertFalse(handler.seenBody)
         XCTAssertFalse(handler.seenEnd)
@@ -372,7 +450,10 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertTrue(try channel.finish().isClean)
     }
 
-    private func assertResponseTransferEncodingHasBodyTerminatedByEndOfChunk(transferEncodingHeader: String, eofMechanism: EOFMechanism) throws {
+    private func assertResponseTransferEncodingHasBodyTerminatedByEndOfChunk(
+        transferEncodingHeader: String,
+        eofMechanism: EOFMechanism
+    ) throws {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(HTTPRequestEncoder()))
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPResponseDecoder())))
 
@@ -380,13 +461,27 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         // Prime the decoder with a request and consume it.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http1_1,
-                                                                                           method: .GET,
-                                                                                           uri: "/"))).isFull)
+        XCTAssertTrue(
+            try channel.writeOutbound(
+                HTTPClientRequestPart.head(
+                    HTTPRequestHead(
+                        version: .http1_1,
+                        method: .GET,
+                        uri: "/"
+                    )
+                )
+            ).isFull
+        )
         XCTAssertNoThrow(XCTAssertNotNil(try channel.readOutbound(as: ByteBuffer.self)))
 
         // Send a 200 with the appropriate Transfer Encoding header. We should see the request.
-        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n")))
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                channel.allocator.buffer(
+                    string: "HTTP/1.1 200 OK\r\nTransfer-Encoding: \(transferEncodingHeader)\r\n\r\n"
+                )
+            )
+        )
         XCTAssert(handler.seenHead)
         XCTAssertFalse(handler.seenBody)
         XCTAssertFalse(handler.seenEnd)
@@ -416,38 +511,58 @@ class HTTPDecoderLengthTest: XCTestCase {
     }
 
     func testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithChannelInactive() throws {
-        try assertResponseTransferEncodingHasBodyTerminatedByEndOfChunk(transferEncodingHeader: "gzip, chunked", eofMechanism: .channelInactive)
+        try assertResponseTransferEncodingHasBodyTerminatedByEndOfChunk(
+            transferEncodingHeader: "gzip, chunked",
+            eofMechanism: .channelInactive
+        )
     }
 
     func testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithChannelInactive() throws {
         // Here http_parser is right, and this is EOF terminated.
-        try assertResponseTransferEncodingHasBodyTerminatedByEOF(transferEncodingHeader: "chunked, gzip", eofMechanism: .channelInactive)
+        try assertResponseTransferEncodingHasBodyTerminatedByEOF(
+            transferEncodingHeader: "chunked, gzip",
+            eofMechanism: .channelInactive
+        )
     }
 
     func testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithChannelInactive() throws {
         // Here http_parser is right, and this is EOF terminated.
-        try assertResponseTransferEncodingHasBodyTerminatedByEOF(transferEncodingHeader: "gzip, chunked, deflate", eofMechanism: .channelInactive)
+        try assertResponseTransferEncodingHasBodyTerminatedByEOF(
+            transferEncodingHeader: "gzip, chunked, deflate",
+            eofMechanism: .channelInactive
+        )
     }
 
     func testMultipleTEWithChunkedLastHasEOFBodyOnResponseWithHalfClosure() throws {
-        try assertResponseTransferEncodingHasBodyTerminatedByEndOfChunk(transferEncodingHeader: "gzip, chunked", eofMechanism: .halfClosure)
+        try assertResponseTransferEncodingHasBodyTerminatedByEndOfChunk(
+            transferEncodingHeader: "gzip, chunked",
+            eofMechanism: .halfClosure
+        )
     }
 
     func testMultipleTEWithChunkedFirstHasEOFBodyOnResponseWithHalfClosure() throws {
         // Here http_parser is right, and this is EOF terminated.
-        try assertResponseTransferEncodingHasBodyTerminatedByEOF(transferEncodingHeader: "chunked, gzip", eofMechanism: .halfClosure)
+        try assertResponseTransferEncodingHasBodyTerminatedByEOF(
+            transferEncodingHeader: "chunked, gzip",
+            eofMechanism: .halfClosure
+        )
     }
 
     func testMultipleTEWithChunkedInTheMiddleHasEOFBodyOnResponseWithHalfClosure() throws {
         // Here http_parser is right, and this is EOF terminated.
-        try assertResponseTransferEncodingHasBodyTerminatedByEOF(transferEncodingHeader: "gzip, chunked, deflate", eofMechanism: .halfClosure)
+        try assertResponseTransferEncodingHasBodyTerminatedByEOF(
+            transferEncodingHeader: "gzip, chunked, deflate",
+            eofMechanism: .halfClosure
+        )
     }
 
     func testRequestWithTEAndContentLengthErrors() throws {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder())))
 
         // Send a GET with the invalid headers.
-        let request = channel.allocator.buffer(string: "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n")
+        let request = channel.allocator.buffer(
+            string: "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n"
+        )
         XCTAssertThrowsError(try channel.writeInbound(request)) { error in
             XCTAssertEqual(HTTPParserError.unexpectedContentLength, error as? HTTPParserError)
         }
@@ -462,9 +577,17 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPResponseDecoder())))
 
         // Prime the decoder with a request.
-        XCTAssertTrue(try channel.writeOutbound(HTTPClientRequestPart.head(HTTPRequestHead(version: .http1_1,
-                                                                                           method: .GET,
-                                                                                           uri: "/"))).isFull)
+        XCTAssertTrue(
+            try channel.writeOutbound(
+                HTTPClientRequestPart.head(
+                    HTTPRequestHead(
+                        version: .http1_1,
+                        method: .GET,
+                        uri: "/"
+                    )
+                )
+            ).isFull
+        )
 
         // Send a 200 OK with the invalid headers.
         let response = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n"
@@ -483,8 +606,10 @@ class HTTPDecoderLengthTest: XCTestCase {
         // Send a GET with the invalid headers.
         let request = "POST / HTTP/1.1\r\nContent-Length: \(contentLengthField)\r\n\r\n"
         XCTAssertThrowsError(try channel.writeInbound(channel.allocator.buffer(string: request))) { error in
-            XCTAssert(HTTPParserError.unexpectedContentLength == error as? HTTPParserError ||
-                HTTPParserError.invalidContentLength == error as? HTTPParserError)
+            XCTAssert(
+                HTTPParserError.unexpectedContentLength == error as? HTTPParserError
+                    || HTTPParserError.invalidContentLength == error as? HTTPParserError
+            )
         }
 
         // Must spin the loop.
@@ -544,7 +669,9 @@ class HTTPDecoderLengthTest: XCTestCase {
 
         // Send a POST without a length field of any kind. This should be a zero-length request,
         // so .end should come immediately.
-        XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: "POST / HTTP/1.1\r\nHost: example.org\r\n\r\n")))
+        XCTAssertNoThrow(
+            try channel.writeInbound(channel.allocator.buffer(string: "POST / HTTP/1.1\r\nHost: example.org\r\n\r\n"))
+        )
         XCTAssert(handler.seenHead)
         XCTAssertFalse(handler.seenBody)
         XCTAssert(handler.seenEnd)

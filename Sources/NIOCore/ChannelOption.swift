@@ -20,11 +20,11 @@ public protocol ChannelOption: Equatable, _NIOPreconcurrencySendable {
 
 public typealias SocketOptionName = Int32
 #if (os(Linux) || os(Android)) && !canImport(Musl)
-    public typealias SocketOptionLevel = Int
-    public typealias SocketOptionValue = Int
+public typealias SocketOptionLevel = Int
+public typealias SocketOptionValue = Int
 #else
-    public typealias SocketOptionLevel = CInt
-    public typealias SocketOptionValue = CInt
+public typealias SocketOptionLevel = CInt
+public typealias SocketOptionValue = CInt
 #endif
 
 @available(*, deprecated, renamed: "ChannelOptions.Types.SocketOption")
@@ -77,7 +77,7 @@ extension ChannelOptions {
 
             public var level: SocketOptionLevel {
                 get {
-                    return SocketOptionLevel(optionLevel.rawValue)
+                    SocketOptionLevel(optionLevel.rawValue)
                 }
                 set {
                     self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(newValue))
@@ -85,7 +85,7 @@ extension ChannelOptions {
             }
             public var name: SocketOptionName {
                 get {
-                    return SocketOptionName(optionName.rawValue)
+                    SocketOptionName(optionName.rawValue)
                 }
                 set {
                     self.optionName = NIOBSDSocket.Option(rawValue: CInt(newValue))
@@ -93,15 +93,15 @@ extension ChannelOptions {
             }
 
             #if !os(Windows)
-                /// Create a new `SocketOption`.
-                ///
-                /// - parameters:
-                ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
-                ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
-                public init(level: SocketOptionLevel, name: SocketOptionName) {
-                    self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
-                    self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
-                }
+            /// Create a new `SocketOption`.
+            ///
+            /// - parameters:
+            ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+            ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
+            public init(level: SocketOptionLevel, name: SocketOptionName) {
+                self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
+                self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
+            }
             #endif
 
             /// Create a new `SocketOption`.
@@ -188,7 +188,7 @@ extension ChannelOptions {
         public struct DatagramVectorReadMessageCountOption: ChannelOption, Sendable {
             public typealias Value = Int
 
-            public init() { }
+            public init() {}
         }
 
         /// ``DatagramSegmentSize`` controls the `UDP_SEGMENT` socket option (sometimes reffered to as 'GSO') which allows for
@@ -201,7 +201,7 @@ extension ChannelOptions {
         /// Setting this option to zero disables segmentation offload.
         public struct DatagramSegmentSize: ChannelOption, Sendable {
             public typealias Value = CInt
-            public init() { }
+            public init() {}
         }
 
         /// ``DatagramReceiveOffload`` sets the `UDP_GRO` socket option which allows for datagrams to be accumulated
@@ -214,7 +214,7 @@ extension ChannelOptions {
         ///   The default allocator for datagram channels uses fixed sized buffers of 2048 bytes.
         public struct DatagramReceiveOffload: ChannelOption, Sendable {
             public typealias Value = Bool
-            public init() { }
+            public init() {}
         }
 
         /// When set to true IP level ECN information will be reported through `AddressedEnvelope.Metadata`
@@ -300,23 +300,27 @@ extension ChannelOptions {
 /// Provides `ChannelOption`s to be used with a `Channel`, `Bootstrap` or `ServerBootstrap`.
 public struct ChannelOptions: Sendable {
     #if !os(Windows)
-        public static let socket: @Sendable (SocketOptionLevel, SocketOptionName) -> ChannelOptions.Types.SocketOption = { (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
-            .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
-        }
+    public static let socket: @Sendable (SocketOptionLevel, SocketOptionName) -> ChannelOptions.Types.SocketOption = {
+        (level: SocketOptionLevel, name: SocketOptionName) -> Types.SocketOption in
+        .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
+    }
     #endif
 
     /// - seealso: `SocketOption`.
-    public static let socketOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+    public static let socketOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = {
+        (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .socket, name: name)
     }
 
     /// - seealso: `SocketOption`.
-    public static let ipOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+    public static let ipOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = {
+        (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .ip, name: name)
     }
 
     /// - seealso: `SocketOption`.
-    public static let tcpOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = { (name: NIOBSDSocket.Option) -> Types.SocketOption in
+    public static let tcpOption: @Sendable (NIOBSDSocket.Option) -> ChannelOptions.Types.SocketOption = {
+        (name: NIOBSDSocket.Option) -> Types.SocketOption in
         .init(level: .tcp, name: name)
     }
 
@@ -366,12 +370,107 @@ public struct ChannelOptions: Sendable {
     public static let bufferedWritableBytes = Types.BufferedWritableBytesOption()
 }
 
+/// - seealso: `SocketOption`.
+extension ChannelOption where Self == ChannelOptions.Types.SocketOption {
+    #if !(os(Windows))
+    public static func socket(_ level: SocketOptionLevel, _ name: SocketOptionName) -> Self {
+        .init(level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)), name: NIOBSDSocket.Option(rawValue: CInt(name)))
+    }
+    #endif
+
+    public static func socketOption(_ name: NIOBSDSocket.Option) -> Self {
+        .init(level: .socket, name: name)
+    }
+
+    public static func ipOption(_ name: NIOBSDSocket.Option) -> Self {
+        .init(level: .ip, name: name)
+    }
+
+    public static func tcpOption(_ name: NIOBSDSocket.Option) -> Self {
+        .init(level: .tcp, name: name)
+    }
+}
+
+/// - seealso: `AllocatorOption`.
+extension ChannelOption where Self == ChannelOptions.Types.AllocatorOption {
+    public static var allocator: Self { .init() }
+}
+
+/// - seealso: `RecvAllocatorOption`.
+extension ChannelOption where Self == ChannelOptions.Types.RecvAllocatorOption {
+    public static var recvAllocator: Self { .init() }
+}
+
+/// - seealso: `AutoReadOption`.
+extension ChannelOption where Self == ChannelOptions.Types.AutoReadOption {
+    public static var autoRead: Self { .init() }
+}
+
+/// - seealso: `MaxMessagesPerReadOption`.
+extension ChannelOption where Self == ChannelOptions.Types.MaxMessagesPerReadOption {
+    public static var maxMessagesPerRead: Self { .init() }
+}
+
+/// - seealso: `BacklogOption`.
+extension ChannelOption where Self == ChannelOptions.Types.BacklogOption {
+    public static var backlog: Self { .init() }
+}
+
+/// - seealso: `WriteSpinOption`.
+extension ChannelOption where Self == ChannelOptions.Types.WriteSpinOption {
+    public static var writeSpin: Self { .init() }
+}
+
+/// - seealso: `WriteBufferWaterMarkOption`.
+extension ChannelOption where Self == ChannelOptions.Types.WriteBufferWaterMarkOption {
+    public static var writeBufferWaterMark: Self { .init() }
+}
+
+/// - seealso: `ConnectTimeoutOption`.
+extension ChannelOption where Self == ChannelOptions.Types.ConnectTimeoutOption {
+    public static var connectTimeout: Self { .init() }
+}
+
+/// - seealso: `AllowRemoteHalfClosureOption`.
+extension ChannelOption where Self == ChannelOptions.Types.AllowRemoteHalfClosureOption {
+    public static var allowRemoteHalfClosure: Self { .init() }
+}
+
+/// - seealso: `DatagramVectorReadMessageCountOption`.
+extension ChannelOption where Self == ChannelOptions.Types.DatagramVectorReadMessageCountOption {
+    public static var datagramVectorReadMessageCount: Self { .init() }
+}
+
+/// - seealso: `DatagramSegmentSize`.
+extension ChannelOption where Self == ChannelOptions.Types.DatagramSegmentSize {
+    public static var datagramSegmentSize: Self { .init() }
+}
+
+/// - seealso: `DatagramReceiveOffload`.
+extension ChannelOption where Self == ChannelOptions.Types.DatagramReceiveOffload {
+    public static var datagramReceiveOffload: Self { .init() }
+}
+
+/// - seealso: `ExplicitCongestionNotificationsOption`.
+extension ChannelOption where Self == ChannelOptions.Types.ExplicitCongestionNotificationsOption {
+    public static var explicitCongestionNotification: Self { .init() }
+}
+
+/// - seealso: `ReceivePacketInfo`.
+extension ChannelOption where Self == ChannelOptions.Types.ReceivePacketInfo {
+    public static var receivePacketInfo: Self { .init() }
+}
+
 extension ChannelOptions {
     /// A type-safe storage facility for `ChannelOption`s. You will only ever need this if you implement your own
     /// `Channel` that needs to store `ChannelOption`s.
     public struct Storage: Sendable {
         @usableFromInline
-        internal var _storage: [(any ChannelOption, (any Sendable, @Sendable (Channel) -> (any ChannelOption, any Sendable) -> EventLoopFuture<Void>))]
+        internal var _storage:
+            [(
+                any ChannelOption,
+                (any Sendable, @Sendable (Channel) -> (any ChannelOption, any Sendable) -> EventLoopFuture<Void>)
+            )]
 
         public init() {
             self._storage = []
@@ -387,8 +486,8 @@ extension ChannelOptions {
         public mutating func append<Option: ChannelOption>(key newKey: Option, value newValue: Option.Value) {
             @Sendable
             func applier(_ t: Channel) -> (any ChannelOption, any Sendable) -> EventLoopFuture<Void> {
-                return { (option, value) in
-                    return t.setOption(option as! Option, value: value as! Option.Value)
+                { (option, value) in
+                    t.setOption(option as! Option, value: value as! Option.Value)
                 }
             }
             var hasSet = false
@@ -417,7 +516,17 @@ extension ChannelOptions {
             let it = self._storage.makeIterator()
 
             @Sendable
-            func applyNext(iterator: IndexingIterator<[(any ChannelOption, (any Sendable, @Sendable (any Channel) -> (any ChannelOption, any Sendable) -> EventLoopFuture<Void>))]>) {
+            func applyNext(
+                iterator: IndexingIterator<
+                    [(
+                        any ChannelOption,
+                        (
+                            any Sendable,
+                            @Sendable (any Channel) -> (any ChannelOption, any Sendable) -> EventLoopFuture<Void>
+                        )
+                    )]
+                >
+            ) {
                 var iterator = iterator
                 guard let (key, (value, applier)) = iterator.next() else {
                     // If we reached the end, everything is applied.

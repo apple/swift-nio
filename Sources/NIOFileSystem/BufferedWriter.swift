@@ -50,13 +50,13 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     ///
     /// You can flush the buffer manually by calling ``flush()``.
     public var bufferedBytes: Int {
-        return self.buffer.count
+        self.buffer.count
     }
 
     /// The capacity of the buffer.
     @_spi(Testing)
     public var bufferCapacity: Int {
-        return self.buffer.capacity
+        self.buffer.capacity
     }
 
     internal init(wrapping writableHandle: Handle, initialOffset: Int64, capacity: Int) {
@@ -215,13 +215,13 @@ extension WritableFileHandleProtocol {
         startingAtAbsoluteOffset initialOffset: Int64 = 0,
         capacity: ByteCount = .kibibytes(512)
     ) -> BufferedWriter<Self> {
-        return BufferedWriter(
+        BufferedWriter(
             wrapping: self,
             initialOffset: initialOffset,
             capacity: Int(capacity.bytes)
         )
     }
-    
+
     /// Convenience function that creates a buffered reader, executes
     /// the closure that writes the contents into the buffer and calls 'flush()'.
     ///
@@ -238,7 +238,7 @@ extension WritableFileHandleProtocol {
     ) async throws -> Result {
         var bufferedWriter = self.bufferedWriter(startingAtAbsoluteOffset: initialOffset, capacity: capacity)
         return try await withUncancellableTearDown {
-            return try await body(&bufferedWriter)
+            try await body(&bufferedWriter)
         } tearDown: { _ in
             try await bufferedWriter.flush()
         }

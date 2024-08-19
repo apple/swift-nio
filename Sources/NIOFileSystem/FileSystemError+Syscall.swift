@@ -541,7 +541,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func fdopendir(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unknown,
             message: "Unable to open directory stream for '\(path)'.",
             systemCall: "fdopendir",
@@ -552,7 +552,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func readdir(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unknown,
             message: "Unable to read directory stream for '\(path)'.",
             systemCall: "readdir",
@@ -563,7 +563,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func ftsRead(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unknown,
             message: "Unable to read FTS stream for '\(path)'.",
             systemCall: "fts_read",
@@ -966,7 +966,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func getcwd(errno: Errno, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unavailable,
             message: "Can't get current working directory.",
             systemCall: "getcwd",
@@ -977,7 +977,7 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func confstr(name: String, errno: Errno, location: SourceLocation) -> Self {
-        return FileSystemError(
+        FileSystemError(
             code: .unavailable,
             message: "Can't get configuration value for '\(name)'.",
             systemCall: "confstr",
@@ -988,6 +988,38 @@ extension FileSystemError {
 
     @_spi(Testing)
     public static func fcopyfile(
+        errno: Errno,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        Self._copyfile(
+            "fcopyfile",
+            errno: errno,
+            from: sourcePath,
+            to: destinationPath,
+            location: location
+        )
+    }
+
+    @_spi(Testing)
+    public static func copyfile(
+        errno: Errno,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
+        location: SourceLocation
+    ) -> Self {
+        Self._copyfile(
+            "copyfile",
+            errno: errno,
+            from: sourcePath,
+            to: destinationPath,
+            location: location
+        )
+    }
+
+    private static func _copyfile(
+        _ name: String,
         errno: Errno,
         from sourcePath: FilePath,
         to destinationPath: FilePath,
@@ -1016,6 +1048,25 @@ extension FileSystemError {
                 Can't copy file from '\(sourcePath)' to '\(destinationPath)', the destination \
                 path already exists.
                 """
+        case .fileExists:
+            code = .fileAlreadyExists
+            message = """
+                Unable to create file at path '\(destinationPath)', no existing file options were set \
+                which implies that no file should exist but a file already exists at the \
+                specified path.
+                """
+        case .tooManyOpenFiles:
+            code = .unavailable
+            message = """
+                Unable to open the source ('\(sourcePath)') or destination ('\(destinationPath)') files, \
+                too many file descriptors are open.
+                """
+        case .noSuchFileOrDirectory:
+            code = .notFound
+            message = """
+                Unable to open or create file at path '\(sourcePath)', either a component of the \
+                path did not exist or the named file to be opened did not exist.
+                """
         default:
             code = .unknown
             message = "Can't copy file from '\(sourcePath)' to '\(destinationPath)'."
@@ -1024,7 +1075,7 @@ extension FileSystemError {
         return FileSystemError(
             code: code,
             message: message,
-            systemCall: "fcopyfile",
+            systemCall: name,
             errno: errno,
             location: location
         )
@@ -1085,7 +1136,8 @@ extension FileSystemError {
 
         case .readOnlyFileSystem:
             code = .unsupported
-            message = "Not permitted to change last access or last data modification times for \(path): this is a read-only file system."
+            message =
+                "Not permitted to change last access or last data modification times for \(path): this is a read-only file system."
 
         case .badFileDescriptor:
             code = .closed

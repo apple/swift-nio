@@ -131,7 +131,7 @@ extension ByteBuffer {
         result += String(repeating: " ", count: 60 - result.count)
 
         // Right column renders the 16 bytes line as ASCII characters, or "." if the character is not printable.
-        let printableRange = UInt8(ascii: " ") ..< UInt8(ascii: "~")
+        let printableRange = UInt8(ascii: " ")..<UInt8(ascii: "~")
         let printableBytes = self.readableBytesView.map {
             printableRange.contains($0) ? $0 : UInt8(ascii: ".")
         }
@@ -183,7 +183,7 @@ extension ByteBuffer {
 
         // reserve capacity for the maxBytes dumped, plus the separator line, and buffer length line.
         var result = ""
-        result.reserveCapacity(maxBytes/16 * 79 + 79 + 8)
+        result.reserveCapacity(maxBytes / 16 * 79 + 79 + 8)
 
         var buffer = self
 
@@ -246,7 +246,7 @@ extension ByteBuffer {
     /// - parameters:
     ///     - format: ``HexDumpFormat`` to use for the dump.
     public func hexDump(format: HexDumpFormat) -> String {
-        switch(format.value) {
+        switch format.value {
         case .plain(let maxBytes):
             if let maxBytes = maxBytes {
                 return self.hexDumpPlain(maxBytes: maxBytes)
@@ -263,4 +263,3 @@ extension ByteBuffer {
         }
     }
 }
-
