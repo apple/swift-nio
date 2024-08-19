@@ -59,6 +59,7 @@ jobs:
       with:
         # We need to fetch everything otherwise only the head commit will be fetched.
         fetch-depth: 0
+        persist-credentials: false
     - name: Mark the workspace as safe
       # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
@@ -75,6 +76,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+          persist-credentials: false
     - name: Run documentation check
       run: |
         apt-get -qq update && apt-get -qq -y install curl yq
@@ -88,6 +91,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+          persist-credentials: false
     - name: Run unacceptable language check
       env:
         UNACCEPTABLE_WORD_LIST: ${{ inputs.unacceptable_language_check_word_list}}
@@ -101,6 +106,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+          persist-credentials: false
     - name: Run license header check
       env:
         PROJECT_NAME: ${{ inputs.license_header_check_project_name }}
@@ -114,6 +121,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+          persist-credentials: false
     - name: Run broken symlinks check
       run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-broken-symlinks.sh | bash
 
@@ -127,6 +136,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+          persist-credentials: false
     - name: Mark the workspace as safe
     # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
@@ -143,6 +154,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+          persist-credentials: false
     - name: Mark the workspace as safe
     # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
