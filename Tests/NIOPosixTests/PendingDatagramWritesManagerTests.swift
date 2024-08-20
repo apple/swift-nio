@@ -787,7 +787,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         }
     }
     
-    func testBufferedWritableBytesConsecutiveWrites() throws {
+    func testReadBufferedWritableBytesWithConsecutiveWritesAndWouldBlock() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
         let address = try SocketAddress(ipAddress: "127.0.0.1", port: 80)
@@ -833,6 +833,8 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                                                    expectedVectorWritabilities: nil,
                                                    returns: [.success(.processed(1))],
                                                    promiseStates: [Array(repeating: true, count: 5)])
+            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
 }
