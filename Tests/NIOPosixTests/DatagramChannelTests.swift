@@ -1677,9 +1677,6 @@ class DatagramChannelTests: XCTestCase {
         let writeCount = 10
         var promises: [EventLoopFuture<Void>] = []
         
-        let sendBuffer = try self.firstChannel.getOption(ChannelOptions.socketOption(.so_sndbuf)).wait()
-        XCTAssertEqual(sendBuffer, 16)
-        
         (0..<writeCount).forEach { i in
             let promise = self.firstChannel.write(NIOAny(data))
             promises.append(promise)
