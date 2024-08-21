@@ -248,9 +248,13 @@ extension ChannelPipeline {
 /// more bytes in a sequence than what was specified as the maximum. It could be that this upTo
 /// limit should be increased, or that the sequence has unexpected content in it.
 ///
-/// - maxBytes: the maximum number of bytes to be collected
+/// - maxBytes: (optional) current limit on the maximum number of bytes in the sequence
 public struct NIOTooManyBytesError: Error, Hashable {
-    let maxBytes: Int
+    let maxBytes: Int?
+
+    public init() {
+        self.maxBytes = nil
+    }
 
     public init(maxBytes: Int) {
         self.maxBytes = maxBytes
