@@ -1651,7 +1651,7 @@ class DatagramChannelTests: XCTestCase {
         
         let promises = (0..<writeCount).map { _ in self.firstChannel.write(NIOAny(data)) }
         let bufferedAmount = try self.firstChannel.getOption(ChannelOptions.bufferedWritableBytes).wait()
-        XCTAssertEqual(bufferedAmount, Int64(buffer.readableBytes * writeCount))
+        XCTAssertEqual(bufferedAmount, buffer.readableBytes * writeCount)
         self.firstChannel.flush()
         let bufferedAmountAfterFlush = try self.firstChannel.getOption(ChannelOptions.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmountAfterFlush, 0)
@@ -1687,7 +1687,7 @@ class DatagramChannelTests: XCTestCase {
                     XCTAssertEqual(bufferedAmount, 0)
                 } else {
                     let bufferedAmount = try self.firstChannel.getOption(ChannelOptions.bufferedWritableBytes).wait()
-                    XCTAssertEqual(bufferedAmount, Int64(buffer.readableBytes))
+                    XCTAssertEqual(bufferedAmount, buffer.readableBytes)
                 }
             } catch {
                 XCTFail("firstChannel should not throw any error, but threw \(error)")

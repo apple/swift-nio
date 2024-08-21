@@ -290,7 +290,7 @@ extension ChannelOptions {
         
         /// `BufferedWritableBytesOption` allows users to know the number of writable bytes currently buffered in the `Channel`.
         public struct BufferedWritableBytesOption: ChannelOption, Sendable {
-            public typealias Value = Int64
+            public typealias Value = Int
             
             public init() {}
         }

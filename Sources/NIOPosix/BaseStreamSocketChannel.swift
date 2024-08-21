@@ -77,7 +77,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
         case _ as ChannelOptions.Types.WriteBufferWaterMarkOption:
             return self.pendingWrites.waterMark as! Option.Value
         case _ as ChannelOptions.Types.BufferedWritableBytesOption:
-            return self.pendingWrites.bufferedBytes as! Option.Value
+            return Int(self.pendingWrites.bufferedBytes) as! Option.Value
         default:
             return try super.getOption0(option)
         }
