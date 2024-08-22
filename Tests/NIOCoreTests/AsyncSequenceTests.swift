@@ -126,10 +126,11 @@ final class AsyncSequenceCollectTests: XCTestCase {
             }
 
             // test for the generic version
+            let maxBytes = max(expectedBytes.count - 1, 0)
             await XCTAssertThrowsError(
                 try await testCase.buffers
                     .asAsyncSequence()
-                    .collect(upTo: max(expectedBytes.count - 1, 0), using: .init()),
+                    .collect(upTo: maxBytes, using: .init()),
                 file: testCase.file,
                 line: testCase.line
             ) { error in
@@ -138,6 +139,14 @@ final class AsyncSequenceCollectTests: XCTestCase {
                     file: testCase.file,
                     line: testCase.line
                 )
+                if let tooManyBytesErr = error as? NIOTooManyBytesError {
+                    XCTAssertEqual(
+                        maxBytes,
+                        tooManyBytesErr.maxBytes,
+                        file: testCase.file,
+                        line: testCase.line
+                    )
+                }
             }
 
             // test for the `ByteBuffer` optimised version
@@ -145,7 +154,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 try await testCase.buffers
                     .map(ByteBuffer.init(bytes:))
                     .asAsyncSequence()
-                    .collect(upTo: max(expectedBytes.count - 1, 0)),
+                    .collect(upTo: maxBytes),
                 file: testCase.file,
                 line: testCase.line
             ) { error in
@@ -154,6 +163,14 @@ final class AsyncSequenceCollectTests: XCTestCase {
                     file: testCase.file,
                     line: testCase.line
                 )
+                if let tooManyBytesErr = error as? NIOTooManyBytesError {
+                    // Sometimes the max bytes is subtracted from the header size
+                    XCTAssertTrue(
+                        tooManyBytesErr.maxBytes != nil && tooManyBytesErr.maxBytes! <= maxBytes,
+                        file: testCase.file,
+                        line: testCase.line
+                    )
+                }
             }
         }
     }

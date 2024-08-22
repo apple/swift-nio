@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Foundation
+
 extension EventLoopFuture {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
     ///
@@ -247,11 +249,11 @@ extension ChannelPipeline {
 /// that will be processed. This error is generally thrown when it is discovered that there are
 /// more bytes in a sequence than what was specified as the maximum. It could be that this upTo
 /// limit should be increased, or that the sequence has unexpected content in it.
-///
-/// - maxBytes: (optional) current limit on the maximum number of bytes in the sequence
 public struct NIOTooManyBytesError: Error, Hashable {
-    let maxBytes: Int?
+    /// Current limit on the maximum number of bytes in the sequence
+    public var maxBytes: Int?
 
+    @available(*, deprecated, message: "Construct the NIOTooManyBytesError with the maxBytes limit that triggered this error")
     public init() {
         self.maxBytes = nil
     }
