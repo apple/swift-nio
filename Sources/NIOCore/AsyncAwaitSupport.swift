@@ -243,8 +243,8 @@ extension ChannelPipeline {
 /// An error that is thrown when the number of bytes in an AsyncSequence exceeds the limit.
 ///
 /// When collecting the bytes from an AsyncSequence, there is a limit up to where the content
-/// exceeds a certain threshold beyond which the content isn't matching the expected maximum size.
-/// that will be processed. This error is generally thrown when it is discovered that there are
+/// exceeds a certain threshold beyond which the content isn't matching an expected reasonable
+/// size to be processed. This error is generally thrown when it is discovered that there are more
 /// more bytes in a sequence than what was specified as the maximum. It could be that this upTo
 /// limit should be increased, or that the sequence has unexpected content in it.
 public struct NIOTooManyBytesError: Error, Hashable {
