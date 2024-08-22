@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
-
 extension EventLoopFuture {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
     ///
