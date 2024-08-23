@@ -247,7 +247,7 @@ extension ChannelPipeline {
 /// size to be processed. This error is generally thrown when it is discovered that there are more
 /// more bytes in a sequence than what was specified as the maximum. It could be that this upTo
 /// limit should be increased, or that the sequence has unexpected content in it.
-public struct NIOTooManyBytesError: Error, Hashable {
+public struct NIOTooManyBytesError: Error {
     /// Current limit on the maximum number of bytes in the sequence
     public var maxBytes: Int?
 
@@ -258,6 +258,20 @@ public struct NIOTooManyBytesError: Error, Hashable {
 
     public init(maxBytes: Int) {
         self.maxBytes = maxBytes
+    }
+}
+
+extension NIOTooManyBytesError: Equatable {
+    public static func == (lhs: NIOTooManyBytesError, rhs: NIOTooManyBytesError) -> Bool {
+        // Equality of the maxBytes isn't of consequence
+        return true
+    }
+}
+
+extension NIOTooManyBytesError: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        // All errors of this type hash to the same value since maxBytes isn't of consequence
+        hasher.combine(7)
     }
 }
 
