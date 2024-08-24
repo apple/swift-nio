@@ -461,6 +461,11 @@ extension ChannelOption where Self == ChannelOptions.Types.ReceivePacketInfo {
     public static var receivePacketInfo: Self { .init() }
 }
 
+/// - seealso: `BufferedWritableBytesOption`
+extension ChannelOption where Self == ChannelOptions.Types.BufferedWritableBytesOption {
+    public static var bufferedWritableBytes: Self { .init() }
+}
+
 extension ChannelOptions {
     /// A type-safe storage facility for `ChannelOption`s. You will only ever need this if you implement your own
     /// `Channel` that needs to store `ChannelOption`s.

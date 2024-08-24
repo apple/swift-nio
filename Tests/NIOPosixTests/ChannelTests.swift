@@ -3432,11 +3432,11 @@ public final class ChannelTests: XCTestCase {
         let writeCount = 3
         
         let promises = (0..<writeCount).map {_ in client.write(NIOAny(buffer))}
-        let bufferedAmount = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        let bufferedAmount = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmount, buffer.readableBytes * writeCount)
         client.flush()
         XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: client.eventLoop).wait())
-        let bufferedAmountAfterFlush = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        let bufferedAmountAfterFlush = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmountAfterFlush, 0)
     }
     
@@ -3461,14 +3461,14 @@ public final class ChannelTests: XCTestCase {
         let writeCount = 20
         
         var promises = (0..<writeCount).map {_ in client.writeAndFlush(NIOAny(buffer))}
-        var bufferedAmount = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        var bufferedAmount = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertTrue(bufferedAmount >= 0 && bufferedAmount <= buffer.readableBytes * writeCount)
         promises.append(client.write(NIOAny(buffer)))
-        bufferedAmount = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        bufferedAmount = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertTrue(bufferedAmount >= buffer.readableBytes && bufferedAmount <= buffer.readableBytes * (writeCount + 1))
         client.flush()
         XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: client.eventLoop).wait())
-        let bufferedAmountAfterFlush = try client.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        let bufferedAmountAfterFlush = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmountAfterFlush, 0)
     }
 }

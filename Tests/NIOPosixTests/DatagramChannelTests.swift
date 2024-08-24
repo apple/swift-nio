@@ -1650,10 +1650,10 @@ class DatagramChannelTests: XCTestCase {
         let writeCount = 3
         
         let promises = (0..<writeCount).map { _ in self.firstChannel.write(NIOAny(data)) }
-        let bufferedAmount = try self.firstChannel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        let bufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmount, buffer.readableBytes * writeCount)
         self.firstChannel.flush()
-        let bufferedAmountAfterFlush = try self.firstChannel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        let bufferedAmountAfterFlush = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmountAfterFlush, 0)
         XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
         let datagrams = try self.secondChannel.waitForDatagrams(count: writeCount)
@@ -1683,10 +1683,10 @@ class DatagramChannelTests: XCTestCase {
             do {
                 if i % 2 == 0 {
                     self.firstChannel.flush()
-                    let bufferedAmount = try self.firstChannel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+                    let bufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
                     XCTAssertEqual(bufferedAmount, 0)
                 } else {
-                    let bufferedAmount = try self.firstChannel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+                    let bufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
                     XCTAssertEqual(bufferedAmount, buffer.readableBytes)
                 }
             } catch {
@@ -1694,7 +1694,7 @@ class DatagramChannelTests: XCTestCase {
             }
         }
         self.firstChannel.flush()
-        let finalBufferedAmount = try self.firstChannel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        let finalBufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(finalBufferedAmount, 0)
         XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
         let datagrams = try self.secondChannel.waitForDatagrams(count: writeCount)
