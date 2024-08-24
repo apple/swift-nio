@@ -14,7 +14,7 @@
 
 extension ByteBuffer {
 
-    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from  the string representation of `hexEncodedBytes`.
+    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from  the string representation of `plainHexEncodedBytes`.
     ///
     /// This will allocate a new `ByteBuffer` with enough space to fit the hex decoded `bytes` and potentially some extra space
     /// using the default allocator.
@@ -24,8 +24,8 @@ extension ByteBuffer {
     ///         buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
     ///         size followed by a `writeHexEncodedBytes` instead of using this method. This allows SwiftNIO to do
     ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
-    init(hexEncodedBytes string: String) {
-        self = ByteBufferAllocator().buffer(hexEncodedBytes: string)
+    init(plainHexEncodedBytes string: String) throws {
+        self = try ByteBufferAllocator().buffer(plainHexEncodedBytes: string)
     }
 
     /// Describes a ByteBuffer hexDump format.
@@ -356,23 +356,52 @@ extension ByteBuffer {
     }
 }
 
-extension String {
-    /// Plain decode a string representing a hexadecimal sequence them into an UInt8 sequence
-    /// - Complexity: O(n)
-    @inlinable
-    var hexPlainDecodedBytes: UnfoldSequence<UInt8, String> {
-        let stringWithoutWhiteSpaces = self.filter { !$0.isWhitespace }
-        return sequence(
-            state: stringWithoutWhiteSpaces,
-            next: { remainder in
-                guard remainder.count >= 2 else {
-                    precondition(remainder.count == 0, "Uneven number of hex encoded bytes within string")
-                    return nil
-                }
-                let nextTwo = remainder.prefix(2)
-                remainder.removeFirst(2)
-                return UInt8(nextTwo, radix: 16)
-            }
-        )
+enum HexDecodingError: Error {
+    case invalidHexLength
+}
+
+extension UInt8 {
+    fileprivate var isASCIIWhitespace: Bool {
+        switch self {
+        case UInt8(ascii: "\n"), UInt8(ascii: "\t"), UInt8(ascii: "\n"), UInt8(ascii: "\r"), UInt8(ascii: " "):
+            return true
+        default: return false
+        }
+    }
+
+    fileprivate var asciiHexNibble: UInt8? {
+        switch self {
+        case UInt8(ascii: "0")...UInt8(ascii: "9"):
+            return self - UInt8(ascii: "0")
+        case UInt8(ascii: "a")...UInt8(ascii: "f"):
+            return self - UInt8(ascii: "a") + 10
+        case UInt8(ascii: "A")...UInt8(ascii: "F"):
+            return self - UInt8(ascii: "A") + 10
+        default:
+            return nil
+        }
+    }
+}
+
+extension Substring.UTF8View {
+    @usableFromInline
+    mutating func popNextHexByte() throws -> UInt8? {
+        while let nextByte = self.first, nextByte.isASCIIWhitespace {
+            self = self.dropFirst()
+        }
+
+        guard let firstHex = self.popFirst()?.asciiHexNibble else {
+            return nil  // No next byte to pop
+        }
+
+        while let nextByte = self.first, nextByte.isASCIIWhitespace {
+            self = self.dropFirst()
+        }
+
+        guard let secondHex = self.popFirst()?.asciiHexNibble else {
+            throw HexDecodingError.invalidHexLength
+        }
+
+        return (firstHex << 4) | secondHex
     }
 }

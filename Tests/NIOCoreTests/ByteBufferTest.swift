@@ -1946,26 +1946,32 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testWriteHexEncodedBytes() throws {
-        var buffer = ByteBuffer(hexEncodedBytes: "68 65 6c 6c 6f 20 77 6f 72 6c 64 0a")
-        XCTAssertEqual(buffer.writeHexEncodedBytes("68656c6c6f20776f726c64"), 11)
-        XCTAssertEqual(buffer.writeHexEncodedBytes("     0a    "), 1)
-        XCTAssertEqual(buffer.writeHexEncodedBytes(""), 0)
-        XCTAssertEqual(buffer.writeHexEncodedBytes("      "), 0)
-        XCTAssertEqual(ByteBuffer(string: "hello world\nhello world\n"), buffer)
+        var buffer = try ByteBuffer(plainHexEncodedBytes: "68 65 6c 6c 6f 20 77 6f 72 6c 64 0a")
+        XCTAssertEqual(try buffer.writePlainHexEncodedBytes("68656c6c6f20776f726c64"), 11)
+        XCTAssertEqual(try buffer.writePlainHexEncodedBytes("     0a    "), 1)
+        XCTAssertEqual(try buffer.writePlainHexEncodedBytes(""), 0)
+        XCTAssertEqual(try buffer.writePlainHexEncodedBytes("      "), 0)
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1  "))
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1"))
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1       "))
+        // The first byte (68 = "h") is valid, the method throws and the valid byte IS written to the ByteBuffer
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("68 1"))
+        XCTAssertEqual(ByteBuffer(string: "hello world\nhello world\nh"), buffer)
     }
 
-    func testHexInitialiser() {
+    func testHexInitialiser() throws {
         var allBytes = ByteBufferAllocator().buffer(capacity: Int(UInt8.max))
         for x in UInt8.min...UInt8.max {
             allBytes.writeInteger(x)
         }
 
         let allBytesHex = allBytes.hexDump(format: .plain)
-        let allBytesDecoded = ByteBuffer(hexEncodedBytes: allBytesHex)
+        let allBytesDecoded = try ByteBuffer(plainHexEncodedBytes: allBytesHex)
         XCTAssertEqual(allBytes, allBytesDecoded)
 
-        // Edge case
-        XCTAssertEqual(ByteBuffer(hexEncodedBytes: " "), ByteBufferAllocator.zeroCapacityWithDefaultAllocator)
+        // Edge cases
+        XCTAssertEqual(try ByteBuffer(plainHexEncodedBytes: " "), ByteBufferAllocator.zeroCapacityWithDefaultAllocator)
+        XCTAssertThrowsError(try ByteBuffer(plainHexEncodedBytes: " 1  "))
     }
 
     func testHexDumpPlain() {

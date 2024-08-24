@@ -94,13 +94,18 @@ extension ByteBuffer {
     // MARK: Hex encoded string APIs
     /// Write `string` into this `ByteBuffer` in ASCII hexadecimal, moving the writer index forward appropriately.
     /// - parameters:
-    ///     - string: The hex encoded string to write.
+    ///     - plainHexEncodedBytes: The hex encoded string to write.
     /// - returns: The number of bytes written.
     @discardableResult
     @inlinable
-    public mutating func writeHexEncodedBytes(_ string: String) -> Int {
-        let written = self.setBytes(string.hexPlainDecodedBytes, at: self.writerIndex)
-        self._moveWriterIndex(forwardBy: written)
+    public mutating func writePlainHexEncodedBytes(_ plainHexEncodedBytes: String) throws -> Int {
+        var slice = plainHexEncodedBytes.utf8[...]
+        var written = 0
+
+        while let nextByte = try slice.popNextHexByte() {
+            written += self.writeInteger(nextByte)
+        }
+
         return written
     }
 
@@ -776,18 +781,18 @@ extension ByteBufferAllocator {
         return buffer
     }
 
-    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from the ASCII `hexEncodedBytes` string .
+    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from the ASCII `plainHexEncodedBytes` string .
     ///
     /// This will allocate a new `ByteBuffer` with enough space to fit `bytes` and potentially some extra space.
     ///
     /// - returns: The `ByteBuffer` containing the written bytes.
     @inlinable
-    public func buffer(hexEncodedBytes string: String) -> ByteBuffer {
-        var buffer = self.buffer(capacity: string.hexPlainDecodedBytes.underestimatedCount)
-        buffer.writeBytes(string.hexPlainDecodedBytes)
+    public func buffer(plainHexEncodedBytes string: String) throws -> ByteBuffer {
+        var buffer = self.buffer(capacity: string.utf8.count / 2)
+        try buffer.writePlainHexEncodedBytes(string)
         return buffer
     }
-    
+
     /// Create a fresh `ByteBuffer` containing the bytes of the byte representation in the given `endianness` of
     /// `integer`.
     ///
