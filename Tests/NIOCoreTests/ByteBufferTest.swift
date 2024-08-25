@@ -1954,6 +1954,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1  "))
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1"))
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1       "))
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("🤓"))
         // The first byte (68 = "h") is valid, the method throws and the valid byte IS written to the ByteBuffer
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("68 1"))
         XCTAssertEqual(ByteBuffer(string: "hello world\nhello world\nh"), buffer)

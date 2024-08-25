@@ -358,27 +358,28 @@ extension ByteBuffer {
 
 enum HexDecodingError: Error {
     case invalidHexLength
+    case invalidCharacter
 }
 
 extension UInt8 {
     fileprivate var isASCIIWhitespace: Bool {
-        switch self {
-        case UInt8(ascii: "\n"), UInt8(ascii: "\t"), UInt8(ascii: "\n"), UInt8(ascii: "\r"), UInt8(ascii: " "):
-            return true
-        default: return false
-        }
+        [UInt8(ascii: "\n"), UInt8(ascii: "\t"), UInt8(ascii: "\n"), UInt8(ascii: "\r"), UInt8(ascii: " ")].contains(
+            self
+        )
     }
 
     fileprivate var asciiHexNibble: UInt8? {
-        switch self {
-        case UInt8(ascii: "0")...UInt8(ascii: "9"):
-            return self - UInt8(ascii: "0")
-        case UInt8(ascii: "a")...UInt8(ascii: "f"):
-            return self - UInt8(ascii: "a") + 10
-        case UInt8(ascii: "A")...UInt8(ascii: "F"):
-            return self - UInt8(ascii: "A") + 10
-        default:
-            return nil
+        get throws {
+            switch self {
+            case UInt8(ascii: "0")...UInt8(ascii: "9"):
+                return self - UInt8(ascii: "0")
+            case UInt8(ascii: "a")...UInt8(ascii: "f"):
+                return self - UInt8(ascii: "a") + 10
+            case UInt8(ascii: "A")...UInt8(ascii: "F"):
+                return self - UInt8(ascii: "A") + 10
+            default:
+                throw HexDecodingError.invalidCharacter
+            }
         }
     }
 }
@@ -390,7 +391,7 @@ extension Substring.UTF8View {
             self = self.dropFirst()
         }
 
-        guard let firstHex = self.popFirst()?.asciiHexNibble else {
+        guard let firstHex = try self.popFirst()?.asciiHexNibble else {
             return nil  // No next byte to pop
         }
 
@@ -398,7 +399,7 @@ extension Substring.UTF8View {
             self = self.dropFirst()
         }
 
-        guard let secondHex = self.popFirst()?.asciiHexNibble else {
+        guard let secondHex = try self.popFirst()?.asciiHexNibble else {
             throw HexDecodingError.invalidHexLength
         }
 
