@@ -251,7 +251,11 @@ public struct NIOTooManyBytesError: Error {
     /// Current limit on the maximum number of bytes in the sequence
     public var maxBytes: Int?
 
-    @available(*, deprecated, message: "Construct the NIOTooManyBytesError with the maxBytes limit that triggered this error")
+    @available(
+        *,
+        deprecated,
+        message: "Construct the NIOTooManyBytesError with the maxBytes limit that triggered this error"
+    )
     public init() {
         self.maxBytes = nil
     }
@@ -264,7 +268,7 @@ public struct NIOTooManyBytesError: Error {
 extension NIOTooManyBytesError: Equatable {
     public static func == (lhs: NIOTooManyBytesError, rhs: NIOTooManyBytesError) -> Bool {
         // Equality of the maxBytes isn't of consequence
-        return true
+        true
     }
 }
 
