@@ -140,11 +140,17 @@ extension NIOThread: CustomStringConvertible {
     }
 }
 
-/// A `ThreadSpecificVariable` is a variable that can be read and set like a normal variable except that it holds
+/// A ``ThreadSpecificVariable`` is a variable that can be read and set like a normal variable except that it holds
 /// different variables per thread.
 ///
-/// `ThreadSpecificVariable` is thread-safe so it can be used with multiple threads at the same time but the value
-/// returned by `currentValue` is defined per thread.
+/// ``ThreadSpecificVariable`` is thread-safe so it can be used with multiple threads at the same time but the value
+/// returned by ``currentValue`` is defined per thread.
+///
+/// - Note: Though ``ThreadSpecificVariable`` is thread-safe, it is not `Sendable` unless `Value` is `Sendable`.
+///     If ``ThreadSpecificVariable`` were unconditionally `Sendable`, it could be used to "smuggle"
+///     non-`Sendable` state out of an actor or other isolation domain without triggering warnings. If you
+///     are attempting to use ``ThreadSpecificVariable`` with non-`Sendable` data, consider using a dynamic
+///     enforcement tool like `NIOLoopBoundBox` to police the access.
 public final class ThreadSpecificVariable<Value: AnyObject> {
     // the actual type in there is `Box<(ThreadSpecificVariable<T>, T)>` but we can't use that as C functions can't capture (even types)
     private typealias BoxedType = Box<(AnyObject, AnyObject)>

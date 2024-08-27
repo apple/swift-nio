@@ -882,7 +882,7 @@ final class FileSystemTests: XCTestCase {
                     // Give the cancellation time to kick in, this should be more than plenty.
                     if shouldSleep {
                         do {
-                            try await Task.sleep(for: .seconds(3))
+                            try await Task.sleep(nanoseconds: 3_000_000_000)
                             XCTFail("\(description) Should have been cancelled by now!")
                         } catch is CancellationError {
                             // This is fine - we got cancelled as desired, let the rest of the in flight

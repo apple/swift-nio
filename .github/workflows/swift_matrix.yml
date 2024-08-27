@@ -81,6 +81,11 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+          persist-credentials: false
+    - name: Mark the workspace as safe
+    # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
     - name: Run matrix job
       if: ${{ matrix.swift.enabled }}
       env:
