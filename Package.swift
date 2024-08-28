@@ -549,7 +549,7 @@ if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
         .package(url: "https://github.com/apple/swift-system.git", from: "1.2.0"),
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-docc-plugin", "1.0.0"..<"1.4.0"),
     ]
 } else {
     package.dependencies += [
