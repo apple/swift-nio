@@ -1904,6 +1904,33 @@ class ByteBufferTest: XCTestCase {
         let expected = "00 01 02 03 04 ... fb fc fd fe ff"
         XCTAssertEqual(expected, actual)
     }
+    
+    func testHexDumpCompact() {
+        let buf = ByteBuffer(string: "Hello")
+        XCTAssertEqual("48656c6c6f", buf.hexDump(format: .compact))
+    }
+
+    func testHexDumpCompactEmptyBuffer() {
+        let buf = ByteBuffer(string: "")
+        XCTAssertEqual("", buf.hexDump(format: .compact))
+    }
+
+    func testHexDumpCompactWithReaderIndexOffset() {
+        var buf = ByteBuffer(string: "Hello")
+        let firstTwo = buf.readBytes(length: 2)!
+        XCTAssertEqual([72, 101], firstTwo)
+        XCTAssertEqual("6c6c6f", buf.hexDump(format: .compact))
+    }
+
+    func testHexDumpCompactWithMaxBytes() {
+        self.buf.clear()
+        for f in UInt8.min...UInt8.max {
+            self.buf.writeInteger(f)
+        }
+        let actual = self.buf.hexDump(format: .compact(maxBytes: 10))
+        let expected = "0001020304 ... fbfcfdfeff"
+        XCTAssertEqual(expected, actual)
+    }
 
     func testHexDumpDetailed() {
         let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
