@@ -79,7 +79,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
 
     // MARK: - writeQUICVariableLengthPrefixed tests
 
-    func testWriteMessageWithLengthOfZero() throws {
+    func testWriteMessageWithLengthOfZero() {
         var buffer = ByteBuffer()
         let bytesWritten = buffer.writeQUICVariableLengthPrefixed { _ in
             // write nothing
@@ -90,7 +90,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteMessageWithLengthOfOne() throws {
+    func testWriteMessageWithLengthOfOne() {
         var buffer = ByteBuffer()
         let bytesWritten = buffer.writeQUICVariableLengthPrefixed { buffer in
             buffer.writeString("A")
@@ -101,7 +101,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteMessageWithMultipleWrites() throws {
+    func testWriteMessageWithMultipleWrites() {
         var buffer = ByteBuffer()
         let bytesWritten = buffer.writeQUICVariableLengthPrefixed { buffer in
             buffer.writeString("Hello") + buffer.writeString(" ") + buffer.writeString("World")
@@ -112,7 +112,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteMessageWithLengthUsingFull4Bytes() throws {
+    func testWriteMessageWithLengthUsingFull4Bytes() {
         var buffer = ByteBuffer()
         // This is the largest possible length you could encode in 4 bytes
         let maxLength = 1_073_741_823 - 1
@@ -126,7 +126,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteMessageWithLengthUsing8Bytes() throws {
+    func testWriteMessageWithLengthUsing8Bytes() {
         var buffer = ByteBuffer()
         // This is the largest possible length you could encode in 4 bytes
         let maxLength = 1_073_741_823
@@ -142,7 +142,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
 
     // MARK: - writeQUICVariableLengthPrefixedBuffer tests
 
-    func testWriteMessageWith1ByteLength() throws {
+    func testWriteMessageWith1ByteLength() {
         var buffer = ByteBuffer()
         let bytesWritten = buffer.writeQUICVariableLengthPrefixedBuffer(ByteBuffer(string: "hello"))
         XCTAssertEqual(bytesWritten, 6)  // The length can be encoded in just 1 byte, followed by 'hello'
@@ -151,7 +151,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteMessageWith2ByteLength() throws {
+    func testWriteMessageWith2ByteLength() {
         var buffer = ByteBuffer()
         let length = 100  // this can be anything between 64 and 16383
         let testString = String(repeating: "A", count: length)
@@ -162,7 +162,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteMessageWith4ByteLength() throws {
+    func testWriteMessageWith4ByteLength() {
         var buffer = ByteBuffer()
         let length = 20_000  // this can be anything between 16384 and 1073741823
         let testString = String(repeating: "A", count: length)
@@ -173,7 +173,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteMessageWith8ByteLength() throws {
+    func testWriteMessageWith8ByteLength() {
         var buffer = ByteBuffer()
         let length = 1_073_741_824  // this can be anything between 1073741824 and 4611686018427387903
         let testString = String(repeating: "A", count: length)
@@ -186,7 +186,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
 
     // MARK: - writeQUICVariableLengthPrefixedString tests
 
-    func testWriteQUICVariableLengthPrefixedString() throws {
+    func testWriteQUICVariableLengthPrefixedString() {
         var buffer = ByteBuffer()
         let testString = "Hello World"  // length = 11
         let bytesWritten = buffer.writeQUICVariableLengthPrefixedString(testString)
@@ -201,7 +201,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
 
     // MARK: - writeQUICVariableLengthPrefixedBytes tests
 
-    func testWriteQUICVariableLengthPrefixedBytes() throws {
+    func testWriteQUICVariableLengthPrefixedBytes() {
         var buffer = ByteBuffer()
         let testBytes: [UInt8] = [1, 2, 3, 4, 5]  // length = 5
         let bytesWritten = buffer.writeQUICVariableLengthPrefixedBytes(testBytes)
