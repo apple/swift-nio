@@ -136,7 +136,7 @@ extension ByteBuffer {
     }
 
     /// Return a `String` of  hexadecimal digits of the readable bytes in the buffer,
-    /// analog to `.plain` format but without whitespaces. This format guarantees not to emmit whitespaces.
+    /// analog to `.plain` format but without whitespaces. This format guarantees not to emit whitespaces.
     /// `hexDumpCompact()` always dumps all readable bytes, i.e. from `readerIndex` to `writerIndex`,
     /// so you should set those indices to desired location to get the offset and length that you need to dump.
     private func hexDumpCompact() -> String {
