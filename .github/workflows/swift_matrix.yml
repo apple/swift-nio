@@ -96,6 +96,9 @@ jobs:
         - image: ${{ inputs.matrix_linux_nightly_main_container_image }}
           swift_version: "nightly-main"
           enabled: ${{ inputs.matrix_linux_nightly_main_enabled }}
+        exclude:
+          - swift:
+            - enabled: false
     container:
       image: ${{ matrix.swift.image }}
     steps:
