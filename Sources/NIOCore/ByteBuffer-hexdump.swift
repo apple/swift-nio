@@ -55,20 +55,65 @@ extension ByteBuffer {
         }
     }
 
+    /// Shared logic for `hexDumpPlain` and `hexDumpCompact`.
+    /// Returns a `String` of hexadecimals digits of the readable bytes in the buffer.
+    /// - parameter
+    ///     - separateWithWhitespace: Controls whether the hex deump will be separated by whitespaces.
+    private func _hexDump(separateWithWhitespace: Bool) -> String {
+        var hexString = ""
+        var capacity: Int
+
+        if separateWithWhitespace {
+            capacity = self.readableBytes * 3
+        } else {
+            capacity = self.readableBytes * 2
+        }
+
+        hexString.reserveCapacity(capacity)
+
+        for byte in self.readableBytesView {
+            hexString += String(byte, radix: 16, padding: 2)
+            if separateWithWhitespace {
+                hexString += " "
+            }
+        }
+
+        if separateWithWhitespace {
+            return String(hexString.dropLast())
+        }
+
+        return hexString
+    }
+
+    /// Shared logic for `hexDumpPlain(maxBytes: Int)` and `hexDumpCompact(maxBytes: Int)`.
+    ///
+    /// - parameters:
+    ///     - maxBytes: The maximum amount of bytes presented in the dump.
+    ///     - separateWithWhitespace: Controls whether the dump will be separated by whitespaces.
+    private func _hexDump(maxBytes: Int, separateWithWhitespace: Bool) -> String {
+        // If the buffer length fits in the max bytes limit in the hex dump, just dump the whole thing.
+        if self.readableBytes <= maxBytes {
+            return self.hexDump(format: .plain)
+        }
+
+        var buffer = self
+
+        // Safe to force-unwrap because we just checked readableBytes is > maxBytes above.
+        let front = buffer.readSlice(length: maxBytes / 2)!
+        buffer.moveReaderIndex(to: buffer.writerIndex - maxBytes / 2)
+        let back = buffer.readSlice(length: buffer.readableBytes)!
+
+        let startHex = front._hexDump(separateWithWhitespace: separateWithWhitespace)
+        let endHex = back._hexDump(separateWithWhitespace: separateWithWhitespace)
+        return startHex + " ... " + endHex
+    }
+
     /// Return a `String` of space separated hexadecimal digits of the readable bytes in the buffer,
     /// in a format that's compatible with `xxd -r -p`.
     /// `hexDumpPlain()` always dumps all readable bytes, i.e. from `readerIndex` to `writerIndex`,
     /// so you should set those indices to desired location to get the offset and length that you need to dump.
     private func hexDumpPlain() -> String {
-        var hexString = ""
-        hexString.reserveCapacity(self.readableBytes * 3)
-
-        for byte in self.readableBytesView {
-            hexString += String(byte, radix: 16, padding: 2)
-            hexString += " "
-        }
-
-        return String(hexString.dropLast())
+        self._hexDump(separateWithWhitespace: true)
     }
 
     /// Return a `String` of space delimited hexadecimal digits of the readable bytes in the buffer,
@@ -79,61 +124,26 @@ extension ByteBuffer {
     /// - parameters:
     ///     - maxBytes: The maximum amount of bytes presented in the dump.
     private func hexDumpPlain(maxBytes: Int) -> String {
-        // If the buffer length fits in the max bytes limit in the hex dump, just dump the whole thing.
-        if self.readableBytes <= maxBytes {
-            return self.hexDump(format: .plain)
-        }
-
-        var buffer = self
-
-        // Safe to force-unwrap because we just checked readableBytes is > maxBytes above.
-        let front = buffer.readSlice(length: maxBytes / 2)!
-        buffer.moveReaderIndex(to: buffer.writerIndex - maxBytes / 2)
-        let back = buffer.readSlice(length: buffer.readableBytes)!
-
-        let startHex = front.hexDumpPlain()
-        let endHex = back.hexDumpPlain()
-        return startHex + " ... " + endHex
+        self._hexDump(maxBytes: maxBytes, separateWithWhitespace: true)
     }
-    
+
     /// Return a `String` of  hexadecimal digits of the readable bytes in the buffer,
     /// analog to `.plain` format but without whitespaces.
     /// `hexDumpCompact()` always dumps all readable bytes, i.e. from `readerIndex` to `writerIndex`,
     /// so you should set those indices to desired location to get the offset and length that you need to dump.
     private func hexDumpCompact() -> String {
-        var hexString = ""
-        hexString.reserveCapacity(self.readableBytes * 3)
-
-        for byte in self.readableBytesView {
-            hexString += String(byte, radix: 16, padding: 2)
-        }
-
-        return hexString
+        self._hexDump(separateWithWhitespace: false)
     }
 
     /// Return a `String` of  hexadecimal digits of the readable bytes in the buffer,
     /// analog to `.plain` format but without whitespaces and clips the output to the max length of `maxBytes` bytes.
     /// If the dump contains more than the `maxBytes` bytes, this function will return the first `maxBytes/2`
-    /// and the last `maxBytes/2` of that, replacing the rest with `...`, i.e. `01 02 03 ... 09 11 12`.
+    /// and the last `maxBytes/2` of that, replacing the rest with `...`, i.e. `010203 ... 091112`.
     ///
     /// - parameters:
     ///     - maxBytes: The maximum amount of bytes presented in the dump.
     private func hexDumpCompact(maxBytes: Int) -> String {
-        // If the buffer length fits in the max bytes limit in the hex dump, just dump the whole thing.
-        if self.readableBytes <= maxBytes {
-            return self.hexDump(format: .plain)
-        }
-
-        var buffer = self
-
-        // Safe to force-unwrap because we just checked readableBytes is > maxBytes above.
-        let front = buffer.readSlice(length: maxBytes / 2)!
-        buffer.moveReaderIndex(to: buffer.writerIndex - maxBytes / 2)
-        let back = buffer.readSlice(length: buffer.readableBytes)!
-
-        let startHex = front.hexDumpCompact()
-        let endHex = back.hexDumpCompact()
-        return startHex + " ... " + endHex
+        self._hexDump(maxBytes: maxBytes, separateWithWhitespace: false)
     }
 
     /// Returns a `String` containing a detailed hex dump of this buffer.
@@ -305,7 +315,7 @@ extension ByteBuffer {
             } else {
                 return self.hexDumpPlain()
             }
-            
+
         case .compact(let maxBytes):
             if let maxBytes = maxBytes {
                 return self.hexDumpCompact(maxBytes: maxBytes)
