@@ -1928,7 +1928,7 @@ class ByteBufferTest: XCTestCase {
             self.buf.writeInteger(f)
         }
         let actual = self.buf.hexDump(format: .compact(maxBytes: 10))
-        let expected = "0001020304 ... fbfcfdfeff"
+        let expected = "0001020304...fbfcfdfeff"
         XCTAssertEqual(expected, actual)
     }
 

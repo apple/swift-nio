@@ -105,7 +105,15 @@ extension ByteBuffer {
 
         let startHex = front._hexDump(separateWithWhitespace: separateWithWhitespace)
         let endHex = back._hexDump(separateWithWhitespace: separateWithWhitespace)
-        return startHex + " ... " + endHex
+        
+        var dots: String
+        if separateWithWhitespace {
+            dots = " ... "
+        } else {
+            dots = "..."
+        }
+        
+        return startHex + dots + endHex
     }
 
     /// Return a `String` of space separated hexadecimal digits of the readable bytes in the buffer,
@@ -128,7 +136,7 @@ extension ByteBuffer {
     }
 
     /// Return a `String` of  hexadecimal digits of the readable bytes in the buffer,
-    /// analog to `.plain` format but without whitespaces.
+    /// analog to `.plain` format but without whitespaces. This format guarantees not to emmit whitespaces.
     /// `hexDumpCompact()` always dumps all readable bytes, i.e. from `readerIndex` to `writerIndex`,
     /// so you should set those indices to desired location to get the offset and length that you need to dump.
     private func hexDumpCompact() -> String {
@@ -137,8 +145,9 @@ extension ByteBuffer {
 
     /// Return a `String` of  hexadecimal digits of the readable bytes in the buffer,
     /// analog to `.plain` format but without whitespaces and clips the output to the max length of `maxBytes` bytes.
+    /// This format guarantees not to emmit whitespaces.
     /// If the dump contains more than the `maxBytes` bytes, this function will return the first `maxBytes/2`
-    /// and the last `maxBytes/2` of that, replacing the rest with `...`, i.e. `010203 ... 091112`.
+    /// and the last `maxBytes/2` of that, replacing the rest with `...`, i.e. `010203...091112`.
     ///
     /// - parameters:
     ///     - maxBytes: The maximum amount of bytes presented in the dump.
