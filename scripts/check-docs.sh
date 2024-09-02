@@ -19,6 +19,13 @@ log() { printf -- "** %s\n" "$*" >&2; }
 error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
+log "Editing Package.swift..."
+cat <<EOF >> "Package.swift"
+package.dependencies.append(
+    .package(url: "https://github.com/apple/swift-docc-plugin", "1.0.0"..<"1.4.0")
+)
+EOF
+
 log "Checking documentation targets..."
 for target in $(yq -r '.builder.configs[].documentation_targets[]' .spi.yml); do
   log "Checking target $target..."
