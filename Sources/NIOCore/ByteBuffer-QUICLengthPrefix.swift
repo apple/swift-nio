@@ -85,26 +85,11 @@ extension ByteBuffer {
         }
     }
 
-    /// Write a QUIC variable-length integer prefixed buffer.
-    ///
-    /// [RFC 9000 § 16](https://www.rfc-editor.org/rfc/rfc9000.html#section-16)
-    ///
-    /// Write `buffer` prefixed with the length of buffer as a QUIC variable-length integer
-    /// - Parameter buffer: The buffer to be written
-    /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the buffer itself
-    @discardableResult
-    public mutating func writeQUICLengthPrefixed(_ buffer: ByteBuffer) -> Int {
-        var written = 0
-        written += self.writeQUICVariableLengthInteger(buffer.readableBytes)
-        written += self.writeImmutableBuffer(buffer)
-        return written
-    }
-
     /// Prefixes a message written by `writeMessage` with the number of bytes written as a QUIC variable-length integer
     /// - Parameters:
     ///     - writeMessage: A closure that takes a buffer, writes a message to it and returns the number of bytes written
     /// - Returns: Number of total bytes written
-    /// - Note: Because the length of the message is not known upfront, 4 bytes will be used for encoding the length even if that may not be necessary. If you know the length of your message, prefer ``writeQUICLengthPrefixed(_:)`` instead
+    /// - Note: Because the length of the message is not known upfront, 4 bytes will be used for encoding the length even if that may not be necessary. If you know the length of your message, prefer ``writeQUICLengthPrefixedBuffer(_:)`` instead
     @discardableResult
     @inlinable
     public mutating func writeQUICLengthPrefixed(
@@ -135,7 +120,7 @@ extension ByteBuffer {
         if messageLength >= 1_073_741_823 {
             // This message length cannot fit in the 4 bytes which we reserved. We need to make more space before the message
             self._createSpace(before: startWriterIndex, length: messageLength, requiredSpace: 4)
-            totalBytesWritten += 4 // the 4 bytes we just reserved
+            totalBytesWritten += 4  // the 4 bytes we just reserved
             // We now have 8 bytes to use for the length
             let value = UInt64(truncatingIfNeeded: messageLength) | (0xC0 << 56)
             self.setInteger(value, at: lengthPrefixIndex)
@@ -149,6 +134,67 @@ extension ByteBuffer {
         }
 
         return totalBytesWritten
+    }
+}
+
+// MARK: - Helpers for writing QUIC variable-length prefixed things
+
+extension ByteBuffer {
+    /// Write a QUIC variable-length integer prefixed buffer.
+    ///
+    /// [RFC 9000 § 16](https://www.rfc-editor.org/rfc/rfc9000.html#section-16)
+    ///
+    /// Write `buffer` prefixed with the length of buffer as a QUIC variable-length integer
+    /// - Parameter buffer: The buffer to be written
+    /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the buffer itself
+    @discardableResult
+    public mutating func writeQUICLengthPrefixedBuffer(_ buffer: ByteBuffer) -> Int {
+        var written = 0
+        written += self.writeQUICVariableLengthInteger(buffer.readableBytes)
+        written += self.writeImmutableBuffer(buffer)
+        return written
+    }
+
+    /// Write a QUIC variable-length integer prefixed string.
+    ///
+    /// [RFC 9000 § 16](https://www.rfc-editor.org/rfc/rfc9000.html#section-16)
+    ///
+    /// Write `string` prefixed with the length of string as a QUIC variable-length integer
+    /// - Parameter string: The string to be written
+    /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the string itself
+    @discardableResult
+    public mutating func writeQUICLengthPrefixedString(_ string: String) -> Int {
+        var written = 0
+        // writeString always writes the String as UTF8 bytes, without a null-terminator
+        // So the length will be the utf8 count
+        written += self.writeQUICVariableLengthInteger(string.utf8.count)
+        written += self.writeString(string)
+        return written
+    }
+
+    /// Write a QUIC variable-length integer prefixed collection of bytes.
+    ///
+    /// [RFC 9000 § 16](https://www.rfc-editor.org/rfc/rfc9000.html#section-16)
+    ///
+    /// Write `bytes` prefixed with the number of bytes as a QUIC variable-length integer
+    /// - Parameter bytes: The bytes to be written
+    /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the string itself
+    @inlinable
+    public mutating func writeQUICLengthPrefixedBytes<Bytes: Sequence>(_ bytes: Bytes) -> Int
+    where Bytes.Element == UInt8 {
+        let numberOfBytes = bytes.withContiguousStorageIfAvailable { b in
+            UnsafeRawBufferPointer(b).count
+        }
+        if let numberOfBytes {
+            var written = 0
+            written += self.writeQUICVariableLengthInteger(numberOfBytes)
+            written += self.writeBytes(bytes)
+            return written
+        } else {
+            return self.writeQUICLengthPrefixed { buffer in
+                buffer.writeBytes(bytes)
+            }
+        }
     }
 }
 

@@ -77,7 +77,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         }
     }
 
-    // MARK: - writeQUICLengthPrefixed with unknown length tests
+    // MARK: - writeQUICLengthPrefixed tests
 
     func testWriteMessageWithLengthOfZero() throws {
         var buffer = ByteBuffer()
@@ -140,11 +140,11 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    // MARK: - writeQUICLengthPrefixed with known length tests
+    // MARK: - writeQUICLengthPrefixedBuffer tests
 
     func testWriteMessageWith1ByteLength() throws {
         var buffer = ByteBuffer()
-        let bytesWritten = buffer.writeQUICLengthPrefixed(ByteBuffer(string: "hello"))
+        let bytesWritten = buffer.writeQUICLengthPrefixedBuffer(ByteBuffer(string: "hello"))
         XCTAssertEqual(bytesWritten, 6)  // The length can be encoded in just 1 byte, followed by 'hello'
         XCTAssertEqual(buffer.readQUICVariableLengthInteger(), 5)
         XCTAssertEqual(buffer.readString(length: 5), "hello")
@@ -155,7 +155,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         var buffer = ByteBuffer()
         let length = 100  // this can be anything between 64 and 16383
         let testString = String(repeating: "A", count: length)
-        let bytesWritten = buffer.writeQUICLengthPrefixed(ByteBuffer(string: testString))
+        let bytesWritten = buffer.writeQUICLengthPrefixedBuffer(ByteBuffer(string: testString))
         XCTAssertEqual(bytesWritten, length + 2)  // The length of the string, plus 2 bytes for the length
         XCTAssertEqual(buffer.readQUICVariableLengthInteger(), length)
         XCTAssertEqual(buffer.readString(length: length), testString)
@@ -166,7 +166,7 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         var buffer = ByteBuffer()
         let length = 20_000  // this can be anything between 16384 and 1073741823
         let testString = String(repeating: "A", count: length)
-        let bytesWritten = buffer.writeQUICLengthPrefixed(ByteBuffer(string: testString))
+        let bytesWritten = buffer.writeQUICLengthPrefixedBuffer(ByteBuffer(string: testString))
         XCTAssertEqual(bytesWritten, length + 4)  // The length of the string, plus 4 bytes for the length
         XCTAssertEqual(buffer.readQUICVariableLengthInteger(), length)
         XCTAssertEqual(buffer.readString(length: length), testString)
@@ -177,10 +177,40 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         var buffer = ByteBuffer()
         let length = 1_073_741_824  // this can be anything between 1073741824 and 4611686018427387903
         let testString = String(repeating: "A", count: length)
-        let bytesWritten = buffer.writeQUICLengthPrefixed(ByteBuffer(string: testString))
+        let bytesWritten = buffer.writeQUICLengthPrefixedBuffer(ByteBuffer(string: testString))
         XCTAssertEqual(bytesWritten, length + 8)  // The length of the string, plus 8 bytes for the length
         XCTAssertEqual(buffer.readQUICVariableLengthInteger(), length)
         XCTAssertEqual(buffer.readString(length: length), testString)
+        XCTAssertTrue(buffer.readableBytesView.isEmpty)
+    }
+
+    // MARK: - writeQUICLengthPrefixedString tests
+
+    func testWriteQUICLengthPrefixedString() throws {
+        var buffer = ByteBuffer()
+        let testString = "Hello World"  // length = 11
+        let bytesWritten = buffer.writeQUICLengthPrefixedString(testString)
+        XCTAssertEqual(bytesWritten, 12)
+
+        let length = buffer.readQUICVariableLengthInteger()
+        XCTAssertEqual(length, 11)
+
+        XCTAssertEqual(buffer.readString(length: 11), testString)
+        XCTAssertTrue(buffer.readableBytesView.isEmpty)
+    }
+
+    // MARK: - writeQUICLengthPrefixedBytes tests
+
+    func testWriteQUICLengthPrefixedBytes() throws {
+        var buffer = ByteBuffer()
+        let testBytes: [UInt8] = [1, 2, 3, 4, 5]  // length = 5
+        let bytesWritten = buffer.writeQUICLengthPrefixedBytes(testBytes)
+        XCTAssertEqual(bytesWritten, 6)
+
+        let length = buffer.readQUICVariableLengthInteger()
+        XCTAssertEqual(length, 5)
+
+        XCTAssertEqual(buffer.readBytes(length: 5), testBytes)
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 }
