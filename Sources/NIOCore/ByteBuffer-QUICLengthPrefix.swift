@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -60,18 +60,10 @@ extension ByteBuffer {
     /// Write a QUIC variable-length integer.
     ///
     /// [RFC 9000 § 16](https://www.rfc-editor.org/rfc/rfc9000.html#section-16)
-    @discardableResult
-    public mutating func writeQUICVariableLengthInteger(_ value: Int) -> Int {
-        self.writeQUICVariableLengthInteger(UInt(value))
-    }
-
-    /// Write a QUIC variable-length integer.
-    ///
-    /// [RFC 9000 § 16](https://www.rfc-editor.org/rfc/rfc9000.html#section-16)
     ///
     /// - Returns: The number of bytes written
     @discardableResult
-    public mutating func writeQUICVariableLengthInteger(_ value: UInt) -> Int {
+    public mutating func writeQUICVariableLengthInteger<Integer: FixedWidthInteger>(_ value: Integer) -> Int {
         switch value {
         case 0..<63:
             // Easy, store the value. The top two bits are 0 so we don't need to do any masking.
@@ -135,25 +127,15 @@ extension ByteBuffer {
         totalBytesWritten += messageLength
 
         let actualBytesWritten = endWriterIndex - startWriterIndex
-        assert(
+        precondition(
             actualBytesWritten == messageLength,
             "writeMessage returned \(messageLength) bytes, but actually \(actualBytesWritten) bytes were written, but they should be the same"
         )
 
         if messageLength >= 1_073_741_823 {
-            // This message length cannot fit in the 4 bytes which we reserved. We need to make more space
-            // Reserve 4 more bytes
-            totalBytesWritten += self.writeBytes([0, 0, 0, 0])
-            // Move the message forward by 4 bytes
-            self.withUnsafeMutableReadableBytes { pointer in
-                _ = memmove(
-                    // The new position is 4 forward from where the user written message currently begins
-                    pointer.baseAddress!.advanced(by: startWriterIndex + 4),
-                    // This is the position where the user written message currently begins
-                    pointer.baseAddress?.advanced(by: startWriterIndex),
-                    messageLength
-                )
-            }
+            // This message length cannot fit in the 4 bytes which we reserved. We need to make more space before the message
+            self._createSpace(before: startWriterIndex, length: messageLength, requiredSpace: 4)
+            totalBytesWritten += 4 // the 4 bytes we just reserved
             // We now have 8 bytes to use for the length
             let value = UInt64(truncatingIfNeeded: messageLength) | (0xC0 << 56)
             self.setInteger(value, at: lengthPrefixIndex)
@@ -167,5 +149,28 @@ extension ByteBuffer {
         }
 
         return totalBytesWritten
+    }
+}
+
+extension ByteBuffer {
+    /// Creates `requiredSpace` bytes of free space before `index` by moving the `length` bytes after `index` forward by `requiredSpace`
+    /// e.g. given [a, b, c, d, e, f, g, h, i, j] and calling this function with (before: 4, length: 6, requiredSpace: 2) would result in
+    /// [a, b, c, d, 0, 0, e, f, g, h, i, j]
+    /// 2 extra bytes of space were created before index 4 (the letter e)
+    /// The total bytes written will be equal to `requiredSpace`, and the writer index will be moved accordingly
+    @usableFromInline
+    mutating func _createSpace(before index: Int, length: Int, requiredSpace: Int) {
+        // Add the required number of bytes to the end first
+        self.writeBytes([UInt8](repeatElement(0, count: requiredSpace)))
+        // Move the message forward by that many bytes, to make space at the front
+        self.withUnsafeMutableReadableBytes { pointer in
+            _ = memmove(
+                // The new position is 4 forward from where the user written message currently begins
+                pointer.baseAddress!.advanced(by: index + requiredSpace),
+                // This is the position where the user written message currently begins
+                pointer.baseAddress!.advanced(by: index),
+                length
+            )
+        }
     }
 }
