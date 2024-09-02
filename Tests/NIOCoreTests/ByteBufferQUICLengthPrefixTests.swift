@@ -213,4 +213,15 @@ final class ByteBufferQUICLengthPrefixTests: XCTestCase {
         XCTAssertEqual(buffer.readBytes(length: 5), testBytes)
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
+
+    // MARK: - testReadQUICVariableLengthPrefixedSlice tests
+
+    func testReadQUICVariableLengthPrefixedSlice() {
+        for size in [37, 15293, 494_878_333] {  // random sizes to hit different integer lengths
+            var buffer = ByteBuffer()
+            let value = ByteBuffer(repeating: 1, count: size)
+            buffer.writeQUICVariableLengthPrefixedBuffer(value)
+            XCTAssertEqual(buffer.readQUICVariableLengthPrefixedSlice(), value)
+        }
+    }
 }

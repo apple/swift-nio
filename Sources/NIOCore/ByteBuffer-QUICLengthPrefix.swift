@@ -135,6 +135,22 @@ extension ByteBuffer {
 
         return totalBytesWritten
     }
+
+    /// Read a QUIC variable-length integer prefixed slice.
+    ///
+    /// [RFC 9000 § 16](https://www.rfc-editor.org/rfc/rfc9000.html#section-16)
+    ///
+    /// Reads a slice which is prefixed with a QUIC variable-length integer representing the size of the slice.
+    /// - Returns: The slice, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the slice
+    /// If there are not enough bytes to read the full slice, the readerIndex will stay unchanged
+    public mutating func readQUICVariableLengthPrefixedSlice() -> ByteBuffer? {
+        let originalReaderIndex = self.readerIndex
+        guard let length = self.readQUICVariableLengthInteger(), let slice = self.readSlice(length: length) else {
+            self.moveReaderIndex(to: originalReaderIndex)
+            return nil
+        }
+        return slice
+    }
 }
 
 // MARK: - Helpers for writing QUIC variable-length prefixed things
