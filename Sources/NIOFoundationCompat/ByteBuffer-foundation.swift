@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOCore
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
-import NIOCore
 
 /// Errors that may be thrown by ByteBuffer methods that call into Foundation.
 public enum ByteBufferFoundationError: Error {
