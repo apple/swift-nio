@@ -180,7 +180,7 @@ struct EventLoopCrashTests {
         NIOSingletons.groupLoopCountSuggestion = -1
     }
 
-    #if compiler(>=5.9) && swift(<5.11)  // We only support Concurrency executor take-over on 5.9-5.10, as versions greater than 5.10 have not been properly tested.
+    #if compiler(>=5.9) && swift(<6.2)  // We only support Concurrency executor take-over on those Swift versions, as versions greater than that have not been properly tested.
     let testInstallingSingletonMTELGAsConcurrencyExecutorWorksButOnlyOnce = CrashTest(
         regex: #"Fatal error: Must be called only once"#
     ) {
@@ -207,6 +207,6 @@ struct EventLoopCrashTests {
         // This should crash
         _ = NIOSingletons.unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor()
     }
-    #endif  // compiler(>=5.9) && swift(<5.11)
+    #endif  // compiler(>=5.9) && swift(<6.2)
 }
 #endif  // !canImport(Darwin) || os(macOS)
