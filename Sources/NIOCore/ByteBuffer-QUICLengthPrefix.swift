@@ -89,10 +89,10 @@ extension ByteBuffer {
     /// - Parameters:
     ///     - writeMessage: A closure that takes a buffer, writes a message to it and returns the number of bytes written
     /// - Returns: Number of total bytes written
-    /// - Note: Because the length of the message is not known upfront, 4 bytes will be used for encoding the length even if that may not be necessary. If you know the length of your message, prefer ``writeQUICLengthPrefixedBuffer(_:)`` instead
+    /// - Note: Because the length of the message is not known upfront, 4 bytes will be used for encoding the length even if that may not be necessary. If you know the length of your message, prefer ``writeQUICVariableLengthPrefixedBuffer(_:)`` instead
     @discardableResult
     @inlinable
-    public mutating func writeQUICLengthPrefixed(
+    public mutating func writeQUICVariableLengthPrefixed(
         writeMessage: (inout ByteBuffer) throws -> Int
     ) rethrows -> Int {
         var totalBytesWritten = 0
@@ -148,7 +148,7 @@ extension ByteBuffer {
     /// - Parameter buffer: The buffer to be written
     /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the buffer itself
     @discardableResult
-    public mutating func writeQUICLengthPrefixedBuffer(_ buffer: ByteBuffer) -> Int {
+    public mutating func writeQUICVariableLengthPrefixedBuffer(_ buffer: ByteBuffer) -> Int {
         var written = 0
         written += self.writeQUICVariableLengthInteger(buffer.readableBytes)
         written += self.writeImmutableBuffer(buffer)
@@ -163,7 +163,7 @@ extension ByteBuffer {
     /// - Parameter string: The string to be written
     /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the string itself
     @discardableResult
-    public mutating func writeQUICLengthPrefixedString(_ string: String) -> Int {
+    public mutating func writeQUICVariableLengthPrefixedString(_ string: String) -> Int {
         var written = 0
         // writeString always writes the String as UTF8 bytes, without a null-terminator
         // So the length will be the utf8 count
@@ -180,7 +180,7 @@ extension ByteBuffer {
     /// - Parameter bytes: The bytes to be written
     /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the string itself
     @inlinable
-    public mutating func writeQUICLengthPrefixedBytes<Bytes: Sequence>(_ bytes: Bytes) -> Int
+    public mutating func writeQUICVariableLengthPrefixedBytes<Bytes: Sequence>(_ bytes: Bytes) -> Int
     where Bytes.Element == UInt8 {
         let numberOfBytes = bytes.withContiguousStorageIfAvailable { b in
             UnsafeRawBufferPointer(b).count
@@ -191,7 +191,7 @@ extension ByteBuffer {
             written += self.writeBytes(bytes)
             return written
         } else {
-            return self.writeQUICLengthPrefixed { buffer in
+            return self.writeQUICVariableLengthPrefixed { buffer in
                 buffer.writeBytes(bytes)
             }
         }
