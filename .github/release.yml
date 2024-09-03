@@ -2,7 +2,7 @@ changelog:
   categories:
     - title: SemVer Major
       labels:
-        - semver/major
+        - ⚠️ semver/major
     - title: SemVer Minor
       labels:
         - semver/minor

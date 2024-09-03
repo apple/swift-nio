@@ -7,10 +7,18 @@ on:
         type: boolean
         description: "Boolean to enable the API breakage check job. Defaults to true."
         default: true
+      api_breakage_check_container_image:
+        type: string
+        description: "Container image for the API breakage check job. Defaults to latest Swift Ubuntu image."
+        default: "swift:5.10-noble"
       docs_check_enabled:
         type: boolean
         description: "Boolean to enable the docs check job. Defaults to true."
         default: true
+      docs_check_container_image:
+        type: string
+        description: "Container image for the docs check job. Defaults to latest Swift Ubuntu image."
+        default: "swift:5.10-noble"
       unacceptable_language_check_enabled:
         type: boolean
         description: "Boolean to enable the acceptable language check job. Defaults to true."
@@ -51,7 +59,7 @@ jobs:
     if: ${{ inputs.api_breakage_check_enabled }}
     runs-on: ubuntu-latest
     container:
-      image: swift:5.10-noble
+      image: ${{ inputs.api_breakage_check_container_image }}
     timeout-minutes: 20
     steps:
     - name: Checkout repository
@@ -71,7 +79,7 @@ jobs:
     if: ${{ inputs.docs_check_enabled }}
     runs-on: ubuntu-latest
     container:
-      image: swift:5.10-noble
+      image: ${{ inputs.docs_check_container_image }}
     timeout-minutes: 20
     steps:
     - name: Checkout repository

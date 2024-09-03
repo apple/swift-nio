@@ -15,6 +15,10 @@ on:
         type: boolean
         description: "Boolean to enable the 5.8 Swift version matrix job. Defaults to true."
         default: true
+      matrix_linux_5_8_container_image:
+        type: string
+        description: "Container image for the 5.8 Swift version matrix job. Defaults to matching Swift Ubuntu image."
+        default: "swift:5.8-jammy"
       matrix_linux_5_8_command_override:
         type: string
         description: "The command of the 5.8 Swift version linux matrix job to execute."
@@ -22,6 +26,10 @@ on:
         type: boolean
         description: "Boolean to enable the 5.9 Swift version matrix job. Defaults to true."
         default: true
+      matrix_linux_5_9_container_image:
+        type: string
+        description: "Container image for the 5.9 Swift version matrix job. Defaults to matching Swift Ubuntu image."
+        default: "swift:5.9-jammy"
       matrix_linux_5_9_command_override:
         type: string
         description: "The command of the 5.9 Swift version linux matrix job to execute."
@@ -29,6 +37,10 @@ on:
         type: boolean
         description: "Boolean to enable the 5.10 Swift version matrix job. Defaults to true."
         default: true
+      matrix_linux_5_10_container_image:
+        type: string
+        description: "Container image for the 5.10 Swift version matrix job. Defaults to matching Swift Ubuntu image."
+        default: "swift:5.10-jammy"
       matrix_linux_5_10_command_override:
         type: string
         description: "The command of the 5.10 Swift version linux matrix job to execute."
@@ -36,6 +48,10 @@ on:
         type: boolean
         description: "Boolean to enable the nightly 6.0 Swift version matrix job. Defaults to true."
         default: true
+      matrix_linux_nightly_6_0_container_image:
+        type: string
+        description: "Container image for the nightly 6.0 Swift version matrix job. Defaults to matching Swift Ubuntu image."
+        default: "swiftlang/swift:nightly-6.0-jammy"
       matrix_linux_nightly_6_0_command_override:
         type: string
         description: "The command of the nightly 6.0 Swift version linux matrix job to execute."
@@ -43,6 +59,10 @@ on:
         type: boolean
         description: "Boolean to enable the nightly main Swift version matrix job. Defaults to true."
         default: true
+      matrix_linux_nightly_main_container_image:
+        type: string
+        description: "Container image for the nightly main Swift version matrix job. Defaults to matching Swift Ubuntu image."
+        default: "swiftlang/swift:nightly-main-jammy"
       matrix_linux_nightly_main_command_override:
         type: string
         description: "The command of the nightly main Swift version linux matrix job to execute."
@@ -61,29 +81,31 @@ jobs:
       matrix:
         # We are specifying only the major and minor of the docker images to automatically pick up the latest patch release
         swift:
-        - image: swift:5.8-jammy
+        - image: ${{ inputs.matrix_linux_5_8_container_image }}
           swift_version: "5.8"
           enabled: ${{ inputs.matrix_linux_5_8_enabled }}
-        - image: swift:5.9-jammy
+        - image: ${{ inputs.matrix_linux_5_9_container_image }}
           swift_version: "5.9"
           enabled: ${{ inputs.matrix_linux_5_9_enabled }}
-        - image: swift:5.10-jammy
+        - image: ${{ inputs.matrix_linux_5_10_container_image }}
           swift_version: "5.10"
           enabled: ${{ inputs.matrix_linux_5_10_enabled }}
-        - image: swiftlang/swift:nightly-6.0-jammy
+        - image: ${{ inputs.matrix_linux_nightly_6_0_container_image }}
           swift_version: "nightly-6.0"
           enabled: ${{ inputs.matrix_linux_nightly_6_0_enabled }}
-        - image: swiftlang/swift:nightly-main-jammy
+        - image: ${{ inputs.matrix_linux_nightly_main_container_image }}
           swift_version: "nightly-main"
           enabled: ${{ inputs.matrix_linux_nightly_main_enabled }}
     container:
       image: ${{ matrix.swift.image }}
     steps:
     - name: Checkout repository
+      if: ${{ matrix.swift.enabled }}
       uses: actions/checkout@v4
       with:
           persist-credentials: false
     - name: Mark the workspace as safe
+      if: ${{ matrix.swift.enabled }}
     # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
     - name: Run matrix job
