@@ -43,6 +43,18 @@ extension NIOSerialEventLoopExecutor {
     public var executor: any SerialExecutor {
         self
     }
+
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    @inlinable
+    public func isSameExclusiveExecutionContext(other: Self) -> Bool {
+        other === self
+    }
+
+    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
+    @inlinable
+    public func checkIsolated() {
+        self.preconditionInEventLoop()
+    }
 }
 
 /// A type that wraps a NIO ``EventLoop`` into a `SerialExecutor`

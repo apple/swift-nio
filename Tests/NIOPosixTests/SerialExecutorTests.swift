@@ -21,6 +21,8 @@ import XCTest
 actor EventLoopBoundActor {
     nonisolated let unownedExecutor: UnownedSerialExecutor
 
+    var counter: Int = 0
+
     init(loop: EventLoop) {
         self.unownedExecutor = loop.executor.asUnownedSerialExecutor()
     }
@@ -34,6 +36,14 @@ actor EventLoopBoundActor {
         loop.assertNotInEventLoop()
         XCTAssertFalse(loop.inEventLoop)
     }
+
+    #if compiler(>=6.0)
+    nonisolated func assumeInLoop() -> Int {
+        self.assumeIsolated { actor in
+            actor.counter
+        }
+    }
+    #endif
 }
 #endif
 
@@ -68,5 +78,21 @@ final class SerialExecutorTests: XCTestCase {
         }
 
         try await self._testBasicExecutorFitsOnEventLoop(loop1: loop1, loop2: loop2)
+    }
+
+    func testAssumeIsolation() async throws {
+        #if compiler(<5.9)
+        throw XCTSkip("Custom executors are only supported in 5.9")
+        #else
+
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let el = group.next()
+
+        let testActor = EventLoopBoundActor(loop: el)
+        let result = try await el.submit {
+            testActor.assumeInLoop()
+        }.get()
+        XCTAssertEqual(result, 0)
+        #endif
     }
 }
