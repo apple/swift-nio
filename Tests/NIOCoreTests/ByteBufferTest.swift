@@ -1909,6 +1909,11 @@ class ByteBufferTest: XCTestCase {
         let buf = ByteBuffer(string: "Hello")
         XCTAssertEqual("48656c6c6f", buf.hexDump(format: .compact))
     }
+    
+    func testHexDumpCompactReadableBytesLessThenMaxBytes() {
+        let buf = ByteBuffer(string: "hello world")
+        XCTAssertEqual("68656c6c6f20776f726c64", buf.hexDump(format: .compact(maxBytes: 100)))
+    }
 
     func testHexDumpCompactEmptyBuffer() {
         let buf = ByteBuffer(string: "")
@@ -3602,5 +3607,12 @@ extension ByteBufferTest {
             XCTAssertEqual(error as? Base64Error, .invalidCharacter)
         }
     }
-
+    
+    func testByteBufferDescription() {
+        let buffer = ByteBuffer(string: "hello world")
+        
+        XCTAssertEqual(buffer.description, "[68656c6c6f20776f726c64](11 bytes)")
+        
+        XCTAssertEqual(buffer.description, buffer.debugDescription)
+    }
 }
