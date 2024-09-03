@@ -32,7 +32,7 @@ extension ByteBuffer {
 
         /// A hex dump format compatible with `hexdump` command line utility.
         public static let detailed = Self(.detailed(maxBytes: nil))
-        
+
         /// A hex dump analog to `plain` format  but without whitespaces.
         public static let compact = Self(.compact(maxBytes: nil))
 
@@ -47,7 +47,7 @@ extension ByteBuffer {
         public static func detailed(maxBytes: Int) -> Self {
             Self(.detailed(maxBytes: maxBytes))
         }
-        
+
         /// A hex dump analog to `plain`format  but without whitespaces.
         /// This format will dump first `maxBytes / 2` bytes, and the last `maxBytes / 2` bytes, with a placeholder in between.
         public static func compact(maxBytes: Int) -> Self {
@@ -105,14 +105,14 @@ extension ByteBuffer {
 
         let startHex = front._hexDump(separateWithWhitespace: separateWithWhitespace)
         let endHex = back._hexDump(separateWithWhitespace: separateWithWhitespace)
-        
+
         var dots: String
         if separateWithWhitespace {
             dots = " ... "
         } else {
             dots = "..."
         }
-        
+
         return startHex + dots + endHex
     }
 

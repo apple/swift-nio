@@ -1904,7 +1904,7 @@ class ByteBufferTest: XCTestCase {
         let expected = "00 01 02 03 04 ... fb fc fd fe ff"
         XCTAssertEqual(expected, actual)
     }
-    
+
     func testHexDumpCompact() {
         let buf = ByteBuffer(string: "Hello")
         XCTAssertEqual("48656c6c6f", buf.hexDump(format: .compact))
