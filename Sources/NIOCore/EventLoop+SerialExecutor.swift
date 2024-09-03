@@ -36,7 +36,7 @@ extension NIOSerialEventLoopExecutor {
 
     @inlinable
     public func asUnownedSerialExecutor() -> UnownedSerialExecutor {
-        UnownedSerialExecutor(ordinary: self)
+        UnownedSerialExecutor(complexEquality: self)
     }
 
     @inlinable
