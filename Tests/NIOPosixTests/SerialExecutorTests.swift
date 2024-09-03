@@ -81,7 +81,7 @@ final class SerialExecutorTests: XCTestCase {
     }
 
     func testAssumeIsolation() async throws {
-        #if compiler(<5.9)
+        #if compiler(<6.0)
         throw XCTSkip("Custom executors are only supported in 5.9")
         #else
 
