@@ -621,7 +621,6 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         )
 
         let expectedOutput = """
-            WebSocketFrame ( \
             maskKey: nil, \
             fin: true, \
             rsv1: true, \
@@ -632,8 +631,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
             data: \(String(describing: byteBuffer)), \
             extensionData: nil, \
             unmaskedData: \(String(describing: byteBuffer)), \
-            unmaskedDataExtension: nil \
-            )
+            unmaskedDataExtension: nil
             """
 
         XCTAssertEqual(expectedOutput, String(describing: webSocketFrame))
