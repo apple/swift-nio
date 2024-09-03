@@ -386,19 +386,19 @@ extension WebSocketFrame: CustomStringConvertible {
     /// - returns: A description of this `WebSocketFrame`.
     public var description: String {
         """
-        WebSocketFrame {
-        maskKey: \(String(describing: self.maskKey)),
-        fin: \(self.fin),
-        rsv1: \(self.rsv1),
-        rsv2: \(self.rsv2),
-        rsv3: \(self.rsv3),
-        opcode: \(self.opcode),
-        length: \(self.length),
-        data: \(String(describing: self.data)),
-        extensionData: \(String(describing: self.extensionData)),
-        unmaskedData: \(String(describing: self.unmaskedData)),
-        unmaskedDataExtension: \(String(describing: self.unmaskedExtensionData))
-        }
+        WebSocketFrame ( \
+        maskKey: \(String(describing: self.maskKey)), \
+        fin: \(self.fin), \
+        rsv1: \(self.rsv1), \
+        rsv2: \(self.rsv2), \
+        rsv3: \(self.rsv3), \
+        opcode: \(self.opcode), \
+        length: \(self.length), \
+        data: \(String(describing: self.data)), \
+        extensionData: \(String(describing: self.extensionData)), \
+        unmaskedData: \(String(describing: self.unmaskedData)), \
+        unmaskedDataExtension: \(String(describing: self.unmaskedExtensionData)) \
+        )
         """
     }
 }
