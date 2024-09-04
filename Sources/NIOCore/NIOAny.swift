@@ -272,6 +272,12 @@ extension NIOAny: Sendable {}
 
 extension NIOAny: CustomStringConvertible {
     public var description: String {
-        "NIOAny { \(self.asAny()) }"
+        "\(type(of: self.asAny())): \(self.asAny())"
+    }
+}
+
+extension NIOAny: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "(\(self.description))"
     }
 }
