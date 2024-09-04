@@ -3615,4 +3615,25 @@ extension ByteBufferTest {
 
         XCTAssertEqual(buffer.description, buffer.debugDescription)
     }
+
+    func testByteBufferDescriptionEmpty() {
+        let buffer = ByteBuffer()
+
+        XCTAssertEqual(buffer.description, "[](0 bytes)")
+
+        XCTAssertEqual(buffer.description, buffer.debugDescription)
+    }
+
+    func testByteBufferDescriptionTruncated() {
+        let buffer = ByteBuffer(
+            string: "iloveswiftnioiloveswiftnioiloveswiftnioiloveswiftnioiloveswiftnioiloveswiftnio"
+        )
+
+        XCTAssertEqual(
+            buffer.description,
+            "[696c6f766573776966746e696f696c6f766573776966746e696f696c6f766573...6966746e696f696c6f766573776966746e696f696c6f766573776966746e696f](78 bytes)"
+        )
+
+        XCTAssertEqual(buffer.description, buffer.debugDescription)
+    }
 }
