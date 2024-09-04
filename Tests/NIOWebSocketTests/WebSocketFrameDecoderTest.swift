@@ -636,4 +636,36 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
 
         XCTAssertEqual(expectedOutput, String(describing: webSocketFrame))
     }
+
+    func testWebSocketFrameDebugDescription() {
+        let byteBuffer = ByteBuffer()
+        let webSocketFrame = WebSocketFrame(
+            fin: true,
+            rsv1: true,
+            rsv2: true,
+            rsv3: true,
+            opcode: .binary,
+            maskKey: nil,
+            data: byteBuffer,
+            extensionData: nil
+        )
+
+        let expectedOutput = """
+            (\
+            maskKey: nil, \
+            fin: true, \
+            rsv1: true, \
+            rsv2: true, \
+            rsv3: true, \
+            opcode: WebSocketOpcode.binary, \
+            length: 0, \
+            data: \(String(describing: byteBuffer)), \
+            extensionData: nil, \
+            unmaskedData: \(String(describing: byteBuffer)), \
+            unmaskedDataExtension: nil\
+            )
+            """
+
+        XCTAssertEqual(expectedOutput, webSocketFrame.debugDescription)
+    }
 }
