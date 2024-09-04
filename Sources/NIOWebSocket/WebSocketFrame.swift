@@ -363,3 +363,46 @@ extension WebSocketFrame._Storage: Equatable {
         lhs.data == rhs.data && lhs.extensionData == rhs.extensionData
     }
 }
+
+extension WebSocketFrame: CustomStringConvertible {
+    /// A `String` describing this `WebSocketFrame`. Example:
+    ///
+    ///     WebSocketFrame {
+    ///     maskKey: Optional(NIOWebSocket.WebSocketMaskingKey(_key: (187, 28, 185, 79))),
+    ///     fin: true,
+    ///     rsv1: true,
+    ///     rsv2: true,
+    ///     rsv3: true,
+    ///     opcode: WebSocketOpcode.binary,
+    ///     length: 0,
+    ///     data: ByteBuffer { readerIndex: 0, writerIndex: 0, readableBytes: 0, capacity: 0, storageCapacity: 0, slice: _ByteBufferSlice { 0..<0 }, storage: 0x00006000028246b0 (0 bytes) },
+    ///     extensionData: nil,
+    ///     unmaskedData: ByteBuffer { readerIndex: 0, writerIndex: 0, readableBytes: 0, capacity: 0, storageCapacity: 0, slice: _ByteBufferSlice { 0..<0 }, storage: 0x0000600002824800 (0 bytes) },
+    ///     unmaskedDataExtension: nil
+    ///     }
+    ///
+    /// The format of the description is not API.
+    ///
+    /// - returns: A description of this `WebSocketFrame`.
+    public var description: String {
+        """
+        maskKey: \(String(describing: self.maskKey)), \
+        fin: \(self.fin), \
+        rsv1: \(self.rsv1), \
+        rsv2: \(self.rsv2), \
+        rsv3: \(self.rsv3), \
+        opcode: \(self.opcode), \
+        length: \(self.length), \
+        data: \(String(describing: self.data)), \
+        extensionData: \(String(describing: self.extensionData)), \
+        unmaskedData: \(String(describing: self.unmaskedData)), \
+        unmaskedDataExtension: \(String(describing: self.unmaskedExtensionData))
+        """
+    }
+}
+
+extension WebSocketFrame: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "(\(self.description))"
+    }
+}
