@@ -47,7 +47,7 @@ extension LockOperations {
 
         #if os(Windows)
         InitializeSRWLock(mutex)
-        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && !_runtime(_multithreaded))
+        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         var attr = pthread_mutexattr_t()
         pthread_mutexattr_init(&attr)
         debugOnly {
@@ -65,7 +65,7 @@ extension LockOperations {
 
         #if os(Windows)
         // SRWLOCK does not need to be free'd
-        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && !_runtime(_multithreaded))
+        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         let err = pthread_mutex_destroy(mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #endif
@@ -77,7 +77,7 @@ extension LockOperations {
 
         #if os(Windows)
         AcquireSRWLockExclusive(mutex)
-        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && !_runtime(_multithreaded))
+        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         let err = pthread_mutex_lock(mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #endif
@@ -89,7 +89,7 @@ extension LockOperations {
 
         #if os(Windows)
         ReleaseSRWLockExclusive(mutex)
-        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && !_runtime(_multithreaded))
+        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         let err = pthread_mutex_unlock(mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #endif

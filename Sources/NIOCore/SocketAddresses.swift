@@ -499,7 +499,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
                 throw SocketAddressError.unsupported
             }
         }
-        #else
+        #elseif !os(WASI)
         var info: UnsafeMutablePointer<addrinfo>?
 
         // FIXME: this is blocking!
