@@ -959,37 +959,32 @@ public struct ByteBuffer {
 }
 
 extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
-    /// A `String` describing this `ByteBuffer`. Example:
+    /// A `String` describing this `ByteBuffer` including length and the bytes it contains (partially).
     ///
-    ///     ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, storageCapacity: 1024, slice: 256..<768, storage: 0x0000000103001000 (1024 bytes)}
+    /// For a `ByteBuffer` initialised with `hello world` the description would be the following:
     ///
+    ///     [68656c6c6f20776f726c64](11 bytes)
+    ///
+    /// Buffers larger that 64 bytes will get truncated when printing out.
     /// The format of the description is not API.
     ///
     /// - returns: A description of this `ByteBuffer`.
     public var description: String {
-        """
-        ByteBuffer { \
-        readerIndex: \(self.readerIndex), \
-        writerIndex: \(self.writerIndex), \
-        readableBytes: \(self.readableBytes), \
-        capacity: \(self.capacity), \
-        storageCapacity: \(self.storageCapacity), \
-        slice: \(self._slice), \
-        storage: \(self._storage.bytes) (\(self._storage.capacity) bytes) \
-        }
-        """
+        "[\(self.hexDump(format: .compact(maxBytes: 64)))](\(self.readableBytes) bytes)"
     }
 
-    /// A `String` describing this `ByteBuffer` with some portion of the readable bytes dumped too. Example:
+    /// A `String` describing this `ByteBuffer` including length and the bytes it contains (partially).
     ///
-    ///     ByteBuffer { readerIndex: 0, writerIndex: 4, readableBytes: 4, capacity: 512, slice: 256..<768, storage: 0x0000000103001000 (1024 bytes)}
-    ///     readable bytes (max 1k): [ 00 01 02 03 ]
+    /// For a `ByteBuffer` initialised with `hello world` the description would be the following:
     ///
+    ///     [68656c6c6f20776f726c64](11 bytes)
+    ///
+    /// Buffers larger that 64 bytes will get truncated when printing out.
     /// The format of the description is not API.
     ///
-    /// - returns: A description of this `ByteBuffer` useful for debugging.
+    /// - returns: A description of this `ByteBuffer`.
     public var debugDescription: String {
-        "\(self.description)\nreadable bytes (max 1k): \(self._storage.dumpBytes(slice: self._slice, offset: self.readerIndex, length: min(1024, self.readableBytes)))"
+        "[\(self.hexDump(format: .compact(maxBytes: 64)))](\(self.readableBytes) bytes)"
     }
 }
 
