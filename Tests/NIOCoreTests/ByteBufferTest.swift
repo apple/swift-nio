@@ -1910,6 +1910,11 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("48656c6c6f", buf.hexDump(format: .compact))
     }
 
+    func testHexDumpCompactReadableBytesLessThenMaxBytes() {
+        let buf = ByteBuffer(string: "hello world")
+        XCTAssertEqual("68656c6c6f20776f726c64", buf.hexDump(format: .compact(maxBytes: 100)))
+    }
+
     func testHexDumpCompactEmptyBuffer() {
         let buf = ByteBuffer(string: "")
         XCTAssertEqual("", buf.hexDump(format: .compact))
@@ -3603,4 +3608,32 @@ extension ByteBufferTest {
         }
     }
 
+    func testByteBufferDescription() {
+        let buffer = ByteBuffer(string: "hello world")
+
+        XCTAssertEqual(buffer.description, "[68656c6c6f20776f726c64](11 bytes)")
+
+        XCTAssertEqual(buffer.description, buffer.debugDescription)
+    }
+
+    func testByteBufferDescriptionEmpty() {
+        let buffer = ByteBuffer()
+
+        XCTAssertEqual(buffer.description, "[](0 bytes)")
+
+        XCTAssertEqual(buffer.description, buffer.debugDescription)
+    }
+
+    func testByteBufferDescriptionTruncated() {
+        let buffer = ByteBuffer(
+            string: "iloveswiftnioiloveswiftnioiloveswiftnioiloveswiftnioiloveswiftnioiloveswiftnio"
+        )
+
+        XCTAssertEqual(
+            buffer.description,
+            "[696c6f766573776966746e696f696c6f766573776966746e696f696c6f766573...6966746e696f696c6f766573776966746e696f696c6f766573776966746e696f](78 bytes)"
+        )
+
+        XCTAssertEqual(buffer.description, buffer.debugDescription)
+    }
 }

@@ -93,7 +93,7 @@ extension ByteBuffer {
     private func _hexDump(maxBytes: Int, separateWithWhitespace: Bool) -> String {
         // If the buffer length fits in the max bytes limit in the hex dump, just dump the whole thing.
         if self.readableBytes <= maxBytes {
-            return self.hexDump(format: .plain)
+            return self._hexDump(separateWithWhitespace: separateWithWhitespace)
         }
 
         var buffer = self
