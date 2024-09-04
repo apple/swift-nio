@@ -957,8 +957,9 @@ public struct ByteBuffer {
 }
 
 extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
-    /// A `String` describing this `ByteBuffer`.  For a `ByteBuffer` initialised with `hello world`
-    /// the description would be the following:
+    /// A `String` describing this `ByteBuffer` including length and the bytes it contains (partially).
+    ///
+    /// For a `ByteBuffer` initialised with `hello world` the description would be the following:
     ///
     ///     [68656c6c6f20776f726c64](11 bytes)
     ///
@@ -970,8 +971,9 @@ extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
         "[\(self.hexDump(format: .compact(maxBytes: 64)))](\(self.readableBytes) bytes)"
     }
 
-    /// A `String` describing this `ByteBuffer`.  For a `ByteBuffer` initialised with `hello world`
-    /// the description would be the following:
+    /// A `String` describing this `ByteBuffer` including length and the bytes it contains (partially).
+    ///
+    /// For a `ByteBuffer` initialised with `hello world` the description would be the following:
     ///
     ///     [68656c6c6f20776f726c64](11 bytes)
     ///
