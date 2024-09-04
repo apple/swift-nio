@@ -25,6 +25,9 @@ import Musl
 import Bionic
 #elseif canImport(WASILibc)
 import WASILibc
+#if canImport(wasi_pthread)
+import wasi_pthread
+#endif
 #else
 #error("The concurrency NIOLock module was unable to identify your C library.")
 #endif

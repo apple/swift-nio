@@ -25,6 +25,9 @@ import Musl
 import Bionic
 #elseif canImport(WASILibc)
 import WASILibc
+#if canImport(wasi_pthread)
+import wasi_pthread
+#endif
 #else
 #error("The concurrency lock module was unable to identify your C library.")
 #endif
@@ -255,8 +258,14 @@ public final class ConditionLock<T: Equatable> {
         gettimeofday(&curTime, nil)
 
         let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_usec) * 1000
+        #if canImport(wasi_pthread)
+        let tvSec = curTime.tv_sec + (allNSecs / nsecPerSec)
+        #else
+        let tvSec = curTime.tv_sec + Int((allNSecs / nsecPerSec))
+        #endif
+        
         var timeoutAbs = timespec(
-            tv_sec: curTime.tv_sec + Int((allNSecs / nsecPerSec)),
+            tv_sec: tvSec,
             tv_nsec: Int(allNSecs % nsecPerSec)
         )
         assert(timeoutAbs.tv_nsec >= 0 && timeoutAbs.tv_nsec < Int(nsecPerSec))
