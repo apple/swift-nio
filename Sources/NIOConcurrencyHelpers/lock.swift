@@ -263,7 +263,7 @@ public final class ConditionLock<T: Equatable> {
         #else
         let tvSec = curTime.tv_sec + Int((allNSecs / nsecPerSec))
         #endif
-        
+
         var timeoutAbs = timespec(
             tv_sec: tvSec,
             tv_nsec: Int(allNSecs % nsecPerSec)
