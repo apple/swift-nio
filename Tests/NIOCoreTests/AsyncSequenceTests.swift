@@ -14,7 +14,7 @@
 import NIOCore
 import XCTest
 
-fileprivate struct TestCase {
+private struct TestCase {
     var buffers: [[UInt8]]
     var file: StaticString
     var line: UInt
@@ -25,12 +25,12 @@ fileprivate struct TestCase {
     }
 }
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncSequenceCollectTests: XCTestCase {
     func testAsyncSequenceCollect() async throws {
-        guard #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) else { return }
         let testCases = [
             TestCase([
-                [],
+                []
             ]),
             TestCase([
                 [],
@@ -74,7 +74,7 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 [],
             ]),
             TestCase([
-                Array(0..<10),
+                Array(0..<10)
             ]),
             TestCase([
                 Array(0..<10),
@@ -126,15 +126,31 @@ final class AsyncSequenceCollectTests: XCTestCase {
             }
 
             // test for the generic version
+            let maxBytes = max(expectedBytes.count - 1, 0)
             await XCTAssertThrowsError(
                 try await testCase.buffers
                     .asAsyncSequence()
-                    .collect(upTo: max(expectedBytes.count - 1, 0), using: .init()),
+                    .collect(upTo: maxBytes, using: .init()),
                 file: testCase.file,
                 line: testCase.line
             ) { error in
                 XCTAssertTrue(
                     error is NIOTooManyBytesError,
+                    file: testCase.file,
+                    line: testCase.line
+                )
+                guard let tooManyBytesErr = error as? NIOTooManyBytesError else {
+                    XCTFail(
+                        "Error was not an NIOTooManyBytesError",
+                        file: testCase.file,
+                        line: testCase.line
+                    )
+                    return
+                }
+
+                XCTAssertEqual(
+                    maxBytes,
+                    tooManyBytesErr.maxBytes,
                     file: testCase.file,
                     line: testCase.line
                 )
@@ -145,12 +161,27 @@ final class AsyncSequenceCollectTests: XCTestCase {
                 try await testCase.buffers
                     .map(ByteBuffer.init(bytes:))
                     .asAsyncSequence()
-                    .collect(upTo: max(expectedBytes.count - 1, 0)),
+                    .collect(upTo: maxBytes),
                 file: testCase.file,
                 line: testCase.line
             ) { error in
                 XCTAssertTrue(
                     error is NIOTooManyBytesError,
+                    file: testCase.file,
+                    line: testCase.line
+                )
+                guard let tooManyBytesErr = error as? NIOTooManyBytesError else {
+                    XCTFail(
+                        "Error was not an NIOTooManyBytesError",
+                        file: testCase.file,
+                        line: testCase.line
+                    )
+                    return
+                }
+
+                // Sometimes the max bytes is subtracted from the header size
+                XCTAssertTrue(
+                    tooManyBytesErr.maxBytes != nil && tooManyBytesErr.maxBytes! <= maxBytes,
                     file: testCase.file,
                     line: testCase.line
                 )

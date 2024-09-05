@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import XCTest
 import NIOCore
 import NIOFoundationCompat
+import XCTest
 
 class CodableByteBufferTest: XCTestCase {
     var buffer: ByteBuffer!
@@ -68,10 +68,16 @@ class CodableByteBufferTest: XCTestCase {
         self.buffer.writeString("GARBAGE {}!!? / GARBAGE")
 
         let expectedSandI = StringAndInt(string: "hello", int: 42)
-        XCTAssertNoThrow(XCTAssertEqual(expectedSandI,
-                                        try self.buffer.getJSONDecodable(StringAndInt.self,
-                                                                         at: beginIndex,
-                                                                         length: endIndex - beginIndex)))
+        XCTAssertNoThrow(
+            XCTAssertEqual(
+                expectedSandI,
+                try self.buffer.getJSONDecodable(
+                    StringAndInt.self,
+                    at: beginIndex,
+                    length: endIndex - beginIndex
+                )
+            )
+        )
     }
 
     func testGetJSONDecodableFromBufferFailsBecauseShort() {
@@ -80,9 +86,13 @@ class CodableByteBufferTest: XCTestCase {
         self.buffer.writeString(#"{"string": "hello", "int": 42}"#)
         let endIndex = self.buffer.writerIndex
 
-        XCTAssertThrowsError(try self.buffer.getJSONDecodable(StringAndInt.self,
-                                                              at: beginIndex,
-                                                              length: endIndex - beginIndex - 1)) { error in
+        XCTAssertThrowsError(
+            try self.buffer.getJSONDecodable(
+                StringAndInt.self,
+                at: beginIndex,
+                length: endIndex - beginIndex - 1
+            )
+        ) { error in
             XCTAssert(error is DecodingError)
         }
     }
@@ -94,9 +104,15 @@ class CodableByteBufferTest: XCTestCase {
         self.buffer.writeString("GARBAGE {}!!? / GARBAGE")
 
         let expectedSandI = StringAndInt(string: "hello", int: 42)
-        XCTAssertNoThrow(XCTAssertEqual(expectedSandI,
-                                        try self.buffer.readJSONDecodable(StringAndInt.self,
-                                                                          length: endIndex - beginIndex)))
+        XCTAssertNoThrow(
+            XCTAssertEqual(
+                expectedSandI,
+                try self.buffer.readJSONDecodable(
+                    StringAndInt.self,
+                    length: endIndex - beginIndex
+                )
+            )
+        )
     }
 
     func testReadJSONDecodableFromBufferFailsBecauseShort() {
@@ -104,8 +120,12 @@ class CodableByteBufferTest: XCTestCase {
         self.buffer.writeString(#"{"string": "hello", "int": 42}"#)
         let endIndex = self.buffer.writerIndex
 
-        XCTAssertThrowsError(try self.buffer.readJSONDecodable(StringAndInt.self,
-                                                               length: endIndex - beginIndex - 1)) { error in
+        XCTAssertThrowsError(
+            try self.buffer.readJSONDecodable(
+                StringAndInt.self,
+                length: endIndex - beginIndex - 1
+            )
+        ) { error in
             XCTAssert(error is DecodingError)
         }
     }
@@ -129,19 +149,39 @@ class CodableByteBufferTest: XCTestCase {
         let expectedSandI = StringAndInt(string: "hello", int: 42)
         self.buffer.writeString(String(repeating: "{", count: 1000))
         var writtenBytes: Int?
-        XCTAssertNoThrow(writtenBytes = try self.buffer.setJSONEncodable(expectedSandI,
-                                                                         at: self.buffer.readerIndex + 123))
-        XCTAssertNoThrow(try self.buffer.setJSONEncodable(expectedSandI,
-                                                          encoder: JSONEncoder(),
-                                                          at: self.buffer.readerIndex + 501))
-        XCTAssertNoThrow(XCTAssertEqual(expectedSandI,
-                                        try self.buffer.getJSONDecodable(StringAndInt.self,
-                                                                         at: self.buffer.readerIndex + 123,
-                                                                         length: writtenBytes ?? -1)))
-        XCTAssertNoThrow(XCTAssertEqual(expectedSandI,
-                                        try self.buffer.getJSONDecodable(StringAndInt.self,
-                                                                         at: self.buffer.readerIndex + 501,
-                                                                         length: writtenBytes ?? -1)))
+        XCTAssertNoThrow(
+            writtenBytes = try self.buffer.setJSONEncodable(
+                expectedSandI,
+                at: self.buffer.readerIndex + 123
+            )
+        )
+        XCTAssertNoThrow(
+            try self.buffer.setJSONEncodable(
+                expectedSandI,
+                encoder: JSONEncoder(),
+                at: self.buffer.readerIndex + 501
+            )
+        )
+        XCTAssertNoThrow(
+            XCTAssertEqual(
+                expectedSandI,
+                try self.buffer.getJSONDecodable(
+                    StringAndInt.self,
+                    at: self.buffer.readerIndex + 123,
+                    length: writtenBytes ?? -1
+                )
+            )
+        )
+        XCTAssertNoThrow(
+            XCTAssertEqual(
+                expectedSandI,
+                try self.buffer.getJSONDecodable(
+                    StringAndInt.self,
+                    at: self.buffer.readerIndex + 501,
+                    length: writtenBytes ?? -1
+                )
+            )
+        )
     }
 
     func testFailingReadsDoNotChangeReaderIndex() {
@@ -149,14 +189,18 @@ class CodableByteBufferTest: XCTestCase {
         var writtenBytes: Int?
         XCTAssertNoThrow(writtenBytes = try self.buffer.writeJSONEncodable(expectedSandI))
         for length in 0..<(writtenBytes ?? 0) {
-            XCTAssertThrowsError(try self.buffer.readJSONDecodable(StringAndInt.self,
-                                                                   length: length)) { error in
+            XCTAssertThrowsError(
+                try self.buffer.readJSONDecodable(
+                    StringAndInt.self,
+                    length: length
+                )
+            ) { error in
                 XCTAssert(error is DecodingError)
             }
         }
         XCTAssertNoThrow(try self.buffer.readJSONDecodable(StringAndInt.self, length: writtenBytes ?? -1))
     }
-    
+
     func testCustomEncoderIsRespected() {
         let expectedDate = Date(timeIntervalSinceReferenceDate: 86400)
         let strategyExpectation = XCTestExpectation(description: "Custom encoding strategy invoked")
@@ -185,7 +229,9 @@ class CodableByteBufferTest: XCTestCase {
             return Date(timeIntervalSinceReferenceDate: try container.decode(Double.self))
         })
         XCTAssertNoThrow(try encoder.encode(["date": expectedDate], into: &self.buffer))
-        XCTAssertNoThrow(XCTAssertEqual(["date": expectedDate], try decoder.decode(Dictionary<String, Date>.self, from: self.buffer)))
+        XCTAssertNoThrow(
+            XCTAssertEqual(["date": expectedDate], try decoder.decode(Dictionary<String, Date>.self, from: self.buffer))
+        )
         XCTAssertEqual(XCTWaiter().wait(for: [strategyExpectation], timeout: 0.0), .completed)
     }
 
@@ -207,10 +253,16 @@ class CodableByteBufferTest: XCTestCase {
             return Date(timeIntervalSinceReferenceDate: try container.decode(Double.self))
         })
         XCTAssertNoThrow(try self.buffer.writeJSONEncodable(["date": expectedDate], encoder: encoder))
-        XCTAssertNoThrow(XCTAssertEqual(["date": expectedDate],
-                                        try self.buffer.readJSONDecodable(Dictionary<String, Date>.self,
-                                                                          decoder: decoder,
-                                                                          length: self.buffer.readableBytes)))
+        XCTAssertNoThrow(
+            XCTAssertEqual(
+                ["date": expectedDate],
+                try self.buffer.readJSONDecodable(
+                    Dictionary<String, Date>.self,
+                    decoder: decoder,
+                    length: self.buffer.readableBytes
+                )
+            )
+        )
         XCTAssertEqual(XCTWaiter().wait(for: [decoderStrategyExpectation], timeout: 0.0), .completed)
         XCTAssertEqual(XCTWaiter().wait(for: [encoderStrategyExpectation], timeout: 0.0), .completed)
     }

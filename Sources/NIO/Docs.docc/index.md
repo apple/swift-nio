@@ -35,6 +35,7 @@ SwiftNIO has a number of products that provide different functionality. This pac
 - [NIOHTTP1][module-http1]. This provides a low-level HTTP/1.1 protocol implementation.
 - [NIOWebSocket][module-websocket]. This provides a low-level WebSocket protocol implementation.
 - [NIOTestUtils][module-test-utilities]. This provides a number of helpers for testing projects that use SwiftNIO.
+- [NIOFileSystem][module-filesystem]. This provides `async` APIs for interacting with the file system.
 
 ### Conceptual Overview
 
@@ -127,7 +128,7 @@ One major difference between writing concurrent code and writing synchronous cod
 
 An [`EventLoopFuture<T>`][elf] is essentially a container for the return value of a function that will be populated *at some time in the future*. Each [`EventLoopFuture<T>`][elf] has a corresponding [`EventLoopPromise<T>`][elp], which is the object that the result will be put into. When the promise is succeeded, the future will be fulfilled.
 
-If you had to poll the future to detect when it completed that would be quite inefficient, so [`EventLoopFuture<T>`][elf] is designed to have managed callbacks. Essentially, you can hang callbacks off the future that will be executed when a result is available. The [`EventLoopFuture<T>`][elf] will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around [`EventLoopFuture<T>`][elf] callbacks.
+If you had to poll the future to detect when it completed that would be quite inefficient, so [`EventLoopFuture<T>`][elf] is designed to have managed callbacks. Essentially, you can chain callbacks off the future that will be executed when a result is available. The [`EventLoopFuture<T>`][elf] will even carefully arrange the scheduling to ensure that these callbacks always execute on the event loop that initially created the promise, which helps ensure that you don't need too much synchronization around [`EventLoopFuture<T>`][elf] callbacks.
 
 Another important topic for consideration is the difference between how the promise passed to `close` works as opposed to `closeFuture` on a [`Channel`][c]. For example, the promise passed into `close` will succeed after the [`Channel`][c] is closed down but before the [`ChannelPipeline`][cp] is completely cleared out. This will allow you to take action on the [`ChannelPipeline`][cp] before it is completely cleared out, if needed. If it is desired to wait for the [`Channel`][c] to close down and the [`ChannelPipeline`][cp] to be cleared out without any further action, then the better option would be to wait for the `closeFuture` to succeed.
 
@@ -151,32 +152,32 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 [repo-nio-transport-services]: https://github.com/apple/swift-nio-transport-services
 [repo-nio-ssh]: https://github.com/apple/swift-nio-ssh
 
-[module-core]: ./niocore
-[module-posix]: ./nioposix
-[module-embedded]: ./nioembedded
-[module-concurrency-helpers]: ./nioconcurrencyhelpers
-[module-embedded]: ./nioembedded
-[module-foundation-compatibility]: ./niofoundationcompat
-[module-http1]: ./niohttp1
-[module-tls]: ./niotls
-[module-websocket]: ./niowebsocket
-[module-test-utilities]: ./niotestutils
+[module-core]: ./NIOCore
+[module-posix]: ./NIOPosix
+[module-embedded]: ./NIOEmbedded
+[module-concurrency-helpers]: ./NIOConcurrencyHelpers
+[module-foundation-compatibility]: ./NIOFoundationCompat
+[module-http1]: ./NIOHTTP1
+[module-tls]: ./NIOTLS
+[module-websocket]: ./NIOWebSocket
+[module-test-utilities]: ./NIOTestUtils
+[module-filesystem]: ./_NIOFileSystem
 
-[ch]: ./niocore/channelhandler
-[c]: ./niocore/channel
-[chc]: ./niocore/channelhandlercontext
-[ec]: ./nioembedded/embeddedchannel
-[el]: ./niocore/eventloop
-[eel]: ./nioembedded/embeddedeventloop
-[elg]: ./niocore/eventloopgroup
-[bb]: ./niocore/bytebuffer
-[elf]: ./niocore/eventloopfuture
-[elp]: ./niocore/eventlooppromise
-[cp]: ./niocore/channelpipeline
-[mtelg]: ./nioposix/multithreadedeventloopgroup
-[sb]: ./nioposix/serverbootstrap
-[cb]: ./nioposix/clientbootstrap
-[db]: ./nioposix/datagrambootstrap
+[ch]: ./NIOCore/ChannelHandler
+[c]: ./NIOCore/Channel
+[chc]: ./NIOCore/ChannelHandlerContext
+[ec]: ./NIOEmbedded/EmbeddedChannel
+[el]: ./NIOCore/EventLoop
+[eel]: ./NIOEmbedded/EmbeddedEventLoop
+[elg]: ./NIOCore/EventLoopGroup
+[bb]: ./NIOCore/ByteBuffer
+[elf]: ./NIOCore/EventLoopFuture
+[elp]: ./NIOCore/EventLoopPromise
+[cp]: ./NIOCore/ChannelPipeline
+[mtelg]: ./NIOPosix/MultiThreadedEventLoopGroup
+[sb]: ./NIOPosix/ServerBootstrap
+[cb]: ./NIOPosix/ClientBootstrap
+[db]: ./NIOPosix/DatagramBootstrap
 [pthreads]: https://en.wikipedia.org/wiki/POSIX_Threads
 [kqueue]: https://en.wikipedia.org/wiki/Kqueue
 [epoll]: https://en.wikipedia.org/wiki/Epoll

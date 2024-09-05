@@ -13,12 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 @testable import NIOCore
 
 class LinuxTest: XCTestCase {
     func testCoreCountQuota() throws {
         #if os(Linux) || os(Android)
-        try [
+        let coreCountQuoats = [
             ("50000", "100000", 1),
             ("100000", "100000", 1),
             ("100000\n", "100000", 1),
@@ -29,8 +30,9 @@ class LinuxTest: XCTestCase {
             ("100000", "-1", nil),
             ("", "100000", nil),
             ("100000", "", nil),
-            ("100000", "0", nil)
-        ].forEach { quota, period, count in
+            ("100000", "0", nil),
+        ]
+        for (quota, period, count) in coreCountQuoats {
             try withTemporaryFile(content: quota) { (_, quotaPath) -> Void in
                 try withTemporaryFile(content: period) { (_, periodPath) -> Void in
                     XCTAssertEqual(Linux.coreCountCgroup1Restriction(quota: quotaPath, period: periodPath), count)
@@ -42,15 +44,16 @@ class LinuxTest: XCTestCase {
 
     func testCoreCountCpuset() throws {
         #if os(Linux) || os(Android)
-        try [
+        let cpusets = [
             ("0", 1),
             ("0,3", 2),
             ("0-3", 4),
             ("0-3,7", 5),
             ("0-3,7\n", 5),
             ("0,2-4,6,7,9-11", 9),
-            ("", nil)
-        ].forEach { cpuset, count in
+            ("", nil),
+        ]
+        for (cpuset, count) in cpusets {
             try withTemporaryFile(content: cpuset) { (_, path) -> Void in
                 XCTAssertEqual(Linux.coreCount(cpuset: path), count)
             }
@@ -60,11 +63,12 @@ class LinuxTest: XCTestCase {
 
     func testCoreCountCgoup2() throws {
         #if os(Linux) || os(Android)
-        try [
+        let contents = [
             ("max 100000", nil),
             ("75000 100000", 1),
-            ("200000 100000", 2)
-        ].forEach { (content, count) in
+            ("200000 100000", 2),
+        ]
+        for (content, count) in contents {
             try withTemporaryFile(content: content) { (_, path) in
                 XCTAssertEqual(Linux.coreCountCgroup2Restriction(cpuMaxPath: path), count)
             }

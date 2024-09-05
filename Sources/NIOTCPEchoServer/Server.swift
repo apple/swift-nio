@@ -11,11 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if swift(>=5.9)
-@_spi(AsyncChannel) import NIOCore
-@_spi(AsyncChannel) import NIOPosix
 
-@available(macOS 14, *)
+#if compiler(>=5.9)
+import NIOCore
+import NIOPosix
+
+@available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
 @main
 struct Server {
     /// The server's host.
@@ -37,7 +38,7 @@ struct Server {
     /// This method starts the server and handles incoming connections.
     func run() async throws {
         let channel = try await ServerBootstrap(group: self.eventLoopGroup)
-            .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
+            .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
             .bind(
                 host: self.host,
                 port: self.port
@@ -48,7 +49,7 @@ struct Server {
                     try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(NewlineDelimiterCoder()))
 
                     return try NIOAsyncChannel(
-                        synchronouslyWrapping: channel,
+                        wrappingChannelSynchronously: channel,
                         configuration: NIOAsyncChannel.Configuration(
                             inboundType: String.self,
                             outboundType: String.self
@@ -64,11 +65,13 @@ struct Server {
         // the results of the group we need the group to automatically discard them; otherwise, this
         // would result in a memory leak over time.
         try await withThrowingDiscardingTaskGroup { group in
-            for try await connectionChannel in channel.inboundStream {
-                group.addTask {
-                    print("Handling new connection")
-                    await self.handleConnection(channel: connectionChannel)
-                    print("Done handling connection")
+            try await channel.executeThenClose { inbound in
+                for try await connectionChannel in inbound {
+                    group.addTask {
+                        print("Handling new connection")
+                        await self.handleConnection(channel: connectionChannel)
+                        print("Done handling connection")
+                    }
                 }
             }
         }
@@ -80,16 +83,17 @@ struct Server {
         // We do this since we don't want to tear down the whole server when a single connection
         // encounters an error.
         do {
-            for try await inboundData in channel.inboundStream {
-                print("Received request (\(inboundData))")
-                try await channel.outboundWriter.write(inboundData)
+            try await channel.executeThenClose { inbound, outbound in
+                for try await inboundData in inbound {
+                    print("Received request (\(inboundData))")
+                    try await outbound.write(inboundData)
+                }
             }
         } catch {
             print("Hit error: \(error)")
         }
     }
 }
-
 
 /// A simple newline based encoder and decoder.
 private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEncoder {
@@ -106,7 +110,7 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
         if let firstLine = readableBytes.firstIndex(of: self.newLine).map({ readableBytes[..<$0] }) {
             buffer.moveReaderIndex(forwardBy: firstLine.count + 1)
             // Fire a read without a newline
-            context.fireChannelRead(self.wrapInboundOut(String(buffer: ByteBuffer(firstLine))))
+            context.fireChannelRead(Self.wrapInboundOut(String(buffer: ByteBuffer(firstLine))))
             return .continue
         } else {
             return .needMoreData

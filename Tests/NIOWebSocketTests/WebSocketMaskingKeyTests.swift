@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOWebSocket
+import XCTest
 
 final class WebSocketMaskingKeyTests: XCTestCase {
     var generator = SystemRandomNumberGenerator()
@@ -25,16 +25,22 @@ final class WebSocketMaskingKeyTests: XCTestCase {
         buffer.webSocketUnmask(key)
         XCTAssertEqual(buffer, ByteBuffer(bytes: [1, 2, 3, 4, 5, 6, 7, 8]))
     }
-    
+
     func testRandomMaskingKeyIsNotAlwaysZero() {
-        XCTAssertTrue((0..<1000).contains { _ in
-            WebSocketMaskingKey.random(using: &generator) != [0, 0, 0, 0]
-        }, "at least 1 of 1000 random masking keys should not be all zeros")
+        XCTAssertTrue(
+            (0..<1000).contains { _ in
+                WebSocketMaskingKey.random(using: &generator) != [0, 0, 0, 0]
+            },
+            "at least 1 of 1000 random masking keys should not be all zeros"
+        )
     }
-    
+
     func testRandomMaskingKeyIsNotAlwaysZeroWithDefaultGenerator() {
-        XCTAssertTrue((0..<1000).contains { _ in
-            WebSocketMaskingKey.random() != [0, 0, 0, 0]
-        }, "at least 1 of 1000 random masking keys with default generator should not be all zeros")
+        XCTAssertTrue(
+            (0..<1000).contains { _ in
+                WebSocketMaskingKey.random() != [0, 0, 0, 0]
+            },
+            "at least 1 of 1000 random masking keys with default generator should not be all zeros"
+        )
     }
 }

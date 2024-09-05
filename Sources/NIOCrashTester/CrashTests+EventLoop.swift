@@ -11,11 +11,13 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
 #if !canImport(Darwin) || os(macOS)
+import Dispatch
 import NIOCore
 import NIOPosix
 
-fileprivate let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+private let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
 
 struct EventLoopCrashTests {
     let testMultiThreadedELGCrashesOnZeroThreads = CrashTest(
@@ -80,9 +82,9 @@ struct EventLoopCrashTests {
                 exit(2)
             }
             func f() {
-                el.scheduleTask(in: .nanoseconds(0)) { [f /* to make 5.1 compiler not crash */] in
+                el.scheduleTask(in: .nanoseconds(0)) { [f] in
                     f()
-                }.futureResult.whenFailure { [f /* to make 5.1 compiler not crash */] error in
+                }.futureResult.whenFailure { [f] error in
                     guard case .some(.shutdown) = error as? EventLoopError else {
                         exit(3)
                     }
@@ -177,5 +179,34 @@ struct EventLoopCrashTests {
     ) {
         NIOSingletons.groupLoopCountSuggestion = -1
     }
+
+    #if compiler(>=5.9) && swift(<6.2)  // We only support Concurrency executor take-over on those Swift versions, as versions greater than that have not been properly tested.
+    let testInstallingSingletonMTELGAsConcurrencyExecutorWorksButOnlyOnce = CrashTest(
+        regex: #"Fatal error: Must be called only once"#
+    ) {
+        guard NIOSingletons.unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor() else {
+            print("Installation failed, that's unexpected -> let's not crash")
+            return
+        }
+
+        // Yes, this pattern is bad abuse but this is a crash test, we don't mind.
+        let semaphoreAbuse = DispatchSemaphore(value: 0)
+        if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
+            Task {
+                precondition(MultiThreadedEventLoopGroup.currentEventLoop != nil)
+                try await Task.sleep(nanoseconds: 123)
+                precondition(MultiThreadedEventLoopGroup.currentEventLoop != nil)
+                semaphoreAbuse.signal()
+            }
+        } else {
+            semaphoreAbuse.signal()
+        }
+        semaphoreAbuse.wait()
+        print("Okay, worked")
+
+        // This should crash
+        _ = NIOSingletons.unsafeTryInstallSingletonPosixEventLoopGroupAsConcurrencyGlobalExecutor()
+    }
+    #endif  // compiler(>=5.9) && swift(<6.2)
 }
-#endif
+#endif  // !canImport(Darwin) || os(macOS)

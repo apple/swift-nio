@@ -30,20 +30,15 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
     private var state = State.initial
 
     @usableFromInline
-    enum DeinitHandlerAction {
+    enum HandlerRemovedAction {
         case failPromise
     }
 
     @inlinable
-    mutating func deinitHandler() -> DeinitHandlerAction? {
+    mutating func handlerRemoved() -> HandlerRemovedAction? {
         switch self.state {
-        case .initial:
+        case .initial, .waitingForUser, .unbuffering:
             return .failPromise
-
-        case .waitingForUser, .unbuffering:
-            // We are retaining the handler strongly while waiting and unbuffering
-            // so we should never hit the deinit.
-            fatalError("Unexpected state")
 
         case .finished:
             return .none
@@ -58,7 +53,7 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
 
     @inlinable
     mutating func userInboundEventTriggered(event: Any) -> UserInboundEventTriggeredAction {
-        if case .handshakeCompleted(let negotiated) = event as? TLSUserEvent  {
+        if case .handshakeCompleted(let negotiated) = event as? TLSUserEvent {
             switch self.state {
             case .initial:
                 self.state = .waitingForUser(buffer: .init())
@@ -176,7 +171,7 @@ struct ProtocolNegotiationHandlerStateMachine<NegotiationResult> {
         switch self.state {
         case .initial, .unbuffering, .waitingForUser:
             self.state = .finished
-            
+
         case .finished:
             break
         }

@@ -15,13 +15,16 @@
 import Atomics
 import DequeModule
 import NIOConcurrencyHelpers
+import _NIODataStructures
+
+@usableFromInline
+let _asyncWriterYieldIDCounter = ManagedAtomic<UInt64>(0)
 
 /// The delegate of the ``NIOAsyncWriter``. It is the consumer of the yielded writes to the ``NIOAsyncWriter``.
 /// Furthermore, the delegate gets informed when the ``NIOAsyncWriter`` terminated.
 ///
-/// - Important: The methods on the delegate are called while a lock inside of the ``NIOAsyncWriter`` is held. This is done to
-/// guarantee the ordering of the writes. However, this means you **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)``
-/// from within ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` or ``NIOAsyncWriterSinkDelegate/didTerminate(error:)``.
+/// - Important: The methods on the delegate might be called on arbitrary threads and the implementation must ensure
+/// that proper synchronization is in place.
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 public protocol NIOAsyncWriterSinkDelegate: Sendable {
     /// The `Element` type of the delegate and the writer.
@@ -31,22 +34,20 @@ public protocol NIOAsyncWriterSinkDelegate: Sendable {
     ///
     /// If the ``NIOAsyncWriter`` was writable when the sequence was yielded, the sequence will be forwarded
     /// right away to the delegate. If the ``NIOAsyncWriter`` was _NOT_ writable then the sequence will be buffered
-    /// until the ``NIOAsyncWriter`` becomes writable again. All buffered writes, while the ``NIOAsyncWriter`` is not writable,
-    /// will be coalesced into a single sequence.
+    /// until the ``NIOAsyncWriter`` becomes writable again.
     ///
-    /// - Important: You **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
+    /// The delegate might reentrantly call ``NIOAsyncWriter/Sink/setWritability(to:)`` while still processing writes.
     func didYield(contentsOf sequence: Deque<Element>)
 
     /// This method is called once a single element was yielded to the ``NIOAsyncWriter``.
     ///
     /// If the ``NIOAsyncWriter`` was writable when the sequence was yielded, the sequence will be forwarded
     /// right away to the delegate. If the ``NIOAsyncWriter`` was _NOT_ writable then the sequence will be buffered
-    /// until the ``NIOAsyncWriter`` becomes writable again. All buffered writes, while the ``NIOAsyncWriter`` is not writable,
-    /// will be coalesced into a single sequence.
+    /// until the ``NIOAsyncWriter`` becomes writable again.
     ///
     /// - Note: This a fast path that you can optionally implement. By default this will just call ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)``.
     ///
-    /// - Important: You **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
+    /// The delegate might reentrantly call ``NIOAsyncWriter/Sink/setWritability(to:)`` while still processing writes.
     func didYield(_ element: Element)
 
     /// This method is called once the ``NIOAsyncWriter`` is terminated.
@@ -55,15 +56,11 @@ public protocol NIOAsyncWriterSinkDelegate: Sendable {
     /// - The ``NIOAsyncWriter`` is deinited and all yielded elements have been delivered to the delegate.
     /// - ``NIOAsyncWriter/finish()`` is called and all yielded elements have been delivered to the delegate.
     /// - ``NIOAsyncWriter/finish(error:)`` is called and all yielded elements have been delivered to the delegate.
-    /// - ``NIOAsyncWriter/Sink/finish()`` or ``NIOAsyncWriter/Sink/finish(error:)`` is called.
     ///
-    /// - Note: This is guaranteed to be called _exactly_ once.
+    /// - Note: This is guaranteed to be called _at most_ once.
     ///
     /// - Parameter error: The error that terminated the ``NIOAsyncWriter``. If the writer was terminated without an
-    /// error this value is `nil`. This can be either the error passed to ``NIOAsyncWriter/finish(error:)`` or
-    /// to ``NIOAsyncWriter/Sink/finish(error:)``.
-    ///
-    /// - Important: You **MUST NOT** call ``NIOAsyncWriter/Sink/setWritability(to:)`` from within this method.
+    /// error this value is `nil`. This can be either the error passed to ``NIOAsyncWriter/finish(error:)``.
     func didTerminate(error: Error?)
 }
 
@@ -86,11 +83,9 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
     @usableFromInline
     let _code: _Code
 
-    @usableFromInline
-    var file: String
+    public var file: String
 
-    @usableFromInline
-    var line: Int
+    public var line: Int
 
     @inlinable
     init(_code: _Code, file: String, line: Int) {
@@ -101,7 +96,7 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
 
     @inlinable
     public static func == (lhs: NIOAsyncWriterError, rhs: NIOAsyncWriterError) -> Bool {
-        return lhs._code == rhs._code
+        lhs._code == rhs._code
     }
 
     @inlinable
@@ -117,7 +112,7 @@ public struct NIOAsyncWriterError: Error, Hashable, CustomStringConvertible {
 
     @inlinable
     public var description: String {
-        "NIOAsyncWriterError.\(self._code.rawValue)"
+        "NIOAsyncWriterError.\(self._code.rawValue): \(self.file):\(self.line)"
     }
 }
 
@@ -152,7 +147,7 @@ public struct NIOAsyncWriter<
         public let writer: NIOAsyncWriter
 
         @inlinable
-        /* fileprivate */ internal init(
+        internal init(
             sink: Sink,
             writer: NIOAsyncWriter
         ) {
@@ -163,26 +158,35 @@ public struct NIOAsyncWriter<
 
     /// This class is needed to hook the deinit to observe once all references to the ``NIOAsyncWriter`` are dropped.
     @usableFromInline
-    /* fileprivate */ internal final class InternalClass: Sendable {
+    internal final class InternalClass: Sendable {
         @usableFromInline
         internal let _storage: Storage
 
+        @usableFromInline
+        internal let _finishOnDeinit: Bool
+
         @inlinable
-        init(storage: Storage) {
+        init(storage: Storage, finishOnDeinit: Bool) {
             self._storage = storage
+            self._finishOnDeinit = finishOnDeinit
         }
 
         @inlinable
         deinit {
-            _storage.writerDeinitialized()
+            if !self._finishOnDeinit && !self._storage.isWriterFinished {
+                preconditionFailure("Deinited NIOAsyncWriter without calling finish()")
+            } else {
+                // We need to call finish here to resume any suspended continuation.
+                self._storage.writerFinish(error: nil)
+            }
         }
     }
 
     @usableFromInline
-    /* private */ internal let _internalClass: InternalClass
+    internal let _internalClass: InternalClass
 
     @inlinable
-    /* private */ internal var _storage: Storage {
+    internal var _storage: Storage {
         self._internalClass._storage
     }
 
@@ -199,6 +203,12 @@ public struct NIOAsyncWriter<
     ///   - delegate: The delegate of the writer.
     /// - Returns: A ``NIOAsyncWriter/NewWriter``.
     @inlinable
+    @available(
+        *,
+        deprecated,
+        renamed: "makeWriter(elementType:isWritable:finishOnDeinit:delegate:)",
+        message: "This method has been deprecated since it defaults to deinit based resource teardown"
+    )
     public static func makeWriter(
         elementType: Element.Type = Element.self,
         isWritable: Bool,
@@ -206,38 +216,66 @@ public struct NIOAsyncWriter<
     ) -> NewWriter {
         let writer = Self(
             isWritable: isWritable,
+            finishOnDeinit: true,
             delegate: delegate
         )
-        let sink = Sink(storage: writer._storage)
+        let sink = Sink(storage: writer._storage, finishOnDeinit: true)
+
+        return .init(sink: sink, writer: writer)
+    }
+
+    /// Initializes a new ``NIOAsyncWriter`` and a ``NIOAsyncWriter/Sink``.
+    ///
+    /// - Important: This method returns a struct containing a ``NIOAsyncWriter/Sink`` and
+    /// a ``NIOAsyncWriter``. The sink MUST be held by the caller and is used to set the writability.
+    /// The writer MUST be passed to the actual producer and MUST NOT be held by the
+    /// caller. This is due to the fact that deiniting the sequence is used as part of a trigger to terminate the underlying sink.
+    ///
+    /// - Parameters:
+    ///   - elementType: The element type of the sequence.
+    ///   - isWritable: The initial writability state of the writer.
+    ///   - finishOnDeinit: Indicates if ``NIOAsyncWriter/finish()`` should be called on deinit. We do not recommend to rely on
+    ///   deinit based resource tear down.
+    ///   - delegate: The delegate of the writer.
+    /// - Returns: A ``NIOAsyncWriter/NewWriter``.
+    @inlinable
+    public static func makeWriter(
+        elementType: Element.Type = Element.self,
+        isWritable: Bool,
+        finishOnDeinit: Bool,
+        delegate: Delegate
+    ) -> NewWriter {
+        let writer = Self(
+            isWritable: isWritable,
+            finishOnDeinit: finishOnDeinit,
+            delegate: delegate
+        )
+        let sink = Sink(storage: writer._storage, finishOnDeinit: finishOnDeinit)
 
         return .init(sink: sink, writer: writer)
     }
 
     @inlinable
-    /* private */ internal init(
+    internal init(
         isWritable: Bool,
+        finishOnDeinit: Bool,
         delegate: Delegate
     ) {
         let storage = Storage(
             isWritable: isWritable,
             delegate: delegate
         )
-        self._internalClass = .init(storage: storage)
+        self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
     }
 
     /// Yields a sequence of new elements to the ``NIOAsyncWriter``.
     ///
     /// If the ``NIOAsyncWriter`` is writable the sequence will get forwarded to the ``NIOAsyncWriterSinkDelegate`` immediately.
     /// Otherwise, the sequence will be buffered and the call to ``NIOAsyncWriter/yield(contentsOf:)`` will get suspended until the ``NIOAsyncWriter``
-    /// becomes writable again. If the calling `Task` gets cancelled at any point the call to ``NIOAsyncWriter/yield(contentsOf:)``
-    /// will be resumed.
+    /// becomes writable again.
     ///
-    /// If the ``NIOAsyncWriter/finish()`` or ``NIOAsyncWriter/finish(error:)`` method is called while a call to
-    /// ``NIOAsyncWriter/yield(contentsOf:)`` is suspended then the call will be resumed and the yielded sequence will be kept buffered.
-    ///
-    /// If the ``NIOAsyncWriter/Sink/finish()`` or ``NIOAsyncWriter/Sink/finish(error:)`` method is called while
-    /// a call to ``NIOAsyncWriter/yield(contentsOf:)`` is suspended then the call will be resumed with an error and the
-    /// yielded sequence is dropped.
+    /// If the calling `Task` gets cancelled at any point the call to ``NIOAsyncWriter/yield(contentsOf:)``
+    /// will be resumed. Consequently, the provided elements will not be yielded.
     ///
     /// This can be called more than once and from multiple `Task`s at the same time.
     ///
@@ -251,22 +289,17 @@ public struct NIOAsyncWriter<
     ///
     /// If the ``NIOAsyncWriter`` is writable the element will get forwarded to the ``NIOAsyncWriterSinkDelegate`` immediately.
     /// Otherwise, the element will be buffered and the call to ``NIOAsyncWriter/yield(_:)`` will get suspended until the ``NIOAsyncWriter``
-    /// becomes writable again. If the calling `Task` gets cancelled at any point the call to ``NIOAsyncWriter/yield(_:)``
-    /// will be resumed.
+    /// becomes writable again.
     ///
-    /// If the ``NIOAsyncWriter/finish()`` or ``NIOAsyncWriter/finish(error:)`` method is called while a call to
-    /// ``NIOAsyncWriter/yield(_:)`` is suspended then the call will be resumed and the yielded sequence will be kept buffered.
-    ///
-    /// If the ``NIOAsyncWriter/Sink/finish()`` or ``NIOAsyncWriter/Sink/finish(error:)`` method is called while
-    /// a call to ``NIOAsyncWriter/yield(_:)`` is suspended then the call will be resumed with an error and the
-    /// yielded sequence is dropped.
+    /// If the calling `Task` gets cancelled at any point the call to ``NIOAsyncWriter/yield(_:)``
+    /// will be resumed. Consequently, the provided element will not be yielded.
     ///
     /// This can be called more than once and from multiple `Task`s at the same time.
     ///
     /// - Parameter element: The element to yield.
     @inlinable
     public func yield(_ element: Element) async throws {
-        try await self._storage.yield(element)
+        try await self._storage.yield(element: element)
     }
 
     /// Finishes the writer.
@@ -275,7 +308,7 @@ public struct NIOAsyncWriter<
     /// or ``NIOAsyncWriter/yield(_:)`` will be resumed. Any subsequent calls to ``NIOAsyncWriter/yield(contentsOf:)``
     /// or ``NIOAsyncWriter/yield(_:)`` will throw.
     ///
-    /// Any element that have been yielded elements before the writer has been finished which have not been delivered yet are continued
+    /// Any element that have been yielded before the writer has been finished which have not been delivered yet are continued
     /// to be buffered and will be delivered once the writer becomes writable again.
     ///
     /// - Note: Calling this function more than once has no effect.
@@ -290,7 +323,7 @@ public struct NIOAsyncWriter<
     /// or ``NIOAsyncWriter/yield(_:)`` will be resumed. Any subsequent calls to ``NIOAsyncWriter/yield(contentsOf:)``
     /// or ``NIOAsyncWriter/yield(_:)`` will throw.
     ///
-    /// Any element that have been yielded elements before the writer has been finished which have not been delivered yet are continued
+    /// Any element that have been yielded before the writer has been finished which have not been delivered yet are continued
     /// to be buffered and will be delivered once the writer becomes writable again.
     ///
     /// - Note: Calling this function more than once has no effect.
@@ -309,33 +342,41 @@ extension NIOAsyncWriter {
     public struct Sink {
         /// This class is needed to hook the deinit to observe once all references to the ``NIOAsyncWriter/Sink`` are dropped.
         @usableFromInline
-        /* fileprivate */ internal final class InternalClass: Sendable {
+        internal final class InternalClass: Sendable {
             @usableFromInline
-            /* fileprivate */ internal let _storage: Storage
+            internal let _storage: Storage
+
+            @usableFromInline
+            internal let _finishOnDeinit: Bool
 
             @inlinable
-            init(storage: Storage) {
+            init(storage: Storage, finishOnDeinit: Bool) {
                 self._storage = storage
+                self._finishOnDeinit = finishOnDeinit
             }
 
             @inlinable
             deinit {
-                // We need to call finish here to resume any suspended continuation.
-                self._storage.sinkFinish(error: nil)
+                if !self._finishOnDeinit && !self._storage.isSinkFinished {
+                    preconditionFailure("Deinited NIOAsyncWriter.Sink without calling sink.finish()")
+                } else {
+                    // We need to call finish here to resume any suspended continuation.
+                    self._storage.sinkFinish(error: nil)
+                }
             }
         }
 
         @usableFromInline
-        /* private */ internal let _internalClass: InternalClass
+        internal let _internalClass: InternalClass
 
         @inlinable
-        /* private */ internal var _storage: Storage {
+        internal var _storage: Storage {
             self._internalClass._storage
         }
 
         @inlinable
-        init(storage: Storage) {
-            self._internalClass = .init(storage: storage)
+        init(storage: Storage, finishOnDeinit: Bool) {
+            self._internalClass = .init(storage: storage, finishOnDeinit: finishOnDeinit)
         }
 
         /// Sets the writability of the ``NIOAsyncWriter``.
@@ -378,17 +419,17 @@ extension NIOAsyncWriter {
 extension NIOAsyncWriter {
     /// This is the underlying storage of the writer. The goal of this is to synchronize the access to all state.
     @usableFromInline
-    /* fileprivate */ internal final class Storage: @unchecked Sendable {
+    internal struct Storage: Sendable {
         /// Internal type to generate unique yield IDs.
         ///
         /// This type has reference semantics.
         @usableFromInline
-        struct YieldIDGenerator {
+        struct YieldIDGenerator: Sendable {
             /// A struct representing a unique yield ID.
             @usableFromInline
             struct YieldID: Equatable, Sendable {
                 @usableFromInline
-                /* private */ internal var value: UInt64
+                internal var value: UInt64
 
                 @inlinable
                 init(value: UInt64) {
@@ -401,46 +442,147 @@ extension NIOAsyncWriter {
                 }
             }
 
-            @usableFromInline
-            /* private */ internal let _yieldIDCounter = ManagedAtomic<UInt64>(0)
-
             @inlinable
             func generateUniqueYieldID() -> YieldID {
                 // Using relaxed is fine here since we do not need any strict ordering just a
                 // unique ID for every yield.
-                .init(value: self._yieldIDCounter.loadThenWrappingIncrement(ordering: .relaxed))
+                .init(value: _asyncWriterYieldIDCounter.loadThenWrappingIncrement(ordering: .relaxed))
             }
         }
 
-        /// The lock that protects our state.
-        @usableFromInline
-        /* private */ internal let _lock = NIOLock()
         /// The counter used to assign an ID to all our yields.
         @usableFromInline
-        /* private */ internal let _yieldIDGenerator = YieldIDGenerator()
+        internal let _yieldIDGenerator = YieldIDGenerator()
         /// The state machine.
         @usableFromInline
-        /* private */ internal var _stateMachine: StateMachine
+        internal let _state: NIOLockedValueBox<State>
+
+        @usableFromInline
+        struct State: Sendable {
+            @usableFromInline
+            var stateMachine: StateMachine
+            @usableFromInline
+            var didSuspend: (@Sendable () -> Void)?
+
+            @inlinable
+            init(stateMachine: StateMachine) {
+                self.stateMachine = stateMachine
+                self.didSuspend = nil
+            }
+        }
+
+        /// Hook used in testing.
+        @usableFromInline
+        internal func _setDidSuspend(_ didSuspend: (@Sendable () -> Void)?) {
+            self._state.withLockedValue {
+                $0.didSuspend = didSuspend
+            }
+        }
 
         @inlinable
-        /* fileprivate */ internal init(
+        internal var isWriterFinished: Bool {
+            self._state.withLockedValue { $0.stateMachine.isWriterFinished }
+        }
+
+        @inlinable
+        internal var isSinkFinished: Bool {
+            self._state.withLockedValue { $0.stateMachine.isSinkFinished }
+        }
+
+        @inlinable
+        internal init(
             isWritable: Bool,
             delegate: Delegate
         ) {
-            self._stateMachine = .init(isWritable: isWritable, delegate: delegate)
+            let state = State(stateMachine: StateMachine(isWritable: isWritable, delegate: delegate))
+            self._state = NIOLockedValueBox(state)
         }
 
         @inlinable
-        /* fileprivate */ internal func writerDeinitialized() {
-            self._lock.withLock {
-                let action = self._stateMachine.writerDeinitialized()
+        internal func setWritability(to writability: Bool) {
+            // We must not resume the continuation while holding the lock
+            // because it can deadlock in combination with the underlying ulock
+            // in cases where we race with a cancellation handler
+            let action = self._state.withLockedValue {
+                $0.stateMachine.setWritability(to: writability)
+            }
+
+            switch action {
+            case .resumeContinuations(let suspendedYields):
+                for yield in suspendedYields {
+                    yield .continuation.resume(returning: .retry)
+                }
+
+            case .none:
+                return
+            }
+        }
+
+        @inlinable
+        internal func yield<S: Sequence>(contentsOf sequence: S) async throws
+        where S.Element == Element {
+            let yieldID = self._yieldIDGenerator.generateUniqueYieldID()
+            while true {
+                switch try await self._yield(contentsOf: sequence, yieldID: yieldID) {
+                case .retry:
+                    continue
+                case .yielded:
+                    return
+                }
+            }
+        }
+
+        @inlinable
+        internal func _yield<S: Sequence>(
+            contentsOf sequence: S,
+            yieldID: StateMachine.YieldID?
+        ) async throws -> StateMachine.YieldResult where S.Element == Element {
+            let yieldID = yieldID ?? self._yieldIDGenerator.generateUniqueYieldID()
+
+            return try await withTaskCancellationHandler {
+                // We are manually locking here to hold the lock across the withCheckedContinuation call
+                let unsafe = self._state.unsafe
+                unsafe.lock()
+
+                let action = unsafe.withValueAssumingLockIsAcquired {
+                    $0.stateMachine.yield(yieldID: yieldID)
+                }
 
                 switch action {
-                case .callDidTerminate(let delegate):
-                    // We are calling the delegate while holding lock. This can lead to potential crashes
-                    // if the delegate calls `setWritability` reentrantly. However, we call this
-                    // out in the docs of the delegate
-                    delegate.didTerminate(error: nil)
+                case .callDidYield(let delegate):
+                    // We are allocating a new Deque for every write here
+                    unsafe.unlock()
+                    delegate.didYield(contentsOf: Deque(sequence))
+                    self.unbufferQueuedEvents()
+                    return .yielded
+
+                case .throwError(let error):
+                    unsafe.unlock()
+                    throw error
+
+                case .suspendTask:
+                    return try await withCheckedThrowingContinuation {
+                        (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
+                        let didSuspend = unsafe.withValueAssumingLockIsAcquired {
+                            $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
+                            return $0.didSuspend
+                        }
+
+                        unsafe.unlock()
+                        didSuspend?()
+                    }
+                }
+            } onCancel: {
+                // We must not resume the continuation while holding the lock
+                // because it can deadlock in combination with the underlying ulock
+                // in cases where we race with a cancellation handler
+                let action = self._state.withLockedValue {
+                    $0.stateMachine.cancel(yieldID: yieldID)
+                }
+
+                switch action {
+                case .resumeContinuationWithCancellationError(let continuation):
+                    continuation.resume(throwing: CancellationError())
 
                 case .none:
                     break
@@ -449,192 +591,130 @@ extension NIOAsyncWriter {
         }
 
         @inlinable
-        /* fileprivate */ internal func setWritability(to writability: Bool) {
-            self._lock.withLock {
-                let action = self._stateMachine.setWritability(to: writability)
+        internal func yield(element: Element) async throws {
+            let yieldID = self._yieldIDGenerator.generateUniqueYieldID()
+            while true {
+                switch try await self._yield(element: element, yieldID: yieldID) {
+                case .retry:
+                    continue
+                case .yielded:
+                    return
+                }
+            }
+        }
+
+        @inlinable
+        internal func _yield(
+            element: Element,
+            yieldID: StateMachine.YieldID?
+        ) async throws -> StateMachine.YieldResult {
+            let yieldID = yieldID ?? self._yieldIDGenerator.generateUniqueYieldID()
+
+            return try await withTaskCancellationHandler {
+                // We are manually locking here to hold the lock across the withCheckedContinuation call
+                let unsafe = self._state.unsafe
+                unsafe.lock()
+
+                let action = unsafe.withValueAssumingLockIsAcquired {
+                    $0.stateMachine.yield(yieldID: yieldID)
+                }
 
                 switch action {
-                case .callDidYieldAndResumeContinuations(let delegate, let elements, let suspendedYields):
-                    // We are calling the delegate while holding lock. This can lead to potential crashes
-                    // if the delegate calls `setWritability` reentrantly. However, we call this
-                    // out in the docs of the delegate
-                    delegate.didYield(contentsOf: elements)
+                case .callDidYield(let delegate):
+                    // We are allocating a new Deque for every write here
+                    unsafe.unlock()
+                    delegate.didYield(element)
+                    self.unbufferQueuedEvents()
+                    return .yielded
 
-                    // It is safe to resume the continuations while holding the lock since resume
-                    // is immediately returning and just enqueues the Job on the executor
-                    suspendedYields.forEach { $0.continuation.resume() }
+                case .throwError(let error):
+                    unsafe.unlock()
+                    throw error
 
-                case .callDidYieldAndDidTerminate(let delegate, let elements):
-                    // We are calling the delegate while holding lock. This can lead to potential crashes
-                    // if the delegate calls `setWritability` reentrantly. However, we call this
-                    // out in the docs of the delegate
-                    delegate.didYield(contentsOf: elements)
-                    delegate.didTerminate(error: nil)
+                case .suspendTask:
+                    return try await withCheckedThrowingContinuation {
+                        (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
+                        let didSuspend = unsafe.withValueAssumingLockIsAcquired {
+                            $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
+                            return $0.didSuspend
+                        }
+                        unsafe.unlock()
+                        didSuspend?()
+                    }
+                }
+            } onCancel: {
+                // We must not resume the continuation while holding the lock
+                // because it can deadlock in combination with the underlying lock
+                // in cases where we race with a cancellation handler
+                let action = self._state.withLockedValue {
+                    $0.stateMachine.cancel(yieldID: yieldID)
+                }
+
+                switch action {
+                case .resumeContinuationWithCancellationError(let continuation):
+                    continuation.resume(throwing: CancellationError())
 
                 case .none:
-                    return
+                    break
                 }
             }
         }
 
         @inlinable
-        /* fileprivate */ internal func yield<S: Sequence>(contentsOf sequence: S) async throws where S.Element == Element {
-            let yieldID = self._yieldIDGenerator.generateUniqueYieldID()
+        internal func writerFinish(error: Error?) {
+            // We must not resume the continuation while holding the lock
+            // because it can deadlock in combination with the underlying ulock
+            // in cases where we race with a cancellation handler
+            let action = self._state.withLockedValue {
+                $0.stateMachine.writerFinish(error: error)
+            }
 
-            try await withTaskCancellationHandler {
-                // We are manually locking here to hold the lock across the withCheckedContinuation call
-                self._lock.lock()
+            switch action {
+            case .callDidTerminate(let delegate):
+                delegate.didTerminate(error: error)
 
-                let action = self._stateMachine.yield(contentsOf: sequence, yieldID: yieldID)
-
-                switch action {
-                case .callDidYield(let delegate):
-                    // We are calling the delegate while holding lock. This can lead to potential crashes
-                    // if the delegate calls `setWritability` reentrantly. However, we call this
-                    // out in the docs of the delegate
-
-                    // We are allocating a new Deque for every write here
-                    delegate.didYield(contentsOf: Deque(sequence))
-                    self._lock.unlock()
-
-                case .returnNormally:
-                    self._lock.unlock()
-                    return
-
-                case .throwError(let error):
-                    self._lock.unlock()
-                    throw error
-
-                case .suspendTask:
-                    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                        self._stateMachine.yield(
-                            contentsOf: sequence,
-                            continuation: continuation,
-                            yieldID: yieldID
-                        )
-
-                        self._lock.unlock()
-                    }
+            case .resumeContinuations(let suspendedYields):
+                for yield in suspendedYields {
+                    yield .continuation.resume(returning: .retry)
                 }
-            } onCancel: {
-                self._lock.withLock {
-                    let action = self._stateMachine.cancel(yieldID: yieldID)
 
-                    switch action {
-                    case .resumeContinuation(let continuation):
-                        // It is safe to resume the continuations while holding the lock since resume
-                        // is immediately returning and just enqueues the Job on the executor
-                        continuation.resume()
-
-                    case .none:
-                        break
-                    }
-                }
+            case .none:
+                break
             }
         }
 
         @inlinable
-        /* fileprivate */ internal func yield(_ element: Element) async throws {
-            let yieldID = self._yieldIDGenerator.generateUniqueYieldID()
+        internal func sinkFinish(error: Error?) {
+            // We must not resume the continuation while holding the lock
+            // because it can deadlock in combination with the underlying ulock
+            // in cases where we race with a cancellation handler
+            let action = self._state.withLockedValue {
+                $0.stateMachine.sinkFinish(error: error)
+            }
 
-            try await withTaskCancellationHandler {
-                // We are manually locking here to hold the lock across the withCheckedContinuation call
-                self._lock.lock()
-
-                let action = self._stateMachine.yield(contentsOf: CollectionOfOne(element), yieldID: yieldID)
-
-                switch action {
-                case .callDidYield(let delegate):
-                    // We are calling the delegate while holding lock. This can lead to potential crashes
-                    // if the delegate calls `setWritability` reentrantly. However, we call this
-                    // out in the docs of the delegate
-
-                    delegate.didYield(element)
-                    self._lock.unlock()
-
-                case .returnNormally:
-                    self._lock.unlock()
-                    return
-
-                case .throwError(let error):
-                    self._lock.unlock()
-                    throw error
-
-                case .suspendTask:
-                    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                        self._stateMachine.yield(
-                            contentsOf: CollectionOfOne(element),
-                            continuation: continuation,
-                            yieldID: yieldID
-                        )
-
-                        self._lock.unlock()
-                    }
+            switch action {
+            case .resumeContinuationsWithError(let suspendedYields, let error):
+                for yield in suspendedYields {
+                    yield .continuation.resume(throwing: error)
                 }
-            } onCancel: {
-                self._lock.withLock {
-                    let action = self._stateMachine.cancel(yieldID: yieldID)
 
-                    switch action {
-                    case .resumeContinuation(let continuation):
-                        // It is safe to resume the continuations while holding the lock since resume
-                        // is immediately returning and just enqueues the Job on the executor
-                        continuation.resume()
-
-                    case .none:
-                        break
-                    }
-                }
+            case .none:
+                break
             }
         }
 
         @inlinable
-        /* fileprivate */ internal func writerFinish(error: Error?) {
-            self._lock.withLock {
-                let action = self._stateMachine.writerFinish()
-
+        internal func unbufferQueuedEvents() {
+            while let action = self._state.withLockedValue({ $0.stateMachine.unbufferQueuedEvents() }) {
                 switch action {
-                case .callDidTerminate(let delegate):
-                    // We are calling the delegate while holding lock. This can lead to potential crashes
-                    // if the delegate calls `setWritability` reentrantly. However, we call this
-                    // out in the docs of the delegate
+                case .callDidTerminate(let delegate, let error):
                     delegate.didTerminate(error: error)
 
                 case .resumeContinuations(let suspendedYields):
-                    // It is safe to resume the continuations while holding the lock since resume
-                    // is immediately returning and just enqueues the Job on the executor
-                    suspendedYields.forEach { $0.continuation.resume() }
-
-                case .none:
-                    break
-                }
-            }
-        }
-
-        @inlinable
-        /* fileprivate */ internal func sinkFinish(error: Error?) {
-            self._lock.withLock {
-                let action = self._stateMachine.sinkFinish(error: error)
-
-                switch action {
-                case .callDidTerminate(let delegate, let error):
-                    // We are calling the delegate while holding lock. This can lead to potential crashes
-                    // if the delegate calls `setWritability` reentrantly. However, we call this
-                    // out in the docs of the delegate
-                    delegate.didTerminate(error: error)
-
-                case .resumeContinuationsWithErrorAndCallDidTerminate(let delegate, let suspendedYields, let error):
-                    // We are calling the delegate while holding lock. This can lead to potential crashes
-                    // if the delegate calls `setWritability` reentrantly. However, we call this
-                    // out in the docs of the delegate
-                    delegate.didTerminate(error: error)
-
-                    // It is safe to resume the continuations while holding the lock since resume
-                    // is immediately returning and just enqueues the Job on the executor
-                    suspendedYields.forEach { $0.continuation.resume(throwing: error) }
-
-                case .none:
-                    break
+                    for yield in suspendedYields {
+                        yield .continuation.resume(returning: .retry)
+                    }
+                    return
                 }
             }
         }
@@ -644,30 +724,38 @@ extension NIOAsyncWriter {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncWriter {
     @usableFromInline
-    /* private */ internal struct StateMachine {
+    internal struct StateMachine: Sendable {
         @usableFromInline
         typealias YieldID = Storage.YieldIDGenerator.YieldID
         /// This is a small helper struct to encapsulate the two different values for a suspended yield.
         @usableFromInline
-        /* private */ internal struct SuspendedYield {
+        internal struct SuspendedYield: Sendable {
             /// The yield's ID.
             @usableFromInline
             var yieldID: YieldID
             /// The yield's produced sequence of elements.
             /// The yield's continuation.
             @usableFromInline
-            var continuation: CheckedContinuation<Void, Error>
+            var continuation: CheckedContinuation<YieldResult, Error>
 
             @inlinable
-            init(yieldID: YieldID, continuation: CheckedContinuation<Void, Error>) {
+            init(yieldID: YieldID, continuation: CheckedContinuation<YieldResult, Error>) {
                 self.yieldID = yieldID
                 self.continuation = continuation
             }
         }
+        /// The internal result of a yield.
+        @usableFromInline
+        internal enum YieldResult {
+            /// Indicates that the elements got yielded to the sink.
+            case yielded
+            /// Indicates that the yield should be retried.
+            case retry
+        }
 
         /// The current state of our ``NIOAsyncWriter``.
         @usableFromInline
-        /* private */ internal enum State {
+        internal enum State: Sendable, CustomStringConvertible {
             /// The initial state before either a call to ``NIOAsyncWriter/yield(contentsOf:)`` or
             /// ``NIOAsyncWriter/finish(completion:)`` happened.
             case initial(
@@ -678,18 +766,24 @@ extension NIOAsyncWriter {
             /// The state after a call to ``NIOAsyncWriter/yield(contentsOf:)``.
             case streaming(
                 isWritable: Bool,
+                inDelegateOutcall: Bool,
                 cancelledYields: [YieldID],
-                suspendedYields: [SuspendedYield],
-                elements: Deque<Element>,
+                suspendedYields: _TinyArray<SuspendedYield>,
                 delegate: Delegate
             )
 
-            /// The state once the writer finished and there are still elements that need to be delivered. This can happen if:
+            /// The state once the writer finished and there are still tasks that need to write. This can happen if:
             /// 1. The ``NIOAsyncWriter`` was deinited
             /// 2. ``NIOAsyncWriter/finish(completion:)`` was called.
             case writerFinished(
-                elements: Deque<Element>,
-                delegate: Delegate
+                isWritable: Bool,
+                inDelegateOutcall: Bool,
+                suspendedYields: _TinyArray<SuspendedYield>,
+                cancelledYields: [YieldID],
+                // These are the yields that have been enqueued before the writer got finished.
+                bufferedYieldIDs: _TinyArray<YieldID>,
+                delegate: Delegate,
+                error: Error?
             )
 
             /// The state once the sink has been finished or the writer has been finished and all elements
@@ -698,11 +792,61 @@ extension NIOAsyncWriter {
 
             /// Internal state to avoid CoW.
             case modifying
+
+            @usableFromInline
+            var description: String {
+                switch self {
+                case .initial(let isWritable, _):
+                    return "initial(isWritable: \(isWritable))"
+                case .streaming(let isWritable, let inDelegateOutcall, let cancelledYields, let suspendedYields, _):
+                    return
+                        "streaming(isWritable: \(isWritable), inDelegateOutcall: \(inDelegateOutcall), cancelledYields: \(cancelledYields.count), suspendedYields: \(suspendedYields.count))"
+                case .writerFinished(
+                    let isWritable,
+                    let inDelegateOutcall,
+                    let suspendedYields,
+                    let cancelledYields,
+                    let bufferedYieldIDs,
+                    _,
+                    _
+                ):
+                    return
+                        "writerFinished(isWritable: \(isWritable), inDelegateOutcall: \(inDelegateOutcall), suspendedYields: \(suspendedYields.count), cancelledYields: \(cancelledYields.count), bufferedYieldIDs: \(bufferedYieldIDs.count)"
+                case .finished:
+                    return "finished"
+                case .modifying:
+                    return "modifying"
+                }
+            }
         }
 
         /// The state machine's current state.
         @usableFromInline
-        /* private */ internal var _state: State
+        internal var _state: State
+
+        @inlinable
+        internal var isWriterFinished: Bool {
+            switch self._state {
+            case .initial, .streaming:
+                return false
+            case .writerFinished, .finished:
+                return true
+            case .modifying:
+                preconditionFailure("Invalid state")
+            }
+        }
+
+        @inlinable
+        internal var isSinkFinished: Bool {
+            switch self._state {
+            case .initial, .streaming, .writerFinished:
+                return false
+            case .finished:
+                return true
+            case .modifying:
+                preconditionFailure("Invalid state")
+            }
+        }
 
         @inlinable
         init(
@@ -712,63 +856,15 @@ extension NIOAsyncWriter {
             self._state = .initial(isWritable: isWritable, delegate: delegate)
         }
 
-        /// Actions returned by `writerDeinitialized()`.
-        @usableFromInline
-        enum WriterDeinitializedAction {
-            /// Indicates that ``NIOAsyncWriterSinkDelegate/didTerminate(completion:)`` should be called.
-            case callDidTerminate(Delegate)
-            /// Indicates that nothing should be done.
-            case none
-        }
-
-        @inlinable
-        /* fileprivate */ internal mutating func writerDeinitialized() -> WriterDeinitializedAction {
-            switch self._state {
-            case .initial(_, let delegate):
-                // The writer deinited before writing anything.
-                // We can transition to finished and inform our delegate
-                self._state = .finished(sinkError: nil)
-
-                return .callDidTerminate(delegate)
-
-            case .streaming(_, _, let suspendedYields, let elements, let delegate):
-                // The writer got deinited after we started streaming.
-                // This is normal and we need to transition to finished
-                // and call the delegate. However, we should not have
-                // any suspended yields because they MUST strongly retain
-                // the writer.
-                precondition(suspendedYields.isEmpty, "We have outstanding suspended yields")
-                precondition(elements.isEmpty, "We have buffered elements")
-
-                // We have no elements left and can transition to finished directly
-                self._state = .finished(sinkError: nil)
-
-                return .callDidTerminate(delegate)
-
-            case .finished, .writerFinished:
-                // We are already finished nothing to do here
-                return .none
-
-            case .modifying:
-                preconditionFailure("Invalid state")
-            }
-        }
-
         /// Actions returned by `setWritability()`.
         @usableFromInline
         enum SetWritabilityAction {
-            /// Indicates that ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` should be called
-            /// and all continuations should be resumed.
-            case callDidYieldAndResumeContinuations(Delegate, Deque<Element>, [SuspendedYield])
-            /// Indicates that ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` and
-            /// ``NIOAsyncWriterSinkDelegate/didTerminate(error:)``should be called.
-            case callDidYieldAndDidTerminate(Delegate, Deque<Element>)
-            /// Indicates that nothing should be done.
-            case none
+            /// Indicates that all writer continuations should be resumed.
+            case resumeContinuations(_TinyArray<SuspendedYield>)
         }
 
         @inlinable
-        /* fileprivate */ internal mutating func setWritability(to newWritability: Bool) -> SetWritabilityAction {
+        internal mutating func setWritability(to newWritability: Bool) -> SetWritabilityAction? {
             switch self._state {
             case .initial(_, let delegate):
                 // We just need to store the new writability state
@@ -776,53 +872,105 @@ extension NIOAsyncWriter {
 
                 return .none
 
-            case .streaming(let isWritable, let cancelledYields, let suspendedYields, let elements, let delegate):
+            case .streaming(
+                let isWritable,
+                let inDelegateOutcall,
+                let cancelledYields,
+                let suspendedYields,
+                let delegate
+            ):
                 if isWritable == newWritability {
                     // The writability didn't change so we can just early exit here
                     return .none
                 }
 
-                if newWritability {
-                    // We became writable again. This means we have to resume all the continuations
-                    // and yield the values.
-
+                if newWritability && !inDelegateOutcall {
+                    // We became writable again. This means we have to resume all the continuations.
                     self._state = .streaming(
                         isWritable: newWritability,
+                        inDelegateOutcall: inDelegateOutcall,
                         cancelledYields: cancelledYields,
-                        suspendedYields: [],
-                        elements: .init(),
+                        suspendedYields: .init(),
                         delegate: delegate
                     )
 
-                    // We are taking the whole array of suspended yields and the deque of elements
-                    // and allocate a new empty one.
-                    // As a performance optimization we could always keep multiple arrays/deques and
-                    // switch between them but I don't think this is the performance critical part.
-                    return .callDidYieldAndResumeContinuations(delegate, elements, suspendedYields)
-                } else {
-                    // We became unwritable nothing really to do here
-                    precondition(suspendedYields.isEmpty, "No yield should be suspended at this point")
-                    precondition(elements.isEmpty, "No element should be buffered at this point")
-
+                    return .resumeContinuations(suspendedYields)
+                } else if newWritability && inDelegateOutcall {
+                    // We became writable but are in a delegate outcall.
+                    // We just have to store the new writability here.
                     self._state = .streaming(
                         isWritable: newWritability,
+                        inDelegateOutcall: inDelegateOutcall,
                         cancelledYields: cancelledYields,
                         suspendedYields: suspendedYields,
-                        elements: elements,
+                        delegate: delegate
+                    )
+                    return .none
+                } else {
+                    // We became unwritable nothing really to do here
+                    self._state = .streaming(
+                        isWritable: newWritability,
+                        inDelegateOutcall: inDelegateOutcall,
+                        cancelledYields: cancelledYields,
+                        suspendedYields: suspendedYields,
                         delegate: delegate
                     )
                     return .none
                 }
 
-            case .writerFinished(let elements, let delegate):
+            case .writerFinished(
+                _,
+                let inDelegateOutcall,
+                let suspendedYields,
+                let cancelledYields,
+                let bufferedYieldIDs,
+                let delegate,
+                let error
+            ):
                 if !newWritability {
                     // We are not writable so we can't deliver the outstanding elements
                     return .none
                 }
 
-                self._state = .finished(sinkError: nil)
+                if newWritability && !inDelegateOutcall {
+                    // We became writable again. This means we have to resume all the continuations.
+                    self._state = .writerFinished(
+                        isWritable: newWritability,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: .init(),
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: bufferedYieldIDs,
+                        delegate: delegate,
+                        error: error
+                    )
 
-                return .callDidYieldAndDidTerminate(delegate, elements)
+                    return .resumeContinuations(suspendedYields)
+                } else if newWritability && inDelegateOutcall {
+                    // We became writable but are in a delegate outcall.
+                    // We just have to store the new writability here.
+                    self._state = .writerFinished(
+                        isWritable: newWritability,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: suspendedYields,
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: bufferedYieldIDs,
+                        delegate: delegate,
+                        error: error
+                    )
+                    return .none
+                } else {
+                    // We became unwritable nothing really to do here
+                    self._state = .writerFinished(
+                        isWritable: newWritability,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: suspendedYields,
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: bufferedYieldIDs,
+                        delegate: delegate,
+                        error: error
+                    )
+                    return .none
+                }
 
             case .finished:
                 // We are already finished nothing to do here
@@ -840,8 +988,6 @@ extension NIOAsyncWriter {
             case callDidYield(Delegate)
             /// Indicates that the calling `Task` should get suspended.
             case suspendTask
-            /// Indicates that the method should just return.
-            case returnNormally
             /// Indicates the given error should be thrown.
             case throwError(Error)
 
@@ -856,68 +1002,134 @@ extension NIOAsyncWriter {
         }
 
         @inlinable
-        /* fileprivate */ internal mutating func yield<S: Sequence>(
-            contentsOf sequence: S,
+        internal mutating func yield(
             yieldID: YieldID
-        ) -> YieldAction where S.Element == Element {
+        ) -> YieldAction {
             switch self._state {
             case .initial(let isWritable, let delegate):
                 // We can transition to streaming now
 
                 self._state = .streaming(
                     isWritable: isWritable,
+                    inDelegateOutcall: isWritable,  // If we are writable we are going to make an outcall
                     cancelledYields: [],
-                    suspendedYields: [],
-                    elements: .init(),
+                    suspendedYields: .init(),
                     delegate: delegate
                 )
 
                 return .init(isWritable: isWritable, delegate: delegate)
 
-            case .streaming(let isWritable, var cancelledYields, let suspendedYields, var elements, let delegate):
+            case .streaming(
+                let isWritable,
+                let inDelegateOutcall,
+                var cancelledYields,
+                let suspendedYields,
+                let delegate
+            ):
+                self._state = .modifying
+
                 if let index = cancelledYields.firstIndex(of: yieldID) {
                     // We already marked the yield as cancelled. We have to remove it and
-                    // throw an error.
-                    self._state = .modifying
-
+                    // throw a CancellationError.
                     cancelledYields.remove(at: index)
 
-                    if isWritable {
-                        // We are writable so we can yield the elements right away and then
-                        // return normally.
-                        self._state = .streaming(
-                            isWritable: isWritable,
-                            cancelledYields: cancelledYields,
-                            suspendedYields: suspendedYields,
-                            elements: elements,
-                            delegate: delegate
-                        )
-                        return .callDidYield(delegate)
-                    } else {
-                        // We are not writable so we are just going to enqueue the writes
-                        // and return normally. We are not suspending the yield since the Task
-                        // is marked as cancelled.
-                        elements.append(contentsOf: sequence)
+                    self._state = .streaming(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        cancelledYields: cancelledYields,
+                        suspendedYields: suspendedYields,
+                        delegate: delegate
+                    )
 
-                        self._state = .streaming(
-                            isWritable: isWritable,
-                            cancelledYields: cancelledYields,
-                            suspendedYields: suspendedYields,
-                            elements: elements,
-                            delegate: delegate
-                        )
-
-                        return .returnNormally
-                    }
+                    return .throwError(CancellationError())
                 } else {
                     // Yield hasn't been marked as cancelled.
-                    // This means we can either call the delegate or suspend
-                    return .init(isWritable: isWritable, delegate: delegate)
+
+                    switch (isWritable, inDelegateOutcall) {
+                    case (true, false):
+                        self._state = .streaming(
+                            isWritable: isWritable,
+                            inDelegateOutcall: true,  // We are now making a call to the delegate
+                            cancelledYields: cancelledYields,
+                            suspendedYields: suspendedYields,
+                            delegate: delegate
+                        )
+
+                        return .callDidYield(delegate)
+                    case (true, true), (false, _):
+                        self._state = .streaming(
+                            isWritable: isWritable,
+                            inDelegateOutcall: inDelegateOutcall,
+                            cancelledYields: cancelledYields,
+                            suspendedYields: suspendedYields,
+                            delegate: delegate
+                        )
+                        return .suspendTask
+                    }
                 }
 
-            case .writerFinished:
-                // We are already finished and still tried to write something
-                return .throwError(NIOAsyncWriterError.alreadyFinished())
+            case .writerFinished(
+                let isWritable,
+                let inDelegateOutcall,
+                let suspendedYields,
+                var cancelledYields,
+                let bufferedYieldIDs,
+                let delegate,
+                let error
+            ):
+                if bufferedYieldIDs.contains(yieldID) {
+                    // This yield was buffered before we became finished so we still have to deliver it
+                    self._state = .modifying
+
+                    if let index = cancelledYields.firstIndex(of: yieldID) {
+                        // We already marked the yield as cancelled. We have to remove it and
+                        // throw a CancellationError.
+                        cancelledYields.remove(at: index)
+
+                        self._state = .writerFinished(
+                            isWritable: isWritable,
+                            inDelegateOutcall: inDelegateOutcall,
+                            suspendedYields: suspendedYields,
+                            cancelledYields: cancelledYields,
+                            bufferedYieldIDs: bufferedYieldIDs,
+                            delegate: delegate,
+                            error: error
+                        )
+
+                        return .throwError(CancellationError())
+                    } else {
+                        // Yield hasn't been marked as cancelled.
+
+                        switch (isWritable, inDelegateOutcall) {
+                        case (true, false):
+                            self._state = .writerFinished(
+                                isWritable: isWritable,
+                                inDelegateOutcall: true,  // We are now making a call to the delegate
+                                suspendedYields: suspendedYields,
+                                cancelledYields: cancelledYields,
+                                bufferedYieldIDs: bufferedYieldIDs,
+                                delegate: delegate,
+                                error: error
+                            )
+
+                            return .callDidYield(delegate)
+                        case (true, true), (false, _):
+                            self._state = .writerFinished(
+                                isWritable: isWritable,
+                                inDelegateOutcall: inDelegateOutcall,
+                                suspendedYields: suspendedYields,
+                                cancelledYields: cancelledYields,
+                                bufferedYieldIDs: bufferedYieldIDs,
+                                delegate: delegate,
+                                error: error
+                            )
+                            return .suspendTask
+                        }
+                    }
+                } else {
+                    // We are already finished and still tried to write something
+                    return .throwError(NIOAsyncWriterError.alreadyFinished())
+                }
 
             case .finished(let sinkError):
                 // We are already finished and still tried to write something
@@ -930,13 +1142,18 @@ extension NIOAsyncWriter {
 
         /// This method is called as a result of the above `yield` method if it decided that the task needs to get suspended.
         @inlinable
-        /* fileprivate */ internal mutating func yield<S: Sequence>(
-            contentsOf sequence: S,
-            continuation: CheckedContinuation<Void, Error>,
+        internal mutating func yield(
+            continuation: CheckedContinuation<YieldResult, Error>,
             yieldID: YieldID
-        ) where S.Element == Element {
+        ) {
             switch self._state {
-            case .streaming(let isWritable, let cancelledYields, var suspendedYields, var elements, let delegate):
+            case .streaming(
+                let isWritable,
+                let inDelegateOutcall,
+                let cancelledYields,
+                var suspendedYields,
+                let delegate
+            ):
                 // We have a suspended yield at this point that hasn't been cancelled yet.
                 // We need to store the yield now.
 
@@ -947,13 +1164,12 @@ extension NIOAsyncWriter {
                     continuation: continuation
                 )
                 suspendedYields.append(suspendedYield)
-                elements.append(contentsOf: sequence)
 
                 self._state = .streaming(
                     isWritable: isWritable,
+                    inDelegateOutcall: inDelegateOutcall,
                     cancelledYields: cancelledYields,
                     suspendedYields: suspendedYields,
-                    elements: elements,
                     delegate: delegate
                 )
 
@@ -968,13 +1184,14 @@ extension NIOAsyncWriter {
         /// Actions returned by `cancel()`.
         @usableFromInline
         enum CancelAction {
-            case resumeContinuation(CheckedContinuation<Void, Error>)
+            /// Indicates that the continuation should be resumed with a `CancellationError`.
+            case resumeContinuationWithCancellationError(CheckedContinuation<YieldResult, Error>)
             /// Indicates that nothing should be done.
             case none
         }
 
         @inlinable
-        /* fileprivate */ internal mutating func cancel(
+        internal mutating func cancel(
             yieldID: YieldID
         ) -> CancelAction {
             switch self._state {
@@ -984,15 +1201,21 @@ extension NIOAsyncWriter {
 
                 self._state = .streaming(
                     isWritable: isWritable,
+                    inDelegateOutcall: false,
                     cancelledYields: [yieldID],
-                    suspendedYields: [],
-                    elements: .init(),
+                    suspendedYields: .init(),
                     delegate: delegate
                 )
 
                 return .none
 
-            case .streaming(let isWritable, var cancelledYields, var suspendedYields, let elements, let delegate):
+            case .streaming(
+                let isWritable,
+                let inDelegateOutcall,
+                var cancelledYields,
+                var suspendedYields,
+                let delegate
+            ):
                 if let index = suspendedYields.firstIndex(where: { $0.yieldID == yieldID }) {
                     self._state = .modifying
                     // We have a suspended yield for the id. We need to resume the continuation now.
@@ -1006,13 +1229,13 @@ extension NIOAsyncWriter {
                     // We are keeping the elements that the yield produced.
                     self._state = .streaming(
                         isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
                         cancelledYields: cancelledYields,
                         suspendedYields: suspendedYields,
-                        elements: elements,
                         delegate: delegate
                     )
 
-                    return .resumeContinuation(suspendedYield.continuation)
+                    return .resumeContinuationWithCancellationError(suspendedYield.continuation)
 
                 } else {
                     self._state = .modifying
@@ -1023,16 +1246,71 @@ extension NIOAsyncWriter {
                     cancelledYields.append(yieldID)
                     self._state = .streaming(
                         isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
                         cancelledYields: cancelledYields,
                         suspendedYields: suspendedYields,
-                        elements: elements,
                         delegate: delegate
                     )
 
                     return .none
                 }
 
-            case .writerFinished, .finished:
+            case .writerFinished(
+                let isWritable,
+                let inDelegateOutcall,
+                var suspendedYields,
+                var cancelledYields,
+                let bufferedYieldIDs,
+                let delegate,
+                let error
+            ):
+                guard bufferedYieldIDs.contains(yieldID) else {
+                    return .none
+                }
+                if let index = suspendedYields.firstIndex(where: { $0.yieldID == yieldID }) {
+                    self._state = .modifying
+                    // We have a suspended yield for the id. We need to resume the continuation now.
+
+                    // Removing can be quite expensive if it produces a gap in the array.
+                    // Since we are not expecting a lot of elements in this array it should be fine
+                    // to just remove. If this turns out to be a performance pitfall, we can
+                    // swap the elements before removing. So that we always remove the last element.
+                    let suspendedYield = suspendedYields.remove(at: index)
+
+                    // We are keeping the elements that the yield produced.
+                    self._state = .writerFinished(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: suspendedYields,
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: bufferedYieldIDs,
+                        delegate: delegate,
+                        error: error
+                    )
+
+                    return .resumeContinuationWithCancellationError(suspendedYield.continuation)
+
+                } else {
+                    self._state = .modifying
+                    // There is no suspended yield. This can mean that we either already yielded
+                    // or that the call to `yield` is coming afterwards. We need to store
+                    // the ID here. However, if the yield already happened we will never remove the
+                    // stored ID. The only way to avoid doing this would be storing every ID
+                    cancelledYields.append(yieldID)
+                    self._state = .writerFinished(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: suspendedYields,
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: bufferedYieldIDs,
+                        delegate: delegate,
+                        error: error
+                    )
+
+                    return .none
+                }
+
+            case .finished:
                 // We are already finished and there is nothing to do
                 return .none
 
@@ -1047,13 +1325,13 @@ extension NIOAsyncWriter {
             /// Indicates that ``NIOAsyncWriterSinkDelegate/didTerminate(completion:)`` should be called.
             case callDidTerminate(Delegate)
             /// Indicates that all continuations should be resumed.
-            case resumeContinuations([SuspendedYield])
+            case resumeContinuations(_TinyArray<SuspendedYield>)
             /// Indicates that nothing should be done.
             case none
         }
 
         @inlinable
-        /* fileprivate */ internal mutating func writerFinish() -> WriterFinishAction {
+        internal mutating func writerFinish(error: Error?) -> WriterFinishAction {
             switch self._state {
             case .initial(_, let delegate):
                 // Nothing was ever written so we can transition to finished
@@ -1061,23 +1339,47 @@ extension NIOAsyncWriter {
 
                 return .callDidTerminate(delegate)
 
-            case .streaming(_, _, let suspendedYields, let elements, let delegate):
+            case .streaming(
+                let isWritable,
+                let inDelegateOutcall,
+                let cancelledYields,
+                let suspendedYields,
+                let delegate
+            ):
                 // We are currently streaming and the writer got finished.
-                if elements.isEmpty {
-                    // We have no elements left and can transition to finished directly
-                    self._state = .finished(sinkError: nil)
-
-                    return .callDidTerminate(delegate)
+                if suspendedYields.isEmpty {
+                    if inDelegateOutcall {
+                        // We are in an outcall already and have to buffer
+                        // the didTerminate call.
+                        self._state = .writerFinished(
+                            isWritable: isWritable,
+                            inDelegateOutcall: inDelegateOutcall,
+                            suspendedYields: .init(),
+                            cancelledYields: cancelledYields,
+                            bufferedYieldIDs: .init(),
+                            delegate: delegate,
+                            error: error
+                        )
+                        return .none
+                    } else {
+                        // We have no elements left and are not in an outcall so we
+                        // can transition to finished directly
+                        self._state = .finished(sinkError: nil)
+                        return .callDidTerminate(delegate)
+                    }
                 } else {
-                    // There are still elements left which we need to deliver once we become writable again
+                    // There are still suspended writer tasks which we need to deliver once we become writable again
                     self._state = .writerFinished(
-                        elements: elements,
-                        delegate: delegate
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: suspendedYields,
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: _TinyArray(suspendedYields.map { $0.yieldID }),
+                        delegate: delegate,
+                        error: error
                     )
 
-                    // We are not resuming the continuations with the error here since their elements
-                    // are still queued up. If they try to yield again they will run into an alreadyFinished error
-                    return .resumeContinuations(suspendedYields)
+                    return .none
                 }
 
             case .writerFinished, .finished:
@@ -1092,45 +1394,125 @@ extension NIOAsyncWriter {
         /// Actions returned by `sinkFinish()`.
         @usableFromInline
         enum SinkFinishAction {
-            /// Indicates that ``NIOAsyncWriterSinkDelegate/didTerminate(completion:)`` should be called.
-            case callDidTerminate(Delegate, Error?)
-            /// Indicates that ``NIOAsyncWriterSinkDelegate/didTerminate(completion:)`` should be called and all
-            /// continuations should be resumed with the given error.
-            case resumeContinuationsWithErrorAndCallDidTerminate(Delegate, [SuspendedYield], Error)
+            /// Indicates that all continuations should be resumed with the given error.
+            case resumeContinuationsWithError(_TinyArray<SuspendedYield>, Error)
             /// Indicates that nothing should be done.
             case none
         }
 
         @inlinable
-        /* fileprivate */ internal mutating func sinkFinish(error: Error?) -> SinkFinishAction {
+        internal mutating func sinkFinish(error: Error?) -> SinkFinishAction {
             switch self._state {
-            case .initial(_, let delegate):
+            case .initial(_, _):
                 // Nothing was ever written so we can transition to finished
                 self._state = .finished(sinkError: error)
 
-                return .callDidTerminate(delegate, error)
+                return .none
 
-            case .streaming(_, _, let suspendedYields, _, let delegate):
-                // We are currently streaming and the writer got finished.
+            case .streaming(_, _, _, let suspendedYields, _):
+                // We are currently streaming and the sink got finished.
                 // We can transition to finished and need to resume all continuations.
                 self._state = .finished(sinkError: error)
-
-                return .resumeContinuationsWithErrorAndCallDidTerminate(
-                    delegate,
+                return .resumeContinuationsWithError(
                     suspendedYields,
                     error ?? NIOAsyncWriterError.alreadyFinished()
                 )
 
-            case .writerFinished(_, let delegate):
-                // The writer already finished and we were waiting to become writable again
-                // The Sink finished before we became writable so we can drop the elements and
-                // transition to finished
+            case .writerFinished(_, _, let suspendedYields, _, _, _, _):
+                // The writer already got finished and the sink got finished too now.
+                // We can transition to finished and need to resume all continuations.
                 self._state = .finished(sinkError: error)
-
-                return .callDidTerminate(delegate, error)
+                return .resumeContinuationsWithError(
+                    suspendedYields,
+                    error ?? NIOAsyncWriterError.alreadyFinished()
+                )
 
             case .finished:
                 // We are already finished and there is nothing to do
+                return .none
+
+            case .modifying:
+                preconditionFailure("Invalid state")
+            }
+        }
+
+        /// Actions returned by `sinkFinish()`.
+        @usableFromInline
+        enum UnbufferQueuedEventsAction {
+            case resumeContinuations(_TinyArray<SuspendedYield>)
+            case callDidTerminate(Delegate, Error?)
+        }
+
+        @inlinable
+        internal mutating func unbufferQueuedEvents() -> UnbufferQueuedEventsAction? {
+            switch self._state {
+            case .initial:
+                preconditionFailure("Invalid state")
+
+            case .streaming(
+                let isWritable,
+                let inDelegateOutcall,
+                let cancelledYields,
+                let suspendedYields,
+                let delegate
+            ):
+                precondition(inDelegateOutcall, "We must be in a delegate outcall when we unbuffer events")
+                // We have to resume the other suspended yields now.
+
+                if suspendedYields.isEmpty {
+                    // There are no other writer suspended writer tasks so we can just return
+                    self._state = .streaming(
+                        isWritable: isWritable,
+                        inDelegateOutcall: false,
+                        cancelledYields: cancelledYields,
+                        suspendedYields: suspendedYields,
+                        delegate: delegate
+                    )
+                    return .none
+                } else {
+                    // We have to resume the other suspended yields now.
+                    self._state = .streaming(
+                        isWritable: isWritable,
+                        inDelegateOutcall: false,
+                        cancelledYields: cancelledYields,
+                        suspendedYields: .init(),
+                        delegate: delegate
+                    )
+                    return .resumeContinuations(suspendedYields)
+                }
+
+            case .writerFinished(
+                let isWritable,
+                let inDelegateOutcall,
+                let suspendedYields,
+                let cancelledYields,
+                let bufferedYieldIDs,
+                let delegate,
+                let error
+            ):
+                precondition(inDelegateOutcall, "We must be in a delegate outcall when we unbuffer events")
+                if suspendedYields.isEmpty {
+                    // We were the last writer task and can now call didTerminate
+                    self._state = .finished(sinkError: nil)
+                    return .callDidTerminate(delegate, error)
+                } else {
+                    // There are still other writer tasks that need to be resumed
+                    self._state = .modifying
+
+                    self._state = .writerFinished(
+                        isWritable: isWritable,
+                        inDelegateOutcall: inDelegateOutcall,
+                        suspendedYields: .init(),
+                        cancelledYields: cancelledYields,
+                        bufferedYieldIDs: bufferedYieldIDs,
+                        delegate: delegate,
+                        error: error
+                    )
+
+                    return .resumeContinuations(suspendedYields)
+                }
+
+            case .finished:
                 return .none
 
             case .modifying:

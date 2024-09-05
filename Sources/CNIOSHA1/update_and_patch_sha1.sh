@@ -19,10 +19,10 @@ here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 case "$(uname -s)" in
     Darwin)
-        sed=gsed
+        sed="gsed"
         ;;
     *)
-        sed=sed
+        sed="sed"
         ;;
 esac
 
@@ -33,8 +33,9 @@ for f in sha1.c sha1.h; do
       echo "    - defined the __min_size macro inline"
       echo "    - included sys/endian.h on Android"
       echo "    - use welcoming language (soundness check)"
+      echo "    - ensure BYTE_ORDER is defined"
       echo "*/"
-      curl -Ls "https://raw.githubusercontent.com/freebsd/freebsd/master/sys/crypto/$f"
+      curl -Ls "https://raw.githubusercontent.com/freebsd/freebsd/master/sys/crypto/$f" # ignore-unacceptable-language
     ) > "$here/c_nio_$f"
 
     for func in sha1_init sha1_pad sha1_loop sha1_result; do
@@ -52,8 +53,9 @@ $sed -e $'/#define _CRYPTO_SHA1_H_/a #include <stdint.h>\\\n#include <stddef.h>'
 
 $sed -e 's/u_int\([0-9]\+\)_t/uint\1_t/g'                                        \
      -e '/^#include/d'                                                           \
-     -e $'/__FBSDID/c #include "include/CNIOSHA1.h"\\n#include <string.h>\\n#if !defined(bzero)\\n#define bzero(b,l) memset((b), \'\\\\0\', (l))\\n#endif\\n#if !defined(bcopy)\\n#define bcopy(s,d,l) memmove((d), (s), (l))\\n#endif\\n#ifdef __ANDROID__\\n#include <sys/endian.h>\\n#elif __linux__\\n#include <sys/types.h>\\n#endif' \
+     -e $'/__FBSDID/c #include "include/CNIOSHA1.h"\\n#include <string.h>\\n#if !defined(bzero)\\n#define bzero(b,l) memset((b), \'\\\\0\', (l))\\n#endif\\n#if !defined(bcopy)\\n#define bcopy(s,d,l) memmove((d), (s), (l))\\n#endif\\n#ifdef __ANDROID__\\n#include <sys/endian.h>\\n#elif defined(__linux__) || defined(__APPLE__)\\n#include <sys/types.h>\\n#endif' \
      -e 's/sanit[y]/soundness/g'                                                 \
+     -e 's/#if BYTE_ORDER != BIG_ENDIAN/#if !defined(BYTE_ORDER)\\n#error "BYTE_ORDER not defined"\\n#elif BYTE_ORDER != BIG_ENDIAN/' \
      -i "$here/c_nio_sha1.c"
 
 mv "$here/c_nio_sha1.h" "$here/include/CNIOSHA1.h"
@@ -61,9 +63,9 @@ mv "$here/c_nio_sha1.h" "$here/include/CNIOSHA1.h"
 tmp=$(mktemp -d /tmp/.test_compile_XXXXXX)
 
 clang -o "$tmp/test.o" -c "$here/c_nio_sha1.c"
-num_non_nio=$(nm "$tmp/test.o" | grep ' T ' | grep -v c_nio | wc -l)
+num_non_nio=$(nm "$tmp/test.o" | grep ' T ' | grep -vc c_nio)
 
-test 0 -eq $num_non_nio || {
+test 0 -eq "$num_non_nio" || {
     echo "ERROR: $num_non_nio exported non-prefixed symbols found"
     exit 1
 }

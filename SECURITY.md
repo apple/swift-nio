@@ -19,8 +19,10 @@ team would create the following patch releases:
   Swift 5.4 and later
 * NIO 2.50. + plus next patch release to address the issue for projects that support
   Swift 5.5.2 and later
-* mainline + plus next patch release to address the issue for projects that support
+* NIO 2.59. + plus next patch release to address the issue for projects that support
   Swift 5.6 and later
+* mainline + plus next patch release to address the issue for projects that support
+  Swift 5.7 and later
 
 SwiftNIO 1.x is considered end of life and will not receive any security patches.
 
@@ -62,7 +64,7 @@ with the [details usually included with bug reports][issue-template].
   and the [SSWG][sswg] will announce the vulnerability on the [Swift
   forums][swift-forums-sec].
 
-[issue-template]: https://github.com/apple/swift-nio/blob/main/.github/ISSUE_TEMPLATE.md
+[issue-template]: https://github.com/apple/swift-nio/blob/main/.github/ISSUE_TEMPLATE/bug-report.md
 [sswg]: https://github.com/swift-server/sswg
 [sswg-security]: https://github.com/swift-server/sswg/blob/main/process/incubation.md#security-best-practices
 [swift-forums-sec]: https://forums.swift.org/c/server/security-updates/

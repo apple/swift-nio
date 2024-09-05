@@ -16,25 +16,27 @@ import CNIOAtomics
 
 #if canImport(Darwin)
 import Darwin
-fileprivate func sys_sched_yield() {
+private func sys_sched_yield() {
     pthread_yield_np()
 }
 #elseif os(Windows)
 import ucrt
 import WinSDK
-fileprivate func sys_sched_yield() {
-  Sleep(0)
+private func sys_sched_yield() {
+    Sleep(0)
 }
 #else
 #if canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
 #else
 #error("The concurrency atomics module was unable to identify your C library.")
 #endif
 
-fileprivate func sys_sched_yield() {
+private func sys_sched_yield() {
     _ = sched_yield()
 }
 #endif
@@ -86,7 +88,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     ///     match the current value and so no exchange occurred.
     @inlinable
     public func compareAndExchange(expected: T, desired: T) -> Bool {
-        return T.atomic_compare_and_exchange(self.value, expected, desired)
+        T.atomic_compare_and_exchange(self.value, expected, desired)
     }
 
     /// Atomically adds `rhs` to this object.
@@ -100,7 +102,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     @discardableResult
     @inlinable
     public func add(_ rhs: T) -> T {
-        return T.atomic_add(self.value, rhs)
+        T.atomic_add(self.value, rhs)
     }
 
     /// Atomically subtracts `rhs` from this object.
@@ -114,7 +116,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     @discardableResult
     @inlinable
     public func sub(_ rhs: T) -> T {
-        return T.atomic_sub(self.value, rhs)
+        T.atomic_sub(self.value, rhs)
     }
 
     /// Atomically exchanges `value` for the current value of this object.
@@ -127,7 +129,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     /// - Returns: The value previously held by this object.
     @inlinable
     public func exchange(with value: T) -> T {
-        return T.atomic_exchange(self.value, value)
+        T.atomic_exchange(self.value, value)
     }
 
     /// Atomically loads and returns the value of this object.
@@ -139,7 +141,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     /// - Returns: The value of this object
     @inlinable
     public func load() -> T {
-        return T.atomic_load(self.value)
+        T.atomic_load(self.value)
     }
 
     /// Atomically replaces the value of this object with `value`.
@@ -150,7 +152,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
     ///
     /// - Parameter value: The new value to set the object to.
     @inlinable
-    public func store(_ value: T) -> Void {
+    public func store(_ value: T) {
         T.atomic_store(self.value, value)
     }
 
@@ -162,6 +164,9 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
         T.atomic_destroy(self.value)
     }
 }
+
+@available(*, deprecated)
+extension UnsafeEmbeddedAtomic: @unchecked Sendable where T: Sendable {}
 
 /// An encapsulation of an atomic primitive object.
 ///
@@ -181,7 +186,7 @@ public struct UnsafeEmbeddedAtomic<T: AtomicPrimitive> {
 /// By necessity, all atomic values are references: after all, it makes no
 /// sense to talk about managing an atomic value when each time it's modified
 /// the thread that modified it gets a local copy!
-@available(*, deprecated, message:"please use ManagedAtomic from https://github.com/apple/swift-atomics instead")
+@available(*, deprecated, message: "please use ManagedAtomic from https://github.com/apple/swift-atomics instead")
 public final class Atomic<T: AtomicPrimitive> {
     @usableFromInline
     internal let embedded: UnsafeEmbeddedAtomic<T>
@@ -209,7 +214,7 @@ public final class Atomic<T: AtomicPrimitive> {
     ///     match the current value and so no exchange occurred.
     @inlinable
     public func compareAndExchange(expected: T, desired: T) -> Bool {
-        return self.embedded.compareAndExchange(expected: expected, desired: desired)
+        self.embedded.compareAndExchange(expected: expected, desired: desired)
     }
 
     /// Atomically adds `rhs` to this object.
@@ -223,7 +228,7 @@ public final class Atomic<T: AtomicPrimitive> {
     @discardableResult
     @inlinable
     public func add(_ rhs: T) -> T {
-        return self.embedded.add(rhs)
+        self.embedded.add(rhs)
     }
 
     /// Atomically subtracts `rhs` from this object.
@@ -237,7 +242,7 @@ public final class Atomic<T: AtomicPrimitive> {
     @discardableResult
     @inlinable
     public func sub(_ rhs: T) -> T {
-        return self.embedded.sub(rhs)
+        self.embedded.sub(rhs)
     }
 
     /// Atomically exchanges `value` for the current value of this object.
@@ -250,7 +255,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// - Returns: The value previously held by this object.
     @inlinable
     public func exchange(with value: T) -> T {
-        return self.embedded.exchange(with: value)
+        self.embedded.exchange(with: value)
     }
 
     /// Atomically loads and returns the value of this object.
@@ -262,7 +267,7 @@ public final class Atomic<T: AtomicPrimitive> {
     /// - Returns: The value of this object
     @inlinable
     public func load() -> T {
-        return self.embedded.load()
+        self.embedded.load()
     }
 
     /// Atomically replaces the value of this object with `value`.
@@ -273,7 +278,7 @@ public final class Atomic<T: AtomicPrimitive> {
     ///
     /// - Parameter value: The new value to set the object to.
     @inlinable
-    public func store(_ value: T) -> Void {
+    public func store(_ value: T) {
         self.embedded.store(value)
     }
 
@@ -282,11 +287,27 @@ public final class Atomic<T: AtomicPrimitive> {
     }
 }
 
+@available(*, deprecated)
+extension Atomic: @unchecked Sendable where T: Sendable {}
+
 /// The protocol that all types that can be made atomic must conform to.
 ///
 /// **Do not add conformance to this protocol for arbitrary types**. Only a small range
 /// of types have appropriate atomic operations supported by the CPU, and those types
 /// already have conformances implemented.
+#if compiler(>=6.0)
+@preconcurrency
+public protocol AtomicPrimitive {
+    static var atomic_create: @Sendable (Self) -> OpaquePointer { get }
+    static var atomic_destroy: @Sendable (OpaquePointer) -> Void { get }
+    static var atomic_compare_and_exchange: @Sendable (OpaquePointer, Self, Self) -> Bool { get }
+    static var atomic_add: @Sendable (OpaquePointer, Self) -> Self { get }
+    static var atomic_sub: @Sendable (OpaquePointer, Self) -> Self { get }
+    static var atomic_exchange: @Sendable (OpaquePointer, Self) -> Self { get }
+    static var atomic_load: @Sendable (OpaquePointer) -> Self { get }
+    static var atomic_store: @Sendable (OpaquePointer, Self) -> Void { get }
+}
+#else
 public protocol AtomicPrimitive {
     static var atomic_create: (Self) -> OpaquePointer { get }
     static var atomic_destroy: (OpaquePointer) -> Void { get }
@@ -297,149 +318,150 @@ public protocol AtomicPrimitive {
     static var atomic_load: (OpaquePointer) -> Self { get }
     static var atomic_store: (OpaquePointer, Self) -> Void { get }
 }
+#endif
 
 extension Bool: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic__Bool_create
-    public static let atomic_destroy              = catmc_atomic__Bool_destroy
+    public static let atomic_create = catmc_atomic__Bool_create
+    public static let atomic_destroy = catmc_atomic__Bool_destroy
     public static let atomic_compare_and_exchange = catmc_atomic__Bool_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic__Bool_add
-    public static let atomic_sub                  = catmc_atomic__Bool_sub
-    public static let atomic_exchange             = catmc_atomic__Bool_exchange
-    public static let atomic_load                 = catmc_atomic__Bool_load
-    public static let atomic_store                = catmc_atomic__Bool_store
+    public static let atomic_add = catmc_atomic__Bool_add
+    public static let atomic_sub = catmc_atomic__Bool_sub
+    public static let atomic_exchange = catmc_atomic__Bool_exchange
+    public static let atomic_load = catmc_atomic__Bool_load
+    public static let atomic_store = catmc_atomic__Bool_store
 }
 
 extension Int8: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_int_least8_t_create
-    public static let atomic_destroy              = catmc_atomic_int_least8_t_destroy
+    public static let atomic_create = catmc_atomic_int_least8_t_create
+    public static let atomic_destroy = catmc_atomic_int_least8_t_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_int_least8_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_int_least8_t_add
-    public static let atomic_sub                  = catmc_atomic_int_least8_t_sub
-    public static let atomic_exchange             = catmc_atomic_int_least8_t_exchange
-    public static let atomic_load                 = catmc_atomic_int_least8_t_load
-    public static let atomic_store                = catmc_atomic_int_least8_t_store
+    public static let atomic_add = catmc_atomic_int_least8_t_add
+    public static let atomic_sub = catmc_atomic_int_least8_t_sub
+    public static let atomic_exchange = catmc_atomic_int_least8_t_exchange
+    public static let atomic_load = catmc_atomic_int_least8_t_load
+    public static let atomic_store = catmc_atomic_int_least8_t_store
 }
 
 extension UInt8: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_uint_least8_t_create
-    public static let atomic_destroy              = catmc_atomic_uint_least8_t_destroy
+    public static let atomic_create = catmc_atomic_uint_least8_t_create
+    public static let atomic_destroy = catmc_atomic_uint_least8_t_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_uint_least8_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_uint_least8_t_add
-    public static let atomic_sub                  = catmc_atomic_uint_least8_t_sub
-    public static let atomic_exchange             = catmc_atomic_uint_least8_t_exchange
-    public static let atomic_load                 = catmc_atomic_uint_least8_t_load
-    public static let atomic_store                = catmc_atomic_uint_least8_t_store
+    public static let atomic_add = catmc_atomic_uint_least8_t_add
+    public static let atomic_sub = catmc_atomic_uint_least8_t_sub
+    public static let atomic_exchange = catmc_atomic_uint_least8_t_exchange
+    public static let atomic_load = catmc_atomic_uint_least8_t_load
+    public static let atomic_store = catmc_atomic_uint_least8_t_store
 }
 
 extension Int16: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_int_least16_t_create
-    public static let atomic_destroy              = catmc_atomic_int_least16_t_destroy
+    public static let atomic_create = catmc_atomic_int_least16_t_create
+    public static let atomic_destroy = catmc_atomic_int_least16_t_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_int_least16_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_int_least16_t_add
-    public static let atomic_sub                  = catmc_atomic_int_least16_t_sub
-    public static let atomic_exchange             = catmc_atomic_int_least16_t_exchange
-    public static let atomic_load                 = catmc_atomic_int_least16_t_load
-    public static let atomic_store                = catmc_atomic_int_least16_t_store
+    public static let atomic_add = catmc_atomic_int_least16_t_add
+    public static let atomic_sub = catmc_atomic_int_least16_t_sub
+    public static let atomic_exchange = catmc_atomic_int_least16_t_exchange
+    public static let atomic_load = catmc_atomic_int_least16_t_load
+    public static let atomic_store = catmc_atomic_int_least16_t_store
 }
 
 extension UInt16: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_uint_least16_t_create
-    public static let atomic_destroy              = catmc_atomic_uint_least16_t_destroy
+    public static let atomic_create = catmc_atomic_uint_least16_t_create
+    public static let atomic_destroy = catmc_atomic_uint_least16_t_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_uint_least16_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_uint_least16_t_add
-    public static let atomic_sub                  = catmc_atomic_uint_least16_t_sub
-    public static let atomic_exchange             = catmc_atomic_uint_least16_t_exchange
-    public static let atomic_load                 = catmc_atomic_uint_least16_t_load
-    public static let atomic_store                = catmc_atomic_uint_least16_t_store
+    public static let atomic_add = catmc_atomic_uint_least16_t_add
+    public static let atomic_sub = catmc_atomic_uint_least16_t_sub
+    public static let atomic_exchange = catmc_atomic_uint_least16_t_exchange
+    public static let atomic_load = catmc_atomic_uint_least16_t_load
+    public static let atomic_store = catmc_atomic_uint_least16_t_store
 }
 
 extension Int32: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_int_least32_t_create
-    public static let atomic_destroy              = catmc_atomic_int_least32_t_destroy
+    public static let atomic_create = catmc_atomic_int_least32_t_create
+    public static let atomic_destroy = catmc_atomic_int_least32_t_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_int_least32_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_int_least32_t_add
-    public static let atomic_sub                  = catmc_atomic_int_least32_t_sub
-    public static let atomic_exchange             = catmc_atomic_int_least32_t_exchange
-    public static let atomic_load                 = catmc_atomic_int_least32_t_load
-    public static let atomic_store                = catmc_atomic_int_least32_t_store
+    public static let atomic_add = catmc_atomic_int_least32_t_add
+    public static let atomic_sub = catmc_atomic_int_least32_t_sub
+    public static let atomic_exchange = catmc_atomic_int_least32_t_exchange
+    public static let atomic_load = catmc_atomic_int_least32_t_load
+    public static let atomic_store = catmc_atomic_int_least32_t_store
 }
 
 extension UInt32: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_uint_least32_t_create
-    public static let atomic_destroy              = catmc_atomic_uint_least32_t_destroy
+    public static let atomic_create = catmc_atomic_uint_least32_t_create
+    public static let atomic_destroy = catmc_atomic_uint_least32_t_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_uint_least32_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_uint_least32_t_add
-    public static let atomic_sub                  = catmc_atomic_uint_least32_t_sub
-    public static let atomic_exchange             = catmc_atomic_uint_least32_t_exchange
-    public static let atomic_load                 = catmc_atomic_uint_least32_t_load
-    public static let atomic_store                = catmc_atomic_uint_least32_t_store
+    public static let atomic_add = catmc_atomic_uint_least32_t_add
+    public static let atomic_sub = catmc_atomic_uint_least32_t_sub
+    public static let atomic_exchange = catmc_atomic_uint_least32_t_exchange
+    public static let atomic_load = catmc_atomic_uint_least32_t_load
+    public static let atomic_store = catmc_atomic_uint_least32_t_store
 }
 
 extension Int64: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_long_long_create
-    public static let atomic_destroy              = catmc_atomic_long_long_destroy
+    public static let atomic_create = catmc_atomic_long_long_create
+    public static let atomic_destroy = catmc_atomic_long_long_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_long_long_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_long_long_add
-    public static let atomic_sub                  = catmc_atomic_long_long_sub
-    public static let atomic_exchange             = catmc_atomic_long_long_exchange
-    public static let atomic_load                 = catmc_atomic_long_long_load
-    public static let atomic_store                = catmc_atomic_long_long_store
+    public static let atomic_add = catmc_atomic_long_long_add
+    public static let atomic_sub = catmc_atomic_long_long_sub
+    public static let atomic_exchange = catmc_atomic_long_long_exchange
+    public static let atomic_load = catmc_atomic_long_long_load
+    public static let atomic_store = catmc_atomic_long_long_store
 }
 
 extension UInt64: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_unsigned_long_long_create
-    public static let atomic_destroy              = catmc_atomic_unsigned_long_long_destroy
+    public static let atomic_create = catmc_atomic_unsigned_long_long_create
+    public static let atomic_destroy = catmc_atomic_unsigned_long_long_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_unsigned_long_long_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_unsigned_long_long_add
-    public static let atomic_sub                  = catmc_atomic_unsigned_long_long_sub
-    public static let atomic_exchange             = catmc_atomic_unsigned_long_long_exchange
-    public static let atomic_load                 = catmc_atomic_unsigned_long_long_load
-    public static let atomic_store                = catmc_atomic_unsigned_long_long_store
+    public static let atomic_add = catmc_atomic_unsigned_long_long_add
+    public static let atomic_sub = catmc_atomic_unsigned_long_long_sub
+    public static let atomic_exchange = catmc_atomic_unsigned_long_long_exchange
+    public static let atomic_load = catmc_atomic_unsigned_long_long_load
+    public static let atomic_store = catmc_atomic_unsigned_long_long_store
 }
 
 #if os(Windows)
 extension Int: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_intptr_t_create
-    public static let atomic_destroy              = catmc_atomic_intptr_t_destroy
+    public static let atomic_create = catmc_atomic_intptr_t_create
+    public static let atomic_destroy = catmc_atomic_intptr_t_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_intptr_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_intptr_t_add
-    public static let atomic_sub                  = catmc_atomic_intptr_t_sub
-    public static let atomic_exchange             = catmc_atomic_intptr_t_exchange
-    public static let atomic_load                 = catmc_atomic_intptr_t_load
-    public static let atomic_store                = catmc_atomic_intptr_t_store
+    public static let atomic_add = catmc_atomic_intptr_t_add
+    public static let atomic_sub = catmc_atomic_intptr_t_sub
+    public static let atomic_exchange = catmc_atomic_intptr_t_exchange
+    public static let atomic_load = catmc_atomic_intptr_t_load
+    public static let atomic_store = catmc_atomic_intptr_t_store
 }
 
 extension UInt: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_uintptr_t_create
-    public static let atomic_destroy              = catmc_atomic_uintptr_t_destroy
+    public static let atomic_create = catmc_atomic_uintptr_t_create
+    public static let atomic_destroy = catmc_atomic_uintptr_t_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_uintptr_t_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_uintptr_t_add
-    public static let atomic_sub                  = catmc_atomic_uintptr_t_sub
-    public static let atomic_exchange             = catmc_atomic_uintptr_t_exchange
-    public static let atomic_load                 = catmc_atomic_uintptr_t_load
-    public static let atomic_store                = catmc_atomic_uintptr_t_store
+    public static let atomic_add = catmc_atomic_uintptr_t_add
+    public static let atomic_sub = catmc_atomic_uintptr_t_sub
+    public static let atomic_exchange = catmc_atomic_uintptr_t_exchange
+    public static let atomic_load = catmc_atomic_uintptr_t_load
+    public static let atomic_store = catmc_atomic_uintptr_t_store
 }
 #else
 extension Int: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_long_create
-    public static let atomic_destroy              = catmc_atomic_long_destroy
+    public static let atomic_create = catmc_atomic_long_create
+    public static let atomic_destroy = catmc_atomic_long_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_long_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_long_add
-    public static let atomic_sub                  = catmc_atomic_long_sub
-    public static let atomic_exchange             = catmc_atomic_long_exchange
-    public static let atomic_load                 = catmc_atomic_long_load
-    public static let atomic_store                = catmc_atomic_long_store
+    public static let atomic_add = catmc_atomic_long_add
+    public static let atomic_sub = catmc_atomic_long_sub
+    public static let atomic_exchange = catmc_atomic_long_exchange
+    public static let atomic_load = catmc_atomic_long_load
+    public static let atomic_store = catmc_atomic_long_store
 }
 
 extension UInt: AtomicPrimitive {
-    public static let atomic_create               = catmc_atomic_unsigned_long_create
-    public static let atomic_destroy              = catmc_atomic_unsigned_long_destroy
+    public static let atomic_create = catmc_atomic_unsigned_long_create
+    public static let atomic_destroy = catmc_atomic_unsigned_long_destroy
     public static let atomic_compare_and_exchange = catmc_atomic_unsigned_long_compare_and_exchange
-    public static let atomic_add                  = catmc_atomic_unsigned_long_add
-    public static let atomic_sub                  = catmc_atomic_unsigned_long_sub
-    public static let atomic_exchange             = catmc_atomic_unsigned_long_exchange
-    public static let atomic_load                 = catmc_atomic_unsigned_long_load
-    public static let atomic_store                = catmc_atomic_unsigned_long_store
+    public static let atomic_add = catmc_atomic_unsigned_long_add
+    public static let atomic_sub = catmc_atomic_unsigned_long_sub
+    public static let atomic_exchange = catmc_atomic_unsigned_long_exchange
+    public static let atomic_load = catmc_atomic_unsigned_long_load
+    public static let atomic_store = catmc_atomic_unsigned_long_store
 }
 #endif
 
@@ -447,7 +469,11 @@ extension UInt: AtomicPrimitive {
 ///
 /// - warning: The use of `AtomicBox` should be avoided because it requires an implementation of a spin-lock
 ///            (more precisely a CAS loop) to operate correctly.
-@available(*, deprecated, message: "AtomicBox is deprecated without replacement because the original implementation doesn't work.")
+@available(
+    *,
+    deprecated,
+    message: "AtomicBox is deprecated without replacement because the original implementation doesn't work."
+)
 public final class AtomicBox<T: AnyObject> {
     private let storage: NIOAtomic<UInt>
 
@@ -482,7 +508,7 @@ public final class AtomicBox<T: AnyObject> {
     /// - Returns: `True` if the exchange occurred, or `False` if `expected` did not
     ///     match the current value and so no exchange occurred.
     public func compareAndExchange(expected: T, desired: T) -> Bool {
-        return withExtendedLifetime(desired) {
+        withExtendedLifetime(desired) {
             let expectedPtr = Unmanaged<T>.passUnretained(expected)
             let desiredPtr = Unmanaged<T>.passUnretained(desired)
             let expectedPtrBits = UInt(bitPattern: expectedPtr.toOpaque())
@@ -573,7 +599,7 @@ public final class AtomicBox<T: AnyObject> {
 
         // step 3: Now, let's exchange it back into the store
         let casWorked = self.storage.compareAndExchange(expected: 0, desired: ptrBits)
-        precondition(casWorked) // this _has_ to work because `0` means we own it exclusively.
+        precondition(casWorked)  // this _has_ to work because `0` means we own it exclusively.
         return value
     }
 
@@ -587,7 +613,10 @@ public final class AtomicBox<T: AnyObject> {
     ///            100% CPU load.
     ///
     /// - Parameter value: The new value to set the object to.
-    public func store(_ value: T) -> Void {
+    public func store(_ value: T) {
         _ = self.exchange(with: value)
     }
 }
+
+@available(*, deprecated)
+extension AtomicBox: @unchecked Sendable where T: Sendable {}

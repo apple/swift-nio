@@ -13,8 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-@testable import NIOPosix
 import XCTest
+
+@testable import NIOPosix
 
 class GetaddrinfoResolverTest: XCTestCase {
 

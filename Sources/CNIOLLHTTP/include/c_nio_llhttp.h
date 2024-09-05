@@ -1,16 +1,13 @@
 /* Additional changes for SwiftNIO:
     - prefixed all symbols by 'c_nio_'
 */
+
 #ifndef INCLUDE_LLHTTP_H_
 #define INCLUDE_LLHTTP_H_
 
-#define LLHTTP_VERSION_MAJOR 6
+#define LLHTTP_VERSION_MAJOR 9
 #define LLHTTP_VERSION_MINOR 0
-#define LLHTTP_VERSION_PATCH 9
-
-#ifndef LLHTTP_STRICT_MODE
-# define LLHTTP_STRICT_MODE 0
-#endif
+#define LLHTTP_VERSION_PATCH 1
 
 #ifndef INCLUDE_LLHTTP_ITSELF_H_
 #define INCLUDE_LLHTTP_ITSELF_H_
@@ -20,8 +17,8 @@ extern "C" {
 
 #include <stdint.h>
 
-typedef struct llhttp__internal_s llhttp__internal_t;
-struct llhttp__internal_s {
+typedef struct c_nio_llhttp__internal_s c_nio_llhttp__internal_t;
+struct c_nio_llhttp__internal_s {
   int32_t _index;
   void* _span_pos0;
   void* _span_cb0;
@@ -41,16 +38,18 @@ struct llhttp__internal_s {
   uint8_t finish;
   uint16_t flags;
   uint16_t status_code;
+  uint8_t initial_message_completed;
   void* settings;
 };
 
-int c_nio_llhttp__internal_init(llhttp__internal_t* s);
-int c_nio_llhttp__internal_execute(llhttp__internal_t* s, const char* p, const char* endp);
+int c_nio_llhttp__internal_init(c_nio_llhttp__internal_t* s);
+int c_nio_llhttp__internal_execute(c_nio_llhttp__internal_t* s, const char* p, const char* endp);
 
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 #endif  /* INCLUDE_LLHTTP_ITSELF_H_ */
+
 
 #ifndef LLLLHTTP_C_HEADERS_
 #define LLLLHTTP_C_HEADERS_
@@ -88,8 +87,13 @@ enum llhttp_errno {
   HPE_USER = 24,
   HPE_CB_URL_COMPLETE = 26,
   HPE_CB_STATUS_COMPLETE = 27,
+  HPE_CB_METHOD_COMPLETE = 32,
+  HPE_CB_VERSION_COMPLETE = 33,
   HPE_CB_HEADER_FIELD_COMPLETE = 28,
-  HPE_CB_HEADER_VALUE_COMPLETE = 29
+  HPE_CB_HEADER_VALUE_COMPLETE = 29,
+  HPE_CB_CHUNK_EXTENSION_NAME_COMPLETE = 34,
+  HPE_CB_CHUNK_EXTENSION_VALUE_COMPLETE = 35,
+  HPE_CB_RESET = 31
 };
 typedef enum llhttp_errno llhttp_errno_t;
 
@@ -111,7 +115,10 @@ enum llhttp_lenient_flags {
   LENIENT_CHUNKED_LENGTH = 0x2,
   LENIENT_KEEP_ALIVE = 0x4,
   LENIENT_TRANSFER_ENCODING = 0x8,
-  LENIENT_VERSION = 0x10
+  LENIENT_VERSION = 0x10,
+  LENIENT_DATA_AFTER_CLOSE = 0x20,
+  LENIENT_OPTIONAL_LF_AFTER_CR = 0x40,
+  LENIENT_OPTIONAL_CRLF_AFTER_CHUNK = 0x80
 };
 typedef enum llhttp_lenient_flags llhttp_lenient_flags_t;
 
@@ -184,6 +191,11 @@ enum llhttp_status {
   HTTP_STATUS_SWITCHING_PROTOCOLS = 101,
   HTTP_STATUS_PROCESSING = 102,
   HTTP_STATUS_EARLY_HINTS = 103,
+  HTTP_STATUS_RESPONSE_IS_STALE = 110,
+  HTTP_STATUS_REVALIDATION_FAILED = 111,
+  HTTP_STATUS_DISCONNECTED_OPERATION = 112,
+  HTTP_STATUS_HEURISTIC_EXPIRATION = 113,
+  HTTP_STATUS_MISCELLANEOUS_WARNING = 199,
   HTTP_STATUS_OK = 200,
   HTTP_STATUS_CREATED = 201,
   HTTP_STATUS_ACCEPTED = 202,
@@ -193,13 +205,16 @@ enum llhttp_status {
   HTTP_STATUS_PARTIAL_CONTENT = 206,
   HTTP_STATUS_MULTI_STATUS = 207,
   HTTP_STATUS_ALREADY_REPORTED = 208,
+  HTTP_STATUS_TRANSFORMATION_APPLIED = 214,
   HTTP_STATUS_IM_USED = 226,
+  HTTP_STATUS_MISCELLANEOUS_PERSISTENT_WARNING = 299,
   HTTP_STATUS_MULTIPLE_CHOICES = 300,
   HTTP_STATUS_MOVED_PERMANENTLY = 301,
   HTTP_STATUS_FOUND = 302,
   HTTP_STATUS_SEE_OTHER = 303,
   HTTP_STATUS_NOT_MODIFIED = 304,
   HTTP_STATUS_USE_PROXY = 305,
+  HTTP_STATUS_SWITCH_PROXY = 306,
   HTTP_STATUS_TEMPORARY_REDIRECT = 307,
   HTTP_STATUS_PERMANENT_REDIRECT = 308,
   HTTP_STATUS_BAD_REQUEST = 400,
@@ -221,6 +236,8 @@ enum llhttp_status {
   HTTP_STATUS_RANGE_NOT_SATISFIABLE = 416,
   HTTP_STATUS_EXPECTATION_FAILED = 417,
   HTTP_STATUS_IM_A_TEAPOT = 418,
+  HTTP_STATUS_PAGE_EXPIRED = 419,
+  HTTP_STATUS_ENHANCE_YOUR_CALM = 420,
   HTTP_STATUS_MISDIRECTED_REQUEST = 421,
   HTTP_STATUS_UNPROCESSABLE_ENTITY = 422,
   HTTP_STATUS_LOCKED = 423,
@@ -229,8 +246,21 @@ enum llhttp_status {
   HTTP_STATUS_UPGRADE_REQUIRED = 426,
   HTTP_STATUS_PRECONDITION_REQUIRED = 428,
   HTTP_STATUS_TOO_MANY_REQUESTS = 429,
+  HTTP_STATUS_REQUEST_HEADER_FIELDS_TOO_LARGE_UNOFFICIAL = 430,
   HTTP_STATUS_REQUEST_HEADER_FIELDS_TOO_LARGE = 431,
+  HTTP_STATUS_LOGIN_TIMEOUT = 440,
+  HTTP_STATUS_NO_RESPONSE = 444,
+  HTTP_STATUS_RETRY_WITH = 449,
+  HTTP_STATUS_BLOCKED_BY_PARENTAL_CONTROL = 450,
   HTTP_STATUS_UNAVAILABLE_FOR_LEGAL_REASONS = 451,
+  HTTP_STATUS_CLIENT_CLOSED_LOAD_BALANCED_REQUEST = 460,
+  HTTP_STATUS_INVALID_X_FORWARDED_FOR = 463,
+  HTTP_STATUS_REQUEST_HEADER_TOO_LARGE = 494,
+  HTTP_STATUS_SSL_CERTIFICATE_ERROR = 495,
+  HTTP_STATUS_SSL_CERTIFICATE_REQUIRED = 496,
+  HTTP_STATUS_HTTP_REQUEST_SENT_TO_HTTPS_PORT = 497,
+  HTTP_STATUS_INVALID_TOKEN = 498,
+  HTTP_STATUS_CLIENT_CLOSED_REQUEST = 499,
   HTTP_STATUS_INTERNAL_SERVER_ERROR = 500,
   HTTP_STATUS_NOT_IMPLEMENTED = 501,
   HTTP_STATUS_BAD_GATEWAY = 502,
@@ -240,9 +270,22 @@ enum llhttp_status {
   HTTP_STATUS_VARIANT_ALSO_NEGOTIATES = 506,
   HTTP_STATUS_INSUFFICIENT_STORAGE = 507,
   HTTP_STATUS_LOOP_DETECTED = 508,
-  HTTP_STATUS_BANDWITH_LIMIT_EXCEEDED = 509,
+  HTTP_STATUS_BANDWIDTH_LIMIT_EXCEEDED = 509,
   HTTP_STATUS_NOT_EXTENDED = 510,
-  HTTP_STATUS_NETWORK_AUTHENTICATION_REQUIRED = 511
+  HTTP_STATUS_NETWORK_AUTHENTICATION_REQUIRED = 511,
+  HTTP_STATUS_WEB_SERVER_UNKNOWN_ERROR = 520,
+  HTTP_STATUS_WEB_SERVER_IS_DOWN = 521,
+  HTTP_STATUS_CONNECTION_TIMEOUT = 522,
+  HTTP_STATUS_ORIGIN_IS_UNREACHABLE = 523,
+  HTTP_STATUS_TIMEOUT_OCCURED = 524,
+  HTTP_STATUS_SSL_HANDSHAKE_FAILED = 525,
+  HTTP_STATUS_INVALID_SSL_CERTIFICATE = 526,
+  HTTP_STATUS_RAILGUN_ERROR = 527,
+  HTTP_STATUS_SITE_IS_OVERLOADED = 529,
+  HTTP_STATUS_SITE_IS_FROZEN = 530,
+  HTTP_STATUS_IDENTITY_PROVIDER_AUTHENTICATION_ERROR = 561,
+  HTTP_STATUS_NETWORK_READ_TIMEOUT = 598,
+  HTTP_STATUS_NETWORK_CONNECT_TIMEOUT = 599
 };
 typedef enum llhttp_status llhttp_status_t;
 
@@ -276,8 +319,13 @@ typedef enum llhttp_status llhttp_status_t;
   XX(24, USER, USER) \
   XX(26, CB_URL_COMPLETE, CB_URL_COMPLETE) \
   XX(27, CB_STATUS_COMPLETE, CB_STATUS_COMPLETE) \
+  XX(32, CB_METHOD_COMPLETE, CB_METHOD_COMPLETE) \
+  XX(33, CB_VERSION_COMPLETE, CB_VERSION_COMPLETE) \
   XX(28, CB_HEADER_FIELD_COMPLETE, CB_HEADER_FIELD_COMPLETE) \
   XX(29, CB_HEADER_VALUE_COMPLETE, CB_HEADER_VALUE_COMPLETE) \
+  XX(34, CB_CHUNK_EXTENSION_NAME_COMPLETE, CB_CHUNK_EXTENSION_NAME_COMPLETE) \
+  XX(35, CB_CHUNK_EXTENSION_VALUE_COMPLETE, CB_CHUNK_EXTENSION_VALUE_COMPLETE) \
+  XX(31, CB_RESET, CB_RESET) \
 
 
 #define HTTP_METHOD_MAP(XX) \
@@ -388,6 +436,11 @@ typedef enum llhttp_status llhttp_status_t;
   XX(101, SWITCHING_PROTOCOLS, SWITCHING_PROTOCOLS) \
   XX(102, PROCESSING, PROCESSING) \
   XX(103, EARLY_HINTS, EARLY_HINTS) \
+  XX(110, RESPONSE_IS_STALE, RESPONSE_IS_STALE) \
+  XX(111, REVALIDATION_FAILED, REVALIDATION_FAILED) \
+  XX(112, DISCONNECTED_OPERATION, DISCONNECTED_OPERATION) \
+  XX(113, HEURISTIC_EXPIRATION, HEURISTIC_EXPIRATION) \
+  XX(199, MISCELLANEOUS_WARNING, MISCELLANEOUS_WARNING) \
   XX(200, OK, OK) \
   XX(201, CREATED, CREATED) \
   XX(202, ACCEPTED, ACCEPTED) \
@@ -397,13 +450,16 @@ typedef enum llhttp_status llhttp_status_t;
   XX(206, PARTIAL_CONTENT, PARTIAL_CONTENT) \
   XX(207, MULTI_STATUS, MULTI_STATUS) \
   XX(208, ALREADY_REPORTED, ALREADY_REPORTED) \
+  XX(214, TRANSFORMATION_APPLIED, TRANSFORMATION_APPLIED) \
   XX(226, IM_USED, IM_USED) \
+  XX(299, MISCELLANEOUS_PERSISTENT_WARNING, MISCELLANEOUS_PERSISTENT_WARNING) \
   XX(300, MULTIPLE_CHOICES, MULTIPLE_CHOICES) \
   XX(301, MOVED_PERMANENTLY, MOVED_PERMANENTLY) \
   XX(302, FOUND, FOUND) \
   XX(303, SEE_OTHER, SEE_OTHER) \
   XX(304, NOT_MODIFIED, NOT_MODIFIED) \
   XX(305, USE_PROXY, USE_PROXY) \
+  XX(306, SWITCH_PROXY, SWITCH_PROXY) \
   XX(307, TEMPORARY_REDIRECT, TEMPORARY_REDIRECT) \
   XX(308, PERMANENT_REDIRECT, PERMANENT_REDIRECT) \
   XX(400, BAD_REQUEST, BAD_REQUEST) \
@@ -425,6 +481,8 @@ typedef enum llhttp_status llhttp_status_t;
   XX(416, RANGE_NOT_SATISFIABLE, RANGE_NOT_SATISFIABLE) \
   XX(417, EXPECTATION_FAILED, EXPECTATION_FAILED) \
   XX(418, IM_A_TEAPOT, IM_A_TEAPOT) \
+  XX(419, PAGE_EXPIRED, PAGE_EXPIRED) \
+  XX(420, ENHANCE_YOUR_CALM, ENHANCE_YOUR_CALM) \
   XX(421, MISDIRECTED_REQUEST, MISDIRECTED_REQUEST) \
   XX(422, UNPROCESSABLE_ENTITY, UNPROCESSABLE_ENTITY) \
   XX(423, LOCKED, LOCKED) \
@@ -433,8 +491,21 @@ typedef enum llhttp_status llhttp_status_t;
   XX(426, UPGRADE_REQUIRED, UPGRADE_REQUIRED) \
   XX(428, PRECONDITION_REQUIRED, PRECONDITION_REQUIRED) \
   XX(429, TOO_MANY_REQUESTS, TOO_MANY_REQUESTS) \
+  XX(430, REQUEST_HEADER_FIELDS_TOO_LARGE_UNOFFICIAL, REQUEST_HEADER_FIELDS_TOO_LARGE_UNOFFICIAL) \
   XX(431, REQUEST_HEADER_FIELDS_TOO_LARGE, REQUEST_HEADER_FIELDS_TOO_LARGE) \
+  XX(440, LOGIN_TIMEOUT, LOGIN_TIMEOUT) \
+  XX(444, NO_RESPONSE, NO_RESPONSE) \
+  XX(449, RETRY_WITH, RETRY_WITH) \
+  XX(450, BLOCKED_BY_PARENTAL_CONTROL, BLOCKED_BY_PARENTAL_CONTROL) \
   XX(451, UNAVAILABLE_FOR_LEGAL_REASONS, UNAVAILABLE_FOR_LEGAL_REASONS) \
+  XX(460, CLIENT_CLOSED_LOAD_BALANCED_REQUEST, CLIENT_CLOSED_LOAD_BALANCED_REQUEST) \
+  XX(463, INVALID_X_FORWARDED_FOR, INVALID_X_FORWARDED_FOR) \
+  XX(494, REQUEST_HEADER_TOO_LARGE, REQUEST_HEADER_TOO_LARGE) \
+  XX(495, SSL_CERTIFICATE_ERROR, SSL_CERTIFICATE_ERROR) \
+  XX(496, SSL_CERTIFICATE_REQUIRED, SSL_CERTIFICATE_REQUIRED) \
+  XX(497, HTTP_REQUEST_SENT_TO_HTTPS_PORT, HTTP_REQUEST_SENT_TO_HTTPS_PORT) \
+  XX(498, INVALID_TOKEN, INVALID_TOKEN) \
+  XX(499, CLIENT_CLOSED_REQUEST, CLIENT_CLOSED_REQUEST) \
   XX(500, INTERNAL_SERVER_ERROR, INTERNAL_SERVER_ERROR) \
   XX(501, NOT_IMPLEMENTED, NOT_IMPLEMENTED) \
   XX(502, BAD_GATEWAY, BAD_GATEWAY) \
@@ -444,15 +515,29 @@ typedef enum llhttp_status llhttp_status_t;
   XX(506, VARIANT_ALSO_NEGOTIATES, VARIANT_ALSO_NEGOTIATES) \
   XX(507, INSUFFICIENT_STORAGE, INSUFFICIENT_STORAGE) \
   XX(508, LOOP_DETECTED, LOOP_DETECTED) \
-  XX(509, BANDWITH_LIMIT_EXCEEDED, BANDWITH_LIMIT_EXCEEDED) \
+  XX(509, BANDWIDTH_LIMIT_EXCEEDED, BANDWIDTH_LIMIT_EXCEEDED) \
   XX(510, NOT_EXTENDED, NOT_EXTENDED) \
   XX(511, NETWORK_AUTHENTICATION_REQUIRED, NETWORK_AUTHENTICATION_REQUIRED) \
+  XX(520, WEB_SERVER_UNKNOWN_ERROR, WEB_SERVER_UNKNOWN_ERROR) \
+  XX(521, WEB_SERVER_IS_DOWN, WEB_SERVER_IS_DOWN) \
+  XX(522, CONNECTION_TIMEOUT, CONNECTION_TIMEOUT) \
+  XX(523, ORIGIN_IS_UNREACHABLE, ORIGIN_IS_UNREACHABLE) \
+  XX(524, TIMEOUT_OCCURED, TIMEOUT_OCCURED) \
+  XX(525, SSL_HANDSHAKE_FAILED, SSL_HANDSHAKE_FAILED) \
+  XX(526, INVALID_SSL_CERTIFICATE, INVALID_SSL_CERTIFICATE) \
+  XX(527, RAILGUN_ERROR, RAILGUN_ERROR) \
+  XX(529, SITE_IS_OVERLOADED, SITE_IS_OVERLOADED) \
+  XX(530, SITE_IS_FROZEN, SITE_IS_FROZEN) \
+  XX(561, IDENTITY_PROVIDER_AUTHENTICATION_ERROR, IDENTITY_PROVIDER_AUTHENTICATION_ERROR) \
+  XX(598, NETWORK_READ_TIMEOUT, NETWORK_READ_TIMEOUT) \
+  XX(599, NETWORK_CONNECT_TIMEOUT, NETWORK_CONNECT_TIMEOUT) \
 
 
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 #endif  /* LLLLHTTP_C_HEADERS_ */
+
 
 #ifndef INCLUDE_LLHTTP_API_H_
 #define INCLUDE_LLHTTP_API_H_
@@ -467,7 +552,7 @@ extern "C" {
 #define LLHTTP_EXPORT
 #endif
 
-typedef llhttp__internal_t llhttp_t;
+typedef c_nio_llhttp__internal_t llhttp_t;
 typedef struct llhttp_settings_s llhttp_settings_t;
 
 typedef int (*llhttp_data_cb)(llhttp_t*, const char *at, size_t length);
@@ -480,8 +565,12 @@ struct llhttp_settings_s {
   /* Possible return values 0, -1, HPE_USER */
   llhttp_data_cb on_url;
   llhttp_data_cb on_status;
+  llhttp_data_cb on_method;
+  llhttp_data_cb on_version;
   llhttp_data_cb on_header_field;
   llhttp_data_cb on_header_value;
+  llhttp_data_cb      on_chunk_extension_name;
+  llhttp_data_cb      on_chunk_extension_value;
 
   /* Possible return values:
    * 0  - Proceed normally
@@ -501,8 +590,12 @@ struct llhttp_settings_s {
   llhttp_cb      on_message_complete;
   llhttp_cb      on_url_complete;
   llhttp_cb      on_status_complete;
+  llhttp_cb      on_method_complete;
+  llhttp_cb      on_version_complete;
   llhttp_cb      on_header_field_complete;
   llhttp_cb      on_header_value_complete;
+  llhttp_cb      on_chunk_extension_name_complete;
+  llhttp_cb      on_chunk_extension_value_complete;
 
   /* When on_chunk_header is called, the current chunk length is stored
    * in parser->content_length.
@@ -510,6 +603,7 @@ struct llhttp_settings_s {
    */
   llhttp_cb      on_chunk_header;
   llhttp_cb      on_chunk_complete;
+  llhttp_cb      on_reset;
 };
 
 /* Initialize the parser with specific type and user settings.
@@ -670,7 +764,8 @@ const char* c_nio_llhttp_status_name(llhttp_status_t status);
  * `HPE_INVALID_HEADER_TOKEN` will be raised for incorrect header values when
  * lenient parsing is "on".
  *
- * **(USE AT YOUR OWN RISK)**
+ * **Enabling this flag can pose a security issue since you will be exposed to
+ * request smuggling attacks. USE WITH CAUTION!**
  */
 LLHTTP_EXPORT
 void c_nio_llhttp_set_lenient_headers(llhttp_t* parser, int enabled);
@@ -684,7 +779,8 @@ void c_nio_llhttp_set_lenient_headers(llhttp_t* parser, int enabled);
  * request smuggling, but may be less desirable for small number of cases
  * involving legacy servers.
  *
- * **(USE AT YOUR OWN RISK)**
+ * **Enabling this flag can pose a security issue since you will be exposed to
+ * request smuggling attacks. USE WITH CAUTION!**
  */
 LLHTTP_EXPORT
 void c_nio_llhttp_set_lenient_chunked_length(llhttp_t* parser, int enabled);
@@ -699,8 +795,10 @@ void c_nio_llhttp_set_lenient_chunked_length(llhttp_t* parser, int enabled);
  * but might interact badly with outdated and insecure clients. With this flag
  * the extra request/response will be parsed normally.
  *
- * **(USE AT YOUR OWN RISK)**
+ * **Enabling this flag can pose a security issue since you will be exposed to
+ * poisoning attacks. USE WITH CAUTION!**
  */
+LLHTTP_EXPORT
 void c_nio_llhttp_set_lenient_keep_alive(llhttp_t* parser, int enabled);
 
 /* Enables/disables lenient handling of `Transfer-Encoding` header.
@@ -712,13 +810,65 @@ void c_nio_llhttp_set_lenient_keep_alive(llhttp_t* parser, int enabled);
  * avoid request smuggling.
  * With this flag the extra value will be parsed normally.
  *
- * **(USE AT YOUR OWN RISK)**
+ * **Enabling this flag can pose a security issue since you will be exposed to
+ * request smuggling attacks. USE WITH CAUTION!**
  */
+LLHTTP_EXPORT
 void c_nio_llhttp_set_lenient_transfer_encoding(llhttp_t* parser, int enabled);
+
+/* Enables/disables lenient handling of HTTP version.
+ *
+ * Normally `llhttp` would error when the HTTP version in the request or status line
+ * is not `0.9`, `1.0`, `1.1` or `2.0`.
+ * With this flag the invalid value will be parsed normally.
+ *
+ * **Enabling this flag can pose a security issue since you will allow unsupported
+ * HTTP versions. USE WITH CAUTION!**
+ */
+LLHTTP_EXPORT
+void c_nio_llhttp_set_lenient_version(llhttp_t* parser, int enabled);
+
+/* Enables/disables lenient handling of additional data received after a message ends
+ * and keep-alive is disabled.
+ *
+ * Normally `llhttp` would error when additional unexpected data is received if the message
+ * contains the `Connection` header with `close` value.
+ * With this flag the extra data will discarded without throwing an error.
+ *
+ * **Enabling this flag can pose a security issue since you will be exposed to
+ * poisoning attacks. USE WITH CAUTION!**
+ */
+LLHTTP_EXPORT
+void c_nio_llhttp_set_lenient_data_after_close(llhttp_t* parser, int enabled);
+
+/* Enables/disables lenient handling of incomplete CRLF sequences.
+ *
+ * Normally `llhttp` would error when a CR is not followed by LF when terminating the
+ * request line, the status line, the headers or a chunk header.
+ * With this flag only a CR is required to terminate such sections.
+ *
+ * **Enabling this flag can pose a security issue since you will be exposed to
+ * request smuggling attacks. USE WITH CAUTION!**
+ */
+LLHTTP_EXPORT
+void c_nio_llhttp_set_lenient_optional_lf_after_cr(llhttp_t* parser, int enabled);
+
+/* Enables/disables lenient handling of chunks not separated via CRLF.
+ *
+ * Normally `llhttp` would error when after a chunk data a CRLF is missing before
+ * starting a new chunk.
+ * With this flag the new chunk can start immediately after the previous one.
+ *
+ * **Enabling this flag can pose a security issue since you will be exposed to
+ * request smuggling attacks. USE WITH CAUTION!**
+ */
+LLHTTP_EXPORT
+void c_nio_llhttp_set_lenient_optional_crlf_after_chunk(llhttp_t* parser, int enabled);
 
 #ifdef __cplusplus
 }  /* extern "C" */
 #endif
 #endif  /* INCLUDE_LLHTTP_API_H_ */
+
 
 #endif  /* INCLUDE_LLHTTP_H_ */

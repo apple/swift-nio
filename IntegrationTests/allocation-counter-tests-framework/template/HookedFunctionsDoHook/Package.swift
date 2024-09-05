@@ -1,4 +1,4 @@
-// swift-tools-version:5.0
+// swift-tools-version:5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 //===----------------------------------------------------------------------===//
 //
@@ -19,12 +19,12 @@ import PackageDescription
 let package = Package(
     name: "HookedFunctions",
     products: [
-        .library(name: "HookedFunctions", type: .dynamic, targets: ["HookedFunctions"]),
+        .library(name: "HookedFunctions", type: .dynamic, targets: ["HookedFunctions"])
     ],
     dependencies: [
-        .package(url: "../AtomicCounter/", .branch("main")),
+        .package(url: "../AtomicCounter/", branch: "main")
     ],
     targets: [
-        .target(name: "HookedFunctions", dependencies: ["AtomicCounter"]),
+        .target(name: "HookedFunctions", dependencies: ["AtomicCounter"])
     ]
 )

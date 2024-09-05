@@ -1,0 +1,171 @@
+name: Soundness
+
+on:
+  workflow_call:
+    inputs:
+      api_breakage_check_enabled:
+        type: boolean
+        description: "Boolean to enable the API breakage check job. Defaults to true."
+        default: true
+      api_breakage_check_container_image:
+        type: string
+        description: "Container image for the API breakage check job. Defaults to latest Swift Ubuntu image."
+        default: "swift:5.10-noble"
+      docs_check_enabled:
+        type: boolean
+        description: "Boolean to enable the docs check job. Defaults to true."
+        default: true
+      docs_check_container_image:
+        type: string
+        description: "Container image for the docs check job. Defaults to latest Swift Ubuntu image."
+        default: "swift:5.10-noble"
+      unacceptable_language_check_enabled:
+        type: boolean
+        description: "Boolean to enable the acceptable language check job. Defaults to true."
+        default: true
+      unacceptable_language_check_word_list:
+        type: string
+        description: "List of unacceptable words. Defaults to a sensible list of words."
+        default: "blacklist whitelist slave master sane sanity insane insanity kill killed killing hang hung hanged hanging" #ignore-unacceptable-language
+      license_header_check_enabled:
+        type: boolean
+        description: "Boolean to enable the license header check job. Defaults to true."
+        default: true
+      license_header_check_project_name:
+        type: string
+        description: "Name of the project called out in the license header."
+        required: true
+      broken_symlink_check_enabled:
+        type: boolean
+        description: "Boolean to enable the broken symlink check job. Defaults to true."
+        default: true
+      format_check_enabled:
+        type: boolean
+        description: "Boolean to enable the format check job. Defaults to true."
+        default: true
+      shell_check_enabled:
+        type: boolean
+        description: "Boolean to enable the shell check job. Defaults to true."
+        default: true
+
+## We are cancelling previously triggered workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-soundness
+  cancel-in-progress: true
+ 
+jobs:
+  api-breakage-check:
+    name: API breakage check
+    if: ${{ inputs.api_breakage_check_enabled }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.api_breakage_check_container_image }}
+    timeout-minutes: 20
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # We need to fetch everything otherwise only the head commit will be fetched.
+        fetch-depth: 0
+        persist-credentials: false
+    - name: Mark the workspace as safe
+      # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+    - name: Run API breakage check
+      run: swift package diagnose-api-breaking-changes origin/main
+
+  docs-check:
+    name: Documentation check
+    if: ${{ inputs.docs_check_enabled }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.docs_check_container_image }}
+    timeout-minutes: 20
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+          persist-credentials: false
+    - name: Run documentation check
+      run: |
+        apt-get -qq update && apt-get -qq -y install curl yq
+        curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-docs.sh | bash
+
+  unacceptable-language-check:
+    name: Unacceptable language check
+    if: ${{ inputs.unacceptable_language_check_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+          persist-credentials: false
+    - name: Run unacceptable language check
+      env:
+        UNACCEPTABLE_WORD_LIST: ${{ inputs.unacceptable_language_check_word_list}}
+      run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-unacceptable-language.sh | bash
+
+  license-header-check:
+    name: License headers check
+    if: ${{ inputs.license_header_check_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+          persist-credentials: false
+    - name: Run license header check
+      env:
+        PROJECT_NAME: ${{ inputs.license_header_check_project_name }}
+      run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-license-header.sh | bash
+
+  broken-symlink-check:
+    name: Broken symlinks check
+    if: ${{ inputs.broken_symlink_check_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+          persist-credentials: false
+    - name: Run broken symlinks check
+      run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-broken-symlinks.sh | bash
+
+  format-check:
+    name: Format check
+    if: ${{ inputs.format_check_enabled }}
+    runs-on: ubuntu-latest
+    container:
+      image: swiftlang/swift:nightly-6.0-jammy
+    timeout-minutes: 5
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+          persist-credentials: false
+    - name: Mark the workspace as safe
+    # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+    - name: Run format check
+      run:  |
+        apt-get -qq update && apt-get -qq -y install curl
+        curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-swift-format.sh | bash
+
+  shell-check:
+    name: Shell check
+    if: ${{ inputs.shell_check_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+          persist-credentials: false
+    - name: Mark the workspace as safe
+    # https://github.com/actions/checkout/issues/766
+      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+    - name: Run shellcheck
+      run:  git ls-files -z '*.sh' | xargs -0 shellcheck

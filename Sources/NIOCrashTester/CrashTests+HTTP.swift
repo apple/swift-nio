@@ -18,28 +18,44 @@ import NIOHTTP1
 
 struct HTTPCrashTests {
     let testEncodingChunkedAndContentLengthForRequestsCrashes = CrashTest(
-        regex: "Assertion failed: illegal HTTP sent: HTTPRequestHead .* contains both a content-length and transfer-encoding:chunked",
+        regex:
+            "Assertion failed: illegal HTTP sent: HTTPRequestHead .* contains both a content-length and transfer-encoding:chunked",
         {
             let channel = EmbeddedChannel(handler: HTTPRequestEncoder())
             _ = try? channel.writeAndFlush(
                 HTTPClientRequestPart.head(
-                    HTTPRequestHead(version: .http1_1,
-                                    method: .POST,
-                                    uri: "/",
-                                    headers: ["content-Length": "1",
-                                              "transfer-Encoding": "chunked"]))).wait()
-        })
+                    HTTPRequestHead(
+                        version: .http1_1,
+                        method: .POST,
+                        uri: "/",
+                        headers: [
+                            "content-Length": "1",
+                            "transfer-Encoding": "chunked",
+                        ]
+                    )
+                )
+            ).wait()
+        }
+    )
 
     let testEncodingChunkedAndContentLengthForResponseCrashes = CrashTest(
-        regex: "Assertion failed: illegal HTTP sent: HTTPResponseHead .* contains both a content-length and transfer-encoding:chunked",
+        regex:
+            "Assertion failed: illegal HTTP sent: HTTPResponseHead .* contains both a content-length and transfer-encoding:chunked",
         {
             let channel = EmbeddedChannel(handler: HTTPResponseEncoder())
             _ = try? channel.writeAndFlush(
                 HTTPServerResponsePart.head(
-                    HTTPResponseHead(version: .http1_1,
-                                     status: .ok,
-                                     headers: ["content-Length": "1",
-                                               "transfer-Encoding": "chunked"]))).wait()
-        })
+                    HTTPResponseHead(
+                        version: .http1_1,
+                        status: .ok,
+                        headers: [
+                            "content-Length": "1",
+                            "transfer-Encoding": "chunked",
+                        ]
+                    )
+                )
+            ).wait()
+        }
+    )
 }
 #endif

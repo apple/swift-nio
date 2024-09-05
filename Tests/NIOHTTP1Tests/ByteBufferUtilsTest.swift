@@ -12,45 +12,64 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
+import XCTest
+
 @testable import NIOHTTP1
 
-fileprivate enum DummyError: Error {
+private enum DummyError: Error {
     case err
 }
 
 class ByteBufferUtilsTest: XCTestCase {
-    
+
     func testComparators() {
         let someByteBuffer: ByteBuffer = ByteBuffer(string: "fiRSt")
         XCTAssert(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
-                to: "first".utf8))
+                to: "first".utf8
+            )
+        )
         XCTAssert(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
-                to: "fiRSt".utf8))
+                to: "fiRSt".utf8
+            )
+        )
         XCTAssert(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
-                to: "fIrst".utf8))
+                to: "fIrst".utf8
+            )
+        )
         XCTAssertFalse(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
-                to: "fIrt".utf8))
+                to: "fIrt".utf8
+            )
+        )
         XCTAssertFalse(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
-                to: "firsta".utf8))
+                to: "firsta".utf8
+            )
+        )
         XCTAssertFalse(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
-                to: "afirst".utf8))
+                to: "afirst".utf8
+            )
+        )
         XCTAssertFalse(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
-                to: "eiRSt".utf8))
+                to: "eiRSt".utf8
+            )
+        )
         XCTAssertFalse(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
-                to: "fIrso".utf8))
+                to: "fIrso".utf8
+            )
+        )
         XCTAssertFalse(
             someByteBuffer.readableBytesView.compareCaseInsensitiveASCIIBytes(
-                to: "firot".utf8))
+                to: "firot".utf8
+            )
+        )
     }
 
     private func byteBufferView(string: String) -> ByteBufferView {
@@ -61,16 +80,42 @@ class ByteBufferUtilsTest: XCTestCase {
     }
 
     func testTrimming() {
-        XCTAssertEqual(byteBufferView(string: "   first").trimSpaces().map({CChar($0)}), byteBufferView(string: "first").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "   first  ").trimSpaces().map({CChar($0)}), byteBufferView(string: "first").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "first  ").trimSpaces().map({CChar($0)}), byteBufferView(string: "first").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "first").trimSpaces().map({CChar($0)}), byteBufferView(string: "first").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: " \t\t  fi  rst").trimSpaces().map({CChar($0)}), byteBufferView(string: "fi  rst").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "   firs  t \t ").trimSpaces().map({CChar($0)}), byteBufferView(string: "firs  t").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "f\t  irst  ").trimSpaces().map({CChar($0)}), byteBufferView(string: "f\t  irst").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "f i  rs  t").trimSpaces().map({CChar($0)}), byteBufferView(string: "f i  rs  t").map({CChar($0)}))
-        XCTAssertEqual(byteBufferView(string: "   \t \t ").trimSpaces().map({CChar($0)}),
-            byteBufferView(string: "").map({CChar($0)}))
+        XCTAssertEqual(
+            byteBufferView(string: "   first").trimSpaces().map({ CChar($0) }),
+            byteBufferView(string: "first").map({ CChar($0) })
+        )
+        XCTAssertEqual(
+            byteBufferView(string: "   first  ").trimSpaces().map({ CChar($0) }),
+            byteBufferView(string: "first").map({ CChar($0) })
+        )
+        XCTAssertEqual(
+            byteBufferView(string: "first  ").trimSpaces().map({ CChar($0) }),
+            byteBufferView(string: "first").map({ CChar($0) })
+        )
+        XCTAssertEqual(
+            byteBufferView(string: "first").trimSpaces().map({ CChar($0) }),
+            byteBufferView(string: "first").map({ CChar($0) })
+        )
+        XCTAssertEqual(
+            byteBufferView(string: " \t\t  fi  rst").trimSpaces().map({ CChar($0) }),
+            byteBufferView(string: "fi  rst").map({ CChar($0) })
+        )
+        XCTAssertEqual(
+            byteBufferView(string: "   firs  t \t ").trimSpaces().map({ CChar($0) }),
+            byteBufferView(string: "firs  t").map({ CChar($0) })
+        )
+        XCTAssertEqual(
+            byteBufferView(string: "f\t  irst  ").trimSpaces().map({ CChar($0) }),
+            byteBufferView(string: "f\t  irst").map({ CChar($0) })
+        )
+        XCTAssertEqual(
+            byteBufferView(string: "f i  rs  t").trimSpaces().map({ CChar($0) }),
+            byteBufferView(string: "f i  rs  t").map({ CChar($0) })
+        )
+        XCTAssertEqual(
+            byteBufferView(string: "   \t \t ").trimSpaces().map({ CChar($0) }),
+            byteBufferView(string: "").map({ CChar($0) })
+        )
     }
 
 }

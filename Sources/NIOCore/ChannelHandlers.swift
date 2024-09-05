@@ -15,7 +15,6 @@
 //
 //
 
-
 /// A `ChannelHandler` that implements a backoff for a `ServerChannel` when accept produces an `IOError`.
 /// These errors are often recoverable by reducing the rate at which we call accept.
 public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelHandler {
@@ -28,7 +27,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
 
     /// Default implementation used as `backoffProvider` which delays accept by 1 second.
     public static func defaultBackoffProvider(error: IOError) -> TimeAmount? {
-        return .seconds(1)
+        .seconds(1)
     }
 
     /// Create a new instance
@@ -92,7 +91,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     }
 
     private func scheduleRead(at: NIODeadline, context: ChannelHandlerContext) {
-        self.scheduledRead = context.eventLoop.scheduleTask(deadline: at) {
+        self.scheduledRead = context.eventLoop.assumeIsolated().scheduleTask(deadline: at) {
             self.doRead(context)
         }
     }
@@ -105,15 +104,11 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension AcceptBackoffHandler: Sendable {}
-#endif
 
-/**
- ChannelHandler implementation which enforces back-pressure by stopping to read from the remote peer when it cannot write back fast enough.
- It will start reading again once pending data was written.
-*/
+/// ChannelHandler implementation which enforces back-pressure by stopping to read from the remote peer when it cannot write back fast enough.
+/// It will start reading again once pending data was written.
 public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHandler {
     public typealias OutboundIn = NIOAny
     public typealias InboundIn = ByteBuffer
@@ -123,7 +118,7 @@ public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHa
     private var pendingRead = false
     private var writable: Bool = true
 
-    public init() { }
+    public init() {}
 
     public func read(context: ChannelHandlerContext) {
         if writable {
@@ -157,10 +152,8 @@ public final class BackPressureHandler: ChannelDuplexHandler, RemovableChannelHa
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension BackPressureHandler: Sendable {}
-#endif
 
 /// Triggers an IdleStateEvent when a Channel has not performed read, write, or both operation for a while.
 public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandler {
@@ -222,7 +215,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     }
 
     public func channelReadComplete(context: ChannelHandlerContext) {
-        if (readTimeout != nil  || allTimeout != nil) && reading {
+        if (readTimeout != nil || allTimeout != nil) && reading {
             lastReadTime = .now()
             reading = false
         }
@@ -236,7 +229,7 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
         }
 
         let writePromise = promise ?? context.eventLoop.makePromise()
-        writePromise.futureResult.whenComplete { (_: Result<Void, Error>) in
+        writePromise.futureResult.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
             self.lastWriteCompleteTime = .now()
         }
         context.write(data, promise: writePromise)
@@ -250,32 +243,41 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     }
 
     private func makeReadTimeoutTask(_ context: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
-        return {
-            guard self.shouldReschedule(context) else  {
+        {
+            guard self.shouldReschedule(context) else {
                 return
             }
 
             if self.reading {
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeReadTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(
+                    in: timeout,
+                    self.makeReadTimeoutTask(context, timeout)
+                )
                 return
             }
 
             let diff = .now() - self.lastReadTime
             if diff >= timeout {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeReadTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(
+                    in: timeout,
+                    self.makeReadTimeoutTask(context, timeout)
+                )
 
                 context.fireUserInboundEventTriggered(IdleStateEvent.read)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(deadline: self.lastReadTime + timeout, self.makeReadTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(
+                    deadline: self.lastReadTime + timeout,
+                    self.makeReadTimeoutTask(context, timeout)
+                )
             }
         }
     }
 
     private func makeWriteTimeoutTask(_ context: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
-        return {
-            guard self.shouldReschedule(context) else  {
+        {
+            guard self.shouldReschedule(context) else {
                 return
             }
 
@@ -284,24 +286,33 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
 
             if diff >= timeout {
                 // Writer is idle - set a new timeout and notify the callback.
-                self.scheduledWriterTask = context.eventLoop.scheduleTask(in: timeout, self.makeWriteTimeoutTask(context, timeout))
+                self.scheduledWriterTask = context.eventLoop.assumeIsolated().scheduleTask(
+                    in: timeout,
+                    self.makeWriteTimeoutTask(context, timeout)
+                )
 
                 context.fireUserInboundEventTriggered(IdleStateEvent.write)
             } else {
                 // Write occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledWriterTask = context.eventLoop.scheduleTask(deadline: self.lastWriteCompleteTime + timeout, self.makeWriteTimeoutTask(context, timeout))
+                self.scheduledWriterTask = context.eventLoop.assumeIsolated().scheduleTask(
+                    deadline: self.lastWriteCompleteTime + timeout,
+                    self.makeWriteTimeoutTask(context, timeout)
+                )
             }
         }
     }
 
     private func makeAllTimeoutTask(_ context: ChannelHandlerContext, _ timeout: TimeAmount) -> (() -> Void) {
-        return {
-            guard self.shouldReschedule(context) else  {
+        {
+            guard self.shouldReschedule(context) else {
                 return
             }
 
             if self.reading {
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(
+                    in: timeout,
+                    self.makeAllTimeoutTask(context, timeout)
+                )
                 return
             }
             let lastRead = self.lastReadTime
@@ -311,19 +322,29 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
             let diff = .now() - latestLast
             if diff >= timeout {
                 // Reader is idle - set a new timeout and trigger an event through the pipeline
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(in: timeout, self.makeAllTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(
+                    in: timeout,
+                    self.makeAllTimeoutTask(context, timeout)
+                )
 
                 context.fireUserInboundEventTriggered(IdleStateEvent.all)
             } else {
                 // Read occurred before the timeout - set a new timeout with shorter delay.
-                self.scheduledReaderTask = context.eventLoop.scheduleTask(deadline: latestLast + timeout, self.makeAllTimeoutTask(context, timeout))
+                self.scheduledReaderTask = context.eventLoop.assumeIsolated().scheduleTask(
+                    deadline: latestLast + timeout,
+                    self.makeAllTimeoutTask(context, timeout)
+                )
             }
         }
     }
 
-    private func schedule(_ context: ChannelHandlerContext, _ amount: TimeAmount?, _ body: @escaping (ChannelHandlerContext, TimeAmount) -> (() -> Void) ) -> Scheduled<Void>? {
+    private func schedule(
+        _ context: ChannelHandlerContext,
+        _ amount: TimeAmount?,
+        _ body: @escaping (ChannelHandlerContext, TimeAmount) -> (() -> Void)
+    ) -> Scheduled<Void>? {
         if let timeout = amount {
-            return context.eventLoop.scheduleTask(in: timeout, body(context, timeout))
+            return context.eventLoop.assumeIsolated().scheduleTask(in: timeout, body(context, timeout))
         }
         return nil
     }
@@ -347,7 +368,5 @@ public final class IdleStateHandler: ChannelDuplexHandler, RemovableChannelHandl
     }
 }
 
-#if swift(>=5.7)
 @available(*, unavailable)
 extension IdleStateHandler: Sendable {}
-#endif

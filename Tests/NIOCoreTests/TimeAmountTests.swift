@@ -29,7 +29,7 @@ class TimeAmountTests: XCTestCase {
         let amounts: Set<TimeAmount> = [.seconds(1), .milliseconds(4), .seconds(1)]
         XCTAssertEqual(amounts, [.seconds(1), .milliseconds(4)])
     }
-    
+
     func testTimeAmountDoesAddTime() {
         var lhs = TimeAmount.nanoseconds(0)
         let rhs = TimeAmount.nanoseconds(5)
@@ -42,5 +42,23 @@ class TimeAmountTests: XCTestCase {
         let rhs = TimeAmount.nanoseconds(5)
         lhs -= rhs
         XCTAssertEqual(lhs, .nanoseconds(0))
+    }
+
+    func testTimeAmountCappedOverflow() {
+        let overflowCap = TimeAmount.nanoseconds(Int64.max)
+        XCTAssertEqual(TimeAmount.microseconds(.max), overflowCap)
+        XCTAssertEqual(TimeAmount.milliseconds(.max), overflowCap)
+        XCTAssertEqual(TimeAmount.seconds(.max), overflowCap)
+        XCTAssertEqual(TimeAmount.minutes(.max), overflowCap)
+        XCTAssertEqual(TimeAmount.hours(.max), overflowCap)
+    }
+
+    func testTimeAmountCappedUnderflow() {
+        let underflowCap = TimeAmount.nanoseconds(.min)
+        XCTAssertEqual(TimeAmount.microseconds(.min), underflowCap)
+        XCTAssertEqual(TimeAmount.milliseconds(.min), underflowCap)
+        XCTAssertEqual(TimeAmount.seconds(.min), underflowCap)
+        XCTAssertEqual(TimeAmount.minutes(.min), underflowCap)
+        XCTAssertEqual(TimeAmount.hours(.min), underflowCap)
     }
 }

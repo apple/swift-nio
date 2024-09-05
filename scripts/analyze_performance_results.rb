@@ -79,9 +79,9 @@ end
 def print_results_markdown(results)
   columns = ["min", "max", "mean", "std"]
   puts "| name | #{columns.join(" | ")} |"
-  puts "|#{Array.new(columns.size+1, '--').join("|")}|"
+  puts "|#{Array.new(columns.size+1, '---').join("|")}|"
   results.keys.each do |key|
-    print "| #{key}"
+    print "| `#{key}`"
     columns.each do |column|
       print " | #{results[key][column]}"
     end
@@ -111,9 +111,9 @@ end
 
 def print_comparison_markdown(results)
   puts "| name | current | previous | winner | diff |"
-  puts "|#{Array.new(5, '--').join("|")}|"
+  puts "|#{Array.new(5, '---').join("|")}|"
   results.keys.each do |key|
-    puts "| #{key} | #{results[key]["current"][::METRIC]} | #{results[key]["previous"][::METRIC]} | #{results[key]["winner"]} | #{results[key]["diff"]}% |"
+    puts "| `#{key}` | #{results[key]["current"][::METRIC]} | #{results[key]["previous"][::METRIC]} | #{results[key]["winner"]} | #{results[key]["diff"]}% |"
   end
 end
 
