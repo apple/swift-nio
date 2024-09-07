@@ -1955,9 +1955,9 @@ class ByteBufferTest: XCTestCase {
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1"))
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1       "))
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("🤓"))
-        // The first byte (68 = "h") is valid, the method throws and the valid byte IS written to the ByteBuffer
+        // The first byte (68 = "h") is valid, the method throws and the valid byte IS NOT written to the ByteBuffer
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("68 1"))
-        XCTAssertEqual(ByteBuffer(string: "hello world\nhello world\nh"), buffer)
+        XCTAssertEqual(ByteBuffer(string: "hello world\nhello world\n"), buffer)
     }
 
     func testHexInitialiser() throws {

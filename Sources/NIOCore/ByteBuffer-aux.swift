@@ -101,9 +101,15 @@ extension ByteBuffer {
     public mutating func writePlainHexEncodedBytes(_ plainHexEncodedBytes: String) throws -> Int {
         var slice = plainHexEncodedBytes.utf8[...]
         var written = 0
+        var bytesToWrite: [UInt8] = []
 
+        // Single pass to ensure string is a valid representation of hex bytes
         while let nextByte = try slice.popNextHexByte() {
-            written += self.writeInteger(nextByte)
+            bytesToWrite.append(nextByte)
+        }
+
+        for byte in bytesToWrite {
+            written += self.writeInteger(byte)
         }
 
         return written
