@@ -16,7 +16,7 @@ import NIOCore
 import XCTest
 
 /// A strategy which just writes integers as UInt8. Enforces the integer must be a particular number to aid testing. Forbids reads
-struct UInt8WritingTestStrategy: BinaryIntegerEncodingStrategy {
+struct UInt8WritingTestStrategy: NIOBinaryIntegerEncodingStrategy {
     let expectedWrite: Int
 
     func readInteger<IntegerType: FixedWidthInteger>(
@@ -32,14 +32,14 @@ struct UInt8WritingTestStrategy: BinaryIntegerEncodingStrategy {
         return buffer.writeInteger(UInt8(integer))
     }
 
-    func writeIntegerWithReservedSpace(_ integer: Int, reservedSpace: Int, to buffer: inout ByteBuffer) -> Int {
+    func writeIntegerWithReservedCapacity(_ integer: Int, reservedCapacity: Int, to buffer: inout ByteBuffer) -> Int {
         XCTFail("This should not be called")
         return 1
     }
 }
 
 // A which reads a single UInt8 for the length. Forbids writes
-struct UInt8ReadingTestStrategy: BinaryIntegerEncodingStrategy {
+struct UInt8ReadingTestStrategy: NIOBinaryIntegerEncodingStrategy {
     let expectedRead: UInt8
 
     func readInteger<IntegerType: FixedWidthInteger>(
@@ -56,19 +56,19 @@ struct UInt8ReadingTestStrategy: BinaryIntegerEncodingStrategy {
         return 1
     }
 
-    func writeIntegerWithReservedSpace(_ integer: Int, reservedSpace: Int, to buffer: inout ByteBuffer) -> Int {
+    func writeIntegerWithReservedCapacity(_ integer: Int, reservedCapacity: Int, to buffer: inout ByteBuffer) -> Int {
         XCTFail("This should not be called")
         return 1
     }
 
-    var reservedSpaceForInteger: Int { 1 }
+    var reservedCapacityForInteger: Int { 1 }
 }
 
 final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
     // MARK: - simple readEncodedInteger and writeEncodedInteger tests
 
     func testReadWriteEncodedInteger() {
-        struct TestStrategy: BinaryIntegerEncodingStrategy {
+        struct TestStrategy: NIOBinaryIntegerEncodingStrategy {
             func readInteger<IntegerType: FixedWidthInteger>(
                 as: IntegerType.Type,
                 from buffer: inout ByteBuffer
@@ -84,7 +84,11 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedSpace(_ integer: Int, reservedSpace: Int, to buffer: inout ByteBuffer) -> Int {
+            func writeIntegerWithReservedCapacity(
+                _ integer: Int,
+                reservedCapacity: Int,
+                to buffer: inout ByteBuffer
+            ) -> Int {
                 XCTFail("This should not be called")
                 return 1
             }
@@ -98,8 +102,8 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
 
     // MARK: - writeLengthPrefixed tests
 
-    func testWriteLengthPrefixedFitsInReservedSpace() {
-        struct TestStrategy: BinaryIntegerEncodingStrategy {
+    func testWriteLengthPrefixedFitsInReservedCapacity() {
+        struct TestStrategy: NIOBinaryIntegerEncodingStrategy {
             func readInteger<IntegerType: FixedWidthInteger>(
                 as: IntegerType.Type,
                 from buffer: inout ByteBuffer
@@ -116,13 +120,17 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedSpace(_ integer: Int, reservedSpace: Int, to buffer: inout ByteBuffer) -> Int {
+            func writeIntegerWithReservedCapacity(
+                _ integer: Int,
+                reservedCapacity: Int,
+                to buffer: inout ByteBuffer
+            ) -> Int {
                 XCTAssertEqual(Int(integer), 4)
-                XCTAssertEqual(reservedSpace, 1)
+                XCTAssertEqual(reservedCapacity, 1)
                 return buffer.writeInteger(UInt8(integer))
             }
 
-            var reservedSpaceForInteger: Int { 1 }
+            var reservedCapacityForInteger: Int { 1 }
         }
 
         var buffer = ByteBuffer()
@@ -135,8 +143,8 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteLengthPrefixedNeedsMoreThanReservedSpace() {
-        struct TestStrategy: BinaryIntegerEncodingStrategy {
+    func testWriteLengthPrefixedNeedsMoreThanReservedCapacity() {
+        struct TestStrategy: NIOBinaryIntegerEncodingStrategy {
             func readInteger<IntegerType: FixedWidthInteger>(
                 as: IntegerType.Type,
                 from buffer: inout ByteBuffer
@@ -153,14 +161,18 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedSpace(_ integer: Int, reservedSpace: Int, to buffer: inout ByteBuffer) -> Int {
+            func writeIntegerWithReservedCapacity(
+                _ integer: Int,
+                reservedCapacity: Int,
+                to buffer: inout ByteBuffer
+            ) -> Int {
                 XCTAssertEqual(Int(integer), 4)
-                XCTAssertEqual(reservedSpace, 1)
+                XCTAssertEqual(reservedCapacity, 1)
                 // We use 8 bytes, but only one was reserved
                 return buffer.writeInteger(UInt64(integer))
             }
 
-            var reservedSpaceForInteger: Int { 1 }
+            var reservedCapacityForInteger: Int { 1 }
         }
 
         var buffer = ByteBuffer()
@@ -174,8 +186,8 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteLengthPrefixedNeedsLessThanReservedSpace() {
-        struct TestStrategy: BinaryIntegerEncodingStrategy {
+    func testWriteLengthPrefixedNeedsLessThanReservedCapacity() {
+        struct TestStrategy: NIOBinaryIntegerEncodingStrategy {
             func readInteger<IntegerType: FixedWidthInteger>(
                 as: IntegerType.Type,
                 from buffer: inout ByteBuffer
@@ -192,13 +204,17 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedSpace(_ integer: Int, reservedSpace: Int, to buffer: inout ByteBuffer) -> Int {
+            func writeIntegerWithReservedCapacity(
+                _ integer: Int,
+                reservedCapacity: Int,
+                to buffer: inout ByteBuffer
+            ) -> Int {
                 XCTAssertEqual(Int(integer), 4)
-                XCTAssertEqual(reservedSpace, 8)
+                XCTAssertEqual(reservedCapacity, 8)
                 return buffer.writeInteger(UInt8(integer))
             }
 
-            var reservedSpaceForInteger: Int { 8 }
+            var reservedCapacityForInteger: Int { 8 }
         }
 
         var buffer = ByteBuffer()
@@ -215,7 +231,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
 
     func testWriteLengthPrefixedThrowing() {
         // A strategy which fails the test if anything is called
-        struct NeverCallStrategy: BinaryIntegerEncodingStrategy {
+        struct NeverCallStrategy: NIOBinaryIntegerEncodingStrategy {
             func readInteger<IntegerType: FixedWidthInteger>(
                 as: IntegerType.Type,
                 from buffer: inout ByteBuffer
@@ -232,12 +248,16 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedSpace(_ integer: Int, reservedSpace: Int, to buffer: inout ByteBuffer) -> Int {
+            func writeIntegerWithReservedCapacity(
+                _ integer: Int,
+                reservedCapacity: Int,
+                to buffer: inout ByteBuffer
+            ) -> Int {
                 XCTFail("This should not be called")
                 return 1
             }
 
-            var reservedSpaceForInteger: Int { 1 }
+            var reservedCapacityForInteger: Int { 1 }
         }
 
         struct TestError: Error {}

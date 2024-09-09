@@ -13,19 +13,19 @@
 //===----------------------------------------------------------------------===//
 
 extension ByteBuffer {
-    public struct QUICBinaryEncodingStrategy: BinaryIntegerEncodingStrategy {
-        public var reservedSpace: Int
+    public struct QUICBinaryEncodingStrategy: NIOBinaryIntegerEncodingStrategy {
+        public var reservedCapacityForInteger: Int
 
         @inlinable
-        public init(reservedSpace: Int) {
+        public init(reservedCapacity: Int) {
             precondition(
-                reservedSpace == 0
-                    || reservedSpace == 1
-                    || reservedSpace == 2
-                    || reservedSpace == 4
-                    || reservedSpace == 8
+                reservedCapacity == 0
+                    || reservedCapacity == 1
+                    || reservedCapacity == 2
+                    || reservedCapacity == 4
+                    || reservedCapacity == 8
             )
-            self.reservedSpace = reservedSpace
+            self.reservedCapacityForInteger = reservedCapacity
         }
 
         @inlinable
@@ -83,25 +83,22 @@ extension ByteBuffer {
             _ integer: IntegerType,
             to buffer: inout ByteBuffer
         ) -> Int {
-            self.writeIntegerWithReservedSpace(integer, reservedSpace: 0, to: &buffer)
+            self.writeIntegerWithReservedCapacity(integer, reservedCapacity: 0, to: &buffer)
         }
 
         @inlinable
-        public var reservedSpaceForInteger: Int { 4 }
-
-        @inlinable
-        public func writeIntegerWithReservedSpace<IntegerType: FixedWidthInteger>(
+        public func writeIntegerWithReservedCapacity<IntegerType: FixedWidthInteger>(
             _ integer: IntegerType,
-            reservedSpace: Int,
+            reservedCapacity: Int,
             to buffer: inout ByteBuffer
         ) -> Int {
-            if reservedSpace > 8 {
+            if reservedCapacity > 8 {
                 fatalError("Reserved space for QUIC encoded integer must be at most 8 bytes")
             }
             // Use more space than necessary in order to fill the reserved space
             // This will avoid a memmove
             // If the needed space is more than the reserved, we can't avoid the move
-            switch max(reservedSpace, self.bytesNeededForInteger(integer)) {
+            switch max(reservedCapacity, self.bytesNeededForInteger(integer)) {
             case 1:
                 // Easy, store the value. The top two bits are 0 so we don't need to do any masking.
                 return buffer.writeInteger(UInt8(truncatingIfNeeded: integer))
@@ -124,12 +121,12 @@ extension ByteBuffer {
     }
 }
 
-extension BinaryIntegerEncodingStrategy where Self == ByteBuffer.QUICBinaryEncodingStrategy {
+extension NIOBinaryIntegerEncodingStrategy where Self == ByteBuffer.QUICBinaryEncodingStrategy {
     @inlinable
-    public static func quic(reservedSpace: Int) -> ByteBuffer.QUICBinaryEncodingStrategy {
-        ByteBuffer.QUICBinaryEncodingStrategy(reservedSpace: reservedSpace)
+    public static func quic(reservedCapacity: Int) -> ByteBuffer.QUICBinaryEncodingStrategy {
+        ByteBuffer.QUICBinaryEncodingStrategy(reservedCapacity: reservedCapacity)
     }
 
     @inlinable
-    public static var quic: ByteBuffer.QUICBinaryEncodingStrategy { .quic(reservedSpace: 4) }
+    public static var quic: ByteBuffer.QUICBinaryEncodingStrategy { .quic(reservedCapacity: 4) }
 }
