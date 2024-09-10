@@ -7,6 +7,10 @@ on:
         type: string
         description: "The name of the workflow used for the concurrency group."
         required: true
+      cache_key_prefix:
+        type: string
+        description: "The prefix for the cache key. If empty, caching is disabled"
+        default: ''
       matrix_linux_command:
         type: string
         description: "The command of the current Swift version linux matrix job to execute."
@@ -71,7 +75,7 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
   cancel-in-progress: true
- 
+
 jobs:
   linux:
     name: Linux (${{ matrix.swift.swift_version }})
@@ -108,6 +112,16 @@ jobs:
       if: ${{ matrix.swift.enabled }}
     # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+
+    - name: Restore .build
+      if: ${{ matrix.swift.enabled && (inputs.cache_key_prefix != '') }}
+      id: "restore-cache"
+      uses: actions/cache/restore@v4
+      with:
+        path: .build
+        key: "${{ inputs.cache_key_prefix }}${{ github.event.repository.name }}-build-${{ matrix.swift.swift_version }}-${{ runner.os }}-${{ (github.event.pull_request.base.sha != null) && github.event.pull_request.base.sha || github.event.after }}"
+        restore-keys: "${{ inputs.cache_key_prefix }}${{ github.event.repository.name }}-build-${{ matrix.swift.swift_version }}-${{ runner.os }}"
+
     - name: Run matrix job
       if: ${{ matrix.swift.enabled }}
       env:
@@ -121,3 +135,10 @@ jobs:
       run: |
         apt-get -qq update && apt-get -qq -y install curl
         curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
+
+    - name: Cache .build
+      if: ${{ matrix.swift.enabled && (inputs.cache_key_prefix != '') && (steps.restore-cache.outputs.cache-hit != 'true') }}
+      uses: actions/cache/save@v4
+      with:
+        path: .build
+        key: "${{ inputs.cache_key_prefix }}${{ github.event.repository.name }}-build-${{ matrix.swift.swift_version }}-${{ runner.os }}-${{ (github.event.pull_request.base.sha != null) && github.event.pull_request.base.sha || github.event.after }}"
