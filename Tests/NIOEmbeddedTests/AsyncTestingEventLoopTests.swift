@@ -507,7 +507,9 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
             try await group.waitForAll()
         }
 
-        XCTAssertGreaterThan(tasksRun.load(ordering: .acquiring), 1)
+        try await eventLoop.executeInContext {
+            XCTAssertGreaterThan(tasksRun.load(ordering: .acquiring), 1)
+        }
     }
 
     func testShutdownCancelsRemainingScheduledTasks() async {

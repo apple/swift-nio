@@ -1262,7 +1262,10 @@ final class FileHandleTests: XCTestCase {
             // to avoid timing flakiness. Both the last accessed and last modification times should
             // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
-            XCTAssertEqual(Double(actualLastAccessTime.seconds), estimatedCurrentTimeInSeconds, accuracy: 1)
+            let actualLastAccessTimeNanosecondsInSeconds = Double(actualLastAccessTime.nanoseconds) / 1e+9
+            let actualLastAccessTimeInSeconds =
+                Double(actualLastAccessTime.seconds) + actualLastAccessTimeNanosecondsInSeconds
+            XCTAssertEqual(actualLastAccessTimeInSeconds, estimatedCurrentTimeInSeconds, accuracy: 1)
             actualLastDataModificationTime = try await handle.info().lastDataModificationTime
             XCTAssertEqual(actualLastDataModificationTime.seconds, actualLastAccessTime.seconds)
         }
@@ -1290,7 +1293,10 @@ final class FileHandleTests: XCTestCase {
             // to avoid timing flakiness. Both the last accessed and last modification times should
             // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
-            XCTAssertEqual(Double(actualLastAccessTime.seconds), estimatedCurrentTimeInSeconds, accuracy: 1)
+            let actualLastAccessTimeNanosecondsInSeconds = Double(actualLastAccessTime.nanoseconds) / 1e+9
+            let actualLastAccessTimeInSeconds =
+                Double(actualLastAccessTime.seconds) + actualLastAccessTimeNanosecondsInSeconds
+            XCTAssertEqual(actualLastAccessTimeInSeconds, estimatedCurrentTimeInSeconds, accuracy: 1)
             actualLastDataModificationTime = try await handle.info().lastDataModificationTime
             XCTAssertEqual(actualLastDataModificationTime.seconds, actualLastAccessTime.seconds)
         }

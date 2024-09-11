@@ -973,18 +973,8 @@ extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
         "[\(self.hexDump(format: .compact(maxBytes: 64)))](\(self.readableBytes) bytes)"
     }
 
-    /// A `String` describing this `ByteBuffer` including length and the bytes it contains (partially).
-    ///
-    /// For a `ByteBuffer` initialised with `hello world` the description would be the following:
-    ///
-    ///     [68656c6c6f20776f726c64](11 bytes)
-    ///
-    /// Buffers larger that 64 bytes will get truncated when printing out.
-    /// The format of the description is not API.
-    ///
-    /// - returns: A description of this `ByteBuffer`.
     public var debugDescription: String {
-        "[\(self.hexDump(format: .compact(maxBytes: 64)))](\(self.readableBytes) bytes)"
+        String(describing: self)
     }
 }
 
