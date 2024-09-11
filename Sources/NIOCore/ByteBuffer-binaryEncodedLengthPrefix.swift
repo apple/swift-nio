@@ -44,22 +44,29 @@ public protocol NIOBinaryIntegerEncodingStrategy {
     /// Write an integer to a buffer. Move the writer index to after the written integer.
     /// - Parameters:
     ///    - integer: The type of the integer to write.
-    ///    - to: The buffer to write to.
+    ///    - buffer: The buffer to write to.
+    /// - Returns: The number of bytes used to write the integer.
     func writeInteger<IntegerType: FixedWidthInteger>(
         _ integer: IntegerType,
         to buffer: inout ByteBuffer
     ) -> Int
 
-    /// When writing an integer using this strategy, how many bytes we should reserve.
-    /// If the actual bytes used by the write function is more or less than this, it will be necessary to shuffle bytes.
+    /// An estimate of the bytes required to write integers using ths strategy.
+    /// Callers may use this to reserve bytes before writing the integer.
+    /// If the actual bytes used by the write function is more or less than this, it may be necessary to shuffle bytes.
     /// Therefore, an accurate prediction here will improve performance.
-    var reservedCapacityForInteger: Int { get }
+    var requiredBytesHint: Int { get }
 
-    /// Write an integer to a buffer. The writer index should be moved accordingly.
-    /// This function takes  a `reservedCapacity` parameter which is the number of bytes we already reserved for writing this integer.
-    /// If you use write more or less than this many bytes, we wll need to move bytes around to make that possible.
-    /// Therefore, you may decide to encode differently to use more bytes than you actually would need, if it is possible for you to do so.
-    /// That way, you waste the reserved bytes, but improve writing performance.
+    /// Write an integer to a buffer. Move the writer index to after the written integer.
+    /// Call this function if you have already reserved some capacity for an integer to be written.
+    /// Implementors should consider using a less efficient encoding, if possible,to fit exactly within the reserved capacity.
+    /// Otherwise, callers may need to shift bytes to reconcile the difference.
+    /// It is up to the implementor to find the balance between performance and size.
+    /// - Parameters:
+    ///   - integer: The integer to write
+    ///   - reservedCapacity: The capacity already reserved for writing this integer
+    ///   - buffer: The buffer to write into.
+    /// - Returns: The number of bytes used to write the integer.
     func writeIntegerWithReservedCapacity(
         _ integer: Int,
         reservedCapacity: Int,
@@ -69,7 +76,7 @@ public protocol NIOBinaryIntegerEncodingStrategy {
 
 extension NIOBinaryIntegerEncodingStrategy {
     @inlinable
-    public var reservedCapacityForInteger: Int { 1 }
+    public var requiredBytesHint: Int { 1 }
 
     @inlinable
     public func writeIntegerWithReservedCapacity<IntegerType: FixedWidthInteger>(
@@ -104,7 +111,8 @@ extension ByteBuffer {
         strategy.writeInteger(value, to: &self)
     }
 
-    /// Prefixes a message written by `writeMessage` with the number of bytes written using `strategy`.
+    /// Prefixes bytes written by `writeData` with the number of bytes written.
+    /// The number of bytes written is encoded usng `strategy`
     ///
     /// - Note: This function works by reserving the number of bytes suggested by `strategy` before the data.
     /// It then writes the data, and then goes back to write the length.
@@ -113,45 +121,45 @@ extension ByteBuffer {
     ///
     /// - Parameters:
     ///     - strategy: The strategy to use for encoding the length.
-    ///     - writeMessage: A closure that takes a buffer, writes a message to it and returns the number of bytes written.
-    /// - Returns: Number of total bytes written. This is the length of the written message + the number of bytes used to write the length before it.
+    ///     - writeData: A closure that takes a buffer, writes some data to it, and returns the number of bytes written.
+    /// - Returns: Number of total bytes written. This is the length of the written data + the number of bytes used to write the length before it.
     @discardableResult
     @inlinable
     public mutating func writeLengthPrefixed<Strategy: NIOBinaryIntegerEncodingStrategy>(
         strategy: Strategy,
-        writeMessage: (inout ByteBuffer) throws -> Int
+        writeData: (_ buffer: inout ByteBuffer) throws -> Int
     ) rethrows -> Int {
         /// The index at which we write the length
         let lengthPrefixIndex = self.writerIndex
         /// The space which we reserve for writing the length
-        let reservedCapacity = strategy.reservedCapacityForInteger
+        let reservedCapacity = strategy.requiredBytesHint
         self.writeRepeatingByte(0, count: reservedCapacity)
 
-        /// The index at which we start writing the message originally. We may later move the message if the reserved space for the length wasn't right
-        let originalMessageStartIndex = self.writerIndex
-        /// The length of the message written
-        let messageLength: Int
+        /// The index at which we start writing the data originally. We may later move the data if the reserved space for the length wasn't right
+        let originalDataStartIndex = self.writerIndex
+        /// The length of the data written
+        let dataLength: Int
         do {
-            messageLength = try writeMessage(&self)
+            dataLength = try writeData(&self)
         } catch {
             // Clean up our write so that it as if we never did it.
             self.moveWriterIndex(to: lengthPrefixIndex)
             throw error
         }
-        /// The index at the end of the written message originally. We may later move the message if the reserved space for the length wasn't right
-        let originalMessageEndIndex = self.writerIndex
+        /// The index at the end of the written data originally. We may later move the data if the reserved space for the length wasn't right
+        let originalDataEndIndex = self.writerIndex
 
         // Quick check to make sure the user didn't do something silly
         precondition(
-            originalMessageEndIndex - originalMessageStartIndex == messageLength,
-            "writeMessage returned \(messageLength) bytes, but actually \(originalMessageEndIndex - originalMessageStartIndex) bytes were written. They should be the same"
+            originalDataEndIndex - originalDataStartIndex == dataLength,
+            "writeData returned \(dataLength) bytes, but actually \(originalDataEndIndex - originalDataStartIndex) bytes were written. They must be the same."
         )
 
-        // We write the length after the message to begin with. We will move it later
+        // We write the length after the data to begin with. We will move it later
 
         /// The actual number of bytes used to write the length written. The user may write more or fewer bytes than what we reserved
         let actualIntegerLength = strategy.writeIntegerWithReservedCapacity(
-            messageLength,
+            dataLength,
             reservedCapacity: reservedCapacity,
             to: &self
         )
@@ -159,19 +167,19 @@ extension ByteBuffer {
         switch actualIntegerLength {
         case reservedCapacity:
             // Good, exact match, swap the values and then "delete" the trailing bytes by moving the index back
-            self._moveBytes(from: originalMessageEndIndex, to: lengthPrefixIndex, size: actualIntegerLength)
-            self.moveWriterIndex(to: originalMessageEndIndex)
+            self._moveBytes(from: originalDataEndIndex, to: lengthPrefixIndex, size: actualIntegerLength)
+            self.moveWriterIndex(to: originalDataEndIndex)
         case ..<reservedCapacity:
             // We wrote fewer bytes. We now have to move the length bytes from the end, and
             // _then_ shrink the rest of the buffer onto it.
-            self._moveBytes(from: originalMessageEndIndex, to: lengthPrefixIndex, size: actualIntegerLength)
-            let newMessageStartIndex = lengthPrefixIndex + actualIntegerLength
+            self._moveBytes(from: originalDataEndIndex, to: lengthPrefixIndex, size: actualIntegerLength)
+            let newDataStartIndex = lengthPrefixIndex + actualIntegerLength
             self._moveBytes(
-                from: originalMessageStartIndex,
-                to: newMessageStartIndex,
-                size: messageLength
+                from: originalDataStartIndex,
+                to: newDataStartIndex,
+                size: dataLength
             )
-            self.moveWriterIndex(to: newMessageStartIndex + messageLength)
+            self.moveWriterIndex(to: newDataStartIndex + dataLength)
         case reservedCapacity...:
             // We wrote more bytes. We now have to create enough space. Once we do, we have the same
             // implementation as the matching case.
@@ -179,10 +187,10 @@ extension ByteBuffer {
             self._createSpace(before: lengthPrefixIndex, requiredSpace: extraSpaceNeeded)
 
             // Clean up the indices.
-            let newMessageEndIndex = originalMessageEndIndex + extraSpaceNeeded
-            // We wrote the length after the message, so we have to move those bytes to the space at the front
-            self._moveBytes(from: newMessageEndIndex, to: lengthPrefixIndex, size: actualIntegerLength)
-            self.moveWriterIndex(to: newMessageEndIndex)
+            let newDataEndIndex = originalDataEndIndex + extraSpaceNeeded
+            // We wrote the length after the data, so we have to move those bytes to the space at the front
+            self._moveBytes(from: newDataEndIndex, to: lengthPrefixIndex, size: actualIntegerLength)
+            self.moveWriterIndex(to: newDataEndIndex)
         default:
             fatalError("Unreachable")
         }
@@ -194,6 +202,7 @@ extension ByteBuffer {
     /// Reads a slice which is prefixed with a length. The length will be read using `strategy`, and then that many bytes will be read to create a slice.
     /// - Returns: The slice, if there are enough bytes to read it fully. In this case, the readerIndex will move to after the slice.
     /// If there are not enough bytes to read the full slice, the readerIndex will stay unchanged.
+    @inlinable
     public mutating func readLengthPrefixedSlice<Strategy: NIOBinaryIntegerEncodingStrategy>(
         _ strategy: Strategy
     ) -> ByteBuffer? {
@@ -216,6 +225,7 @@ extension ByteBuffer {
     ///   - strategy: The encoding strategy to use.
     /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the buffer itself.
     @discardableResult
+    @inlinable
     public mutating func writeLengthPrefixedBuffer<
         Strategy: NIOBinaryIntegerEncodingStrategy
     >(
@@ -234,6 +244,7 @@ extension ByteBuffer {
     ///  - strategy: The encoding strategy to use.
     /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the string itself.
     @discardableResult
+    @inlinable
     public mutating func writeLengthPrefixedString<
         Strategy: NIOBinaryIntegerEncodingStrategy
     >(
@@ -253,6 +264,7 @@ extension ByteBuffer {
     ///  - bytes: The bytes to be written.
     ///  - strategy: The encoding strategy to use.
     /// - Returns: The total bytes written. This is the bytes needed to write the length, plus the length of the bytes themselves.
+    @discardableResult
     @inlinable
     public mutating func writeLengthPrefixedBytes<
         Bytes: Sequence,
@@ -290,13 +302,14 @@ extension ByteBuffer {
 
         // Add the required number of bytes to the end first
         self.writeRepeatingByte(0, count: requiredSpace)
-        // Move the message forward by that many bytes, to make space at the front
+        // Move the data forward by that many bytes, to make space at the front
         self.withVeryUnsafeMutableBytes { pointer in
             _ = memmove(
-                // The new position is forward from where the user written message currently begins
+                // Destination: This is forward from the index where we want to make space
                 pointer.baseAddress!.advanced(by: index + requiredSpace),
-                // This is the position where the user written message currently begins
+                // Source: This is the index where we want to make space
                 pointer.baseAddress!.advanced(by: index),
+                // This is the number of bytes which will be moved
                 bytesToMove
             )
         }

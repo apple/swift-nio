@@ -14,18 +14,19 @@
 
 extension ByteBuffer {
     public struct QUICBinaryEncodingStrategy: NIOBinaryIntegerEncodingStrategy {
-        public var reservedCapacityForInteger: Int
+        public var requiredBytesHint: Int
 
+        /// - Parameter requiredBytesHint: An estimate of the bytes required to write integers using this strategy
         @inlinable
-        public init(reservedCapacity: Int) {
+        public init(requiredBytesHint: Int) {
             precondition(
-                reservedCapacity == 0
-                    || reservedCapacity == 1
-                    || reservedCapacity == 2
-                    || reservedCapacity == 4
-                    || reservedCapacity == 8
+                requiredBytesHint == 0
+                    || requiredBytesHint == 1
+                    || requiredBytesHint == 2
+                    || requiredBytesHint == 4
+                    || requiredBytesHint == 8
             )
-            self.reservedCapacityForInteger = reservedCapacity
+            self.requiredBytesHint = reservedCapacity
         }
 
         @inlinable

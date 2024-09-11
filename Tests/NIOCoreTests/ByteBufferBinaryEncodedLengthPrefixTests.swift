@@ -61,7 +61,7 @@ struct UInt8ReadingTestStrategy: NIOBinaryIntegerEncodingStrategy {
         return 1
     }
 
-    var reservedCapacityForInteger: Int { 1 }
+    var requiredBytesHint: Int { 1 }
 }
 
 final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
@@ -130,7 +130,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return buffer.writeInteger(UInt8(integer))
             }
 
-            var reservedCapacityForInteger: Int { 1 }
+            var requiredBytesHint: Int { 1 }
         }
 
         var buffer = ByteBuffer()
@@ -172,7 +172,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return buffer.writeInteger(UInt64(integer))
             }
 
-            var reservedCapacityForInteger: Int { 1 }
+            var requiredBytesHint: Int { 1 }
         }
 
         var buffer = ByteBuffer()
@@ -214,7 +214,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return buffer.writeInteger(UInt8(integer))
             }
 
-            var reservedCapacityForInteger: Int { 8 }
+            var requiredBytesHint: Int { 8 }
         }
 
         var buffer = ByteBuffer()
@@ -257,7 +257,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            var reservedCapacityForInteger: Int { 1 }
+            var requiredBytesHint: Int { 1 }
         }
 
         struct TestError: Error {}
