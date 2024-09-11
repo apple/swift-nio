@@ -26,7 +26,7 @@ extension ByteBuffer {
                     || requiredBytesHint == 4
                     || requiredBytesHint == 8
             )
-            self.requiredBytesHint = reservedCapacity
+            self.requiredBytesHint = requiredBytesHint
         }
 
         @inlinable
@@ -124,10 +124,10 @@ extension ByteBuffer {
 
 extension NIOBinaryIntegerEncodingStrategy where Self == ByteBuffer.QUICBinaryEncodingStrategy {
     @inlinable
-    public static func quic(reservedCapacity: Int) -> ByteBuffer.QUICBinaryEncodingStrategy {
-        ByteBuffer.QUICBinaryEncodingStrategy(reservedCapacity: reservedCapacity)
+    public static func quic(requiredBytesHint: Int) -> ByteBuffer.QUICBinaryEncodingStrategy {
+        ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: requiredBytesHint)
     }
 
     @inlinable
-    public static var quic: ByteBuffer.QUICBinaryEncodingStrategy { .quic(reservedCapacity: 4) }
+    public static var quic: ByteBuffer.QUICBinaryEncodingStrategy { .quic(requiredBytesHint: 4) }
 }
