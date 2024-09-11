@@ -232,6 +232,7 @@ extension ByteBuffer {
         _ buffer: ByteBuffer,
         strategy: Strategy
     ) -> Int {
+        self.reserveCapacity(minimumWritableBytes: buffer.readableBytes + strategy.requiredBytesHint)
         var written = 0
         written += self.writeEncodedInteger(buffer.readableBytes, strategy: strategy)
         written += self.writeImmutableBuffer(buffer)
@@ -251,9 +252,10 @@ extension ByteBuffer {
         _ string: String,
         strategy: Strategy
     ) -> Int {
-        var written = 0
         // writeString always writes the String as UTF8 bytes, without a null-terminator
         // So the length will be the utf8 count
+        self.reserveCapacity(minimumWritableBytes: string.utf8.count + strategy.requiredBytesHint)
+        var written = 0
         written += self.writeEncodedInteger(string.utf8.count, strategy: strategy)
         written += self.writeString(string)
         return written
@@ -278,6 +280,7 @@ extension ByteBuffer {
             UnsafeRawBufferPointer(b).count
         }
         if let numberOfBytes {
+            self.reserveCapacity(minimumWritableBytes: numberOfBytes + strategy.requiredBytesHint)
             var written = 0
             written += self.writeEncodedInteger(numberOfBytes, strategy: strategy)
             written += self.writeBytes(bytes)
