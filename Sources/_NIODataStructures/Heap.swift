@@ -17,6 +17,8 @@ import Darwin.C
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(WASILibc)
+import WASILibc
 #elseif os(Windows)
 import ucrt
 #elseif canImport(Bionic)

@@ -52,6 +52,8 @@ import Musl
 import Android
 #endif
 import CNIOLinux
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("The Socket Addresses module was unable to identify your C library.")
 #endif
@@ -178,7 +180,11 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         case .v6:
             return .inet6
         case .unixDomainSocket:
+            #if os(WASI)
+            fatalError("unix domain sockets are currently not supported by WASILibc")
+            #else
             return .unix
+            #endif
         }
     }
 
@@ -197,7 +203,6 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             return nil
         }
     }
-
     /// Get and set the port associated with the address, if defined.
     /// When setting to `nil` the port will default to `0` for compatible sockets. The rationale for this is that both `nil` and `0` can
     /// be interpreted as "no preference".
@@ -233,6 +238,9 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// Get the pathname of a UNIX domain socket as a string
     public var pathname: String? {
+        #if os(WASI)
+        return nil
+        #else
         switch self {
         case .v4:
             return nil
@@ -248,6 +256,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
             }
             return pathname
         }
+        #endif
     }
 
     /// Calls the given function with a pointer to a `sockaddr` structure and the associated size
@@ -321,11 +330,13 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(NIOBSDSocket.AddressFamily.unix.rawValue)
 
+        #if !os(WASI)
         pathBytes.withUnsafeBytes { srcBuffer in
             withUnsafeMutableBytes(of: &addr.sun_path) { dstPtr in
                 dstPtr.copyMemory(from: srcBuffer)
             }
         }
+        #endif
 
         self = .unixDomainSocket(.init(address: addr))
     }
@@ -457,6 +468,10 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     /// - returns: the `SocketAddress` for the host / port pair.
     /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
+        #if os(WASI)
+        throw SocketAddressError.unsupported
+        #endif
+
         #if os(Windows)
         return try host.withCString(encodedAs: UTF16.self) { wszHost in
             try String(port).withCString(encodedAs: UTF16.self) { wszPort in
@@ -484,7 +499,7 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
                 throw SocketAddressError.unsupported
             }
         }
-        #else
+        #elseif !os(WASI)
         var info: UnsafeMutablePointer<addrinfo>?
 
         // FIXME: this is blocking!
@@ -549,6 +564,9 @@ extension SocketAddress: Equatable {
                 return false
             }
 
+            #if os(WASI)
+            return true
+            #else
             let bufferSize = MemoryLayout.size(ofValue: addr1.address.sun_path)
 
             // Swift implicitly binds the memory for homogeneous tuples to both the tuple type and the element type.
@@ -563,6 +581,7 @@ extension SocketAddress: Equatable {
                     return strncmp(typedSunpath1, typedSunpath2, bufferSize) == 0
                 }
             }
+            #endif
         case (.v4, _), (.v6, _), (.unixDomainSocket, _):
             return false
         }
@@ -581,6 +600,7 @@ extension SocketAddress: Hashable {
             hasher.combine(0)
             hasher.combine(uds.address.sun_family)
 
+            #if !os(WASI)
             let pathSize = MemoryLayout.size(ofValue: uds.address.sun_path)
 
             // Swift implicitly binds the memory of homogeneous tuples to both the tuple type and the element type.
@@ -593,6 +613,7 @@ extension SocketAddress: Hashable {
                 let bytes = UnsafeRawBufferPointer(start: UnsafeRawPointer(typedPathPointer), count: length)
                 hasher.combine(bytes: bytes)
             }
+            #endif
         case .v4(let v4Addr):
             hasher.combine(1)
             hasher.combine(v4Addr.address.sin_family)

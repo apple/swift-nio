@@ -32,6 +32,8 @@ import Glibc
 import Musl
 #elseif canImport(Bionic)
 import Bionic
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("The concurrency atomics module was unable to identify your C library.")
 #endif

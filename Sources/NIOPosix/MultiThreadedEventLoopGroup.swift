@@ -13,9 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
-import Dispatch
 import NIOConcurrencyHelpers
 import NIOCore
+
+#if canImport(Dispatch)
+import Dispatch
+#endif
 
 struct NIORegistration: Registration {
     enum ChannelType {
