@@ -85,11 +85,18 @@ extension FileChunks.FileChunkIterator: Sendable {}
 // MARK: - Internal
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-fileprivate typealias FileChunkSequenceProducer = NIOThrowingAsyncSequenceProducer<ByteBuffer, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, FileChunkProducer>
+private typealias FileChunkSequenceProducer = NIOThrowingAsyncSequenceProducer<
+    ByteBuffer, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, FileChunkProducer
+>
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension NIOThrowingAsyncSequenceProducer where Element == ByteBuffer, Failure == Error,
-        Strategy == NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, Delegate == FileChunkProducer {
+extension NIOThrowingAsyncSequenceProducer
+where
+    Element == ByteBuffer,
+    Failure == Error,
+    Strategy == NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark,
+    Delegate == FileChunkProducer
+{
     static func makeFileChunksStream(
         of: Element.Type = Element.self,
         handle: SystemFileHandle,
@@ -129,12 +136,12 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
     let length: Int64
 
     init(range: FileChunks.ChunkRange, handle: SystemFileHandle, length: Int64) {
-
-        let state: ProducerState = switch range {
+        let state: ProducerState
+        switch range {
         case .entireFile:
-                .init(handle: handle, range: nil)
+            state = .init(handle: handle, range: nil)
         case .partial(let partialRange):
-                .init(handle: handle, range: partialRange)
+            state = .init(handle: handle, range: partialRange)
         }
 
         self.state = NIOLockedValueBox(state)
@@ -272,7 +279,7 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
         case .produceMore:
             self.produceMore()
         case .stopProducing:
-            self.state.withLockedValue { state in state.pauseProducing()}
+            self.state.withLockedValue { state in state.pauseProducing() }
         case .dropped:
             // The source is finished; mark ourselves as done.
             self.state.withLockedValue { state in state.done() }
@@ -357,13 +364,13 @@ private struct ProducerState: Sendable {
     mutating func didReadBytes(_ count: Int) {
         switch self.state {
         case var .producing(state):
-            if state.updateRange(count: count) {
+            if state.didReadBytes(count) {
                 self.state = .done(emptyRange: false)
             } else {
                 self.state = .producing(state)
             }
         case var .pausedProducing(state):
-            if state.updateRange(count: count) {
+            if state.didReadBytes(count) {
                 self.state = .done(emptyRange: false)
             } else {
                 self.state = .pausedProducing(state)
@@ -396,10 +403,12 @@ private struct ProducerState: Sendable {
     }
 }
 
-
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension ProducerState.Producing {
-    mutating func updateRange(count: Int) -> Bool {
+    /// Updates the range (the offsets to read from and up to) to reflect the number of bytes which have been read.
+    /// - Parameter count: The number of bytes which have been read.
+    /// - Returns: Returns `True` if there are no remaining bytes to read, `False` otherwise.
+    mutating func didReadBytes(_ count: Int) -> Bool {
         guard let currentRange = self.range else {
             // if we read 0 bytes we are done
             return count == 0

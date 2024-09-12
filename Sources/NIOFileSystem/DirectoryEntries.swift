@@ -119,7 +119,9 @@ extension DirectoryEntries {
         public struct BatchedIterator: AsyncIteratorProtocol {
             private var iterator: BufferedOrAnyStream<[DirectoryEntry], DirectoryEntryProducer>.AsyncIterator
 
-            fileprivate init(wrapping iterator: BufferedOrAnyStream<[DirectoryEntry], DirectoryEntryProducer>.AsyncIterator) {
+            fileprivate init(
+                wrapping iterator: BufferedOrAnyStream<[DirectoryEntry], DirectoryEntryProducer>.AsyncIterator
+            ) {
                 self.iterator = iterator
             }
 
@@ -136,15 +138,23 @@ extension DirectoryEntries.Batched.AsyncIterator: Sendable {}
 // MARK: - Internal
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension NIOThrowingAsyncSequenceProducer where Element == [DirectoryEntry], Failure == Error,
-        Strategy == NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, Delegate == DirectoryEntryProducer {
+extension NIOThrowingAsyncSequenceProducer
+where
+    Element == [DirectoryEntry],
+    Failure == (any Error),
+    Strategy == NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark,
+    Delegate == DirectoryEntryProducer
+{
     fileprivate static func makeBatchedDirectoryEntryStream(
         handle: SystemFileHandle,
         recursive: Bool,
         entriesPerBatch: Int,
         lowWatermark: Int,
         highWatermark: Int
-    ) -> NIOThrowingAsyncSequenceProducer<[DirectoryEntry], any Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, DirectoryEntryProducer> {
+    ) -> NIOThrowingAsyncSequenceProducer<
+        [DirectoryEntry], any Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark,
+        DirectoryEntryProducer
+    > {
         let producer = DirectoryEntryProducer(
             handle: handle,
             recursive: recursive,
@@ -168,10 +178,12 @@ extension NIOThrowingAsyncSequenceProducer where Element == [DirectoryEntry], Fa
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-fileprivate typealias DirectoryEntrySequenceProducer = NIOThrowingAsyncSequenceProducer<[DirectoryEntry], Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, DirectoryEntryProducer>
+private typealias DirectoryEntrySequenceProducer = NIOThrowingAsyncSequenceProducer<
+    [DirectoryEntry], Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, DirectoryEntryProducer
+>
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-fileprivate final class DirectoryEntryProducer: NIOAsyncSequenceProducerDelegate {
+private final class DirectoryEntryProducer: NIOAsyncSequenceProducerDelegate {
     let state: NIOLockedValueBox<DirectoryEnumerator>
     let entriesPerBatch: Int
 
@@ -262,7 +274,7 @@ fileprivate final class DirectoryEntryProducer: NIOAsyncSequenceProducerDelegate
             // error.
             self.close()
             let source = self.state.withLockedValue { state in
-                return state.sequenceProducerSource
+                state.sequenceProducerSource
             }
             source?.finish(error)
             self.clearSource()
@@ -270,9 +282,8 @@ fileprivate final class DirectoryEntryProducer: NIOAsyncSequenceProducerDelegate
     }
 
     private func onNextBatch(_ entries: [DirectoryEntry]) {
-
         let source = self.state.withLockedValue { state in
-            return state.sequenceProducerSource
+            state.sequenceProducerSource
         }
 
         guard let source else {
@@ -412,7 +423,6 @@ private struct DirectoryEnumerator: Sendable {
         case let .open(threadPool, _, _):
             return threadPool
         case .openPausedProducing(let threadPool, let source, let array):
-            self.state = .modifying
             self.state = .open(threadPool, source, array)
             return threadPool
         case .done:
@@ -424,13 +434,12 @@ private struct DirectoryEnumerator: Sendable {
 
     internal mutating func pauseProducing() {
         switch self.state {
-        case .open(let nIOThreadPool, let source, let array):
-            self.state = .modifying
-            self.state = .openPausedProducing(nIOThreadPool, source, array)
+        case .open(let threadPool, let source, let array):
+            self.state = .openPausedProducing(threadPool, source, array)
         case .idle:
-            () // we won't apply back pressure until something has been read
+            ()  // we won't apply back pressure until something has been read
         case .openPausedProducing, .done:
-            () // no-op
+            ()  // no-op
         case .modifying:
             fatalError()
         }

@@ -18,7 +18,9 @@ import NIOCore
 /// Wraps a ``NIOThrowingAsyncSequenceProducer<Element>`` or ``AnyAsyncSequence<Element>``.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDelegate> {
-    typealias AsyncSequenceProducer = NIOThrowingAsyncSequenceProducer<Element, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, Delegate>
+    typealias AsyncSequenceProducer = NIOThrowingAsyncSequenceProducer<
+        Element, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, Delegate
+    >
 
     case nioThrowingAsyncSequenceProducer(AsyncSequenceProducer)
     case anyAsyncSequence(AnyAsyncSequence<Element>)
@@ -47,7 +49,7 @@ internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDel
         internal mutating func next() async throws -> Element? {
             let element: Element?
             switch self {
-            case var .bufferedStream(iterator):
+            case let .bufferedStream(iterator):
                 defer { self = .bufferedStream(iterator) }
                 element = try await iterator.next()
             case var .anyAsyncSequence(iterator):
