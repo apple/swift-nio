@@ -65,6 +65,11 @@ extension ByteBuffer {
 
         @usableFromInline
         func bytesNeededForInteger<IntegerType: FixedWidthInteger>(_ integer: IntegerType) -> Int {
+            // We must cast the integer to UInt64 here
+            // Otherwise, it an integer can fall through to the default case
+            // E.g., if someone calls this function with UInt8.max (which is 255), they would not hit the first case (0..<63)
+            // The second case cannot be represented at all in UInt8, because 16383 is too big
+            // Swift will end up creating the 16383 literal as 0, and thus we will fall all the way through to the default
             switch UInt64(integer) {
             case 0..<63:
                 return 1

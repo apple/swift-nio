@@ -26,9 +26,25 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
             let strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: 0)
             let bytesWritten = strategy.writeInteger(number, to: &buffer)
             XCTAssertEqual(bytesWritten, 1)
-            XCTAssertEqual(strategy.readInteger(as: UInt8.self, from: &buffer), UInt8(number))
+            // The number is written exactly as is
+            XCTAssertEqual(buffer.readInteger(as: UInt8.self), UInt8(number))
             XCTAssertEqual(buffer.readableBytes, 0)
         }
+    }
+
+    func testWriteBigUInt8() {
+        // This test case specifically tests the scenario where 2 bytes are needed, but the number being written is UInt8.
+        // A naive implementation of the quic variable length integer encoder might check whether the number is in
+        // the range of 64..<16383, to determine that it should be written with 2 bytes.
+        // However, constructing such a range on a UInt8 would actually construct 64..<0, because 16383 can't be represented as UInt8.
+        // So this test makes sure we didn't make that mistake
+        let number: UInt8 = .max
+        var buffer = ByteBuffer()
+        let strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: 0)
+        let bytesWritten = strategy.writeInteger(number, to: &buffer)
+        XCTAssertEqual(bytesWritten, 2)
+        XCTAssertEqual(buffer.readInteger(as: UInt16.self), 0b01000000_11111111)
+        XCTAssertEqual(buffer.readableBytes, 0)
     }
 
     func testWriteTwoByteQUICVariableLengthInteger() {
