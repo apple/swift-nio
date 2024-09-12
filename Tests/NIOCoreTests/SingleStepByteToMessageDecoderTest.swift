@@ -559,11 +559,12 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
             /// `ByteBuffer`s will be passed to the next stage.
             public typealias InboundOut = ByteBuffer
 
-            public init() { }
+            public init() {}
 
             struct DecodeLastError: Error {}
 
             func decodeLast(buffer: inout NIOCore.ByteBuffer, seenEOF: Bool) throws -> NIOCore.ByteBuffer? {
+                buffer = ByteBuffer()  // to allow the decode loop to exit
                 throw DecodeLastError()
             }
 
@@ -574,10 +575,18 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
 
         let decoder = ThrowingOnLastDecoder()
         let b2mp = NIOSingleStepByteToMessageProcessor(decoder)
-        XCTAssertNoThrow(try b2mp.process(buffer: ByteBuffer(string: "1\n\n2\n3\n")) { line in
-            XCTAssertThrowsError(try b2mp.finishProcessing(seenEOF: true) { _ in }) { error in
-                XCTAssertNotNil(error as? ThrowingOnLastDecoder.DecodeLastError)
+        var errorObserved = false
+        XCTAssertNoThrow(
+            try b2mp.process(buffer: ByteBuffer(string: "1\n\n2\n3\n")) { line in
+                // We will throw an error to exit the decoding within the nested process call prematurely.
+                // Unless this is carefully handled we can be left in an inconsistent state which the outer call will encounter
+                do {
+                    try b2mp.finishProcessing(seenEOF: true) { _ in }
+                } catch _ as ThrowingOnLastDecoder.DecodeLastError {
+                    errorObserved = true
+                }
             }
-        })
+        )
+        XCTAssertTrue(errorObserved)
     }
 }
