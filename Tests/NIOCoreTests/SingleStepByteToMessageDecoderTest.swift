@@ -549,4 +549,35 @@ public final class NIOSingleStepByteToMessageDecoderTest: XCTestCase {
         XCTAssertEqual(2, messageReceiver.count)
         XCTAssertEqual(processor.unprocessedBytes, 0)
     }
+
+    /// Tests re-entrancy by having a nested decoding operation empty the buffer and exit part way
+    /// through the outer processing step
+    func testErrorDuringNestedDecoding() {
+        class ThrowingOnLastDecoder: NIOSingleStepByteToMessageDecoder {
+            /// `ByteBuffer` is the expected type passed in.
+            public typealias InboundIn = ByteBuffer
+            /// `ByteBuffer`s will be passed to the next stage.
+            public typealias InboundOut = ByteBuffer
+
+            public init() { }
+
+            struct DecodeLastError: Error {}
+
+            func decodeLast(buffer: inout NIOCore.ByteBuffer, seenEOF: Bool) throws -> NIOCore.ByteBuffer? {
+                throw DecodeLastError()
+            }
+
+            func decode(buffer: inout NIOCore.ByteBuffer) throws -> NIOCore.ByteBuffer? {
+                ByteBuffer()
+            }
+        }
+
+        let decoder = ThrowingOnLastDecoder()
+        let b2mp = NIOSingleStepByteToMessageProcessor(decoder)
+        XCTAssertNoThrow(try b2mp.process(buffer: ByteBuffer(string: "1\n\n2\n3\n")) { line in
+            XCTAssertThrowsError(try b2mp.finishProcessing(seenEOF: true) { _ in }) { error in
+                XCTAssertNotNil(error as? ThrowingOnLastDecoder.DecodeLastError)
+            }
+        })
+    }
 }
