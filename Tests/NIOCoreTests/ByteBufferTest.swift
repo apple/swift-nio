@@ -1883,10 +1883,9 @@ class ByteBufferTest: XCTestCase {
         XCTAssertFalse(buffer.shrinkBufferCapacity(to: desiredCapacity))
         XCTAssertEqual(buffer.capacity, 2048)
 
-        // If desired capacity is greater than the readable bytes and less than buffer capacity, should shrink to desiredCapacity.nextPowerOf2Clamp
-        // Where desiredCapacity.nextPowerOf2Clamp == desiredCapacity as desiredCapacity should already be a power of 2 value
+        // If desired capacity is greater than or equal the readable bytes and less than buffer capacity, should shrink
         buffer.clear()
-        buffer.writeString(String(repeating: "x", count: desiredCapacity - 1))
+        buffer.writeString(String(repeating: "x", count: desiredCapacity))
         XCTAssertEqual(buffer.capacity, 2048)
         XCTAssertTrue(buffer.shrinkBufferCapacity(to: desiredCapacity))
         XCTAssertEqual(buffer.capacity, 1024)
@@ -1910,8 +1909,10 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testExpansionOfCapacityWithPadding() throws {
-        XCTAssertEqual(ByteBuffer.addPaddingTo(12), 16)
-        XCTAssertEqual(ByteBuffer.addPaddingTo(0), 0)
+        XCTAssertEqual(ByteBuffer.roundUpToUsableCapacity(12), 16)
+        XCTAssertEqual(ByteBuffer.roundUpToUsableCapacity(0), 0)
+        XCTAssertEqual(ByteBuffer.roundUpToUsableCapacity(UInt32.min), 0)
+        XCTAssertEqual(ByteBuffer.roundUpToUsableCapacity(UInt32.max), UInt32.max)
     }
 
     func testDumpBytesFormat() throws {
