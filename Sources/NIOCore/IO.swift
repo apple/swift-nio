@@ -34,6 +34,8 @@ import Glibc
 import Musl
 #elseif canImport(Bionic)
 import Bionic
+#elseif canImport(WASILibc)
+import WASILibc
 #elseif canImport(Darwin)
 import Darwin
 #else

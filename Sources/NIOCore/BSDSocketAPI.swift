@@ -87,6 +87,13 @@ private let sysInet_ntop:
     @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? =
         inet_ntop
 private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
+#elseif canImport(WASILibc)
+import WASILibc
+
+private let sysInet_ntop:
+    @convention(c) (CInt, UnsafeRawPointer?, UnsafeMutablePointer<CChar>?, socklen_t) -> UnsafePointer<CChar>? =
+        inet_ntop
+private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMutableRawPointer?) -> CInt = inet_pton
 #else
 #error("The BSD Socket module was unable to identify your C library.")
 #endif
@@ -212,12 +219,14 @@ extension NIOBSDSocket.ProtocolFamily {
     public static let inet6: NIOBSDSocket.ProtocolFamily =
         NIOBSDSocket.ProtocolFamily(rawValue: PF_INET6)
 
+    #if !os(WASI)
     /// UNIX local to the host.
     public static let unix: NIOBSDSocket.ProtocolFamily =
         NIOBSDSocket.ProtocolFamily(rawValue: PF_UNIX)
+    #endif
 }
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
 extension NIOBSDSocket.ProtocolFamily {
     /// UNIX local to the host, alias for `PF_UNIX` (`.unix`)
     public static let local: NIOBSDSocket.ProtocolFamily =
@@ -382,6 +391,7 @@ extension NIOBSDSocket.Option {
     public static let mptcp_info = NIOBSDSocket.Option(rawValue: 1)
 }
 
+#if !os(WASI)
 // Socket Options
 extension NIOBSDSocket.Option {
     /// Get the error status and clear.
@@ -408,8 +418,9 @@ extension NIOBSDSocket.Option {
     /// Allows the socket to send broadcast messages.
     public static let so_broadcast = Self(rawValue: SO_BROADCAST)
 }
+#endif
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
 extension NIOBSDSocket.Option {
     /// Indicate when to generate timestamps.
     public static let so_timestamp: NIOBSDSocket.Option =

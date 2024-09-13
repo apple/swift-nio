@@ -12,8 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
 import NIOCore
+
+#if canImport(Dispatch)
+import Dispatch
+#endif
 
 /// A DNS resolver built on top of the libc `getaddrinfo` function.
 ///

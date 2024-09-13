@@ -25,6 +25,8 @@ import Glibc
 import Musl
 #elseif canImport(Bionic)
 import Bionic
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("Unsupported C library")
 #endif

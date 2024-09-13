@@ -14,9 +14,12 @@
 
 import Atomics
 import DequeModule
-import Dispatch
 import NIOConcurrencyHelpers
 import NIOCore
+
+#if canImport(Dispatch)
+import Dispatch
+#endif
 
 /// Errors that may be thrown when executing work on a `NIOThreadPool`
 public enum NIOThreadPoolError {
