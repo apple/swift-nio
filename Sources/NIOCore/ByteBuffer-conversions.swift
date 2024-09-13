@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Dispatch)
 import Dispatch
+#endif
 
 extension Array where Element == UInt8 {
 
@@ -48,6 +50,7 @@ extension String {
     }
 }
 
+#if canImport(Dispatch)
 extension DispatchData {
 
     /// Creates a `DispatchData` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
@@ -59,3 +62,4 @@ extension DispatchData {
     }
 
 }
+#endif

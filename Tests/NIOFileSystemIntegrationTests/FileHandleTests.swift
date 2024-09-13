@@ -546,7 +546,7 @@ final class FileHandleTests: XCTestCase {
 
     func testReadRangeLongerThanChunkAndNotMultipleOfChunkLength() async throws {
         // Reading chunks of bytes from within a range longer than the chunklength
-        // and with size not a multiple of the chunklegth.
+        // and with size not a multiple of the chunklength.
         try await self.withHandle(forFileAtPath: Self.thisFile) { handle in
             var bytes = ByteBuffer()
             for try await chunk in handle.readChunks(in: 0...200, chunkLength: .bytes(128)) {
@@ -1256,14 +1256,18 @@ final class FileHandleTests: XCTestCase {
                 lastAccess: nil,
                 lastDataModification: nil
             )
-            let estimatedCurrentTime = Date.now.timeIntervalSince1970
+            let estimatedCurrentTimeInSeconds = Date.now.timeIntervalSince1970
 
-            // Assert that the times are equal to the current time, with up to a second difference (to avoid timing flakiness).
+            // Assert that the times are equal to the current time, with up to a second difference
+            // to avoid timing flakiness. Both the last accessed and last modification times should
+            // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
-            XCTAssertEqual(Float(actualLastAccessTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
-
+            let actualLastAccessTimeNanosecondsInSeconds = Double(actualLastAccessTime.nanoseconds) / 1e+9
+            let actualLastAccessTimeInSeconds =
+                Double(actualLastAccessTime.seconds) + actualLastAccessTimeNanosecondsInSeconds
+            XCTAssertEqual(actualLastAccessTimeInSeconds, estimatedCurrentTimeInSeconds, accuracy: 1)
             actualLastDataModificationTime = try await handle.info().lastDataModificationTime
-            XCTAssertEqual(Float(actualLastDataModificationTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+            XCTAssertEqual(actualLastDataModificationTime.seconds, actualLastAccessTime.seconds)
         }
     }
 
@@ -1283,14 +1287,18 @@ final class FileHandleTests: XCTestCase {
             XCTAssertEqual(actualLastDataModificationTime, FileInfo.Timespec(seconds: 1, nanoseconds: 0))
 
             try await handle.touch()
-            let estimatedCurrentTime = Date.now.timeIntervalSince1970
+            let estimatedCurrentTimeInSeconds = Date.now.timeIntervalSince1970
 
-            // Assert that the times are equal to the current time, with up to a second difference (to avoid timing flakiness).
+            // Assert that the times are equal to the current time, with up to a second difference
+            // to avoid timing flakiness. Both the last accessed and last modification times should
+            // also equal each other.
             actualLastAccessTime = try await handle.info().lastAccessTime
-            XCTAssertEqual(Float(actualLastAccessTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
-
+            let actualLastAccessTimeNanosecondsInSeconds = Double(actualLastAccessTime.nanoseconds) / 1e+9
+            let actualLastAccessTimeInSeconds =
+                Double(actualLastAccessTime.seconds) + actualLastAccessTimeNanosecondsInSeconds
+            XCTAssertEqual(actualLastAccessTimeInSeconds, estimatedCurrentTimeInSeconds, accuracy: 1)
             actualLastDataModificationTime = try await handle.info().lastDataModificationTime
-            XCTAssertEqual(Float(actualLastDataModificationTime.seconds), Float(estimatedCurrentTime), accuracy: 1)
+            XCTAssertEqual(actualLastDataModificationTime.seconds, actualLastAccessTime.seconds)
         }
     }
 }

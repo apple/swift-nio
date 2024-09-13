@@ -1961,6 +1961,38 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(expected, actual)
     }
 
+    func testHexDumpCompact() {
+        let buf = ByteBuffer(string: "Hello")
+        XCTAssertEqual("48656c6c6f", buf.hexDump(format: .compact))
+    }
+
+    func testHexDumpCompactReadableBytesLessThenMaxBytes() {
+        let buf = ByteBuffer(string: "hello world")
+        XCTAssertEqual("68656c6c6f20776f726c64", buf.hexDump(format: .compact(maxBytes: 100)))
+    }
+
+    func testHexDumpCompactEmptyBuffer() {
+        let buf = ByteBuffer(string: "")
+        XCTAssertEqual("", buf.hexDump(format: .compact))
+    }
+
+    func testHexDumpCompactWithReaderIndexOffset() {
+        var buf = ByteBuffer(string: "Hello")
+        let firstTwo = buf.readBytes(length: 2)!
+        XCTAssertEqual([72, 101], firstTwo)
+        XCTAssertEqual("6c6c6f", buf.hexDump(format: .compact))
+    }
+
+    func testHexDumpCompactWithMaxBytes() {
+        self.buf.clear()
+        for f in UInt8.min...UInt8.max {
+            self.buf.writeInteger(f)
+        }
+        let actual = self.buf.hexDump(format: .compact(maxBytes: 10))
+        let expected = "0001020304...fbfcfdfeff"
+        XCTAssertEqual(expected, actual)
+    }
+
     func testHexDumpDetailed() {
         let buf = ByteBuffer(string: "Goodbye, world! It was nice knowing you.\n")
         let expected = """
@@ -3632,4 +3664,32 @@ extension ByteBufferTest {
         }
     }
 
+    func testByteBufferDescription() {
+        let buffer = ByteBuffer(string: "hello world")
+
+        XCTAssertEqual(buffer.description, "[68656c6c6f20776f726c64](11 bytes)")
+
+        XCTAssertEqual(buffer.description, buffer.debugDescription)
+    }
+
+    func testByteBufferDescriptionEmpty() {
+        let buffer = ByteBuffer()
+
+        XCTAssertEqual(buffer.description, "[](0 bytes)")
+
+        XCTAssertEqual(buffer.description, buffer.debugDescription)
+    }
+
+    func testByteBufferDescriptionTruncated() {
+        let buffer = ByteBuffer(
+            string: "iloveswiftnioiloveswiftnioiloveswiftnioiloveswiftnioiloveswiftnioiloveswiftnio"
+        )
+
+        XCTAssertEqual(
+            buffer.description,
+            "[696c6f766573776966746e696f696c6f766573776966746e696f696c6f766573...6966746e696f696c6f766573776966746e696f696c6f766573776966746e696f](78 bytes)"
+        )
+
+        XCTAssertEqual(buffer.description, buffer.debugDescription)
+    }
 }

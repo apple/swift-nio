@@ -481,19 +481,16 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
     func testTasksScheduledDuringShutdownAreAutomaticallyCancelled() async throws {
         let eventLoop = NIOAsyncTestingEventLoop()
         let tasksRun = ManagedAtomic(0)
-        var childTasks: [Scheduled<Void>] = []
 
         func scheduleRecursiveTask(
             at taskStartTime: NIODeadline,
             andChildTaskAfter childTaskStartDelay: TimeAmount
         ) -> Scheduled<Void> {
             eventLoop.scheduleTask(deadline: taskStartTime) {
-                tasksRun.wrappingIncrement(ordering: .relaxed)
-                childTasks.append(
-                    scheduleRecursiveTask(
-                        at: eventLoop.now + childTaskStartDelay,
-                        andChildTaskAfter: childTaskStartDelay
-                    )
+                tasksRun.wrappingIncrement(ordering: .releasing)
+                _ = scheduleRecursiveTask(
+                    at: eventLoop.now + childTaskStartDelay,
+                    andChildTaskAfter: childTaskStartDelay
                 )
             }
         }
@@ -502,17 +499,17 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
-                try await Task.sleep(nanoseconds: 1_000_000)
+                try await Task.sleep(nanoseconds: 10_000_000)
                 await eventLoop.shutdownGracefully()
             }
-            group.addTask {
-                await eventLoop.advanceTime(to: .uptimeNanoseconds(1))
-            }
+
+            await eventLoop.advanceTime(to: .uptimeNanoseconds(1))
             try await group.waitForAll()
         }
 
-        XCTAssertGreaterThan(tasksRun.load(ordering: .relaxed), 1)
-        XCTAssertEqual(childTasks.count, tasksRun.load(ordering: .relaxed))
+        try await eventLoop.executeInContext {
+            XCTAssertGreaterThan(tasksRun.load(ordering: .acquiring), 1)
+        }
     }
 
     func testShutdownCancelsRemainingScheduledTasks() async {

@@ -18,16 +18,14 @@ import XCTest
 class NIOAnyDebugTest: XCTestCase {
 
     func testCustomStringConvertible() throws {
-        XCTAssertEqual(wrappedInNIOAnyBlock("string"), wrappedInNIOAnyBlock("string"))
-        XCTAssertEqual(wrappedInNIOAnyBlock(123), wrappedInNIOAnyBlock("123"))
+        XCTAssertEqual(wrappedInNIOAnyBlock("string").description, "String: string")
+        XCTAssertEqual(wrappedInNIOAnyBlock(123).description, "Int: 123")
 
         let bb = ByteBuffer(string: "byte buffer string")
-        XCTAssertTrue(
-            wrappedInNIOAnyBlock(bb).contains(
-                "NIOAny { ByteBuffer { readerIndex: 0, writerIndex: 18, readableBytes: 18, capacity: 32, storageCapacity: 32, slice: _ByteBufferSlice { 0..<32 }, storage: "
-            )
+        XCTAssertEqual(
+            wrappedInNIOAnyBlock(bb).description,
+            "ByteBuffer: [627974652062756666657220737472696e67](18 bytes)"
         )
-        XCTAssertTrue(wrappedInNIOAnyBlock(bb).hasSuffix(" }"))
 
         let fileHandle = NIOFileHandle(descriptor: 1)
         defer {
@@ -35,37 +33,40 @@ class NIOAnyDebugTest: XCTestCase {
         }
         let fileRegion = FileRegion(fileHandle: fileHandle, readerIndex: 1, endIndex: 5)
         XCTAssertEqual(
-            wrappedInNIOAnyBlock(fileRegion),
-            wrappedInNIOAnyBlock(
-                """
-                FileRegion { \
-                handle: \
-                FileHandle \
-                { descriptor: 1 \
-                }, \
-                readerIndex: \(fileRegion.readerIndex), \
-                endIndex: \(fileRegion.endIndex) }
-                """
-            )
+            wrappedInNIOAnyBlock(fileRegion).description,
+            """
+            FileRegion: \
+            FileRegion { \
+            handle: \
+            FileHandle \
+            { descriptor: 1 \
+            }, \
+            readerIndex: \(fileRegion.readerIndex), \
+            endIndex: \(fileRegion.endIndex) }
+            """
         )
 
         let socketAddress = try SocketAddress(unixDomainSocketPath: "socketAdress")
         let envelopeByteBuffer = ByteBuffer(string: "envelope buffer")
         let envelope = AddressedEnvelope<ByteBuffer>(remoteAddress: socketAddress, data: envelopeByteBuffer)
         XCTAssertEqual(
-            wrappedInNIOAnyBlock("\(envelope)"),
-            wrappedInNIOAnyBlock(
-                """
-                AddressedEnvelope { \
-                remoteAddress: \(socketAddress), \
-                data: \(envelopeByteBuffer) }
-                """
-            )
+            wrappedInNIOAnyBlock(envelope).description,
+            """
+            AddressedEnvelope<ByteBuffer>: \
+            AddressedEnvelope { \
+            remoteAddress: \(socketAddress), \
+            data: \(envelopeByteBuffer) }
+            """
         )
     }
 
-    private func wrappedInNIOAnyBlock(_ item: Any) -> String {
-        "NIOAny { \(item) }"
+    func testCustomDebugStringConvertible() {
+        XCTAssertEqual(wrappedInNIOAnyBlock("string").debugDescription, "(String: string)")
+        let any = wrappedInNIOAnyBlock("test")
+        XCTAssertEqual(any.debugDescription, "(\(any.description))")
     }
 
+    private func wrappedInNIOAnyBlock(_ item: Any) -> NIOAny {
+        NIOAny(item)
+    }
 }
