@@ -24,7 +24,7 @@ extension ByteBuffer {
     ///         buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
     ///         size followed by a `writeHexEncodedBytes` instead of using this method. This allows SwiftNIO to do
     ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
-    init(plainHexEncodedBytes string: String) throws {
+    public init(plainHexEncodedBytes string: String) throws {
         self = try ByteBufferAllocator().buffer(plainHexEncodedBytes: string)
     }
 
@@ -354,21 +354,25 @@ extension ByteBuffer {
             }
         }
     }
-}
 
-enum HexDecodingError: Error {
-    case invalidHexLength
-    case invalidCharacter
+    public struct HexDecodingError: Error {
+        let kind: HexDecodingErrorKind
+
+        public enum HexDecodingErrorKind {
+            case invalidHexLength
+            case invalidCharacter
+        }
+    }
 }
 
 extension UInt8 {
     fileprivate var isASCIIWhitespace: Bool {
-        [UInt8(ascii: "\n"), UInt8(ascii: "\t"), UInt8(ascii: "\n"), UInt8(ascii: "\r"), UInt8(ascii: " ")].contains(
+        [UInt8(ascii: "\n"), UInt8(ascii: "\t"), UInt8(ascii: "\r"), UInt8(ascii: " ")].contains(
             self
         )
     }
 
-    fileprivate var asciiHexNibble: UInt8? {
+    fileprivate var asciiHexNibble: UInt8 {
         get throws {
             switch self {
             case UInt8(ascii: "0")...UInt8(ascii: "9"):
@@ -378,7 +382,7 @@ extension UInt8 {
             case UInt8(ascii: "A")...UInt8(ascii: "F"):
                 return self - UInt8(ascii: "A") + 10
             default:
-                throw HexDecodingError.invalidCharacter
+                throw ByteBuffer.HexDecodingError(kind: .invalidCharacter)
             }
         }
     }
@@ -395,12 +399,8 @@ extension Substring.UTF8View {
             return nil  // No next byte to pop
         }
 
-        while let nextByte = self.first, nextByte.isASCIIWhitespace {
-            self = self.dropFirst()
-        }
-
         guard let secondHex = try self.popFirst()?.asciiHexNibble else {
-            throw HexDecodingError.invalidHexLength
+            throw ByteBuffer.HexDecodingError(kind: .invalidHexLength)
         }
 
         return (firstHex << 4) | secondHex

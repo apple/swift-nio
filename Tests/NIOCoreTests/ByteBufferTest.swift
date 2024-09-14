@@ -1951,13 +1951,32 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(try buffer.writePlainHexEncodedBytes("     0a    "), 1)
         XCTAssertEqual(try buffer.writePlainHexEncodedBytes(""), 0)
         XCTAssertEqual(try buffer.writePlainHexEncodedBytes("      "), 0)
-        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1  "))
-        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1"))
-        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1       "))
-        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("🤓"))
-        // The first byte (68 = "h") is valid, the method throws and the valid byte IS NOT written to the ByteBuffer
-        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("68 1"))
         XCTAssertEqual(ByteBuffer(string: "hello world\nhello world\n"), buffer)
+    }
+
+    func testWriteHexEncodedBytesFails() throws {
+        var buffer = ByteBuffer()
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1  ")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidCharacter)
+        }
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidHexLength)
+        }
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1       ")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidCharacter)
+        }
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("🤓")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidCharacter)
+        }
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1 1")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidCharacter)
+        }
+
+        // The first byte (68 = "h") is valid, the method throws and the valid byte IS NOT written to the ByteBuffer
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("68 1")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidHexLength)
+        }
+        XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
     func testHexInitialiser() throws {

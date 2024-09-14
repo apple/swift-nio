@@ -92,27 +92,26 @@ extension ByteBuffer {
     }
 
     // MARK: Hex encoded string APIs
-    /// Write `string` into this `ByteBuffer` in ASCII hexadecimal, moving the writer index forward appropriately.
+    /// Write `string` into this `ByteBuffer` in ASCII hexadecimal, moving the writer index forward appropriately. This method will throw if the string input is not of the "plain" hex encoded format.
     /// - parameters:
-    ///     - plainHexEncodedBytes: The hex encoded string to write.
+    ///     - plainHexEncodedBytes: The hex encoded string to write. Plain hex dump format is hex bytes optionally separated by spaces, i.e. `48 65 6c 6c 6f` or `48656c6c6f` for `Hello`.
+    ///     This format is compatible with `xxd` CLI utility.
     /// - returns: The number of bytes written.
     @discardableResult
     @inlinable
     public mutating func writePlainHexEncodedBytes(_ plainHexEncodedBytes: String) throws -> Int {
         var slice = plainHexEncodedBytes.utf8[...]
-        var written = 0
-        var bytesToWrite: [UInt8] = []
+        let initialWriterIndex = self._writerIndex
 
-        // Single pass to ensure string is a valid representation of hex bytes
-        while let nextByte = try slice.popNextHexByte() {
-            bytesToWrite.append(nextByte)
+        do {
+            while let nextByte = try slice.popNextHexByte() {
+                self.writeInteger(nextByte)
+            }
+            return Int(self._writerIndex - initialWriterIndex)
+        } catch {
+            self._moveWriterIndex(to: initialWriterIndex)
+            throw error
         }
-
-        for byte in bytesToWrite {
-            written += self.writeInteger(byte)
-        }
-
-        return written
     }
 
     // MARK: String APIs
