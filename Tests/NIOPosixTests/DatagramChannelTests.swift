@@ -1677,7 +1677,7 @@ class DatagramChannelTests: XCTestCase {
         let writeCount = 10
         var promises: [EventLoopFuture<Void>] = []
         
-        (0..<writeCount).forEach { i in
+        for i in 0..<writeCount {
             let promise = self.firstChannel.write(NIOAny(data))
             promises.append(promise)
             do {
@@ -1693,6 +1693,7 @@ class DatagramChannelTests: XCTestCase {
                 XCTFail("firstChannel should not throw any error, but threw \(error)")
             }
         }
+
         self.firstChannel.flush()
         let finalBufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(finalBufferedAmount, 0)

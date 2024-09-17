@@ -796,7 +796,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
         let bufferSize = buffer.readableBytes
         try withPendingDatagramWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0...4).map { (_: Int) in el.makePromise() }
-            (0..<4).forEach { idx in
+            for idx in 0..<4 {
                 _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[idx])
             }
 

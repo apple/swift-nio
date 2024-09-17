@@ -639,8 +639,7 @@ class EmbeddedChannelTest: XCTestCase {
         buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
         XCTAssertEqual(0, buffered)
         
-        
-        try (0..<5).forEach { _ in
+        for _ in 0..<5 {
             XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
         }
         
