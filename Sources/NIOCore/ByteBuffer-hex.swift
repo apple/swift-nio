@@ -355,11 +355,14 @@ extension ByteBuffer {
         }
     }
 
+    /// An error that is thrown when an invalid hex encoded string was attempted to be written to a ByteBuffer.
     public struct HexDecodingError: Error {
         let kind: HexDecodingErrorKind
 
-        public enum HexDecodingErrorKind {
+        enum HexDecodingErrorKind {
+            /// The hex encoded string was not of the expected even length.
             case invalidHexLength
+            /// An invalid hex character was found in the hex encoded string.
             case invalidCharacter
         }
     }

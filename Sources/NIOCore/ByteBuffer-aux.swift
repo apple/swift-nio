@@ -101,15 +101,15 @@ extension ByteBuffer {
     @inlinable
     public mutating func writePlainHexEncodedBytes(_ plainHexEncodedBytes: String) throws -> Int {
         var slice = plainHexEncodedBytes.utf8[...]
-        let initialWriterIndex = self._writerIndex
+        let initialWriterIndex = self.writerIndex
 
         do {
             while let nextByte = try slice.popNextHexByte() {
                 self.writeInteger(nextByte)
             }
-            return Int(self._writerIndex - initialWriterIndex)
+            return self.writerIndex - initialWriterIndex
         } catch {
-            self._moveWriterIndex(to: initialWriterIndex)
+            self.moveWriterIndex(to: initialWriterIndex)
             throw error
         }
     }
