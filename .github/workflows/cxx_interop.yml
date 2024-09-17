@@ -28,7 +28,7 @@ jobs:
     cxx-interop:
         name: Cxx interop
         # Workaround https://github.com/nektos/act/issues/1875
-        uses: apple/nio/.github/workflows/swift_matrix.yml@main
+        uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
         with:
           name: "Cxx interop"
           matrix_linux_command: "apt-get update -y -q && apt-get install -y -q jq && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-cxx-interop-compatibility.sh | bash"

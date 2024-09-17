@@ -8,7 +8,7 @@ jobs:
     unit-tests:
         name: Unit tests
         # Workaround https://github.com/nektos/act/issues/1875
-        uses: apple/nio/.github/workflows/unit_tests.yml@main
+        uses: apple/swift-nio/.github/workflows/unit_tests.yml@main
         with:
             linux_5_8_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
             linux_5_9_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
@@ -19,19 +19,19 @@ jobs:
     benchmarks:
         name: Benchmarks
         # Workaround https://github.com/nektos/act/issues/1875
-        uses: apple/nio/.github/workflows/benchmarks.yml@main
+        uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
         with:
             benchmark_package_path: "Benchmarks"
 
     cxx-interop:
         name: Cxx interop
         # Workaround https://github.com/nektos/act/issues/1875
-        uses: apple/nio/.github/workflows/cxx_interop.yml@main
+        uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
 
     integration-tests:
         name: Integration Tests
         # Workaround https://github.com/nektos/act/issues/1875
-        uses: apple/nio/.github/workflows/swift_matrix.yml@main
+        uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
         with:
           name: "Integration tests"
           matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"
