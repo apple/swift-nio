@@ -329,12 +329,14 @@ private struct ProducerState: Sendable {
         }
     }
 
+    /// Update internal state to reflect that we have been notified to produce more.
     mutating func shouldProduceMore() -> NIOThreadPool? {
         switch self.state {
         case let .producing(state):
             return state.handle.threadPool
-        case .pausedProducing:
-            return nil
+        case let .pausedProducing(state):
+            self.state = .producing(state)
+            return state.handle.threadPool
         case .done:
             return nil
         }
