@@ -1495,7 +1495,10 @@ class DatagramChannelTests: XCTestCase {
     func testWriteBufferAtGSOSegmentCountLimit() throws {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
 
-        var segments = 64
+        let udpMaxSegments = System.udpMaxSegments() ?? 64
+
+        var segments = udpMaxSegments
+
         let segmentSize = 10
         let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize))
         XCTAssertNoThrow(try didSet.wait())
@@ -1514,7 +1517,7 @@ class DatagramChannelTests: XCTestCase {
             self.firstChannel = try self.buildChannel(group: self.group)
             let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize))
             XCTAssertNoThrow(try didSet.wait())
-            segments = 61
+            segments = udpMaxSegments - 3
             try send(byteCount: segments * segmentSize)
         }
 
@@ -1525,13 +1528,16 @@ class DatagramChannelTests: XCTestCase {
     func testWriteBufferAboveGSOSegmentCountLimitShouldError() throws {
         try XCTSkipUnless(System.supportsUDPSegmentationOffload, "UDP_SEGMENT (GSO) is not supported on this platform")
 
+        // commonly 64 or 128 on systems which may or may not define UDP_MAX_SEGMENTS, pick the larger to ensure failure
+        let udpMaxSegments = System.udpMaxSegments() ?? 128
+
         let segmentSize = 10
         let didSet = self.firstChannel.setOption(.datagramSegmentSize, value: CInt(segmentSize))
         XCTAssertNoThrow(try didSet.wait())
 
-        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * 65)
+        let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * udpMaxSegments + 1)
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        // The kernel limits messages to a maximum of 64 segments; any more should result in an error.
+        // The kernel limits messages to a maximum of UDP_MAX_SEGMENTS segments; any more should result in an error.
         XCTAssertThrowsError(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait()) {
             XCTAssert($0 is IOError)
         }

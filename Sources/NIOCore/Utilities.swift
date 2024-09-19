@@ -258,3 +258,18 @@ extension System {
     public static let supportsUDPReceiveOffload: Bool = false
     #endif
 }
+
+extension System {
+    /// Returns the UDP maximum segment count if the platform supports and defines it.
+    public static func udpMaxSegments() -> Int? {
+        #if os(Linux)
+        if CNIOLinux_udp_max_segments_defined() {
+            return Int(CNIOLinux_UDP_MAX_SEGMENTS)
+        } else {
+            return nil
+        }
+        #else
+        return nil
+        #endif
+    }
+}
