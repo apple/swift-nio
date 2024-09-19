@@ -97,7 +97,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     // execution.
     private var taskNumber: UInt64 = 0
 
-    public var description = "EmbeddedEventLoop"
+    public let description = "EmbeddedEventLoop"
 
     private func nextTaskNumber() -> UInt64 {
         defer {
