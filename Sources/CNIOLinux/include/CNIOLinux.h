@@ -143,8 +143,7 @@ extern const unsigned int CNIOLinux_RENAME_EXCHANGE;
 extern const unsigned long CNIOLinux_UTIME_OMIT;
 extern const unsigned long CNIOLinux_UTIME_NOW;
 
-bool CNIOLinux_udp_max_segments_defined();
-extern const unsigned long CNIOLinux_UDP_MAX_SEGMENTS;
+extern const long CNIOLinux_UDP_MAX_SEGMENTS;
 
 #endif
 #endif

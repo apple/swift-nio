@@ -216,16 +216,8 @@ const unsigned long CNIOLinux_UTIME_OMIT = UTIME_OMIT;
 const unsigned long CNIOLinux_UTIME_NOW = UTIME_NOW;
 
 
-bool CNIOLinux_udp_max_segments_defined() {
-    #ifdef UDP_MAX_SEGMENTS
-    return true;
-    #else
-    return false;
-    #endif
-}
-
 #ifdef UDP_MAX_SEGMENTS
-const unsigned long CNIOLinux_UDP_MAX_SEGMENTS = UDP_MAX_SEGMENTS;
+const long CNIOLinux_UDP_MAX_SEGMENTS = UDP_MAX_SEGMENTS;
 #endif
-const unsigned long CNIOLinux_UDP_MAX_SEGMENTS = 0;
+const long CNIOLinux_UDP_MAX_SEGMENTS = -1;
 #endif
