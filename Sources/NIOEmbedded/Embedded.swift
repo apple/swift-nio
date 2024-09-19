@@ -97,6 +97,8 @@ public final class EmbeddedEventLoop: EventLoop {
     // execution.
     private var taskNumber: UInt64 = 0
 
+    public var description = "EmbeddedEventLoop"
+
     private func nextTaskNumber() -> UInt64 {
         defer {
             self.taskNumber += 1
