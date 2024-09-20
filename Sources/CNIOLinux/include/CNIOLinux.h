@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <netinet/ip.h>
-#include <netinet/udp.h>
+#include <linux/udp.h>
 #include <linux/vm_sockets.h>
 #include <fcntl.h>
 #include <fts.h>
@@ -142,6 +142,8 @@ extern const unsigned int CNIOLinux_RENAME_EXCHANGE;
 
 extern const unsigned long CNIOLinux_UTIME_OMIT;
 extern const unsigned long CNIOLinux_UTIME_NOW;
+
+extern const long CNIOLinux_UDP_MAX_SEGMENTS;
 
 #endif
 #endif
