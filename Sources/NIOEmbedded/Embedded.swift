@@ -79,7 +79,7 @@ extension EmbeddedScheduledTask: Comparable {
 ///     is because it is intended to be run in the thread that instantiated it. Users are
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
 ///     unsynchronized fashion.
-public final class EmbeddedEventLoop: EventLoop {
+public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     internal var _now: NIODeadline = .uptimeNanoseconds(0)
 
@@ -96,6 +96,8 @@ public final class EmbeddedEventLoop: EventLoop {
     // scheduled at the same time, we may do so in the order in which they were submitted for
     // execution.
     private var taskNumber: UInt64 = 0
+
+    public let description = "EmbeddedEventLoop"
 
     private func nextTaskNumber() -> UInt64 {
         defer {

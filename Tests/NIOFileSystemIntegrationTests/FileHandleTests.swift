@@ -546,7 +546,7 @@ final class FileHandleTests: XCTestCase {
 
     func testReadRangeLongerThanChunkAndNotMultipleOfChunkLength() async throws {
         // Reading chunks of bytes from within a range longer than the chunklength
-        // and with size not a multiple of the chunklength.
+        // and with size not a multiple of the chunklegth.
         try await self.withHandle(forFileAtPath: Self.thisFile) { handle in
             var bytes = ByteBuffer()
             for try await chunk in handle.readChunks(in: 0...200, chunkLength: .bytes(128)) {
