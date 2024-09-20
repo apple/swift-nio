@@ -7,13 +7,15 @@ on:
 jobs:
     soundness:
         name: Soundness
-        uses: ./.github/workflows/soundness.yml
+        # Workaround https://github.com/nektos/act/issues/1875
+        uses: apple/swift-nio/.github/workflows/soundness.yml@main
         with:
             license_header_check_project_name: "SwiftNIO"
 
     unit-tests:
         name: Unit tests
-        uses: ./.github/workflows/unit_tests.yml
+        # Workaround https://github.com/nektos/act/issues/1875
+        uses: apple/swift-nio/.github/workflows/unit_tests.yml@main
         with:
             linux_5_8_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
             linux_5_9_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
@@ -23,21 +25,25 @@ jobs:
 
     benchmarks:
         name: Benchmarks
-        uses: ./.github/workflows/benchmarks.yml
+        # Workaround https://github.com/nektos/act/issues/1875
+        uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
         with:
             benchmark_package_path: "Benchmarks"
 
     cxx-interop:
         name: Cxx interop
-        uses: ./.github/workflows/cxx_interop.yml
+        # Workaround https://github.com/nektos/act/issues/1875
+        uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
 
     integration-tests:
         name: Integration Tests
-        uses: ./.github/workflows/swift_matrix.yml
+        # Workaround https://github.com/nektos/act/issues/1875
+        uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
         with:
           name: "Integration tests"
           matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"
 
     swift-6-language-mode:
         name: Swift 6 Language Mode
-        uses: ./.github/workflows/swift_6_language_mode.yml
+        # Workaround https://github.com/nektos/act/issues/1875
+        uses: apple/swift-nio/.github/workflows/swift_6_language_mode.yml@main
