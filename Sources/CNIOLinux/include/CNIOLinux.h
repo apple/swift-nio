@@ -30,7 +30,11 @@
 #include <errno.h>
 #include <pthread.h>
 #include <netinet/ip.h>
+#if __has_include(<linux/udp.h>)
 #include <linux/udp.h>
+#else
+#include <netinet/udp.h>
+#endif
 #include <linux/vm_sockets.h>
 #include <fcntl.h>
 #include <fts.h>
