@@ -1650,6 +1650,68 @@ class DatagramChannelTests: XCTestCase {
         try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 4, vectorReads: 4)
     }
 
+    func testChannelCanReportWritableBufferedBytes() throws {
+        let buffer = self.firstChannel.allocator.buffer(string: "abcd")
+        let data = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        let writeCount = 3
+
+        let promises = (0..<writeCount).map { _ in self.firstChannel.write(NIOAny(data)) }
+        let bufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
+        XCTAssertEqual(bufferedAmount, buffer.readableBytes * writeCount)
+        self.firstChannel.flush()
+        let bufferedAmountAfterFlush = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
+        XCTAssertEqual(bufferedAmountAfterFlush, 0)
+        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
+        let datagrams = try self.secondChannel.waitForDatagrams(count: writeCount)
+
+        for datagram in datagrams {
+            XCTAssertEqual(datagram.data.readableBytes, buffer.readableBytes)
+        }
+    }
+
+    func testChannelCanReportWritableBufferedBytesWithDataLargerThanSendBuffer() throws {
+        self.firstChannel = try DatagramBootstrap(group: self.group)
+            .channelOption(.socketOption(.so_sndbuf), value: 16)
+            .channelOption(.socketOption(.so_reuseaddr), value: 1)
+            .channelInitializer { channel in
+                channel.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
+            }
+            .bind(host: "127.0.0.1", port: 0)
+            .wait()
+        let buffer = self.firstChannel.allocator.buffer(repeating: 0xff, count: 16)
+        let data = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        let writeCount = 10
+        var promises: [EventLoopFuture<Void>] = []
+
+        for i in 0..<writeCount {
+            let promise = self.firstChannel.write(NIOAny(data))
+            promises.append(promise)
+            do {
+                if i % 2 == 0 {
+                    self.firstChannel.flush()
+                    let bufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
+                    XCTAssertEqual(bufferedAmount, 0)
+                } else {
+                    let bufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
+                    XCTAssertEqual(bufferedAmount, buffer.readableBytes)
+                }
+            } catch {
+                XCTFail("firstChannel should not throw any error, but threw \(error)")
+            }
+        }
+
+        self.firstChannel.flush()
+        let finalBufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
+        XCTAssertEqual(finalBufferedAmount, 0)
+        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
+        let datagrams = try self.secondChannel.waitForDatagrams(count: writeCount)
+
+        XCTAssertEqual(datagrams.count, writeCount)
+        for datagram in datagrams {
+            XCTAssertEqual(datagram.data.readableBytes, buffer.readableBytes)
+        }
+    }
+
     private func hasGoodGROSupport() throws -> Bool {
         // Source code for UDP_GRO was added in Linux 5.0. However, this support is somewhat limited
         // and some sources indicate support was actually added in 5.10 (perhaps more widely
