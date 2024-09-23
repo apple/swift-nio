@@ -676,6 +676,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
                 throw ChannelError._operationUnsupported
             }
             return try self.socket.getUDPReceiveOffload() as! Option.Value
+        case _ as ChannelOptions.Types.BufferedWritableBytesOption:
+            return Int(self.pendingWrites.bufferedBytes) as! Option.Value
         default:
             return try super.getOption0(option)
         }

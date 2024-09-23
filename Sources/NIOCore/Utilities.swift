@@ -257,4 +257,15 @@ extension System {
     /// The option can be enabled by setting the ``ChannelOptions/Types/DatagramReceiveOffload`` channel option.
     public static let supportsUDPReceiveOffload: Bool = false
     #endif
+
+    /// Returns the UDP maximum segment count if the platform supports and defines it.
+    public static var udpMaxSegments: Int? {
+        #if os(Linux)
+        let maxSegments = CNIOLinux_UDP_MAX_SEGMENTS
+        if maxSegments != -1 {
+            return maxSegments
+        }
+        #endif
+        return nil
+    }
 }

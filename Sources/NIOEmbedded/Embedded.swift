@@ -79,7 +79,7 @@ extension EmbeddedScheduledTask: Comparable {
 ///     is because it is intended to be run in the thread that instantiated it. Users are
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
 ///     unsynchronized fashion.
-public final class EmbeddedEventLoop: EventLoop {
+public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     internal var _now: NIODeadline = .uptimeNanoseconds(0)
 
@@ -96,6 +96,8 @@ public final class EmbeddedEventLoop: EventLoop {
     // scheduled at the same time, we may do so in the order in which they were submitted for
     // execution.
     private var taskNumber: UInt64 = 0
+
+    public let description = "EmbeddedEventLoop"
 
     private func nextTaskNumber() -> UInt64 {
         defer {
@@ -862,6 +864,14 @@ public final class EmbeddedChannel: Channel {
         }
         if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
             return self.allowRemoteHalfClosure as! Option.Value
+        }
+        if option is ChannelOptions.Types.BufferedWritableBytesOption {
+            let result = self.channelcore.pendingOutboundBuffer.reduce(0) { partialResult, dataAndPromise in
+                let buffer = self.channelcore.unwrapData(dataAndPromise.0, as: ByteBuffer.self)
+                return partialResult + buffer.readableBytes
+            }
+
+            return result as! Option.Value
         }
         fatalError("option \(option) not supported")
     }
