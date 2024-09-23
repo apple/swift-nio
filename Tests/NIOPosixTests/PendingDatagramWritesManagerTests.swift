@@ -388,7 +388,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: secondAddress, data: buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: firstAddress, data: emptyBuffer), promise: ps[2])
-            
+
             XCTAssertEqual(8, pwm.bufferedBytes)
 
             var result = try assertExpectedWritability(
@@ -544,7 +544,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
             pwm.markFlushCheckpoint()
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[2])
-            
+
             XCTAssertEqual(12, pwm.bufferedBytes)
 
             let result = try assertExpectedWritability(
@@ -587,7 +587,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[1])
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[2])
             pwm.markFlushCheckpoint()
-            
+
             XCTAssertEqual(Int64(3 * halfTheWriteVLimit), pwm.bufferedBytes)
 
             let result = try assertExpectedWritability(
@@ -680,7 +680,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: emptyBuffer), promise: ps[1])
             pwm.markFlushCheckpoint()
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: emptyBuffer), promise: ps[2])
-            
+
             XCTAssertEqual(0, pwm.bufferedBytes)
 
             var result = try assertExpectedWritability(
@@ -786,7 +786,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
-    
+
     func testReadBufferedWritableBytesWithConsecutiveWritesAndWouldBlock() throws {
         let el = EmbeddedEventLoop()
         let alloc = ByteBufferAllocator()
@@ -803,36 +803,46 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             pwm.markFlushCheckpoint()
             XCTAssertEqual(Int64(bufferSize * (ps.count - 1)), pwm.bufferedBytes)
 
-            var result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                       promises: ps,
-                                                       expectedSingleWritabilities: [(bufferSize, address)],
-                                                       expectedVectorWritabilities: [Array(repeating: (bufferSize, address), count: 4)],
-                                                       returns: [.success(.processed(3)), .success(.wouldBlock(0))],
-                                                       promiseStates: [Array(repeating: true, count: 3) + [false, false],
-                                                                       Array(repeating: true, count: 3) + [false, false]])
+            var result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [(bufferSize, address)],
+                expectedVectorWritabilities: [Array(repeating: (bufferSize, address), count: 4)],
+                returns: [.success(.processed(3)), .success(.wouldBlock(0))],
+                promiseStates: [
+                    Array(repeating: true, count: 3) + [false, false],
+                    Array(repeating: true, count: 3) + [false, false],
+                ]
+            )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
             XCTAssertEqual(Int64(bufferSize), pwm.bufferedBytes)
-            
+
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps.last!)
             pwm.markFlushCheckpoint()
             XCTAssertEqual(Int64(bufferSize * 2), pwm.bufferedBytes)
-            
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: [(bufferSize, address)],
-                                                   expectedVectorWritabilities: [[(bufferSize, address), (bufferSize, address)]],
-                                                   returns: [.success(.processed(1)), .success(.wouldBlock(0))],
-                                                   promiseStates: [Array(repeating: true, count: 4) + [false],
-                                                                   Array(repeating: true, count: 4) + [false]])
+
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [(bufferSize, address)],
+                expectedVectorWritabilities: [[(bufferSize, address), (bufferSize, address)]],
+                returns: [.success(.processed(1)), .success(.wouldBlock(0))],
+                promiseStates: [
+                    Array(repeating: true, count: 4) + [false],
+                    Array(repeating: true, count: 4) + [false],
+                ]
+            )
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
             XCTAssertEqual(Int64(bufferSize), pwm.bufferedBytes)
-            
-            result = try assertExpectedWritability(pendingWritesManager: pwm,
-                                                   promises: ps,
-                                                   expectedSingleWritabilities: [(bufferSize, address)],
-                                                   expectedVectorWritabilities: nil,
-                                                   returns: [.success(.processed(1))],
-                                                   promiseStates: [Array(repeating: true, count: 5)])
+
+            result = try assertExpectedWritability(
+                pendingWritesManager: pwm,
+                promises: ps,
+                expectedSingleWritabilities: [(bufferSize, address)],
+                expectedVectorWritabilities: nil,
+                returns: [.success(.processed(1))],
+                promiseStates: [Array(repeating: true, count: 5)]
+            )
             XCTAssertEqual(.writtenCompletely, result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }

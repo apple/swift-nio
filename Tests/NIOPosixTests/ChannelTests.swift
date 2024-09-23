@@ -786,7 +786,8 @@ public final class ChannelTests: XCTestCase {
             for i in (0..<numberOfWrites) {
                 _ = pwm.add(data: i % 2 == 0 ? .byteBuffer(buffer) : .fileRegion(fileRegion), promise: ps[i])
             }
-            let totalBytes = (0..<numberOfWrites).map { $0 % 2 == 0 ? buffer.readableBytes : fileRegion.readableBytes }.reduce(0, +)
+            let totalBytes = (0..<numberOfWrites).map { $0 % 2 == 0 ? buffer.readableBytes : fileRegion.readableBytes }
+                .reduce(0, +)
             XCTAssertEqual(Int64(totalBytes), pwm.bufferedBytes)
             pwm.markFlushCheckpoint()
 
@@ -1069,14 +1070,17 @@ public final class ChannelTests: XCTestCase {
                 XCTAssertNoThrow(try fh1.takeDescriptorOwnership())
                 XCTAssertNoThrow(try fh2.takeDescriptorOwnership())
             }
-            
+
             var totalBytes: Int64 = 0
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[0])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[1])
             _ = pwm.add(data: .fileRegion(fr1), promise: ps[2])
             _ = pwm.add(data: .byteBuffer(buffer), promise: ps[3])
             _ = pwm.add(data: .fileRegion(fr2), promise: ps[4])
-            totalBytes += Int64(buffer.readableBytes + buffer.readableBytes + fr1.readableBytes + buffer.readableBytes + fr2.readableBytes)
+            totalBytes += Int64(
+                buffer.readableBytes + buffer.readableBytes + fr1.readableBytes + buffer.readableBytes
+                    + fr2.readableBytes
+            )
             XCTAssertEqual(totalBytes, pwm.bufferedBytes)
             pwm.markFlushCheckpoint()
 
@@ -3411,27 +3415,27 @@ public final class ChannelTests: XCTestCase {
         XCTAssertNoThrow(try handler.becameUnwritable.futureResult.wait())
         XCTAssertNoThrow(try handler.becameWritable.futureResult.wait())
     }
-    
+
     func testChannelCanReportWritableBufferedBytes() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        
+
         let server = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .bind(host: "localhost", port: 0)
             .wait()
-        
+
         let client = try ClientBootstrap(group: group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .connect(to: server.localAddress!)
             .wait()
-        
+
         let buffer = client.allocator.buffer(string: "abcd")
         let writeCount = 3
-        
-        let promises = (0..<writeCount).map {_ in client.write(NIOAny(buffer))}
+
+        let promises = (0..<writeCount).map { _ in client.write(NIOAny(buffer)) }
         let bufferedAmount = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmount, buffer.readableBytes * writeCount)
         client.flush()
@@ -3439,33 +3443,35 @@ public final class ChannelTests: XCTestCase {
         let bufferedAmountAfterFlush = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmountAfterFlush, 0)
     }
-    
+
     func testChannelCanReportWritableBufferedBytesWhenSendBufferWouldBlock() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
-        
+
         let server = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .bind(host: "localhost", port: 0)
             .wait()
-        
+
         let client = try ClientBootstrap(group: group)
             .channelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
             .channelOption(ChannelOptions.socketOption(.so_sndbuf), value: 8)
             .connect(to: server.localAddress!)
             .wait()
-        
+
         let buffer = client.allocator.buffer(string: "abcd")
         let writeCount = 20
-        
-        var promises = (0..<writeCount).map {_ in client.writeAndFlush(NIOAny(buffer))}
+
+        var promises = (0..<writeCount).map { _ in client.writeAndFlush(NIOAny(buffer)) }
         var bufferedAmount = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertTrue(bufferedAmount >= 0 && bufferedAmount <= buffer.readableBytes * writeCount)
         promises.append(client.write(NIOAny(buffer)))
         bufferedAmount = try client.getOption(.bufferedWritableBytes).wait()
-        XCTAssertTrue(bufferedAmount >= buffer.readableBytes && bufferedAmount <= buffer.readableBytes * (writeCount + 1))
+        XCTAssertTrue(
+            bufferedAmount >= buffer.readableBytes && bufferedAmount <= buffer.readableBytes * (writeCount + 1)
+        )
         client.flush()
         XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: client.eventLoop).wait())
         let bufferedAmountAfterFlush = try client.getOption(.bufferedWritableBytes).wait()

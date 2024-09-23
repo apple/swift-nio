@@ -1643,12 +1643,12 @@ class DatagramChannelTests: XCTestCase {
     func testChannelCanReceiveMultipleLargeBuffersWithGROUsingVectorReads() throws {
         try self.testReceiveLargeBufferWithGRO(segments: 10, segmentSize: 1000, writes: 4, vectorReads: 4)
     }
-    
+
     func testChannelCanReportWritableBufferedBytes() throws {
         let buffer = self.firstChannel.allocator.buffer(string: "abcd")
         let data = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
         let writeCount = 3
-        
+
         let promises = (0..<writeCount).map { _ in self.firstChannel.write(NIOAny(data)) }
         let bufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmount, buffer.readableBytes * writeCount)
@@ -1657,12 +1657,12 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertEqual(bufferedAmountAfterFlush, 0)
         XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
         let datagrams = try self.secondChannel.waitForDatagrams(count: writeCount)
-        
+
         for datagram in datagrams {
             XCTAssertEqual(datagram.data.readableBytes, buffer.readableBytes)
         }
     }
-    
+
     func testChannelCanReportWritableBufferedBytesWithDataLargerThanSendBuffer() throws {
         self.firstChannel = try DatagramBootstrap(group: self.group)
             .channelOption(.socketOption(.so_sndbuf), value: 16)
@@ -1676,7 +1676,7 @@ class DatagramChannelTests: XCTestCase {
         let data = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
         let writeCount = 10
         var promises: [EventLoopFuture<Void>] = []
-        
+
         for i in 0..<writeCount {
             let promise = self.firstChannel.write(NIOAny(data))
             promises.append(promise)
@@ -1699,7 +1699,7 @@ class DatagramChannelTests: XCTestCase {
         XCTAssertEqual(finalBufferedAmount, 0)
         XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
         let datagrams = try self.secondChannel.waitForDatagrams(count: writeCount)
-        
+
         XCTAssertEqual(datagrams.count, writeCount)
         for datagram in datagrams {
             XCTAssertEqual(datagram.data.readableBytes, buffer.readableBytes)

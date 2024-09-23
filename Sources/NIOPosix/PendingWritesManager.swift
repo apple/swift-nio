@@ -323,9 +323,9 @@ final class PendingStreamWritesManager: PendingWritesManager {
     var isEmpty: Bool {
         self.state.isEmpty
     }
-    
+
     var bufferedBytes: Int64 {
-        return self.state.bytes
+        self.state.bytes
     }
 
     /// Add a pending write alongside its promise.

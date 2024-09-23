@@ -450,9 +450,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     var isEmpty: Bool {
         self.state.isEmpty
     }
-    
+
     var bufferedBytes: Int64 {
-        return self.state.bytes
+        self.state.bytes
     }
 
     private func add(_ pendingWrite: PendingDatagramWrite) -> Bool {

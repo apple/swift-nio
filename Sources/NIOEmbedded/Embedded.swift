@@ -868,7 +868,7 @@ public final class EmbeddedChannel: Channel {
                 let buffer = self.channelcore.unwrapData(dataAndPromise.0, as: ByteBuffer.self)
                 return partialResult + buffer.readableBytes
             }
-            
+
             return result as! Option.Value
         }
         fatalError("option \(option) not supported")
