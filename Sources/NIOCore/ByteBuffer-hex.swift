@@ -14,7 +14,7 @@
 
 extension ByteBuffer {
 
-    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from  the string representation of `plainHexEncodedBytes`.
+    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from the string representation of `plainHexEncodedBytes`.
     ///
     /// This will allocate a new `ByteBuffer` with enough space to fit the hex decoded `bytes` and potentially some extra space
     /// using the default allocator.
@@ -356,15 +356,18 @@ extension ByteBuffer {
     }
 
     /// An error that is thrown when an invalid hex encoded string was attempted to be written to a ByteBuffer.
-    public struct HexDecodingError: Error {
-        let kind: HexDecodingErrorKind
+    public struct HexDecodingError: Error, Equatable {
+        private let kind: HexDecodingErrorKind
 
-        enum HexDecodingErrorKind {
+        private enum HexDecodingErrorKind {
             /// The hex encoded string was not of the expected even length.
             case invalidHexLength
             /// An invalid hex character was found in the hex encoded string.
             case invalidCharacter
         }
+
+        public static let invalidHexLength = HexDecodingError(kind: .invalidHexLength)
+        public static let invalidCharacter = HexDecodingError(kind: .invalidCharacter)
     }
 }
 
@@ -385,7 +388,7 @@ extension UInt8 {
             case UInt8(ascii: "A")...UInt8(ascii: "F"):
                 return self - UInt8(ascii: "A") + 10
             default:
-                throw ByteBuffer.HexDecodingError(kind: .invalidCharacter)
+                throw ByteBuffer.HexDecodingError.invalidCharacter
             }
         }
     }
@@ -403,7 +406,7 @@ extension Substring.UTF8View {
         }
 
         guard let secondHex = try self.popFirst()?.asciiHexNibble else {
-            throw ByteBuffer.HexDecodingError(kind: .invalidHexLength)
+            throw ByteBuffer.HexDecodingError.invalidHexLength
         }
 
         return (firstHex << 4) | secondHex

@@ -1957,24 +1957,24 @@ class ByteBufferTest: XCTestCase {
     func testWriteHexEncodedBytesFails() throws {
         var buffer = ByteBuffer()
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1  ")) { error in
-            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidCharacter)
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidCharacter)
         }
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1")) { error in
-            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidHexLength)
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidHexLength)
         }
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1       ")) { error in
-            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidCharacter)
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidCharacter)
         }
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("🤓")) { error in
-            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidCharacter)
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidCharacter)
         }
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1 1")) { error in
-            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidCharacter)
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidCharacter)
         }
 
         // The first byte (68 = "h") is valid, the method throws and the valid byte IS NOT written to the ByteBuffer
         XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("68 1")) { error in
-            XCTAssertTrue((error as? ByteBuffer.HexDecodingError)?.kind == .invalidHexLength)
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidHexLength)
         }
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }

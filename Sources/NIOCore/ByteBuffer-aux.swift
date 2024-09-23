@@ -92,7 +92,8 @@ extension ByteBuffer {
     }
 
     // MARK: Hex encoded string APIs
-    /// Write `string` into this `ByteBuffer` in ASCII hexadecimal, moving the writer index forward appropriately. This method will throw if the string input is not of the "plain" hex encoded format.
+    /// Write ASCII hexadecimal `string` into this `ByteBuffer` as raw bytes, decoding the hexadecimal & moving the writer index forward appropriately.
+    /// This method will throw if the string input is not of the "plain" hex encoded format.
     /// - parameters:
     ///     - plainHexEncodedBytes: The hex encoded string to write. Plain hex dump format is hex bytes optionally separated by spaces, i.e. `48 65 6c 6c 6f` or `48656c6c6f` for `Hello`.
     ///     This format is compatible with `xxd` CLI utility.
