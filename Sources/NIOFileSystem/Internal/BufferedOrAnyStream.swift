@@ -12,21 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-/// Wraps a ``NIOThrowingAsyncSequenceProducer<Element>`` or ``AnyAsyncSequence<Element>``.
+/// Wraps a ``BufferedStream<Element>`` or ``AnyAsyncSequence<Element>``.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDelegate> {
-    typealias AsyncSequenceProducer = NIOThrowingAsyncSequenceProducer<
-        Element, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, Delegate
-    >
-
-    case nioThrowingAsyncSequenceProducer(AsyncSequenceProducer)
+internal enum BufferedOrAnyStream<Element> {
+    case bufferedStream(BufferedStream<Element>)
     case anyAsyncSequence(AnyAsyncSequence<Element>)
 
-    internal init(wrapping stream: AsyncSequenceProducer) {
-        self = .nioThrowingAsyncSequenceProducer(stream)
+    internal init(wrapping stream: BufferedStream<Element>) {
+        self = .bufferedStream(stream)
     }
 
     internal init<S: AsyncSequence>(wrapping stream: S) where S.Element == Element {
@@ -35,7 +29,7 @@ internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDel
 
     internal func makeAsyncIterator() -> AsyncIterator {
         switch self {
-        case let .nioThrowingAsyncSequenceProducer(stream):
+        case let .bufferedStream(stream):
             return AsyncIterator(wrapping: stream.makeAsyncIterator())
         case let .anyAsyncSequence(stream):
             return AsyncIterator(wrapping: stream.makeAsyncIterator())
@@ -43,13 +37,13 @@ internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDel
     }
 
     internal enum AsyncIterator: AsyncIteratorProtocol {
-        case bufferedStream(AsyncSequenceProducer.AsyncIterator)
+        case bufferedStream(BufferedStream<Element>.AsyncIterator)
         case anyAsyncSequence(AnyAsyncSequence<Element>.AsyncIterator)
 
         internal mutating func next() async throws -> Element? {
             let element: Element?
             switch self {
-            case let .bufferedStream(iterator):
+            case var .bufferedStream(iterator):
                 defer { self = .bufferedStream(iterator) }
                 element = try await iterator.next()
             case var .anyAsyncSequence(iterator):
@@ -59,7 +53,7 @@ internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDel
             return element
         }
 
-        internal init(wrapping iterator: AsyncSequenceProducer.AsyncIterator) {
+        internal init(wrapping iterator: BufferedStream<Element>.AsyncIterator) {
             self = .bufferedStream(iterator)
         }
 
