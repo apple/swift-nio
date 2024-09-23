@@ -12,20 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(Windows)
-import ucrt
-#elseif canImport(Darwin)
-import Darwin
-#elseif canImport(Glibc)
-import Glibc
-#elseif canImport(Musl)
-import Musl
-#elseif canImport(Bionic)
-import Bionic
-#else
-#error("The Byte Buffer module was unable to identify your C library.")
-#endif
-
 /// Describes a way to encode and decode an integer as bytes
 ///
 public protocol NIOBinaryIntegerEncodingStrategy {
@@ -301,21 +287,14 @@ extension ByteBuffer {
     /// The total bytes written will be equal to `requiredSpace`, and the writer index will be moved accordingly.
     @usableFromInline
     mutating func _createSpace(before index: Int, requiredSpace: Int) {
+        precondition(index >= self.readerIndex)
         let bytesToMove = self.writerIndex - index
 
         // Add the required number of bytes to the end first
         self.writeRepeatingByte(0, count: requiredSpace)
         // Move the data forward by that many bytes, to make space at the front
-        self.withVeryUnsafeMutableBytes { pointer in
-            _ = memmove(
-                // Destination: This is forward from the index where we want to make space
-                pointer.baseAddress!.advanced(by: index + requiredSpace),
-                // Source: This is the index where we want to make space
-                pointer.baseAddress!.advanced(by: index),
-                // This is the number of bytes which will be moved
-                bytesToMove
-            )
-        }
+        // The precondition above makes this safe: our indices are in the valid range, so we can safely use them here
+        try! self.copyBytes(at: index, to: index + requiredSpace, length: bytesToMove)
     }
 
     /// Move the `size` bytes starting from `source` to `destination`.
@@ -326,12 +305,6 @@ extension ByteBuffer {
         precondition(source + size <= self.writerIndex)
 
         // The precondition above makes this safe: our indices are in the valid range, so we can safely use them here
-        self.withVeryUnsafeMutableBytes { pointer in
-            _ = memmove(
-                pointer.baseAddress!.advanced(by: destination),
-                pointer.baseAddress!.advanced(by: source),
-                size
-            )
-        }
+        try! self.copyBytes(at: source, to: destination, length: size)
     }
 }

@@ -294,7 +294,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
 
     // MARK: - writeLengthPrefixed* tests
 
-    func testWriteQUICVariableLengthPrefixedString() {
+    func testWriteVariableLengthPrefixedString() {
         var buffer = ByteBuffer()
         let strategy = UInt8WritingTestStrategy(expectedWrite: 11)
         let testString = "Hello World"  // length = 11
@@ -306,7 +306,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteQUICVariableLengthPrefixedBytes() {
+    func testWriteVariableLengthPrefixedBytes() {
         var buffer = ByteBuffer()
         let strategy = UInt8WritingTestStrategy(expectedWrite: 10)
         let testBytes = [UInt8](repeating: 1, count: 10)
@@ -318,7 +318,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
         XCTAssertTrue(buffer.readableBytesView.isEmpty)
     }
 
-    func testWriteQUICVariableLengthPrefixedBuffer() {
+    func testWriteVariableLengthPrefixedBuffer() {
         var buffer = ByteBuffer()
         let strategy = UInt8WritingTestStrategy(expectedWrite: 4)
         let testBuffer = ByteBuffer(string: "test")
