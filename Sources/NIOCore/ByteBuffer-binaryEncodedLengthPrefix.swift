@@ -98,7 +98,7 @@ extension ByteBuffer {
     }
 
     /// Prefixes bytes written by `writeData` with the number of bytes written.
-    /// The number of bytes written is encoded usng `strategy`
+    /// The number of bytes written is encoded using `strategy`
     ///
     /// - Note: This function works by reserving the number of bytes suggested by `strategy` before the data.
     /// It then writes the data, and then goes back to write the length.
