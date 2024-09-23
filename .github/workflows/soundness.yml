@@ -143,7 +143,7 @@ jobs:
     if: ${{ inputs.format_check_enabled }}
     runs-on: ubuntu-latest
     container:
-      image: swiftlang/swift:nightly-6.0-jammy
+      image: swift:6.0-jammy
     timeout-minutes: 5
     steps:
     - name: Checkout repository
