@@ -3,10 +3,6 @@ name: Matrix
 on:
   workflow_call:
     inputs:
-      name:
-        type: string
-        description: "The name of the workflow used for the concurrency group."
-        required: true
       matrix_linux_command:
         type: string
         description: "The command of the current Swift version linux matrix job to execute."
@@ -66,11 +62,6 @@ on:
       matrix_linux_nightly_main_command_override:
         type: string
         description: "The command of the nightly main Swift version linux matrix job to execute."
-
-## We are cancelling previously triggered workflow runs
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
-  cancel-in-progress: true
  
 jobs:
   linux:

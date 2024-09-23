@@ -51,11 +51,6 @@ on:
         type: string
         description: "Container image for the shell check job. Defaults to latest Swift Ubuntu image."
         default: "swift:5.10-noble"
-
-## We are cancelling previously triggered workflow runs
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-soundness
-  cancel-in-progress: true
  
 jobs:
   api-breakage-check:
