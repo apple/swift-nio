@@ -32,7 +32,7 @@ struct UInt8WritingTestStrategy: NIOBinaryIntegerEncodingStrategy {
         return buffer.writeInteger(UInt8(integer))
     }
 
-    func writeIntegerWithReservedCapacity(_ integer: Int, reservedCapacity: Int, to buffer: inout ByteBuffer) -> Int {
+    func writeInteger(_ integer: Int, reservedCapacity: Int, to buffer: inout ByteBuffer) -> Int {
         XCTFail("This should not be called")
         return 1
     }
@@ -56,7 +56,7 @@ struct UInt8ReadingTestStrategy: NIOBinaryIntegerEncodingStrategy {
         return 1
     }
 
-    func writeIntegerWithReservedCapacity(_ integer: Int, reservedCapacity: Int, to buffer: inout ByteBuffer) -> Int {
+    func writeInteger(_ integer: Int, reservedCapacity: Int, to buffer: inout ByteBuffer) -> Int {
         XCTFail("This should not be called")
         return 1
     }
@@ -84,7 +84,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedCapacity(
+            func writeInteger(
                 _ integer: Int,
                 reservedCapacity: Int,
                 to buffer: inout ByteBuffer
@@ -120,7 +120,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedCapacity(
+            func writeInteger(
                 _ integer: Int,
                 reservedCapacity: Int,
                 to buffer: inout ByteBuffer
@@ -161,7 +161,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedCapacity(
+            func writeInteger(
                 _ integer: Int,
                 reservedCapacity: Int,
                 to buffer: inout ByteBuffer
@@ -204,7 +204,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedCapacity(
+            func writeInteger(
                 _ integer: Int,
                 reservedCapacity: Int,
                 to buffer: inout ByteBuffer
@@ -248,7 +248,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
                 return 1
             }
 
-            func writeIntegerWithReservedCapacity(
+            func writeInteger(
                 _ integer: Int,
                 reservedCapacity: Int,
                 to buffer: inout ByteBuffer

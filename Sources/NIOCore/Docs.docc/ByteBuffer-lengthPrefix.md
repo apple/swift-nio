@@ -104,7 +104,7 @@ will default to simply calling the existing ``NIOBinaryIntegerEncodingStrategy/w
 ///   - reservedCapacity: The capacity already reserved for writing this integer
 ///   - buffer: The buffer to write into.
 /// - Returns: The number of bytes used to write the integer.
-func writeIntegerWithReservedCapacity(
+func writeInteger(
     _ integer: Int,
     reservedCapacity: Int,
     to buffer: inout ByteBuffer

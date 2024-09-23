@@ -37,7 +37,7 @@ public protocol NIOBinaryIntegerEncodingStrategy {
         to buffer: inout ByteBuffer
     ) -> Int
 
-    /// An estimate of the bytes required to write integers using ths strategy.
+    /// An estimate of the bytes required to write integers using this strategy.
     /// Callers may use this to reserve bytes before writing the integer.
     /// If the actual bytes used by the write function is more or less than this, it may be necessary to shuffle bytes.
     /// Therefore, an accurate prediction here will improve performance.
@@ -53,7 +53,7 @@ public protocol NIOBinaryIntegerEncodingStrategy {
     ///   - reservedCapacity: The capacity already reserved for writing this integer
     ///   - buffer: The buffer to write into.
     /// - Returns: The number of bytes used to write the integer.
-    func writeIntegerWithReservedCapacity(
+    func writeInteger(
         _ integer: Int,
         reservedCapacity: Int,
         to buffer: inout ByteBuffer
@@ -65,7 +65,7 @@ extension NIOBinaryIntegerEncodingStrategy {
     public var requiredBytesHint: Int { 1 }
 
     @inlinable
-    public func writeIntegerWithReservedCapacity<IntegerType: FixedWidthInteger>(
+    public func writeInteger<IntegerType: FixedWidthInteger>(
         _ integer: IntegerType,
         reservedCapacity: Int,
         to buffer: inout ByteBuffer
@@ -144,7 +144,7 @@ extension ByteBuffer {
         // We write the length after the data to begin with. We will move it later
 
         /// The actual number of bytes used to write the length written. The user may write more or fewer bytes than what we reserved
-        let actualIntegerLength = strategy.writeIntegerWithReservedCapacity(
+        let actualIntegerLength = strategy.writeInteger(
             dataLength,
             reservedCapacity: reservedCapacity,
             to: &self

@@ -90,7 +90,7 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
         // We only need one byte but the encoder will use 2 because we reserved 2
         var buffer = ByteBuffer()
         let strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: 0)
-        let bytesWritten = strategy.writeIntegerWithReservedCapacity(0b00000001, reservedCapacity: 2, to: &buffer)
+        let bytesWritten = strategy.writeInteger(0b00000001, reservedCapacity: 2, to: &buffer)
         XCTAssertEqual(bytesWritten, 2)
         XCTAssertEqual(buffer.readInteger(as: UInt16.self), UInt16(0b01000000_00000001))
         XCTAssertEqual(buffer.readableBytes, 0)
@@ -102,7 +102,7 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
             for testNumber in [0, 63, 15293, 494_878_333, 151_288_809_941_952_652] {
                 var buffer = ByteBuffer()
                 let strategy = ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: 0)
-                let bytesWritten = strategy.writeIntegerWithReservedCapacity(
+                let bytesWritten = strategy.writeInteger(
                     testNumber,
                     reservedCapacity: reservedCapacity,
                     to: &buffer

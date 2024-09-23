@@ -89,11 +89,11 @@ extension ByteBuffer {
             _ integer: IntegerType,
             to buffer: inout ByteBuffer
         ) -> Int {
-            self.writeIntegerWithReservedCapacity(integer, reservedCapacity: 0, to: &buffer)
+            self.writeInteger(integer, reservedCapacity: 0, to: &buffer)
         }
 
         @inlinable
-        public func writeIntegerWithReservedCapacity<IntegerType: FixedWidthInteger>(
+        public func writeInteger<IntegerType: FixedWidthInteger>(
             _ integer: IntegerType,
             reservedCapacity: Int,
             to buffer: inout ByteBuffer
