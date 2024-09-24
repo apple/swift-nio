@@ -79,8 +79,11 @@ extension ByteBuffer {
     /// Read a binary encoded integer, moving the `readerIndex` appropriately.
     /// If there are not enough bytes, nil is returned.
     @inlinable
-    public mutating func readEncodedInteger<Strategy: NIOBinaryIntegerEncodingStrategy>(_ strategy: Strategy) -> Int? {
-        strategy.readInteger(as: Int.self, from: &self)
+    public mutating func readEncodedInteger<Strategy: NIOBinaryIntegerEncodingStrategy, Integer: FixedWidthInteger>(
+        _ strategy: Strategy,
+        as: Integer.Type = Integer.self
+    ) -> Integer? {
+        strategy.readInteger(as: Integer.self, from: &self)
     }
 
     /// Write a binary encoded integer.
