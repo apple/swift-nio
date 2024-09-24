@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 /// Describes a way to encode and decode an integer as bytes
+/// For more information, see <doc:ByteBuffer-lengthPrefix>
 ///
 public protocol NIOBinaryIntegerEncodingStrategy {
     /// Read an integer from a buffer.
@@ -44,10 +45,10 @@ public protocol NIOBinaryIntegerEncodingStrategy {
     var requiredBytesHint: Int { get }
 
     /// Write an integer to a buffer. Move the writer index to after the written integer.
-    /// Call this function if you have already reserved some capacity for an integer to be written.
-    /// Implementors should consider using a less efficient encoding, if possible,to fit exactly within the reserved capacity.
-    /// Otherwise, callers may need to shift bytes to reconcile the difference.
-    /// It is up to the implementor to find the balance between performance and size.
+    /// This function will be called when an integer needs to be written, and some capacity has already been reserved for it.
+    /// Implementers should consider using a less efficient encoding, if possible,to fit exactly within the reserved capacity.
+    /// Otherwise, the caller will need to shift bytes to reconcile the difference.
+    /// It is up to the implementer to find the balance between performance and size.
     /// - Parameters:
     ///   - integer: The integer to write
     ///   - reservedCapacity: The capacity already reserved for writing this integer
