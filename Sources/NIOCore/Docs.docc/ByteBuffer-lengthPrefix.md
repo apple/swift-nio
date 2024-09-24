@@ -21,9 +21,9 @@ implementation: ``ByteBuffer/QUICBinaryEncodingStrategy``
 
 This protocol only has 2 requirements which don't have default implementations:
 
-- ``readInteger``: Reads an integer from the ByteBuffer using this encoding. Implementations will read as many bytes as
+- `readInteger`: Reads an integer from the ByteBuffer using this encoding. Implementations will read as many bytes as
   they need to, according to their wire format, and move the reader index accordingly
-- ``writeInteger``: Write an integer to the ByteBuffer using this encoding. Implementations will write as many bytes as
+- `writeInteger`: Write an integer to the ByteBuffer using this encoding. Implementations will write as many bytes as
   they need to, according to their wire format, and move the writer index accordingly.
 
 Note that implementations of this protocol need to either:
@@ -35,8 +35,8 @@ Note that implementations of this protocol need to either:
 ## Extensions on ``ByteBuffer``
 
 To provide a more user-friendly API, we have added extensions on `ByteBuffer` for writing integers with a
-chosen ``NIOBinaryIntegerEncodingStrategy``. These are ``ByteBuffer/writeEncodedInteger``
-and ``ByteBuffer/readEncodedInteger``.
+chosen ``NIOBinaryIntegerEncodingStrategy``. These are ``ByteBuffer/writeEncodedInteger(_:strategy:)``
+and ``ByteBuffer/readEncodedInteger(_:as:)``.
 
 ## Reading and writing length-prefixed data
 

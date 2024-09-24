@@ -38,10 +38,11 @@ public protocol NIOBinaryIntegerEncodingStrategy {
         to buffer: inout ByteBuffer
     ) -> Int
 
-    /// An estimate of the bytes required to write integers using this strategy.
+    /// An estimate of the number of bytes required to write integers using this strategy.
     /// Callers may use this to reserve bytes before writing the integer.
     /// If the actual bytes used by the write function is more or less than this, it may be necessary to shuffle bytes.
     /// Therefore, an accurate prediction here will improve performance.
+    /// This function will be called from ``ByteBuffer/writeLengthPrefixed(strategy:writeData:)``
     var requiredBytesHint: Int { get }
 
     /// Write an integer to a buffer. Move the writer index to after the written integer.
