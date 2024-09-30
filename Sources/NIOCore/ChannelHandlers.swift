@@ -23,6 +23,7 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
 
     private var nextReadDeadlineNS: Optional<NIODeadline>
     private let backoffProvider: (IOError) -> TimeAmount?
+    private let shouldForwardIOErrorCaught: Bool
     private var scheduledRead: Optional<Scheduled<Void>>
 
     /// Default implementation used as `backoffProvider` which delays accept by 1 second.
@@ -38,6 +39,22 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
         self.backoffProvider = backoffProvider
         self.nextReadDeadlineNS = nil
         self.scheduledRead = nil
+        self.shouldForwardIOErrorCaught = true
+    }
+
+    /// Create a new instance
+    ///
+    /// - parameters:
+    ///     - shouldForwardIOErrorCaught: A boolean indicating if a caught IOError should be forwarded.
+    ///     - backoffProvider: returns a `TimeAmount` which will be the amount of time to wait before attempting another `read`.
+    public init(
+        shouldForwardIOErrorCaught: Bool,
+        backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider
+    ) {
+        self.backoffProvider = backoffProvider
+        self.nextReadDeadlineNS = nil
+        self.scheduledRead = nil
+        self.shouldForwardIOErrorCaught = shouldForwardIOErrorCaught
     }
 
     public func read(context: ChannelHandlerContext) {
@@ -59,16 +76,22 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
     }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        if let ioError = error as? IOError {
-            if let amount = backoffProvider(ioError) {
-                self.nextReadDeadlineNS = .now() + amount
-                if let scheduled = self.scheduledRead {
-                    scheduled.cancel()
-                    scheduleRead(at: self.nextReadDeadlineNS!, context: context)
-                }
+        guard let ioError = error as? IOError else {
+            context.fireErrorCaught(error)
+            return
+        }
+
+        if let amount = backoffProvider(ioError) {
+            self.nextReadDeadlineNS = .now() + amount
+            if let scheduled = self.scheduledRead {
+                scheduled.cancel()
+                scheduleRead(at: self.nextReadDeadlineNS!, context: context)
             }
         }
-        context.fireErrorCaught(error)
+
+        if self.shouldForwardIOErrorCaught {
+            context.fireErrorCaught(error)
+        }
     }
 
     public func channelInactive(context: ChannelHandlerContext) {

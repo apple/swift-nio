@@ -22,6 +22,8 @@ import Bionic
 import CNIOLinux
 #elseif canImport(Darwin)
 import Darwin
+#elseif canImport(WASILibc)
+import WASILibc
 #elseif os(Windows)
 import let WinSDK.AF_INET
 import let WinSDK.AF_INET6
@@ -44,7 +46,7 @@ import typealias WinSDK.UINT8
 #error("The Core interfaces module was unable to identify your C library.")
 #endif
 
-#if !os(Windows)
+#if !os(Windows) && !os(WASI)
 extension ifaddrs {
     fileprivate var dstaddr: UnsafeMutablePointer<sockaddr>? {
         #if os(Linux) || os(Android)
@@ -95,6 +97,11 @@ public final class NIONetworkInterface: Sendable {
     /// The index of the interface, as provided by `if_nametoindex`.
     public let interfaceIndex: Int
 
+    #if os(WASI)
+    @available(*, unavailable)
+    init() { fatalError() }
+    #endif
+
     #if os(Windows)
     internal init?(
         _ pAdapter: UnsafeMutablePointer<IP_ADAPTER_ADDRESSES>,
@@ -127,7 +134,7 @@ public final class NIONetworkInterface: Sendable {
         self.pointToPointDestinationAddress = nil
         self.multicastSupported = false
     }
-    #else
+    #elseif !os(WASI)
     internal init?(_ caddr: ifaddrs) {
         self.name = String(cString: caddr.ifa_name!)
 
@@ -308,7 +315,7 @@ public struct NIONetworkDevice {
         }
         self.backing = backing
     }
-    #else
+    #elseif !os(WASI)
     internal init?(_ caddr: ifaddrs) {
         guard let backing = Backing(caddr) else {
             return nil
@@ -318,7 +325,7 @@ public struct NIONetworkDevice {
     }
     #endif
 
-    #if !os(Windows)
+    #if !os(Windows) && !os(WASI)
     /// Convert a `NIONetworkInterface` to a `NIONetworkDevice`. As `NIONetworkDevice`s are a superset of `NIONetworkInterface`s,
     /// it is always possible to perform this conversion.
     @available(*, deprecated, message: "This is a compatibility helper, and will be removed in a future release")
@@ -424,7 +431,7 @@ extension NIONetworkDevice {
             self.pointToPointDestinationAddress = nil
             self.multicastSupported = false
         }
-        #else
+        #elseif !os(WASI)
         internal init?(_ caddr: ifaddrs) {
             self.name = String(cString: caddr.ifa_name!)
             self.address = caddr.ifa_addr.flatMap { $0.convert() }

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if canImport(Dispatch)
 import NIOConcurrencyHelpers
 import NIOCore
 
@@ -580,6 +581,14 @@ public final class NIOAsyncTestingChannel: Channel {
         if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
             return self.allowRemoteHalfClosure as! Option.Value
         }
+        if option is ChannelOptions.Types.BufferedWritableBytesOption {
+            let result = self.channelcore.pendingOutboundBuffer.reduce(0) { partialResult, dataAndPromise in
+                let buffer = self.channelcore.unwrapData(dataAndPromise.0, as: ByteBuffer.self)
+                return partialResult + buffer.readableBytes
+            }
+
+            return result as! Option.Value
+        }
         fatalError("option \(option) not supported")
     }
 
@@ -661,3 +670,4 @@ extension NIOAsyncTestingChannel.LeftOverState: @unchecked Sendable {}
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable {}
+#endif

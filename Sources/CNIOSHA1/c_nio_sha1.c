@@ -54,7 +54,7 @@
 #endif
 #ifdef __ANDROID__
 #include <sys/endian.h>
-#elif defined(__linux__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__) || defined(__wasm32__)
 #include <sys/types.h>
 #endif
 

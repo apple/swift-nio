@@ -12,5 +12,7 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
+              with:
+                  persist-credentials: false
             - name: Check for Semantic Version label
               uses: ./.github/actions/pull_request_semver_label_checker/

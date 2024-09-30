@@ -551,6 +551,116 @@ class AsyncTestingChannelTests: XCTestCase {
         _ = try await channel.finish()
         await XCTAsyncAssertThrowsError(try await channel.finish())
     }
+
+    func testWriteOutboundEmptyBufferedByte() async throws {
+        let channel = NIOAsyncTestingChannel()
+        var buffered: ChannelOptions.Types.BufferedWritableBytesOption.Value = try await channel.getOption(
+            .bufferedWritableBytes
+        )
+        XCTAssertEqual(0, buffered)
+
+        let buf = channel.allocator.buffer(capacity: 10)
+
+        channel.write(buf, promise: nil)
+        buffered = try await channel.getOption(.bufferedWritableBytes)
+        XCTAssertEqual(0, buffered)
+
+        channel.flush()
+        buffered = try await channel.getOption(.bufferedWritableBytes)
+        XCTAssertEqual(0, buffered)
+
+        try await XCTAsyncAssertEqual(buf, try await channel.waitForOutboundWrite(as: ByteBuffer.self))
+        try await XCTAsyncAssertTrue(try await channel.finish().isClean)
+    }
+
+    func testWriteOutboundBufferedBytesSingleWrite() async throws {
+        let channel = NIOAsyncTestingChannel()
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+
+        channel.write(buf, promise: nil)
+        var buffered: ChannelOptions.Types.BufferedWritableBytesOption.Value = try await channel.getOption(
+            .bufferedWritableBytes
+        )
+        XCTAssertEqual(buf.readableBytes, buffered)
+        channel.flush()
+
+        buffered = try await channel.getOption(.bufferedWritableBytes).get()
+        XCTAssertEqual(0, buffered)
+        try await XCTAsyncAssertEqual(buf, try await channel.waitForOutboundWrite(as: ByteBuffer.self))
+        try await XCTAsyncAssertTrue(try await channel.finish().isClean)
+    }
+
+    func testWriteOuboundBufferedBytesMultipleWrites() async throws {
+        let channel = NIOAsyncTestingChannel()
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+        let totalCount = 5
+        for _ in 0..<totalCount {
+            channel.write(buf, promise: nil)
+        }
+        var buffered: ChannelOptions.Types.BufferedWritableBytesOption.Value = try await channel.getOption(
+            .bufferedWritableBytes
+        )
+        XCTAssertEqual(buf.readableBytes * totalCount, buffered)
+
+        channel.flush()
+        buffered = try await channel.getOption(.bufferedWritableBytes)
+        XCTAssertEqual(0, buffered)
+
+        for _ in 0..<totalCount {
+            try await XCTAsyncAssertEqual(buf, try await channel.waitForOutboundWrite(as: ByteBuffer.self))
+        }
+
+        try await XCTAsyncAssertTrue(try await channel.finish().isClean)
+    }
+
+    func testWriteOuboundBufferedBytesWriteAndFlushInterleaved() async throws {
+        let channel = NIOAsyncTestingChannel()
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+
+        channel.write(buf, promise: nil)
+        channel.write(buf, promise: nil)
+        channel.write(buf, promise: nil)
+        var buffered: ChannelOptions.Types.BufferedWritableBytesOption.Value = try await channel.getOption(
+            .bufferedWritableBytes
+        )
+        XCTAssertEqual(buf.readableBytes * 3, buffered)
+
+        channel.flush()
+        buffered = try await channel.getOption(.bufferedWritableBytes)
+        XCTAssertEqual(0, buffered)
+
+        channel.write(buf, promise: nil)
+        channel.write(buf, promise: nil)
+        buffered = try await channel.getOption(.bufferedWritableBytes)
+        XCTAssertEqual(buf.readableBytes * 2, buffered)
+        channel.flush()
+        buffered = try await channel.getOption(.bufferedWritableBytes)
+        XCTAssertEqual(0, buffered)
+
+        for _ in 0..<5 {
+            try await XCTAsyncAssertEqual(buf, try await channel.waitForOutboundWrite(as: ByteBuffer.self))
+        }
+
+        try await XCTAsyncAssertTrue(try await channel.finish().isClean)
+    }
+
+    func testWriteOutboundBufferedBytesWriteAndFlush() async throws {
+        let channel = NIOAsyncTestingChannel()
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+
+        try await XCTAsyncAssertTrue(await channel.writeOutbound(buf).isFull)
+        let buffered: ChannelOptions.Types.BufferedWritableBytesOption.Value = try await channel.getOption(
+            .bufferedWritableBytes
+        )
+        XCTAssertEqual(0, buffered)
+
+        try await XCTAsyncAssertEqual(buf, try await channel.waitForOutboundWrite(as: ByteBuffer.self))
+        try await XCTAsyncAssertTrue(try await channel.finish().isClean)
+    }
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)

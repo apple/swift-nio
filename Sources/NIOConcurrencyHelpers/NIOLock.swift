@@ -23,6 +23,11 @@ import Glibc
 import Musl
 #elseif canImport(Bionic)
 import Bionic
+#elseif canImport(WASILibc)
+import WASILibc
+#if canImport(wasi_pthread)
+import wasi_pthread
+#endif
 #else
 #error("The concurrency NIOLock module was unable to identify your C library.")
 #endif
@@ -45,7 +50,7 @@ extension LockOperations {
 
         #if os(Windows)
         InitializeSRWLock(mutex)
-        #else
+        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         var attr = pthread_mutexattr_t()
         pthread_mutexattr_init(&attr)
         debugOnly {
@@ -63,7 +68,7 @@ extension LockOperations {
 
         #if os(Windows)
         // SRWLOCK does not need to be free'd
-        #else
+        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         let err = pthread_mutex_destroy(mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #endif
@@ -75,7 +80,7 @@ extension LockOperations {
 
         #if os(Windows)
         AcquireSRWLockExclusive(mutex)
-        #else
+        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         let err = pthread_mutex_lock(mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #endif
@@ -87,7 +92,7 @@ extension LockOperations {
 
         #if os(Windows)
         ReleaseSRWLockExclusive(mutex)
-        #else
+        #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         let err = pthread_mutex_unlock(mutex)
         precondition(err == 0, "\(#function) failed in pthread_mutex with error \(err)")
         #endif

@@ -233,8 +233,9 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
         }
 
         self._buffer = nil  // To avoid CoW
+        defer { self._buffer = buffer }
+
         let result = try body(&buffer)
-        self._buffer = buffer
         return result
     }
 
@@ -272,8 +273,9 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
             throw ByteToMessageDecoderError.PayloadTooLargeError()
         }
 
-        // force unwrapping is safe because nil case is handled already and asserted above
-        if self._buffer!.readerIndex > 0, self.decoder.shouldReclaimBytes(buffer: self._buffer!) {
+        if let readerIndex = self._buffer?.readerIndex, readerIndex > 0,
+            self.decoder.shouldReclaimBytes(buffer: self._buffer!)
+        {
             self._buffer!.discardReadBytes()
         }
     }
