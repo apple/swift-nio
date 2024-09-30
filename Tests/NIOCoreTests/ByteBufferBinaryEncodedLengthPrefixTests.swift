@@ -96,7 +96,7 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
 
         // This should just call down to the strategy function
         var buffer = ByteBuffer()
-        XCTAssertEqual(buffer.readEncodedInteger(TestStrategy()), 10)
+        XCTAssertEqual(buffer.readEncodedInteger(strategy: TestStrategy()), 10)
         XCTAssertEqual(buffer.writeEncodedInteger(10, strategy: TestStrategy()), 1)
     }
 
@@ -279,14 +279,14 @@ final class ByteBufferBinaryEncodedLengthPrefixTests: XCTestCase {
     func testReadLengthPrefixedSlice() {
         var buffer = ByteBuffer()
         buffer.writeBytes([5, 1, 2, 3, 4, 5])
-        let slice = buffer.readLengthPrefixedSlice(UInt8ReadingTestStrategy(expectedRead: 5))
+        let slice = buffer.readLengthPrefixedSlice(strategy: UInt8ReadingTestStrategy(expectedRead: 5))
         XCTAssertEqual(slice?.readableBytesView, [1, 2, 3, 4, 5])
     }
 
     func testReadLengthPrefixedSliceInsufficientBytes() {
         var buffer = ByteBuffer()
         buffer.writeBytes([5, 1, 2, 3])  // We put a length of 5, followed by only 3 bytes
-        let slice = buffer.readLengthPrefixedSlice(UInt8ReadingTestStrategy(expectedRead: 5))
+        let slice = buffer.readLengthPrefixedSlice(strategy: UInt8ReadingTestStrategy(expectedRead: 5))
         XCTAssertNil(slice)
         // The original buffer reader index should NOT move
         XCTAssertEqual(buffer.readableBytesView, [5, 1, 2, 3])

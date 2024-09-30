@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// Describes a way to encode and decode an integer as bytes
+/// Describes a way to encode and decode an integer as bytes.
 /// For more information, see <doc:ByteBuffer-lengthPrefix>
 ///
 public protocol NIOBinaryIntegerEncodingStrategy {
@@ -30,7 +30,7 @@ public protocol NIOBinaryIntegerEncodingStrategy {
 
     /// Write an integer to a buffer. Move the writer index to after the written integer.
     /// - Parameters:
-    ///    - integer: The type of the integer to write.
+    ///    - integer: The integer to write.
     ///    - buffer: The buffer to write to.
     /// - Returns: The number of bytes used to write the integer.
     func writeInteger<IntegerType: FixedWidthInteger>(
@@ -47,7 +47,7 @@ public protocol NIOBinaryIntegerEncodingStrategy {
 
     /// Write an integer to a buffer. Move the writer index to after the written integer.
     /// This function will be called when an integer needs to be written, and some capacity has already been reserved for it.
-    /// Implementers should consider using a less efficient encoding, if possible,to fit exactly within the reserved capacity.
+    /// Implementers should consider using a less efficient encoding, if possible, to fit exactly within the reserved capacity.
     /// Otherwise, the caller will need to shift bytes to reconcile the difference.
     /// It is up to the implementer to find the balance between performance and size.
     /// - Parameters:
@@ -81,8 +81,8 @@ extension ByteBuffer {
     /// If there are not enough bytes, nil is returned.
     @inlinable
     public mutating func readEncodedInteger<Strategy: NIOBinaryIntegerEncodingStrategy, Integer: FixedWidthInteger>(
-        _ strategy: Strategy,
-        as: Integer.Type = Integer.self
+        as: Integer.Type = Integer.self,
+        strategy: Strategy
     ) -> Integer? {
         strategy.readInteger(as: Integer.self, from: &self)
     }
@@ -103,7 +103,7 @@ extension ByteBuffer {
     }
 
     /// Prefixes bytes written by `writeData` with the number of bytes written.
-    /// The number of bytes written is encoded using `strategy`
+    /// The number of bytes written is encoded using `strategy`.
     ///
     /// - Note: This function works by reserving the number of bytes suggested by `strategy` before the data.
     /// It then writes the data, and then goes back to write the length.
@@ -195,7 +195,7 @@ extension ByteBuffer {
     /// If there are not enough bytes to read the full slice, the readerIndex will stay unchanged.
     @inlinable
     public mutating func readLengthPrefixedSlice<Strategy: NIOBinaryIntegerEncodingStrategy>(
-        _ strategy: Strategy
+        strategy: Strategy
     ) -> ByteBuffer? {
         let originalReaderIndex = self.readerIndex
         guard let length = strategy.readInteger(as: Int.self, from: &self), let slice = self.readSlice(length: length)

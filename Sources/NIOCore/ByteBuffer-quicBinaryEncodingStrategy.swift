@@ -13,7 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 extension ByteBuffer {
+    /// A ``NIOBinaryIntegerEncodingStrategy`` which encodes bytes as defined in RFC 9000 § 16
     public struct QUICBinaryEncodingStrategy: NIOBinaryIntegerEncodingStrategy {
+        /// An estimate of the bytes required to write integers using this strategy
         public var requiredBytesHint: Int
 
         /// - Parameter requiredBytesHint: An estimate of the bytes required to write integers using this strategy
@@ -129,10 +131,14 @@ extension ByteBuffer {
 
 extension NIOBinaryIntegerEncodingStrategy where Self == ByteBuffer.QUICBinaryEncodingStrategy {
     @inlinable
+    /// Encodes bytes as defined in RFC 9000 § 16
+    /// - Parameter requiredBytesHint: An estimate of the bytes required to write integers using this strategy
+    /// - Returns: <#description#>
     public static func quic(requiredBytesHint: Int) -> ByteBuffer.QUICBinaryEncodingStrategy {
         ByteBuffer.QUICBinaryEncodingStrategy(requiredBytesHint: requiredBytesHint)
     }
 
     @inlinable
+    /// Encodes bytes as defined in RFC 9000 § 16
     public static var quic: ByteBuffer.QUICBinaryEncodingStrategy { .quic(requiredBytesHint: 4) }
 }

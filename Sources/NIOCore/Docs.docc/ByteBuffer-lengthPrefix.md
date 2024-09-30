@@ -6,8 +6,7 @@ This article explains how to write data prefixed with a length, where the length
 
 We often need to write some data prefixed by its length. Sometimes, this may simply be a fixed width integer. But many
 protocols encode the length differently, depending on how big it is. For example, the QUIC protocol uses variable-length
-integer encodings, in which smaller numbers can be encoded in fewer bytes. The first 2 bits of the first byte indicate
-how many further bytes should be read.
+integer encodings, in which smaller numbers can be encoded in fewer bytes.
 
 We have added functions to help with reading and writing data which is prefixed with lengths encoded by various
 strategies.
@@ -16,27 +15,26 @@ strategies.
 
 The first building block is a protocol which describes how to encode and decode an integer.
 
-An implementation of this protocol is needed for any encoding strategy. Currently, we provide one
-implementation: ``ByteBuffer/QUICBinaryEncodingStrategy``
+An implementation of this protocol is needed for any encoding strategy. One example is the ``ByteBuffer/QUICBinaryEncodingStrategy``.
 
-This protocol only has 2 requirements which don't have default implementations:
+This protocol only has two requirements which don't have default implementations:
 
-- `readInteger`: Reads an integer from the ByteBuffer using this encoding. Implementations will read as many bytes as
+- `readInteger`: Reads an integer from the `ByteBuffer` using this encoding. Implementations will read as many bytes as
   they need to, according to their wire format, and move the reader index accordingly
-- `writeInteger`: Write an integer to the ByteBuffer using this encoding. Implementations will write as many bytes as
+- `writeInteger`: Write an integer to the `ByteBuffer` using this encoding. Implementations will write as many bytes as
   they need to, according to their wire format, and move the writer index accordingly.
 
 Note that implementations of this protocol need to either:
 
 - Encode the length of the integer into the integer itself when writing, so it knows how many bytes to read when
   reading. This is what QUIC does.
-- Always use the same length, e.g. a simple strategy which always writes the integer as a UInt64.
+- Always use the same length, e.g. a simple strategy which always writes the integer as a `UInt64`.
 
 ## Extensions on ``ByteBuffer``
 
 To provide a more user-friendly API, we have added extensions on `ByteBuffer` for writing integers with a
 chosen ``NIOBinaryIntegerEncodingStrategy``. These are ``ByteBuffer/writeEncodedInteger(_:strategy:)``
-and ``ByteBuffer/readEncodedInteger(_:as:)``.
+and ``ByteBuffer/readEncodedInteger(as:strategy:)``.
 
 ## Reading and writing length-prefixed data
 
@@ -67,20 +65,20 @@ public mutating func writeLengthPrefixed<Strategy: NIOBinaryIntegerEncodingStrat
 Users could use the function as follows:
 
 ```swift
-myBuffer.writeLengthPrefixed(strategy: .quic) { writer in
-    writer.writeString("something")
-    writer.writeSomethingComplex(something)
+myBuffer.writeLengthPrefixed(strategy: .quic) { buffer in
+    buffer.writeString("something")
+    buffer.writeSomethingComplex(something)
 }
 ```
 
-Writing the implementation of `writeLengthPrefixed` presented a challenge. We need to write the length _before_ the
+Writing the implementation of `writeLengthPrefixed` presents a challenge. We need to write the length _before_ the
 data. But we do not know the length until the data is written.
 
-Ideally, we would reserve some number of bytes, then call the writeData closure, and then go back and write the length
+Ideally, we would reserve some number of bytes, then call the `writeData` closure, and then go back and write the length
 in the reserved space. However, we would not even know how many bytes of space to reserve, because the number of bytes
 needed to write an integer will depend on the integer!
 
-The solution we landed on was the following:
+The solution we landed on is the following:
 
 - Added ``NIOBinaryIntegerEncodingStrategy/requiredBytesHint``. This allows strategies to provide an estimate of how
   many bytes they need for encoding a length
@@ -91,7 +89,7 @@ The solution we landed on was the following:
     - If the length ends up needing more bytes than we had reserved, shuffle the data forward to make space
 
 This code will be most performant when the `requiredBytesHint` is exactly correct, because it will avoid needing to
-shuffle any bytes. With that in mind, we can actually make one more optimisation: when we call the writeInteger function
+shuffle any bytes. With that in mind, we can actually make one more optimisation: when we call the `writeInteger` function
 on a strategy, we can tell the strategy that we have already reserved some number of bytes. Some encoding strategies
 will be able to adjust the way they encode such that they can use exactly that many bytes.
 
@@ -111,7 +109,7 @@ func writeInteger(
 ) -> Int
 ```
 
-Many strategies will not be able to do anything useful with the additional `reservedCapacity` parameter. For e.g., in
+Many strategies will not be able to do anything useful with the additional `reservedCapacity` parameter. For example, in
 ASN1, there is only one possible encoding for a given integer. However, some protocols, such as QUIC, do allow less
 efficient encodings. E.g. it is valid in QUIC to encode the number `6` using 4 bytes, even though it could be encoded
 using just 1. Such encoding strategies need to make a decision here: they can either use the less efficient
