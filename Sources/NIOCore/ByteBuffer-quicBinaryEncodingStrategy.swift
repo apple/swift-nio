@@ -65,10 +65,12 @@ extension ByteBuffer {
             case one, two, four, eight
         }
 
-        @usableFromInline
-        func bytesNeededForInteger<IntegerType: FixedWidthInteger>(_ integer: IntegerType) -> Int {
+        /// Calculates the minimum number of bytes needed to encode an integer using this strategy
+        /// - Parameter integer: The integer to be encoded
+        /// - Returns: The number of bytes needed to encode it
+        public static func bytesNeededForInteger<IntegerType: FixedWidthInteger>(_ integer: IntegerType) -> Int {
             // We must cast the integer to UInt64 here
-            // Otherwise, it an integer can fall through to the default case
+            // Otherwise, an integer can fall through to the default case
             // E.g., if someone calls this function with UInt8.max (which is 255), they would not hit the first case (0..<63)
             // The second case cannot be represented at all in UInt8, because 16383 is too big
             // Swift will end up creating the 16383 literal as 0, and thus we will fall all the way through to the default
@@ -82,7 +84,7 @@ extension ByteBuffer {
             case 0..<4_611_686_018_427_387_903:
                 return 8
             default:
-                fatalError("Could not write QUIC variable-length integer: outside of valid range")
+                fatalError("QUIC variable-length integer outside of valid range")
             }
         }
 
@@ -106,7 +108,7 @@ extension ByteBuffer {
             // Use more space than necessary in order to fill the reserved space
             // This will avoid a memmove
             // If the needed space is more than the reserved, we can't avoid the move
-            switch max(reservedCapacity, self.bytesNeededForInteger(integer)) {
+            switch max(reservedCapacity, Self.bytesNeededForInteger(integer)) {
             case 1:
                 // Easy, store the value. The top two bits are 0 so we don't need to do any masking.
                 return buffer.writeInteger(UInt8(truncatingIfNeeded: integer))

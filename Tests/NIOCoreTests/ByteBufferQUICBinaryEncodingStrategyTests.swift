@@ -107,7 +107,10 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
                     reservedCapacity: reservedCapacity,
                     to: &buffer
                 )
-                XCTAssertEqual(bytesWritten, max(strategy.bytesNeededForInteger(testNumber), reservedCapacity))
+                let minRequiredBytes = ByteBuffer.QUICBinaryEncodingStrategy.bytesNeededForInteger(testNumber)
+                // If the reserved capacity is higher than the min required, use the reserved number
+                let expectedUsedBytes = max(minRequiredBytes, reservedCapacity)
+                XCTAssertEqual(bytesWritten, expectedUsedBytes)
                 XCTAssertEqual(strategy.readInteger(as: UInt64.self, from: &buffer), UInt64(testNumber))
                 XCTAssertEqual(buffer.readableBytes, 0)
             }
