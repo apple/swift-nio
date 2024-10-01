@@ -61,10 +61,6 @@ extension ByteBuffer {
             }
         }
 
-        private enum NumBytes {
-            case one, two, four, eight
-        }
-
         /// Calculates the minimum number of bytes needed to encode an integer using this strategy
         /// - Parameter integer: The integer to be encoded
         /// - Returns: The number of bytes needed to encode it
