@@ -159,8 +159,6 @@ public final class ConditionLock<T: Equatable> {
         #elseif (compiler(<6.1) && !os(WASI)) || (compiler(>=6.1) && _runtime(_multithreaded))
         let err = pthread_cond_destroy(self.cond)
         precondition(err == 0, "\(#function) failed in pthread_cond with error \(err)")
-        #endif
-        #if compiler(>=6.1) && _runtime(_multithreaded)
         self.cond.deallocate()
         #endif
     }
