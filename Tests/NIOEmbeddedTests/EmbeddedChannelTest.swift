@@ -559,4 +559,103 @@ class EmbeddedChannelTest: XCTestCase {
 
         XCTAssertEqual(try channel._channelCore.remoteAddress0(), remoteAddress)
     }
+
+    func testWriteOutboundEmptyBufferedByte() throws {
+        let channel = EmbeddedChannel()
+        var buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(0, buffered)
+
+        let buf = channel.allocator.buffer(capacity: 10)
+
+        channel.write(buf, promise: nil)
+        buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(0, buffered)
+
+        channel.flush()
+        buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(0, buffered)
+        XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+
+    func testWriteOutboundBufferedByteSingleWrite() throws {
+        let channel = EmbeddedChannel()
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+
+        channel.write(buf, promise: nil)
+        var buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(buf.readableBytes, buffered)
+        channel.flush()
+
+        buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(0, buffered)
+        XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+
+    func testWriteOuboundBufferedBytesMultipleWrites() throws {
+        let channel = EmbeddedChannel()
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+        let totalCount = 5
+        for _ in 0..<totalCount {
+            channel.write(buf, promise: nil)
+        }
+
+        var buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(buf.readableBytes * totalCount, buffered)
+
+        channel.flush()
+        buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(0, buffered)
+        for _ in 0..<totalCount {
+            XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
+        }
+
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+
+    func testWriteOuboundBufferedBytesWriteAndFlushInterleaved() throws {
+        let channel = EmbeddedChannel()
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+
+        channel.write(buf, promise: nil)
+        channel.write(buf, promise: nil)
+        channel.write(buf, promise: nil)
+        var buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(buf.readableBytes * 3, buffered)
+
+        channel.flush()
+        buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(0, buffered)
+
+        channel.write(buf, promise: nil)
+        channel.write(buf, promise: nil)
+        buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(buf.readableBytes * 2, buffered)
+        channel.flush()
+        buffered = try channel.getOption(ChannelOptions.bufferedWritableBytes).wait()
+        XCTAssertEqual(0, buffered)
+
+        for _ in 0..<5 {
+            XCTAssertNoThrow(XCTAssertEqual(buf, try channel.readOutbound()))
+        }
+
+        XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+    }
+
+    func testWriteOutboundBufferedBytesWriteAndFlush() throws {
+        let channel = EmbeddedChannel()
+        var buf = channel.allocator.buffer(capacity: 10)
+        buf.writeString("hello")
+
+        try XCTAssertTrue(channel.writeOutbound(buf).isFull)
+        let buffered = try channel.getOption(.bufferedWritableBytes).wait()
+        XCTAssertEqual(0, buffered)
+
+        XCTAssertEqual(buf, try channel.readOutbound(as: ByteBuffer.self))
+        XCTAssertTrue(try channel.finish().isClean)
+    }
 }

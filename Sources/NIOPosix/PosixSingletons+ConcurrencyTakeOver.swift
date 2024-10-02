@@ -73,7 +73,7 @@ extension NIOSingletons {
         let concurrencyEnqueueGlobalHookPtr = dlsym(
             dlopen(nil, RTLD_NOW),
             "swift_task_enqueueGlobal_hook"
-        )?.assumingMemoryBound(to: UnsafeRawPointer?.AtomicRepresentation.self)
+        )?.assumingMemoryBound(to: UnsafeRawPointer?.AtomicRep.self)
         guard let concurrencyEnqueueGlobalHookPtr = concurrencyEnqueueGlobalHookPtr else {
             return false
         }
@@ -125,4 +125,13 @@ extension NIOSingletons {
         return false
         #endif
     }
+}
+
+// Workaround for https://github.com/apple/swift-nio/issues/2893
+extension Optional
+where
+    Wrapped: AtomicOptionalWrappable,
+    Wrapped.AtomicRepresentation.Value == Wrapped
+{
+    typealias AtomicRep = Wrapped.AtomicOptionalRepresentation
 }

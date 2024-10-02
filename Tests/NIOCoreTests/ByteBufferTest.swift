@@ -1069,6 +1069,17 @@ class ByteBufferTest: XCTestCase {
         XCTAssertNil(self.buf.getString(at: 0, length: capacity + 1))
     }
 
+    func testWriteEmptyByteArray() throws {
+        var buffer = ByteBufferAllocator().buffer(capacity: 32)
+        buffer.moveWriterIndex(to: 16)
+        buffer.moveReaderIndex(to: 16)
+        XCTAssertEqual(buffer.setBytes([], at: 16), 0)
+        XCTAssertEqual(buffer.readableBytes, 0)
+        XCTAssertEqual(buffer.writableBytes, 16)
+        XCTAssertEqual(buffer.writerIndex, 16)
+        XCTAssertEqual(buffer.readerIndex, 16)
+    }
+
     func testSetGetBytesAllFine() throws {
         self.buf.moveReaderIndex(to: 0)
         self.buf.setBytes([1, 2, 3, 4], at: 0)
@@ -1859,6 +1870,62 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual(0, buffer2.readableBytes)
     }
 
+    func testShrinkBufferCapacityWithNoLeadingUnwrittenBytes() {
+        let desiredCapacity = 1024
+        var buffer = self.allocator.buffer(capacity: 512)
+
+        // For any item, it should not shrink buffer capacity to a value larger than the current buffer capacity
+        buffer.clear()
+        buffer.writeString("Any item")
+        XCTAssertFalse(buffer.shrinkBufferCapacity(to: 2048))
+        XCTAssertEqual(buffer.capacity, 512)
+
+        // If desired capacity are less than or equal to buffer capacity, should not shrink
+        buffer.clear()
+        buffer.writeString(String(repeating: "x", count: desiredCapacity))
+        XCTAssertEqual(buffer.capacity, 1024)  // Before
+        XCTAssertFalse(buffer.shrinkBufferCapacity(to: desiredCapacity))
+        XCTAssertEqual(buffer.capacity, 1024)  // After
+
+        // If desiredCapacity is less than readable bytes, do not shrink
+        buffer.clear()
+        buffer.writeString(String(repeating: "x", count: desiredCapacity + 1))
+        XCTAssertEqual(buffer.capacity, 2048)
+        XCTAssertFalse(buffer.shrinkBufferCapacity(to: desiredCapacity))
+        XCTAssertEqual(buffer.capacity, 2048)
+
+        // If desired capacity is greater than or equal the readable bytes and less than buffer capacity, should shrink
+        buffer.clear()
+        buffer.writeString(String(repeating: "x", count: desiredCapacity))
+        XCTAssertEqual(buffer.capacity, 2048)
+        XCTAssertTrue(buffer.shrinkBufferCapacity(to: desiredCapacity))
+        XCTAssertEqual(buffer.capacity, 1024)
+    }
+
+    func testShrinkBufferCapacityWithLeadingUnwrittenBytes() {
+        var buffer = self.allocator.buffer(capacity: 16384)
+        buffer.moveWriterIndex(to: 16000)
+        buffer.moveReaderIndex(to: 16000)
+        buffer.writeString("WW")
+        buffer.shrinkBufferCapacity(to: 4)
+        XCTAssertEqual("WW", String(buffer: buffer))
+
+        // If readable bytes is exactly the same as buffer capacity shrunken to
+        buffer = self.allocator.buffer(capacity: 16)
+        buffer.moveWriterIndex(to: 8)
+        buffer.moveReaderIndex(to: 8)
+        buffer.writeString("WWWWWWWW")  // 8 bytes written
+        buffer.shrinkBufferCapacity(to: 4)  // Invisible padding makes this 8 bytes
+        XCTAssertEqual("WWWWWWWW", String(buffer: buffer))  // All 8 bytes are returned!
+    }
+
+    func testExpansionOfCapacityWithPadding() throws {
+        XCTAssertEqual(ByteBuffer.roundUpToUsableCapacity(12), 16)
+        XCTAssertEqual(ByteBuffer.roundUpToUsableCapacity(0), 0)
+        XCTAssertEqual(ByteBuffer.roundUpToUsableCapacity(UInt32.min), 0)
+        XCTAssertEqual(ByteBuffer.roundUpToUsableCapacity(UInt32.max), UInt32.max)
+    }
+
     func testDumpBytesFormat() throws {
         self.buf.clear()
         for f in UInt8.min...UInt8.max {
@@ -1876,6 +1943,55 @@ class ByteBufferTest: XCTestCase {
             e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 fa fb fc fd fe ff ]
             """
         XCTAssertEqual(expected, actual)
+    }
+
+    func testWriteHexEncodedBytes() throws {
+        var buffer = try ByteBuffer(plainHexEncodedBytes: "68 65 6c 6c 6f 20 77 6f 72 6c 64 0a")
+        XCTAssertEqual(try buffer.writePlainHexEncodedBytes("68656c6c6f20776f726c64"), 11)
+        XCTAssertEqual(try buffer.writePlainHexEncodedBytes("     0a    "), 1)
+        XCTAssertEqual(try buffer.writePlainHexEncodedBytes(""), 0)
+        XCTAssertEqual(try buffer.writePlainHexEncodedBytes("      "), 0)
+        XCTAssertEqual(ByteBuffer(string: "hello world\nhello world\n"), buffer)
+    }
+
+    func testWriteHexEncodedBytesFails() throws {
+        var buffer = ByteBuffer()
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1  ")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidCharacter)
+        }
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("    1")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidHexLength)
+        }
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1       ")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidCharacter)
+        }
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("🤓")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidCharacter)
+        }
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("1 1")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidCharacter)
+        }
+
+        // The first byte (68 = "h") is valid, the method throws and the valid byte IS NOT written to the ByteBuffer
+        XCTAssertThrowsError(try buffer.writePlainHexEncodedBytes("68 1")) { error in
+            XCTAssertTrue((error as? ByteBuffer.HexDecodingError) == ByteBuffer.HexDecodingError.invalidHexLength)
+        }
+        XCTAssertTrue(buffer.readableBytesView.isEmpty)
+    }
+
+    func testHexInitialiser() throws {
+        var allBytes = ByteBufferAllocator().buffer(capacity: Int(UInt8.max))
+        for x in UInt8.min...UInt8.max {
+            allBytes.writeInteger(x)
+        }
+
+        let allBytesHex = allBytes.hexDump(format: .plain)
+        let allBytesDecoded = try ByteBuffer(plainHexEncodedBytes: allBytesHex)
+        XCTAssertEqual(allBytes, allBytesDecoded)
+
+        // Edge cases
+        XCTAssertEqual(try ByteBuffer(plainHexEncodedBytes: " "), ByteBufferAllocator.zeroCapacityWithDefaultAllocator)
+        XCTAssertThrowsError(try ByteBuffer(plainHexEncodedBytes: " 1  "))
     }
 
     func testHexDumpPlain() {

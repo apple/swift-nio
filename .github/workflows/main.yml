@@ -1,8 +1,8 @@
-name: Scheduled
+name: Main
 
 on:
-    schedule:
-        - cron: "0 8,20 * * *"
+    push:
+      branches: [main]
 
 jobs:
     unit-tests:
@@ -22,6 +22,11 @@ jobs:
         uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
         with:
             benchmark_package_path: "Benchmarks"
+
+    cxx-interop:
+        name: Cxx interop
+        # Workaround https://github.com/nektos/act/issues/1875
+        uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
 
     integration-tests:
         name: Integration Tests

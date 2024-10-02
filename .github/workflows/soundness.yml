@@ -47,6 +47,10 @@ on:
         type: boolean
         description: "Boolean to enable the shell check job. Defaults to true."
         default: true
+      shell_check_container_image:
+        type: string
+        description: "Container image for the shell check job. Defaults to latest Swift Ubuntu image."
+        default: "swift:5.10-noble"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -65,14 +69,14 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        # We need to fetch everything otherwise only the head commit will be fetched.
-        fetch-depth: 0
         persist-credentials: false
     - name: Mark the workspace as safe
       # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
     - name: Run API breakage check
-      run: swift package diagnose-api-breaking-changes origin/main
+      run:  |
+        git fetch ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY} ${GITHUB_BASE_REF}:pull-base-ref
+        swift package diagnose-api-breaking-changes pull-base-ref
 
   docs-check:
     name: Documentation check
@@ -158,6 +162,8 @@ jobs:
     name: Shell check
     if: ${{ inputs.shell_check_enabled }}
     runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.shell_check_container_image }}
     timeout-minutes: 5
     steps:
     - name: Checkout repository
@@ -168,4 +174,6 @@ jobs:
     # https://github.com/actions/checkout/issues/766
       run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
     - name: Run shellcheck
-      run:  git ls-files -z '*.sh' | xargs -0 shellcheck
+      run:  |
+        apt-get -qq update && apt-get -qq -y install shellcheck
+        git ls-files -z '*.sh' | xargs -0 shellcheck

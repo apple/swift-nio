@@ -451,6 +451,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         self.state.isEmpty
     }
 
+    var bufferedBytes: Int64 {
+        self.state.bytes
+    }
+
     private func add(_ pendingWrite: PendingDatagramWrite) -> Bool {
         assert(self.isOpen)
         self.state.append(pendingWrite)

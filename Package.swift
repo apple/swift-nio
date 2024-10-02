@@ -27,6 +27,10 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(
     condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
 
+// These platforms require a depdency on `NIOPosix` from `NIOHTTP1` to maintain backward
+// compatibility with previous NIO versions.
+let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
+
 let strictConcurrencyDevelopment = false
 
 let strictConcurrencySettings: [SwiftSetting] = {
@@ -82,6 +86,7 @@ let package = Package(
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
+                "CNIOWASI",
                 "_NIODataStructures",
                 swiftCollections,
                 swiftAtomics,
@@ -130,14 +135,14 @@ let package = Package(
         .target(
             name: "_NIOConcurrency",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ]
         ),
         .target(
             name: "NIOFoundationCompat",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ]
         ),
@@ -171,6 +176,10 @@ let package = Package(
             dependencies: []
         ),
         .target(
+            name: "CNIOWASI",
+            dependencies: []
+        ),
+        .target(
             name: "NIOConcurrencyHelpers",
             dependencies: [
                 "CNIOAtomics"
@@ -180,7 +189,7 @@ let package = Package(
         .target(
             name: "NIOHTTP1",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
@@ -190,7 +199,7 @@ let package = Package(
         .target(
             name: "NIOWebSocket",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 "NIOHTTP1",
                 "CNIOSHA1",
@@ -207,7 +216,7 @@ let package = Package(
         .target(
             name: "NIOTLS",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 swiftCollections,
             ]

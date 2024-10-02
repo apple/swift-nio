@@ -20,7 +20,7 @@ import NIOPosix
 
 /// An `AsyncSequence` of ordered chunks read from a file.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct FileChunks: AsyncSequence {
+public struct FileChunks: AsyncSequence, Sendable {
     enum ChunkRange {
         case entireFile
         case partial(Range<Int64>)

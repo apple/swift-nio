@@ -50,6 +50,8 @@ while IFS= read -r file_path; do
     sh) expected_file_header=$(cat <(echo '#!/bin/bash') <(sed -e 's|@@|##|g' <<<"${expected_file_header_template}")) ;;
     py) expected_file_header=$(cat <(echo '#!/usr/bin/env python3') <(sed -e 's|@@|##|g' <<<"${expected_file_header_template}")) ;;
     rb) expected_file_header=$(cat <(echo '#!/usr/bin/env ruby') <(sed -e 's|@@|##|g' <<<"${expected_file_header_template}")) ;;
+    in) expected_file_header=$(sed -e 's|@@|##|g' <<<"${expected_file_header_template}") ;;
+    cmake) expected_file_header=$(sed -e 's|@@|##|g' <<<"${expected_file_header_template}") ;;
     *) fatal "Unsupported file extension for file (exclude or update this script): ${file_path}" ;;
   esac
   expected_file_header_linecount=$(wc -l <<<"${expected_file_header}")

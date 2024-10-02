@@ -16,5 +16,5 @@ runs:
         env:
             GH_TOKEN: ${{ inputs.token }}
         run: |
-            gh pr view ${{ github.event.number }} --repo apple/swift-nio --json labels \
+            gh pr view ${{ github.event.number }} --repo ${{ github.repository }} --json labels \
             | jq -e '[.labels[].name] | any(. == "semver/major" or . == "semver/minor" or . == "semver/patch" or . == "semver/none")'

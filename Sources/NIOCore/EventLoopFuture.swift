@@ -12,8 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
 import NIOConcurrencyHelpers
+
+#if canImport(Dispatch)
+import Dispatch
+#endif
 
 /// Internal list of callbacks.
 ///
@@ -1666,6 +1669,7 @@ extension EventLoopFuture {
 
 // MARK: may block
 
+#if canImport(Dispatch)
 extension EventLoopFuture {
     /// Chain an `EventLoopFuture<NewValue>` providing the result of a IO / task that may block. For example:
     ///
@@ -1764,6 +1768,7 @@ extension EventLoopFuture {
         }
     }
 }
+#endif
 
 // MARK: assertion
 
