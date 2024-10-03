@@ -26,8 +26,9 @@ public struct PriorityQueue<Element: Comparable> {
         self._heap.remove(value: key)
     }
 
+    @discardableResult
     @inlinable
-    public mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows {
+    public mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows -> Element? {
         try self._heap.removeFirst(where: shouldBeRemoved)
     }
 

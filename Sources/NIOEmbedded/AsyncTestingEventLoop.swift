@@ -192,6 +192,38 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
         self.scheduleTask(deadline: self.now + `in`, task)
     }
 
+    public func scheduleCallback(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        /// The default implementation of `scheduledCallback(at:handler)` makes two calls to the event loop because it
+        /// needs to hook the future of the backing scheduled task, which can lead to lost cancellation callbacks when
+        /// callbacks are scheduled close to event loop shutdown.
+        ///
+        /// We work around this here by using a blocking `wait()` if we are not on the event loop, which would be very
+        /// bad in areal event loop, but _less bad_ for testing.
+        ///
+        /// For more details, see the documentation attached to the default implementation.
+        if self.inEventLoop {
+            return self._scheduleCallback(at: deadline, handler: handler)
+        } else {
+            return try self.submit {
+                self._scheduleCallback(at: deadline, handler: handler)
+            }.wait()
+        }
+    }
+
+    @discardableResult
+    public func scheduleCallback(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        /// Even though this type does not implement a custom `scheduleCallback(at:handler)`, it uses a manual clock so
+        /// it cannot rely on the default implementation of `scheduleCallback(in:handler:)`, which computes the deadline
+        /// as an offset from `NIODeadline.now`. This event loop needs the deadline to be offset from `self.now`.
+        try self.scheduleCallback(at: self.now + amount, handler: handler)
+    }
+
     /// On an `NIOAsyncTestingEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. Unlike with the other operations, this will
     /// immediately execute, to eliminate a common class of bugs.
     public func execute(_ task: @escaping () -> Void) {

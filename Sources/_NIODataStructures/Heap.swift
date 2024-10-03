@@ -126,17 +126,18 @@ internal struct Heap<Element: Comparable> {
         }
     }
 
+    @discardableResult
     @inlinable
-    internal mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows {
+    internal mutating func removeFirst(where shouldBeRemoved: (Element) throws -> Bool) rethrows -> Element? {
         guard self.storage.count > 0 else {
-            return
+            return nil
         }
 
         guard let index = try self.storage.firstIndex(where: shouldBeRemoved) else {
-            return
+            return nil
         }
 
-        self._remove(index: index)
+        return self._remove(index: index)
     }
 
     @discardableResult

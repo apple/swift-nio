@@ -497,6 +497,8 @@ internal final class SelectableEventLoop: EventLoop {
                     fatalError("Tried to run an UnownedJob without runtime support")
                 }
             #endif
+            case .callback(let handler):
+                handler.handleScheduledCallback(eventLoop: self)
             }
         }
     }
@@ -591,7 +593,10 @@ internal final class SelectableEventLoop: EventLoop {
             if moreScheduledTasksToConsider, tasksCopy.count < tasksCopyBatchSize, let task = scheduledTasks.peek() {
                 if task.readyTime.readyIn(now) <= .nanoseconds(0) {
                     scheduledTasks.pop()
-                    tasksCopy.append(.function(task.task))
+                    switch task.kind {
+                    case .task(let task, _): tasksCopy.append(.function(task))
+                    case .callback(let handler): tasksCopy.append(.callback(handler))
+                    }
                 } else {
                     nextScheduledTaskDeadline = task.readyTime
                     moreScheduledTasksToConsider = false
@@ -690,9 +695,15 @@ internal final class SelectableEventLoop: EventLoop {
                 for task in immediateTasksCopy {
                     self.run(task)
                 }
-                // Fail all the scheduled tasks.
                 for task in scheduledTasksCopy {
-                    task.fail(EventLoopError._shutdown)
+                    switch task.kind {
+                    // Fail all the scheduled tasks.
+                    case .task(_, let failFn):
+                        failFn(EventLoopError._shutdown)
+                    // Call the cancellation handler for all the scheduled callbacks.
+                    case .callback(let handler):
+                        handler.didCancelScheduledCallback(eventLoop: self)
+                    }
                 }
 
                 iterations += 1
@@ -901,6 +912,7 @@ enum UnderlyingTask {
     #if compiler(>=5.9)
     case unownedJob(ErasedUnownedJob)
     #endif
+    case callback(any NIOScheduledCallbackHandler)
 }
 
 @usableFromInline
@@ -916,4 +928,34 @@ internal func assertExpression(_ body: () -> Bool) {
             body()
         }()
     )
+}
+
+extension SelectableEventLoop {
+    @inlinable
+    func scheduleCallback(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
+        let task = ScheduledTask(id: taskID, handler, deadline)
+        try self._schedule0(.scheduled(task))
+        return NIOScheduledCallback(self, id: taskID)
+    }
+
+    @inlinable
+    func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback) {
+        guard let id = scheduledCallback.customCallbackID else {
+            preconditionFailure("No custom ID for callback")
+        }
+        self._tasksLock.withLock {
+            guard let scheduledTask = self._scheduledTasks.removeFirst(where: { $0.id == id }) else {
+                // Must have been cancelled already.
+                return
+            }
+            guard case .callback(let handler) = scheduledTask.kind else {
+                preconditionFailure("Incorrect task kind for callback")
+            }
+            handler.didCancelScheduledCallback(eventLoop: self)
+        }
+    }
 }

@@ -160,6 +160,17 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
         scheduleTask(deadline: self._now + `in`, task)
     }
 
+    @discardableResult
+    public func scheduleCallback(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) -> NIOScheduledCallback {
+        /// Even though this type does not implement a custom `scheduleCallback(at:handler)`, it uses a manual clock so
+        /// it cannot rely on the default implementation of `scheduleCallback(in:handler:)`, which computes the deadline
+        /// as an offset from `NIODeadline.now`. This event loop needs the deadline to be offset from `self._now`.
+        self.scheduleCallback(at: self._now + amount, handler: handler)
+    }
+
     /// On an `EmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that
     /// `task` will be run the next time you call `EmbeddedEventLoop.run`.
     public func execute(_ task: @escaping () -> Void) {

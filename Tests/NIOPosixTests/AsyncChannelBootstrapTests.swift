@@ -1485,7 +1485,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension AsyncStream {
-    fileprivate static func makeStream(
+    static func makeStream(
         of elementType: Element.Type = Element.self,
         bufferingPolicy limit: Continuation.BufferingPolicy = .unbounded
     ) -> (stream: AsyncStream<Element>, continuation: AsyncStream<Element>.Continuation) {

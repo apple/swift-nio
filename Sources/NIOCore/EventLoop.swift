@@ -365,6 +365,31 @@ public protocol EventLoop: EventLoopGroup {
     /// It is valid for an `EventLoop` not to implement any of the two `_promise` functions. If either of them are implemented,
     /// however, both of them should be implemented.
     func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
+
+    /// Schedule a callback at a given time.
+    ///
+    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** also implement
+    ///         `cancelScheduledCallback`. Failure to do so will result in a runtime error.
+    @discardableResult
+    func scheduleCallback(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback
+
+    /// Schedule a callback after given time.
+    ///
+    /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** also implement
+    ///         `cancelScheduledCallback`. Failure to do so will result in a runtime error.
+    @discardableResult
+    func scheduleCallback(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback
+
+    /// Cancel a scheduled callback.
+    ///
+    /// - NOTE: Event loops only need to implemented this if they provide a custom scheduled callback implementation.
+    func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback)
 }
 
 extension EventLoop {
