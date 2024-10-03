@@ -14,6 +14,20 @@
 
 extension ByteBuffer {
 
+    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from the string representation of `plainHexEncodedBytes`.
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit the hex decoded `bytes` and potentially some extra space
+    /// using the default allocator.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(integer:)`. Or if you want to write multiple items into the
+    ///         buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `writeHexEncodedBytes` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    public init(plainHexEncodedBytes string: String) throws {
+        self = try ByteBufferAllocator().buffer(plainHexEncodedBytes: string)
+    }
+
     /// Describes a ByteBuffer hexDump format.
     /// Can be either xxd output compatible, or hexdump compatible.
     public struct HexDumpFormat: Hashable, Sendable {
@@ -339,5 +353,62 @@ extension ByteBuffer {
                 return self.hexdumpDetailed()
             }
         }
+    }
+
+    /// An error that is thrown when an invalid hex encoded string was attempted to be written to a ByteBuffer.
+    public struct HexDecodingError: Error, Equatable {
+        private let kind: HexDecodingErrorKind
+
+        private enum HexDecodingErrorKind {
+            /// The hex encoded string was not of the expected even length.
+            case invalidHexLength
+            /// An invalid hex character was found in the hex encoded string.
+            case invalidCharacter
+        }
+
+        public static let invalidHexLength = HexDecodingError(kind: .invalidHexLength)
+        public static let invalidCharacter = HexDecodingError(kind: .invalidCharacter)
+    }
+}
+
+extension UInt8 {
+    fileprivate var isASCIIWhitespace: Bool {
+        [UInt8(ascii: "\n"), UInt8(ascii: "\t"), UInt8(ascii: "\r"), UInt8(ascii: " ")].contains(
+            self
+        )
+    }
+
+    fileprivate var asciiHexNibble: UInt8 {
+        get throws {
+            switch self {
+            case UInt8(ascii: "0")...UInt8(ascii: "9"):
+                return self - UInt8(ascii: "0")
+            case UInt8(ascii: "a")...UInt8(ascii: "f"):
+                return self - UInt8(ascii: "a") + 10
+            case UInt8(ascii: "A")...UInt8(ascii: "F"):
+                return self - UInt8(ascii: "A") + 10
+            default:
+                throw ByteBuffer.HexDecodingError.invalidCharacter
+            }
+        }
+    }
+}
+
+extension Substring.UTF8View {
+    @usableFromInline
+    mutating func popNextHexByte() throws -> UInt8? {
+        while let nextByte = self.first, nextByte.isASCIIWhitespace {
+            self = self.dropFirst()
+        }
+
+        guard let firstHex = try self.popFirst()?.asciiHexNibble else {
+            return nil  // No next byte to pop
+        }
+
+        guard let secondHex = try self.popFirst()?.asciiHexNibble else {
+            throw ByteBuffer.HexDecodingError.invalidHexLength
+        }
+
+        return (firstHex << 4) | secondHex
     }
 }

@@ -91,6 +91,30 @@ extension ByteBuffer {
         )
     }
 
+    // MARK: Hex encoded string APIs
+    /// Write ASCII hexadecimal `string` into this `ByteBuffer` as raw bytes, decoding the hexadecimal & moving the writer index forward appropriately.
+    /// This method will throw if the string input is not of the "plain" hex encoded format.
+    /// - parameters:
+    ///     - plainHexEncodedBytes: The hex encoded string to write. Plain hex dump format is hex bytes optionally separated by spaces, i.e. `48 65 6c 6c 6f` or `48656c6c6f` for `Hello`.
+    ///     This format is compatible with `xxd` CLI utility.
+    /// - returns: The number of bytes written.
+    @discardableResult
+    @inlinable
+    public mutating func writePlainHexEncodedBytes(_ plainHexEncodedBytes: String) throws -> Int {
+        var slice = plainHexEncodedBytes.utf8[...]
+        let initialWriterIndex = self.writerIndex
+
+        do {
+            while let nextByte = try slice.popNextHexByte() {
+                self.writeInteger(nextByte)
+            }
+            return self.writerIndex - initialWriterIndex
+        } catch {
+            self.moveWriterIndex(to: initialWriterIndex)
+            throw error
+        }
+    }
+
     // MARK: String APIs
     /// Write `string` into this `ByteBuffer` using UTF-8 encoding, moving the writer index forward appropriately.
     ///
@@ -760,6 +784,18 @@ extension ByteBufferAllocator {
     public func buffer<Bytes: Sequence>(bytes: Bytes) -> ByteBuffer where Bytes.Element == UInt8 {
         var buffer = self.buffer(capacity: bytes.underestimatedCount)
         buffer.writeBytes(bytes)
+        return buffer
+    }
+
+    /// Create a fresh `ByteBuffer` containing the `bytes` decoded from the ASCII `plainHexEncodedBytes` string .
+    ///
+    /// This will allocate a new `ByteBuffer` with enough space to fit `bytes` and potentially some extra space.
+    ///
+    /// - returns: The `ByteBuffer` containing the written bytes.
+    @inlinable
+    public func buffer(plainHexEncodedBytes string: String) throws -> ByteBuffer {
+        var buffer = self.buffer(capacity: string.utf8.count / 2)
+        try buffer.writePlainHexEncodedBytes(string)
         return buffer
     }
 
