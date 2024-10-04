@@ -61,7 +61,7 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
     func testWriteFourByteQUICVariableLengthInteger() {
         var buffer = ByteBuffer()
         let strategy = ByteBuffer.QUICBinaryEncodingStrategy.quic
-        let bytesWritten = strategy.writeInteger(0b00011101_01111111_00111110_01111101, to: &buffer)
+        let bytesWritten = strategy.writeInteger(0b00011101_01111111_00111110_01111101 as Int64, to: &buffer)
         XCTAssertEqual(bytesWritten, 4)
         // 2 bit mask is 10 for 4 bytes so this becomes 0b10011101_01111111_00111110_01111101
         XCTAssertEqual(buffer.readInteger(as: UInt32.self), 0b10011101_01111111_00111110_01111101)
@@ -72,7 +72,7 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
         var buffer = ByteBuffer()
         let strategy = ByteBuffer.QUICBinaryEncodingStrategy.quic
         let bytesWritten = strategy.writeInteger(
-            0b00000010_00011001_01111100_01011110_11111111_00010100_11101000_10001100,
+            0b00000010_00011001_01111100_01011110_11111111_00010100_11101000_10001100 as Int64,
             to: &buffer
         )
         XCTAssertEqual(bytesWritten, 8)
@@ -99,7 +99,8 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
     func testRoundtripWithReservedCapacity() {
         // This test makes sure that a number encoded with more space than necessary can still be decoded as normal
         for reservedCapacity in [0, 1, 2, 4, 8] {
-            for testNumber in [0, 63, 15293, 494_878_333, 151_288_809_941_952_652] {
+            let testNumbers: [Int64] = [0, 63, 15293, 494_878_333, 151_288_809_941_952_652]
+            for testNumber in testNumbers {
                 var buffer = ByteBuffer()
                 let strategy = ByteBuffer.QUICBinaryEncodingStrategy.quic
                 let bytesWritten = strategy.writeInteger(
@@ -127,10 +128,11 @@ final class ByteBufferQUICBinaryEncodingStrategyTests: XCTestCase {
 
     func testWriteReadQUICVariableLengthInteger() {
         let strategy = ByteBuffer.QUICBinaryEncodingStrategy.quic
-        for integer in [37, 15293, 494_878_333, 151_288_809_941_952_652] {
+        let testNumbers: [Int64] = [37, 15293, 494_878_333, 151_288_809_941_952_652]
+        for integer in testNumbers {
             var buffer = ByteBuffer()
             _ = strategy.writeInteger(integer, to: &buffer)
-            XCTAssertEqual(strategy.readInteger(as: Int.self, from: &buffer), integer)
+            XCTAssertEqual(strategy.readInteger(as: Int64.self, from: &buffer), integer)
         }
     }
 }
