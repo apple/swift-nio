@@ -1689,6 +1689,9 @@ class DatagramChannelTests: XCTestCase {
             do {
                 if i % 2 == 0 {
                     self.firstChannel.flush()
+                    XCTAssertNoThrow(
+                        try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait()
+                    )
                     let bufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
                     XCTAssertEqual(bufferedAmount, 0)
                 } else {
@@ -1701,9 +1704,9 @@ class DatagramChannelTests: XCTestCase {
         }
 
         self.firstChannel.flush()
+        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
         let finalBufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(finalBufferedAmount, 0)
-        XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
         let datagrams = try self.secondChannel.waitForDatagrams(count: writeCount)
 
         XCTAssertEqual(datagrams.count, writeCount)
