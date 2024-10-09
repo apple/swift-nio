@@ -58,5 +58,31 @@ class ByteCountTests: XCTestCase {
         XCTAssertEqual(byteCount1, byteCount1)
         XCTAssertNotEqual(byteCount1, byteCount2)
     }
+
+    func testByteCountZero() {
+        let byteCount = ByteCount.zero
+        XCTAssertEqual(byteCount.bytes, 0)
+    }
+
+    func testByteCountAddition() {
+        let byteCount1 = ByteCount.bytes(10)
+        let byteCount2 = ByteCount.bytes(20)
+        let sum = byteCount1 + byteCount2
+        XCTAssertEqual(sum.bytes, 30)
+    }
+
+    func testByteCountSubtraction() {
+        let byteCount1 = ByteCount.bytes(30)
+        let byteCount2 = ByteCount.bytes(20)
+        let difference = byteCount1 - byteCount2
+        XCTAssertEqual(difference.bytes, 10)
+    }
+
+    func testByteCountComparison() {
+        let byteCount1 = ByteCount.bytes(10)
+        let byteCount2 = ByteCount.bytes(20)
+        XCTAssertLessThan(byteCount1, byteCount2)
+        XCTAssertGreaterThan(byteCount2, byteCount1)
+    }
 }
 #endif

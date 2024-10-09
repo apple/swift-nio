@@ -80,4 +80,22 @@ public struct ByteCount: Hashable, Sendable {
     }
 }
 
+extension ByteCount: AdditiveArithmetic {
+    public static var zero: ByteCount { ByteCount(bytes: 0) }
+
+    public static func + (lhs: ByteCount, rhs: ByteCount) -> ByteCount {
+        ByteCount(bytes: lhs.bytes + rhs.bytes)
+    }
+
+    public static func - (lhs: ByteCount, rhs: ByteCount) -> ByteCount {
+        ByteCount(bytes: lhs.bytes - rhs.bytes)
+    }
+}
+
+extension ByteCount: Comparable {
+    public static func < (lhs: ByteCount, rhs: ByteCount) -> Bool {
+        lhs.bytes < rhs.bytes
+    }
+}
+
 #endif
