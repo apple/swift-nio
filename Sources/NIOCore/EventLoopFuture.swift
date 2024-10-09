@@ -639,11 +639,14 @@ extension EventLoopFuture {
     @inlinable
     @preconcurrency
     public func map<NewValue>(
+        _ callback: @escaping @Sendable (Value) -> (NewValue)
+    ) -> EventLoopFuture<NewValue> {
         self._map(callback)
     }
     @usableFromInline typealias MapCallback<NewValue> = @Sendable (Value) -> (NewValue)
 
     @inlinable
+    func _map<NewValue>(
         _ callback: @escaping @Sendable (Value) -> (NewValue)
     ) -> EventLoopFuture<NewValue> {
         if NewValue.self == Value.self && NewValue.self == Void.self {
@@ -1043,12 +1046,12 @@ extension EventLoopFuture {
     /// - throws: The error value of the `EventLoopFuture` if it errors.
     @available(*, noasync, message: "wait() can block indefinitely, prefer get()", renamed: "get()")
     @preconcurrency
-    public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value {
+    public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value where Value: Sendable {
         try self._wait(file: file, line: line)
     }
 
     @inlinable
-    public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value where Value: Sendable {
+    func _wait(file: StaticString = #file, line: UInt = #line) throws -> Value where Value: Sendable {
         self.eventLoop._preconditionSafeToWait(file: file, line: line)
 
         let v: UnsafeMutableTransferBox<Result<Value, Error>?> = .init(nil)
