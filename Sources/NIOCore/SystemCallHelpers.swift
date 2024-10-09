@@ -25,8 +25,12 @@ import Darwin.C
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(WASILibc)
+import WASILibc
 #elseif os(Windows)
 import CNIOWindows
+#elseif canImport(Android)
+import Android
 #else
 #error("The system call helpers module was unable to identify your C library.")
 #endif
@@ -37,7 +41,9 @@ private let sysClose: @convention(c) (CInt) -> CInt = _close
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = _lseek
 private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, CUnsignedInt) -> CInt = _read
 #else
+#if !os(WASI)
 private let sysDup: @convention(c) (CInt) -> CInt = dup
+#endif
 private let sysClose: @convention(c) (CInt) -> CInt = close
 private let sysOpenWithMode: @convention(c) (UnsafePointer<CChar>, CInt, NIOPOSIXFileMode) -> CInt = open
 private let sysLseek: @convention(c) (CInt, off_t, CInt) -> off_t = lseek
@@ -47,7 +53,7 @@ private let sysRead: @convention(c) (CInt, UnsafeMutableRawPointer?, size_t) -> 
 #if os(Android)
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>) -> CUnsignedInt = if_nametoindex
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) -> CInt = getifaddrs
-#else
+#elseif !os(WASI)
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 #if !os(Windows)
 private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>?) -> CInt = getifaddrs
@@ -63,36 +69,42 @@ private func isUnacceptableErrno(_ code: Int32) -> Bool {
     }
 }
 
-private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) -> Void {
+private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))")
+    precondition(
+        !isUnacceptableErrno(err),
+        "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))"
+    )
 }
 
-/*
- * Sorry, we really try hard to not use underscored attributes. In this case
- * however we seem to break the inlining threshold which makes a system call
- * take twice the time, ie. we need this exception.
- */
+// Sorry, we really try hard to not use underscored attributes. In this case
+// however we seem to break the inlining threshold which makes a system call
+// take twice the time, ie. we need this exception.
 @inline(__always)
 @discardableResult
-internal func syscall<T: FixedWidthInteger>(blocking: Bool,
-                                            where function: String = #function,
-                                            _ body: () throws -> T)
-        throws -> CoreIOResult<T> {
+internal func syscall<T: FixedWidthInteger>(
+    blocking: Bool,
+    where function: String = #function,
+    _ body: () throws -> T
+)
+    throws -> CoreIOResult<T>
+{
     while true {
         let res = try body()
         if res == -1 {
-#if os(Windows)
+            #if os(Windows)
             var err: CInt = 0
             ucrt._get_errno(&err)
-#else
+            #else
             let err = errno
-#endif
+            #endif
             switch (err, blocking) {
             case (EINTR, _):
                 continue
+            #if !os(WASI)
             case (EWOULDBLOCK, true):
                 return .wouldBlock(0)
+            #endif
             default:
                 preconditionIsNotUnacceptableErrno(err: err, where: function)
                 throw IOError(errnoCode: err, reason: function)
@@ -103,26 +115,28 @@ internal func syscall<T: FixedWidthInteger>(blocking: Bool,
 }
 
 enum SystemCalls {
+    #if !os(WASI)
     @discardableResult
     @inline(never)
     internal static func dup(descriptor: CInt) throws -> CInt {
-        return try syscall(blocking: false) {
+        try syscall(blocking: false) {
             sysDup(descriptor)
         }.result
     }
+    #endif
 
     @inline(never)
     internal static func close(descriptor: CInt) throws {
         let res = sysClose(descriptor)
         if res == -1 {
-#if os(Windows)
+            #if os(Windows)
             var err: CInt = 0
             ucrt._get_errno(&err)
-#else
+            #else
             let err = errno
-#endif
+            #endif
 
-            // There is really nothing "sane" we can do when EINTR was reported on close.
+            // There is really nothing "good" we can do when EINTR was reported on close.
             // So just ignore it and "assume" everything is fine == we closed the file descriptor.
             //
             // For more details see:
@@ -136,48 +150,60 @@ enum SystemCalls {
     }
 
     @inline(never)
-    internal static func open(file: UnsafePointer<CChar>, oFlag: CInt,
-                              mode: NIOPOSIXFileMode) throws -> CInt {
-#if os(Windows)
+    internal static func open(
+        file: UnsafePointer<CChar>,
+        oFlag: CInt,
+        mode: NIOPOSIXFileMode
+    ) throws -> CInt {
+        #if os(Windows)
         return try syscall(blocking: false) {
             var fh: CInt = -1
             let _ = ucrt._sopen_s(&fh, file, oFlag, _SH_DENYNO, mode)
             return fh
         }.result
-#else
+        #else
         return try syscall(blocking: false) {
             sysOpenWithMode(file, oFlag, mode)
         }.result
-#endif
+        #endif
     }
 
     @discardableResult
     @inline(never)
     internal static func lseek(descriptor: CInt, offset: off_t, whence: CInt) throws -> off_t {
-        return try syscall(blocking: false) {
+        try syscall(blocking: false) {
             sysLseek(descriptor, offset, whence)
         }.result
     }
 
-#if os(Windows)
+    #if os(Windows)
     @inline(never)
-    internal static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: CUnsignedInt) throws -> CoreIOResult<CInt> {
-        return try syscall(blocking: true) {
+    internal static func read(
+        descriptor: CInt,
+        pointer: UnsafeMutableRawPointer,
+        size: CUnsignedInt
+    ) throws -> CoreIOResult<CInt> {
+        try syscall(blocking: true) {
             sysRead(descriptor, pointer, size)
         }
     }
-#else
+    #elseif !os(WASI)
     @inline(never)
-    internal static func read(descriptor: CInt, pointer: UnsafeMutableRawPointer, size: size_t) throws -> CoreIOResult<ssize_t> {
-        return try syscall(blocking: true) {
+    internal static func read(
+        descriptor: CInt,
+        pointer: UnsafeMutableRawPointer,
+        size: size_t
+    ) throws -> CoreIOResult<ssize_t> {
+        try syscall(blocking: true) {
             sysRead(descriptor, pointer, size)
         }
     }
-#endif
+    #endif
 
+    #if !os(WASI)
     @inline(never)
     internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
-        return try syscall(blocking: false) {
+        try syscall(blocking: false) {
             sysIfNameToIndex(name!)
         }.result
     }
@@ -190,4 +216,5 @@ enum SystemCalls {
         }
     }
     #endif
+    #endif  // !os(WASI)
 }

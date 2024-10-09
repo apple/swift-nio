@@ -52,7 +52,7 @@ extension _TinyArray: RandomAccessCollection {
 
     @inlinable
     public func makeIterator() -> Iterator {
-        return Iterator(storage: self.storage)
+        Iterator(storage: self.storage)
     }
 
     public struct Iterator: IteratorProtocol {
@@ -98,6 +98,8 @@ extension _TinyArray: RandomAccessCollection {
         self.storage.endIndex
     }
 }
+
+extension _TinyArray.Iterator: Sendable where Element: Sendable {}
 
 extension _TinyArray {
     @inlinable

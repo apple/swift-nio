@@ -40,7 +40,10 @@ class UtilitiesTest: XCTestCase {
                 XCTAssertNil(interface.pointToPointDestinationAddress)
             } else if try interface.address == SocketAddress(ipAddress: "::1", port: 0) {
                 ipv6LoopbackPresent = true
-                XCTAssertEqual(interface.netmask, try SocketAddress(ipAddress: "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", port: 0))
+                XCTAssertEqual(
+                    interface.netmask,
+                    try SocketAddress(ipAddress: "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", port: 0)
+                )
                 XCTAssertNil(interface.broadcastAddress)
                 XCTAssertNil(interface.pointToPointDestinationAddress)
             }
@@ -68,7 +71,10 @@ class UtilitiesTest: XCTestCase {
                 XCTAssertNil(device.pointToPointDestinationAddress)
             } else if try device.address == SocketAddress(ipAddress: "::1", port: 0) {
                 ipv6LoopbackPresent = true
-                XCTAssertEqual(device.netmask, try SocketAddress(ipAddress: "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", port: 0))
+                XCTAssertEqual(
+                    device.netmask,
+                    try SocketAddress(ipAddress: "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff", port: 0)
+                )
                 XCTAssertNil(device.broadcastAddress)
                 XCTAssertNil(device.pointToPointDestinationAddress)
             }

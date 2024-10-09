@@ -48,13 +48,13 @@ public struct WebSocketOpcode: Sendable {
     /// Whether the opcode is in the control range: that is, if the
     /// high bit of the opcode nibble is `1`.
     public var isControlOpcode: Bool {
-        return self.networkRepresentation & 0x8 == 0x8
+        self.networkRepresentation & 0x8 == 0x8
     }
 }
 
-extension WebSocketOpcode: Equatable { }
+extension WebSocketOpcode: Equatable {}
 
-extension WebSocketOpcode: Hashable { }
+extension WebSocketOpcode: Hashable {}
 
 extension WebSocketOpcode: CaseIterable {
     public static var allCases = (0..<0x10).map { WebSocketOpcode(rawValue: $0) }

@@ -21,7 +21,7 @@ extension EventLoopFuture {
         line: UInt = #line,
         _ callback: @escaping @Sendable (Value) -> EventLoopFuture<NewValue>
     ) -> EventLoopFuture<NewValue> {
-        return self.flatMap(callback)
+        self.flatMap(callback)
     }
 
     @preconcurrency
@@ -32,7 +32,7 @@ extension EventLoopFuture {
         line: UInt = #line,
         _ callback: @escaping @Sendable (Value) throws -> NewValue
     ) -> EventLoopFuture<NewValue> {
-        return self.flatMapThrowing(callback)
+        self.flatMapThrowing(callback)
     }
 
     @inlinable
@@ -42,7 +42,7 @@ extension EventLoopFuture {
         line: UInt = #line,
         _ callback: @escaping @Sendable (Error) throws -> Value
     ) -> EventLoopFuture<Value> {
-        return self.flatMapErrorThrowing(callback)
+        self.flatMapErrorThrowing(callback)
     }
 
     @inlinable
@@ -52,7 +52,7 @@ extension EventLoopFuture {
         line: UInt = #line,
         _ callback: @escaping @Sendable (Value) -> (NewValue)
     ) -> EventLoopFuture<NewValue> {
-        return self.map(callback)
+        self.map(callback)
     }
 
     @inlinable
@@ -73,7 +73,7 @@ extension EventLoopFuture {
         line: UInt = #line,
         _ body: @escaping @Sendable (Value) -> Result<NewValue, SomeError>
     ) -> EventLoopFuture<NewValue> {
-        return self.flatMapResult(body)
+        self.flatMapResult(body)
     }
 
     @preconcurrency
@@ -84,7 +84,7 @@ extension EventLoopFuture {
         line: UInt = #line,
         _ callback: @escaping @Sendable (Error) -> Value
     ) -> EventLoopFuture<Value> {
-        return self.recover(callback)
+        self.recover(callback)
     }
 
     @preconcurrency
@@ -95,7 +95,7 @@ extension EventLoopFuture {
         file: StaticString = #fileID,
         line: UInt = #line
     ) -> EventLoopFuture<(Value, OtherValue)> {
-        return self.and(other)
+        self.and(other)
     }
 
     @preconcurrency
@@ -106,6 +106,6 @@ extension EventLoopFuture {
         file: StaticString = #fileID,
         line: UInt = #line
     ) -> EventLoopFuture<(Value, OtherValue)> {
-        return self.and(value: value)
+        self.and(value: value)
     }
 }

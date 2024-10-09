@@ -49,8 +49,8 @@ final class ChannelPipelineBenchmark: Benchmark {
     func tearDown() {
         let handlersToRemove = self.handlers
         self.handlers.removeAll()
-        try! handlersToRemove.forEach {
-            try self.channel.pipeline.removeHandler($0).wait()
+        for handler in handlersToRemove {
+            try! self.channel.pipeline.removeHandler(handler).wait()
         }
     }
 

@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
+import XCTest
+
 @testable import NIOHTTP1
 
 private final class ReadRecorder: ChannelInboundHandler {
@@ -24,7 +25,7 @@ private final class ReadRecorder: ChannelInboundHandler {
         case channelRead(InboundIn)
         case halfClose
 
-        static func ==(lhs: Event, rhs: Event) -> Bool {
+        static func == (lhs: Event, rhs: Event) -> Bool {
             switch (lhs, rhs) {
             case (.channelRead(let b1), .channelRead(let b2)):
                 return b1 == b2
@@ -39,7 +40,7 @@ private final class ReadRecorder: ChannelInboundHandler {
     public var reads: [Event] = []
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.reads.append(.channelRead(self.unwrapInboundIn(data)))
+        self.reads.append(.channelRead(Self.unwrapInboundIn(data)))
         context.fireChannelRead(data)
     }
 
@@ -59,7 +60,7 @@ private final class WriteRecorder: ChannelOutboundHandler {
     public var writes: [HTTPServerResponsePart] = []
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        self.writes.append(self.unwrapOutboundIn(data))
+        self.writes.append(Self.unwrapOutboundIn(data))
 
         context.write(data, promise: promise)
     }
@@ -76,7 +77,6 @@ private final class ReadCountingHandler: ChannelOutboundHandler {
         context.read()
     }
 }
-
 
 private final class QuiesceEventRecorder: ChannelInboundHandler {
     typealias InboundIn = Any
@@ -106,7 +106,6 @@ private final class CloseOutputSuppressor: ChannelOutboundHandler {
         }
     }
 }
-
 
 class HTTPServerPipelineHandlerTest: XCTestCase {
     var channel: EmbeddedChannel! = nil
@@ -165,33 +164,45 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
 
         // Only one request should have made it through.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Unblock by sending a response.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
 
         // Two requests should have made it through now.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Now send the last response.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
 
         // Now all three.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
     }
 
     func testReadCallsAreSuppressedWhenPipelining() throws {
@@ -290,34 +301,46 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
 
         // Only one request should have made it through, no half-closure yet.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Unblock by sending a response.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
 
         // Two requests should have made it through now.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Now send the last response.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
 
         // Now the half-closure should be delivered.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .halfClose])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .halfClose,
+            ]
+        )
     }
 
     func testPipelineHandlerWillDeliverHalfCloseEarly() throws {
@@ -330,20 +353,28 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
 
         // Only one request should have made it through, no half-closure yet.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Unblock by sending a response.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
 
         // The second request head, followed by the half-close, should have made it through.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .halfClose])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .halfClose,
+            ]
+        )
     }
 
     func testAReadIsNotIssuedWhenUnbufferingAHalfCloseAfterRequestComplete() throws {
@@ -385,31 +416,43 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
 
         // Only one request should have made it through, no half-closure yet.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Unblock by sending a response.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
 
         // Two requests should have made it through now. Still no half-closure.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Now send the half-closure.
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
 
         // The half-closure should be delivered immediately.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .halfClose])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .halfClose,
+            ]
+        )
     }
 
     func testRecursiveChannelReadInvocationsDoNotCauseIssues() throws {
@@ -442,7 +485,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             var state: State = .req1HeadExpected
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let req = self.unwrapInboundIn(data)
+                let req = Self.unwrapInboundIn(data)
                 switch req {
                 case .head(let head):
                     // except for "req_1", we always send the .end straight away
@@ -465,9 +508,12 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                     default:
                         XCTFail("didn't expect \(head)")
                     }
-                    context.write(self.wrapOutboundOut(.head(HTTPResponseHead(version: .http1_1, status: .ok))), promise: nil)
+                    context.write(
+                        Self.wrapOutboundOut(.head(HTTPResponseHead(version: .http1_1, status: .ok))),
+                        promise: nil
+                    )
                     if sendEnd {
-                        context.write(self.wrapOutboundOut(.end(nil)), promise: nil)
+                        context.write(Self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
                     context.flush()
                 case .end:
@@ -478,7 +524,11 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                         self.state = .req3HeadExpected
 
                         // this will cause `channelRead` to be recursively called and we need to make sure everything then still works
-                        try! (context.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.head(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/req_boom")))
+                        try! (context.channel as! EmbeddedChannel).writeInbound(
+                            HTTPServerRequestPart.head(
+                                HTTPRequestHead(version: .http1_1, method: .GET, uri: "/req_boom")
+                            )
+                        )
                         try! (context.channel as! EmbeddedChannel).writeInbound(HTTPServerRequestPart.end(nil))
                     case .req3EndExpected:
                         self.state = .reqBoomHeadExpected
@@ -497,7 +547,9 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
         for f in 1...3 {
-            XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(makeRequestHead(uri: "/req_\(f)"))))
+            XCTAssertNoThrow(
+                try self.channel.writeInbound(HTTPServerRequestPart.head(makeRequestHead(uri: "/req_\(f)")))
+            )
             XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
         }
 
@@ -524,18 +576,26 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
         // The request should have made it through.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Now send a response.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
 
         // No further events should have happened.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         XCTAssertTrue(self.channel.isActive)
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
@@ -546,8 +606,10 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
     func testQuiescingInTheMiddleOfARequestNoResponseBitsYet() throws {
         // Send through only the head.
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [.channelRead(HTTPServerRequestPart.head(self.requestHead))]
+        )
 
         XCTAssertTrue(self.channel.isActive)
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
@@ -562,9 +624,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         var reqWithConnectionClose: HTTPResponseHead = self.responseHead
         reqWithConnectionClose.headers.add(name: "connection", value: "close")
-        XCTAssertEqual([HTTPServerResponsePart.head(reqWithConnectionClose),
-                        HTTPServerResponsePart.end(nil)],
-                       self.writeRecorder.writes)
+        XCTAssertEqual(
+            [
+                HTTPServerResponsePart.head(reqWithConnectionClose),
+                HTTPServerResponsePart.end(nil),
+            ],
+            self.writeRecorder.writes
+        )
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
@@ -577,9 +643,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         XCTAssertTrue(self.channel.isActive)
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
@@ -593,9 +663,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         var reqWithConnectionClose: HTTPResponseHead = self.responseHead
         reqWithConnectionClose.headers.add(name: "connection", value: "close")
-        XCTAssertEqual([HTTPServerResponsePart.head(reqWithConnectionClose),
-                        HTTPServerResponsePart.end(nil)],
-                       self.writeRecorder.writes)
+        XCTAssertEqual(
+            [
+                HTTPServerResponsePart.head(reqWithConnectionClose),
+                HTTPServerResponsePart.end(nil),
+            ],
+            self.writeRecorder.writes
+        )
 
         XCTAssertFalse(self.channel.isActive)
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
@@ -606,9 +680,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Now send the response .head.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
@@ -621,9 +699,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
         XCTAssertFalse(self.channel.isActive)
 
-        XCTAssertEqual([HTTPServerResponsePart.head(self.responseHead),
-                        HTTPServerResponsePart.end(nil)],
-                       self.writeRecorder.writes)
+        XCTAssertEqual(
+            [
+                HTTPServerResponsePart.head(self.responseHead),
+                HTTPServerResponsePart.end(nil),
+            ],
+            self.writeRecorder.writes
+        )
 
         XCTAssertFalse(self.channel.isActive)
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
@@ -633,8 +715,10 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         // Send through a request .head.
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [.channelRead(HTTPServerRequestPart.head(self.requestHead))]
+        )
 
         // Now send the response .head.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
@@ -646,18 +730,26 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         // Request .end.
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
         XCTAssertTrue(self.channel.isActive)
 
         // Response .end.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
         XCTAssertFalse(self.channel.isActive)
 
-        XCTAssertEqual([HTTPServerResponsePart.head(self.responseHead),
-                        HTTPServerResponsePart.end(nil)],
-                       self.writeRecorder.writes)
+        XCTAssertEqual(
+            [
+                HTTPServerResponsePart.head(self.responseHead),
+                HTTPServerResponsePart.end(nil),
+            ],
+            self.writeRecorder.writes
+        )
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
@@ -669,8 +761,10 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         // Send through a request .head.
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [.channelRead(HTTPServerRequestPart.head(self.requestHead))]
+        )
 
         // Now send the response .head.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
@@ -686,15 +780,23 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         // Request .end.
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         XCTAssertFalse(self.channel.isActive)
 
-        XCTAssertEqual([HTTPServerResponsePart.head(self.responseHead),
-                        HTTPServerResponsePart.end(nil)],
-                       self.writeRecorder.writes)
+        XCTAssertEqual(
+            [
+                HTTPServerResponsePart.head(self.responseHead),
+                HTTPServerResponsePart.end(nil),
+            ],
+            self.writeRecorder.writes
+        )
 
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
@@ -710,9 +812,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
 
         // Check that only one request came through
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         XCTAssertTrue(self.channel.isActive)
         self.channel.pipeline.fireUserInboundEventTriggered(ChannelShouldQuiesceEvent())
@@ -728,14 +834,22 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         reqWithConnectionClose.headers.add(name: "connection", value: "close")
 
         // check that only one response (with connection: close) came through
-        XCTAssertEqual([HTTPServerResponsePart.head(reqWithConnectionClose),
-                        HTTPServerResponsePart.end(nil)],
-                       self.writeRecorder.writes)
+        XCTAssertEqual(
+            [
+                HTTPServerResponsePart.head(reqWithConnectionClose),
+                HTTPServerResponsePart.end(nil),
+            ],
+            self.writeRecorder.writes
+        )
 
         // Check that only one request came through
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         XCTAssertFalse(self.channel.isActive)
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
@@ -798,14 +912,22 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                switch self.unwrapInboundIn(data) {
+                switch Self.unwrapInboundIn(data) {
                 case .head:
                     // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
                     // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
                     context.eventLoop.execute {
-                        context.writeAndFlush(self.wrapOutboundOut(.head(.init(version: .http1_1,
-                                                                           status: .ok))),
-                                          promise: nil)
+                        context.writeAndFlush(
+                            Self.wrapOutboundOut(
+                                .head(
+                                    .init(
+                                        version: .http1_1,
+                                        status: .ok
+                                    )
+                                )
+                            ),
+                            promise: nil
+                        )
                     }
                     XCTAssertEqual(.reqHeadExpected, self.state)
                     self.state = .reqEndExpected
@@ -815,7 +937,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                     // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
                     // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
                     context.eventLoop.execute {
-                        context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+                        context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
                     XCTAssertEqual(.reqEndExpected, self.state)
                     self.state = .errorExpected
@@ -897,18 +1019,26 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
 
         // Only one request should have made it through.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Remove the handler.
         XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(self.pipelineHandler).wait())
 
         // The extra data should have been forwarded.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil)),
-                        .channelRead(HTTPServerRequestPart.head(self.requestHead))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+            ]
+        )
     }
 
     func testQuiescingInAResponseThenRemovedFiresEventAndReads() throws {
@@ -923,9 +1053,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
 
         // Only one request should have made it through.
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         XCTAssertTrue(self.channel.isActive)
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
@@ -962,8 +1096,10 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         // Send through just the head.
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [.channelRead(HTTPServerRequestPart.head(self.requestHead))]
+        )
 
         XCTAssertTrue(self.channel.isActive)
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 0)
@@ -989,7 +1125,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertEqual(self.quiesceEventRecorder.quiesceCount, 1)
         XCTAssertEqual(self.readCounter.readCount, 3)
     }
-    
+
     func testServerCanRespondContinue() throws {
         // Send in the first part of a request.
         var expect100ContinueHead = self.requestHead!
@@ -1008,51 +1144,51 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         // Now the server sends the final response.
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
-     }
+    }
 
     func testServerCanRespondProcessingMultipleTimes() throws {
-         // Send in a request.
-         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
-         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
+        // Send in a request.
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
+        XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.end(nil)))
 
-         // We haven't completed our response, so no more reading
-         XCTAssertEqual(self.readCounter.readCount, 0)
-         self.channel.read()
-         XCTAssertEqual(self.readCounter.readCount, 0)
+        // We haven't completed our response, so no more reading
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
 
-         var processResponse: HTTPResponseHead = self.responseHead!
-         processResponse.status = .processing
+        var processResponse: HTTPResponseHead = self.responseHead!
+        processResponse.status = .processing
 
-         // Now the server sends multiple processing responses.
-         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
+        // Now the server sends multiple processing responses.
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
 
-         // We are processing... Reading not allowed
-         XCTAssertEqual(self.readCounter.readCount, 0)
-         self.channel.read()
-         XCTAssertEqual(self.readCounter.readCount, 0)
+        // We are processing... Reading not allowed
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
 
-         // Continue processing...
-         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
+        // Continue processing...
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
 
-         // We are processing... Reading not allowed
-         XCTAssertEqual(self.readCounter.readCount, 0)
-         self.channel.read()
-         XCTAssertEqual(self.readCounter.readCount, 0)
+        // We are processing... Reading not allowed
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
 
-         // Continue processing...
-         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
+        // Continue processing...
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(processResponse)).wait())
 
-         // We are processing... Reading not allowed
-         XCTAssertEqual(self.readCounter.readCount, 0)
-         self.channel.read()
-         XCTAssertEqual(self.readCounter.readCount, 0)
+        // We are processing... Reading not allowed
+        XCTAssertEqual(self.readCounter.readCount, 0)
+        self.channel.read()
+        XCTAssertEqual(self.readCounter.readCount, 0)
 
-         // Now send the actual response!
-         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
-         XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
+        // Now send the actual response!
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.head(self.responseHead)).wait())
+        XCTAssertNoThrow(try channel.writeAndFlush(HTTPServerResponsePart.end(nil)).wait())
 
-         // This should have triggered a read
-         XCTAssertEqual(self.readCounter.readCount, 1)
+        // This should have triggered a read
+        XCTAssertEqual(self.readCounter.readCount, 1)
     }
 
     func testServerCloseOutputForcesReadsBackOn() throws {
@@ -1065,9 +1201,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.channel.read()
         XCTAssertEqual(self.readCounter.readCount, 0)
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Now the server sends close output
         XCTAssertNoThrow(try channel.close(mode: .output).wait())
@@ -1088,9 +1228,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.channel.read()
         XCTAssertEqual(self.readCounter.readCount, 0)
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Now the server sends close output
         XCTAssertNoThrow(try channel.close(mode: .output).wait())
@@ -1109,9 +1253,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.channel.read()
         XCTAssertEqual(self.readCounter.readCount, 3)
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
     }
 
     func testCloseOutputFirstIsOkEvenIfItsABitWeird() throws {
@@ -1154,16 +1302,24 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.channel.read()
         XCTAssertEqual(self.readCounter.readCount, 0)
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
 
         // Server sends close mode output. The buffered requests are dropped.
         XCTAssertNoThrow(try channel.close(mode: .output).wait())
 
-        XCTAssertEqual(self.readRecorder.reads,
-                       [.channelRead(HTTPServerRequestPart.head(self.requestHead)),
-                        .channelRead(HTTPServerRequestPart.end(nil))])
+        XCTAssertEqual(
+            self.readRecorder.reads,
+            [
+                .channelRead(HTTPServerRequestPart.head(self.requestHead)),
+                .channelRead(HTTPServerRequestPart.end(nil)),
+            ]
+        )
     }
 
     func testWritesAfterCloseOutputAreDropped() throws {
@@ -1188,7 +1344,10 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))
         // Sending a head twice is an error
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead))) { error in
-            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "received request head in state requestAndResponseEndPending"))
+            XCTAssertEqual(
+                error as? HTTPServerPipelineHandler.ConnectionStateError,
+                .preconditionViolated(message: "received request head in state requestAndResponseEndPending")
+            )
         }
     }
 
@@ -1197,12 +1356,18 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         // Writing an end whilst in state idle is an error
         XCTAssertThrowsError(try self.channel.writeOutbound(HTTPServerResponsePart.end(nil))) { error in
-            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "Unexpectedly received a response in state idle"))
+            XCTAssertEqual(
+                error as? HTTPServerPipelineHandler.ConnectionStateError,
+                .preconditionViolated(message: "Unexpectedly received a response in state idle")
+            )
         }
 
         // Calling finish surfaces the error again
         XCTAssertThrowsError(try self.channel.finish()) { error in
-            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "Unexpectedly received a response in state idle"))
+            XCTAssertEqual(
+                error as? HTTPServerPipelineHandler.ConnectionStateError,
+                .preconditionViolated(message: "Unexpectedly received a response in state idle")
+            )
         }
     }
 
@@ -1210,7 +1375,10 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         self.pipelineHandler.failOnPreconditions = false
         // End sending a request which was never started
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
-            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "Received second request"))
+            XCTAssertEqual(
+                error as? HTTPServerPipelineHandler.ConnectionStateError,
+                .preconditionViolated(message: "Received second request")
+            )
         }
     }
 
@@ -1219,7 +1387,10 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
 
         // End sending a request which was never started
         XCTAssertThrowsError(try self.channel.writeInbound(HTTPServerRequestPart.end(nil))) { error in
-            XCTAssertEqual(error as? HTTPServerPipelineHandler.ConnectionStateError, .preconditionViolated(message: "Received second request"))
+            XCTAssertEqual(
+                error as? HTTPServerPipelineHandler.ConnectionStateError,
+                .preconditionViolated(message: "Received second request")
+            )
         }
         // The handler should now refuse further io, and forcefully shutdown
         XCTAssertNoThrow(try self.channel.writeInbound(HTTPServerRequestPart.head(self.requestHead)))

@@ -19,8 +19,13 @@ import SystemPackage
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+import CNIOLinux
 #elseif canImport(Musl)
 import Musl
+import CNIOLinux
+#elseif canImport(Android)
+import Android
+import CNIOLinux
 #endif
 
 /// Information about a file system object.
@@ -73,8 +78,8 @@ public struct FileInfo: Hashable, Sendable {
     /// Creates a ``FileInfo`` by deriving values from a platform-specific value.
     public init(platformSpecificStatus: CInterop.Stat) {
         self._platformSpecificStatus = Stat(platformSpecificStatus)
-        self.type = FileType(platformSpecificMode: platformSpecificStatus.st_mode)
-        self.permissions = FilePermissions(masking: platformSpecificStatus.st_mode)
+        self.type = FileType(platformSpecificMode: CInterop.Mode(platformSpecificStatus.st_mode))
+        self.permissions = FilePermissions(masking: CInterop.Mode(platformSpecificStatus.st_mode))
         self.size = Int64(platformSpecificStatus.st_size)
         self.userID = UserID(rawValue: platformSpecificStatus.st_uid)
         self.groupID = GroupID(rawValue: platformSpecificStatus.st_gid)
@@ -83,7 +88,7 @@ public struct FileInfo: Hashable, Sendable {
         self.lastAccessTime = Timespec(platformSpecificStatus.st_atimespec)
         self.lastDataModificationTime = Timespec(platformSpecificStatus.st_mtimespec)
         self.lastStatusChangeTime = Timespec(platformSpecificStatus.st_ctimespec)
-        #elseif canImport(Glibc) || canImport(Musl)
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
         self.lastAccessTime = Timespec(platformSpecificStatus.st_atim)
         self.lastDataModificationTime = Timespec(platformSpecificStatus.st_mtim)
         self.lastStatusChangeTime = Timespec(platformSpecificStatus.st_ctim)
@@ -145,6 +150,29 @@ extension FileInfo {
 
     /// A time interval consisting of whole seconds and nanoseconds.
     public struct Timespec: Hashable, Sendable {
+        #if canImport(Darwin)
+        private static let utimeOmit = Int(UTIME_OMIT)
+        private static let utimeNow = Int(UTIME_NOW)
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
+        private static let utimeOmit = Int(CNIOLinux_UTIME_OMIT)
+        private static let utimeNow = Int(CNIOLinux_UTIME_NOW)
+        #endif
+
+        /// A timespec where the seconds are set to zero and the nanoseconds set to `UTIME_OMIT`.
+        /// In syscalls such as `futimens`, this means the time component set to this value will be ignored.
+        public static let omit = Self(
+            seconds: 0,
+            nanoseconds: Self.utimeOmit
+        )
+
+        /// A timespec where the seconds are set to zero and the nanoseconds set to `UTIME_NOW`.
+        /// In syscalls such as `futimens`, this means the time component set to this value will be
+        /// be set to the current time or the largest value supported by the platform, whichever is smaller.
+        public static let now = Self(
+            seconds: 0,
+            nanoseconds: Self.utimeNow
+        )
+
         /// The number of seconds.
         public var seconds: Int
 
@@ -193,7 +221,7 @@ private struct Stat: Hashable {
         hasher.combine(FileInfo.Timespec(stat.st_birthtimespec))
         hasher.combine(stat.st_flags)
         hasher.combine(stat.st_gen)
-        #elseif canImport(Glibc) || canImport(Musl)
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
         hasher.combine(FileInfo.Timespec(stat.st_atim))
         hasher.combine(FileInfo.Timespec(stat.st_mtim))
         hasher.combine(FileInfo.Timespec(stat.st_ctim))
@@ -234,7 +262,7 @@ private struct Stat: Hashable {
                 == FileInfo.Timespec(rStat.st_birthtimespec)
         isEqual = isEqual && lStat.st_flags == rStat.st_flags
         isEqual = isEqual && lStat.st_gen == rStat.st_gen
-        #elseif canImport(Glibc) || canImport(Musl)
+        #elseif canImport(Glibc) || canImport(Musl) || canImport(Android)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_atim) == FileInfo.Timespec(rStat.st_atim)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_mtim) == FileInfo.Timespec(rStat.st_mtim)
         isEqual = isEqual && FileInfo.Timespec(lStat.st_ctim) == FileInfo.Timespec(rStat.st_ctim)

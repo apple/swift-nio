@@ -20,7 +20,8 @@ import NIOCore
 
 @usableFromInline
 enum CQEEventType: UInt8 {
-    case poll = 1, pollModify, pollDelete // start with 1 to not get zero bit patterns for stdin
+    case poll = 1
+    case pollModify, pollDelete  // start with 1 to not get zero bit patterns for stdin
 }
 
 internal enum URingError: Error {
@@ -29,7 +30,7 @@ internal enum URingError: Error {
     case uringWaitCqeFailure
 }
 
-internal extension TimeAmount {
+extension TimeAmount {
     func kernelTimespec() -> __kernel_timespec {
         var ts = __kernel_timespec()
         ts.tv_sec = self.nanoseconds / 1_000_000_000
@@ -43,9 +44,10 @@ internal extension TimeAmount {
 // for the type of event issued (poll/modify/delete).
 @usableFromInline struct URingUserData {
     @usableFromInline var fileDescriptor: CInt
-    @usableFromInline var registrationID: UInt16 // SelectorRegistrationID truncated, only have room for bottom 16 bits (could be expanded to 24 if required)
+    // SelectorRegistrationID truncated, only have room for bottom 16 bits (could be expanded to 24 if required)
+    @usableFromInline var registrationID: UInt16
     @usableFromInline var eventType: CQEEventType
-    @usableFromInline var padding: Int8 // reserved for future use
+    @usableFromInline var padding: Int8  // reserved for future use
 
     @inlinable init(registrationID: SelectorRegistrationID, fileDescriptor: CInt, eventType: CQEEventType) {
         assert(MemoryLayout<UInt64>.size == MemoryLayout<URingUserData>.size)
@@ -57,9 +59,11 @@ internal extension TimeAmount {
 
     @inlinable init(rawValue: UInt64) {
         let unpacked = IntegerBitPacking.unpackUInt32UInt16UInt8(rawValue)
-        self = .init(registrationID: SelectorRegistrationID(rawValue: UInt32(unpacked.1)),
-                     fileDescriptor: CInt(unpacked.0),
-                     eventType: CQEEventType(rawValue:unpacked.2)!)
+        self = .init(
+            registrationID: SelectorRegistrationID(rawValue: UInt32(unpacked.1)),
+            fileDescriptor: CInt(unpacked.0),
+            eventType: CQEEventType(rawValue: unpacked.2)!
+        )
     }
 }
 
@@ -70,9 +74,11 @@ extension UInt64 {
         assert(fd >= 0, "\(fd) is not a valid file descriptor")
         assert(eventType >= 0, "\(eventType) is not a valid eventType")
 
-        self = IntegerBitPacking.packUInt32UInt16UInt8(UInt32(truncatingIfNeeded: fd),
-                                                       uringUserData.registrationID,
-                                                       eventType)
+        self = IntegerBitPacking.packUInt32UInt16UInt8(
+            UInt32(truncatingIfNeeded: fd),
+            uringUserData.registrationID,
+            eventType
+        )
     }
 }
 
@@ -80,9 +86,9 @@ extension UInt64 {
 internal struct URingEvent {
     var fd: CInt
     var pollMask: UInt32
-    var registrationID: UInt16 // we just have the truncated lower 16 bits of the registrationID
+    var registrationID: UInt16  // we just have the truncated lower 16 bits of the registrationID
     var pollCancelled: Bool
-    init () {
+    init() {
         self.fd = -1
         self.pollMask = 0
         self.registrationID = 0
@@ -93,7 +99,7 @@ internal struct URingEvent {
 // This is the key we use for merging events in our internal hashtable
 struct FDEventKey: Hashable {
     var fileDescriptor: CInt
-    var registrationID: UInt16 // we just have the truncated lower 16 bits of the registrationID
+    var registrationID: UInt16  // we just have the truncated lower 16 bits of the registrationID
 
     init(_ f: CInt, _ s: UInt16) {
         self.fileDescriptor = f
@@ -105,20 +111,21 @@ final internal class URing {
     internal static let POLLIN: CUnsignedInt = numericCast(CNIOLinux.POLLIN)
     internal static let POLLOUT: CUnsignedInt = numericCast(CNIOLinux.POLLOUT)
     internal static let POLLERR: CUnsignedInt = numericCast(CNIOLinux.POLLERR)
-    internal static let POLLRDHUP: CUnsignedInt = CNIOLinux_POLLRDHUP() // numericCast(CNIOLinux.POLLRDHUP) 
+    internal static let POLLRDHUP: CUnsignedInt = CNIOLinux_POLLRDHUP()  // numericCast(CNIOLinux.POLLRDHUP)
     internal static let POLLHUP: CUnsignedInt = numericCast(CNIOLinux.POLLHUP)
-    internal static let POLLCANCEL: CUnsignedInt = 0xF0000000 // Poll cancelled, need to reregister for singleshot polls
+    // Poll cancelled, need to reregister for singleshot polls
+    internal static let POLLCANCEL: CUnsignedInt = 0xF000_0000
 
     private var ring = io_uring()
     private let ringEntries: CUnsignedInt = 8192
-    private let cqeMaxCount: UInt32 = 8192 // this is the max chunk of CQE we take.
+    private let cqeMaxCount: UInt32 = 8192  // this is the max chunk of CQE we take.
 
     var cqes: UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>
-    var fdEvents = [FDEventKey : UInt32]() // fd, sequence_identifier : merged event_poll_return
+    var fdEvents = [FDEventKey: UInt32]()  // fd, sequence_identifier : merged event_poll_return
     var emptyCqe = io_uring_cqe()
 
     var fd: CInt {
-        return ring.ring_fd
+        ring.ring_fd
     }
 
     static var io_uring_use_multishot_poll: Bool {
@@ -129,7 +136,7 @@ final internal class URing {
         #endif
     }
 
-    func _dumpCqes(_ header:String, count: Int = 1) {
+    func _dumpCqes(_ header: String, count: Int = 1) {
         #if SWIFTNIO_IO_URING_DEBUG_DUMP_CQE
         func _debugPrintCQE(_ s: String) {
             print("Q [\(NIOThread.current)] " + s)
@@ -143,31 +150,32 @@ final internal class URing {
         for i in 0..<count {
             let c = cqes[i]!.pointee
 
-            let bitPattern = UInt(bitPattern:io_uring_cqe_get_data(cqes[i]))
+            let bitPattern = UInt(bitPattern: io_uring_cqe_get_data(cqes[i]))
             let uringUserData = URingUserData(rawValue: UInt64(bitPattern))
 
-            _debugPrintCQE("\(i) = fd[\(uringUserData.fileDescriptor)] eventType[\(String(describing:uringUserData.eventType))] registrationID[\(uringUserData.registrationID)] res [\(c.res)] flags [\(c.flags)]")
+            _debugPrintCQE(
+                "\(i) = fd[\(uringUserData.fileDescriptor)] eventType[\(String(describing:uringUserData.eventType))] registrationID[\(uringUserData.registrationID)] res [\(c.res)] flags [\(c.flags)]"
+            )
         }
         #endif
     }
 
     init() {
         cqes = UnsafeMutablePointer<UnsafeMutablePointer<io_uring_cqe>?>.allocate(capacity: Int(cqeMaxCount))
-        cqes.initialize(repeating:&emptyCqe, count:Int(cqeMaxCount))
+        cqes.initialize(repeating: &emptyCqe, count: Int(cqeMaxCount))
     }
 
     deinit {
         cqes.deallocate()
     }
 
-    internal func io_uring_queue_init() throws -> () {
-        if (CNIOLinux.io_uring_queue_init(ringEntries, &ring, 0 ) != 0)
-         {
-             throw URingError.uringSetupFailure
-         }
+    internal func io_uring_queue_init() throws {
+        if CNIOLinux.io_uring_queue_init(ringEntries, &ring, 0) != 0 {
+            throw URingError.uringSetupFailure
+        }
 
         _debugPrint("io_uring_queue_init \(self.ring.ring_fd)")
-     }
+    }
 
     internal func io_uring_queue_exit() {
         _debugPrint("io_uring_queue_exit \(self.ring.ring_fd)")
@@ -178,8 +186,7 @@ final internal class URing {
     // modifications - we never want to have to handle retries of
     // SQE allocation in all places it could possibly occur.
     // If the SQ ring is full, we may need to submit IO first
-    func withSQE<R>(_ body: (UnsafeMutablePointer<io_uring_sqe>?) throws -> R) rethrows -> R
-    {
+    func withSQE<R>(_ body: (UnsafeMutablePointer<io_uring_sqe>?) throws -> R) rethrows -> R {
         // io_uring_submit can fail here due to backpressure from kernel for not reaping CQE:s.
         //
         // I think we should consider handling that as a fatalError, as fundamentally the ring size is too small
@@ -191,7 +198,7 @@ final internal class URing {
         //
         while true {
             if let sqe = CNIOLinux.io_uring_get_sqe(&ring) {
-               return try body(sqe)
+                return try body(sqe)
             }
             self.io_uring_flush()
         }
@@ -202,15 +209,14 @@ final internal class URing {
     // has gone down and we are re-registering polls this means we will silently lose any
     // entries after the failed fd. Ouch. Proper approach is to use io_uring_sq_ready() in a loop.
     // See: https://github.com/axboe/liburing/issues/309
-    internal func io_uring_flush() {         // When using SQPOLL this is basically a NOP
+    internal func io_uring_flush() {  // When using SQPOLL this is basically a NOP
         var waitingSubmissions: UInt32 = 0
         var submissionCount = 0
         var retval: CInt
 
         waitingSubmissions = CNIOLinux.io_uring_sq_ready(&ring)
 
-        loop: while (waitingSubmissions > 0)
-        {
+        loop: while waitingSubmissions > 0 {
             retval = CNIOLinux.io_uring_submit(&ring)
             submissionCount += 1
 
@@ -225,21 +231,27 @@ final internal class URing {
             // trying to get new SQE if the actual SQE queue is full, but
             // that would be due to user error in usage IMHO and we should fatalError there.
             case -EAGAIN, -EBUSY:
-                _debugPrint("io_uring_flush io_uring_submit -EBUSY/-EAGAIN waitingSubmissions[\(waitingSubmissions)] submissionCount[\(submissionCount)]. Breaking out and resubmitting later (whenReady() end).")
+                _debugPrint(
+                    "io_uring_flush io_uring_submit -EBUSY/-EAGAIN waitingSubmissions[\(waitingSubmissions)] submissionCount[\(submissionCount)]. Breaking out and resubmitting later (whenReady() end)."
+                )
                 break loop
             // -ENOMEM when there is not enough memory to do internal allocations on the kernel side.
             // Right nog we just loop with a sleep trying to buy time, but could also possibly fatalError here.
             // See: https://github.com/axboe/liburing/issues/309
             case -ENOMEM:
-                usleep(10_000) // let's not busy loop to give the kernel some time to recover if possible
+                usleep(10_000)  // let's not busy loop to give the kernel some time to recover if possible
                 _debugPrint("io_uring_flush io_uring_submit -ENOMEM \(submissionCount)")
             case 0:
-                _debugPrint("io_uring_flush io_uring_submit submitted 0, so far needed submissionCount[\(submissionCount)] waitingSubmissions[\(waitingSubmissions)] submitted [\(retval)] SQE:s this iteration")
+                _debugPrint(
+                    "io_uring_flush io_uring_submit submitted 0, so far needed submissionCount[\(submissionCount)] waitingSubmissions[\(waitingSubmissions)] submitted [\(retval)] SQE:s this iteration"
+                )
                 break
             case 1...:
-                _debugPrint("io_uring_flush io_uring_submit needed [\(submissionCount)] submission(s), submitted [\(retval)] SQE:s out of [\(waitingSubmissions)] possible")
+                _debugPrint(
+                    "io_uring_flush io_uring_submit needed [\(submissionCount)] submission(s), submitted [\(retval)] SQE:s out of [\(waitingSubmissions)] possible"
+                )
                 break
-            default: // other errors
+            default:  // other errors
                 fatalError("Unexpected error [\(retval)] from io_uring_submit ")
             }
 
@@ -248,81 +260,132 @@ final internal class URing {
     }
 
     // we stuff event type into the upper byte, the next 3 bytes gives us the sequence number (16M before wrap) and final 4 bytes are fd.
-    internal func io_uring_prep_poll_add(fileDescriptor: CInt, pollMask: UInt32, registrationID: SelectorRegistrationID, submitNow: Bool = true, multishot: Bool = true) -> () {
-        let bitPattern = UInt64(URingUserData(registrationID: registrationID, fileDescriptor: fileDescriptor, eventType:CQEEventType.poll))
+    internal func io_uring_prep_poll_add(
+        fileDescriptor: CInt,
+        pollMask: UInt32,
+        registrationID: SelectorRegistrationID,
+        submitNow: Bool = true,
+        multishot: Bool = true
+    ) {
+        let bitPattern = UInt64(
+            URingUserData(registrationID: registrationID, fileDescriptor: fileDescriptor, eventType: CQEEventType.poll)
+        )
         let bitpatternAsPointer = UnsafeMutableRawPointer.init(bitPattern: UInt(bitPattern))
 
-        _debugPrint("io_uring_prep_poll_add fileDescriptor[\(fileDescriptor)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] submitNow[\(submitNow)] multishot[\(multishot)]")
+        _debugPrint(
+            "io_uring_prep_poll_add fileDescriptor[\(fileDescriptor)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing:bitpatternAsPointer))] submitNow[\(submitNow)] multishot[\(multishot)]"
+        )
 
         self.withSQE { sqe in
             CNIOLinux.io_uring_prep_poll_add(sqe, fileDescriptor, pollMask)
-            CNIOLinux.io_uring_sqe_set_data(sqe, bitpatternAsPointer) // must be done after prep_poll_add, otherwise zeroed out.
+            // must be done after prep_poll_add, otherwise zeroed out.
+            CNIOLinux.io_uring_sqe_set_data(sqe, bitpatternAsPointer)
 
             if multishot {
-                sqe!.pointee.len |= IORING_POLL_ADD_MULTI; // turn on multishots, set through environment variable
+                // turn on multishots, set through environment variable
+                sqe!.pointee.len |= IORING_POLL_ADD_MULTI
             }
         }
-        
+
         if submitNow {
             self.io_uring_flush()
         }
     }
 
-    internal func io_uring_prep_poll_remove(fileDescriptor: CInt, pollMask: UInt32, registrationID: SelectorRegistrationID, submitNow: Bool = true, link: Bool = false) -> () {
-        let bitPattern = UInt64(URingUserData(registrationID: registrationID,
-                                              fileDescriptor: fileDescriptor,
-                                              eventType:CQEEventType.poll))
-        let userbitPattern = UInt64(URingUserData(registrationID: registrationID,
-                                                  fileDescriptor: fileDescriptor,
-                                                  eventType:CQEEventType.pollDelete))
+    internal func io_uring_prep_poll_remove(
+        fileDescriptor: CInt,
+        pollMask: UInt32,
+        registrationID: SelectorRegistrationID,
+        submitNow: Bool = true,
+        link: Bool = false
+    ) {
+        let bitPattern = UInt64(
+            URingUserData(
+                registrationID: registrationID,
+                fileDescriptor: fileDescriptor,
+                eventType: CQEEventType.poll
+            )
+        )
+        let userbitPattern = UInt64(
+            URingUserData(
+                registrationID: registrationID,
+                fileDescriptor: fileDescriptor,
+                eventType: CQEEventType.pollDelete
+            )
+        )
 
-        _debugPrint("io_uring_prep_poll_remove fileDescriptor[\(fileDescriptor)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing: bitPattern))] userBitpatternAsPointer[\(String(describing: userbitPattern))] submitNow[\(submitNow)] link[\(link)]")
+        _debugPrint(
+            "io_uring_prep_poll_remove fileDescriptor[\(fileDescriptor)] pollMask[\(pollMask)] bitpatternAsPointer[\(String(describing: bitPattern))] userBitpatternAsPointer[\(String(describing: userbitPattern))] submitNow[\(submitNow)] link[\(link)]"
+        )
 
         self.withSQE { sqe in
             CNIOLinux.io_uring_prep_poll_remove(sqe, .init(userData: bitPattern))
-            CNIOLinux.io_uring_sqe_set_data(sqe, .init(userData: userbitPattern)) // must be done after prep_poll_add, otherwise zeroed out.
+            // must be done after prep_poll_add, otherwise zeroed out.
+            CNIOLinux.io_uring_sqe_set_data(sqe, .init(userData: userbitPattern))
 
             if link {
                 CNIOLinux_io_uring_set_link_flag(sqe)
             }
         }
-        
+
         if submitNow {
             self.io_uring_flush()
         }
     }
-    
-    // the update/multishot polls are
-    internal func io_uring_poll_update(fileDescriptor: CInt, newPollmask: UInt32, oldPollmask: UInt32, registrationID: SelectorRegistrationID, submitNow: Bool = true, multishot: Bool = true) -> () {
-        
-        let bitpattern = UInt64(URingUserData(registrationID: registrationID,
-                                              fileDescriptor: fileDescriptor,
-                                              eventType:CQEEventType.poll))
-        let userbitPattern = UInt64(URingUserData(registrationID: registrationID,
-                                              fileDescriptor: fileDescriptor,
-                                              eventType:CQEEventType.pollModify))
 
-        _debugPrint("io_uring_poll_update fileDescriptor[\(fileDescriptor)] oldPollmask[\(oldPollmask)] newPollmask[\(newPollmask)]  userBitpatternAsPointer[\(String(describing: userbitPattern))]")
+    // the update/multishot polls are
+    internal func io_uring_poll_update(
+        fileDescriptor: CInt,
+        newPollmask: UInt32,
+        oldPollmask: UInt32,
+        registrationID: SelectorRegistrationID,
+        submitNow: Bool = true,
+        multishot: Bool = true
+    ) {
+
+        let bitpattern = UInt64(
+            URingUserData(
+                registrationID: registrationID,
+                fileDescriptor: fileDescriptor,
+                eventType: CQEEventType.poll
+            )
+        )
+        let userbitPattern = UInt64(
+            URingUserData(
+                registrationID: registrationID,
+                fileDescriptor: fileDescriptor,
+                eventType: CQEEventType.pollModify
+            )
+        )
+
+        _debugPrint(
+            "io_uring_poll_update fileDescriptor[\(fileDescriptor)] oldPollmask[\(oldPollmask)] newPollmask[\(newPollmask)]  userBitpatternAsPointer[\(String(describing: userbitPattern))]"
+        )
 
         self.withSQE { sqe in
             // "Documentation" for multishot polls and updates here:
             // https://git.kernel.dk/cgit/linux-block/commit/?h=poll-multiple&id=33021a19e324fb747c2038416753e63fd7cd9266
             var flags = IORING_POLL_UPDATE_EVENTS | IORING_POLL_UPDATE_USER_DATA
             if multishot {
-                flags |= IORING_POLL_ADD_MULTI       // ask for multiple updates
+                flags |= IORING_POLL_ADD_MULTI  // ask for multiple updates
             }
 
-            CNIOLinux.io_uring_prep_poll_update(sqe, .init(userData: bitpattern), .init(userData: bitpattern), newPollmask, flags)
+            CNIOLinux.io_uring_prep_poll_update(
+                sqe,
+                .init(userData: bitpattern),
+                .init(userData: bitpattern),
+                newPollmask,
+                flags
+            )
             CNIOLinux.io_uring_sqe_set_data(sqe, .init(userData: userbitPattern))
         }
-        
+
         if submitNow {
             self.io_uring_flush()
         }
     }
 
-    internal func _debugPrint(_ s: @autoclosure () -> String)
-    {
+    internal func _debugPrint(_ s: @autoclosure () -> String) {
         #if SWIFTNIO_IO_URING_DEBUG_URING
         print("L [\(NIOThread.current)] " + s())
         #endif
@@ -332,7 +395,7 @@ final internal class URing {
     // this minimizes amount of events propagating up and allows Selector to discard
     // events with an old sequence identifier.
     internal func _process_cqe(events: UnsafeMutablePointer<URingEvent>, cqeIndex: Int, multishot: Bool) {
-        let bitPattern = UInt(bitPattern:io_uring_cqe_get_data(cqes[cqeIndex]))
+        let bitPattern = UInt(bitPattern: io_uring_cqe_get_data(cqes[cqeIndex]))
         let uringUserData = URingUserData(rawValue: UInt64(bitPattern))
         let result = cqes[cqeIndex]!.pointee.res
 
@@ -342,13 +405,14 @@ final internal class URing {
             case -ECANCELED:
                 var pollError: UInt32 = 0
                 assert(uringUserData.fileDescriptor >= 0, "fd must be zero or greater")
-                if multishot { // -ECANCELED for streaming polls, should signal error
+                if multishot {  // -ECANCELED for streaming polls, should signal error
                     pollError = URing.POLLERR | URing.POLLHUP
-                } else {       // this just signals that Selector just should resubmit a new fresh poll
+                } else {  // this just signals that Selector just should resubmit a new fresh poll
                     pollError = URing.POLLCANCEL
                 }
                 if let current = fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
-                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
+                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] =
+                        current | pollError
                 } else {
                     fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
                 }
@@ -365,29 +429,30 @@ final internal class URing {
             case -EBADF:
                 _debugPrint("Failed poll with -EBADF for cqeIndex[\(cqeIndex)]")
                 break
-            case ..<0: // other errors
+            case ..<0:  // other errors
                 fatalError("Failed poll with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
                 break
-            case 0: // successfull chained add for singleshots, not an event
+            case 0:  // successfull chained add for singleshots, not an event
                 break
-            default: // positive success
+            default:  // positive success
                 assert(uringUserData.fileDescriptor >= 0, "fd must be zero or greater")
                 let uresult = UInt32(result)
 
                 if let current = fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
-                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] =  current | uresult
+                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | uresult
                 } else {
                     fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = uresult
                 }
             }
-        case .pollModify: // we only get this for multishot modifications
+        case .pollModify:  // we only get this for multishot modifications
             switch result {
-            case -ECANCELED: // -ECANCELED for streaming polls, should signal error
+            case -ECANCELED:  // -ECANCELED for streaming polls, should signal error
                 assert(uringUserData.fileDescriptor >= 0, "fd must be zero or greater")
 
-                let pollError = URing.POLLERR // URing.POLLERR // (URing.POLLHUP | URing.POLLERR)
+                let pollError = URing.POLLERR  // URing.POLLERR // (URing.POLLHUP | URing.POLLERR)
                 if let current = fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] {
-                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = current | pollError
+                    fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] =
+                        current | pollError
                 } else {
                     fdEvents[FDEventKey(uringUserData.fileDescriptor, uringUserData.registrationID)] = pollError
                 }
@@ -402,12 +467,12 @@ final internal class URing {
             case -EBADF:
                 _debugPrint("Failed pollModify with -EBADF for cqeIndex[\(cqeIndex)]")
                 break
-            case ..<0: // other errors
+            case ..<0:  // other errors
                 fatalError("Failed pollModify with unexpected error (\(result) for cqeIndex[\(cqeIndex)]")
                 break
-            case 0: // successfull chained add, not an event
+            case 0:  // successfull chained add, not an event
                 break
-            default: // positive success
+            default:  // positive success
                 fatalError("pollModify returned > 0")
             }
             break
@@ -416,7 +481,11 @@ final internal class URing {
         }
     }
 
-    internal func io_uring_peek_batch_cqe(events: UnsafeMutablePointer<URingEvent>, maxevents: UInt32, multishot: Bool = true) -> Int {
+    internal func io_uring_peek_batch_cqe(
+        events: UnsafeMutablePointer<URingEvent>,
+        maxevents: UInt32,
+        multishot: Bool = true
+    ) -> Int {
         var eventCount = 0
         var currentCqeCount = CNIOLinux.io_uring_peek_batch_cqe(&ring, cqes, cqeMaxCount)
 
@@ -432,19 +501,20 @@ final internal class URing {
         assert(currentCqeCount >= 0, "currentCqeCount should never be negative")
         assert(maxevents > 0, "maxevents should be a positive number")
 
-        for cqeIndex in 0 ..< currentCqeCount
-        {
-            self._process_cqe(events: events, cqeIndex: Int(cqeIndex), multishot:multishot)
+        for cqeIndex in 0..<currentCqeCount {
+            self._process_cqe(events: events, cqeIndex: Int(cqeIndex), multishot: multishot)
 
-            if (fdEvents.count == maxevents) // ensure we don't generate more events than maxevents
+            if fdEvents.count == maxevents  // ensure we don't generate more events than maxevents
             {
-                _debugPrint("io_uring_peek_batch_cqe breaking loop early, currentCqeCount [\(currentCqeCount)] maxevents [\(maxevents)]")
-                currentCqeCount = maxevents // to make sure we only cq_advance the correct amount
+                _debugPrint(
+                    "io_uring_peek_batch_cqe breaking loop early, currentCqeCount [\(currentCqeCount)] maxevents [\(maxevents)]"
+                )
+                currentCqeCount = maxevents  // to make sure we only cq_advance the correct amount
                 break
             }
         }
 
-        io_uring_cq_advance(&ring, currentCqeCount) // bulk variant of io_uring_cqe_seen(&ring, dataPointer)
+        io_uring_cq_advance(&ring, currentCqeCount)  // bulk variant of io_uring_cqe_seen(&ring, dataPointer)
 
         //  we just return single event per fd, sequencenumber pair
         eventCount = 0
@@ -462,14 +532,18 @@ final internal class URing {
             eventCount += 1
         }
 
-        fdEvents.removeAll(keepingCapacity: true) // reused for next batch
+        fdEvents.removeAll(keepingCapacity: true)  // reused for next batch
 
         _debugPrint("io_uring_peek_batch_cqe returning [\(eventCount)] events, fdEvents.count [\(fdEvents.count)]")
 
         return eventCount
     }
 
-    internal func _io_uring_wait_cqe_shared(events: UnsafeMutablePointer<URingEvent>, error: Int32, multishot: Bool) throws -> Int {
+    internal func _io_uring_wait_cqe_shared(
+        events: UnsafeMutablePointer<URingEvent>,
+        error: Int32,
+        multishot: Bool
+    ) throws -> Int {
         var eventCount = 0
 
         switch error {
@@ -489,7 +563,7 @@ final internal class URing {
 
         self._dumpCqes("_io_uring_wait_cqe_shared")
 
-        self._process_cqe(events: events, cqeIndex: 0, multishot:multishot)
+        self._process_cqe(events: events, cqeIndex: 0, multishot: multishot)
 
         CNIOLinux.io_uring_cqe_seen(&ring, cqes[0])
 
@@ -502,27 +576,36 @@ final internal class URing {
             _debugPrint("_io_uring_wait_cqe_shared if let firstEvent = fdEvents.first failed")
         }
 
-        fdEvents.removeAll(keepingCapacity: true) // reused for next batch
+        fdEvents.removeAll(keepingCapacity: true)  // reused for next batch
 
         return eventCount
     }
 
-    internal func io_uring_wait_cqe(events: UnsafeMutablePointer<URingEvent>, maxevents: UInt32, multishot: Bool = true) throws -> Int {
+    internal func io_uring_wait_cqe(
+        events: UnsafeMutablePointer<URingEvent>,
+        maxevents: UInt32,
+        multishot: Bool = true
+    ) throws -> Int {
         _debugPrint("io_uring_wait_cqe")
 
         let error = CNIOLinux.io_uring_wait_cqe(&ring, cqes)
 
-        return try self._io_uring_wait_cqe_shared(events: events, error: error, multishot:multishot)
+        return try self._io_uring_wait_cqe_shared(events: events, error: error, multishot: multishot)
     }
 
-    internal func io_uring_wait_cqe_timeout(events: UnsafeMutablePointer<URingEvent>, maxevents: UInt32, timeout: TimeAmount, multishot: Bool = true) throws -> Int {
+    internal func io_uring_wait_cqe_timeout(
+        events: UnsafeMutablePointer<URingEvent>,
+        maxevents: UInt32,
+        timeout: TimeAmount,
+        multishot: Bool = true
+    ) throws -> Int {
         var ts = timeout.kernelTimespec()
 
         _debugPrint("io_uring_wait_cqe_timeout.ETIME milliseconds \(ts)")
 
         let error = CNIOLinux.io_uring_wait_cqe_timeout(&ring, cqes, &ts)
 
-        return try self._io_uring_wait_cqe_shared(events: events, error: error, multishot:multishot)
+        return try self._io_uring_wait_cqe_shared(events: events, error: error, multishot: multishot)
     }
 }
 

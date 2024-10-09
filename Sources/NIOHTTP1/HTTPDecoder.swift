@@ -12,13 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 @_implementationOnly import CNIOLLHTTP
+import NIOCore
 
-private extension UnsafeMutablePointer where Pointee == llhttp_t {
+extension UnsafeMutablePointer where Pointee == llhttp_t {
     /// Returns the `KeepAliveState` for the current message that is parsed.
-    var keepAliveState: KeepAliveState {
-        return c_nio_llhttp_should_keep_alive(self) == 0 ? .close : .keepAlive
+    fileprivate var keepAliveState: KeepAliveState {
+        c_nio_llhttp_should_keep_alive(self) == 0 ? .close : .keepAlive
     }
 }
 
@@ -39,7 +39,7 @@ private class BetterHTTPParser {
     private static let maximumHeaderFieldSize = 80 * 1024
 
     var delegate: HTTPDecoderDelegate! = nil
-    private var parser: llhttp_t? = llhttp_t() // nil if unaccessible because reference passed away exclusively
+    private var parser: llhttp_t? = llhttp_t()  // nil if unaccessible because reference passed away exclusively
     private var settings: UnsafeMutablePointer<llhttp_settings_t>
     private var decodingState: HTTPDecodingState = .beforeMessageBegin
     private var firstNonDiscardableOffset: Int? = nil
@@ -58,7 +58,7 @@ private class BetterHTTPParser {
     }
 
     private static func fromOpaque(_ opaque: UnsafePointer<llhttp_t>?) -> BetterHTTPParser {
-        return Unmanaged<BetterHTTPParser>.fromOpaque(UnsafeRawPointer(opaque!.pointee.data)).takeUnretainedValue()
+        Unmanaged<BetterHTTPParser>.fromOpaque(UnsafeRawPointer(opaque!.pointee.data)).takeUnretainedValue()
     }
 
     init(kind: HTTPDecoderKind) {
@@ -70,17 +70,21 @@ private class BetterHTTPParser {
             return 0
         }
         self.settings.pointee.on_header_field = { opaque, bytes, len in
-            return BetterHTTPParser.fromOpaque(opaque).didReceiveHeaderFieldData(UnsafeRawBufferPointer(start: bytes, count: len))
+            BetterHTTPParser.fromOpaque(opaque).didReceiveHeaderFieldData(
+                UnsafeRawBufferPointer(start: bytes, count: len)
+            )
         }
         self.settings.pointee.on_header_value = { opaque, bytes, len in
-            return BetterHTTPParser.fromOpaque(opaque).didReceiveHeaderValueData(UnsafeRawBufferPointer(start: bytes, count: len))
+            BetterHTTPParser.fromOpaque(opaque).didReceiveHeaderValueData(
+                UnsafeRawBufferPointer(start: bytes, count: len)
+            )
         }
         self.settings.pointee.on_status = { opaque, bytes, len in
             BetterHTTPParser.fromOpaque(opaque).didReceiveStatusData(UnsafeRawBufferPointer(start: bytes, count: len))
             return 0
         }
         self.settings.pointee.on_url = { opaque, bytes, len in
-            return BetterHTTPParser.fromOpaque(opaque).didReceiveURLData(UnsafeRawBufferPointer(start: bytes, count: len))
+            BetterHTTPParser.fromOpaque(opaque).didReceiveURLData(UnsafeRawBufferPointer(start: bytes, count: len))
         }
         self.settings.pointee.on_chunk_complete = { opaque in
             BetterHTTPParser.fromOpaque(opaque).didReceiveChunkCompleteNotification()
@@ -96,19 +100,21 @@ private class BetterHTTPParser {
         }
         self.settings.pointee.on_headers_complete = { opaque in
             let parser = BetterHTTPParser.fromOpaque(opaque)
-            switch parser.didReceiveHeadersCompleteNotification(versionMajor: Int(opaque!.pointee.http_major),
-                                                                versionMinor: Int(opaque!.pointee.http_minor),
-                                                                statusCode: Int(opaque!.pointee.status_code),
-                                                                isUpgrade: opaque!.pointee.upgrade != 0,
-                                                                method: llhttp_method(rawValue: CUnsignedInt(opaque!.pointee.method)),
-                                                                keepAliveState: opaque!.keepAliveState) {
+            switch parser.didReceiveHeadersCompleteNotification(
+                versionMajor: Int(opaque!.pointee.http_major),
+                versionMinor: Int(opaque!.pointee.http_minor),
+                statusCode: Int(opaque!.pointee.status_code),
+                isUpgrade: opaque!.pointee.upgrade != 0,
+                method: llhttp_method(rawValue: CUnsignedInt(opaque!.pointee.method)),
+                keepAliveState: opaque!.keepAliveState
+            ) {
             case .normal:
                 return 0
             case .skipBody:
                 return 1
             case .error(let err):
                 parser.httpErrno = err
-                return -1 // error
+                return -1  // error
             }
         }
         self.settings.pointee.on_message_complete = { opaque in
@@ -145,7 +151,7 @@ private class BetterHTTPParser {
         let end = start + currentFieldByteLength
         self.firstNonDiscardableOffset = nil
         precondition(start >= self.rawBytesView.startIndex && end <= self.rawBytesView.endIndex)
-        try callout(&self.delegate, .init(rebasing: self.rawBytesView[start ..< end]))
+        try callout(&self.delegate, .init(rebasing: self.rawBytesView[start..<end]))
     }
 
     private func didReceiveBodyData(_ bytes: UnsafeRawBufferPointer) {
@@ -256,12 +262,14 @@ private class BetterHTTPParser {
         self.delegate.didFinishMessage()
     }
 
-    private func didReceiveHeadersCompleteNotification(versionMajor: Int,
-                                                       versionMinor: Int,
-                                                       statusCode: Int,
-                                                       isUpgrade: Bool,
-                                                       method: llhttp_method,
-                                                       keepAliveState: KeepAliveState) -> MessageContinuation {
+    private func didReceiveHeadersCompleteNotification(
+        versionMajor: Int,
+        versionMinor: Int,
+        statusCode: Int,
+        isUpgrade: Bool,
+        method: llhttp_method,
+        keepAliveState: KeepAliveState
+    ) -> MessageContinuation {
         switch self.decodingState {
         case .headerValue:
             self.finish { delegate, bytes in
@@ -307,7 +315,7 @@ private class BetterHTTPParser {
                 self.richerError = NIOHTTPDecoderError.unsolicitedResponse
                 return .error(HPE_INTERNAL)
             }
-            
+
             if 100 <= statusCode && statusCode < 200 && statusCode != 101 {
                 // if the response status is in the range of 100..<200 but not 101 we don't want to
                 // pop the request method. The actual request head is expected with the next HTTP
@@ -317,19 +325,22 @@ private class BetterHTTPParser {
                 let method = self.requestHeads.removeFirst().method
                 if method == .HEAD || method == .CONNECT {
                     skipBody = true
-                } else if statusCode / 100 == 1 ||  // 1XX codes
-                    statusCode == 204 || statusCode == 304 {
+                } else if statusCode / 100 == 1  // 1XX codes
+                    || statusCode == 204 || statusCode == 304
+                {
                     skipBody = true
                 }
             }
         }
 
-        let success = self.delegate.didFinishHead(versionMajor: versionMajor,
-                                                  versionMinor: versionMinor,
-                                                  isUpgrade: isUpgrade,
-                                                  method: method,
-                                                  statusCode: statusCode,
-                                                  keepAliveState: keepAliveState)
+        let success = self.delegate.didFinishHead(
+            versionMajor: versionMajor,
+            versionMinor: versionMinor,
+            isUpgrade: isUpgrade,
+            method: method,
+            statusCode: statusCode,
+            keepAliveState: keepAliveState
+        )
         guard success else {
             return .error(HPE_INVALID_VERSION)
         }
@@ -361,7 +372,7 @@ private class BetterHTTPParser {
         return 0
     }
 
-    @inline(__always) // this need to be optimised away
+    @inline(__always)  // this need to be optimised away
     func withExclusiveHTTPParser<T>(_ body: (UnsafeMutablePointer<llhttp_t>) -> T) -> T {
         var parser: llhttp_t? = nil
         assert(self.parser != nil, "parser must not be nil here, must be a re-entrancy issue")
@@ -387,9 +398,11 @@ private class BetterHTTPParser {
                 let startPointer = bytes.baseAddress! + self.httpParserOffset
                 let bytesToRead = bytes.count - self.httpParserOffset
 
-                rc = c_nio_llhttp_execute_swift(parserPtr,
-                                                startPointer,
-                                                bytesToRead)
+                rc = c_nio_llhttp_execute_swift(
+                    parserPtr,
+                    startPointer,
+                    bytesToRead
+                )
 
                 if rc == HPE_PAUSED_UPGRADE {
                     // This is a special pause. We don't need to stop here (our other code will prevent us
@@ -417,7 +430,7 @@ private class BetterHTTPParser {
             // If we have a richer error than the errno code, and the errno is internal, we'll use it. Otherwise, we use the
             // error from http_parser.
             let err = self.httpErrno ?? parserErrno
-            if (err == HPE_INTERNAL || err == HPE_USER), let richerError = self.richerError {
+            if err == HPE_INTERNAL || err == HPE_USER, let richerError = self.richerError {
                 throw richerError
             } else {
                 throw HTTPParserError.httpError(fromCHTTPParserErrno: err)!
@@ -449,12 +462,14 @@ private protocol HTTPDecoderDelegate {
     mutating func didReceiveTrailerName(_ bytes: UnsafeRawBufferPointer) throws
     mutating func didReceiveTrailerValue(_ bytes: UnsafeRawBufferPointer)
     mutating func didReceiveURL(_ bytes: UnsafeRawBufferPointer)
-    mutating func didFinishHead(versionMajor: Int,
-                                versionMinor: Int,
-                                isUpgrade: Bool,
-                                method: llhttp_method,
-                                statusCode: Int,
-                                keepAliveState: KeepAliveState) -> Bool
+    mutating func didFinishHead(
+        versionMajor: Int,
+        versionMinor: Int,
+        isUpgrade: Bool,
+        method: llhttp_method,
+        statusCode: Int,
+        keepAliveState: KeepAliveState
+    ) -> Bool
     mutating func didFinishMessage()
 }
 
@@ -484,7 +499,8 @@ public enum HTTPDecoderKind: Sendable {
     case response
 }
 
-extension HTTPDecoder: WriteObservingByteToMessageDecoder where In == HTTPClientResponsePart, Out == HTTPClientRequestPart {
+extension HTTPDecoder: WriteObservingByteToMessageDecoder
+where In == HTTPClientResponsePart, Out == HTTPClientRequestPart {
     public typealias OutboundIn = Out
 
     public func write(data: HTTPClientRequestPart) {
@@ -520,7 +536,7 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     private let leftOverBytesStrategy: RemoveAfterUpgradeStrategy
     private let informationalResponseStrategy: NIOInformationalResponseStrategy
     private let kind: HTTPDecoderKind
-    private var stopParsing = false // set on upgrade or HTTP version error
+    private var stopParsing = false  // set on upgrade or HTTP version error
     private var lastResponseHeaderWasInformational = false
 
     /// Creates a new instance of `HTTPDecoder`.
@@ -531,7 +547,7 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     public convenience init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) {
         self.init(leftOverBytesStrategy: leftOverBytesStrategy, informationalResponseStrategy: .drop)
     }
-        
+
     /// Creates a new instance of `HTTPDecoder`.
     ///
     /// - parameters:
@@ -539,7 +555,10 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
     ///                              detected. Note that this does not affect what happens on EOF.
     ///     - informationalResponseStrategy: Should informational responses (like http status 100) be forwarded or dropped.
     ///                              Default is `.drop`. This property is only respected when decoding responses.
-    public init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes, informationalResponseStrategy: NIOInformationalResponseStrategy = .drop) {
+    public init(
+        leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
+        informationalResponseStrategy: NIOInformationalResponseStrategy = .drop
+    ) {
         self.headers.reserveCapacity(16)
         if In.self == HTTPServerRequestPart.self {
             self.kind = .request
@@ -563,9 +582,13 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         self.buffer!.moveReaderIndex(forwardBy: offset)
         switch self.kind {
         case .request:
-            self.context!.fireChannelRead(NIOAny(HTTPServerRequestPart.body(self.buffer!.readSlice(length: bytes.count)!)))
+            self.context!.fireChannelRead(
+                NIOAny(HTTPServerRequestPart.body(self.buffer!.readSlice(length: bytes.count)!))
+            )
         case .response:
-            self.context!.fireChannelRead(NIOAny(HTTPClientResponsePart.body(self.buffer!.readSlice(length: bytes.count)!)))
+            self.context!.fireChannelRead(
+                NIOAny(HTTPClientResponsePart.body(self.buffer!.readSlice(length: bytes.count)!))
+            )
         }
 
     }
@@ -608,12 +631,14 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         self.url = String(decoding: bytes, as: Unicode.UTF8.self)
     }
 
-    func didFinishHead(versionMajor: Int,
-                       versionMinor: Int,
-                       isUpgrade: Bool,
-                       method: llhttp_method,
-                       statusCode: Int,
-                       keepAliveState: KeepAliveState) -> Bool {
+    func didFinishHead(
+        versionMajor: Int,
+        versionMinor: Int,
+        isUpgrade: Bool,
+        method: llhttp_method,
+        statusCode: Int,
+        keepAliveState: KeepAliveState
+    ) -> Bool {
         let message: NIOAny?
 
         guard versionMajor == 1 else {
@@ -624,13 +649,17 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
 
         switch self.kind {
         case .request:
-            let reqHead = HTTPRequestHead(version: .init(major: versionMajor, minor: versionMinor),
-                                          method: HTTPMethod.from(httpParserMethod: method),
-                                          uri: self.url!,
-                                          headers: HTTPHeaders(self.headers,
-                                                               keepAliveState: keepAliveState))
+            let reqHead = HTTPRequestHead(
+                version: .init(major: versionMajor, minor: versionMinor),
+                method: HTTPMethod.from(httpParserMethod: method),
+                uri: self.url!,
+                headers: HTTPHeaders(
+                    self.headers,
+                    keepAliveState: keepAliveState
+                )
+            )
             message = NIOAny(HTTPServerRequestPart.head(reqHead))
-            
+
         case .response where (100..<200).contains(statusCode) && statusCode != 101:
             self.lastResponseHeaderWasInformational = true
             switch self.informationalResponseStrategy.base {
@@ -646,7 +675,7 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
             case .drop:
                 message = nil
             }
-            
+
         case .response:
             self.lastResponseHeaderWasInformational = false
             let resHeadPart = HTTPClientResponsePart.head(
@@ -721,7 +750,11 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         return .needMoreData
     }
 
-    public func decodeLast(context: ChannelHandlerContext, buffer: inout ByteBuffer, seenEOF: Bool) throws -> DecodingState {
+    public func decodeLast(
+        context: ChannelHandlerContext,
+        buffer: inout ByteBuffer,
+        seenEOF: Bool
+    ) throws -> DecodingState {
         if !self.stopParsing {
             while buffer.readableBytes > 0, case .continue = try self.decode(context: context, buffer: &buffer) {}
             if seenEOF {
@@ -763,12 +796,12 @@ public struct NIOInformationalResponseStrategy: Hashable, Sendable {
         case drop
         case forward
     }
-    
+
     var base: Base
     private init(_ base: Base) {
         self.base = base
     }
-    
+
     /// Drop the informational response and only forward the "real" response
     public static let drop = Self(.drop)
     /// Forward the informational response and then forward the "real" response. This will result in
@@ -803,7 +836,7 @@ extension HTTPParserError {
         case HPE_INVALID_VERSION:
             return .invalidVersion
         case HPE_INVALID_HEADER_TOKEN,
-             HPE_UNEXPECTED_SPACE:
+            HPE_UNEXPECTED_SPACE:
             return .invalidHeaderToken
         case HPE_INVALID_CONTENT_LENGTH:
             return .invalidContentLength
@@ -816,17 +849,17 @@ extension HTTPParserError {
         case HPE_PAUSED, HPE_PAUSED_UPGRADE, HPE_PAUSED_H2_UPGRADE:
             return .paused
         case HPE_INVALID_TRANSFER_ENCODING,
-             HPE_CR_EXPECTED,
-             HPE_CB_MESSAGE_BEGIN,
-             HPE_CB_HEADERS_COMPLETE,
-             HPE_CB_MESSAGE_COMPLETE,
-             HPE_CB_CHUNK_HEADER,
-             HPE_CB_CHUNK_COMPLETE,
-             HPE_USER,
-             HPE_CB_URL_COMPLETE,
-             HPE_CB_STATUS_COMPLETE,
-             HPE_CB_HEADER_FIELD_COMPLETE,
-             HPE_CB_HEADER_VALUE_COMPLETE:
+            HPE_CR_EXPECTED,
+            HPE_CB_MESSAGE_BEGIN,
+            HPE_CB_HEADERS_COMPLETE,
+            HPE_CB_MESSAGE_COMPLETE,
+            HPE_CB_CHUNK_HEADER,
+            HPE_CB_CHUNK_COMPLETE,
+            HPE_USER,
+            HPE_CB_URL_COMPLETE,
+            HPE_CB_STATUS_COMPLETE,
+            HPE_CB_HEADER_FIELD_COMPLETE,
+            HPE_CB_HEADER_VALUE_COMPLETE:
             // The downside of enums here, we don't have a case for these. Map them to .unknown for now.
             return .unknown
         default:
@@ -942,7 +975,6 @@ extension HTTPMethod {
     }
 }
 
-
 /// Errors thrown by `HTTPRequestDecoder` and `HTTPResponseDecoder` in addition to
 /// `HTTPParserError`.
 public struct NIOHTTPDecoderError: Error {
@@ -953,19 +985,16 @@ public struct NIOHTTPDecoderError: Error {
     private let baseError: BaseError
 }
 
-
 extension NIOHTTPDecoderError {
     /// A response was received from a server without an associated request having been sent.
     public static let unsolicitedResponse: NIOHTTPDecoderError = .init(baseError: .unsolicitedResponse)
 }
 
-
-extension NIOHTTPDecoderError: Hashable { }
-
+extension NIOHTTPDecoderError: Hashable {}
 
 extension NIOHTTPDecoderError: CustomDebugStringConvertible {
     public var debugDescription: String {
-        return String(describing: self.baseError)
+        String(describing: self.baseError)
     }
 }
 
@@ -977,10 +1006,12 @@ extension HTTPClientResponsePart {
         keepAliveState: KeepAliveState,
         headers: [(String, String)]
     ) -> HTTPClientResponsePart {
-        HTTPClientResponsePart.head(HTTPResponseHead(
-            version: .init(major: versionMajor, minor: versionMinor),
-            status: .init(statusCode: statusCode),
-            headers: HTTPHeaders(headers, keepAliveState: keepAliveState)
-        ))
+        HTTPClientResponsePart.head(
+            HTTPResponseHead(
+                version: .init(major: versionMajor, minor: versionMinor),
+                status: .init(statusCode: statusCode),
+                headers: HTTPHeaders(headers, keepAliveState: keepAliveState)
+            )
+        )
     }
 }

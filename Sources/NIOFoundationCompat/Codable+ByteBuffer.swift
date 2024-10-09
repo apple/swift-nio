@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 import Foundation
+import NIOCore
 
 extension ByteBuffer {
     /// Attempts to decode the `length` bytes from `index` using the `JSONDecoder` `decoder` as `T`.
@@ -25,9 +25,12 @@ extension ByteBuffer {
     ///    - length: The number of bytes to decode.
     /// - returns: The decoded value if successful or `nil` if there are not enough readable bytes available.
     @inlinable
-    public func getJSONDecodable<T: Decodable>(_ type: T.Type,
-                                               decoder: JSONDecoder = JSONDecoder(),
-                                               at index: Int, length: Int) throws -> T? {
+    public func getJSONDecodable<T: Decodable>(
+        _ type: T.Type,
+        decoder: JSONDecoder = JSONDecoder(),
+        at index: Int,
+        length: Int
+    ) throws -> T? {
         guard let data = self.getData(at: index, length: length, byteTransferStrategy: .noCopy) else {
             return nil
         }
@@ -42,13 +45,19 @@ extension ByteBuffer {
     ///    - length: The number of bytes to decode.
     /// - returns: The decoded value is successful or `nil` if there are not enough readable bytes available.
     @inlinable
-    public mutating func readJSONDecodable<T: Decodable>(_ type: T.Type,
-                                                         decoder: JSONDecoder = JSONDecoder(),
-                                                         length: Int) throws -> T? {
-        guard let decoded = try self.getJSONDecodable(T.self,
-                                                      decoder: decoder,
-                                                      at: self.readerIndex,
-                                                      length: length) else {
+    public mutating func readJSONDecodable<T: Decodable>(
+        _ type: T.Type,
+        decoder: JSONDecoder = JSONDecoder(),
+        length: Int
+    ) throws -> T? {
+        guard
+            let decoded = try self.getJSONDecodable(
+                T.self,
+                decoder: decoder,
+                at: self.readerIndex,
+                length: length
+            )
+        else {
             return nil
         }
         self.moveReaderIndex(forwardBy: length)
@@ -66,9 +75,11 @@ extension ByteBuffer {
     /// - returns: The number of bytes written.
     @inlinable
     @discardableResult
-    public mutating func setJSONEncodable<T: Encodable>(_ value: T,
-                                                        encoder: JSONEncoder = JSONEncoder(),
-                                                        at index: Int) throws -> Int {
+    public mutating func setJSONEncodable<T: Encodable>(
+        _ value: T,
+        encoder: JSONEncoder = JSONEncoder(),
+        at index: Int
+    ) throws -> Int {
         let data = try encoder.encode(value)
         return self.setBytes(data, at: index)
     }
@@ -83,8 +94,10 @@ extension ByteBuffer {
     /// - returns: The number of bytes written.
     @inlinable
     @discardableResult
-    public mutating func writeJSONEncodable<T: Encodable>(_ value: T,
-                                                          encoder: JSONEncoder = JSONEncoder()) throws -> Int {
+    public mutating func writeJSONEncodable<T: Encodable>(
+        _ value: T,
+        encoder: JSONEncoder = JSONEncoder()
+    ) throws -> Int {
         let result = try self.setJSONEncodable(value, encoder: encoder, at: self.writerIndex)
         self.moveWriterIndex(forwardBy: result)
         return result
@@ -106,10 +119,12 @@ extension JSONDecoder {
     ///     - buffer: The `ByteBuffer` that contains JSON object to decode.
     /// - returns: The decoded object.
     public func decode<T: Decodable>(_ type: T.Type, from buffer: ByteBuffer) throws -> T {
-        return try buffer.getJSONDecodable(T.self,
-                                           decoder: self,
-                                           at: buffer.readerIndex,
-                                           length: buffer.readableBytes)! // must work, enough readable bytes
+        try buffer.getJSONDecodable(
+            T.self,
+            decoder: self,
+            at: buffer.readerIndex,
+            length: buffer.readableBytes
+        )!  // must work, enough readable bytes// must work, enough readable bytes
     }
 }
 
@@ -119,8 +134,10 @@ extension JSONEncoder {
     /// - parameters:
     ///     - value: The value to encode as JSON.
     ///     - buffer: The `ByteBuffer` to encode into.
-    public func encode<T: Encodable>(_ value: T,
-                                     into buffer: inout ByteBuffer) throws {
+    public func encode<T: Encodable>(
+        _ value: T,
+        into buffer: inout ByteBuffer
+    ) throws {
         try buffer.writeJSONEncodable(value, encoder: self)
     }
 

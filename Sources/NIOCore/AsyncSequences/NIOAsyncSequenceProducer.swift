@@ -112,7 +112,7 @@ public struct NIOAsyncSequenceProducer<
         public let sequence: NIOAsyncSequenceProducer
 
         @usableFromInline
-        /* fileprivate */ internal init(
+        internal init(
             source: Source,
             sequence: NIOAsyncSequenceProducer
         ) {
@@ -122,12 +122,13 @@ public struct NIOAsyncSequenceProducer<
     }
 
     @usableFromInline
-    /* private */ internal let _throwingSequence: NIOThrowingAsyncSequenceProducer<
-        Element,
-        Never,
-        Strategy,
-        Delegate
-    >
+    internal let _throwingSequence:
+        NIOThrowingAsyncSequenceProducer<
+            Element,
+            Never,
+            Strategy,
+            Delegate
+        >
 
     /// Initializes a new ``NIOAsyncSequenceProducer`` and a ``NIOAsyncSequenceProducer/Source``.
     ///
@@ -175,7 +176,12 @@ public struct NIOAsyncSequenceProducer<
     ///   - delegate: The delegate of the sequence
     /// - Returns: A ``NIOAsyncSequenceProducer/Source`` and a ``NIOAsyncSequenceProducer``.
     @inlinable
-    @available(*, deprecated, renamed: "makeSequence(elementType:backPressureStrategy:finishOnDeinit:delegate:)", message: "This method has been deprecated since it defaults to deinit based resource teardown")
+    @available(
+        *,
+        deprecated,
+        renamed: "makeSequence(elementType:backPressureStrategy:finishOnDeinit:delegate:)",
+        message: "This method has been deprecated since it defaults to deinit based resource teardown"
+    )
     public static func makeSequence(
         elementType: Element.Type = Element.self,
         backPressureStrategy: Strategy,
@@ -194,7 +200,7 @@ public struct NIOAsyncSequenceProducer<
     }
 
     @inlinable
-    /* private */ internal init(
+    internal init(
         throwingSequence: NIOThrowingAsyncSequenceProducer<Element, Never, Strategy, Delegate>
     ) {
         self._throwingSequence = throwingSequence
@@ -212,12 +218,13 @@ extension NIOAsyncSequenceProducer: AsyncSequence {
 extension NIOAsyncSequenceProducer {
     public struct AsyncIterator: AsyncIteratorProtocol {
         @usableFromInline
-        /* private */ internal let _throwingIterator: NIOThrowingAsyncSequenceProducer<
-            Element,
-            Never,
-            Strategy,
-            Delegate
-        >.AsyncIterator
+        internal let _throwingIterator:
+            NIOThrowingAsyncSequenceProducer<
+                Element,
+                Never,
+                Strategy,
+                Delegate
+            >.AsyncIterator
 
         fileprivate init(
             throwingIterator: NIOThrowingAsyncSequenceProducer<
@@ -233,7 +240,7 @@ extension NIOAsyncSequenceProducer {
         @inlinable
         public func next() async -> Element? {
             // this call will only throw if cancelled and we want to just return nil in that case
-            return try? await self._throwingIterator.next()
+            try? await self._throwingIterator.next()
         }
     }
 }
@@ -253,10 +260,10 @@ extension NIOAsyncSequenceProducer {
         >.Source
 
         @usableFromInline
-        /* private */ internal var _throwingSource: ThrowingSource
+        internal var _throwingSource: ThrowingSource
 
         @usableFromInline
-        /* fileprivate */ internal init(throwingSource: ThrowingSource) {
+        internal init(throwingSource: ThrowingSource) {
             self._throwingSource = throwingSource
         }
 

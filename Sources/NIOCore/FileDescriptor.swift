@@ -31,4 +31,3 @@ public protocol FileDescriptor {
     /// Close this `FileDescriptor`.
     func close() throws
 }
-

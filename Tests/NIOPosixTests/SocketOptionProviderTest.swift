@@ -23,25 +23,39 @@ final class SocketOptionProviderTest: XCTestCase {
     var ipv4DatagramChannel: Channel!
     var ipv6DatagramChannel: Channel?
 
-    struct CastError: Error { }
+    struct CastError: Error {}
 
     private func convertedChannel(file: StaticString = #filePath, line: UInt = #line) throws -> SocketOptionProvider {
         guard let provider = self.clientChannel as? SocketOptionProvider else {
-            XCTFail("Unable to cast \(String(describing: self.clientChannel)) to SocketOptionProvider", file: (file), line: line)
+            XCTFail(
+                "Unable to cast \(String(describing: self.clientChannel)) to SocketOptionProvider",
+                file: (file),
+                line: line
+            )
             throw CastError()
         }
         return provider
     }
 
-    private func ipv4MulticastProvider(file: StaticString = #filePath, line: UInt = #line) throws -> SocketOptionProvider {
+    private func ipv4MulticastProvider(
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws -> SocketOptionProvider {
         guard let provider = self.ipv4DatagramChannel as? SocketOptionProvider else {
-            XCTFail("Unable to cast \(String(describing: self.ipv4DatagramChannel)) to SocketOptionProvider", file: (file), line: line)
+            XCTFail(
+                "Unable to cast \(String(describing: self.ipv4DatagramChannel)) to SocketOptionProvider",
+                file: (file),
+                line: line
+            )
             throw CastError()
         }
         return provider
     }
 
-    private func ipv6MulticastProvider(file: StaticString = #filePath, line: UInt = #line) throws -> SocketOptionProvider? {
+    private func ipv6MulticastProvider(
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) throws -> SocketOptionProvider? {
         guard let ipv6Channel = self.ipv6DatagramChannel else {
             return nil
         }
@@ -56,8 +70,12 @@ final class SocketOptionProviderTest: XCTestCase {
 
     override func setUp() {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        self.serverChannel = try? assertNoThrowWithValue(ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait())
-        self.clientChannel = try? assertNoThrowWithValue(ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait())
+        self.serverChannel = try? assertNoThrowWithValue(
+            ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).wait()
+        )
+        self.clientChannel = try? assertNoThrowWithValue(
+            ClientBootstrap(group: group).connect(to: serverChannel.localAddress!).wait()
+        )
 
         // We need to join these multicast groups on the loopback interface to work around issues with rapidly joining and leaving
         // many multicast groups. On some OSes, if we do that on a public interface, we can build up a kernel backlog of IGMP
@@ -66,15 +84,20 @@ final class SocketOptionProviderTest: XCTestCase {
         // risk.
         let v4LoopbackAddress = try! assertNoThrowWithValue(SocketAddress(ipAddress: "127.0.0.1", port: 0))
         let v6LoopbackAddress = try! assertNoThrowWithValue(SocketAddress(ipAddress: "::1", port: 0))
-        let v4LoopbackInterface = try! assertNoThrowWithValue(System.enumerateDevices().filter {
-            $0.address == v4LoopbackAddress
-        }.first)!
+        let v4LoopbackInterface = try! assertNoThrowWithValue(
+            System.enumerateDevices().filter {
+                $0.address == v4LoopbackAddress
+            }.first
+        )!
 
         // Only run the setup if the loopback interface supports multicast
         if v4LoopbackAddress.isMulticast {
             self.ipv4DatagramChannel = try? assertNoThrowWithValue(
                 DatagramBootstrap(group: group).bind(host: "127.0.0.1", port: 0).flatMap { channel in
-                    return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "224.0.2.66", port: 0), device: v4LoopbackInterface).map { channel }
+                    (channel as! MulticastChannel).joinGroup(
+                        try! SocketAddress(ipAddress: "224.0.2.66", port: 0),
+                        device: v4LoopbackInterface
+                    ).map { channel }
                 }.wait()
             )
         }
@@ -82,9 +105,15 @@ final class SocketOptionProviderTest: XCTestCase {
         // Only run the setup if the loopback interface supports multicast
         if v6LoopbackAddress.isMulticast {
             // The IPv6 setup is allowed to fail, some hosts don't have IPv6.
-            let v6LoopbackInterface = try? assertNoThrowWithValue(System.enumerateDevices().filter { $0.address == v6LoopbackAddress }.first)
-            self.ipv6DatagramChannel = try? DatagramBootstrap(group: group).bind(host: "::1", port: 0).flatMap { channel in
-                return (channel as! MulticastChannel).joinGroup(try! SocketAddress(ipAddress: "ff12::beeb", port: 0), device: v6LoopbackInterface).map { channel }
+            let v6LoopbackInterface = try? assertNoThrowWithValue(
+                System.enumerateDevices().filter { $0.address == v6LoopbackAddress }.first
+            )
+            self.ipv6DatagramChannel = try? DatagramBootstrap(group: group).bind(host: "::1", port: 0).flatMap {
+                channel in
+                (channel as! MulticastChannel).joinGroup(
+                    try! SocketAddress(ipAddress: "ff12::beeb", port: 0),
+                    device: v6LoopbackInterface
+                ).map { channel }
             }.wait()
         }
     }
@@ -101,9 +130,11 @@ final class SocketOptionProviderTest: XCTestCase {
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
         let newTimeout = timeval(tv_sec: 5, tv_usec: 0)
-        let retrievedTimeout = try assertNoThrowWithValue(provider.unsafeSetSocketOption(level: .socket, name: .so_rcvtimeo, value: newTimeout).flatMap {
-            provider.unsafeGetSocketOption(level: .socket, name: .so_rcvtimeo) as EventLoopFuture<timeval>
-        }.wait())
+        let retrievedTimeout = try assertNoThrowWithValue(
+            provider.unsafeSetSocketOption(level: .socket, name: .so_rcvtimeo, value: newTimeout).flatMap {
+                provider.unsafeGetSocketOption(level: .socket, name: .so_rcvtimeo) as EventLoopFuture<timeval>
+            }.wait()
+        )
 
         XCTAssertEqual(retrievedTimeout.tv_sec, newTimeout.tv_sec)
         XCTAssertEqual(retrievedTimeout.tv_usec, newTimeout.tv_usec)
@@ -112,7 +143,9 @@ final class SocketOptionProviderTest: XCTestCase {
     func testObtainingDefaultValueOfComplexSocketOption() throws {
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
-        let retrievedTimeout: timeval = try assertNoThrowWithValue(provider.unsafeGetSocketOption(level: .socket, name: .so_rcvtimeo).wait())
+        let retrievedTimeout: timeval = try assertNoThrowWithValue(
+            provider.unsafeGetSocketOption(level: .socket, name: .so_rcvtimeo).wait()
+        )
         XCTAssertEqual(retrievedTimeout.tv_sec, 0)
         XCTAssertEqual(retrievedTimeout.tv_usec, 0)
     }
@@ -121,9 +154,11 @@ final class SocketOptionProviderTest: XCTestCase {
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
         let newReuseAddr = 1 as CInt
-        let retrievedReuseAddr = try assertNoThrowWithValue(provider.unsafeSetSocketOption(level: .socket, name: .so_reuseaddr, value: newReuseAddr).flatMap {
-            provider.unsafeGetSocketOption(level: .socket, name: .so_reuseaddr) as EventLoopFuture<CInt>
-        }.wait())
+        let retrievedReuseAddr = try assertNoThrowWithValue(
+            provider.unsafeSetSocketOption(level: .socket, name: .so_reuseaddr, value: newReuseAddr).flatMap {
+                provider.unsafeGetSocketOption(level: .socket, name: .so_reuseaddr) as EventLoopFuture<CInt>
+            }.wait()
+        )
 
         XCTAssertNotEqual(retrievedReuseAddr, 0)
     }
@@ -131,7 +166,9 @@ final class SocketOptionProviderTest: XCTestCase {
     func testObtainingDefaultValueOfSimpleSocketOption() throws {
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
-        let reuseAddr: CInt = try assertNoThrowWithValue(provider.unsafeGetSocketOption(level: .socket, name: .so_reuseaddr).wait())
+        let reuseAddr: CInt = try assertNoThrowWithValue(
+            provider.unsafeGetSocketOption(level: .socket, name: .so_reuseaddr).wait()
+        )
         XCTAssertEqual(reuseAddr, 0)
     }
 
@@ -143,23 +180,25 @@ final class SocketOptionProviderTest: XCTestCase {
         // we just abandon the other tests: this is sufficient to prove that the error path works.
         let provider = try assertNoThrowWithValue(self.convertedChannel())
 
-        XCTAssertThrowsError(try provider.unsafeSetSocketOption(level: .socket, name: .so_rcvtimeo, value: 1).wait()) { error in
+        XCTAssertThrowsError(try provider.unsafeSetSocketOption(level: .socket, name: .so_rcvtimeo, value: 1).wait()) {
+            error in
             XCTAssertEqual(EINVAL, (error as? IOError)?.errnoCode)
         }
     }
-
 
     // MARK: Tests for the safe helper functions.
     func testLinger() throws {
         let newLingerValue = linger(l_onoff: 1, l_linger: 64)
 
         let provider = try self.convertedChannel()
-        XCTAssertNoThrow(try provider.setSoLinger(newLingerValue).flatMap {
-            provider.getSoLinger()
-        }.map {
-            XCTAssertEqual($0.l_linger, newLingerValue.l_linger)
-            XCTAssertEqual($0.l_onoff, newLingerValue.l_onoff)
-        }.wait())
+        XCTAssertNoThrow(
+            try provider.setSoLinger(newLingerValue).flatMap {
+                provider.getSoLinger()
+            }.map {
+                XCTAssertEqual($0.l_linger, newLingerValue.l_linger)
+                XCTAssertEqual($0.l_onoff, newLingerValue.l_onoff)
+            }.wait()
+        )
     }
 
     func testSoIpMulticastIf() throws {
@@ -178,11 +217,13 @@ final class SocketOptionProviderTest: XCTestCase {
             return
         }
 
-        XCTAssertNoThrow(try provider.setIPMulticastIF(address).flatMap {
-            provider.getIPMulticastIF()
-        }.map {
-            XCTAssertEqual($0.s_addr, address.s_addr)
-        }.wait())
+        XCTAssertNoThrow(
+            try provider.setIPMulticastIF(address).flatMap {
+                provider.getIPMulticastIF()
+            }.map {
+                XCTAssertEqual($0.s_addr, address.s_addr)
+            }.wait()
+        )
     }
 
     func testIpMulticastTtl() throws {
@@ -191,11 +232,13 @@ final class SocketOptionProviderTest: XCTestCase {
             return
         }
         let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
-        XCTAssertNoThrow(try provider.setIPMulticastTTL(6).flatMap {
-            provider.getIPMulticastTTL()
-        }.map {
-            XCTAssertEqual($0, 6)
-        }.wait())
+        XCTAssertNoThrow(
+            try provider.setIPMulticastTTL(6).flatMap {
+                provider.getIPMulticastTTL()
+            }.map {
+                XCTAssertEqual($0, 6)
+            }.wait()
+        )
     }
 
     func testIpMulticastLoop() throws {
@@ -204,11 +247,13 @@ final class SocketOptionProviderTest: XCTestCase {
             return
         }
         let provider = try assertNoThrowWithValue(self.ipv4MulticastProvider())
-        XCTAssertNoThrow(try provider.setIPMulticastLoop(1).flatMap {
-            provider.getIPMulticastLoop()
-        }.map {
-            XCTAssertNotEqual($0, 0)
-        }.wait())
+        XCTAssertNoThrow(
+            try provider.setIPMulticastLoop(1).flatMap {
+                provider.getIPMulticastLoop()
+            }.map {
+                XCTAssertNotEqual($0, 0)
+            }.wait()
+        )
     }
 
     func testIpv6MulticastIf() throws {
@@ -223,16 +268,22 @@ final class SocketOptionProviderTest: XCTestCase {
 
         // TODO: test this when we know what the interface indices are.
         let loopbackAddress = try assertNoThrowWithValue(SocketAddress(ipAddress: "::1", port: 0))
-        guard let loopbackInterface = try assertNoThrowWithValue(System.enumerateDevices().filter({ $0.address == loopbackAddress }).first) else {
+        guard
+            let loopbackInterface = try assertNoThrowWithValue(
+                System.enumerateDevices().filter({ $0.address == loopbackAddress }).first
+            )
+        else {
             XCTFail("Could not find index of loopback address")
             return
         }
 
-        XCTAssertNoThrow(try provider.setIPv6MulticastIF(CUnsignedInt(loopbackInterface.interfaceIndex)).flatMap {
-            provider.getIPv6MulticastIF()
-        }.map {
-            XCTAssertEqual($0, CUnsignedInt(loopbackInterface.interfaceIndex))
-        }.wait())
+        XCTAssertNoThrow(
+            try provider.setIPv6MulticastIF(CUnsignedInt(loopbackInterface.interfaceIndex)).flatMap {
+                provider.getIPv6MulticastIF()
+            }.map {
+                XCTAssertEqual($0, CUnsignedInt(loopbackInterface.interfaceIndex))
+            }.wait()
+        )
     }
 
     func testIPv6MulticastHops() throws {
@@ -245,11 +296,13 @@ final class SocketOptionProviderTest: XCTestCase {
             return
         }
 
-        XCTAssertNoThrow(try provider.setIPv6MulticastHops(6).flatMap {
-            provider.getIPv6MulticastHops()
-        }.map {
-            XCTAssertEqual($0, 6)
-        }.wait())
+        XCTAssertNoThrow(
+            try provider.setIPv6MulticastHops(6).flatMap {
+                provider.getIPv6MulticastHops()
+            }.map {
+                XCTAssertEqual($0, 6)
+            }.wait()
+        )
     }
 
     func testIPv6MulticastLoop() throws {
@@ -262,11 +315,13 @@ final class SocketOptionProviderTest: XCTestCase {
             return
         }
 
-        XCTAssertNoThrow(try provider.setIPv6MulticastLoop(1).flatMap {
-            provider.getIPv6MulticastLoop()
-        }.map {
-            XCTAssertNotEqual($0, 0)
-        }.wait())
+        XCTAssertNoThrow(
+            try provider.setIPv6MulticastLoop(1).flatMap {
+                provider.getIPv6MulticastLoop()
+            }.map {
+                XCTAssertNotEqual($0, 0)
+            }.wait()
+        )
     }
 
     func testTCPInfo() throws {
@@ -286,7 +341,7 @@ final class SocketOptionProviderTest: XCTestCase {
         let channel = self.clientChannel! as! SocketOptionProvider
         let tcpConnectionInfo = try assertNoThrowWithValue(channel.getTCPConnectionInfo().wait())
 
-        #if os(macOS) // deliberately only on macOS
+        #if os(macOS)  // deliberately only on macOS
         // We just need to soundness check something here to ensure that the data is vaguely reasonable.
         XCTAssertEqual(tcpConnectionInfo.tcpi_state, UInt8(TSI_S_ESTABLISHED))
         #endif

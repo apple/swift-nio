@@ -13,6 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 function check_does_not_link() {
@@ -21,7 +22,7 @@ function check_does_not_link() {
 
     case "$(uname -s)" in
         Darwin)
-            otool -L "$binary" > "$tmp/linked_libs"
+            otool -L "$binary" > "${tmp:?"tmp variable not set"}/linked_libs"
             ;;
         Linux)
             ldd "$binary" > "$tmp/linked_libs"
@@ -37,7 +38,7 @@ function check_does_not_link() {
 }
 
 for binary in NIOEchoServer NIOEchoClient NIOChatServer NIOChatClient NIOHTTP1Server; do
-    check_does_not_link /Foundation "$bin_path/$binary" # Darwin (old)
+    check_does_not_link /Foundation "${bin_path:?"tmp variable not set"}/$binary" # Darwin (old)
     check_does_not_link libFoundation "$bin_path/$binary" # Linux
     check_does_not_link swiftFoundation "$bin_path/$binary" # Darwin (new)
 done

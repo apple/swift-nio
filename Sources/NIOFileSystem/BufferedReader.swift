@@ -20,7 +20,7 @@ import NIOCore
 ///
 /// You can create a reader from a ``ReadableFileHandleProtocol`` by calling
 /// ``ReadableFileHandleProtocol/bufferedReader(startingAtAbsoluteOffset:capacity:)``. Call
-/// ``read(_:)`` to read a fixed number of bytes from the file or ``read(while:)`` to read
+/// ``read(_:)`` to read a fixed number of bytes from the file or ``read(while:)-8aukk`` to read
 /// from the file while the bytes match a predicate.
 ///
 /// You can also read bytes without returning them to caller by calling ``drop(_:)`` and
@@ -44,7 +44,7 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
 
     /// The number of bytes currently in the buffer.
     public var count: Int {
-        return self.buffer.readableBytes
+        self.buffer.readableBytes
     }
 
     internal init(wrapping readableHandle: Handle, initialOffset: Int64, capacity: Int) {
@@ -111,10 +111,12 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
     ///
     /// - Parameters:
     ///   - predicate: A predicate which evaluates to `true` for all bytes returned.
-    /// - Returns: The bytes read from the file.
+    /// - Returns: A tuple containing the bytes read from the file in its first component, and a boolean
+    /// indicating whether we've stopped reading because EOF has been reached, or because the predicate
+    /// condition doesn't hold true anymore.
     public mutating func read(
         while predicate: (UInt8) -> Bool
-    ) async throws -> ByteBuffer {
+    ) async throws -> (bytes: ByteBuffer, readEOF: Bool) {
         // Check if the required bytes are in the buffer already.
         let view = self.buffer.readableBytesView
 
@@ -123,7 +125,11 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
             let prefix = view[..<index]
             let buffer = ByteBuffer(prefix)
             self.buffer.moveReaderIndex(forwardBy: buffer.readableBytes)
-            return buffer
+
+            // If we reached this codepath, it's because at least one element
+            // in the buffer makes the predicate false. This means that we have
+            // stopped reading because the condition doesn't hold true anymore.
+            return (buffer, false)
         }
 
         // The predicate holds true for all bytes in the buffer, start consuming chunks from the
@@ -142,18 +148,21 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
                 let buffer = self.buffer
                 self.buffer = chunk
 
-                // Store the rest of the chunk.
-                return buffer
+                // If we reached this codepath, it's because at least one element
+                // in the buffer makes the predicate false. This means that we have
+                // stopped reading because the condition doesn't hold true anymore.
+                return (buffer, false)
             } else {
                 // Predicate holds for all bytes. Continue reading.
                 self.buffer.writeBuffer(&chunk)
             }
         }
 
-        // Read end-of-file without hitting the predicate: clear the buffer and return all bytes.
+        // Read end-of-file and the predicate still holds for all bytes:
+        // clear the buffer and return all bytes.
         let buffer = self.buffer
         self.buffer = ByteBuffer()
-        return buffer
+        return (buffer, true)
     }
 
     /// Reads and discards the given number of bytes.
@@ -198,6 +207,24 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
     }
 }
 
+// swift-format-ignore: AmbiguousTrailingClosureOverload
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension BufferedReader {
+    /// Reads from  the current position in the file until `predicate` returns `false` and returns
+    /// the read bytes.
+    ///
+    /// - Parameters:
+    ///   - predicate: A predicate which evaluates to `true` for all bytes returned.
+    /// - Returns: The bytes read from the file.
+    /// - Important: This method has been deprecated: use ``read(while:)-8aukk`` instead.
+    @available(*, deprecated, message: "Use the read(while:) method returning a (ByteBuffer, Bool) tuple instead.")
+    public mutating func read(
+        while predicate: (UInt8) -> Bool
+    ) async throws -> ByteBuffer {
+        try await self.read(while: predicate).bytes
+    }
+}
+
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension ReadableFileHandleProtocol {
     /// Creates a new ``BufferedReader`` for this file handle.
@@ -210,7 +237,7 @@ extension ReadableFileHandleProtocol {
         startingAtAbsoluteOffset initialOffset: Int64 = 0,
         capacity: ByteCount = .kibibytes(512)
     ) -> BufferedReader<Self> {
-        return BufferedReader(wrapping: self, initialOffset: initialOffset, capacity: Int(capacity.bytes))
+        BufferedReader(wrapping: self, initialOffset: initialOffset, capacity: Int(capacity.bytes))
     }
 }
 

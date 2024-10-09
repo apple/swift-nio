@@ -143,6 +143,27 @@ public protocol FileHandleProtocol {
     ///
     /// After closing the handle calls to other functions will throw an appropriate error.
     func close() async throws
+
+    /// Sets the file's last access and last data modification times to the given values.
+    ///
+    /// If **either** time is `nil`, the current value will not be changed.
+    /// If **both** times are `nil`, then both times will be set to the current time.
+    ///
+    /// > Important: Times are only considered valid if their nanoseconds components are one of the following:
+    /// > - `UTIME_NOW` (you can use ``FileInfo/Timespec/now`` to get a Timespec set to this value),
+    /// > - `UTIME_OMIT` (you can use ``FileInfo/Timespec/omit`` to get a Timespec set to this value),
+    /// > - Greater than zero and no larger than 1000 million: if outside of this range, the value will be clamped to the closest valid value.
+    /// > The seconds component must also be positive: if it's not, zero will be used as the value instead.
+    ///
+    /// - Parameters:
+    ///   - lastAccessTime: The new value of the file's last access time, as time elapsed since the Epoch.
+    ///   - lastDataModificationTime: The new value of the file's last data modification time, as time elapsed since the Epoch.
+    ///
+    /// - Throws: If there's an error updating the times. If this happens, the original values won't be modified.
+    func setTimes(
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws
 }
 
 // MARK: - Readable
@@ -153,7 +174,7 @@ public protocol FileHandleProtocol {
 ///
 /// There are two requirements for implementing this protocol:
 /// 1. ``readChunk(fromAbsoluteOffset:length:)``, and
-/// 2. ``readChunks(in:chunkLength:)-8of2k``
+/// 2. ``readChunks(chunkLength:)
 ///
 /// A number of overloads are provided which provide sensible defaults.
 ///
@@ -193,13 +214,13 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: ClosedRange<Int64>,
         chunkLength: ByteCount = .kibibytes(128)
     ) -> FileChunks {
-        return self.readChunks(in: Range(range), chunkLength: chunkLength)
+        self.readChunks(in: Range(range), chunkLength: chunkLength)
     }
 
     /// Returns an asynchronous sequence of chunks read from the file.
@@ -208,13 +229,13 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: Range<Int64>,
         chunkLength: ByteCount = .kibibytes(128)
     ) -> FileChunks {
-        return self.readChunks(in: range, chunkLength: chunkLength)
+        self.readChunks(in: range, chunkLength: chunkLength)
     }
 
     /// Returns an asynchronous sequence of chunks read from the file.
@@ -223,7 +244,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: PartialRangeFrom<Int64>,
@@ -239,7 +260,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: PartialRangeThrough<Int64>,
@@ -255,7 +276,7 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: PartialRangeUpTo<Int64>,
@@ -271,13 +292,13 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         in range: UnboundedRange,
         chunkLength: ByteCount = .kibibytes(128)
     ) -> FileChunks {
-        return self.readChunks(in: 0..<Int64.max, chunkLength: chunkLength)
+        self.readChunks(in: 0..<Int64.max, chunkLength: chunkLength)
     }
 
     /// Returns an asynchronous sequence of chunks read from the file.
@@ -286,12 +307,12 @@ extension ReadableFileHandleProtocol {
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
     ///   - as: Type of chunk to read.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-5ljvn``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         chunkLength: ByteCount = .kibibytes(128)
     ) -> FileChunks {
-        return self.readChunks(in: ..., chunkLength: chunkLength)
+        self.readChunks(in: ..., chunkLength: chunkLength)
     }
 }
 
@@ -465,6 +486,59 @@ public protocol WritableFileHandleProtocol: FileHandleProtocol {
     func close(makeChangesVisible: Bool) async throws
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension WritableFileHandleProtocol {
+    /// Write the readable bytes of the `ByteBuffer` to the open file.
+    ///
+    /// - Important: This method checks whether the file is seekable or not (i.e., whether it's a socket,
+    /// pipe or FIFO), and will throw ``FileSystemError/Code-swift.struct/unsupported``
+    /// if an offset other than zero is passed.
+    ///
+    /// - Parameters:
+    ///   - buffer: The bytes to write.
+    ///   - offset: The absolute offset into the file to write the bytes.
+    /// - Returns: The number of bytes written.
+    /// - Throws: ``FileSystemError/Code-swift.struct/unsupported`` if file is
+    /// unseekable and `offset` is not 0.
+    @discardableResult
+    public func write(
+        contentsOf buffer: ByteBuffer,
+        toAbsoluteOffset offset: Int64
+    ) async throws -> Int64 {
+        try await self.write(contentsOf: buffer.readableBytesView, toAbsoluteOffset: offset)
+    }
+}
+
+// MARK: - File times modifiers
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension FileHandleProtocol {
+    /// Sets the file's last access time to the given time.
+    ///
+    /// - Parameter time: The time to which the file's last access time should be set.
+    ///
+    /// - Throws: If there's an error updating the time. If this happens, the original value won't be modified.
+    public func setLastAccessTime(to time: FileInfo.Timespec) async throws {
+        try await self.setTimes(lastAccess: time, lastDataModification: nil)
+    }
+
+    /// Sets the file's last data modification time to the given time.
+    ///
+    /// - Parameter time: The time to which the file's last data modification time should be set.
+    ///
+    /// - Throws: If there's an error updating the time. If this happens, the original value won't be modified.
+    public func setLastDataModificationTime(to time: FileInfo.Timespec) async throws {
+        try await self.setTimes(lastAccess: nil, lastDataModification: time)
+    }
+
+    /// Sets the file's last access and last data modification times to the current time.
+    ///
+    /// - Throws: If there's an error updating the times. If this happens, the original values won't be modified.
+    public func touch() async throws {
+        try await self.setTimes(lastAccess: nil, lastDataModification: nil)
+    }
+}
+
 /// A file handle which is suitable for reading and writing.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public typealias ReadableAndWritableFileHandleProtocol = ReadableFileHandleProtocol
@@ -556,7 +630,7 @@ extension DirectoryFileHandleProtocol {
     /// The current (".") and parent ("..") directory entries are not included. The order of entries
     /// is arbitrary and should not be relied upon.
     public func listContents() -> DirectoryEntries {
-        return self.listContents(recursive: false)
+        self.listContents(recursive: false)
     }
 }
 
@@ -581,15 +655,15 @@ extension DirectoryFileHandleProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R: Sendable>(
+    public func withFileHandle<Result>(
         forReadingAt path: FilePath,
         options: OpenOptions.Read = OpenOptions.Read(),
-        execute body: (_ read: ReadFileHandle) async throws -> R
-    ) async throws -> R {
+        execute body: (_ read: ReadFileHandle) async throws -> Result
+    ) async throws -> Result {
         let handle = try await self.openFile(forReadingAt: path, options: options)
 
         return try await withUncancellableTearDown {
-            return try await body(handle)
+            try await body(handle)
         } tearDown: { _ in
             try await handle.close()
         }
@@ -612,15 +686,15 @@ extension DirectoryFileHandleProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R: Sendable>(
+    public func withFileHandle<Result>(
         forWritingAt path: FilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
-        execute body: (_ write: WriteFileHandle) async throws -> R
-    ) async throws -> R {
+        execute body: (_ write: WriteFileHandle) async throws -> Result
+    ) async throws -> Result {
         let handle = try await self.openFile(forWritingAt: path, options: options)
 
         return try await withUncancellableTearDown {
-            return try await body(handle)
+            try await body(handle)
         } tearDown: { result in
             switch result {
             case .success:
@@ -647,15 +721,15 @@ extension DirectoryFileHandleProtocol {
     ///       automatically after the closure exits.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withFileHandle<R: Sendable>(
+    public func withFileHandle<Result>(
         forReadingAndWritingAt path: FilePath,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
-        execute body: (_ readWrite: ReadWriteFileHandle) async throws -> R
-    ) async throws -> R {
+        execute body: (_ readWrite: ReadWriteFileHandle) async throws -> Result
+    ) async throws -> Result {
         let handle = try await self.openFile(forReadingAndWritingAt: path, options: options)
 
         return try await withUncancellableTearDown {
-            return try await body(handle)
+            try await body(handle)
         } tearDown: { result in
             switch result {
             case .success:
@@ -673,15 +747,15 @@ extension DirectoryFileHandleProtocol {
     ///   - body: A closure which provides access to the directory.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.
-    public func withDirectoryHandle<R: Sendable>(
+    public func withDirectoryHandle<Result>(
         atPath path: FilePath,
         options: OpenOptions.Directory = OpenOptions.Directory(),
-        execute body: (_ directory: Self) async throws -> R
-    ) async throws -> R {
+        execute body: (_ directory: Self) async throws -> Result
+    ) async throws -> Result {
         let handle = try await self.openDirectory(atPath: path, options: options)
 
         return try await withUncancellableTearDown {
-            return try await body(handle)
+            try await body(handle)
         } tearDown: { _ in
             try await handle.close()
         }

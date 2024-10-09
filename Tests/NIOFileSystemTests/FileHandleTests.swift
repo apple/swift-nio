@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-@_spi(Testing) import NIOFileSystem
+@_spi(Testing) import _NIOFileSystem
+import NIOPosix
 import XCTest
 
 #if ENABLE_MOCKING
@@ -26,12 +27,12 @@ internal final class FileHandleTests: XCTestCase {
         #if ENABLE_MOCKING
         // The executor is required to create the handle, we won't do any async work if we're
         // mocking as the driver requires synchronous code (as it uses thread local storage).
-        let executor = await IOExecutor.running(numberOfThreads: 1)
-        await executor.drain()
+        let threadPool = NIOThreadPool(numberOfThreads: 1)
+        try! await threadPool.shutdownGracefully()
 
         // Not a real descriptor.
         let descriptor = FileDescriptor(rawValue: -1)
-        let handle = SystemFileHandle(takingOwnershipOf: descriptor, path: path, executor: executor)
+        let handle = SystemFileHandle(takingOwnershipOf: descriptor, path: path, threadPool: threadPool)
         defer {
             // Not a 'real' descriptor so just detach to avoid "leaking" the descriptor and
             // trapping in the deinit of handle.

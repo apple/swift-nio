@@ -15,7 +15,7 @@
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import XCTest
 
-@testable import NIOFileSystem
+@testable import _NIOFileSystem
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class BufferedStreamTests: XCTestCase {
@@ -646,7 +646,7 @@ final class BufferedStreamTests: XCTestCase {
 
         try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await stream.first { _ in true }
+                try await stream.first { _ in true }
             }
 
             // This is always going to be a bit racy since we need the call to next() suspend
@@ -666,7 +666,7 @@ final class BufferedStreamTests: XCTestCase {
 
         try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await stream.first { _ in true }
+                try await stream.first { _ in true }
             }
 
             // This is always going to be a bit racy since we need the call to next() suspend
@@ -916,7 +916,7 @@ final class BufferedStreamTests: XCTestCase {
 
         try await withThrowingTaskGroup(of: Int?.self) { group in
             group.addTask {
-                return try await stream.first { $0 == 2 }
+                try await stream.first { $0 == 2 }
             }
 
             // This is always going to be a bit racy since we need the call to next() suspend

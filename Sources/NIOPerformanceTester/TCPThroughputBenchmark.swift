@@ -38,15 +38,21 @@ final class TCPThroughputBenchmark: Benchmark {
         public typealias InboundIn = ByteBuffer
         public typealias OutboundOut = ByteBuffer
 
+        private let connectionEstablishedPromise: EventLoopPromise<EventLoop>
         private var context: ChannelHandlerContext!
+
+        init(_ connectionEstablishedPromise: EventLoopPromise<EventLoop>) {
+            self.connectionEstablishedPromise = connectionEstablishedPromise
+        }
 
         public func channelActive(context: ChannelHandlerContext) {
             self.context = context
+            connectionEstablishedPromise.succeed(context.eventLoop)
         }
 
         public func send(_ message: ByteBuffer, times count: Int) {
             for _ in 0..<count {
-                _ = self.context.writeAndFlush(self.wrapOutboundOut(message.slice()))
+                _ = self.context.writeAndFlush(Self.wrapOutboundOut(message.slice()))
             }
         }
     }
@@ -58,7 +64,7 @@ final class TCPThroughputBenchmark: Benchmark {
         public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
             if let messageSize = buffer.getInteger(at: buffer.readerIndex, as: UInt16.self) {
                 if buffer.readableBytes >= messageSize {
-                    context.fireChannelRead(self.wrapInboundOut(buffer.readSlice(length: Int(messageSize))!))
+                    context.fireChannelRead(Self.wrapInboundOut(buffer.readSlice(length: Int(messageSize))!))
                     return .continue
                 }
             }
@@ -86,7 +92,7 @@ final class TCPThroughputBenchmark: Benchmark {
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
             self.messagesReceived += 1
 
-            if (self.expectedMessages == self.messagesReceived) {
+            if self.expectedMessages == self.messagesReceived {
                 let promise = self.completionPromise
 
                 self.messagesReceived = 0
@@ -106,12 +112,11 @@ final class TCPThroughputBenchmark: Benchmark {
     func setUp() throws {
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: 4)
 
-        let connectionEstablished: EventLoopPromise<EventLoop> = self.group.next().makePromise()
+        let connectionEstablishedPromise: EventLoopPromise<EventLoop> = self.group.next().makePromise()
 
         self.serverChannel = try ServerBootstrap(group: self.group)
             .childChannelInitializer { channel in
-                self.serverHandler = ServerHandler()
-                connectionEstablished.succeed(channel.eventLoop)
+                self.serverHandler = ServerHandler(connectionEstablishedPromise)
                 return channel.pipeline.addHandler(self.serverHandler)
             }
             .bind(host: "127.0.0.1", port: 0)
@@ -128,13 +133,13 @@ final class TCPThroughputBenchmark: Benchmark {
             .wait()
 
         var message = self.serverChannel.allocator.buffer(capacity: self.messageSize)
-        message.writeInteger(UInt16(messageSize), as:UInt16.self)
+        message.writeInteger(UInt16(messageSize), as: UInt16.self)
         for idx in 0..<(self.messageSize - MemoryLayout<UInt16>.stride) {
-            message.writeInteger(UInt8(truncatingIfNeeded: idx), endianness:.little, as:UInt8.self)
+            message.writeInteger(UInt8(truncatingIfNeeded: idx), endianness: .little, as: UInt8.self)
         }
         self.message = message
 
-        self.serverEventLoop = try connectionEstablished.futureResult.wait()
+        self.serverEventLoop = try connectionEstablishedPromise.futureResult.wait()
     }
 
     func tearDown() {
@@ -149,7 +154,10 @@ final class TCPThroughputBenchmark: Benchmark {
         let expectedMessages = self.messages
 
         try clientChannel.eventLoop.submit {
-            try clientChannel.pipeline.syncOperations.handler(type: ClientHandler.self).prepareRun(expectedMessages: expectedMessages, promise: isDonePromise)
+            try clientChannel.pipeline.syncOperations.handler(type: ClientHandler.self).prepareRun(
+                expectedMessages: expectedMessages,
+                promise: isDonePromise
+            )
         }.wait()
 
         let serverHandler = self.serverHandler!

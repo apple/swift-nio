@@ -26,7 +26,7 @@ func measureAndPrint<B: Benchmark>(desc: String, benchmark bench: B) throws {
         bench.tearDown()
     }
     try measureAndPrint(desc: desc) {
-        return try bench.run()
+        try bench.run()
     }
 }
 
@@ -48,7 +48,7 @@ func measureAndPrint<B: AsyncBenchmark>(desc: String, benchmark bench: B) throws
                 bench.tearDown()
             }
             try await measureAndPrint(desc: desc) {
-                return try await bench.run()
+                try await bench.run()
             }
         }
         group.leave()

@@ -13,17 +13,20 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 @testable import NIOPosix
 
-fileprivate extension UnsafeControlMessageCollection {
-    init(controlBytes: UnsafeMutableRawBufferPointer) {
-        let msgHdr = msghdr(msg_name: nil,
-                            msg_namelen: 0,
-                            msg_iov: nil,
-                            msg_iovlen: 0,
-                            msg_control: controlBytes.baseAddress,
-                            msg_controllen: .init(controlBytes.count),
-                            msg_flags: 0)
+extension UnsafeControlMessageCollection {
+    fileprivate init(controlBytes: UnsafeMutableRawBufferPointer) {
+        let msgHdr = msghdr(
+            msg_name: nil,
+            msg_namelen: 0,
+            msg_iov: nil,
+            msg_iovlen: 0,
+            msg_control: controlBytes.baseAddress,
+            msg_controllen: .init(controlBytes.count),
+            msg_flags: 0
+        )
         self.init(messageHeader: msgHdr)
     }
 }
@@ -31,10 +34,12 @@ fileprivate extension UnsafeControlMessageCollection {
 class ControlMessageTests: XCTestCase {
     var encoderBytes: UnsafeMutableRawBufferPointer?
     var encoder: UnsafeOutboundControlBytes!
-    
+
     override func setUp() {
-        self.encoderBytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 1000,
-                                                                  alignment: MemoryLayout<Int>.alignment)
+        self.encoderBytes = UnsafeMutableRawBufferPointer.allocate(
+            byteCount: 1000,
+            alignment: MemoryLayout<Int>.alignment
+        )
         self.encoder = UnsafeOutboundControlBytes(controlBytes: self.encoderBytes!)
     }
 
@@ -44,7 +49,7 @@ class ControlMessageTests: XCTestCase {
             encoderBytes.deallocate()
         }
     }
-    
+
     func testEmptyEncode() {
         XCTAssertEqual(self.encoder.validControlBytes.count, 0)
     }
@@ -54,12 +59,12 @@ class ControlMessageTests: XCTestCase {
         var type: CInt
         var payload: CInt
     }
-    
+
     func testEncodeDecode1() {
         self.encoder.appendControlMessage(level: 1, type: 2, payload: 3)
         let expected = [DecodedMessage(level: 1, type: 2, payload: 3)]
         let encodedBytes = self.encoder.validControlBytes
-        
+
         let decoder = UnsafeControlMessageCollection(controlBytes: encodedBytes)
         XCTAssertEqual(decoder.count, 1)
         var decoded: [DecodedMessage] = []
@@ -70,16 +75,16 @@ class ControlMessageTests: XCTestCase {
         }
         XCTAssertEqual(expected, decoded)
     }
-    
+
     func testEncodeDecode2() {
         self.encoder.appendControlMessage(level: 1, type: 2, payload: 3)
         self.encoder.appendControlMessage(level: 4, type: 5, payload: 6)
         let expected = [
             DecodedMessage(level: 1, type: 2, payload: 3),
-            DecodedMessage(level: 4, type: 5, payload: 6)
+            DecodedMessage(level: 4, type: 5, payload: 6),
         ]
         let encodedBytes = self.encoder.validControlBytes
-        
+
         let decoder = UnsafeControlMessageCollection(controlBytes: encodedBytes)
         XCTAssertEqual(decoder.count, 2)
         var decoded: [DecodedMessage] = []
@@ -91,14 +96,18 @@ class ControlMessageTests: XCTestCase {
         XCTAssertEqual(expected, decoded)
     }
 
-    private func assertBuffersNonOverlapping(_ b1: UnsafeMutableRawBufferPointer,
-                                             _ b2: UnsafeMutableRawBufferPointer,
-                                             file: StaticString = #filePath,
-                                             line: UInt = #line) {
-        XCTAssert((b1.baseAddress! < b2.baseAddress! && (b1.baseAddress! + b1.count) <= b2.baseAddress!) ||
-                  (b2.baseAddress! < b1.baseAddress! && (b2.baseAddress! + b2.count) <= b1.baseAddress!),
-                  file: (file),
-                  line: line)
+    private func assertBuffersNonOverlapping(
+        _ b1: UnsafeMutableRawBufferPointer,
+        _ b2: UnsafeMutableRawBufferPointer,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssert(
+            (b1.baseAddress! < b2.baseAddress! && (b1.baseAddress! + b1.count) <= b2.baseAddress!)
+                || (b2.baseAddress! < b1.baseAddress! && (b2.baseAddress! + b2.count) <= b1.baseAddress!),
+            file: (file),
+            line: line
+        )
     }
 
     func testStorageIndexing() {

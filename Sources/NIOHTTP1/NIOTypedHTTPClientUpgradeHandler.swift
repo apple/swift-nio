@@ -75,7 +75,9 @@ public struct NIOTypedHTTPClientUpgradeConfiguration<UpgradeResult: Sendable> {
 /// It will only upgrade to the protocol that is returned first in the list and does not currently
 /// have the capability to upgrade to multiple simultaneous layered protocols.
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: ChannelDuplexHandler, RemovableChannelHandler {
+public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: ChannelDuplexHandler,
+    RemovableChannelHandler
+{
     public typealias OutboundIn = HTTPClientRequestPart
     public typealias OutboundOut = HTTPClientRequestPart
     public typealias InboundIn = HTTPClientResponsePart
@@ -139,9 +141,9 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func channelActive(context: ChannelHandlerContext) {
         switch self.stateMachine.channelActive() {
         case .writeUpgradeRequest:
-            context.write(self.wrapOutboundOut(.head(self.upgradeRequestHead)), promise: nil)
-            context.write(self.wrapOutboundOut(.body(.byteBuffer(.init()))), promise: nil)
-            context.writeAndFlush(self.wrapOutboundOut(.end(nil)), promise: nil)
+            context.write(Self.wrapOutboundOut(.head(self.upgradeRequestHead)), promise: nil)
+            context.write(Self.wrapOutboundOut(.body(.byteBuffer(.init()))), promise: nil)
+            context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
 
         case .none:
             break
@@ -177,7 +179,7 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         switch self.stateMachine.channelReadData(data) {
         case .unwrapData:
-            let responsePart = self.unwrapInboundIn(data)
+            let responsePart = Self.unwrapInboundIn(data)
             self.channelRead(context: context, responsePart: responsePart)
 
         case .fireChannelRead:

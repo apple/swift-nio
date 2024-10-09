@@ -1,4 +1,4 @@
-// swift-tools-version:5.7
+// swift-tools-version:5.8
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the SwiftNIO open source project
@@ -15,14 +15,48 @@
 
 import PackageDescription
 
+// Used only for environment variables, does not make its way
+// into the product code.
+import class Foundation.ProcessInfo
+
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(
-  name: "SystemPackage",
-  package: "swift-system",
-  condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
+    name: "SystemPackage",
+    package: "swift-system",
+    condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
 )
 
+// These platforms require a depdency on `NIOPosix` from `NIOHTTP1` to maintain backward
+// compatibility with previous NIO versions.
+let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
+
+let strictConcurrencyDevelopment = false
+
+let strictConcurrencySettings: [SwiftSetting] = {
+    var initialSettings: [SwiftSetting] = []
+    initialSettings.append(contentsOf: [
+        .enableUpcomingFeature("StrictConcurrency"),
+        .enableUpcomingFeature("InferSendableFromCaptures"),
+    ])
+
+    if strictConcurrencyDevelopment {
+        // -warnings-as-errors here is a workaround so that IDE-based development can
+        // get tripped up on -require-explicit-sendable.
+        initialSettings.append(.unsafeFlags(["-require-explicit-sendable", "-warnings-as-errors"]))
+    }
+
+    return initialSettings
+}()
+
+// This doesn't work when cross-compiling: the privacy manifest will be included in the Bundle and
+// Foundation will be linked. This is, however, strictly better than unconditionally adding the
+// resource.
+#if canImport(Darwin)
+let includePrivacyManifest = true
+#else
+let includePrivacyManifest = false
+#endif
 
 let package = Package(
     name: "swift-nio",
@@ -38,14 +72,8 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "_NIOFileSystem", targets: ["NIOFileSystem"]),
-        .library(name: "_NIOFileSystemFoundationCompat", targets: ["NIOFileSystemFoundationCompat"]),
-    ],
-    dependencies: [
-        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
-        .package(url: "https://github.com/apple/swift-system.git", from: "1.2.0"),
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
+        .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
     targets: [
         // MARK: - Targets
@@ -58,16 +86,19 @@ let package = Package(
                 "CNIODarwin",
                 "CNIOLinux",
                 "CNIOWindows",
+                "CNIOWASI",
                 "_NIODataStructures",
                 swiftCollections,
                 swiftAtomics,
             ]
         ),
         .target(
-            name: "_NIODataStructures"
+            name: "_NIODataStructures",
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
-            name: "_NIOBase64"
+            name: "_NIOBase64",
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOEmbedded",
@@ -89,7 +120,9 @@ let package = Package(
                 "NIOCore",
                 "_NIODataStructures",
                 swiftAtomics,
-            ]
+            ],
+            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
+            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : []
         ),
         .target(
             name: "NIO",
@@ -102,14 +135,14 @@ let package = Package(
         .target(
             name: "_NIOConcurrency",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ]
         ),
         .target(
             name: "NIOFoundationCompat",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
             ]
         ),
@@ -117,7 +150,7 @@ let package = Package(
             name: "CNIOAtomics",
             dependencies: [],
             cSettings: [
-                .define("_GNU_SOURCE"),
+                .define("_GNU_SOURCE")
             ]
         ),
         .target(
@@ -128,14 +161,14 @@ let package = Package(
             name: "CNIOLinux",
             dependencies: [],
             cSettings: [
-                .define("_GNU_SOURCE"),
+                .define("_GNU_SOURCE")
             ]
         ),
         .target(
             name: "CNIODarwin",
             dependencies: [],
             cSettings: [
-                .define("__APPLE_USE_RFC_3542"),
+                .define("__APPLE_USE_RFC_3542")
             ]
         ),
         .target(
@@ -143,42 +176,47 @@ let package = Package(
             dependencies: []
         ),
         .target(
+            name: "CNIOWASI",
+            dependencies: []
+        ),
+        .target(
             name: "NIOConcurrencyHelpers",
             dependencies: [
-                "CNIOAtomics",
-            ]
+                "CNIOAtomics"
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOHTTP1",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
-                swiftCollections
+                swiftCollections,
             ]
         ),
         .target(
             name: "NIOWebSocket",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 "NIOHTTP1",
                 "CNIOSHA1",
-                "_NIOBase64"
+                "_NIOBase64",
             ]
         ),
         .target(
             name: "CNIOLLHTTP",
             cSettings: [
-              .define("_GNU_SOURCE"),
-              .define("LLHTTP_STRICT_MODE")
+                .define("_GNU_SOURCE"),
+                .define("LLHTTP_STRICT_MODE"),
             ]
         ),
         .target(
             name: "NIOTLS",
             dependencies: [
-                "NIO",
+                .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 swiftCollections,
             ]
@@ -194,24 +232,36 @@ let package = Package(
             ]
         ),
         .target(
-            name: "NIOFileSystem",
+            name: "_NIOFileSystem",
             dependencies: [
                 "NIOCore",
+                "NIOPosix",
                 "CNIOLinux",
                 "CNIODarwin",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
             ],
+            path: "Sources/NIOFileSystem",
+            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
+            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
             swiftSettings: [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
         ),
         .target(
-            name: "NIOFileSystemFoundationCompat",
+            name: "NIOFileSystem",
             dependencies: [
-                "NIOFileSystem",
-            ]
+                "_NIOFileSystem"
+            ],
+            path: "Sources/_NIOFileSystemExported"
+        ),
+        .target(
+            name: "_NIOFileSystemFoundationCompat",
+            dependencies: [
+                "_NIOFileSystem"
+            ],
+            path: "Sources/NIOFileSystemFoundationCompat"
         ),
 
         // MARK: - Examples
@@ -399,15 +449,18 @@ let package = Package(
             dependencies: [
                 "NIOConcurrencyHelpers",
                 "NIOCore",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIODataStructuresTests",
-            dependencies: ["_NIODataStructures"]
+            dependencies: ["_NIODataStructures"],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOBase64Tests",
-            dependencies: ["_NIOBase64"]
+            dependencies: ["_NIOBase64"],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOHTTP1Tests",
@@ -466,7 +519,7 @@ let package = Package(
             name: "NIOFileSystemTests",
             dependencies: [
                 "NIOCore",
-                "NIOFileSystem",
+                "_NIOFileSystem",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -479,22 +532,37 @@ let package = Package(
             name: "NIOFileSystemIntegrationTests",
             dependencies: [
                 "NIOCore",
-                "NIOFileSystem",
+                "NIOPosix",
+                "_NIOFileSystem",
                 "NIOFoundationCompat",
             ],
             exclude: [
                 // Contains known files and directory structures used
                 // for the integration tests. Exclude the whole tree from
                 // the build.
-                "Test Data",
+                "Test Data"
             ]
         ),
         .testTarget(
             name: "NIOFileSystemFoundationCompatTests",
             dependencies: [
-                "NIOFileSystem",
-                "NIOFileSystemFoundationCompat",
+                "_NIOFileSystem",
+                "_NIOFileSystemFoundationCompat",
             ]
-        )
+        ),
     ]
 )
+
+if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
+    package.dependencies += [
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
+        .package(url: "https://github.com/apple/swift-system.git", from: "1.2.0"),
+    ]
+} else {
+    package.dependencies += [
+        .package(path: "../swift-atomics"),
+        .package(path: "../swift-collections"),
+        .package(path: "../swift-system"),
+    ]
+}

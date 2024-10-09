@@ -12,18 +12,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Dispatch
-@testable import NIOCore
 import NIOEmbedded
 import NIOPosix
 import NIOConcurrencyHelpers
+import XCTest
 
-enum EventLoopFutureTestError : Error {
+@testable import NIOCore
+
+enum EventLoopFutureTestError: Error {
     case example
 }
 
-class EventLoopFutureTest : XCTestCase {
+class EventLoopFutureTest: XCTestCase {
     func testFutureFulfilledIfHasResult() throws {
         let eventLoop = EmbeddedEventLoop()
         let f = EventLoopFuture(eventLoop: eventLoop, value: 5)
@@ -340,7 +341,8 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         let futures: [EventLoopFuture<Int>] = [1, 2, 2, 3, 3, 3].map { (id: Int) in eventLoop.makeSucceededFuture(id) }
 
-        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(into: [:], futures, on: eventLoop) { (freqs, elem) in
+        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(into: [:], futures, on: eventLoop) {
+            (freqs, elem) in
             if let value = freqs[elem] {
                 freqs[elem] = value + 1
             } else {
@@ -357,7 +359,8 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         let futures: [EventLoopFuture<Int>] = []
 
-        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(into: [:], futures, on: eventLoop) { (freqs, elem) in
+        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(into: [:], futures, on: eventLoop) {
+            (freqs, elem) in
             if let value = freqs[elem] {
                 freqs[elem] = value + 1
             } else {
@@ -375,7 +378,8 @@ class EventLoopFutureTest : XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         let futures: [EventLoopFuture<Int>] = [1, 2, 2, 3, 3, 3].map { (id: Int) in eventLoop.makeFailedFuture(E()) }
 
-        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(into: [:], futures, on: eventLoop) { (freqs, elem) in
+        let fN: EventLoopFuture<[Int: Int]> = EventLoopFuture<[Int: Int]>.reduce(into: [:], futures, on: eventLoop) {
+            (freqs, elem) in
             if let value = freqs[elem] {
                 freqs[elem] = value + 1
             } else {
@@ -405,11 +409,11 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssert(eventLoop1 !== eventLoop2)
         XCTAssert(eventLoop0 !== eventLoop2)
 
-        let f0: EventLoopFuture<[Int:Int]> = eventLoop0.submit { [:] }
+        let f0: EventLoopFuture<[Int: Int]> = eventLoop0.submit { [:] }
         let f1s: [EventLoopFuture<Int>] = (1...4).map { id in eventLoop1.submit { id / 2 } }
         let f2s: [EventLoopFuture<Int>] = (5...8).map { id in eventLoop2.submit { id / 2 } }
 
-        let fN = EventLoopFuture<[Int:Int]>.reduce(into: [:], f1s + f2s, on: eventLoop0) { (freqs, elem) in
+        let fN = EventLoopFuture<[Int: Int]>.reduce(into: [:], f1s + f2s, on: eventLoop0) { (freqs, elem) in
             XCTAssert(eventLoop0.inEventLoop)
             if let value = freqs[elem] {
                 freqs[elem] = value + 1
@@ -533,7 +537,7 @@ class EventLoopFutureTest : XCTestCase {
         let n = 20
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         var prev: EventLoopFuture<Int> = elg.next().makeSucceededFuture(0)
-        (1..<20).forEach { (i: Int) in
+        for i in (1..<20) {
             let p = elg.next().makePromise(of: Int.self)
             prev.flatMap { (i2: Int) -> EventLoopFuture<Int> in
                 XCTAssertEqual(i - 1, i2)
@@ -544,7 +548,7 @@ class EventLoopFutureTest : XCTestCase {
             }
             prev = p.futureResult
         }
-        XCTAssertEqual(n-1, try prev.wait())
+        XCTAssertEqual(n - 1, try prev.wait())
         XCTAssertNoThrow(try elg.syncShutdownGracefully())
     }
 
@@ -555,11 +559,11 @@ class EventLoopFutureTest : XCTestCase {
         let n = 20
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: n)
         var prev: EventLoopFuture<Int> = elg.next().makeSucceededFuture(0)
-        (1..<n).forEach { (i: Int) in
+        for i in (1..<n) {
             let p = elg.next().makePromise(of: Int.self)
             prev.flatMap { (i2: Int) -> EventLoopFuture<Int> in
                 XCTAssertEqual(i - 1, i2)
-                if i == n/2 {
+                if i == n / 2 {
                     p.fail(DummyError.dummy)
                 } else {
                     p.succeed(i)
@@ -586,9 +590,9 @@ class EventLoopFutureTest : XCTestCase {
             elg.next().makePromise()
         }
         let allOfEm = EventLoopFuture.andAllSucceed(ps.map { $0.futureResult }, on: elg.next())
-        ps.reversed().forEach { p in
+        for promise in ps.reversed() {
             DispatchQueue.global().async {
-                p.succeed(())
+                promise.succeed(())
             }
         }
         try allOfEm.wait()
@@ -604,12 +608,12 @@ class EventLoopFutureTest : XCTestCase {
             elg.next().makePromise()
         }
         let allOfEm = EventLoopFuture.andAllSucceed(ps.map { $0.futureResult }, on: fireBackEl.next())
-        ps.reversed().enumerated().forEach { idx, p in
+        for (index, promise) in ps.reversed().enumerated() {
             DispatchQueue.global().async {
-                if idx == n / 2 {
-                    p.fail(DummyError.dummy)
+                if index == n / 2 {
+                    promise.fail(DummyError.dummy)
                 } else {
-                    p.succeed(())
+                    promise.succeed(())
                 }
             }
         }
@@ -621,7 +625,10 @@ class EventLoopFutureTest : XCTestCase {
     }
 
     func testFutureInVariousScenarios() throws {
-        enum DummyError: Error { case dummy0; case dummy1 }
+        enum DummyError: Error {
+            case dummy0
+            case dummy1
+        }
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 2)
         let el1 = elg.next()
         let el2 = elg.next()
@@ -779,7 +786,7 @@ class EventLoopFutureTest : XCTestCase {
 
         let p = el.makePromise(of: Int.self)
         let f = p.futureResult.flatMapResult { (_: Int) in
-            return Result<String, Never>.success("hello world")
+            Result<String, Never>.success("hello world")
         }
         p.succeed(1)
         XCTAssertNoThrow(XCTAssertEqual("hello world", try f.wait()))
@@ -794,7 +801,7 @@ class EventLoopFutureTest : XCTestCase {
 
         let p = el.makePromise(of: Int.self)
         let f = p.futureResult.flatMapResult { (_: Int) in
-            return Result<Int, Error>.failure(DummyError())
+            Result<Int, Error>.failure(DummyError())
         }
         p.succeed(1)
         XCTAssertThrowsError(try f.wait()) { error in
@@ -809,8 +816,10 @@ class EventLoopFutureTest : XCTestCase {
         }
 
         func doTest(promise: EventLoopPromise<[Int]>?) {
-            let promises = [group.next().makePromise(of: Int.self),
-                            group.next().makePromise(of: Int.self)]
+            let promises = [
+                group.next().makePromise(of: Int.self),
+                group.next().makePromise(of: Int.self),
+            ]
             let futures = promises.map { $0.futureResult }
             let futureResult: EventLoopFuture<[Int]>
 
@@ -935,7 +944,7 @@ class EventLoopFutureTest : XCTestCase {
         func doTest(promise: EventLoopPromise<[Result<Bool, Error>]>?) {
             let futures: [EventLoopFuture<Bool>] = [
                 group.next().makeFailedFuture(EventLoopFutureTestError.example),
-                group.next().makeSucceededFuture(true)
+                group.next().makeSucceededFuture(true),
             ]
             let future: EventLoopFuture<[Result<Bool, Error>]>
 
@@ -965,7 +974,7 @@ class EventLoopFutureTest : XCTestCase {
                 group.next().makeFailedFuture(EventLoopFutureTestError.example),
                 group.next().makeSucceededFuture(10),
                 group.next().makeFailedFuture(EventLoopFutureTestError.example),
-                group.next().makeSucceededFuture(5)
+                group.next().makeSucceededFuture(5),
             ]
             let future: EventLoopFuture<[Result<Int, Error>]>
 
@@ -1039,49 +1048,53 @@ class EventLoopFutureTest : XCTestCase {
         XCTAssertNoThrow(try doTest(promise: nil))
         XCTAssertNoThrow(try doTest(promise: group.next().makePromise()))
     }
-    
+
     struct DatabaseError: Error {}
     struct Database {
         let query: () -> EventLoopFuture<[String]>
-        
+
         var closed = false
-        
+
         init(query: @escaping () -> EventLoopFuture<[String]>) {
             self.query = query
         }
-        
+
         func runQuery() -> EventLoopFuture<[String]> {
-            return query()
+            query()
         }
-        
+
         mutating func close() {
             self.closed = true
         }
     }
-    
+
     func testAlways() throws {
         let group = EmbeddedEventLoop()
         let loop = group.next()
         var db = Database { loop.makeSucceededFuture(["Item 1", "Item 2", "Item 3"]) }
-        
+
         XCTAssertFalse(db.closed)
-        let _ = try assertNoThrowWithValue(db.runQuery().always { result in
-            assertSuccess(result)
-            db.close()
-        }.map { $0.map { $0.uppercased() }}.wait())
+        let _ = try assertNoThrowWithValue(
+            db.runQuery().always { result in
+                assertSuccess(result)
+                db.close()
+            }.map { $0.map { $0.uppercased() } }.wait()
+        )
         XCTAssertTrue(db.closed)
     }
-    
+
     func testAlwaysWithFailingPromise() throws {
         let group = EmbeddedEventLoop()
         let loop = group.next()
         var db = Database { loop.makeFailedFuture(DatabaseError()) }
-        
+
         XCTAssertFalse(db.closed)
-        let _ = try XCTAssertThrowsError(db.runQuery().always { result in
-            assertFailure(result)
-            db.close()
-        }.map { $0.map { $0.uppercased() }}.wait()) { XCTAssertTrue($0 is DatabaseError) }
+        let _ = try XCTAssertThrowsError(
+            db.runQuery().always { result in
+                assertFailure(result)
+                db.close()
+            }.map { $0.map { $0.uppercased() } }.wait()
+        ) { XCTAssertTrue($0 is DatabaseError) }
         XCTAssertTrue(db.closed)
     }
 
@@ -1164,8 +1177,12 @@ class EventLoopFutureTest : XCTestCase {
         let succeeded = eventLoop.makeSucceededFuture(())
 
         for i in 0..<10 {
-            XCTAssertNoThrow(try EventLoopFuture<Void>.andAllComplete(Array(repeating: succeeded, count: i),
-                                                                      on: eventLoop).wait())
+            XCTAssertNoThrow(
+                try EventLoopFuture<Void>.andAllComplete(
+                    Array(repeating: succeeded, count: i),
+                    on: eventLoop
+                ).wait()
+            )
         }
     }
 
@@ -1175,8 +1192,12 @@ class EventLoopFutureTest : XCTestCase {
         let failed: EventLoopFuture<Void> = eventLoop.makeFailedFuture(Dummy())
 
         for i in 0..<10 {
-            XCTAssertNoThrow(try EventLoopFuture<Void>.andAllComplete(Array(repeating: failed, count: i),
-                                                                      on: eventLoop).wait())
+            XCTAssertNoThrow(
+                try EventLoopFuture<Void>.andAllComplete(
+                    Array(repeating: failed, count: i),
+                    on: eventLoop
+                ).wait()
+            )
         }
     }
 
@@ -1184,16 +1205,18 @@ class EventLoopFutureTest : XCTestCase {
         struct Dummy: Error {}
         let eventLoop = EmbeddedEventLoop()
         let succeeded = eventLoop.makeSucceededFuture(())
-        let incompletes = [eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
-                           eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
-                           eventLoop.makePromise(of: Void.self)]
+        let incompletes = [
+            eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+            eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+            eventLoop.makePromise(of: Void.self),
+        ]
         var futures: [EventLoopFuture<Void>] = []
 
         for i in 0..<10 {
             if i % 2 == 0 {
                 futures.append(succeeded)
             } else {
-                futures.append(incompletes[i/2].futureResult)
+                futures.append(incompletes[i / 2].futureResult)
             }
         }
 
@@ -1214,16 +1237,18 @@ class EventLoopFutureTest : XCTestCase {
         struct Dummy: Error {}
         let eventLoop = EmbeddedEventLoop()
         let succeeded = eventLoop.makeSucceededFuture(())
-        let incompletes = [eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
-                           eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
-                           eventLoop.makePromise(of: Void.self)]
+        let incompletes = [
+            eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+            eventLoop.makePromise(of: Void.self), eventLoop.makePromise(of: Void.self),
+            eventLoop.makePromise(of: Void.self),
+        ]
         var futures: [EventLoopFuture<Void>] = []
 
         for i in 0..<10 {
             if i % 2 == 0 {
                 futures.append(succeeded)
             } else {
-                futures.append(incompletes[i/2].futureResult)
+                futures.append(incompletes[i / 2].futureResult)
             }
         }
 
@@ -1237,11 +1262,13 @@ class EventLoopFutureTest : XCTestCase {
                 incomplete.fail(Dummy())
             }
         }
-        let expected: [Result<Void, Error>] = [.success(()), .success(()),
-                                               .success(()), .failure(Dummy()),
-                                               .success(()), .success(()),
-                                               .success(()), .failure(Dummy()),
-                                               .success(()), .success(())]
+        let expected: [Result<Void, Error>] = [
+            .success(()), .success(()),
+            .success(()), .failure(Dummy()),
+            .success(()), .success(()),
+            .success(()), .failure(Dummy()),
+            .success(()), .success(()),
+        ]
         func assertIsEqual(_ expecteds: [Result<Void, Error>], _ actuals: [Result<Void, Error>]) {
             XCTAssertEqual(expecteds.count, actuals.count, "counts not equal")
             for i in expecteds.indices {
@@ -1260,7 +1287,7 @@ class EventLoopFutureTest : XCTestCase {
         }
         XCTAssertNoThrow(assertIsEqual(expected, try overall.wait()))
     }
-    
+
     func testRepeatedTaskOffEventLoopGroupFuture() throws {
         let elg1: EventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
@@ -1289,10 +1316,10 @@ class EventLoopFutureTest : XCTestCase {
                 return elg2.next().makeFailedFuture(Dummy())
             }
         }
-        
+
         try exitPromise.futureResult.wait()
     }
- 
+
     func testEventLoopFutureOrErrorNoThrow() {
         let eventLoop = EmbeddedEventLoop()
         let promise = eventLoop.makePromise(of: Int?.self)
@@ -1301,19 +1328,20 @@ class EventLoopFutureTest : XCTestCase {
 
         XCTAssertEqual(try promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait(), 42)
     }
- 
+
     func testEventLoopFutureOrThrows() {
         let eventLoop = EmbeddedEventLoop()
         let promise = eventLoop.makePromise(of: Int?.self)
         let result: Result<Int?, Error> = .success(nil)
         promise.completeWith(result)
 
-        XCTAssertThrowsError(try _ = promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait()) { (error) -> Void in
+        XCTAssertThrowsError(try promise.futureResult.unwrap(orError: EventLoopFutureTestError.example).wait()) {
+            (error) -> Void in
             XCTAssertEqual(error as! EventLoopFutureTestError, EventLoopFutureTestError.example)
         }
     }
-  
-     func testEventLoopFutureOrNoReplacement() {
+
+    func testEventLoopFutureOrNoReplacement() {
         let eventLoop = EmbeddedEventLoop()
         let promise = eventLoop.makePromise(of: Int?.self)
         let result: Result<Int?, Error> = .success(42)
@@ -1321,7 +1349,7 @@ class EventLoopFutureTest : XCTestCase {
 
         XCTAssertEqual(try! promise.futureResult.unwrap(orReplace: 41).wait(), 42)
     }
- 
+
     func testEventLoopFutureOrReplacement() {
         let eventLoop = EmbeddedEventLoop()
         let promise = eventLoop.makePromise(of: Int?.self)
@@ -1330,16 +1358,16 @@ class EventLoopFutureTest : XCTestCase {
 
         XCTAssertEqual(try! promise.futureResult.unwrap(orReplace: 42).wait(), 42)
     }
- 
+
     func testEventLoopFutureOrNoElse() {
         let eventLoop = EmbeddedEventLoop()
         let promise = eventLoop.makePromise(of: Int?.self)
         let result: Result<Int?, Error> = .success(42)
         promise.completeWith(result)
 
-        XCTAssertEqual(try! promise.futureResult.unwrap(orElse: { 41 } ).wait(), 42)
+        XCTAssertEqual(try! promise.futureResult.unwrap(orElse: { 41 }).wait(), 42)
     }
- 
+
     func testEventLoopFutureOrElse() {
         let eventLoop = EmbeddedEventLoop()
         let promise = eventLoop.makePromise(of: Int?.self)
@@ -1347,7 +1375,7 @@ class EventLoopFutureTest : XCTestCase {
         promise.completeWith(result)
 
         let x = 2
-        XCTAssertEqual(try! promise.futureResult.unwrap(orElse: { x * 2 } ).wait(), 4)
+        XCTAssertEqual(try! promise.futureResult.unwrap(orElse: { x * 2 }).wait(), 4)
     }
 
     func testFlatBlockingMapOnto() {
@@ -1359,16 +1387,16 @@ class EventLoopFutureTest : XCTestCase {
         p.futureResult.map {
             $0.count
         }.flatMapBlocking(onto: DispatchQueue.global()) { value -> Int in
-            sem.wait() // Block in chained EventLoopFuture
+            sem.wait()  // Block in chained EventLoopFuture
             blockingRan = true
-            return  1 + value
+            return 1 + value
         }.whenSuccess {
             XCTAssertEqual($0, 6)
             XCTAssertTrue(blockingRan)
             XCTAssertTrue(nonBlockingRan)
         }
         p.succeed("hello")
-       
+
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
             nonBlockingRan = true
@@ -1384,13 +1412,13 @@ class EventLoopFutureTest : XCTestCase {
         let nonBlockingRan = NIOLockedValueBox(false)
         let p = eventLoop.makePromise(of: String.self)
         p.futureResult.whenSuccessBlocking(onto: DispatchQueue.global()) {
-            sem.wait() // Block in callback
+            sem.wait()  // Block in callback
             XCTAssertEqual($0, "hello")
             nonBlockingRan.withLockedValue { XCTAssertTrue($0) }
 
         }
         p.succeed("hello")
-    
+
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
             nonBlockingRan.withLockedValue { $0 = true }
@@ -1405,13 +1433,13 @@ class EventLoopFutureTest : XCTestCase {
         let sem = DispatchSemaphore(value: 0)
         var nonBlockingRan = false
         let p = eventLoop.makePromise(of: String.self)
-        p.futureResult.whenFailureBlocking (onto: DispatchQueue.global()) { err in
-            sem.wait() // Block in callback
+        p.futureResult.whenFailureBlocking(onto: DispatchQueue.global()) { err in
+            sem.wait()  // Block in callback
             XCTAssertEqual(err as! EventLoopFutureTestError, EventLoopFutureTestError.example)
             XCTAssertTrue(nonBlockingRan)
         }
         p.fail(EventLoopFutureTestError.example)
-    
+
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
             nonBlockingRan = true
@@ -1426,12 +1454,12 @@ class EventLoopFutureTest : XCTestCase {
         let sem = DispatchSemaphore(value: 0)
         var nonBlockingRan = false
         let p = eventLoop.makePromise(of: String.self)
-        p.futureResult.whenCompleteBlocking (onto: DispatchQueue.global()) { _ in
-            sem.wait() // Block in callback
+        p.futureResult.whenCompleteBlocking(onto: DispatchQueue.global()) { _ in
+            sem.wait()  // Block in callback
             XCTAssertTrue(nonBlockingRan)
         }
         p.succeed("hello")
-    
+
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
             nonBlockingRan = true
@@ -1441,18 +1469,17 @@ class EventLoopFutureTest : XCTestCase {
         sem.signal()
     }
 
-
     func testWhenCompleteBlockingFailure() {
         let eventLoop = EmbeddedEventLoop()
         let sem = DispatchSemaphore(value: 0)
         var nonBlockingRan = false
         let p = eventLoop.makePromise(of: String.self)
-        p.futureResult.whenCompleteBlocking (onto: DispatchQueue.global()) { _ in
-            sem.wait() // Block in callback
+        p.futureResult.whenCompleteBlocking(onto: DispatchQueue.global()) { _ in
+            sem.wait()  // Block in callback
             XCTAssertTrue(nonBlockingRan)
         }
         p.fail(EventLoopFutureTestError.example)
-    
+
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
             nonBlockingRan = true
@@ -1465,22 +1492,26 @@ class EventLoopFutureTest : XCTestCase {
     func testFlatMapWithEL() {
         let el = EmbeddedEventLoop()
 
-        XCTAssertEqual(2,
-                       try el.makeSucceededFuture(1).flatMapWithEventLoop { one, el2 in
-            XCTAssert(el === el2)
-            return el2.makeSucceededFuture(one + 1)
-        }.wait())
+        XCTAssertEqual(
+            2,
+            try el.makeSucceededFuture(1).flatMapWithEventLoop { one, el2 in
+                XCTAssert(el === el2)
+                return el2.makeSucceededFuture(one + 1)
+            }.wait()
+        )
     }
 
     func testFlatMapErrorWithEL() {
         let el = EmbeddedEventLoop()
         struct E: Error {}
 
-        XCTAssertEqual(1,
-                       try el.makeFailedFuture(E()).flatMapErrorWithEventLoop { error, el2 in
-            XCTAssert(error is E)
-            return el2.makeSucceededFuture(1)
-        }.wait())
+        XCTAssertEqual(
+            1,
+            try el.makeFailedFuture(E()).flatMapErrorWithEventLoop { error, el2 in
+                XCTAssert(error is E)
+                return el2.makeSucceededFuture(1)
+            }.wait()
+        )
     }
 
     func testFoldWithEL() {
@@ -1543,4 +1574,76 @@ class EventLoopFutureTest : XCTestCase {
         }
     }
 
+    func testSetOrCascadeReplacesNil() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        var promise: EventLoopPromise<Void>? = nil
+        let other = eventLoop.makePromise(of: Void.self)
+        promise.setOrCascade(to: other)
+        XCTAssertNotNil(promise)
+        promise?.succeed()
+        try other.futureResult.wait()
+    }
+
+    func testSetOrCascadeCascadesToExisting() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        var promise: EventLoopPromise<Void>? = eventLoop.makePromise(of: Void.self)
+        let other = eventLoop.makePromise(of: Void.self)
+        promise.setOrCascade(to: other)
+        promise?.succeed()
+        try other.futureResult.wait()
+    }
+
+    func testSetOrCascadeNoOpOnNil() throws {
+        let eventLoop = EmbeddedEventLoop()
+
+        var promise: EventLoopPromise<Void>? = eventLoop.makePromise(of: Void.self)
+        promise.setOrCascade(to: nil)
+        XCTAssertNotNil(promise)
+        promise?.succeed()
+    }
+
+    func testPromiseEquatable() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise1 = eventLoop.makePromise(of: Void.self)
+        let promise2 = eventLoop.makePromise(of: Void.self)
+        let promise3 = promise1
+        XCTAssertEqual(promise1, promise3)
+        XCTAssertNotEqual(promise1, promise2)
+        XCTAssertNotEqual(promise3, promise2)
+
+        promise1.succeed()
+        promise2.succeed()
+    }
+
+    func testPromiseEquatable_WhenSucceeded() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise1 = eventLoop.makePromise(of: Void.self)
+        let promise2 = eventLoop.makePromise(of: Void.self)
+        let promise3 = promise1
+
+        promise1.succeed()
+        promise2.succeed()
+        XCTAssertEqual(promise1, promise3)
+        XCTAssertNotEqual(promise1, promise2)
+        XCTAssertNotEqual(promise3, promise2)
+    }
+
+    func testPromiseEquatable_WhenFailed() {
+        struct E: Error {}
+        let eventLoop = EmbeddedEventLoop()
+
+        let promise1 = eventLoop.makePromise(of: Void.self)
+        let promise2 = eventLoop.makePromise(of: Void.self)
+        let promise3 = promise1
+
+        promise1.fail(E())
+        promise2.fail(E())
+        XCTAssertEqual(promise1, promise3)
+        XCTAssertNotEqual(promise1, promise2)
+        XCTAssertNotEqual(promise3, promise2)
+    }
 }

@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-@_spi(Testing) import NIOFileSystem
+@_spi(Testing) import _NIOFileSystem
 import SystemPackage
 import XCTest
 
@@ -132,7 +132,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_linkat() throws {
-        #if canImport(Glibc)
+        #if canImport(Glibc) || canImport(Bionic)
         let fd1 = FileDescriptor(rawValue: 13)
         let fd2 = FileDescriptor(rawValue: 42)
 
@@ -160,6 +160,24 @@ final class SyscallTests: XCTestCase {
         #else
         throw XCTSkip("'linkat' is only supported on Linux")
         #endif
+    }
+
+    func test_link() throws {
+        let testCases = [
+            MockTestCase(name: "link", .noInterrupt, "src", "dst") { _ in
+                try Syscall.link(from: "src", to: "dst").get()
+            }
+        ]
+        testCases.run()
+    }
+
+    func test_unlink() throws {
+        let testCases = [
+            MockTestCase(name: "unlink", .noInterrupt, "path") { _ in
+                try Syscall.unlink(path: "path").get()
+            }
+        ]
+        testCases.run()
     }
 
     func test_symlink() throws {
@@ -288,7 +306,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_renameat2() throws {
-        #if canImport(Glibc)
+        #if canImport(Glibc) || canImport(Bionic)
         let fd1 = FileDescriptor(rawValue: 13)
         let fd2 = FileDescriptor(rawValue: 42)
 
@@ -337,7 +355,7 @@ final class SyscallTests: XCTestCase {
     }
 
     func test_sendfile() throws {
-        #if canImport(Glibc)
+        #if canImport(Glibc) || canImport(Bionic)
         let input = FileDescriptor(rawValue: 42)
         let output = FileDescriptor(rawValue: 1)
 
@@ -371,6 +389,20 @@ final class SyscallTests: XCTestCase {
         #endif
     }
 
+    func test_copyfile() throws {
+        #if canImport(Darwin)
+
+        let testCases: [MockTestCase] = [
+            MockTestCase(name: "copyfile", .noInterrupt, "foo", "bar", "nil", 0) { _ in
+                try Libc.copyfile(from: "foo", to: "bar", state: nil, flags: 0).get()
+            }
+        ]
+        testCases.run()
+        #else
+        throw XCTSkip("'copyfile' is only supported on Darwin")
+        #endif
+    }
+
     func test_remove() throws {
         let testCases: [MockTestCase] = [
             MockTestCase(name: "remove", .noInterrupt, "somepath") { _ in
@@ -378,6 +410,22 @@ final class SyscallTests: XCTestCase {
             }
         ]
         testCases.run()
+    }
+
+    func test_futimens() throws {
+        let fd = FileDescriptor(rawValue: 42)
+        let times = timespec(tv_sec: 1, tv_nsec: 1)
+        withUnsafePointer(to: times) { unsafeTimesPointer in
+            let testCases = [
+                MockTestCase(name: "futimens", .noInterrupt, 42, unsafeTimesPointer) { _ in
+                    try Syscall.futimens(
+                        fileDescriptor: fd,
+                        times: unsafeTimesPointer
+                    ).get()
+                }
+            ]
+            testCases.run()
+        }
     }
 
     func testValueOrErrno() throws {

@@ -44,7 +44,7 @@ final class ExecuteBenchmark: Benchmark {
         }.wait()
     }
 
-    func tearDown() { }
+    func tearDown() {}
 
     func run() -> Int {
         try! self.loop.submit {

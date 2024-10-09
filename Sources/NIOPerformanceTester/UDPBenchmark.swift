@@ -45,9 +45,9 @@ extension UDPBenchmark: Benchmark {
         let address = try SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0)
         self.server = try DatagramBootstrap(group: group)
             // zero is the same as not applying the option.
-            .channelOption(ChannelOptions.datagramVectorReadMessageCount, value: self.vectorReads)
+            .channelOption(.datagramVectorReadMessageCount, value: self.vectorReads)
             .channelInitializer { channel in
-                return channel.pipeline.addHandler(EchoHandler())
+                channel.pipeline.addHandler(EchoHandler())
             }
             .bind(to: address)
             .wait()
@@ -56,13 +56,17 @@ extension UDPBenchmark: Benchmark {
 
         self.client = try DatagramBootstrap(group: group)
             // zero is the same as not applying the option.
-            .channelOption(ChannelOptions.datagramVectorReadMessageCount, value: self.vectorReads)
+            .channelOption(.datagramVectorReadMessageCount, value: self.vectorReads)
             .channelInitializer { channel in
-                let handler = EchoHandlerClient(eventLoop: channel.eventLoop,
-                                                config: .init(remoteAddress: remoteAddress,
-                                                              request: self.data,
-                                                              requests: self.numberOfRequests,
-                                                              writesPerFlush: self.vectorWrites))
+                let handler = EchoHandlerClient(
+                    eventLoop: channel.eventLoop,
+                    config: .init(
+                        remoteAddress: remoteAddress,
+                        request: self.data,
+                        requests: self.numberOfRequests,
+                        writesPerFlush: self.vectorWrites
+                    )
+                )
                 return channel.pipeline.addHandler(handler)
             }
             .bind(to: address)
@@ -81,7 +85,6 @@ extension UDPBenchmark: Benchmark {
         return self.vectorReads &+ self.vectorWrites
     }
 }
-
 
 extension UDPBenchmark {
     final class EchoHandler: ChannelInboundHandler {
@@ -241,7 +244,7 @@ extension UDPBenchmark {
             self.state.run(requests: self.config.requests, writesPerFlush: self.config.writesPerFlush, promise: promise)
             let context = self.context!
 
-            for _ in 0 ..< self.config.writesPerFlush {
+            for _ in 0..<self.config.writesPerFlush {
                 self.maybeSend(context: context)
             }
         }
@@ -251,8 +254,11 @@ extension UDPBenchmark {
             case .doNothing:
                 ()
             case let .write(flush):
-                let envolope = AddressedEnvelope<ByteBuffer>(remoteAddress: self.config.remoteAddress, data: self.config.request)
-                context.write(self.wrapOutboundOut(envolope), promise: nil)
+                let envolope = AddressedEnvelope<ByteBuffer>(
+                    remoteAddress: self.config.remoteAddress,
+                    data: self.config.request
+                )
+                context.write(Self.wrapOutboundOut(envolope), promise: nil)
                 if flush {
                     context.flush()
                 }

@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIOCore
 import NIOEmbedded
+import XCTest
+
+@testable import NIOCore
 @testable import NIOHTTP1
 
 private final class TestChannelInboundHandler: ChannelInboundHandler {
@@ -28,10 +29,9 @@ private final class TestChannelInboundHandler: ChannelInboundHandler {
     }
 
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        context.fireChannelRead(self.wrapInboundOut(self.body(self.unwrapInboundIn(data))))
+        context.fireChannelRead(Self.wrapInboundOut(self.body(Self.unwrapInboundIn(data))))
     }
 }
-
 
 class HTTPTest: XCTestCase {
 
@@ -72,7 +72,12 @@ class HTTPTest: XCTestCase {
             return s
         }
 
-        func sendAndCheckRequests(_ expecteds: [HTTPRequestHead], body: String?, trailers: HTTPHeaders?, sendStrategy: (String, EmbeddedChannel) -> EventLoopFuture<Void>) throws -> String? {
+        func sendAndCheckRequests(
+            _ expecteds: [HTTPRequestHead],
+            body: String?,
+            trailers: HTTPHeaders?,
+            sendStrategy: (String, EmbeddedChannel) -> EventLoopFuture<Void>
+        ) throws -> String? {
             var step = 0
             var index = 0
             let channel = EmbeddedChannel()
@@ -82,27 +87,29 @@ class HTTPTest: XCTestCase {
             try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder()))
             var bodyData: [UInt8]? = nil
             var allBodyDatas: [[UInt8]] = []
-            try channel.pipeline.addHandler(TestChannelInboundHandler { reqPart in
-                switch reqPart {
-                case .head(var req):
-                    XCTAssertEqual((index * 2), step)
-                    req.headers.remove(name: "Content-Length")
-                    req.headers.remove(name: "Transfer-Encoding")
-                    XCTAssertEqual(expecteds[index], req)
-                    step += 1
-                case .body(var buffer):
-                    if bodyData == nil {
-                        bodyData = buffer.readBytes(length: buffer.readableBytes)!
-                    } else {
-                        bodyData!.append(contentsOf: buffer.readBytes(length: buffer.readableBytes)!)
+            try channel.pipeline.addHandler(
+                TestChannelInboundHandler { reqPart in
+                    switch reqPart {
+                    case .head(var req):
+                        XCTAssertEqual((index * 2), step)
+                        req.headers.remove(name: "Content-Length")
+                        req.headers.remove(name: "Transfer-Encoding")
+                        XCTAssertEqual(expecteds[index], req)
+                        step += 1
+                    case .body(var buffer):
+                        if bodyData == nil {
+                            bodyData = buffer.readBytes(length: buffer.readableBytes)!
+                        } else {
+                            bodyData!.append(contentsOf: buffer.readBytes(length: buffer.readableBytes)!)
+                        }
+                    case .end(let receivedTrailers):
+                        XCTAssertEqual(trailers, receivedTrailers)
+                        step += 1
+                        XCTAssertEqual(((index + 1) * 2), step)
                     }
-                case .end(let receivedTrailers):
-                    XCTAssertEqual(trailers, receivedTrailers)
-                    step += 1
-                    XCTAssertEqual(((index + 1) * 2), step)
+                    return reqPart
                 }
-                return reqPart
-            }).wait()
+            ).wait()
 
             var writeFutures: [EventLoopFuture<Void>] = []
             for expected in expecteds {
@@ -130,28 +137,40 @@ class HTTPTest: XCTestCase {
             }
         }
 
-        /* send all bytes in one go */
-        let bd1 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
-            var buf = chan.allocator.buffer(capacity: 1024)
-            buf.writeString(reqString)
-            return chan.eventLoop.makeSucceededFuture(()).flatMapThrowing {
-                try chan.writeInbound(buf)
-            }
-        })
-
-        /* send the bytes one by one */
-        let bd2 = try sendAndCheckRequests(expecteds, body: body, trailers: trailers, sendStrategy: { (reqString, chan) in
-            var writeFutures: [EventLoopFuture<Void>] = []
-            for c in reqString {
+        // send all bytes in one go
+        let bd1 = try sendAndCheckRequests(
+            expecteds,
+            body: body,
+            trailers: trailers,
+            sendStrategy: { (reqString, chan) in
                 var buf = chan.allocator.buffer(capacity: 1024)
-
-                buf.writeString("\(c)")
-                writeFutures.append(chan.eventLoop.makeSucceededFuture(()).flatMapThrowing { [buf] in
+                buf.writeString(reqString)
+                return chan.eventLoop.makeSucceededFuture(()).flatMapThrowing {
                     try chan.writeInbound(buf)
-                })
+                }
             }
-            return EventLoopFuture.andAllSucceed(writeFutures, on: chan.eventLoop)
-        })
+        )
+
+        // send the bytes one by one
+        let bd2 = try sendAndCheckRequests(
+            expecteds,
+            body: body,
+            trailers: trailers,
+            sendStrategy: { (reqString, chan) in
+                var writeFutures: [EventLoopFuture<Void>] = []
+                for c in reqString {
+                    var buf = chan.allocator.buffer(capacity: 1024)
+
+                    buf.writeString("\(c)")
+                    writeFutures.append(
+                        chan.eventLoop.makeSucceededFuture(()).flatMapThrowing { [buf] in
+                            try chan.writeInbound(buf)
+                        }
+                    )
+                }
+                return EventLoopFuture.andAllSucceed(writeFutures, on: chan.eventLoop)
+            }
+        )
 
         XCTAssertEqual(bd1, bd2)
         XCTAssertEqual(body, bd1)
@@ -187,27 +206,42 @@ class HTTPTest: XCTestCase {
     }
 
     func testHTTPBody() throws {
-        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
-                             body: "hello world")
+        try checkHTTPRequest(
+            HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
+            body: "hello world"
+        )
     }
 
     func test1ByteHTTPBody() throws {
-        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
-                             body: "1")
+        try checkHTTPRequest(
+            HTTPRequestHead(version: .http1_1, method: .GET, uri: "/"),
+            body: "1"
+        )
     }
 
     func testHTTPPipeliningWithBody() throws {
-        try checkHTTPRequests(Array(repeating: HTTPRequestHead(version: .http1_1,
-                                                               method: .GET, uri: "/"),
-                                    count: 20),
-                             body: "1")
+        try checkHTTPRequests(
+            Array(
+                repeating: HTTPRequestHead(
+                    version: .http1_1,
+                    method: .GET,
+                    uri: "/"
+                ),
+                count: 20
+            ),
+            body: "1"
+        )
     }
 
     func testChunkedBody() throws {
         var trailers = HTTPHeaders()
         trailers.add(name: "X-Key", value: "X-Value")
         trailers.add(name: "Something", value: "Else")
-        try checkHTTPRequest(HTTPRequestHead(version: .http1_1, method: .POST, uri: "/"), body: "100", trailers: trailers)
+        try checkHTTPRequest(
+            HTTPRequestHead(version: .http1_1, method: .POST, uri: "/"),
+            body: "100",
+            trailers: trailers
+        )
     }
 
     func testHTTPRequestHeadCoWWorks() throws {
