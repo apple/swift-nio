@@ -322,7 +322,9 @@ extension ReadableFileHandleProtocol {
     ///
     /// - Important: This method checks whether the file is seekable or not (i.e., whether it's a socket,
     /// pipe or FIFO), and will throw ``FileSystemError/Code-swift.struct/unsupported`` if
-    /// an offset other than zero is passed.
+    /// an offset other than zero is passed. Also, it will throw
+    /// ``FileSystemError/Code-swift.struct/resourceExhausted`` if `maximumSizeAllowed` is more than can be
+    /// written to `ByteBuffer`.
     ///
     /// - Parameters:
     ///   - offset: The absolute offset into the file to read from. Defaults to zero.
@@ -339,6 +341,19 @@ extension ReadableFileHandleProtocol {
         let info = try await self.info()
         let fileSize = Int64(info.size)
         let readSize = max(Int(fileSize - offset), 0)
+
+        if maximumSizeAllowed > .byteBufferCapacity {
+            throw FileSystemError(
+                code: .resourceExhausted,
+                message: """
+                    The maximum size allowed (\(maximumSizeAllowed)) is more than the maximum \
+                    amount of bytes that can be written to ByteBuffer \
+                    (\(ByteCount.byteBufferCapacity)).
+                    """,
+                cause: nil,
+                location: .here()
+            )
+        }
 
         if readSize > maximumSizeAllowed.bytes {
             throw FileSystemError(
