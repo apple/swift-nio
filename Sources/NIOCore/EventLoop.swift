@@ -754,12 +754,6 @@ extension EventLoop {
     @inlinable
     @preconcurrency
     public func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
-        _submit(task)
-    }
-    @usableFromInline typealias SubmitCallback<T> = @Sendable () throws -> T
-
-    @inlinable
-    func _submit<T>(_ task: @escaping SubmitCallback<T>) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = makePromise(file: #fileID, line: #line)
 
         self.execute {
@@ -783,17 +777,14 @@ extension EventLoop {
     /// - returns: An `EventLoopFuture` identical to the `EventLoopFuture` returned from `task`.
     @inlinable
     @preconcurrency
-    public func flatSubmit<T>(_ task: @escaping @Sendable () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
-        self._flatSubmit(task)
-    }
-    @usableFromInline typealias FlatSubmitCallback<T> = @Sendable () -> EventLoopFuture<T>
-
-    @inlinable
-    func _flatSubmit<T>(_ task: @escaping FlatSubmitCallback<T>) -> EventLoopFuture<T> {
+    public func flatSubmit<T: Sendable>(_ task: @escaping @Sendable () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
         self.submit(task).flatMap { $0 }
     }
 
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
+    ///
+    /// - Note: The `T` must be `Sendable` since the isolation domains of the event loop future returned from `task` and
+    /// this event loop might differ.
     ///
     /// - parameters:
     ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
@@ -804,23 +795,11 @@ extension EventLoop {
     @discardableResult
     @inlinable
     @preconcurrency
-    public func flatScheduleTask<T>(
+    public func flatScheduleTask<T: Sendable>(
         deadline: NIODeadline,
         file: StaticString = #fileID,
         line: UInt = #line,
         _ task: @escaping @Sendable () throws -> EventLoopFuture<T>
-    ) -> Scheduled<T> {
-        self._flatScheduleTask(deadline: deadline, file: file, line: line, task)
-    }
-    @usableFromInline typealias FlatScheduleTaskDeadlineCallback<T> = () throws -> EventLoopFuture<T>
-
-    @discardableResult
-    @inlinable
-    func _flatScheduleTask<T>(
-        deadline: NIODeadline,
-        file: StaticString,
-        line: UInt,
-        _ task: @escaping FlatScheduleTaskDelayCallback<T>
     ) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
@@ -831,6 +810,9 @@ extension EventLoop {
 
     /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
     ///
+    /// - Note: The `T` must be `Sendable` since the isolation domains of the event loop future returned from `task` and
+    /// this event loop might differ.
+    ///
     /// - parameters:
     ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
@@ -840,7 +822,7 @@ extension EventLoop {
     @discardableResult
     @inlinable
     @preconcurrency
-    public func flatScheduleTask<T>(
+    public func flatScheduleTask<T: Sendable>(
         in delay: TimeAmount,
         file: StaticString = #fileID,
         line: UInt = #line,
@@ -852,7 +834,7 @@ extension EventLoop {
     @usableFromInline typealias FlatScheduleTaskDelayCallback<T> = @Sendable () throws -> EventLoopFuture<T>
 
     @inlinable
-    func _flatScheduleTask<T>(
+    func _flatScheduleTask<T: Sendable>(
         in delay: TimeAmount,
         file: StaticString,
         line: UInt,
@@ -1003,7 +985,7 @@ extension EventLoop {
         notifying promise: EventLoopPromise<Void>?,
         _ task: @escaping ScheduleRepeatedTaskCallback
     ) -> RepeatedTask {
-        let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
+        let futureTask: @Sendable (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
                 try task(repeatedTask)
                 return self.makeSucceededFuture(())
