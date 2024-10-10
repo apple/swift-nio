@@ -1154,9 +1154,9 @@ class ChannelPipelineTest: XCTestCase {
         let secondContext = try! channel.pipeline.syncOperations.context(name: "the second one to remove")
         let lastContext = try! channel.pipeline.syncOperations.context(name: "the last one to remove")
 
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(context: firstContext).wait())
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(context: secondContext).wait())
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(context: lastContext).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(context: firstContext).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(context: secondContext).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(context: lastContext).wait())
 
         for handler in allHandlers {
             XCTAssertTrue(handler.removeHandlerCalled)
