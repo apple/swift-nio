@@ -93,6 +93,11 @@ extension ByteCount {
 
         return ByteCount(bytes: Int64(byteBufferMaxIndex))
     }
+
+    /// A ``ByteCount`` for an unlimited amount of bytes.
+    public static var unlimited: ByteCount {
+        ByteCount(bytes: .max)
+    }
 }
 
 extension ByteCount: AdditiveArithmetic {
