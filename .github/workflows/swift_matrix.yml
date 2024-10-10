@@ -44,17 +44,17 @@ on:
       matrix_linux_5_10_command_override:
         type: string
         description: "The command of the 5.10 Swift version linux matrix job to execute."
-      matrix_linux_nightly_6_0_enabled:
+      matrix_linux_6_0_enabled:
         type: boolean
-        description: "Boolean to enable the nightly 6.0 Swift version matrix job. Defaults to true."
+        description: "Boolean to enable the 6.0 Swift version matrix job. Defaults to true."
         default: true
-      matrix_linux_nightly_6_0_container_image:
+      matrix_linux_6_0_container_image:
         type: string
-        description: "Container image for the nightly 6.0 Swift version matrix job. Defaults to matching Swift Ubuntu image."
-        default: "swiftlang/swift:nightly-6.0-jammy"
-      matrix_linux_nightly_6_0_command_override:
+        description: "Container image for the 6.0 Swift version matrix job. Defaults to matching Swift Ubuntu image."
+        default: "swift:6.0-jammy"
+      matrix_linux_6_0_command_override:
         type: string
-        description: "The command of the nightly 6.0 Swift version linux matrix job to execute."
+        description: "The command of the 6.0 Swift version linux matrix job to execute."
       matrix_linux_nightly_main_enabled:
         type: boolean
         description: "Boolean to enable the nightly main Swift version matrix job. Defaults to true."
@@ -90,9 +90,9 @@ jobs:
         - image: ${{ inputs.matrix_linux_5_10_container_image }}
           swift_version: "5.10"
           enabled: ${{ inputs.matrix_linux_5_10_enabled }}
-        - image: ${{ inputs.matrix_linux_nightly_6_0_container_image }}
-          swift_version: "nightly-6.0"
-          enabled: ${{ inputs.matrix_linux_nightly_6_0_enabled }}
+        - image: ${{ inputs.matrix_linux_6_0_container_image }}
+          swift_version: "6.0"
+          enabled: ${{ inputs.matrix_linux_6_0_enabled }}
         - image: ${{ inputs.matrix_linux_nightly_main_container_image }}
           swift_version: "nightly-main"
           enabled: ${{ inputs.matrix_linux_nightly_main_enabled }}
@@ -116,7 +116,7 @@ jobs:
         COMMAND_OVERRIDE_5_8: ${{ inputs.matrix_linux_5_8_command_override }}
         COMMAND_OVERRIDE_5_9: ${{ inputs.matrix_linux_5_9_command_override }}
         COMMAND_OVERRIDE_5_10: ${{ inputs.matrix_linux_5_10_command_override }}
-        COMMAND_OVERRIDE_NIGHTLY_6_0: ${{ inputs.matrix_linux_nightly_6_0_command_override }}
+        COMMAND_OVERRIDE_6_0: ${{ inputs.matrix_linux_6_0_command_override }}
         COMMAND_OVERRIDE_NIGHTLY_MAIN: ${{ inputs.matrix_linux_nightly_main_command_override }}
       run: |
         apt-get -qq update && apt-get -qq -y install curl
