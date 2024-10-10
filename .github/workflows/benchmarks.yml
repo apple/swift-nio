@@ -3,44 +3,44 @@ name: Benchmarks
 on:
   workflow_call:
     inputs:
-        benchmark_package_path:
-            type: string
-            description: "Path to the directory containing the benchmarking package. Defaults to ."
-            default: "."
-        swift_package_arguments:
-            type: string
-            description: "Arguments to the switch package command invocation e.g. `--disable-sandbox`"
-        linux_5_8_enabled:
-            type: boolean
-            description: "Boolean to enable the Linux 5.8 Swift version matrix job. Defaults to true."
-            default: true
-        linux_5_9_enabled:
-            type: boolean
-            description: "Boolean to enable the Linux 5.9 Swift version matrix job. Defaults to true."
-            default: true
-        linux_5_10_enabled:
-            type: boolean
-            description: "Boolean to enable the Linux 5.10 Swift version matrix job. Defaults to true."
-            default: true
-        linux_nightly_6_0_enabled:
-            type: boolean
-            description: "Boolean to enable the Linux nightly 6.0 Swift version matrix job. Defaults to true."
-            default: true
-        linux_nightly_main_enabled:
-            type: boolean
-            description: "Boolean to enable the Linux nightly main Swift version matrix job. Defaults to true."
-            default: true
- 
+      benchmark_package_path:
+        type: string
+        description: "Path to the directory containing the benchmarking package. Defaults to ."
+        default: "."
+      swift_package_arguments:
+        type: string
+        description: "Arguments to the switch package command invocation e.g. `--disable-sandbox`"
+      linux_5_8_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux 5.8 Swift version matrix job. Defaults to true."
+        default: true
+      linux_5_9_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux 5.9 Swift version matrix job. Defaults to true."
+        default: true
+      linux_5_10_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux 5.10 Swift version matrix job. Defaults to true."
+        default: true
+      linux_nightly_6_0_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux nightly 6.0 Swift version matrix job. Defaults to true."
+        default: true
+      linux_nightly_main_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux nightly main Swift version matrix job. Defaults to true."
+        default: true
+
 jobs:
-    benchmarks:
-        name: Benchmarks
-        # Workaround https://github.com/nektos/act/issues/1875
-        uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
-        with:
-          name: "Benchmarks"
-          matrix_linux_command: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev && swift package --package-path ${{ inputs.benchmark_package_path }} ${{ inputs.swift_package_arguments }} benchmark baseline check --check-absolute-path ${{ inputs.benchmark_package_path }}/Thresholds/${SWIFT_VERSION}/"
-          matrix_linux_5_8_enabled: ${{ inputs.linux_5_8_enabled }}
-          matrix_linux_5_9_enabled: ${{ inputs.linux_5_9_enabled }}
-          matrix_linux_5_10_enabled: ${{ inputs.linux_5_10_enabled }}
-          matrix_linux_nightly_6_0_enabled: ${{ inputs.linux_nightly_6_0_enabled }}
-          matrix_linux_nightly_main_enabled: ${{ inputs.linux_nightly_main_enabled }}
+  benchmarks:
+    name: Benchmarks
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
+    with:
+      name: "Benchmarks"
+      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev && swift package --package-path ${{ inputs.benchmark_package_path }} ${{ inputs.swift_package_arguments }} benchmark baseline check --check-absolute-path ${{ inputs.benchmark_package_path }}/Thresholds/${SWIFT_VERSION}/"
+      matrix_linux_5_8_enabled: ${{ inputs.linux_5_8_enabled }}
+      matrix_linux_5_9_enabled: ${{ inputs.linux_5_9_enabled }}
+      matrix_linux_5_10_enabled: ${{ inputs.linux_5_10_enabled }}
+      matrix_linux_nightly_6_0_enabled: ${{ inputs.linux_nightly_6_0_enabled }}
+      matrix_linux_nightly_main_enabled: ${{ inputs.linux_nightly_main_enabled }}
