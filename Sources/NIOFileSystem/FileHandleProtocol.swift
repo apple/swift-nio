@@ -322,18 +322,15 @@ extension ReadableFileHandleProtocol {
     ///
     /// - Important: This method checks whether the file is seekable or not (i.e., whether it's a socket,
     /// pipe or FIFO), and will throw ``FileSystemError/Code-swift.struct/unsupported`` if
-    /// an offset other than zero is passed. Also, it will throw
-    /// ``FileSystemError/Code-swift.struct/resourceExhausted`` if `maximumSizeAllowed` is more than can be
-    /// written to `ByteBuffer`.
+    /// an offset other than zero is passed.
     ///
     /// - Parameters:
     ///   - offset: The absolute offset into the file to read from. Defaults to zero.
     ///   - maximumSizeAllowed: The maximum size of file to read, as a ``ByteCount``.
     /// - Returns: The bytes read from the file.
-    /// - Throws: ``FileSystemError`` with code ``FileSystemError/Code-swift.struct/resourceExhausted`` if there
-    ///     are more bytes to read than `maximumBytesAllowed`.
-    ///     ``FileSystemError/Code-swift.struct/unsupported`` if file is unseekable and
-    ///     `offset` is not 0.
+    /// - Throws: ``FileSystemError`` with code ``FileSystemError/Code-swift.struct/resourceExhausted``
+    /// if `maximumSizeAllowed` is more than can be written to `ByteBuffer`. Or if there are more bytes to read than
+    /// `maximumBytesAllowed`.
     public func readToEnd(
         fromAbsoluteOffset offset: Int64 = 0,
         maximumSizeAllowed: ByteCount
@@ -348,7 +345,8 @@ extension ReadableFileHandleProtocol {
                 message: """
                     The maximum size allowed (\(maximumSizeAllowed)) is more than the maximum \
                     amount of bytes that can be written to ByteBuffer \
-                    (\(ByteCount.byteBufferCapacity)).
+                    (\(ByteCount.byteBufferCapacity)). You can read the file in smaller chunks by \
+                    calling readChunks().
                     """,
                 cause: nil,
                 location: .here()
