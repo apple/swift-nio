@@ -335,6 +335,11 @@ extension ReadableFileHandleProtocol {
         fromAbsoluteOffset offset: Int64 = 0,
         maximumSizeAllowed: ByteCount
     ) async throws -> ByteBuffer {
+        var maximumSizeAllowed = maximumSizeAllowed
+        if maximumSizeAllowed == .unlimited {
+            maximumSizeAllowed = .byteBufferCapacity
+        }
+
         let info = try await self.info()
         let fileSize = Int64(info.size)
         let readSize = max(Int(fileSize - offset), 0)

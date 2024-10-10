@@ -52,6 +52,11 @@ class ByteCountTests: XCTestCase {
         XCTAssertEqual(byteCount.bytes, 10_737_418_240)
     }
 
+    func testByteCountUnlimited() {
+        let byteCount = ByteCount.unlimited
+        XCTAssertEqual(byteCount.bytes, .max)
+    }
+
     func testByteCountEquality() {
         let byteCount1 = ByteCount.bytes(10)
         let byteCount2 = ByteCount.bytes(20)
