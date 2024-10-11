@@ -1,25 +1,25 @@
 name: Swift 6 language mode
 
 on:
-    workflow_call:
+  workflow_call:
 
-## We are cancelling previously triggered workflow runs
+# We are cancelling previously triggered workflow runs
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}-swift-6-language-mode
-    cancel-in-progress: true
- 
+  group: ${{ github.workflow }}-${{ github.ref }}-swift-6-language-mode
+  cancel-in-progress: true
+
 jobs:
-    swift-6-language-mode:
-        name: Swift 6 language mode
-        runs-on: ubuntu-latest
-        container:
-            image: swiftlang/swift:nightly-6.0-jammy
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  persist-credentials: false
-            - name: Set the language mode
-              run: swift package tools-version --set 6.0
-            - name: Build with Swift 6 language mode
-              run: swift build -Xswiftc -warnings-as-errors
+  swift-6-language-mode:
+    name: Swift 6 language mode
+    runs-on: ubuntu-latest
+    container:
+      image: swiftlang/swift:nightly-6.0-jammy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set the language mode
+        run: swift package tools-version --set 6.0
+      - name: Build with Swift 6 language mode
+        run: swift build -Xswiftc -warnings-as-errors
