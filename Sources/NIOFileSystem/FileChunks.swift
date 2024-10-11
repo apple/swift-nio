@@ -109,7 +109,7 @@ where
         let producer = FileChunkProducer(
             range: range,
             handle: handle,
-            length: chunkLength
+            chunkLength: chunkLength
         )
 
         let nioThrowingAsyncSequence = NIOThrowingAsyncSequenceProducer.makeSequence(
@@ -133,9 +133,9 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
     let state: NIOLockedValueBox<ProducerState>
 
     let path: FilePath
-    let length: Int64
+    let chunkLength: Int64
 
-    init(range: FileChunks.ChunkRange, handle: SystemFileHandle, length: Int64) {
+    init(range: FileChunks.ChunkRange, handle: SystemFileHandle, chunkLength: Int64) {
         let state: ProducerState
         switch range {
         case .entireFile:
@@ -146,7 +146,7 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
 
         self.state = NIOLockedValueBox(state)
         self.path = handle.path
-        self.length = length
+        self.chunkLength = chunkLength
     }
 
     /// sets the source within the producer state
@@ -177,32 +177,68 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
     /// is signaled via the stream's 'onTermination' handler.
     func produceMore() {
         let threadPool = self.state.withLockedValue { state in
-            state.shouldProduceMore()
+            state.activeThreadPool()
         }
-
-        // No executor means we're done.
+        // No thread pool means we're done.
         guard let threadPool = threadPool else { return }
 
-        threadPool.submit {
-            let result: Result<ByteBuffer, Error>
-            switch $0 {
-            case .active:
-                result = Result { try self.readNextChunk() }
-            case .cancelled:
-                result = .failure(CancellationError())
+        threadPool.submit { workItemState in
+            // update state to reflect that we have been requested to perform a read
+            // the read may be performed immediately, queued to be performed later or ignored
+            let requestedReadAction = self.state.withLockedValue { state in
+                state.requestedProduceMore()
             }
-            self.onReadNextChunkResult(result)
+
+            switch requestedReadAction {
+            case .performRead:
+                let result: Result<ByteBuffer, Error>
+                switch workItemState {
+                case .active:
+                    result = Result { try self.readNextChunk() }
+                case .cancelled:
+                    result = .failure(CancellationError())
+                }
+
+                switch result {
+                case let .success(bytes):
+                    self.didReadNextChunk(bytes)
+                case let .failure(error):
+                    // Failed to read: update our state then notify the stream so consumers receive the
+                    // error.
+                    let source = self.state.withLockedValue { state in
+                        state.done()
+                        return state.source
+                    }
+                    source?.finish(error)
+                    self.clearSource()
+                }
+
+            case .stop:
+                return
+            }
+
+            let performedReadAction = self.state.withLockedValue { state in
+                return state.performedProduceMore()
+            }
+
+            switch performedReadAction {
+            case .readMore:
+                self.produceMore()
+            case .stop:
+                return
+            }
+
         }
     }
 
     private func readNextChunk() throws -> ByteBuffer {
-        try self.state.withLockedValue { state in
-            state.produceMore()
+        return try self.state.withLockedValue { state in
+            state.fileReadingState()
         }.flatMap {
             if let (descriptor, range) = $0 {
                 if let range {
                     let remainingBytes = range.upperBound - range.lowerBound
-                    let clampedLength = min(self.length, remainingBytes)
+                    let clampedLength = min(self.chunkLength, remainingBytes)
                     return descriptor.readChunk(
                         fromAbsoluteOffset: range.lowerBound,
                         length: clampedLength
@@ -210,7 +246,7 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
                         .read(usingSyscall: .pread, error: error, path: self.path, location: .here())
                     }
                 } else {
-                    return descriptor.readChunk(length: self.length).mapError { error in
+                    return descriptor.readChunk(length: self.chunkLength).mapError { error in
                         .read(usingSyscall: .read, error: error, path: self.path, location: .here())
                     }
                 }
@@ -221,63 +257,45 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
         }.get()
     }
 
-    private func onReadNextChunkResult(_ result: Result<ByteBuffer, Error>) {
-        switch result {
-        case let .success(bytes):
-            self.onReadNextChunk(bytes)
-        case let .failure(error):
-            // Failed to read: update our state then notify the stream so consumers receive the
-            // error.
+    private func didReadNextChunk(_ buffer: ByteBuffer) {
+        let chunkLength = self.chunkLength
+        assert(buffer.readableBytes <= chunkLength)
 
-            let source = self.state.withLockedValue { state in
-                state.done()
-                return state.source
+        let (source, initialState): (FileChunkSequenceProducer.Source?, ProducerState.State) = self.state.withLockedValue { state in
+            state.didReadBytes(buffer.readableBytes)
+
+            // finishing short indicates the file is done
+            if buffer.readableBytes < chunkLength {
+                state.state = .done(emptyRange: false)
             }
-            source?.finish(error)
-            self.clearSource()
-        }
-    }
-
-    private func onReadNextChunk(_ buffer: ByteBuffer) {
-        // Reading short means EOF.
-        let readEOF = buffer.readableBytes < self.length
-        assert(buffer.readableBytes <= self.length)
-
-        let source = self.state.withLockedValue { state in
-            if readEOF {
-                state.didReadEnd()
-            } else {
-                state.didReadBytes(buffer.readableBytes)
-            }
-            return state.source
+            return (state.source, state.state)
         }
 
         guard let source else {
-            assertionFailure("unexpectedly missing source")
             return
         }
 
-        // No bytes were read: this must be the end as length is required to be greater than zero.
+        // No bytes were produced, nothing more to do.
         if buffer.readableBytes == 0 {
-            assert(readEOF, "read zero bytes but did not read EOF")
+            source.finish()
+            self.clearSource()
+        }
+
+        // Yield bytes and maybe produce more.
+        let yieldResult = source.yield(contentsOf: CollectionOfOne(buffer))
+
+        switch initialState {
+        case .done:
             source.finish()
             self.clearSource()
             return
+        case .producing, .pausedProducing:
+            ()
         }
 
-        // Bytes were produced: yield them and maybe produce more.
-        let writeResult = source.yield(contentsOf: CollectionOfOne(buffer))
-
-        // Exit early if EOF was read; no use in trying to produce more.
-        if readEOF {
-            source.finish()
-            self.clearSource()
-            return
-        }
-
-        switch writeResult {
+        switch yieldResult {
         case .produceMore:
-            self.produceMore()
+            ()
         case .stopProducing:
             self.state.withLockedValue { state in state.pauseProducing() }
         case .dropped:
@@ -296,6 +314,18 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 private struct ProducerState: Sendable {
     fileprivate struct Producing {
+        /// Possible states for activity relating to performing a read from disk
+        internal enum ActivityState {
+            /// The producer is not currently performing a read from disk
+            case inactive
+            /// The producer is in the critical section for reading from disk
+            case active
+            /// The producer is in the critical section for reading from disk and a further read has been requested.
+            /// This can happen e.g. if a sequence indicates that production should be paused then unpauses and calls
+            /// back into the code before the initial read block has exited.
+            case activeAndQueued
+        }
+
         /// The handle to read from.
         var handle: SystemFileHandle.SendableView
 
@@ -304,6 +334,10 @@ private struct ProducerState: Sendable {
         /// The upper bound should be used to check if producer should stop.
         /// If no range is present, then read entire file.
         var range: Range<Int64>?
+
+        /// Keep track of whether or not we are currently actively engaged in a read
+        /// to protect against re-entrant behavior.
+        var activityState: ActivityState = .inactive
     }
 
     internal enum State {
@@ -329,33 +363,122 @@ private struct ProducerState: Sendable {
         }
     }
 
-    mutating func shouldProduceMore() -> NIOThreadPool? {
+    /// Actions which may be taken after 'produce more' is requested.
+    ///
+    /// Either perform the read immediately or (optionally queue the read then) stop.
+    internal enum RequestedProduceMoreAction {
+        case performRead
+        case stop
+    }
+
+    /// Update state to reflect that 'produce more' has been requested.
+    mutating func requestedProduceMore() -> RequestedProduceMoreAction {
         switch self.state {
-        case let .producing(state):
-            return state.handle.threadPool
-        case .pausedProducing:
-            return nil
+        case .producing(var producingState):
+            switch producingState.activityState {
+            case .inactive:
+                producingState.activityState = .active
+                self.state = .producing(producingState)
+                return .performRead
+            case .active:
+                producingState.activityState = .activeAndQueued
+                self.state = .producing(producingState)
+                return .stop
+            case .activeAndQueued:
+                return .stop
+            }
+
+        case .pausedProducing(var producingState):
+            switch producingState.activityState {
+            case .inactive:
+                producingState.activityState = .active
+                self.state = .producing(producingState)
+                return .performRead
+            case .active:
+                producingState.activityState = .activeAndQueued
+                self.state = .pausedProducing(producingState)
+                return .stop
+            case .activeAndQueued:
+                return .stop
+            }
+
+        case .done:
+            return .stop
+        }
+    }
+
+    /// Actions which may be taken after a more data is produced.
+    ///
+    /// Either go on to read more or stop.
+    internal enum PerformedProduceMoreAction {
+        case readMore
+        case stop
+    }
+
+    /// Update state to reflect that a more data has been produced.
+    mutating func performedProduceMore() -> PerformedProduceMoreAction {
+        switch self.state {
+        case .producing(var producingState):
+            let oldActivityState = producingState.activityState
+
+            producingState.activityState = .inactive
+            self.state = .producing(producingState)
+
+            switch oldActivityState {
+            case .inactive:
+                preconditionFailure()
+            case .active, .activeAndQueued:
+                return .readMore
+            }
+
+        case .pausedProducing(var producingState):
+            let oldActivityState = producingState.activityState
+
+            producingState.activityState = .inactive
+            self.state = .pausedProducing(producingState)
+
+            switch oldActivityState {
+            case .inactive:
+                preconditionFailure()
+            case .active:
+                return .stop
+            case .activeAndQueued:
+                return .readMore
+            }
+
+        case .done:
+            return .stop
+        }
+    }
+
+    internal enum RangeUpdateOutcome {
+        case moreToRead
+        case cannotReadMore
+    }
+
+    mutating func activeThreadPool() -> NIOThreadPool? {
+        switch self.state {
+        case .producing(let producingState), .pausedProducing(let producingState):
+            return producingState.handle.threadPool
         case .done:
             return nil
         }
     }
 
-    mutating func produceMore() -> Result<(FileDescriptor, Range<Int64>?)?, FileSystemError> {
+    mutating func fileReadingState() -> Result<(FileDescriptor, Range<Int64>?)?, FileSystemError> {
         switch self.state {
-        case let .producing(state):
-            if let descriptor = state.handle.descriptorIfAvailable() {
-                return .success((descriptor, state.range))
-            } else {
+        case .producing(let producingState), .pausedProducing(let producingState):
+            guard let descriptor = producingState.handle.descriptorIfAvailable() else {
                 let error = FileSystemError(
                     code: .closed,
-                    message: "Cannot read from closed file ('\(state.handle.path)').",
+                    message: "Cannot read from closed file ('\(producingState.handle.path)').",
                     cause: nil,
                     location: .here()
                 )
                 return .failure(error)
             }
-        case .pausedProducing:
-            return .success(nil)
+
+            return .success((descriptor, producingState.range))
         case .done:
             return .success(nil)
         }
@@ -364,26 +487,19 @@ private struct ProducerState: Sendable {
     mutating func didReadBytes(_ count: Int) {
         switch self.state {
         case var .producing(state):
-            if state.didReadBytes(count) {
-                self.state = .done(emptyRange: false)
-            } else {
+            switch state.updateRangeWithReadBytes(count) {
+            case .moreToRead:
                 self.state = .producing(state)
+            case .cannotReadMore:
+                self.state = .done(emptyRange: false)
             }
         case var .pausedProducing(state):
-            if state.didReadBytes(count) {
-                self.state = .done(emptyRange: false)
-            } else {
+            switch state.updateRangeWithReadBytes(count) {
+            case .moreToRead:
                 self.state = .pausedProducing(state)
+            case .cannotReadMore:
+                self.state = .done(emptyRange: false)
             }
-        case .done:
-            ()
-        }
-    }
-
-    mutating func didReadEnd() {
-        switch self.state {
-        case .pausedProducing, .producing:
-            self.state = .done(emptyRange: false)
         case .done:
             ()
         }
@@ -408,10 +524,10 @@ extension ProducerState.Producing {
     /// Updates the range (the offsets to read from and up to) to reflect the number of bytes which have been read.
     /// - Parameter count: The number of bytes which have been read.
     /// - Returns: Returns `True` if there are no remaining bytes to read, `False` otherwise.
-    mutating func didReadBytes(_ count: Int) -> Bool {
+    mutating func updateRangeWithReadBytes(_ count: Int) -> ProducerState.RangeUpdateOutcome {
         guard let currentRange = self.range else {
-            // if we read 0 bytes we are done
-            return count == 0
+            // we are reading the whole file, just keep going
+            return .moreToRead
         }
 
         let newLowerBound = currentRange.lowerBound + Int64(count)
@@ -419,12 +535,15 @@ extension ProducerState.Producing {
         // we have run out of bytes to read, we are done
         if newLowerBound >= currentRange.upperBound {
             self.range = currentRange.upperBound..<currentRange.upperBound
-            return true
+            return .cannotReadMore
         }
 
         // update range, we are not done
         self.range = newLowerBound..<currentRange.upperBound
-        return false
+        if currentRange.upperBound - newLowerBound < 1 {
+            fatalError("here \(newLowerBound) \(currentRange.upperBound)")
+        }
+        return .moreToRead
     }
 }
 #endif
