@@ -1818,6 +1818,16 @@ extension FileSystemTests {
             }
         }
     }
+
+    func testReadWithUnlimitedMaximumSizeAllowed() async throws {
+        let path = try await self.fs.temporaryFilePath()
+
+        try await self.fs.withFileHandle(forReadingAndWritingAt: path) { fileHandle in
+            await XCTAssertNoThrowAsync(
+                try await fileHandle.readToEnd(maximumSizeAllowed: .unlimited)
+            )
+        }
+    }
 }
 
 #if !canImport(Darwin) && swift(<5.9.2)
