@@ -2,11 +2,6 @@ name: Swift 6 language mode
 
 on:
     workflow_call:
-
-## We are cancelling previously triggered workflow runs
-concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}-swift-6-language-mode
-    cancel-in-progress: true
  
 jobs:
     swift-6-language-mode:
