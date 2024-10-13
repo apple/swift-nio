@@ -1,6 +1,6 @@
 # Advanced performance analysis for CPU-bound programs
 
-Most performance problems can be handily debugged with [Instruments, `perf`, or FlameGraphs](https://github.com/swift-server/guides/blob/main/performance.md). At times however, there are changes in performance that are very hard to understand and sometimes very counter intuitive.
+Most performance problems can be handily debugged with [Instruments, `perf`, or FlameGraphs](https://github.com/swift-server/guides/blob/main/docs/performance.md). At times however, there are changes in performance that are very hard to understand and sometimes very counter intuitive.
 
 ## Motivating example (feel free to skip)
 A motivating example is [this pull request](https://github.com/apple/swift-nio/pull/1733) which is supposed to improve the performance of `ByteToMessageDecoder`s in very specific cases. The expectation would be that most performance tests remain the same and everything that uses a `ByteToMessageDecoder` either remains the same or becomes a little faster. Of course, all the low-level microbenchmarks that don't even use `ByteToMessageDecoder`s should be totally unaffected by this change.

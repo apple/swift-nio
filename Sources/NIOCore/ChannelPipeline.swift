@@ -1161,6 +1161,17 @@ extension ChannelPipeline {
             return promise.futureResult
         }
 
+        /// Remove a `ChannelHandler` from the `ChannelPipeline`.
+        ///
+        /// - parameters:
+        ///     - context: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
+        /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
+        public func removeHandler(context: ChannelHandlerContext) -> EventLoopFuture<Void> {
+            let promise = self.eventLoop.makePromise(of: Void.self)
+            self._pipeline.removeHandler(context: context, promise: promise)
+            return promise.futureResult
+        }
+
         /// Returns the `ChannelHandlerContext` for the given handler instance if it is in
         /// the `ChannelPipeline`, if it exists.
         ///

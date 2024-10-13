@@ -69,4 +69,16 @@ func XCTAssertThrowsFileSystemErrorAsync<R>(
         }
     }
 }
+
+func XCTAssertNoThrowAsync<T>(
+    _ expression: @autoclosure () async throws -> T,
+    file: StaticString = #file,
+    line: UInt = #line
+) async {
+    do {
+        _ = try await expression()
+    } catch {
+        XCTFail("Expression did throw: \(error)", file: file, line: line)
+    }
+}
 #endif

@@ -80,4 +80,42 @@ public struct ByteCount: Hashable, Sendable {
     }
 }
 
+extension ByteCount {
+    /// A ``ByteCount`` for the maximum amount of bytes that can be written to `ByteBuffer`.
+    internal static var byteBufferCapacity: ByteCount {
+        #if arch(arm) || arch(i386) || arch(arm64_32)
+        // on 32-bit platforms we can't make use of a whole UInt32.max (as it doesn't fit in an Int)
+        let byteBufferMaxIndex = UInt32(Int.max)
+        #else
+        // on 64-bit platforms we're good
+        let byteBufferMaxIndex = UInt32.max
+        #endif
+
+        return ByteCount(bytes: Int64(byteBufferMaxIndex))
+    }
+
+    /// A ``ByteCount`` for an unlimited amount of bytes.
+    public static var unlimited: ByteCount {
+        ByteCount(bytes: .max)
+    }
+}
+
+extension ByteCount: AdditiveArithmetic {
+    public static var zero: ByteCount { ByteCount(bytes: 0) }
+
+    public static func + (lhs: ByteCount, rhs: ByteCount) -> ByteCount {
+        ByteCount(bytes: lhs.bytes + rhs.bytes)
+    }
+
+    public static func - (lhs: ByteCount, rhs: ByteCount) -> ByteCount {
+        ByteCount(bytes: lhs.bytes - rhs.bytes)
+    }
+}
+
+extension ByteCount: Comparable {
+    public static func < (lhs: ByteCount, rhs: ByteCount) -> Bool {
+        lhs.bytes < rhs.bytes
+    }
+}
+
 #endif
