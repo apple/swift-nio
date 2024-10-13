@@ -2232,8 +2232,8 @@ extension ChannelPipeline {
             let amount: Int
             switch direction {
             case .inbound:
-                if let outboundHandler = s.handler as? InboundBufferedBytesAuditableChannelHandler {
-                    total += outboundHandler.auditInboundBufferedBytes()
+                if let inboundHandler = s.handler as? InboundBufferedBytesAuditableChannelHandler {
+                    total += inboundHandler.auditInboundBufferedBytes()
                 }
             case .outbound:
                 if let outboundHandler = s.handler as? OutboundBufferedBytesAuditableChannelHandler {
