@@ -2238,20 +2238,22 @@ extension ChannelPipeline {
 
     private func auditAll(direction: AuditDirection) -> Int {
         var total = 0
-        var start = self.head?.next
-        while let s = start, s !== self.tail {
-            let amount: Int
-            switch direction {
-            case .inbound:
-                if let inboundHandler = s.handler as? InboundBufferedBytesAuditableChannelHandler {
+        var current = self.head?.next
+        switch direction {
+        case .inbound:
+            while let c = current, c !== self.tail {
+                if let inboundHandler = c.handler as? InboundBufferedBytesAuditableChannelHandler {
                     total += inboundHandler.auditInboundBufferedBytes()
                 }
-            case .outbound:
-                if let outboundHandler = s.handler as? OutboundBufferedBytesAuditableChannelHandler {
+                current = current?.next
+            }
+        case .outbound:
+            while let c = current, c !== self.tail {
+                if let outboundHandler = c.handler as? OutboundBufferedBytesAuditableChannelHandler {
                     total += outboundHandler.auditOutboundBufferedBytes()
                 }
+                current = current?.next
             }
-            start = start?.next
         }
 
         return total
