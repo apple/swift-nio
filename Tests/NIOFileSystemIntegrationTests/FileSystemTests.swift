@@ -1803,6 +1803,31 @@ extension FileSystemTests {
             XCTAssertEqual(byteCount, Int(size))
         }
     }
+
+    func testReadMoreThanByteBufferCapacity() async throws {
+        let path = try await self.fs.temporaryFilePath()
+
+        try await self.fs.withFileHandle(forReadingAndWritingAt: path) { fileHandle in
+            await XCTAssertThrowsFileSystemErrorAsync {
+                // Set `maximumSizeAllowed` to 1 byte more than can be written to `ByteBuffer`.
+                try await fileHandle.readToEnd(
+                    maximumSizeAllowed: .byteBufferCapacity + .bytes(1)
+                )
+            } onError: { error in
+                XCTAssertEqual(error.code, .resourceExhausted)
+            }
+        }
+    }
+
+    func testReadWithUnlimitedMaximumSizeAllowed() async throws {
+        let path = try await self.fs.temporaryFilePath()
+
+        try await self.fs.withFileHandle(forReadingAndWritingAt: path) { fileHandle in
+            await XCTAssertNoThrowAsync(
+                try await fileHandle.readToEnd(maximumSizeAllowed: .unlimited)
+            )
+        }
+    }
 }
 
 #if !canImport(Darwin) && swift(<5.9.2)

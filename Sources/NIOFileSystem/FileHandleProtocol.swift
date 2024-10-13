@@ -328,17 +328,31 @@ extension ReadableFileHandleProtocol {
     ///   - offset: The absolute offset into the file to read from. Defaults to zero.
     ///   - maximumSizeAllowed: The maximum size of file to read, as a ``ByteCount``.
     /// - Returns: The bytes read from the file.
-    /// - Throws: ``FileSystemError`` with code ``FileSystemError/Code-swift.struct/resourceExhausted`` if there
-    ///     are more bytes to read than `maximumBytesAllowed`.
-    ///     ``FileSystemError/Code-swift.struct/unsupported`` if file is unseekable and
-    ///     `offset` is not 0.
+    /// - Throws: ``FileSystemError`` with code ``FileSystemError/Code-swift.struct/resourceExhausted``
+    /// if `maximumSizeAllowed` is more than can be written to `ByteBuffer`. Or if there are more bytes to read than
+    /// `maximumBytesAllowed`.
     public func readToEnd(
         fromAbsoluteOffset offset: Int64 = 0,
         maximumSizeAllowed: ByteCount
     ) async throws -> ByteBuffer {
+        let maximumSizeAllowed = maximumSizeAllowed == .unlimited ? .byteBufferCapacity : maximumSizeAllowed
         let info = try await self.info()
         let fileSize = Int64(info.size)
         let readSize = max(Int(fileSize - offset), 0)
+
+        if maximumSizeAllowed > .byteBufferCapacity {
+            throw FileSystemError(
+                code: .resourceExhausted,
+                message: """
+                    The maximum size allowed (\(maximumSizeAllowed)) is more than the maximum \
+                    amount of bytes that can be written to ByteBuffer \
+                    (\(ByteCount.byteBufferCapacity)). You can read the file in smaller chunks by \
+                    calling readChunks().
+                    """,
+                cause: nil,
+                location: .here()
+            )
+        }
 
         if readSize > maximumSizeAllowed.bytes {
             throw FileSystemError(
