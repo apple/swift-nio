@@ -1828,6 +1828,30 @@ extension FileSystemTests {
             )
         }
     }
+
+    func testReadIntoArray() async throws {
+        let path = FilePath(#filePath)
+
+        try await self.fs.withFileHandle(forReadingAndWritingAt: path) { fileHandle in
+            _ = try await fileHandle.write(contentsOf: [0, 1, 2], toAbsoluteOffset: 0)
+        }
+
+        let contents = try await Array(contentsOf: path, maximumSizeAllowed: .bytes(1024))
+
+        XCTAssertEqual(contents, [0, 1, 2])
+    }
+
+    func testReadIntoArraySlice() async throws {
+        let path = FilePath(#filePath)
+
+        try await self.fs.withFileHandle(forReadingAndWritingAt: path) { fileHandle in
+            _ = try await fileHandle.write(contentsOf: [0, 1, 2], toAbsoluteOffset: 0)
+        }
+
+        let contents = try await ArraySlice(contentsOf: path, maximumSizeAllowed: .bytes(1024))
+
+        XCTAssertEqual(contents, [0, 1, 2])
+    }
 }
 
 #if !canImport(Darwin) && swift(<5.9.2)

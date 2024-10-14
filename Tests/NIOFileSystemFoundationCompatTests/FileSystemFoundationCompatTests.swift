@@ -33,5 +33,18 @@ final class FileSystemBytesConformanceTests: XCTestCase {
             Date(timeIntervalSince1970: 1.000000001)
         )
     }
+
+    func testReadFileIntoData() async throws {
+        let fs = FileSystem.shared
+        let path = FilePath(#filePath)
+
+        try await fs.withFileHandle(forReadingAndWritingAt: path) { fileHandle in
+            _ = try await fileHandle.write(contentsOf: [0, 1, 2], toAbsoluteOffset: 0)
+        }
+
+        let contents = try await Data(contentsOf: path, maximumSizeAllowed: .bytes(1024))
+
+        XCTAssertEqual(contents, Data([0, 1, 2]))
+    }
 }
 #endif
