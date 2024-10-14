@@ -1,0 +1,35 @@
+name: Uses with expression
+description: Dynamic step that allows `uses` with expressions.
+inputs:
+  uses_with_expression:
+    description: Reference to an action that allows expressions.
+    required: true
+  with:
+    description: Inputs for the action as JSON.
+    required: false
+    default: "{}"
+runs:
+  using: composite
+  steps:
+    - name: Create local action
+      shell: bash
+      run: |
+        mkdir -p ./.uses_with_expression &&
+        cat <<'LOCAL_ACTION' >./.uses_with_expression/action.yml
+        runs:
+          using: composite
+          steps:
+          - run: rm -rf ./.uses_with_expression
+            shell: sh
+          - name: Run
+            id: run
+            uses: ${{ inputs.uses_with_expression }}
+            with: ${{ inputs.with || '{}' }}
+        LOCAL_ACTION
+    - name: Run local action
+      id: run
+      uses: ./.uses_with_expression
+    - name: Cleanup local action
+      if: always() && steps.run.outcome != 'success'
+      shell: bash
+      run: rm -rf ./.uses_with_expression
