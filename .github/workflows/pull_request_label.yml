@@ -16,4 +16,4 @@ jobs:
                   persist-credentials: false
             - name: Check for Semantic Version label
               # Workaround https://github.com/nektos/act/issues/1875
-              uses: apple/swift-nio/.github/actions/pull_request_semver_label_checker/
+              uses: apple/swift-nio/.github/actions/pull_request_semver_label_checker/action.yml@main
