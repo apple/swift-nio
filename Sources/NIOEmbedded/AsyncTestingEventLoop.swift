@@ -407,10 +407,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 }
 
 // MARK: SerialExecutor conformance
-#if compiler(>=5.9)
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
 extension NIOAsyncTestingEventLoop: NIOSerialEventLoopExecutor {}
-#endif
 
 /// This is a thread-safe promise creation store.
 ///

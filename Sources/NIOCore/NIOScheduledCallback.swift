@@ -89,8 +89,7 @@ public struct NIOScheduledCallback: Sendable {
 }
 
 extension EventLoop {
-    // This could be package once we drop Swift 5.8.
-    public func _scheduleCallback(
+    package func _scheduleCallback(
         at deadline: NIODeadline,
         handler: some NIOScheduledCallbackHandler
     ) -> NIOScheduledCallback {

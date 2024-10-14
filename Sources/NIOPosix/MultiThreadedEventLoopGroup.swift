@@ -489,7 +489,6 @@ extension MultiThreadedEventLoopGroup: CustomStringConvertible {
     }
 }
 
-#if compiler(>=5.9)
 @usableFromInline
 struct ErasedUnownedJob {
     @usableFromInline
@@ -507,7 +506,6 @@ struct ErasedUnownedJob {
         self.erasedJob as! UnownedJob
     }
 }
-#endif
 
 @usableFromInline
 internal struct ScheduledTask {
