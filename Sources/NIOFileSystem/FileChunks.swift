@@ -218,7 +218,7 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
             }
 
             let performedReadAction = self.state.withLockedValue { state in
-                return state.performedProduceMore()
+                state.performedProduceMore()
             }
 
             switch performedReadAction {
@@ -232,7 +232,7 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
     }
 
     private func readNextChunk() throws -> ByteBuffer {
-        return try self.state.withLockedValue { state in
+        try self.state.withLockedValue { state in
             state.fileReadingState()
         }.flatMap {
             if let (descriptor, range) = $0 {
@@ -261,15 +261,16 @@ private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendabl
         let chunkLength = self.chunkLength
         assert(buffer.readableBytes <= chunkLength)
 
-        let (source, initialState): (FileChunkSequenceProducer.Source?, ProducerState.State) = self.state.withLockedValue { state in
-            state.didReadBytes(buffer.readableBytes)
+        let (source, initialState): (FileChunkSequenceProducer.Source?, ProducerState.State) = self.state
+            .withLockedValue { state in
+                state.didReadBytes(buffer.readableBytes)
 
-            // finishing short indicates the file is done
-            if buffer.readableBytes < chunkLength {
-                state.state = .done(emptyRange: false)
+                // finishing short indicates the file is done
+                if buffer.readableBytes < chunkLength {
+                    state.state = .done(emptyRange: false)
+                }
+                return (state.source, state.state)
             }
-            return (state.source, state.state)
-        }
 
         guard let source else {
             return
