@@ -115,8 +115,8 @@ where
         let nioThrowingAsyncSequence = NIOThrowingAsyncSequenceProducer.makeSequence(
             elementType: ByteBuffer.self,
             backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark(
-                lowWatermark: 4,
-                highWatermark: 8
+                lowWatermark: lowWatermark,
+                highWatermark: highWatermark
             ),
             finishOnDeinit: false,
             delegate: producer
@@ -451,11 +451,6 @@ private struct ProducerState: Sendable {
         }
     }
 
-    internal enum RangeUpdateOutcome {
-        case moreToRead
-        case cannotReadMore
-    }
-
     mutating func activeThreadPool() -> NIOThreadPool? {
         switch self.state {
         case .producing(let producingState), .pausedProducing(let producingState):
@@ -468,7 +463,9 @@ private struct ProducerState: Sendable {
     mutating func fileReadingState() -> Result<(FileDescriptor, Range<Int64>?)?, FileSystemError> {
         switch self.state {
         case .producing(let producingState), .pausedProducing(let producingState):
-            guard let descriptor = producingState.handle.descriptorIfAvailable() else {
+            if let descriptor = producingState.handle.descriptorIfAvailable() {
+                return .success((descriptor, producingState.range))
+            } else {
                 let error = FileSystemError(
                     code: .closed,
                     message: "Cannot read from closed file ('\(producingState.handle.path)').",
@@ -477,8 +474,6 @@ private struct ProducerState: Sendable {
                 )
                 return .failure(error)
             }
-
-            return .success((descriptor, producingState.range))
         case .done:
             return .success(nil)
         }
@@ -521,10 +516,15 @@ private struct ProducerState: Sendable {
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension ProducerState.Producing {
+    internal enum RangeUpdateOutcome {
+        case moreToRead
+        case cannotReadMore
+    }
+
     /// Updates the range (the offsets to read from and up to) to reflect the number of bytes which have been read.
     /// - Parameter count: The number of bytes which have been read.
-    /// - Returns: Returns `True` if there are no remaining bytes to read, `False` otherwise.
-    mutating func updateRangeWithReadBytes(_ count: Int) -> ProducerState.RangeUpdateOutcome {
+    /// - Returns: Returns `.moreToRead` if there are no remaining bytes to read, `.cannotReadMore` otherwise.
+    mutating func updateRangeWithReadBytes(_ count: Int) -> RangeUpdateOutcome {
         guard let currentRange = self.range else {
             // we are reading the whole file, just keep going
             return .moreToRead
@@ -540,9 +540,6 @@ extension ProducerState.Producing {
 
         // update range, we are not done
         self.range = newLowerBound..<currentRange.upperBound
-        if currentRange.upperBound - newLowerBound < 1 {
-            fatalError("here \(newLowerBound) \(currentRange.upperBound)")
-        }
         return .moreToRead
     }
 }
