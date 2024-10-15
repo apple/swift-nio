@@ -19,6 +19,10 @@ import NIOConcurrencyHelpers
 import NIOCore
 import _NIODataStructures
 
+#if os(Windows)
+import CRT
+#endif
+
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
