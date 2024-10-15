@@ -74,7 +74,7 @@ This is the current version of SwiftNIO and will be supported for the foreseeabl
 ### Swift Versions
 
 We commit to support the most recently released swift version (currently 5.10) and the last two minor releases before that unless this is impossible to do in one codebase.
-In addition checks are run against the latest beta release (if any) as well as the nightly swift builds and the intent is that these should pass. 
+In addition checks are run against the latest beta release (if any) as well as the nightly swift builds and the intent is that these should pass.
 
 The most recent versions of SwiftNIO support Swift 5.9 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
 
@@ -86,8 +86,8 @@ SwiftNIO            | Minimum Swift Version
 `2.43.0 ..< 2.51.0` | 5.5.2
 `2.51.0 ..< 2.60.0` | 5.6
 `2.60.0 ..< 2.65.0` | 5.7
-`2.65.0 ..< 2.75.0  | 5.8
-`2.75.0 ...`        | 5.9
+`2.65.0 ..< 2.76.0  | 5.8
+`2.76.0 ...`        | 5.9
 
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.
