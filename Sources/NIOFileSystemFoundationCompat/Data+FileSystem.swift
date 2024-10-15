@@ -29,14 +29,13 @@ extension Data {
     public init(
         contentsOf path: FilePath,
         maximumSizeAllowed: ByteCount,
-        fileSystem: some FileSystemProtocol,
-        byteTransferStrategy: ByteBuffer.ByteTransferStrategy = .automatic
+        fileSystem: some FileSystemProtocol
     ) async throws {
         let byteBuffer = try await fileSystem.withFileHandle(forReadingAt: path) { handle in
             try await handle.readToEnd(maximumSizeAllowed: maximumSizeAllowed)
         }
 
-        self = Data(buffer: byteBuffer, byteTransferStrategy: byteTransferStrategy)
+        self = Data(buffer: byteBuffer)
     }
 
     /// Reads the contents of the file at the path using ``FileSystem``.
