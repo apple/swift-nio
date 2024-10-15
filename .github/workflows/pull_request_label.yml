@@ -15,5 +15,4 @@ jobs:
               with:
                   persist-credentials: false
             - name: Check for Semantic Version label
-              if: ${{ !env.ACT }}
               uses: ./.github/actions/pull_request_semver_label_checker/
