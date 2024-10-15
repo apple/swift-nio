@@ -1492,8 +1492,6 @@ public enum ChannelPipelineError: Error {
     case alreadyRemoved
     /// `ChannelHandler` was not found.
     case notFound
-    /// `ChannelHandler` is not auditable.
-    case notAuditable
 }
 
 /// Every `ChannelHandler` has -- when added to a `ChannelPipeline` -- a corresponding `ChannelHandlerContext` which is
@@ -2113,6 +2111,29 @@ extension ChannelPipeline {
         return future
     }
     
+    /// Audit and retrieve the number of outbound bytes buffered in the `ChannelHandler` associated with the given `ChannelHandlerContext`.
+    ///
+    /// - Parameters:
+    ///     - in: the `ChannelHandlerContext` from which the outbound buffered bytes of the `ChannelHandler` will be audited and retrieved.
+    ///
+    /// - Returns: The `EventLoopFuture` which will be notified once the number of outbound bytes buffered in the `ChannelHandler`
+    ///            referenced by the `ChannelHandlerContext` parameter `in` is collected.
+    ///            If the `ChannelHandler` in the `ChannelHandlerContext` does not conform to
+    ///            `NIOOutboundBufferedBytesAuditableChannelHandler`, the future will contain`nil`.
+    public func auditOutboundBufferedBytes(in context: ChannelHandlerContext) -> EventLoopFuture<Int?> {
+        let future: EventLoopFuture<Int?>
+        
+        if self.eventLoop.inEventLoop {
+            future = self.eventLoop.makeSucceededFuture(audit0(context: context, direction: .outbound))
+        } else {
+            future = self.eventLoop.submit {
+                self.audit0(context: context, direction: .outbound)
+            }
+        }
+
+        return future
+    }
+    
     /// Audit the total number of bytes buffered for inbound.
     public func auditInboundBufferedBytes() -> EventLoopFuture<Int> {
         let future: EventLoopFuture<Int>
@@ -2127,111 +2148,42 @@ extension ChannelPipeline {
 
         return future
     }
-    
-    /// Audit the total numbers of outbound bytes buffered in the channel handler with the given `name`.
+
+    /// Audit and retrieve the number of inbound bytes buffered in the `ChannelHandler` associated with the given`ChannelHandlerContext`.
     ///
-    /// - parameters:
-    ///     - name: the name of the channel handler whose outbound buffered bytes will be audited.
-    public func auditOutboundBufferedBytes(name: String) -> EventLoopFuture<Int> {
-        let future: EventLoopFuture<Int>
+    /// - Parameters:
+    ///     - in: the `ChannelHandlerContext` from which the inbound buffered bytes of the `ChannelHandler` will be audited and retrieved.
+    ///
+    /// - Returns: The `EventLoopFuture` which will be notified once the number of inbound bytes buffered in the `ChannelHandler`
+    ///            referenced by the `ChannelHandlerContext` parameter `in` is collected.
+    ///            If the `ChannelHandler` in the `ChannelHandlerContext` does not conform to
+    ///            `NIOInboundBufferedBytesAuditableChannelHandler`, the future will contain `nil`.
+    public func auditInboundBufferedBytes(in context: ChannelHandlerContext) -> EventLoopFuture<Int?> {
+        let future: EventLoopFuture<Int?>
         
         if self.eventLoop.inEventLoop {
-            future = self.eventLoop.makeCompletedFuture(audit0(name: name, direction: .outbound))
+            future = self.eventLoop.makeSucceededFuture(audit0(context: context, direction: .inbound))
         } else {
             future = self.eventLoop.submit {
-                try self.audit0(name: name, direction: .outbound).get()
+                self.audit0(context: context, direction: .inbound)
             }
         }
-        
+
         return future
     }
     
-    /// Audit the total numbers of outbound bytes buffered in the channel handler with the given `handler`.
-    ///
-    /// - parameters:
-    ///     - handler: the channel handler object whose outbound buffered bytes will be audited.
-    public func auditOutboundBufferedBytes(handler: ChannelHandler) -> EventLoopFuture<Int> {
-        let future: EventLoopFuture<Int>
-        
-        if self.eventLoop.inEventLoop {
-            future = self.eventLoop.makeCompletedFuture(audit0(handler: handler, direction: .outbound))
-        } else {
-            future = self.eventLoop.submit {
-                try self.audit0(handler: handler, direction: .outbound).get()
-            }
-        }
-        
-        return future
-    }
-    
-    /// Audit the total numbers of inbound bytes buffered in the channel handler with the given `name`.
-    ///
-    /// - parameters:
-    ///     - name: the name of the channel handler whose inbound buffered bytes will be audited.
-    public func auditInboundBufferedBytes(name: String) -> EventLoopFuture<Int> {
-        let future: EventLoopFuture<Int>
-        
-        if self.eventLoop.inEventLoop {
-            future = self.eventLoop.makeCompletedFuture(audit0(name: name, direction: .inbound))
-        } else {
-            future = self.eventLoop.submit {
-                try self.audit0(name: name, direction: .inbound).get()
-            }
-        }
-        
-        return future
-    }
-    
-    /// Audit the total numbers of inbound bytes buffered in the channel handler with the given `handler`.
-    ///
-    /// - parameters:
-    ///     - handler: the channel handler object whose inbound buffered bytes will be audited.
-    public func auditInboundBufferedBytes(handler: ChannelHandler) -> EventLoopFuture<Int> {
-        let future: EventLoopFuture<Int>
-        
-        if self.eventLoop.inEventLoop {
-            future = self.eventLoop.makeCompletedFuture(audit0(handler: handler, direction: .inbound))
-        } else {
-            future = self.eventLoop.submit {
-                try self.audit0(handler: handler, direction: .inbound).get()
-            }
-        }
-        
-        return future
-    }
-    
-    private func audit0(name: String, direction: AuditDirection) -> Result<Int, Error> {
-        let result = self.contextSync(name: name)
-        switch result {
-        case .success(let context):
-            return audit0(context: context, direction: direction)
-        case .failure(let error):
-            return .failure(error)
-        }
-    }
-    
-    private func audit0(handler: ChannelHandler, direction: AuditDirection) -> Result<Int, Error> {
-        let result = self.contextSync(handler: handler)
-        switch result {
-        case .success(let context):
-            return audit0(context: context, direction: direction)
-        case .failure(let error):
-            return .failure(error)
-        }
-    }
-    
-    private func audit0(context: ChannelHandlerContext, direction: AuditDirection) -> Result<Int, Error> {
+    private func audit0(context: ChannelHandlerContext, direction: AuditDirection) -> Int? {
         switch direction {
         case .inbound:
-            guard let handler = context.handler as? InboundBufferedBytesAuditableChannelHandler else {
-                return .failure(ChannelPipelineError.notAuditable)
+            guard let handler = context.handler as? NIOInboundBufferedBytesAuditableChannelHandler else {
+                return nil
             }
-            return .success(handler.auditInboundBufferedBytes())
+            return handler.inboundBufferedBytes
         case .outbound:
-            guard let handler = context.handler as? OutboundBufferedBytesAuditableChannelHandler else {
-                return .failure(ChannelPipelineError.notAuditable)
+            guard let handler = context.handler as? NIOOutboundBufferedBytesAuditableChannelHandler else {
+                return nil
             }
-            return .success(handler.auditOutboundBufferedBytes())
+            return handler.outboundBufferedBytes
         }
 
     }
@@ -2242,20 +2194,66 @@ extension ChannelPipeline {
         switch direction {
         case .inbound:
             while let c = current, c !== self.tail {
-                if let inboundHandler = c.handler as? InboundBufferedBytesAuditableChannelHandler {
-                    total += inboundHandler.auditInboundBufferedBytes()
+                if let inboundHandler = c.handler as? NIOInboundBufferedBytesAuditableChannelHandler {
+                    total += inboundHandler.inboundBufferedBytes
                 }
                 current = current?.next
             }
         case .outbound:
             while let c = current, c !== self.tail {
-                if let outboundHandler = c.handler as? OutboundBufferedBytesAuditableChannelHandler {
-                    total += outboundHandler.auditOutboundBufferedBytes()
+                if let outboundHandler = c.handler as? NIOOutboundBufferedBytesAuditableChannelHandler {
+                    total += outboundHandler.outboundBufferedBytes
                 }
                 current = current?.next
             }
         }
 
         return total
+    }
+}
+
+extension ChannelPipeline.SynchronousOperations {
+    /// Audit the total number of bytes buffered for outbound.
+    ///
+    /// - Important: This *must* be called on the event loop.
+    public func auditOutboundBufferedBytes() -> Int {
+        self.eventLoop.assertInEventLoop()
+        return self._pipeline.auditAll(direction: .outbound)
+    }
+    
+    /// Audit and retrieve the number of outbound bytes buffered in the `ChannelHandler` associated with the given`ChannelHandlerContext`.
+    ///
+    /// - Parameters:
+    ///     - in: the `ChannelHandlerContext` from which the outbound buffered bytes of the `ChannelHandler` will be audited and retrieved.
+    /// - Important: This *must* be called on the event loop.
+    ///
+    /// - Returns: The number of bytes currently buffered in the `ChannelHandler` referenced by the `ChannelHandlerContext` parameter `in`.
+    ///            If the `ChannelHandler` in the given `ChannelHandlerContext` does not conform to
+    ///            `NIOOutboundBufferedBytesAuditableChannelHandler`, this method will return `nil`.
+    public func auditOutboundBufferedBytes(in context: ChannelHandlerContext) -> Int? {
+        self.eventLoop.assertInEventLoop()
+        return self._pipeline.audit0(context: context, direction: .outbound)
+    }
+    
+    /// Audit the total number of bytes buffered for inbound.
+    ///
+    /// - Important: This *must* be called on the event loop.
+    public func auditInboundBufferedBytes() -> Int {
+        self.eventLoop.assertInEventLoop()
+        return self._pipeline.auditAll(direction: .inbound)
+    }
+    
+    /// Audit and retrieve the number of inbound bytes buffered in the `ChannelHandler` associated with the given `ChannelHandlerContext`.
+    ///
+    /// - Parameters:
+    ///     - in: the `ChannelHandlerContext` from which the inbound buffered bytes of the `handler` will be audited and retrieved.
+    /// - Important: This *must* be called on the event loop.
+    ///
+    /// - Returns: The number of bytes currently buffered in the `ChannelHandler` referenced by the `ChannelHandlerContext` parameter `in`.
+    ///            If the `ChannelHandler` in the given `ChannelHandlerContext` does not conform to
+    ///            `NIOInboundBufferedBytesAuditableChannelHandler`, this method will return `nil`.
+    public func auditInboundBufferedBytes(in context: ChannelHandlerContext) -> Int? {
+        self.eventLoop.assertInEventLoop()
+        return self._pipeline.audit0(context: context, direction: .inbound)
     }
 }

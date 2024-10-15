@@ -346,16 +346,16 @@ extension RemovableChannelHandler {
 
 /// A `OutboundBufferedBytesAuditableChannelHandler` is a `ChannelHandler` that 
 /// audits and reports the number of bytes buffered for outbound direction.
-public protocol OutboundBufferedBytesAuditableChannelHandler {
-    /// Returns the number of bytes buffered in the channel handler, which are queued to be sent to
+public protocol NIOOutboundBufferedBytesAuditableChannelHandler {
+    /// The number of bytes buffered in the channel handler, which are queued to be sent to
     /// the next outbound channel handler.
-    func auditOutboundBufferedBytes() -> Int
+    var outboundBufferedBytes: Int { get }
 }
 
 /// A `InboundBufferedBytesAuditableChannelHandler` is a `ChannelHandler` that 
 /// audits and reports the number of bytes buffered for inbound direction.
-public protocol InboundBufferedBytesAuditableChannelHandler {
-    /// Returns the number of bytes buffered in the channel handler, which are queued to be sent to 
+public protocol NIOInboundBufferedBytesAuditableChannelHandler {
+    /// The number of bytes buffered in the channel handler, which are queued to be sent to
     /// the next inbound channel handler.
-    func auditInboundBufferedBytes() -> Int
+    var inboundBufferedBytes: Int { get }
 }
