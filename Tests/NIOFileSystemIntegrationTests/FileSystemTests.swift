@@ -1830,7 +1830,7 @@ extension FileSystemTests {
     }
 
     func testReadIntoArray() async throws {
-        let path = FilePath(#filePath)
+        let path = try await self.fs.temporaryFilePath()
 
         try await self.fs.withFileHandle(forReadingAndWritingAt: path) { fileHandle in
             _ = try await fileHandle.write(contentsOf: [0, 1, 2], toAbsoluteOffset: 0)
@@ -1842,7 +1842,7 @@ extension FileSystemTests {
     }
 
     func testReadIntoArraySlice() async throws {
-        let path = FilePath(#filePath)
+        let path = try await self.fs.temporaryFilePath()
 
         try await self.fs.withFileHandle(forReadingAndWritingAt: path) { fileHandle in
             _ = try await fileHandle.write(contentsOf: [0, 1, 2], toAbsoluteOffset: 0)

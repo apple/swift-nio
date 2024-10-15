@@ -29,10 +29,7 @@ extension Array where Element == UInt8 {
         fileSystem: some FileSystemProtocol
     ) async throws {
         let byteBuffer = try await fileSystem.withFileHandle(forReadingAt: path) { handle in
-            try await handle.readToEnd(
-                fromAbsoluteOffset: 0,
-                maximumSizeAllowed: maximumSizeAllowed
-            )
+            try await handle.readToEnd(maximumSizeAllowed: maximumSizeAllowed)
         }
 
         self = Self(buffer: byteBuffer)

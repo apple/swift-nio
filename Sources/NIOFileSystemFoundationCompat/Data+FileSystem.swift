@@ -15,6 +15,7 @@
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import _NIOFileSystem
 import NIOCore
+import NIOFoundationCompat
 import struct Foundation.Data
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -28,16 +29,14 @@ extension Data {
     public init(
         contentsOf path: FilePath,
         maximumSizeAllowed: ByteCount,
-        fileSystem: some FileSystemProtocol
+        fileSystem: some FileSystemProtocol,
+        byteTransferStrategy: ByteBuffer.ByteTransferStrategy = .automatic
     ) async throws {
         let byteBuffer = try await fileSystem.withFileHandle(forReadingAt: path) { handle in
-            try await handle.readToEnd(
-                fromAbsoluteOffset: 0,
-                maximumSizeAllowed: maximumSizeAllowed
-            )
+            try await handle.readToEnd(maximumSizeAllowed: maximumSizeAllowed)
         }
 
-        self = byteBuffer.withUnsafeReadableBytes { Self($0) }
+        self = Data(buffer: byteBuffer, byteTransferStrategy: byteTransferStrategy)
     }
 
     /// Reads the contents of the file at the path using ``FileSystem``.
