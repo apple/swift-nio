@@ -12,6 +12,7 @@ runs:
   using: "composite"
   steps:
     - name: Check labels
+      if: ${{ !env.ACT }}
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
