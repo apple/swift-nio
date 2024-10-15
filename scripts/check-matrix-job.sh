@@ -22,21 +22,21 @@ test -n "${SWIFT_VERSION:-}" || fatal "SWIFT_VERSION unset"
 test -n "${COMMAND:-}" || fatal "COMMAND unset"
 swift_version="$SWIFT_VERSION"
 command="$COMMAND"
-command_5_8="$COMMAND_OVERRIDE_5_8"
 command_5_9="$COMMAND_OVERRIDE_5_9"
 command_5_10="$COMMAND_OVERRIDE_5_10"
+command_6_0="$COMMAND_OVERRIDE_6_0"
 command_nightly_6_0="$COMMAND_OVERRIDE_NIGHTLY_6_0"
 command_nightly_main="$COMMAND_OVERRIDE_NIGHTLY_MAIN"
 
-if [[ "$swift_version" == "5.8" ]] && [[ -n "$command_5_8" ]]; then
-  log "Running 5.8 command override"
-  eval "$command_5_8"
-elif [[ "$swift_version" == "5.9" ]] && [[ -n "$command_5_9" ]]; then
+if [[ "$swift_version" == "5.9" ]] && [[ -n "$command_5_9" ]]; then
   log "Running 5.9 command override"
   eval "$command_5_9"
 elif [[ "$swift_version" == "5.10" ]] && [[ -n "$command_5_10" ]]; then
   log "Running 5.10 command override"
   eval "$command_5_10"
+elif [[ "$swift_version" == "6.0" ]] && [[ -n "$command_6_0" ]]; then
+  log "Running 6.0 command override"
+  eval "$command_6_0"
 elif [[ "$swift_version" == "nightly-6.0" ]] && [[ -n "$command_nightly_6_0" ]]; then
   log "Running nightly 6.0 command override"
   eval "$command_nightly_6_0"

@@ -13,7 +13,7 @@ jobs:
     name: Swift 6 language mode
     runs-on: ubuntu-latest
     container:
-      image: swiftlang/swift:nightly-6.0-jammy
+      image: swift:6.0-jammy
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
