@@ -67,6 +67,32 @@ on:
         type: string
         description: "The command of the nightly main Swift version linux matrix job to execute."
 
+      matrix_windows_command:
+        type: string
+        description: "The command of the current Swift version windows matrix job to execute."
+        default: ""
+      matrix_windows_6_0_enabled:
+        type: boolean
+        description: "Boolean to enable the 6.0 Swift version matrix job. Defaults to true."
+        default: false
+      matrix_windows_6_0_command_override:
+        type: string
+        description: "The command of the 6.0 Swift version windows matrix job to execute."
+      matrix_windows_nightly_6_0_enabled:
+        type: boolean
+        description: "Boolean to enable the nightly 6.0 Swift version matrix job. Defaults to true."
+        default: false
+      matrix_windows_nightly_6_0_command_override:
+        type: string
+        description: "The command of the nightly 6.0 Swift version windows matrix job to execute."
+      matrix_windows_nightly_main_enabled:
+        type: boolean
+        description: "Boolean to enable the nightly main Swift version matrix job. Defaults to true."
+        default: false
+      matrix_windows_nightly_main_command_override:
+        type: string
+        description: "The command of the nightly main Swift version windows matrix job to execute."
+
 # We are cancelling previously triggered workflow runs
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
@@ -121,3 +147,64 @@ jobs:
         run: |
           apt-get -qq update && apt-get -qq -y install curl
           curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
+
+  windows:
+    name: Windows (${{ matrix.swift.swift_version }})
+    runs-on: windows-2022
+    if: ${{ inputs.matrix_windows_6_0_enabled }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # We are specifying only the major and minor of the docker images to automatically pick up the latest patch release
+        swift:
+          - image: swift:6.0-windowsservercore-ltsc2022
+            swift_version: "6.0"
+            enabled: ${{ inputs.matrix_windows_6_0_enabled }}
+    steps:
+      - name: Pull Docker image
+        if: ${{ matrix.swift.enabled }}
+        run: docker pull ${{ matrix.swift.image }}
+      - name: Checkout repository
+        if: ${{ matrix.swift.enabled }}
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Donwload matrix script
+        if: ${{ matrix.swift.enabled }}
+        run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
+      - name: Run matrix job
+        if: ${{ matrix.swift.enabled }}
+        run: |
+          docker run --env SWIFT_VERSION="${{ matrix.swift.swift_version }}" --env COMMAND="${{ inputs.matrix_windows_command }}" --env COMMAND_OVERRIDE_6_0="${{ inputs.matrix_windows_6_0_command_override }}" -v ${{ github.workspace }}:C:\source ${{ matrix.swift.image }} cmd /s /c  "swift --version & cd C:\source\ & powershell -File __check-matrix-job.ps1"
+
+  windows-nightly:
+    name: Windows (${{ matrix.swift.swift_version }})
+    runs-on: windows-2019
+    if: ${{ inputs.matrix_windows_nightly_6_0_enabled }} && ${{ inputs.matrix_windows_nightly_main_enabled }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # We are specifying only the major and minor of the docker images to automatically pick up the latest patch release
+        swift:
+          - image: swiftlang/swift:nightly-6.0-windowsservercore-1809
+            swift_version: "nightly-6.0"
+            enabled: ${{ inputs.matrix_windows_nightly_6_0_enabled }}
+          - image: swiftlang/swift:nightly-main-windowsservercore-1809
+            swift_version: "nightly-main"
+            enabled: ${{ inputs.matrix_windows_nightly_main_enabled }}
+    steps:
+      - name: Pull Docker image
+        if: ${{ matrix.swift.enabled }}
+        run: docker pull ${{ matrix.swift.image }}
+      - name: Checkout repository
+        if: ${{ matrix.swift.enabled }}
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Donwload matrix script
+        if: ${{ matrix.swift.enabled }}
+        run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
+      - name: Run matrix job
+        if: ${{ matrix.swift.enabled }}
+        run: |
+          docker run --env SWIFT_VERSION="${{ matrix.swift.swift_version }}" --env COMMAND="${{ inputs.matrix_windows_command }}" --env COMMAND_OVERRIDE_NIGHTLY_6_0="${{ inputs.matrix_windows_nightly_6_0_command_override }}" --env COMMAND_OVERRIDE_NIGHTLY_MAIN="${{ inputs.matrix_windows_nightly_main_command_override }}" -v ${{ github.workspace }}:C:\source ${{ matrix.swift.image }} cmd /s /c  "swift --version & cd C:\source\ & powershell -File __check-matrix-job.ps1"
