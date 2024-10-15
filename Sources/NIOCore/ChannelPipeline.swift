@@ -2110,7 +2110,7 @@ extension ChannelPipeline {
 
         return future
     }
-    
+
     /// Audit and retrieve the number of outbound bytes buffered in the `ChannelHandler` associated with the given `ChannelHandlerContext`.
     ///
     /// - Parameters:
@@ -2122,7 +2122,7 @@ extension ChannelPipeline {
     ///            `NIOOutboundBufferedBytesAuditableChannelHandler`, the future will contain`nil`.
     public func auditOutboundBufferedBytes(in context: ChannelHandlerContext) -> EventLoopFuture<Int?> {
         let future: EventLoopFuture<Int?>
-        
+
         if self.eventLoop.inEventLoop {
             future = self.eventLoop.makeSucceededFuture(audit0(context: context, direction: .outbound))
         } else {
@@ -2133,7 +2133,7 @@ extension ChannelPipeline {
 
         return future
     }
-    
+
     /// Audit the total number of bytes buffered for inbound.
     public func auditInboundBufferedBytes() -> EventLoopFuture<Int> {
         let future: EventLoopFuture<Int>
@@ -2160,7 +2160,7 @@ extension ChannelPipeline {
     ///            `NIOInboundBufferedBytesAuditableChannelHandler`, the future will contain `nil`.
     public func auditInboundBufferedBytes(in context: ChannelHandlerContext) -> EventLoopFuture<Int?> {
         let future: EventLoopFuture<Int?>
-        
+
         if self.eventLoop.inEventLoop {
             future = self.eventLoop.makeSucceededFuture(audit0(context: context, direction: .inbound))
         } else {
@@ -2171,7 +2171,7 @@ extension ChannelPipeline {
 
         return future
     }
-    
+
     private func audit0(context: ChannelHandlerContext, direction: AuditDirection) -> Int? {
         switch direction {
         case .inbound:
@@ -2220,7 +2220,7 @@ extension ChannelPipeline.SynchronousOperations {
         self.eventLoop.assertInEventLoop()
         return self._pipeline.auditAll(direction: .outbound)
     }
-    
+
     /// Audit and retrieve the number of outbound bytes buffered in the `ChannelHandler` associated with the given`ChannelHandlerContext`.
     ///
     /// - Parameters:
@@ -2234,7 +2234,7 @@ extension ChannelPipeline.SynchronousOperations {
         self.eventLoop.assertInEventLoop()
         return self._pipeline.audit0(context: context, direction: .outbound)
     }
-    
+
     /// Audit the total number of bytes buffered for inbound.
     ///
     /// - Important: This *must* be called on the event loop.
@@ -2242,7 +2242,7 @@ extension ChannelPipeline.SynchronousOperations {
         self.eventLoop.assertInEventLoop()
         return self._pipeline.auditAll(direction: .inbound)
     }
-    
+
     /// Audit and retrieve the number of inbound bytes buffered in the `ChannelHandler` associated with the given `ChannelHandlerContext`.
     ///
     /// - Parameters:

@@ -344,7 +344,7 @@ extension RemovableChannelHandler {
     }
 }
 
-/// A `OutboundBufferedBytesAuditableChannelHandler` is a `ChannelHandler` that 
+/// A `OutboundBufferedBytesAuditableChannelHandler` is a `ChannelHandler` that
 /// audits and reports the number of bytes buffered for outbound direction.
 public protocol NIOOutboundBufferedBytesAuditableChannelHandler {
     /// The number of bytes buffered in the channel handler, which are queued to be sent to
@@ -352,7 +352,7 @@ public protocol NIOOutboundBufferedBytesAuditableChannelHandler {
     var outboundBufferedBytes: Int { get }
 }
 
-/// A `InboundBufferedBytesAuditableChannelHandler` is a `ChannelHandler` that 
+/// A `InboundBufferedBytesAuditableChannelHandler` is a `ChannelHandler` that
 /// audits and reports the number of bytes buffered for inbound direction.
 public protocol NIOInboundBufferedBytesAuditableChannelHandler {
     /// The number of bytes buffered in the channel handler, which are queued to be sent to
