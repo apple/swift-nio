@@ -16,7 +16,7 @@ jobs:
   unit-tests:
     name: Unit tests
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/unit_tests.yml@main
+    uses: ./.github/workflows/unit_tests.yml
     with:
       linux_5_9_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_5_10_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
