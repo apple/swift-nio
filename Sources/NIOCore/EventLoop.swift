@@ -906,7 +906,9 @@ extension EventLoop {
     /// - Returns: A completed `EventLoopFuture`.
     @preconcurrency
     @inlinable
-    public func makeCompletedFuture<Success: Sendable>(withResultOf body: () throws -> Success) -> EventLoopFuture<Success> {
+    public func makeCompletedFuture<Success: Sendable>(
+        withResultOf body: () throws -> Success
+    ) -> EventLoopFuture<Success> {
         let trans = Result(catching: body)
         return self.makeCompletedFuture(trans)
     }

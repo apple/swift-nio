@@ -62,7 +62,7 @@ extension EventLoopFuture {
         line: UInt = #line,
         _ callback: @escaping @Sendable (Error) -> EventLoopFuture<Value>
     ) -> EventLoopFuture<Value> where Value: Sendable {
-        return self.flatMapError(callback)
+        self.flatMapError(callback)
     }
 
     @preconcurrency

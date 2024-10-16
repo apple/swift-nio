@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import NIOConcurrencyHelpers
 import NIOEmbedded
 import NIOPosix
-import NIOConcurrencyHelpers
 import XCTest
 
 @testable import NIOCore

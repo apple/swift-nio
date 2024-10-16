@@ -945,9 +945,9 @@ extension EventLoopFuture {
     @preconcurrency
     @inlinable
     public func and<OtherValue: Sendable>(
-        value: OtherValue // TODO: This should be transferring
+        value: OtherValue  // TODO: This should be transferring
     ) -> EventLoopFuture<(Value, OtherValue)> {
-        return self.and(EventLoopFuture<OtherValue>(eventLoop: self.eventLoop, value: value))
+        self.and(EventLoopFuture<OtherValue>(eventLoop: self.eventLoop, value: value))
     }
 }
 
@@ -1441,7 +1441,8 @@ extension EventLoopFuture {
         // in the "futures" to pass their result to the caller
         for (index, future) in futures.enumerated() {
             if future.eventLoop.inEventLoop,
-                let result = future._value {
+                let result = future._value
+            {
                 // Fast-track already-fulfilled results without the overhead of calling `whenComplete`. This can yield a
                 // ~20% performance improvement in the case of large arrays where all elements are already fulfilled.
                 switch result {
@@ -1668,7 +1669,8 @@ extension EventLoopFuture {
         // in the "futures" to pass their result to the caller
         for (index, future) in futures.enumerated() {
             if future.eventLoop.inEventLoop,
-                let result = future._value {
+                let result = future._value
+            {
                 // Fast-track already-fulfilled results without the overhead of calling `whenComplete`. This can yield a
                 // ~30% performance improvement in the case of large arrays where all elements are already fulfilled.
                 switch result {
@@ -1784,7 +1786,7 @@ extension EventLoopFuture {
     public func unwrap<NewValue: Sendable>(
         orReplace replacement: NewValue
     ) -> EventLoopFuture<NewValue> where Value == NewValue? {
-        return self.map { (value) -> NewValue in
+        self.map { (value) -> NewValue in
             guard let value = value else {
                 return replacement
             }
@@ -1894,8 +1896,8 @@ extension EventLoopFuture {
     @preconcurrency
     public func whenFailureBlocking(
         onto queue: DispatchQueue,
-        _ callbackMayBlock: @escaping @Sendable (Error) -> Void)
-    {
+        _ callbackMayBlock: @escaping @Sendable (Error) -> Void
+    ) {
         self._whenFailureBlocking(onto: queue, callbackMayBlock)
     }
     @usableFromInline typealias WhenFailureBlockingCallback = @Sendable (Error) -> Void
@@ -2033,7 +2035,7 @@ public struct _NIOEventLoopFutureIdentifier: Hashable, Sendable {
     }
 }
 
-// The promise and future are both unchecked Sendable following the below isolation rules this is safe
+// The future is unchecked Sendable following the below isolation rules this is safe
 //
 // 1. Receiving the value of the future is always done on the EventLoop of the future, hence
 // the value is never transferred out of the event loops isolation domain. It only gets transferred
@@ -2043,9 +2045,9 @@ public struct _NIOEventLoopFutureIdentifier: Hashable, Sendable {
 // transfer the value to the promise. This ensures that the value is now isolated to the event loops
 // isolation domain. Note: Sendable values can always be transferred
 
-extension EventLoopPromise: @unchecked Sendable { }
+extension EventLoopPromise: Sendable {}
 
-extension EventLoopFuture: @unchecked Sendable { }
+extension EventLoopFuture: @unchecked Sendable {}
 
 extension EventLoopPromise where Value == Void {
     // Deliver a successful result to the associated `EventLoopFuture<Void>` object.
