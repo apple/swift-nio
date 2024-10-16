@@ -26,7 +26,7 @@ import Dispatch
 /// In particular, note that _run() here continues to obtain and execute lists of callbacks until it completes.
 /// This eliminates recursion when processing `flatMap()` chains.
 @usableFromInline
-internal struct CallbackList {
+internal struct CallbackList: Sendable {
     @usableFromInline
     internal typealias Element = @Sendable () -> CallbackList
     @usableFromInline
@@ -423,7 +423,7 @@ public final class EventLoopFuture<Value> {
 
     /// A EventLoopFuture<Value> that has already succeeded
     @inlinable
-    internal init(eventLoop: EventLoop, value: Value) {
+    internal init(eventLoop: EventLoop, value: Value) where Value: Sendable {
         self.eventLoop = eventLoop
         self._value = .success(value)
         self._callbacks = .init()
@@ -2063,7 +2063,8 @@ extension Optional {
     /// to `promise`.
     ///
     /// - Parameter promise: The promise to set or cascade to.
-    public mutating func setOrCascade<Value>(to promise: EventLoopPromise<Value>?)
+    @preconcurrency
+    public mutating func setOrCascade<Value: Sendable>(to promise: EventLoopPromise<Value>?)
     where Wrapped == EventLoopPromise<Value> {
         guard let promise = promise else { return }
 

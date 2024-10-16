@@ -90,9 +90,10 @@ public struct NIOScheduledCallback: Sendable {
 
 extension EventLoop {
     // This could be package once we drop Swift 5.8.
+    @preconcurrency
     public func _scheduleCallback(
         at deadline: NIODeadline,
-        handler: some NIOScheduledCallbackHandler
+        handler: some (NIOScheduledCallbackHandler & Sendable)
     ) -> NIOScheduledCallback {
         let task = self.scheduleTask(deadline: deadline) { handler.handleScheduledCallback(eventLoop: self) }
         task.futureResult.whenFailure { error in
@@ -131,10 +132,11 @@ extension EventLoop {
     ///
     /// The implementation of this default conformance has been further factored out so we can use it in
     /// `NIOAsyncTestingEventLoop`, where the use of `wait()` is _less bad_.
+    @preconcurrency
     @discardableResult
     public func scheduleCallback(
         at deadline: NIODeadline,
-        handler: some NIOScheduledCallbackHandler
+        handler: some (NIOScheduledCallbackHandler & Sendable)
     ) -> NIOScheduledCallback {
         self._scheduleCallback(at: deadline, handler: handler)
     }

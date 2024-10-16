@@ -60,7 +60,7 @@ public struct Scheduled<T> {
     }
 }
 
-extension Scheduled: Sendable where T: Sendable {}
+extension Scheduled: Sendable {}
 
 /// Returned once a task was scheduled to be repeatedly executed on the `EventLoop`.
 ///
@@ -753,7 +753,7 @@ extension EventLoop {
     /// - returns: An `EventLoopFuture` containing the result of `task`'s execution.
     @inlinable
     @preconcurrency
-    public func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
+    public func submit<T: Sendable>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = makePromise(file: #fileID, line: #line)
 
         self.execute {
@@ -872,8 +872,9 @@ extension EventLoop {
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
+    @preconcurrency
     @inlinable
-    public func makeSucceededFuture<Success>(_ value: Success) -> EventLoopFuture<Success> {
+    public func makeSucceededFuture<Success: Sendable>(_ value: Success) -> EventLoopFuture<Success> {
         if Success.self == Void.self {
             // The as! will always succeed because we previously checked that Success.self == Void.self.
             return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
@@ -887,8 +888,9 @@ extension EventLoop {
     /// - Parameters:
     ///   - result: The value that is used by the `EventLoopFuture`
     /// - Returns: A completed `EventLoopFuture`.
+    @preconcurrency
     @inlinable
-    public func makeCompletedFuture<Success>(_ result: Result<Success, Error>) -> EventLoopFuture<Success> {
+    public func makeCompletedFuture<Success: Sendable>(_ result: Result<Success, Error>) -> EventLoopFuture<Success> {
         switch result {
         case .success(let value):
             return self.makeSucceededFuture(value)
@@ -902,8 +904,9 @@ extension EventLoop {
     /// - Parameters:
     ///   - body: The function that is used to complete the `EventLoopFuture`
     /// - Returns: A completed `EventLoopFuture`.
+    @preconcurrency
     @inlinable
-    public func makeCompletedFuture<Success>(withResultOf body: () throws -> Success) -> EventLoopFuture<Success> {
+    public func makeCompletedFuture<Success: Sendable>(withResultOf body: () throws -> Success) -> EventLoopFuture<Success> {
         let trans = Result(catching: body)
         return self.makeCompletedFuture(trans)
     }
