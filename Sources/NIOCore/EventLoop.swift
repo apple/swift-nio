@@ -317,7 +317,6 @@ public protocol EventLoop: EventLoopGroup {
     /// allows `EventLoop`s to cache a pre-succeeded `Void` future to prevent superfluous allocations.
     func makeSucceededVoidFuture() -> EventLoopFuture<Void>
 
-    #if compiler(>=5.9)
     /// Returns a `SerialExecutor` corresponding to this ``EventLoop``.
     ///
     /// This executor can be used to isolate an actor to a given ``EventLoop``. Implementers are encouraged to customise
@@ -330,7 +329,6 @@ public protocol EventLoop: EventLoopGroup {
     /// Submit a job to be executed by the `EventLoop`
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     func enqueue(_ job: consuming ExecutorJob)
-    #endif
 
     /// Must crash if it is not safe to call `wait()` on an `EventLoopFuture`.
     ///
@@ -415,7 +413,6 @@ extension EventLoop {
 }
 
 extension EventLoop {
-    #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public var executor: any SerialExecutor {
         NIODefaultSerialEventLoopExecutor(self)
@@ -432,7 +429,6 @@ extension EventLoop {
             unownedJob.runSynchronously(on: self.executor.asUnownedSerialExecutor())
         }
     }
-    #endif
 }
 
 extension EventLoopGroup {
