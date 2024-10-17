@@ -163,7 +163,7 @@ As with Futures, there are occasionally times where it is necessary to schedule
 Much like with ``EventLoopFuture``, you can use ``NIOLoopBound`` and ``NIOLoopBoundBox``
 to make these callbacks safe.
 
-> Warning: ``NIOloopBound`` and ``NIOLoopBoundBox`` replace compile-time isolation checks
+> Warning: ``NIOLoopBound`` and ``NIOLoopBoundBox`` replace compile-time isolation checks
     with runtime ones. This makes it possible to introduce crashes in your code. Please
     ensure that you are 100% confident that the isolation domains align. If you are not
     sure that the ``EventLoopFuture`` you wish to attach a callback to is bound to your

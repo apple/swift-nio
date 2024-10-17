@@ -666,7 +666,8 @@ class NonBlockingFileIOTest: XCTestCase {
     func testFileOpenFails() throws {
         do {
             try self.fileIO.openFile(
-                path: "/dev/null/this/does/not/exist", eventLoop: self.eventLoop
+                path: "/dev/null/this/does/not/exist",
+                eventLoop: self.eventLoop
             ).map { _ in }.wait()
             XCTFail("should've thrown")
         } catch let e as IOError where e.errnoCode == ENOTDIR {
