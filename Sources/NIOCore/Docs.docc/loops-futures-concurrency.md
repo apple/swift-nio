@@ -143,7 +143,7 @@ In these contexts, today users can make their callbacks safe using ``NIOLoopBoun
 access to their values on the same event loop. These constraints are enforced at runtime,
 so at compile time these are unconditionally `Sendable`.
 
-> Warning: ``NIOloopBound`` and ``NIOLoopBoundBox`` replace compile-time isolation checks
+> Warning: ``NIOLoopBound`` and ``NIOLoopBoundBox`` replace compile-time isolation checks
     with runtime ones. This makes it possible to introduce crashes in your code. Please
     ensure that you are 100% confident that the isolation domains align. If you are not
     sure that the ``EventLoopFuture`` you wish to attach a callback to is bound to your
