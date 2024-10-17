@@ -23,7 +23,7 @@ let benchmarks = {
 
     let leakMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,
-        .memoryLeaked
+        .memoryLeaked,
     ]
 
     Benchmark(
@@ -58,7 +58,7 @@ let benchmarks = {
             metrics: leakMetrics,
             scalingFactor: .kilo,
             maxDuration: .seconds(10_000_000),
-            maxIterations: 10_000 // need 10k to get a signal
+            maxIterations: 10_000  // need 10k to get a signal
         )
     ) { benchmark in
         // Elide the cost of the 'EmbeddedEventLoop'.
