@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.9)
 import NIOCore
 import NIOPosix
 
@@ -122,11 +121,3 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
         out.writeInteger(self.newLine)
     }
 }
-#else
-@main
-struct Server {
-    static func main() {
-        fatalError("Requires at least Swift 5.9")
-    }
-}
-#endif

@@ -67,7 +67,7 @@ The default policy for taking contributions is “Squash and Merge” - because 
 
 ### Make sure your patch works for all supported versions of swift
 
-The CI will do this for you, but a project maintainer must kick it off for you.  Currently all versions of Swift >= 5.8 are supported.
+The CI will do this for you, but a project maintainer must kick it off for you.  Currently all versions of Swift >= 5.9 are supported.
 
 If you wish to test this locally you have two options [act](https://github.com/nektos/act) and Docker Compose files.
 
