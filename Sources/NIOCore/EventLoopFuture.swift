@@ -1457,8 +1457,12 @@ extension EventLoopFuture {
                 // value across event loops.
                 future.whenComplete { result in
                     let voidResult = result.map { _ in }
-                    future.eventLoop.execute {
+                    if eventLoop.inEventLoop {
                         processResult(index, voidResult)
+                    } else {
+                        eventLoop.execute {
+                            processResult(index, voidResult)
+                        }
                     }
                 }
             }
@@ -1684,8 +1688,12 @@ extension EventLoopFuture {
                 // value across event loops.
                 future.whenComplete { result in
                     let voidResult = result.map { _ in }
-                    future.eventLoop.execute {
+                    if eventLoop.inEventLoop {
                         processResult(index, voidResult)
+                    } else {
+                        eventLoop.execute {
+                            processResult(index, voidResult)
+                        }
                     }
                 }
             }

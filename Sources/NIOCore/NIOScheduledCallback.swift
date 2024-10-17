@@ -141,11 +141,12 @@ extension EventLoop {
     }
 
     /// Default implementation of `scheduleCallback(in amount:handler:)`: calls `scheduleCallback(at deadline:handler:)`.
+    @preconcurrency
     @discardableResult
     @inlinable
     public func scheduleCallback(
         in amount: TimeAmount,
-        handler: some NIOScheduledCallbackHandler
+        handler: some (NIOScheduledCallbackHandler & Sendable)
     ) throws -> NIOScheduledCallback {
         try self.scheduleCallback(at: .now() + amount, handler: handler)
     }
