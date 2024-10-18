@@ -89,9 +89,10 @@ public struct NIOScheduledCallback: Sendable {
 }
 
 extension EventLoop {
+    @preconcurrency
     package func _scheduleCallback(
         at deadline: NIODeadline,
-        handler: some NIOScheduledCallbackHandler
+        handler: some (NIOScheduledCallbackHandler & Sendable)
     ) -> NIOScheduledCallback {
         let task = self.scheduleTask(deadline: deadline) { handler.handleScheduledCallback(eventLoop: self) }
         task.futureResult.whenFailure { error in
@@ -130,20 +131,22 @@ extension EventLoop {
     ///
     /// The implementation of this default conformance has been further factored out so we can use it in
     /// `NIOAsyncTestingEventLoop`, where the use of `wait()` is _less bad_.
+    @preconcurrency
     @discardableResult
     public func scheduleCallback(
         at deadline: NIODeadline,
-        handler: some NIOScheduledCallbackHandler
+        handler: some (NIOScheduledCallbackHandler & Sendable)
     ) -> NIOScheduledCallback {
         self._scheduleCallback(at: deadline, handler: handler)
     }
 
     /// Default implementation of `scheduleCallback(in amount:handler:)`: calls `scheduleCallback(at deadline:handler:)`.
+    @preconcurrency
     @discardableResult
     @inlinable
     public func scheduleCallback(
         in amount: TimeAmount,
-        handler: some NIOScheduledCallbackHandler
+        handler: some (NIOScheduledCallbackHandler & Sendable)
     ) throws -> NIOScheduledCallback {
         try self.scheduleCallback(at: .now() + amount, handler: handler)
     }

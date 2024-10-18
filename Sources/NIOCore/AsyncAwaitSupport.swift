@@ -18,8 +18,9 @@ extension EventLoopFuture {
     /// This function can be used to bridge an `EventLoopFuture` into the `async` world. Ie. if you're in an `async`
     /// function and want to get the result of this future.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @preconcurrency
     @inlinable
-    public func get() async throws -> Value {
+    public func get() async throws -> Value where Value: Sendable {
         try await withUnsafeThrowingContinuation { (cont: UnsafeContinuation<UnsafeTransfer<Value>, Error>) in
             self.whenComplete { result in
                 switch result {
@@ -62,8 +63,11 @@ extension EventLoopPromise {
     /// - returns: A `Task` which was created to `await` the `body`.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @discardableResult
+    @preconcurrency
     @inlinable
-    public func completeWithTask(_ body: @escaping @Sendable () async throws -> Value) -> Task<Void, Never> {
+    public func completeWithTask(
+        _ body: @escaping @Sendable () async throws -> Value
+    ) -> Task<Void, Never> where Value: Sendable {
         Task {
             do {
                 let value = try await body()
@@ -396,8 +400,9 @@ struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSeq
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension EventLoop {
+    @preconcurrency
     @inlinable
-    public func makeFutureWithTask<Return>(
+    public func makeFutureWithTask<Return: Sendable>(
         _ body: @Sendable @escaping () async throws -> Return
     ) -> EventLoopFuture<Return> {
         let promise = self.makePromise(of: Return.self)
