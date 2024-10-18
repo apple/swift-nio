@@ -12,10 +12,10 @@ the concepts that Swift uses, or have overlapping responsibilities.
 First, a quick recap. The core of Swift 6's data-race safety protection is the concept of an "isolation
 domain". Some valuable reading regarding the concept can be found in
 [SE-0414 (Region based isolation)](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0414-region-based-isolation.md)
-but at a high level an isolation domain can be understood to be a region within which there cannot be
+but at a high level an isolation domain can be understood to be a collection of state and methods within which there cannot be
 multiple executors executing code at the same time.
 
-In standard Swift Concurrency, the main boundaries of isolation regions are actors and tasks. Each actor,
+In standard Swift Concurrency, the main boundaries of isolation domains are actors and tasks. Each actor,
 including global actors, defines an isolation domain. Additionally, for functions and methods that are
 not isolated to an actor, the `Task` within which that code executes defines an isolation domain. Passing
 values between these isolation domains requires that these values are either `Sendable` (safe to hold in

@@ -1052,7 +1052,7 @@ extension EventLoopFuture {
     }
 
     @inlinable
-    func _wait(file: StaticString = #file, line: UInt = #line) throws -> Value where Value: Sendable {
+    func _wait(file: StaticString, line: UInt) throws -> Value where Value: Sendable {
         self.eventLoop._preconditionSafeToWait(file: file, line: line)
 
         let v: UnsafeMutableTransferBox<Result<Value, Error>?> = .init(nil)
