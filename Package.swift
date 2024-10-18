@@ -259,7 +259,8 @@ let package = Package(
         .target(
             name: "_NIOFileSystemFoundationCompat",
             dependencies: [
-                "_NIOFileSystem"
+                "_NIOFileSystem",
+                "NIOFoundationCompat",
             ],
             path: "Sources/NIOFileSystemFoundationCompat"
         ),
