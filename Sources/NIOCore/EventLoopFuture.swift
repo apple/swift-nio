@@ -1046,6 +1046,7 @@ extension EventLoopFuture {
     /// - throws: The error value of the `EventLoopFuture` if it errors.
     @available(*, noasync, message: "wait() can block indefinitely, prefer get()", renamed: "get()")
     @preconcurrency
+    @inlinable
     public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value where Value: Sendable {
         try self._wait(file: file, line: line)
     }

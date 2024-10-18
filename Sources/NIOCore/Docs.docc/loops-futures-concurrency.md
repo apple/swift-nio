@@ -79,9 +79,9 @@ executor (the ``EventLoop``) in the same isolation domain.
 
 The analogy to an actor here is hopefully fairly clear. Conceptually, an ``EventLoopFuture``
 could be modelled as an actor. That means all the callbacks have the same logical semantics:
-the ``EventLoopFuture`` defines an isolation domain, and all the callbacks are `sent` into the
-isolation domain. To that end, all the callback-taking APIs require that the callback is sent
-using `sending` into the ``EventLoopFuture``.
+the ``EventLoopFuture`` uses the isolation domain of its associated ``EventLoop``, and all
+the callbacks are `sent` into the isolation domain. To that end, all the callback-taking APIs
+require that the callback is sent using `sending` into the ``EventLoopFuture``.
 
 > Note: As of the current 2.75.0 release, NIO enforces the stricter requirement that these callbacks
     are `@Sendable`. This is not a long-term position, but reflects the need to continue
