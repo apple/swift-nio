@@ -160,10 +160,11 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
         scheduleTask(deadline: self._now + `in`, task)
     }
 
+    @preconcurrency
     @discardableResult
     public func scheduleCallback(
         in amount: TimeAmount,
-        handler: some NIOScheduledCallbackHandler
+        handler: some (NIOScheduledCallbackHandler & Sendable)
     ) -> NIOScheduledCallback {
         /// Even though this type does not implement a custom `scheduleCallback(at:handler)`, it uses a manual clock so
         /// it cannot rely on the default implementation of `scheduleCallback(in:handler:)`, which computes the deadline
@@ -271,14 +272,12 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
         precondition(scheduledTasks.isEmpty, "Embedded event loop freed with unexecuted scheduled tasks!")
     }
 
-    #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public var executor: any SerialExecutor {
         fatalError(
             "EmbeddedEventLoop is not thread safe and cannot be used as a SerialExecutor. Use NIOAsyncTestingEventLoop instead."
         )
     }
-    #endif
 }
 
 @usableFromInline

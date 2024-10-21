@@ -15,14 +15,12 @@
 import Atomics
 import NIOCore
 
-#if compiler(>=5.9)
 private protocol SilenceWarning {
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     func enqueue(_ job: UnownedJob)
 }
 @available(macOS 14, *)
 extension SelectableEventLoop: SilenceWarning {}
-#endif
 
 private let _haveWeTakenOverTheConcurrencyPool = ManagedAtomic(false)
 extension NIOSingletons {

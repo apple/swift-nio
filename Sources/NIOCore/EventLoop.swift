@@ -60,7 +60,7 @@ public struct Scheduled<T> {
     }
 }
 
-extension Scheduled: Sendable where T: Sendable {}
+extension Scheduled: Sendable {}
 
 /// Returned once a task was scheduled to be repeatedly executed on the `EventLoop`.
 ///
@@ -317,7 +317,6 @@ public protocol EventLoop: EventLoopGroup {
     /// allows `EventLoop`s to cache a pre-succeeded `Void` future to prevent superfluous allocations.
     func makeSucceededVoidFuture() -> EventLoopFuture<Void>
 
-    #if compiler(>=5.9)
     /// Returns a `SerialExecutor` corresponding to this ``EventLoop``.
     ///
     /// This executor can be used to isolate an actor to a given ``EventLoop``. Implementers are encouraged to customise
@@ -330,7 +329,6 @@ public protocol EventLoop: EventLoopGroup {
     /// Submit a job to be executed by the `EventLoop`
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     func enqueue(_ job: consuming ExecutorJob)
-    #endif
 
     /// Must crash if it is not safe to call `wait()` on an `EventLoopFuture`.
     ///
@@ -370,20 +368,22 @@ public protocol EventLoop: EventLoopGroup {
     ///
     /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** also implement
     ///         `cancelScheduledCallback`. Failure to do so will result in a runtime error.
+    @preconcurrency
     @discardableResult
     func scheduleCallback(
         at deadline: NIODeadline,
-        handler: some NIOScheduledCallbackHandler
+        handler: some (NIOScheduledCallbackHandler & Sendable)
     ) throws -> NIOScheduledCallback
 
     /// Schedule a callback after given time.
     ///
     /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** also implement
     ///         `cancelScheduledCallback`. Failure to do so will result in a runtime error.
+    @preconcurrency
     @discardableResult
     func scheduleCallback(
         in amount: TimeAmount,
-        handler: some NIOScheduledCallbackHandler
+        handler: some (NIOScheduledCallbackHandler & Sendable)
     ) throws -> NIOScheduledCallback
 
     /// Cancel a scheduled callback.
@@ -415,7 +415,6 @@ extension EventLoop {
 }
 
 extension EventLoop {
-    #if compiler(>=5.9)
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     public var executor: any SerialExecutor {
         NIODefaultSerialEventLoopExecutor(self)
@@ -432,7 +431,6 @@ extension EventLoop {
             unownedJob.runSynchronously(on: self.executor.asUnownedSerialExecutor())
         }
     }
-    #endif
 }
 
 extension EventLoopGroup {
@@ -753,13 +751,7 @@ extension EventLoop {
     /// - returns: An `EventLoopFuture` containing the result of `task`'s execution.
     @inlinable
     @preconcurrency
-    public func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
-        _submit(task)
-    }
-    @usableFromInline typealias SubmitCallback<T> = @Sendable () throws -> T
-
-    @inlinable
-    func _submit<T>(_ task: @escaping SubmitCallback<T>) -> EventLoopFuture<T> {
+    public func submit<T: Sendable>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = makePromise(file: #fileID, line: #line)
 
         self.execute {
@@ -783,17 +775,14 @@ extension EventLoop {
     /// - returns: An `EventLoopFuture` identical to the `EventLoopFuture` returned from `task`.
     @inlinable
     @preconcurrency
-    public func flatSubmit<T>(_ task: @escaping @Sendable () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
-        self._flatSubmit(task)
-    }
-    @usableFromInline typealias FlatSubmitCallback<T> = @Sendable () -> EventLoopFuture<T>
-
-    @inlinable
-    func _flatSubmit<T>(_ task: @escaping FlatSubmitCallback<T>) -> EventLoopFuture<T> {
+    public func flatSubmit<T: Sendable>(_ task: @escaping @Sendable () -> EventLoopFuture<T>) -> EventLoopFuture<T> {
         self.submit(task).flatMap { $0 }
     }
 
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
+    ///
+    /// - Note: The `T` must be `Sendable` since the isolation domains of the event loop future returned from `task` and
+    /// this event loop might differ.
     ///
     /// - parameters:
     ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
@@ -804,23 +793,11 @@ extension EventLoop {
     @discardableResult
     @inlinable
     @preconcurrency
-    public func flatScheduleTask<T>(
+    public func flatScheduleTask<T: Sendable>(
         deadline: NIODeadline,
         file: StaticString = #fileID,
         line: UInt = #line,
         _ task: @escaping @Sendable () throws -> EventLoopFuture<T>
-    ) -> Scheduled<T> {
-        self._flatScheduleTask(deadline: deadline, file: file, line: line, task)
-    }
-    @usableFromInline typealias FlatScheduleTaskDeadlineCallback<T> = () throws -> EventLoopFuture<T>
-
-    @discardableResult
-    @inlinable
-    func _flatScheduleTask<T>(
-        deadline: NIODeadline,
-        file: StaticString,
-        line: UInt,
-        _ task: @escaping FlatScheduleTaskDelayCallback<T>
     ) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
@@ -831,6 +808,9 @@ extension EventLoop {
 
     /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
     ///
+    /// - Note: The `T` must be `Sendable` since the isolation domains of the event loop future returned from `task` and
+    /// this event loop might differ.
+    ///
     /// - parameters:
     ///     - task: The asynchronous task to run. As everything that runs on the `EventLoop`, it must not block.
     /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
@@ -840,7 +820,7 @@ extension EventLoop {
     @discardableResult
     @inlinable
     @preconcurrency
-    public func flatScheduleTask<T>(
+    public func flatScheduleTask<T: Sendable>(
         in delay: TimeAmount,
         file: StaticString = #fileID,
         line: UInt = #line,
@@ -852,7 +832,7 @@ extension EventLoop {
     @usableFromInline typealias FlatScheduleTaskDelayCallback<T> = @Sendable () throws -> EventLoopFuture<T>
 
     @inlinable
-    func _flatScheduleTask<T>(
+    func _flatScheduleTask<T: Sendable>(
         in delay: TimeAmount,
         file: StaticString,
         line: UInt,
@@ -890,8 +870,9 @@ extension EventLoop {
     /// - parameters:
     ///     - result: the value that is used by the `EventLoopFuture`.
     /// - returns: a succeeded `EventLoopFuture`.
+    @preconcurrency
     @inlinable
-    public func makeSucceededFuture<Success>(_ value: Success) -> EventLoopFuture<Success> {
+    public func makeSucceededFuture<Success: Sendable>(_ value: Success) -> EventLoopFuture<Success> {
         if Success.self == Void.self {
             // The as! will always succeed because we previously checked that Success.self == Void.self.
             return self.makeSucceededVoidFuture() as! EventLoopFuture<Success>
@@ -905,8 +886,9 @@ extension EventLoop {
     /// - Parameters:
     ///   - result: The value that is used by the `EventLoopFuture`
     /// - Returns: A completed `EventLoopFuture`.
+    @preconcurrency
     @inlinable
-    public func makeCompletedFuture<Success>(_ result: Result<Success, Error>) -> EventLoopFuture<Success> {
+    public func makeCompletedFuture<Success: Sendable>(_ result: Result<Success, Error>) -> EventLoopFuture<Success> {
         switch result {
         case .success(let value):
             return self.makeSucceededFuture(value)
@@ -920,8 +902,11 @@ extension EventLoop {
     /// - Parameters:
     ///   - body: The function that is used to complete the `EventLoopFuture`
     /// - Returns: A completed `EventLoopFuture`.
+    @preconcurrency
     @inlinable
-    public func makeCompletedFuture<Success>(withResultOf body: () throws -> Success) -> EventLoopFuture<Success> {
+    public func makeCompletedFuture<Success: Sendable>(
+        withResultOf body: () throws -> Success
+    ) -> EventLoopFuture<Success> {
         let trans = Result(catching: body)
         return self.makeCompletedFuture(trans)
     }
@@ -1003,7 +988,7 @@ extension EventLoop {
         notifying promise: EventLoopPromise<Void>?,
         _ task: @escaping ScheduleRepeatedTaskCallback
     ) -> RepeatedTask {
-        let futureTask: (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
+        let futureTask: @Sendable (RepeatedTask) -> EventLoopFuture<Void> = { repeatedTask in
             do {
                 try task(repeatedTask)
                 return self.makeSucceededFuture(())
