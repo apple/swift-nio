@@ -609,6 +609,69 @@ final class AsyncChannelBootstrapTests: XCTestCase {
         }
     }
 
+    func testServerClientBootstrap_withAsyncChannel_clientConnectedSocket() async throws {
+        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+        defer {
+            try! eventLoopGroup.syncShutdownGracefully()
+        }
+
+        let channel = try await ServerBootstrap(group: eventLoopGroup)
+            .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
+            .childChannelOption(.autoRead, value: true)
+            .bind(
+                host: "127.0.0.1",
+                port: 0
+            ) { channel in
+                channel.eventLoop.makeCompletedFuture { () -> NIOAsyncChannel<String, String> in
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
+                    return try NIOAsyncChannel(
+                        wrappingChannelSynchronously: channel,
+                        configuration: .init(
+                            inboundType: String.self,
+                            outboundType: String.self
+                        )
+                    )
+                }
+            }
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            let (stream, continuation) = AsyncStream<StringOrByte>.makeStream()
+            var iterator = stream.makeAsyncIterator()
+
+            group.addTask {
+                try await withThrowingTaskGroup(of: Void.self) { _ in
+                    try await channel.executeThenClose { inbound in
+                        for try await childChannel in inbound {
+                            try await childChannel.executeThenClose { childChannelInbound, _ in
+                                for try await value in childChannelInbound {
+                                    continuation.yield(.string(value))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            let s = try Socket(protocolFamily: .inet, type: .stream)
+            XCTAssert(try s.connect(to: channel.channel.localAddress!))
+            let fd = try s.takeDescriptorOwnership()
+
+            let stringChannel = try await self.makeClientChannel(
+                eventLoopGroup: eventLoopGroup,
+                fileDescriptor: fd
+            )
+            try await stringChannel.executeThenClose { _, outbound in
+                try await outbound.write("hello")
+            }
+
+            await XCTAsyncAssertEqual(await iterator.next(), .string("hello"))
+
+            group.cancelAll()
+        }
+    }
+
     // MARK: Datagram Bootstrap
 
     func testDatagramBootstrap_withAsyncChannel_andHostPort() async throws {
@@ -1270,6 +1333,22 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             .connect(
                 to: .init(ipAddress: "127.0.0.1", port: port)
             ) { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
+                    try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(MessageToByteHandler(LineDelimiterCoder()))
+                    try channel.pipeline.syncOperations.addHandler(ByteBufferToStringHandler())
+                    return try NIOAsyncChannel(wrappingChannelSynchronously: channel)
+                }
+            }
+    }
+
+    private func makeClientChannel(
+        eventLoopGroup: EventLoopGroup,
+        fileDescriptor: CInt
+    ) async throws -> NIOAsyncChannel<String, String> {
+        try await ClientBootstrap(group: eventLoopGroup)
+            .withConnectedSocket(fileDescriptor) { channel in
                 channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
                     try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(LineDelimiterCoder()))
