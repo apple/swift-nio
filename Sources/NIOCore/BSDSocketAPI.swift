@@ -18,6 +18,7 @@ import ucrt
 import let WinSDK.IPPROTO_IP
 import let WinSDK.IPPROTO_IPV6
 import let WinSDK.IPPROTO_TCP
+import let WinSDK.IPPROTO_UDP
 
 import let WinSDK.IP_ADD_MEMBERSHIP
 import let WinSDK.IP_DROP_MEMBERSHIP
@@ -40,12 +41,14 @@ import let WinSDK.PF_INET
 import let WinSDK.PF_INET6
 import let WinSDK.PF_UNIX
 
+import let WinSDK.SO_BROADCAST
 import let WinSDK.SO_ERROR
 import let WinSDK.SO_KEEPALIVE
 import let WinSDK.SO_LINGER
 import let WinSDK.SO_RCVBUF
 import let WinSDK.SO_RCVTIMEO
 import let WinSDK.SO_REUSEADDR
+import let WinSDK.SO_SNDBUF
 
 import let WinSDK.SOL_SOCKET
 
@@ -282,6 +285,9 @@ extension NIOBSDSocket.OptionLevel {
     #if os(Linux) || os(Android)
     public static let udp: NIOBSDSocket.OptionLevel =
         NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_UDP))
+    #elseif os(Windows)
+    public static let udp: NIOBSDSocket.OptionLevel =
+        NIOBSDSocket.OptionLevel(rawValue: IPPROTO_UDP.rawValue)
     #else
     public static let udp: NIOBSDSocket.OptionLevel =
         NIOBSDSocket.OptionLevel(rawValue: IPPROTO_UDP)
