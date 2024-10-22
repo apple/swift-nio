@@ -149,7 +149,7 @@ jobs:
           curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
 
   windows:
-    name: Windows (${{ matrix.swift.swift_version }})
+    name: Windows (6.0)
     runs-on: windows-2022
     strategy:
       fail-fast: false
@@ -191,7 +191,7 @@ jobs:
           - image: swiftlang/swift:nightly-main-windowsservercore-1809
             swift_version: "nightly-main"
             enabled: ${{ inputs.matrix_windows_nightly_main_enabled }}
-    if: ${{ inputs.matrix_windows_nightly_6_0_enabled }} || ${{ inputs.matrix_windows_nightly_main_enabled }}
+    if: (${{ inputs.matrix_windows_nightly_6_0_enabled }} || ${{ inputs.matrix_windows_nightly_main_enabled }})
     steps:
       - name: Pull Docker image
         if: ${{ matrix.swift.enabled }}
