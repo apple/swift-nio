@@ -634,7 +634,11 @@ public final class EventLoopTest: XCTestCase {
         }
         let threads: [ThreadInitializer] = [body, body]
 
-        let group = MultiThreadedEventLoopGroup(threadInitializers: threads, metricsDelegate: nil)
+        let group = MultiThreadedEventLoopGroup(
+            threadInitializers: threads,
+            threadConfiguration: .defaultForEventLoopGroups,
+            metricsDelegate: nil
+        )
 
         XCTAssertEqual(2, counter)
         XCTAssertNoThrow(try group.syncShutdownGracefully())
@@ -1944,6 +1948,37 @@ public final class EventLoopTest: XCTestCase {
         XCTAssertLessThan(.now(), failDeadline)
 
         scheduledTask.cancel()
+    }
+
+    func testThreadPrefixes() throws {
+        var threadConfig = NIOThreadConfiguration.defaultForEventLoopGroups
+        threadConfig.threadNamePrefix = "test-"
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 3, threadConfiguration: threadConfig)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        for loop in group.makeIterator() {
+            let threadName = try loop.submit { return Thread.current.name ?? "NO NAME" }.wait()
+            XCTAssert(threadName.hasPrefix("test-"))
+        }
+    }
+
+    func testThreadQoS() throws {
+        #if canImport(Darwin)
+        var threadConfig = NIOThreadConfiguration.defaultForEventLoopGroups
+        threadConfig.threadNamePrefix = "test-"
+        threadConfig.osSpecificConfiguration.qosClass = .utility
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 3, threadConfiguration: threadConfig)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        for loop in group.makeIterator() {
+            let qosClass = try loop.submit { qos_class_self() }.wait()
+            XCTAssertEqual(QOS_CLASS_UTILITY, qosClass)
+        }
+        #endif
     }
 }
 
