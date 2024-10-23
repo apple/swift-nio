@@ -31,6 +31,19 @@ on:
         description: "Boolean to enable the Linux nightly main Swift version matrix job. Defaults to true."
         default: true
 
+      windows_6_0_enabled:
+        type: boolean
+        description: "Boolean to enable the Windows 6.0 Swift version matrix job. Defaults to true."
+        default: false
+      windows_nightly_6_0_enabled:
+        type: boolean
+        description: "Boolean to enable the Windows nightly 6.0 Swift version matrix job. Defaults to true."
+        default: false
+      windows_nightly_main_enabled:
+        type: boolean
+        description: "Boolean to enable the Windows nightly main Swift version matrix job. Defaults to true."
+        default: false
+
 jobs:
   benchmarks:
     name: Benchmarks
@@ -44,3 +57,6 @@ jobs:
       matrix_linux_6_0_enabled: ${{ inputs.linux_6_0_enabled }}
       matrix_linux_nightly_6_0_enabled: ${{ inputs.linux_nightly_6_0_enabled }}
       matrix_linux_nightly_main_enabled: ${{ inputs.linux_nightly_main_enabled }}
+      matrix_windows_6_0_enabled: ${{ inputs.windows_6_0_enabled }}
+      matrix_windows_nightly_6_0_enabled: ${{ inputs.windows_nightly_6_0_enabled }}
+      matrix_windows_nightly_main_enabled: ${{ inputs.windows_nightly_main_enabled }}
