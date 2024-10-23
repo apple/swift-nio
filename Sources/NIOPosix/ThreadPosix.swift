@@ -43,7 +43,12 @@ private func sysPthread_create(
     args: UnsafeMutableRawPointer?
 ) -> CInt {
     #if canImport(Darwin)
-    return pthread_create(handle, nil, destructor, args)
+    var attr: pthread_attr_t = .init()
+    pthread_attr_init(&attr)
+    pthread_attr_set_qos_class_np(&attr, qos_class_main(), 0)
+    let thread = pthread_create(handle, &attr, destructor, args)
+    pthread_attr_destroy(&attr)
+    return thread
     #else
     #if canImport(Musl)
     var handleLinux: OpaquePointer? = nil
