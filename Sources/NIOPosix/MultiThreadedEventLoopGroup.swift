@@ -70,7 +70,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     private let index = ManagedAtomic<Int>(0)
     private var eventLoops: [SelectableEventLoop]
     private let shutdownLock: NIOLock = NIOLock()
-    private let threadNamePrefix: String
+    private let threadNamePrefix: String?
     private var runState: RunState = .running
     private let canBeShutDown: Bool
 
@@ -108,7 +108,8 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     }
 
     private static func setupThreadAndEventLoop(
-        name: String,
+        name: String?,
+        threadConfiguration: NIOThreadConfiguration,
         parentGroup: MultiThreadedEventLoopGroup,
         selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
         initializer: @escaping ThreadInitializer,
@@ -119,7 +120,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         // synchronised by `lock`
         var _loop: SelectableEventLoop! = nil
 
-        NIOThread.spawnAndRun(name: name, detachThread: false) { t in
+        NIOThread.spawnAndRun(name: name, configuration: threadConfiguration, detachThread: false) { t in
             MultiThreadedEventLoopGroup.runTheLoop(
                 thread: t,
                 parentGroup: parentGroup,
@@ -150,6 +151,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     public convenience init(numberOfThreads: Int) {
         self.init(
             numberOfThreads: numberOfThreads,
+            threadConfiguration: .defaultForEventLoopGroups,
             canBeShutDown: true,
             metricsDelegate: nil,
             selectorFactory: NIOPosix.Selector<NIORegistration>.init
@@ -169,6 +171,32 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     public convenience init(numberOfThreads: Int, metricsDelegate: NIOEventLoopMetricsDelegate) {
         self.init(
             numberOfThreads: numberOfThreads,
+            threadConfiguration: .defaultForEventLoopGroups,
+            canBeShutDown: true,
+            metricsDelegate: metricsDelegate,
+            selectorFactory: NIOPosix.Selector<NIORegistration>.init
+        )
+    }
+
+    /// Creates a `MultiThreadedEventLoopGroup` instance which uses `numberOfThreads`.
+    ///
+    /// - note: Don't forget to call `shutdownGracefully` or `syncShutdownGracefully` when you no longer need this
+    ///         `EventLoopGroup`. If you forget to shut the `EventLoopGroup` down you will leak `numberOfThreads`
+    ///         (kernel) threads which are costly resources. This is especially important in unit tests where one
+    ///         `MultiThreadedEventLoopGroup` is started per test case.
+    ///
+    /// - Parameters:
+    ///    - numberOfThreads: The number of `Threads` to use.
+    ///    - threadConfiguration: Configuration for the threads to spawn.
+    ///    - metricsDelegate: Delegate for collecting information from this eventloop
+    public convenience init(
+        numberOfThreads: Int,
+        threadConfiguration: NIOThreadConfiguration,
+        metricsDelegate: NIOEventLoopMetricsDelegate? = nil
+    ) {
+        self.init(
+            numberOfThreads: numberOfThreads,
+            threadConfiguration: threadConfiguration,
             canBeShutDown: true,
             metricsDelegate: metricsDelegate,
             selectorFactory: NIOPosix.Selector<NIORegistration>.init
@@ -179,13 +207,13 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     ///
     /// This is only useful for global singletons.
     public static func _makePerpetualGroup(
-        threadNamePrefix: String,
-        numberOfThreads: Int
+        numberOfThreads: Int,
+        threadConfiguration: NIOThreadConfiguration
     ) -> MultiThreadedEventLoopGroup {
         self.init(
             numberOfThreads: numberOfThreads,
+            threadConfiguration: threadConfiguration,
             canBeShutDown: false,
-            threadNamePrefix: threadNamePrefix,
             metricsDelegate: nil,
             selectorFactory: NIOPosix.Selector<NIORegistration>.init
         )
@@ -193,6 +221,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     internal convenience init(
         numberOfThreads: Int,
+        threadConfiguration: NIOThreadConfiguration,
         metricsDelegate: NIOEventLoopMetricsDelegate?,
         selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>
     ) {
@@ -201,6 +230,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         self.init(
             threadInitializers: initializers,
             canBeShutDown: true,
+            threadConfiguration: threadConfiguration,
             metricsDelegate: metricsDelegate,
             selectorFactory: selectorFactory
         )
@@ -208,24 +238,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     internal convenience init(
         numberOfThreads: Int,
-        canBeShutDown: Bool,
-        threadNamePrefix: String,
-        metricsDelegate: NIOEventLoopMetricsDelegate?,
-        selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>
-    ) {
-        precondition(numberOfThreads > 0, "numberOfThreads must be positive")
-        let initializers: [ThreadInitializer] = Array(repeating: { _ in }, count: numberOfThreads)
-        self.init(
-            threadInitializers: initializers,
-            canBeShutDown: canBeShutDown,
-            threadNamePrefix: threadNamePrefix,
-            metricsDelegate: metricsDelegate,
-            selectorFactory: selectorFactory
-        )
-    }
-
-    internal convenience init(
-        numberOfThreads: Int,
+        threadConfiguration: NIOThreadConfiguration,
         canBeShutDown: Bool,
         metricsDelegate: NIOEventLoopMetricsDelegate?,
         selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>
@@ -235,6 +248,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         self.init(
             threadInitializers: initializers,
             canBeShutDown: canBeShutDown,
+            threadConfiguration: threadConfiguration,
             metricsDelegate: metricsDelegate,
             selectorFactory: selectorFactory
         )
@@ -242,6 +256,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     internal convenience init(
         threadInitializers: [ThreadInitializer],
+        threadConfiguration: NIOThreadConfiguration,
         metricsDelegate: NIOEventLoopMetricsDelegate?,
         selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration> = NIOPosix.Selector<NIORegistration>
             .init
@@ -249,6 +264,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         self.init(
             threadInitializers: threadInitializers,
             canBeShutDown: true,
+            threadConfiguration: threadConfiguration,
             metricsDelegate: metricsDelegate,
             selectorFactory: selectorFactory
         )
@@ -261,12 +277,12 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
     internal init(
         threadInitializers: [ThreadInitializer],
         canBeShutDown: Bool,
-        threadNamePrefix: String = "NIO-ELT-",
+        threadConfiguration: NIOThreadConfiguration,
         metricsDelegate: NIOEventLoopMetricsDelegate?,
         selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration> = NIOPosix.Selector<NIORegistration>
             .init
     ) {
-        self.threadNamePrefix = threadNamePrefix
+        self.threadNamePrefix = threadConfiguration.threadNamePrefix
         let myGroupID = nextEventLoopGroupID.loadThenWrappingIncrement(ordering: .relaxed)
         self.myGroupID = myGroupID
         var idx = 0
@@ -275,7 +291,8 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         self.eventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
             let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(
-                name: "\(threadNamePrefix)\(myGroupID)-#\(idx)",
+                name: self.threadNamePrefix.map { "\($0)\(myGroupID)-#\(idx)" },
+                threadConfiguration: threadConfiguration,
                 parentGroup: self,
                 selectorFactory: selectorFactory,
                 initializer: initializer,

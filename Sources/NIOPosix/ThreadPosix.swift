@@ -39,17 +39,18 @@ private typealias ThreadDestructor = @convention(c) (UnsafeMutableRawPointer) ->
 
 private func sysPthread_create(
     handle: UnsafeMutablePointer<pthread_t?>,
+    attr: UnsafePointer<pthread_attr_t>?,
     destructor: @escaping ThreadDestructor,
     args: UnsafeMutableRawPointer?
 ) -> CInt {
     #if canImport(Darwin)
-    return pthread_create(handle, nil, destructor, args)
+    return pthread_create(handle, attr, destructor, args)
     #else
     #if canImport(Musl)
     var handleLinux: OpaquePointer? = nil
     let result = pthread_create(
         &handleLinux,
-        nil,
+        attr,
         destructor,
         args
     )
@@ -57,7 +58,7 @@ private func sysPthread_create(
     var handleLinux = pthread_t()
     let result = pthread_create(
         &handleLinux,
-        nil,
+        attr,
         destructor,
         args
     )
@@ -99,9 +100,25 @@ enum ThreadOpsPosix: ThreadOps {
         args: Box<NIOThread.ThreadBoxValue>,
         detachThread: Bool
     ) {
+        var attr: pthread_attr_t = pthread_attr_t()
+        pthread_attr_init(&attr)
+        defer {
+            pthread_attr_destroy(&attr)
+        }
+        #if canImport(Darwin)
+        let qosClass: qos_class_t
+        switch args.value.configuration.osSpecificConfiguration.qosClass.backing {
+        case .inheritFromMainThread:
+            qosClass = qos_class_main()
+        case .custom(let `class`):
+            qosClass = `class`
+        }
+        pthread_attr_set_qos_class_np(&attr, qosClass, 0)
+        #endif
         let argv0 = Unmanaged.passRetained(args).toOpaque()
         let res = sysPthread_create(
             handle: &handle,
+            attr: &attr,
             destructor: {
                 // Cast to UnsafeMutableRawPointer? and force unwrap to make the
                 // same code work on macOS and Linux.

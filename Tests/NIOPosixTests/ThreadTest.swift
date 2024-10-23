@@ -21,7 +21,7 @@ import XCTest
 class ThreadTest: XCTestCase {
     func testCurrentThreadWorks() throws {
         let s = DispatchSemaphore(value: 0)
-        NIOThread.spawnAndRun { t in
+        NIOThread.spawnAndRunBasic { t in
             XCTAssertTrue(t.isCurrent)
             s.signal()
         }
@@ -30,8 +30,8 @@ class ThreadTest: XCTestCase {
 
     func testCurrentThreadIsNotTrueOnOtherThread() throws {
         let s = DispatchSemaphore(value: 0)
-        NIOThread.spawnAndRun { t1 in
-            NIOThread.spawnAndRun { t2 in
+        NIOThread.spawnAndRunBasic { t1 in
+            NIOThread.spawnAndRunBasic { t2 in
                 XCTAssertFalse(t1.isCurrent)
                 XCTAssertTrue(t2.isCurrent)
                 s.signal()
@@ -43,7 +43,7 @@ class ThreadTest: XCTestCase {
     func testThreadSpecificsAreNilWhenNotPresent() throws {
         class SomeClass {}
         let s = DispatchSemaphore(value: 0)
-        NIOThread.spawnAndRun { (_: NIOPosix.NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOPosix.NIOThread) in
             let tsv: ThreadSpecificVariable<SomeClass> = ThreadSpecificVariable()
             XCTAssertNil(tsv.currentValue)
             s.signal()
@@ -54,7 +54,7 @@ class ThreadTest: XCTestCase {
     func testThreadSpecificsWorks() throws {
         class SomeClass {}
         let s = DispatchSemaphore(value: 0)
-        NIOThread.spawnAndRun { (_: NIOPosix.NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOPosix.NIOThread) in
             let tsv: ThreadSpecificVariable<SomeClass> = ThreadSpecificVariable()
             XCTAssertNil(tsv.currentValue)
             let expected = SomeClass()
@@ -68,12 +68,12 @@ class ThreadTest: XCTestCase {
     func testThreadSpecificsAreNotAvailableOnADifferentThread() throws {
         class SomeClass {}
         let s = DispatchSemaphore(value: 0)
-        NIOThread.spawnAndRun { (_: NIOPosix.NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOPosix.NIOThread) in
             let tsv = ThreadSpecificVariable<SomeClass>()
             XCTAssertNil(tsv.currentValue)
             tsv.currentValue = SomeClass()
             XCTAssertNotNil(tsv.currentValue)
-            NIOThread.spawnAndRun { t2 in
+            NIOThread.spawnAndRunBasic { t2 in
                 XCTAssertNil(tsv.currentValue)
                 s.signal()
             }
@@ -91,7 +91,7 @@ class ThreadTest: XCTestCase {
             }
         }
         weak var weakSome: SomeClass? = nil
-        NIOThread.spawnAndRun { (_: NIOPosix.NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOPosix.NIOThread) in
             let some = SomeClass(sem: s)
             weakSome = some
             let tsv = ThreadSpecificVariable<SomeClass>()
@@ -112,7 +112,7 @@ class ThreadTest: XCTestCase {
             }
         }
         weak var weakSome: SomeClass? = nil
-        NIOThread.spawnAndRun { (_: NIOPosix.NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOPosix.NIOThread) in
             let some = SomeClass(sem: s)
             weakSome = some
             let tsv = ThreadSpecificVariable<SomeClass>()
@@ -138,7 +138,7 @@ class ThreadTest: XCTestCase {
         weak var weakSome1: SomeClass? = nil
         weak var weakSome2: SomeClass? = nil
         weak var weakSome3: SomeClass? = nil
-        NIOThread.spawnAndRun { (_: NIOPosix.NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOPosix.NIOThread) in
             let some1 = SomeClass(sem: s1)
             weakSome1 = some1
             let some2 = SomeClass(sem: s2)
@@ -172,12 +172,12 @@ class ThreadTest: XCTestCase {
             }
         }
         weak var weakSome: SomeClass? = nil
-        NIOThread.spawnAndRun { (_: NIOPosix.NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOPosix.NIOThread) in
             let some = SomeClass(sem: s)
             weakSome = some
             let tsv = ThreadSpecificVariable<SomeClass>()
             for _ in 0..<10 {
-                NIOThread.spawnAndRun { (_: NIOPosix.NIOThread) in
+                NIOThread.spawnAndRunBasic { (_: NIOPosix.NIOThread) in
                     tsv.currentValue = some
                 }
             }
@@ -203,7 +203,7 @@ class ThreadTest: XCTestCase {
         }
         weak var weakSome: SomeClass? = nil
         weak var weakTSV: ThreadSpecificVariable<SomeClass>? = nil
-        NIOThread.spawnAndRun { (_: NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOThread) in
             {
                 let some = SomeClass(sem: s)
                 weakSome = some
@@ -231,7 +231,7 @@ class ThreadTest: XCTestCase {
         }
 
         for _ in 0..<numberOfThreads {
-            NIOThread.spawnAndRun { (_: NIOThread) in
+            NIOThread.spawnAndRunBasic { (_: NIOThread) in
                 let some = SomeClass(sem: s)
                 let tsv = ThreadSpecificVariable<SomeClass>()
                 tsv.currentValue = some
@@ -273,7 +273,7 @@ class ThreadTest: XCTestCase {
         weak var weakSome1: SomeClass? = nil
         weak var weakSome2: SomeClass? = nil
         weak var weakTSV: ThreadSpecificVariable<SomeClass>? = nil
-        NIOThread.spawnAndRun { (_: NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOThread) in
             {
                 let some = SomeClass(sem: t1Sem)
                 weakSome1 = some
@@ -287,7 +287,7 @@ class ThreadTest: XCTestCase {
                 XCTAssertNotNil(weakTSV)
             }()
         }
-        NIOThread.spawnAndRun { (_: NIOThread) in
+        NIOThread.spawnAndRunBasic { (_: NIOThread) in
             {
                 let some = SomeClass(sem: t2Sem)
                 weakSome2 = some
