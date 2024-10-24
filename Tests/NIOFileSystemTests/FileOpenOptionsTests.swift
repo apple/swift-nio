@@ -12,9 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-@_spi(Testing) import _NIOFileSystem
 import XCTest
+@_spi(Testing) import _NIOFileSystem
 
 final class FileOpenOptionsTests: XCTestCase {
     private let expectedDefaults: FilePermissions = [
@@ -99,4 +98,3 @@ final class FileOpenOptionsTests: XCTestCase {
         XCTAssertEqual(FileDescriptor.OpenOptions(options), [.create, .exclusiveCreate, .noFollow])
     }
 }
-#endif

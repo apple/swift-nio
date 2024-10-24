@@ -12,12 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-
 import Atomics
 import NIOCore
 import NIOPosix
-@preconcurrency import SystemPackage
+import SystemPackage
 
 #if canImport(Darwin)
 import Darwin
@@ -1539,4 +1537,3 @@ extension FileSystem {
         }
     }
 }
-#endif

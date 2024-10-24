@@ -12,9 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-import _NIOFileSystem
 import XCTest
+import _NIOFileSystem
 
 class ByteCountTests: XCTestCase {
     func testByteCountBytes() {
@@ -90,4 +89,3 @@ class ByteCountTests: XCTestCase {
         XCTAssertGreaterThan(byteCount2, byteCount1)
     }
 }
-#endif

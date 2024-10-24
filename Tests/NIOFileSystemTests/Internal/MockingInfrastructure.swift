@@ -19,10 +19,9 @@
 //
 //See https://swift.org/LICENSE.txt for license information
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-@_spi(Testing) import _NIOFileSystem
 import SystemPackage
 import XCTest
+@_spi(Testing) import _NIOFileSystem
 
 #if ENABLE_MOCKING
 internal struct Wildcard: Hashable {}
@@ -252,5 +251,4 @@ internal struct MockTestCase: TestCase {
 internal func withWindowsPaths(enabled: Bool, _ body: () -> Void) {
     _withWindowsPaths(enabled: enabled, body)
 }
-#endif
 #endif
