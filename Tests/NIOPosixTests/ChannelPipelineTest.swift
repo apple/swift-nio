@@ -1788,7 +1788,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertTrue(try channel.finish().isClean)
     }
 
-    func testRetrieveInboundBufferedBytesFromEmptyChannel() throws {
+    func testRetrieveInboundBufferedBytesFromChannelWithZeroHandler() throws {
         let channel = EmbeddedChannel()
 
         let data = ByteBuffer(string: "1234")
@@ -1805,7 +1805,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertTrue(try channel.finish().isClean)
     }
 
-    func testRetrieveOutboundBufferedBytesFromEmptyChannel() throws {
+    func testRetrieveOutboundBufferedBytesFromChannelWithZeroHandler() throws {
         let channel = EmbeddedChannel()
 
         let data = ByteBuffer(string: "1234")
@@ -2417,7 +2417,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertTrue(try channel.finish().isClean)
     }
 
-    func testSynchronouslyRetrieveInboundBufferedBytesFromEmptyChannel() throws {
+    func testSynchronouslyRetrieveInboundBufferedBytesFromChannelWithZeroHandler() throws {
         let channel = EmbeddedChannel()
 
         let data = ByteBuffer(string: "1234")
@@ -2434,7 +2434,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertTrue(try channel.finish().isClean)
     }
 
-    func testSynchronouslyRetrieveOutboundBufferedBytesFromEmptyChannel() throws {
+    func testSynchronouslyRetrieveOutboundBufferedBytesFromChannelWithZeroHandler() throws {
         let channel = EmbeddedChannel()
 
         let data = ByteBuffer(string: "1234")
