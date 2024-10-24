@@ -73,7 +73,7 @@ jobs:
   unit-tests:
     name: Unit tests
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
+    uses: ./.github/workflows/swift_matrix.yml
     with:
       name: "Unit tests"
       matrix_linux_command: "swift test"
