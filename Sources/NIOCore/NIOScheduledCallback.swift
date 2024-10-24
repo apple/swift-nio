@@ -90,7 +90,11 @@ public struct NIOScheduledCallback: Sendable {
 
 extension EventLoop {
     @preconcurrency
-    package func _scheduleCallback(
+    /// This method is not part of the public API
+    ///
+    /// Should use `package` not `public` but then it won't compile in
+    /// Xcode 15.4 if you run `swift build --arch x86_64 --arch arm64`.
+    public func _scheduleCallback(
         at deadline: NIODeadline,
         handler: some (NIOScheduledCallbackHandler & Sendable)
     ) -> NIOScheduledCallback {
