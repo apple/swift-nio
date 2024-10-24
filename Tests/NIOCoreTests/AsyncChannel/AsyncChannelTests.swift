@@ -253,7 +253,9 @@ final class AsyncChannelTests: XCTestCase {
             let strongSentinel: Sentinel? = Sentinel()
             sentinel = strongSentinel!
             try await XCTAsyncAssertNotNil(
-                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).get()
+                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).map { _ in
+                    true
+                }.get()
             )
             try await channel.writeInbound(strongSentinel!)
             _ = try await channel.readInbound(as: Sentinel.self)

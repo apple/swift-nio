@@ -13,22 +13,24 @@
 //===----------------------------------------------------------------------===//
 
 extension EventLoopFuture {
+    @preconcurrency
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func flatMap<NewValue>(
+    public func flatMap<NewValue: Sendable>(
         file: StaticString = #fileID,
         line: UInt = #line,
-        _ callback: @escaping (Value) -> EventLoopFuture<NewValue>
+        _ callback: @escaping @Sendable (Value) -> EventLoopFuture<NewValue>
     ) -> EventLoopFuture<NewValue> {
         self.flatMap(callback)
     }
 
+    @preconcurrency
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func flatMapThrowing<NewValue>(
+    public func flatMapThrowing<NewValue: Sendable>(
         file: StaticString = #fileID,
         line: UInt = #line,
-        _ callback: @escaping (Value) throws -> NewValue
+        _ callback: @escaping @Sendable (Value) throws -> NewValue
     ) -> EventLoopFuture<NewValue> {
         self.flatMapThrowing(callback)
     }
@@ -38,7 +40,7 @@ extension EventLoopFuture {
     public func flatMapErrorThrowing(
         file: StaticString = #fileID,
         line: UInt = #line,
-        _ callback: @escaping (Error) throws -> Value
+        _ callback: @escaping @Sendable (Error) throws -> Value
     ) -> EventLoopFuture<Value> {
         self.flatMapErrorThrowing(callback)
     }
@@ -48,7 +50,7 @@ extension EventLoopFuture {
     public func map<NewValue>(
         file: StaticString = #fileID,
         line: UInt = #line,
-        _ callback: @escaping (Value) -> (NewValue)
+        _ callback: @escaping @Sendable (Value) -> (NewValue)
     ) -> EventLoopFuture<NewValue> {
         self.map(callback)
     }
@@ -58,34 +60,37 @@ extension EventLoopFuture {
     public func flatMapError(
         file: StaticString = #fileID,
         line: UInt = #line,
-        _ callback: @escaping (Error) -> EventLoopFuture<Value>
-    ) -> EventLoopFuture<Value> {
+        _ callback: @escaping @Sendable (Error) -> EventLoopFuture<Value>
+    ) -> EventLoopFuture<Value> where Value: Sendable {
         self.flatMapError(callback)
     }
 
+    @preconcurrency
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
     public func flatMapResult<NewValue, SomeError: Error>(
         file: StaticString = #fileID,
         line: UInt = #line,
-        _ body: @escaping (Value) -> Result<NewValue, SomeError>
+        _ body: @escaping @Sendable (Value) -> Result<NewValue, SomeError>
     ) -> EventLoopFuture<NewValue> {
         self.flatMapResult(body)
     }
 
+    @preconcurrency
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
     public func recover(
         file: StaticString = #fileID,
         line: UInt = #line,
-        _ callback: @escaping (Error) -> Value
+        _ callback: @escaping @Sendable (Error) -> Value
     ) -> EventLoopFuture<Value> {
         self.recover(callback)
     }
 
+    @preconcurrency
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func and<OtherValue>(
+    public func and<OtherValue: Sendable>(
         _ other: EventLoopFuture<OtherValue>,
         file: StaticString = #fileID,
         line: UInt = #line
@@ -93,9 +98,10 @@ extension EventLoopFuture {
         self.and(other)
     }
 
+    @preconcurrency
     @inlinable
     @available(*, deprecated, message: "Please don't pass file:line:, there's no point.")
-    public func and<OtherValue>(
+    public func and<OtherValue: Sendable>(
         value: OtherValue,
         file: StaticString = #fileID,
         line: UInt = #line

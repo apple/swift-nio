@@ -1398,7 +1398,7 @@ extension ClientBootstrap {
     private func initializeAndRegisterChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
         channel: SocketChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
-        registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        registration: @escaping @Sendable (SocketChannel) -> EventLoopFuture<Void>,
         postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
             PostRegistrationTransformationResult
         >

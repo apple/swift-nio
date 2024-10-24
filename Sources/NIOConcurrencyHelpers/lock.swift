@@ -229,12 +229,10 @@ public final class ConditionLock<T: Equatable> {
             }
 
             let dwWaitStart = timeGetTime()
-            if !SleepConditionVariableSRW(
-                self.cond,
-                self.mutex._storage.mutex,
-                dwMilliseconds,
-                0
-            ) {
+            let result = self.mutex.withLockPrimitive { mutex in
+                SleepConditionVariableSRW(self.cond, mutex, dwMilliseconds, 0)
+            }
+            if !result {
                 let dwError = GetLastError()
                 if dwError == ERROR_TIMEOUT {
                     self.unlock()
@@ -242,7 +240,6 @@ public final class ConditionLock<T: Equatable> {
                 }
                 fatalError("SleepConditionVariableSRW: \(dwError)")
             }
-
             // NOTE: this may be a spurious wakeup, adjust the timeout accordingly
             dwMilliseconds = dwMilliseconds - (timeGetTime() - dwWaitStart)
         }
