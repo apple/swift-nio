@@ -130,6 +130,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          submodules: true
       - name: Mark the workspace as safe
         if: ${{ matrix.swift.enabled }}
         # https://github.com/actions/checkout/issues/766
@@ -168,6 +169,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          format_check_enabled: true
       - name: Donwload matrix script
         if: ${{ matrix.swift.enabled }}
         run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
@@ -199,6 +201,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          submodules: true
       - name: Donwload matrix script
         if: ${{ matrix.swift.enabled }}
         run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
