@@ -22,6 +22,20 @@ import _NIODataStructures
 import Dispatch
 #endif
 
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif canImport(Bionic)
+import Bionic
+#elseif canImport(WASILibc)
+import WASILibc
+#else
+#error("Unknown C library.")
+#endif
+
 internal struct EmbeddedScheduledTask {
     let id: UInt64
     let task: () -> Void
@@ -99,6 +113,18 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
 
     public let description = "EmbeddedEventLoop"
 
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    private let myThread: pthread_t = pthread_self()
+
+    func isCorrectThread() -> Bool {
+        pthread_equal(self.myThread, pthread_self()) != 0
+    }
+    #else
+    func isCorrectThread() -> Bool {
+        true  // let's be conservative
+    }
+    #endif
+
     private func nextTaskNumber() -> UInt64 {
         defer {
             self.taskNumber += 1
@@ -108,7 +134,29 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
 
     /// - see: `EventLoop.inEventLoop`
     public var inEventLoop: Bool {
-        true
+        self.checkCorrectThread()
+        return true
+    }
+
+    public func checkCorrectThread() {
+        guard self.isCorrectThread() else {
+            if Self.strictModeEnabled {
+                preconditionFailure(
+                    "EmbeddedEventLoop is not thread-safe. You can only use it from the thread you created it on."
+                )
+            } else {
+                fputs(
+                    """
+                    ERROR: NIO API misuse: EmbeddedEventLoop is not thread-safe. \
+                    You can only use it from the thread you created it on. This problem will be upgraded to a forced \
+                    crash in future versions of SwiftNIO.
+
+                    """,
+                    stderr
+                )
+            }
+            return
+        }
     }
 
     /// Initialize a new `EmbeddedEventLoop`.
@@ -117,6 +165,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
     public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        self.checkCorrectThread()
         let promise: EventLoopPromise<T> = makePromise()
 
         switch self.state {
@@ -157,7 +206,8 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     /// - see: `EventLoop.scheduleTask(in:_:)`
     @discardableResult
     public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        scheduleTask(deadline: self._now + `in`, task)
+        self.checkCorrectThread()
+        return self.scheduleTask(deadline: self._now + `in`, task)
     }
 
     @preconcurrency
@@ -166,15 +216,17 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
         in amount: TimeAmount,
         handler: some (NIOScheduledCallbackHandler & Sendable)
     ) -> NIOScheduledCallback {
+        self.checkCorrectThread()
         /// Even though this type does not implement a custom `scheduleCallback(at:handler)`, it uses a manual clock so
         /// it cannot rely on the default implementation of `scheduleCallback(in:handler:)`, which computes the deadline
         /// as an offset from `NIODeadline.now`. This event loop needs the deadline to be offset from `self._now`.
-        self.scheduleCallback(at: self._now + amount, handler: handler)
+        return self.scheduleCallback(at: self._now + amount, handler: handler)
     }
 
     /// On an `EmbeddedEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. This means that
     /// `task` will be run the next time you call `EmbeddedEventLoop.run`.
     public func execute(_ task: @escaping () -> Void) {
+        self.checkCorrectThread()
         self.scheduleTask(deadline: self._now, task)
     }
 
@@ -184,6 +236,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     ///
     /// - seealso: `EmbeddedEventLoop.advanceTime`.
     public func run() {
+        self.checkCorrectThread()
         // Execute all tasks that are currently enqueued to be executed *now*.
         self.advanceTime(to: self._now)
     }
@@ -191,6 +244,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     /// Runs the event loop and moves "time" forward by the given amount, running any scheduled
     /// tasks that need to be run.
     public func advanceTime(by increment: TimeAmount) {
+        self.checkCorrectThread()
         self.advanceTime(to: self._now + increment)
     }
 
@@ -199,6 +253,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     ///
     /// - Note: If `deadline` is before the current time, the current time will not be advanced.
     public func advanceTime(to deadline: NIODeadline) {
+        self.checkCorrectThread()
         let newTime = max(deadline, self._now)
 
         while let nextTask = self.scheduledTasks.peek() {
@@ -228,6 +283,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     }
 
     internal func cancelRemainingScheduledTasks() {
+        self.checkCorrectThread()
         while let task = self.scheduledTasks.pop() {
             task.fail(EventLoopError.cancelled)
         }
@@ -236,6 +292,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     #if canImport(Dispatch)
     /// - see: `EventLoop.shutdownGracefully`
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+        self.checkCorrectThread()
         self.state = .closing
         run()
         cancelRemainingScheduledTasks()
@@ -247,28 +304,33 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     #endif
 
     public func _preconditionSafeToWait(file: StaticString, line: UInt) {
+        self.checkCorrectThread()
         // EmbeddedEventLoop always allows a wait, as waiting will essentially always block
         // wait()
         return
     }
 
     public func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
+        self.checkCorrectThread()
         precondition(_isDebugAssertConfiguration())
         self._promiseCreationStore[futureIdentifier] = (file: file, line: line)
     }
 
     public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
     {
+        self.checkCorrectThread()
         precondition(_isDebugAssertConfiguration())
         return self._promiseCreationStore.removeValue(forKey: futureIdentifier)
     }
 
     public func _preconditionSafeToSyncShutdown(file: StaticString, line: UInt) {
+        self.checkCorrectThread()
         // EmbeddedEventLoop always allows a sync shutdown.
         return
     }
 
     deinit {
+        self.checkCorrectThread()
         precondition(scheduledTasks.isEmpty, "Embedded event loop freed with unexecuted scheduled tasks!")
     }
 
@@ -278,6 +340,18 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
             "EmbeddedEventLoop is not thread safe and cannot be used as a SerialExecutor. Use NIOAsyncTestingEventLoop instead."
         )
     }
+
+    static let strictModeEnabled: Bool = {
+        for ciVar in ["SWIFTNIO_STRICT", "SWIFTNIO_CI", "SWIFTNIO_STRICT_EMBEDDED"] {
+            switch getenv(ciVar).map({ String.init(cString: $0).lowercased() }) {
+            case "true", "y", "yes", "on", "1":
+                return true
+            default:
+                ()
+            }
+        }
+        return false
+    }()
 }
 
 @usableFromInline
@@ -613,9 +687,11 @@ public final class EmbeddedChannel: Channel {
     /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
     public var allowRemoteHalfClosure: Bool {
         get {
-            channelcore.allowRemoteHalfClosure
+            self.embeddedEventLoop.checkCorrectThread()
+            return channelcore.allowRemoteHalfClosure
         }
         set {
+            self.embeddedEventLoop.checkCorrectThread()
             channelcore.allowRemoteHalfClosure = newValue
         }
     }
@@ -631,12 +707,14 @@ public final class EmbeddedChannel: Channel {
 
     /// - see: `Channel._channelCore`
     public var _channelCore: ChannelCore {
-        channelcore
+        self.embeddedEventLoop.checkCorrectThread()
+        return self.channelcore
     }
 
     /// - see: `Channel.pipeline`
     public var pipeline: ChannelPipeline {
-        _pipeline
+        self.embeddedEventLoop.checkCorrectThread()
+        return self._pipeline
     }
 
     /// - see: `Channel.isWritable`
@@ -653,6 +731,7 @@ public final class EmbeddedChannel: Channel {
     ///            writes) this will be `.clean`. If there are any unconsumed inbound, outbound, or pending outbound
     ///            events, the `EmbeddedChannel` will returns those as `.leftOvers(inbound:outbound:pendingOutbound:)`.
     public func finish(acceptAlreadyClosed: Bool) throws -> LeftOverState {
+        self.embeddedEventLoop.checkCorrectThread()
         do {
             try close().wait()
         } catch let error as ChannelError {
@@ -685,7 +764,8 @@ public final class EmbeddedChannel: Channel {
     ///            writes) this will be `.clean`. If there are any unconsumed inbound, outbound, or pending outbound
     ///            events, the `EmbeddedChannel` will returns those as `.leftOvers(inbound:outbound:pendingOutbound:)`.
     public func finish() throws -> LeftOverState {
-        try self.finish(acceptAlreadyClosed: false)
+        self.embeddedEventLoop.checkCorrectThread()
+        return try self.finish(acceptAlreadyClosed: false)
     }
 
     private var _pipeline: ChannelPipeline!
@@ -695,7 +775,8 @@ public final class EmbeddedChannel: Channel {
 
     /// - see: `Channel.eventLoop`
     public var eventLoop: EventLoop {
-        self.embeddedEventLoop
+        self.embeddedEventLoop.checkCorrectThread()
+        return self.embeddedEventLoop
     }
 
     /// Returns the `EmbeddedEventLoop` that this `EmbeddedChannel` uses. This will return the same instance as
@@ -705,9 +786,11 @@ public final class EmbeddedChannel: Channel {
     /// - see: `Channel.localAddress`
     public var localAddress: SocketAddress? {
         get {
-            self.channelcore.localAddress
+            self.embeddedEventLoop.checkCorrectThread()
+            return self.channelcore.localAddress
         }
         set {
+            self.embeddedEventLoop.checkCorrectThread()
             self.channelcore.localAddress = newValue
         }
     }
@@ -715,9 +798,11 @@ public final class EmbeddedChannel: Channel {
     /// - see: `Channel.remoteAddress`
     public var remoteAddress: SocketAddress? {
         get {
-            self.channelcore.remoteAddress
+            self.embeddedEventLoop.checkCorrectThread()
+            return self.channelcore.remoteAddress
         }
         set {
+            self.embeddedEventLoop.checkCorrectThread()
             self.channelcore.remoteAddress = newValue
         }
     }
@@ -739,7 +824,8 @@ public final class EmbeddedChannel: Channel {
     ///         `ChannelHandler`.
     @inlinable
     public func readOutbound<T>(as type: T.Type = T.self) throws -> T? {
-        try _readFromBuffer(buffer: &channelcore.outboundBuffer)
+        self.embeddedEventLoop.checkCorrectThread()
+        return try _readFromBuffer(buffer: &channelcore.outboundBuffer)
     }
 
     /// If available, this method reads one element of type `T` out of the `EmbeddedChannel`'s inbound buffer. If the
@@ -754,7 +840,8 @@ public final class EmbeddedChannel: Channel {
     /// - note: `EmbeddedChannel.writeInbound` will fire data through the `ChannelPipeline` using `fireChannelRead`.
     @inlinable
     public func readInbound<T>(as type: T.Type = T.self) throws -> T? {
-        try _readFromBuffer(buffer: &channelcore.inboundBuffer)
+        self.embeddedEventLoop.checkCorrectThread()
+        return try _readFromBuffer(buffer: &channelcore.inboundBuffer)
     }
 
     /// Sends an inbound `channelRead` event followed by a `channelReadComplete` event through the `ChannelPipeline`.
@@ -768,9 +855,10 @@ public final class EmbeddedChannel: Channel {
     //             all the way.
     @inlinable
     @discardableResult public func writeInbound<T>(_ data: T) throws -> BufferState {
-        pipeline.fireChannelRead(NIOAny(data))
-        pipeline.fireChannelReadComplete()
-        try throwIfErrorCaught()
+        self.embeddedEventLoop.checkCorrectThread()
+        self.pipeline.fireChannelRead(NIOAny(data))
+        self.pipeline.fireChannelReadComplete()
+        try self.throwIfErrorCaught()
         return self.channelcore.inboundBuffer.isEmpty ? .empty : .full(Array(self.channelcore.inboundBuffer))
     }
 
@@ -786,7 +874,8 @@ public final class EmbeddedChannel: Channel {
     //             all the way.
     @inlinable
     @discardableResult public func writeOutbound<T>(_ data: T) throws -> BufferState {
-        try writeAndFlush(NIOAny(data)).wait()
+        self.embeddedEventLoop.checkCorrectThread()
+        try self.writeAndFlush(NIOAny(data)).wait()
         return self.channelcore.outboundBuffer.isEmpty ? .empty : .full(Array(self.channelcore.outboundBuffer))
     }
 
@@ -794,14 +883,16 @@ public final class EmbeddedChannel: Channel {
     ///
     /// The `EmbeddedChannel` will store an error some error travels the `ChannelPipeline` all the way past its end.
     public func throwIfErrorCaught() throws {
+        self.embeddedEventLoop.checkCorrectThread()
         if let error = channelcore.error {
-            channelcore.error = nil
+            self.channelcore.error = nil
             throw error
         }
     }
 
     @inlinable
     func _readFromBuffer<T>(buffer: inout CircularBuffer<NIOAny>) throws -> T? {
+        self.embeddedEventLoop.checkCorrectThread()
         if buffer.isEmpty {
             return nil
         }
@@ -825,6 +916,7 @@ public final class EmbeddedChannel: Channel {
     public convenience init(handler: ChannelHandler? = nil, loop: EmbeddedEventLoop = EmbeddedEventLoop()) {
         let handlers = handler.map { [$0] } ?? []
         self.init(handlers: handlers, loop: loop)
+        self.embeddedEventLoop.checkCorrectThread()
     }
 
     /// Create a new instance.
@@ -842,17 +934,20 @@ public final class EmbeddedChannel: Channel {
 
         // This will never throw...
         try! register().wait()
+        self.embeddedEventLoop.checkCorrectThread()
     }
 
     /// - see: `Channel.setOption`
     @inlinable
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> EventLoopFuture<Void> {
+        self.embeddedEventLoop.checkCorrectThread()
         self.setOptionSync(option, value: value)
         return self.eventLoop.makeSucceededVoidFuture()
     }
 
     @inlinable
     internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
+        self.embeddedEventLoop.checkCorrectThread()
         if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
             self.allowRemoteHalfClosure = value as! Bool
             return
@@ -864,11 +959,13 @@ public final class EmbeddedChannel: Channel {
     /// - see: `Channel.getOption`
     @inlinable
     public func getOption<Option: ChannelOption>(_ option: Option) -> EventLoopFuture<Option.Value> {
-        self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
+        self.embeddedEventLoop.checkCorrectThread()
+        return self.eventLoop.makeSucceededFuture(self.getOptionSync(option))
     }
 
     @inlinable
     internal func getOptionSync<Option: ChannelOption>(_ option: Option) -> Option.Value {
+        self.embeddedEventLoop.checkCorrectThread()
         if option is ChannelOptions.Types.AutoReadOption {
             return true as! Option.Value
         }
@@ -894,10 +991,11 @@ public final class EmbeddedChannel: Channel {
     ///     - address: The address to fake-bind to.
     ///     - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.embeddedEventLoop.checkCorrectThread()
         promise?.futureResult.whenSuccess {
             self.localAddress = address
         }
-        pipeline.bind(to: address, promise: promise)
+        self.pipeline.bind(to: address, promise: promise)
     }
 
     /// Fires the (outbound) `connect` event through the `ChannelPipeline`. If the event hits the `EmbeddedChannel`
@@ -908,10 +1006,11 @@ public final class EmbeddedChannel: Channel {
     ///     - address: The address to fake-bind to.
     ///     - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
+        self.embeddedEventLoop.checkCorrectThread()
         promise?.futureResult.whenSuccess {
             self.remoteAddress = address
         }
-        pipeline.connect(to: address, promise: promise)
+        self.pipeline.connect(to: address, promise: promise)
     }
 }
 

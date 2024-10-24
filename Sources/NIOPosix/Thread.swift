@@ -105,14 +105,14 @@ final class NIOThread {
     }
 
     /// Returns the current running `NIOThread`.
-    static var current: NIOThread {
+    public static var current: NIOThread {
         let handle = ThreadOpsSystem.currentThread
         return NIOThread(handle: handle, desiredName: nil)
     }
 }
 
 extension NIOThread: CustomStringConvertible {
-    var description: String {
+    public var description: String {
         let desiredName = self.desiredName
         let actualName = self.currentName
 
@@ -232,7 +232,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
 extension ThreadSpecificVariable: @unchecked Sendable where Value: Sendable {}
 
 extension NIOThread: Equatable {
-    static func == (lhs: NIOThread, rhs: NIOThread) -> Bool {
+    public static func == (lhs: NIOThread, rhs: NIOThread) -> Bool {
         lhs.withUnsafeThreadHandle { lhs in
             rhs.withUnsafeThreadHandle { rhs in
                 ThreadOpsSystem.compareThreads(lhs, rhs)

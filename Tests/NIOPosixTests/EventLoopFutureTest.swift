@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
 import NIOEmbedded
@@ -1379,27 +1380,31 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     func testFlatBlockingMapOnto() {
-        let eventLoop = EmbeddedEventLoop()
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let eventLoop = group.next()
         let p = eventLoop.makePromise(of: String.self)
         let sem = DispatchSemaphore(value: 0)
-        var blockingRan = false
-        var nonBlockingRan = false
+        let blockingRan = ManagedAtomic(false)
+        let nonBlockingRan = ManagedAtomic(false)
         p.futureResult.map {
             $0.count
         }.flatMapBlocking(onto: DispatchQueue.global()) { value -> Int in
             sem.wait()  // Block in chained EventLoopFuture
-            blockingRan = true
+            blockingRan.store(true, ordering: .sequentiallyConsistent)
             return 1 + value
         }.whenSuccess {
             XCTAssertEqual($0, 6)
-            XCTAssertTrue(blockingRan)
-            XCTAssertTrue(nonBlockingRan)
+            XCTAssertTrue(blockingRan.load(ordering: .sequentiallyConsistent))
+            XCTAssertTrue(nonBlockingRan.load(ordering: .sequentiallyConsistent))
         }
         p.succeed("hello")
 
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
-            nonBlockingRan = true
+            nonBlockingRan.store(true, ordering: .sequentiallyConsistent)
         }
         p2.succeed(true)
 
