@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
 
 /// The interface for interacting with a file system.
@@ -663,5 +662,3 @@ extension FileSystemProtocol {
         }
     }
 }
-
-#endif

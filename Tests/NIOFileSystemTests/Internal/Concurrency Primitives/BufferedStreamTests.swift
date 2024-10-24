@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import XCTest
 
 @testable import _NIOFileSystem
@@ -1140,4 +1139,3 @@ extension AsyncThrowingStream {
         return (stream, continuation!)
     }
 }
-#endif

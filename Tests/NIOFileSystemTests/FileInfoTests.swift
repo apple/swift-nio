@@ -12,9 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-import _NIOFileSystem
 import XCTest
+import _NIOFileSystem
 
 #if canImport(Darwin)
 import Darwin
@@ -159,4 +158,3 @@ final class FileInfoTests: XCTestCase {
         #endif
     }
 }
-#endif

@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import DequeModule
 import NIOCore
 
@@ -240,5 +239,3 @@ extension ReadableFileHandleProtocol {
         BufferedReader(wrapping: self, initialOffset: initialOffset, capacity: Int(capacity.bytes))
     }
 }
-
-#endif

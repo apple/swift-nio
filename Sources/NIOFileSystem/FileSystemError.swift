@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
 
 /// An error thrown as a result of interaction with the file system.
@@ -279,5 +278,3 @@ extension FileSystemError {
         }
     }
 }
-
-#endif

@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-
 /// Represents the number of bytes.
 public struct ByteCount: Hashable, Sendable {
     /// The number of bytes
@@ -117,5 +115,3 @@ extension ByteCount: Comparable {
         lhs.bytes < rhs.bytes
     }
 }
-
-#endif

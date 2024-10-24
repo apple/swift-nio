@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-
 /// Executes the closure and masks cancellation.
 @_spi(Testing)
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -54,5 +52,3 @@ public func withUncancellableTearDown<R>(
     try tearDownResult.get()
     return try result.get()
 }
-
-#endif
