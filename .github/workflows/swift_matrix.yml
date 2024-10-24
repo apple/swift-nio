@@ -175,6 +175,58 @@ jobs:
           echo "${{ steps.set-matrix.outputs.linux-matrix }}"
           echo "${{ steps.set-matrix.outputs.windows-matrix }}"
           echo "${{ steps.set-matrix.outputs.windows-nightly-matrix }}"
+      - name: Generate workflow file
+        run: |
+          {
+            echo "name: Matrix
+
+            on:
+              workflow_call
+
+            concurrency:
+              group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
+              cancel-in-progress: true
+
+            jobs:
+            "
+            if [[ ${{ steps.set-matrix.outputs.linux-matrix }} == '{"swift": []}' ]]; then
+              echo "  linux:
+                  name: Linux (${\{ matrix.swift.swift_version }})
+                  runs-on: ubuntu-latest
+                  strategy:
+                  fail-fast: false
+                  matrix: ${{fromJson(steps.set-matrix.outputs.linux-matrix)}}
+                  container:
+                  image: ${\{ matrix.swift.image }}
+                  steps:
+                  - name: Checkout repository
+                      uses: actions/checkout@v4
+                      with:
+                      persist-credentials: false
+                  - name: Mark the workspace as safe
+                      # https://github.com/actions/checkout/issues/766
+                      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+                  - name: Run matrix job
+                      env:
+                      SWIFT_VERSION: ${\{ matrix.swift.swift_version }}
+                      COMMAND: ${{ inputs.matrix_linux_command }}
+                      COMMAND_OVERRIDE_5_9: ${{ inputs.matrix_linux_5_9_command_override }}
+                      COMMAND_OVERRIDE_5_10: ${{ inputs.matrix_linux_5_10_command_override }}
+                      COMMAND_OVERRIDE_6_0: ${{ inputs.matrix_linux_6_0_command_override }}
+                      COMMAND_OVERRIDE_NIGHTLY_6_0: ${{ inputs.matrix_linux_nightly_6_0_command_override }}
+                      COMMAND_OVERRIDE_NIGHTLY_MAIN: ${{ inputs.matrix_linux_nightly_main_command_override }}
+                      run: |
+                      apt-get -qq update && apt-get -qq -y install curl
+                      curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash"
+            fi
+          } >> .github/workflows/__matrix_workflow.yml
+
+          cat .github/workflows/__matrix_workflow.yml
+
+
+  call-matrix:
+    name: Matrix
+    uses: ./.github/workflows/__matrix_workflow.yml
 
   linux:
     name: Linux (${{ matrix.swift.swift_version }})
