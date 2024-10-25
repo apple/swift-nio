@@ -12,10 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
-import _NIOFileSystem
 import XCTest
+import _NIOFileSystem
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 final class ConvenienceTests: XCTestCase {
@@ -72,4 +71,3 @@ final class ConvenienceTests: XCTestCase {
         XCTAssertEqual(bytes, ByteBuffer(bytes: Array(0..<64)))
     }
 }
-#endif

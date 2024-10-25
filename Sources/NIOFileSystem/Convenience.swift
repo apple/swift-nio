@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
 
 extension String {
@@ -201,5 +200,3 @@ extension AsyncSequence where Self.Element == UInt8, Self: Sendable {
         )
     }
 }
-
-#endif

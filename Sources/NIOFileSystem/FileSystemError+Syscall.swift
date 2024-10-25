@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
 
 #if canImport(Darwin)
@@ -1157,5 +1156,3 @@ extension FileSystemError {
         )
     }
 }
-
-#endif

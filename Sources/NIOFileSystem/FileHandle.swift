@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-
 import NIOCore
 
 /// Provides a ``FileHandle``.
@@ -357,5 +355,3 @@ public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle {
         return DirectoryFileHandle(wrapping: systemFileHandle)
     }
 }
-
-#endif

@@ -12,13 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import CNIODarwin
 import CNIOLinux
 import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
-@preconcurrency import SystemPackage
+import SystemPackage
 
 /// An `AsyncSequence` of entries in a directory.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -737,5 +736,3 @@ extension UnsafeMutablePointer<CInterop.FTSEnt> {
         FilePath(platformString: self.pointee.fts_path!)
     }
 }
-
-#endif

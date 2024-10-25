@@ -12,10 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-@_spi(Testing) import _NIOFileSystem
 import NIOPosix
 import XCTest
+@_spi(Testing) import _NIOFileSystem
 
 #if ENABLE_MOCKING
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -270,5 +269,4 @@ extension MockingDriver {
         }
     }
 }
-#endif
 #endif

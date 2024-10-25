@@ -14,7 +14,6 @@
 
 import NIOCore
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 /// Wraps a ``NIOThrowingAsyncSequenceProducer<Element>`` or ``AnyAsyncSequence<Element>``.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDelegate> {
@@ -95,5 +94,3 @@ internal struct AnyAsyncSequence<Element>: AsyncSequence {
         }
     }
 }
-
-#endif

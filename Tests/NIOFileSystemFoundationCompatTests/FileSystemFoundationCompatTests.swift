@@ -12,10 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
+import XCTest
 import _NIOFileSystem
 import _NIOFileSystemFoundationCompat
-import XCTest
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystem {
@@ -78,4 +77,3 @@ final class FileSystemBytesConformanceTests: XCTestCase {
         XCTAssertEqual(contents, Data([0, 1, 2]))
     }
 }
-#endif
