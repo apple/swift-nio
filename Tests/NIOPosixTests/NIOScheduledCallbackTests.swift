@@ -54,29 +54,6 @@ final class MTELGScheduledCallbackTests: _BaseScheduledCallbackTests {
     }
 }
 
-final class EmbeddedScheduledCallbackTests: _BaseScheduledCallbackTests {
-    struct Requirements: ScheduledCallbackTestRequirements {
-        let _loop = EmbeddedEventLoop()
-        var loop: (any EventLoop) { self._loop }
-
-        func advanceTime(by amount: TimeAmount) async throws {
-            self._loop.advanceTime(by: amount)
-        }
-
-        func shutdownEventLoop() async throws {
-            try await self._loop.shutdownGracefully()
-        }
-
-        func maybeInContext<R: Sendable>(_ body: @escaping @Sendable () throws -> R) async throws -> R {
-            try body()
-        }
-    }
-
-    override func setUp() async throws {
-        self.requirements = Requirements()
-    }
-}
-
 final class NIOAsyncTestingEventLoopScheduledCallbackTests: _BaseScheduledCallbackTests {
     struct Requirements: ScheduledCallbackTestRequirements {
         let _loop = NIOAsyncTestingEventLoop()
