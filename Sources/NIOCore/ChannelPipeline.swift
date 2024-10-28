@@ -1228,7 +1228,11 @@ extension ChannelPipeline {
         ///     - context: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
         ///     - promise: an ``EventLoopPromise`` to notify when the ``ChannelHandler`` was removed.
         public func removeHandler(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-            context.startUserTriggeredRemoval(promise: promise)
+            if context.handler is RemovableChannelHandler {
+                context.startUserTriggeredRemoval(promise: promise)
+            } else {
+                promise?.fail(ChannelError.unremovableHandler)
+            }
         }
 
         /// Returns the `ChannelHandlerContext` for the given handler instance if it is in
