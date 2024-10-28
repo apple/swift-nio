@@ -373,7 +373,11 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - context: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     /// - returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    @available(*, deprecated, message: "Use .syncOperations.removeHandler(context:) instead, this method is not Sendable-safe.")
+    @available(
+        *,
+        deprecated,
+        message: "Use .syncOperations.removeHandler(context:) instead, this method is not Sendable-safe."
+    )
     public func removeHandler(context: ChannelHandlerContext) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
         self.removeHandler(context: context, promise: promise)
@@ -426,7 +430,11 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - context: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     ///     - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    @available(*, deprecated, message: "Use .syncOperations.removeHandler(context:) instead, this method is not Sendable-safe.")
+    @available(
+        *,
+        deprecated,
+        message: "Use .syncOperations.removeHandler(context:) instead, this method is not Sendable-safe."
+    )
     public func removeHandler(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
         let sendableView = context.sendableView
 
@@ -454,7 +462,11 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - parameters:
     ///     - handler: the `ChannelHandler` for which the `ChannelHandlerContext` should be returned
     /// - returns: the `EventLoopFuture` which will be notified once the the operation completes.
-    @available(*, deprecated, message: "This method is not strict concurrency safe. Prefer .syncOperations.context(handler:)")
+    @available(
+        *,
+        deprecated,
+        message: "This method is not strict concurrency safe. Prefer .syncOperations.context(handler:)"
+    )
     @preconcurrency
     public func context(handler: ChannelHandler & Sendable) -> EventLoopFuture<ChannelHandlerContext> {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
