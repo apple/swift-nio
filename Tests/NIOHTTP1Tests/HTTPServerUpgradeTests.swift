@@ -58,7 +58,7 @@ extension ChannelPipeline {
 
     fileprivate func removeUpgrader() throws {
         try self.context(handlerType: HTTPServerUpgradeHandler.self).flatMap {
-            self.removeHandler(context: $0)
+            self.syncOperations.removeHandler(context: $0)
         }.wait()
     }
 
