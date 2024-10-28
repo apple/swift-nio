@@ -188,6 +188,7 @@ extension ChannelPipeline {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(*, deprecated, message: "Use .syncOperations.removeHandler(context:) instead, this method is not Sendable-safe.")
     public func removeHandler(context: ChannelHandlerContext) async throws {
         try await self.removeHandler(context: context).get()
     }
