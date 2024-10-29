@@ -12,11 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
-@preconcurrency import SystemPackage
+import SystemPackage
 
 #if canImport(Darwin)
 import Darwin
@@ -1536,5 +1535,3 @@ extension SystemFileHandle {
         }
     }
 }
-
-#endif

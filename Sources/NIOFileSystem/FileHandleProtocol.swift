@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
 import SystemPackage
 
@@ -775,4 +774,3 @@ extension DirectoryFileHandleProtocol {
         }
     }
 }
-#endif

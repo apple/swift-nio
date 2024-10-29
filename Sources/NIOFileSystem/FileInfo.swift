@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
 
 #if canImport(Darwin)
@@ -277,5 +276,3 @@ extension FilePermissions {
         self = .init(rawValue: rawValue & ~S_IFMT)
     }
 }
-
-#endif

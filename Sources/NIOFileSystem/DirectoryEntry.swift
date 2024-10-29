@@ -12,8 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-@preconcurrency import SystemPackage
+import SystemPackage
 
 /// Information about an item within a directory.
 public struct DirectoryEntry: Sendable, Hashable, Equatable {
@@ -46,5 +45,3 @@ public struct DirectoryEntry: Sendable, Hashable, Equatable {
         self.type = type
     }
 }
-
-#endif

@@ -21,11 +21,7 @@ import class Foundation.ProcessInfo
 
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
-let swiftSystem: PackageDescription.Target.Dependency = .product(
-    name: "SystemPackage",
-    package: "swift-system",
-    condition: .when(platforms: [.macOS, .iOS, .tvOS, .watchOS, .linux, .android])
-)
+let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPackage", package: "swift-system")
 
 // These platforms require a depdency on `NIOPosix` from `NIOHTTP1` to maintain backward
 // compatibility with previous NIO versions.
@@ -558,7 +554,7 @@ if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
     package.dependencies += [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.0.2"),
-        .package(url: "https://github.com/apple/swift-system.git", from: "1.2.0"),
+        .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0"),
     ]
 } else {
     package.dependencies += [

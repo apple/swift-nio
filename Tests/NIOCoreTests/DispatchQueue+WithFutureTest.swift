@@ -15,6 +15,7 @@
 import Dispatch
 import NIOCore
 import NIOEmbedded
+import NIOPosix
 import XCTest
 
 enum DispatchQueueTestError: Error {
@@ -23,7 +24,11 @@ enum DispatchQueueTestError: Error {
 
 class DispatchQueueWithFutureTest: XCTestCase {
     func testDispatchQueueAsyncWithFuture() {
-        let eventLoop = EmbeddedEventLoop()
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let eventLoop = group.next()
         let sem = DispatchSemaphore(value: 0)
         var nonBlockingRan = false
         let futureResult: EventLoopFuture<String> = DispatchQueue.global().asyncWithFuture(eventLoop: eventLoop) {
@@ -46,7 +51,11 @@ class DispatchQueueWithFutureTest: XCTestCase {
     }
 
     func testDispatchQueueAsyncWithFutureThrows() {
-        let eventLoop = EmbeddedEventLoop()
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+        let eventLoop = group.next()
         let sem = DispatchSemaphore(value: 0)
         var nonBlockingRan = false
         let futureResult: EventLoopFuture<String> = DispatchQueue.global().asyncWithFuture(eventLoop: eventLoop) {

@@ -426,9 +426,11 @@ public final class SNIHandler: ByteToMessageDecoder {
     ///    ByteToMessageDecoder to automatically deliver the buffered bytes to the next handler
     ///    in the pipeline, which is now responsible for the work.
     private func sniComplete(result: SNIResult, context: ChannelHandlerContext) {
+        let boundContext = NIOLoopBound(context, eventLoop: context.eventLoop)
         waitingForUser = true
-        completionHandler(result).whenSuccess {
-            context.pipeline.removeHandler(context: context, promise: nil)
+        completionHandler(result).hop(to: context.eventLoop).whenSuccess {
+            let context = boundContext.value
+            context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
         }
     }
 }
