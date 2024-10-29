@@ -1022,4 +1022,119 @@ final class SALChannelTest: XCTestCase, SALTest {
             }
         )
     }
+
+    func testBaseSocketChannelFlushNowReentrancyCrash() {
+        final class TestHandler: ChannelInboundHandler {
+            typealias InboundIn = Any
+            typealias OutboundOut = ByteBuffer
+
+            private let buffer: ByteBuffer
+
+            init(_ buffer: ByteBuffer) {
+                self.buffer = buffer
+            }
+
+            func channelActive(context: ChannelHandlerContext) {
+                context.write(self.wrapOutboundOut(buffer), promise: nil)
+                context.write(self.wrapOutboundOut(buffer), promise: nil)
+                context.flush()
+                context.fireChannelActive()
+            }
+
+            func channelWritabilityChanged(context: ChannelHandlerContext) {
+                if context.channel.isWritable {
+                    context.close(promise: nil)
+                }
+                context.fireChannelWritabilityChanged()
+            }
+        }
+        guard let channel = try? self.makeSocketChannel() else {
+            XCTFail("couldn't make a channel")
+            return
+        }
+        let localAddress = try! SocketAddress(ipAddress: "1.2.3.4", port: 5)
+        let serverAddress = try! SocketAddress(ipAddress: "9.8.7.6", port: 5)
+        let buffer = ByteBuffer(repeating: 0, count: 1024)
+
+        XCTAssertNoThrow(
+            try channel.eventLoop.runSAL(syscallAssertions: {
+                try self.assertSetOption(expectedLevel: .tcp, expectedOption: .tcp_nodelay) { value in
+                    (value as? SocketOptionValue) == 1
+                }
+                try self.assertConnect(expectedAddress: serverAddress, result: false)
+                try self.assertLocalAddress(address: localAddress)
+                try self.assertRegister { selectable, event, Registration in
+                    XCTAssertEqual([.reset], event)
+                    return true
+                }
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .write], event)
+                    return true
+                }
+
+                let writeEvent = SelectorEvent(
+                    io: [.write],
+                    registration: NIORegistration(
+                        channel: .socketChannel(channel),
+                        interested: [.reset, .write],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: writeEvent)
+                try self.assertGetOption(expectedLevel: .socket, expectedOption: .so_error, value: CInt(0))
+                try self.assertRemoteAddress(address: serverAddress)
+
+                try self.assertReregister { selectable, event in
+                    XCTAssertEqual([.reset, .readEOF, .write], event)
+                    return true
+                }
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [buffer, buffer],
+                    return: .wouldBlock(0)
+                )
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [buffer, buffer],
+                    return: .wouldBlock(0)
+                )
+
+                let canWriteEvent = SelectorEvent(
+                    io: [.write],
+                    registration: NIORegistration(
+                        channel: .socketChannel(channel),
+                        interested: [.reset, .readEOF, .write],
+                        registrationID: .initialRegistrationID
+                    )
+                )
+                try self.assertWaitingForNotification(result: canWriteEvent)
+                try self.assertWritev(
+                    expectedFD: .max,
+                    expectedBytes: [buffer, buffer],
+                    return: .processed(buffer.readableBytes)
+                )
+
+                try self.assertDeregister { selectable in
+                    true
+                }
+                try self.assertClose(expectedFD: .max)
+            }) {
+                ClientBootstrap(group: channel.eventLoop)
+                    .channelOption(.autoRead, value: false)
+                    .channelOption(.writeSpin, value: 0)
+                    .channelOption(
+                        .writeBufferWaterMark,
+                        value: .init(low: buffer.readableBytes + 1, high: buffer.readableBytes + 1)
+                    )
+                    .channelInitializer { channel in
+                        try! channel.pipeline.syncOperations.addHandler(TestHandler(buffer))
+                        return channel.eventLoop.makeSucceededVoidFuture()
+                    }
+                    .testOnly_connect(injectedChannel: channel, to: serverAddress)
+                    .flatMap {
+                        $0.closeFuture
+                    }
+            }.salWait()
+        )
+    }
 }
