@@ -856,7 +856,7 @@ public final class EmbeddedChannel: Channel {
     @inlinable
     @discardableResult public func writeInbound<T>(_ data: T) throws -> BufferState {
         self.embeddedEventLoop.checkCorrectThread()
-        self.pipeline.fireChannelRead(NIOAny(data))
+        self.pipeline.fireChannelRead(data)
         self.pipeline.fireChannelReadComplete()
         try self.throwIfErrorCaught()
         return self.channelcore.inboundBuffer.isEmpty ? .empty : .full(Array(self.channelcore.inboundBuffer))
@@ -875,7 +875,7 @@ public final class EmbeddedChannel: Channel {
     @inlinable
     @discardableResult public func writeOutbound<T>(_ data: T) throws -> BufferState {
         self.embeddedEventLoop.checkCorrectThread()
-        try self.writeAndFlush(NIOAny(data)).wait()
+        try self.writeAndFlush(data).wait()
         return self.channelcore.outboundBuffer.isEmpty ? .empty : .full(Array(self.channelcore.outboundBuffer))
     }
 
@@ -1011,6 +1011,42 @@ public final class EmbeddedChannel: Channel {
             self.remoteAddress = address
         }
         self.pipeline.connect(to: address, promise: promise)
+    }
+
+    /// An overload of `Channel.write` that does not require a Sendable type, as ``EmbeddedEventLoop``
+    /// is bound to a single thread.
+    @inlinable
+    public func write<T>(_ data: T, promise: EventLoopPromise<Void>?) {
+        self.embeddedEventLoop.checkCorrectThread()
+        self.pipeline.syncOperations.write(NIOAny(data), promise: promise)
+    }
+
+    /// An overload of `Channel.write` that does not require a Sendable type, as ``EmbeddedEventLoop``
+    /// is bound to a single thread.
+    @inlinable
+    public func write<T>(_ data: T) -> EventLoopFuture<Void> {
+        self.embeddedEventLoop.checkCorrectThread()
+        let promise = self.eventLoop.makePromise(of: Void.self)
+        self.pipeline.syncOperations.write(NIOAny(data), promise: promise)
+        return promise.futureResult
+    }
+
+    /// An overload of `Channel.writeAndFlush` that does not require a Sendable type, as ``EmbeddedEventLoop``
+    /// is bound to a single thread.
+    @inlinable
+    public func writeAndFlush<T>(_ data: T, promise: EventLoopPromise<Void>?) {
+        self.embeddedEventLoop.checkCorrectThread()
+        self.pipeline.syncOperations.writeAndFlush(NIOAny(data), promise: promise)
+    }
+
+    /// An overload of `Channel.writeAndFlush` that does not require a Sendable type, as ``EmbeddedEventLoop``
+    /// is bound to a single thread.
+    @inlinable
+    public func writeAndFlush<T>(_ data: T) -> EventLoopFuture<Void> {
+        self.embeddedEventLoop.checkCorrectThread()
+        let promise = self.eventLoop.makePromise(of: Void.self)
+        self.pipeline.syncOperations.writeAndFlush(NIOAny(data), promise: promise)
+        return promise.futureResult
     }
 }
 

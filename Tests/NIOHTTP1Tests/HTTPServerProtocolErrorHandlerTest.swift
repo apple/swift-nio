@@ -93,7 +93,7 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
                 headers: .init([("Content-Length", "0")])
             )
         )
-        XCTAssertNoThrow(try channel.writeAndFlush(res).wait())
+        XCTAssertNoThrow(try channel.writeOutbound(res))
         // now we have started a response but it's not complete yet, let's inject a parser error
         channel.pipeline.fireErrorCaught(HTTPParserError.invalidEOFState)
         var allOutbound = try channel.readAllOutboundBuffers()

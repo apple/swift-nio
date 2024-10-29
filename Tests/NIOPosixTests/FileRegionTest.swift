@@ -58,13 +58,25 @@ class FileRegionTest: XCTestCase {
         }
 
         try withTemporaryFile { _, filePath in
-            let handle = try NIOFileHandle(path: filePath)
-            let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: bytes.count)
-            defer {
-                XCTAssertNoThrow(try handle.close())
-            }
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
-            try clientChannel.writeAndFlush(NIOAny(fr)).wait()
+            try clientChannel.eventLoop.submit {
+                try NIOFileHandle(path: filePath)
+            }.flatMap { (handle: NIOFileHandle) in
+                let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: bytes.count)
+                let promise = clientChannel.eventLoop.makePromise(of: Void.self)
+                clientChannel.pipeline.syncOperations.writeAndFlush(
+                    NIOAny(fr), promise: promise
+                )
+
+                let bound = NIOLoopBound(handle, eventLoop: clientChannel.eventLoop)
+                return promise.futureResult.flatMapErrorThrowing { error in
+                    try? bound.value.close()
+                    throw error
+                }.flatMapThrowing {
+                    try bound.value.close()
+                }
+            }.wait()
+
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
             buffer.writeBytes(bytes)
             try countingHandler.assertReceived(buffer: buffer)
@@ -102,21 +114,26 @@ class FileRegionTest: XCTestCase {
         }
 
         try withTemporaryFile { _, filePath in
-            let handle = try NIOFileHandle(path: filePath)
-            let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 0)
-            defer {
-                XCTAssertNoThrow(try handle.close())
-            }
             try "".write(toFile: filePath, atomically: false, encoding: .ascii)
 
-            var futures: [EventLoopFuture<Void>] = []
-            for _ in 0..<10 {
-                futures.append(clientChannel.write(NIOAny(fr)))
-            }
-            try clientChannel.writeAndFlush(NIOAny(fr)).wait()
-            for future in futures {
-                try future.wait()
-            }
+            try clientChannel.eventLoop.submit {
+                try NIOFileHandle(path: filePath)
+            }.flatMap { (handle: NIOFileHandle) in
+                let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 0)
+                var futures: [EventLoopFuture<Void>] = []
+                for _ in 0..<10 {
+                    futures.append(clientChannel.pipeline.syncOperations.write(NIOAny(fr)))
+                }
+                futures.append(clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(fr)))
+
+                let bound = NIOLoopBound(handle, eventLoop: clientChannel.eventLoop)
+                return .andAllSucceed(futures, on: clientChannel.eventLoop).flatMapErrorThrowing { error in
+                    try? bound.value.close()
+                    throw error
+                }.flatMapThrowing {
+                    try bound.value.close()
+                }
+            }.wait()
         }
     }
 
@@ -159,25 +176,45 @@ class FileRegionTest: XCTestCase {
         }
 
         try withTemporaryFile { fd, filePath in
-            let fh1 = try NIOFileHandle(path: filePath)
-            let fh2 = try NIOFileHandle(path: filePath)
-            let fr1 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: bytes.count)
-            let fr2 = FileRegion(fileHandle: fh2, readerIndex: 0, endIndex: bytes.count)
-            defer {
-                XCTAssertNoThrow(try fh1.close())
-                XCTAssertNoThrow(try fh2.close())
-            }
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
-            XCTAssertThrowsError(
-                try clientChannel.writeAndFlush(NIOAny(fr1)).flatMap { () -> EventLoopFuture<Void> in
-                    let frFuture = clientChannel.write(NIOAny(fr2))
+
+            let future = clientChannel.eventLoop.submit {
+                let fh1 = try NIOFileHandle(path: filePath)
+                let fh2 = try NIOFileHandle(path: filePath)
+                return (fh1, fh2)
+            }.flatMap { (fh1, fh2) in
+                let fr1 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: bytes.count)
+                let fr2 = FileRegion(fileHandle: fh2, readerIndex: 0, endIndex: bytes.count)
+
+                let loopBoundFr2 = NIOLoopBound(fr2, eventLoop: clientChannel.eventLoop)
+                let loopBoundHandles = NIOLoopBound((fh1, fh2), eventLoop: clientChannel.eventLoop)
+
+                return clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(fr1)).flatMap { () -> EventLoopFuture<Void> in
+                    let frFuture = clientChannel.pipeline.syncOperations.write(NIOAny(loopBoundFr2.value))
                     var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
                     buffer.writeBytes(bytes)
-                    let bbFuture = clientChannel.write(NIOAny(buffer))
+                    let bbFuture = clientChannel.pipeline.syncOperations.write(NIOAny(buffer))
                     clientChannel.close(promise: nil)
                     clientChannel.flush()
                     return frFuture.flatMap { bbFuture }
-                }.wait()
+                }.flatMapErrorThrowing { error in
+                    let (fh1, fh2) = loopBoundHandles.value
+                    try? fh1.close()
+                    try? fh2.close()
+                    throw error
+                }.flatMapThrowing {
+                    let (fh1, fh2) = loopBoundHandles.value
+                    do {
+                        try fh1.close()
+                    } catch {
+                        try? fh2.close()
+                        throw error
+                    }
+                    try fh2.close()
+                }
+            }
+            XCTAssertThrowsError(
+                try future.wait()
             ) { error in
                 XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
             }
