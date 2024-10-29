@@ -1446,9 +1446,6 @@ extension ChannelPipeline {
     }
 }
 
-@available(*, unavailable)
-extension ChannelPipeline.Position: Sendable {}
-
 /// Special `ChannelHandler` that forwards all events to the `Channel.Unsafe` implementation.
 final class HeadChannelHandler: _ChannelOutboundHandler, Sendable {
 
