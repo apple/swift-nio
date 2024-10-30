@@ -708,12 +708,12 @@ public final class ChannelPipeline: ChannelInvoker {
     @available(*, deprecated, message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning.")
     public func fireChannelRead(_ data: NIOAny) {
         if eventLoop.inEventLoop {
-            fireChannelRead0(data)
+            _fireChannelRead0(data)
         } else {
             // This is unsafe, but necessary.
             let unsafeTransfer = UnsafeTransfer(data)
             eventLoop.execute {
-                self.fireChannelRead0(unsafeTransfer.wrappedValue)
+                self._fireChannelRead0(unsafeTransfer.wrappedValue)
             }
         }
     }
@@ -721,10 +721,10 @@ public final class ChannelPipeline: ChannelInvoker {
     @inlinable
     public func fireChannelRead<T: Sendable>(_ data: T) {
         if eventLoop.inEventLoop {
-            fireChannelRead0(NIOAny(data))
+            _fireChannelRead0(NIOAny(data))
         } else {
             eventLoop.execute {
-                self.fireChannelRead0(NIOAny(data))
+                self._fireChannelRead0(NIOAny(data))
             }
         }
     }
@@ -803,12 +803,12 @@ public final class ChannelPipeline: ChannelInvoker {
     @available(*, deprecated, message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning.")
     public func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            write0(data, promise: promise)
+            _write0(data, promise: promise)
         } else {
             // This is unsafe, but unavoidable.
             let unsafeTransfer = UnsafeTransfer(data)
             eventLoop.execute {
-                self.write0(unsafeTransfer.wrappedValue, promise: promise)
+                self._write0(unsafeTransfer.wrappedValue, promise: promise)
             }
         }
     }
@@ -816,10 +816,10 @@ public final class ChannelPipeline: ChannelInvoker {
     @inlinable
     public func write<T: Sendable>(_ data: T, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            write0(NIOAny(data), promise: promise)
+            _write0(NIOAny(data), promise: promise)
         } else {
             eventLoop.execute {
-                self.write0(NIOAny(data), promise: promise)
+                self._write0(NIOAny(data), promise: promise)
             }
         }
     }
@@ -827,12 +827,12 @@ public final class ChannelPipeline: ChannelInvoker {
     @available(*, deprecated, message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning.")
     public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            writeAndFlush0(data, promise: promise)
+            _writeAndFlush0(data, promise: promise)
         } else {
             // This is unsafe, but unavoidable.
             let unsafeTransfer = UnsafeTransfer(data)
             eventLoop.execute {
-                self.writeAndFlush0(unsafeTransfer.wrappedValue, promise: promise)
+                self._writeAndFlush0(unsafeTransfer.wrappedValue, promise: promise)
             }
         }
     }
@@ -840,10 +840,10 @@ public final class ChannelPipeline: ChannelInvoker {
     @inlinable
     public func writeAndFlush<T: Sendable>(_ data: T, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
-            writeAndFlush0(NIOAny(data), promise: promise)
+            _writeAndFlush0(NIOAny(data), promise: promise)
         } else {
             eventLoop.execute {
-                self.writeAndFlush0(NIOAny(data), promise: promise)
+                self._writeAndFlush0(NIOAny(data), promise: promise)
             }
         }
     }
@@ -919,7 +919,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    /* private but */ @usableFromInline func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+    @usableFromInline func _write0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeWrite(data, promise: promise)
         } else {
@@ -927,7 +927,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    /* private but */ @usableFromInline func writeAndFlush0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+    @usableFromInline func _writeAndFlush0(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         if let firstOutboundCtx = firstOutboundCtx {
             firstOutboundCtx.invokeWriteAndFlush(data, promise: promise)
         } else {
@@ -991,7 +991,7 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    /* private but */ @usableFromInline func fireChannelRead0(_ data: NIOAny) {
+    @usableFromInline func _fireChannelRead0(_ data: NIOAny) {
         if let firstInboundCtx = firstInboundCtx {
             firstInboundCtx.invokeChannelRead(data)
         }
@@ -1354,7 +1354,7 @@ extension ChannelPipeline {
         /// This method should typically only be called by `Channel` implementations directly.
         public func fireChannelRead(_ data: NIOAny) {
             self.eventLoop.assertInEventLoop()
-            self._pipeline.fireChannelRead0(data)
+            self._pipeline._fireChannelRead0(data)
         }
 
         /// Fires `channelReadComplete` from the head to the tail.
@@ -1418,7 +1418,7 @@ extension ChannelPipeline {
         /// This method should typically only be called by `Channel` implementations directly.
         public func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
             self.eventLoop.assertInEventLoop()
-            self._pipeline.write0(data, promise: promise)
+            self._pipeline._write0(data, promise: promise)
         }
 
         /// Fires `write` from the tail to the head.
@@ -1427,7 +1427,7 @@ extension ChannelPipeline {
         public func write(_ data: NIOAny) -> EventLoopFuture<Void> {
             self.eventLoop.assertInEventLoop()
             let promise = self.eventLoop.makePromise(of: Void.self)
-            self._pipeline.write0(data, promise: promise)
+            self._pipeline._write0(data, promise: promise)
             return promise.futureResult
         }
 
@@ -1436,7 +1436,7 @@ extension ChannelPipeline {
         /// This method should typically only be called by `Channel` implementations directly.
         public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
             self.eventLoop.assertInEventLoop()
-            self._pipeline.writeAndFlush0(data, promise: promise)
+            self._pipeline._writeAndFlush0(data, promise: promise)
         }
 
         /// Fires `writeAndFlush` from the tail to the head.
@@ -1445,7 +1445,7 @@ extension ChannelPipeline {
         public func writeAndFlush(_ data: NIOAny) -> EventLoopFuture<Void> {
             self.eventLoop.assertInEventLoop()
             let promise = self.eventLoop.makePromise(of: Void.self)
-            self._pipeline.writeAndFlush0(data, promise: promise)
+            self._pipeline._writeAndFlush0(data, promise: promise)
             return promise.futureResult
         }
 
