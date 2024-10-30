@@ -561,42 +561,48 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         }
 
         var newWriteRegistrationState: IONotificationState = .unregister
-        do {
-            while newWriteRegistrationState == .unregister && self.hasFlushedPendingWrites() && self.isOpen {
+        while newWriteRegistrationState == .unregister && self.hasFlushedPendingWrites() && self.isOpen {
+            let writeResult: OverallWriteResult
+            do {
                 assert(self.lifecycleManager.isActive)
-                let writeResult = try self.writeToSocket()
-                switch writeResult.writeResult {
-                case .couldNotWriteEverything:
-                    newWriteRegistrationState = .register
-                case .writtenCompletely:
-                    newWriteRegistrationState = .unregister
-                }
-
+                writeResult = try self.writeToSocket()
                 if writeResult.writabilityChange {
                     // We went from not writable to writable.
                     self.pipeline.syncOperations.fireChannelWritabilityChanged()
                 }
-            }
-        } catch let err {
-            // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
-            // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
-            if self.readIfNeeded0() {
-                assert(self.lifecycleManager.isActive)
+            } catch let err {
+                // If there is a write error we should try drain the inbound before closing the socket as there may be some data pending.
+                // We ignore any error that is thrown as we will use the original err to close the channel and notify the user.
+                if self.readIfNeeded0() {
+                    assert(self.lifecycleManager.isActive)
 
-                // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
-                var readAtLeastOnce = false
-                while let read = try? self.readFromSocket(), read == .some {
-                    readAtLeastOnce = true
+                    // We need to continue reading until there is nothing more to be read from the socket as we will not have another chance to drain it.
+                    var readAtLeastOnce = false
+                    while let read = try? self.readFromSocket(), read == .some {
+                        readAtLeastOnce = true
+                    }
+                    if readAtLeastOnce && self.lifecycleManager.isActive {
+                        self.pipeline.fireChannelReadComplete()
+                    }
                 }
-                if readAtLeastOnce && self.lifecycleManager.isActive {
-                    self.pipeline.fireChannelReadComplete()
-                }
+
+                self.close0(error: err, mode: .all, promise: nil)
+
+                // we handled all writes
+                return .unregister
             }
 
-            self.close0(error: err, mode: .all, promise: nil)
+            switch writeResult.writeResult {
+            case .couldNotWriteEverything:
+                newWriteRegistrationState = .register
+            case .writtenCompletely:
+                newWriteRegistrationState = .unregister
+            }
 
-            // we handled all writes
-            return .unregister
+            if !self.isOpen || !self.hasFlushedPendingWrites() {
+                // No further writes, unregister. We won't re-enter the loop as both of these would have to be true.
+                newWriteRegistrationState = .unregister
+            }
         }
 
         assert(
