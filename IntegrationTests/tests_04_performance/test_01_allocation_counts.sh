@@ -63,5 +63,5 @@ for test in "${all_tests[@]}"; do
             assert_less_than_or_equal "$total_allocations" "$max_allowed"
             assert_greater_than "$total_allocations" "$(( max_allowed - 1000))"
         fi
-    done < <(grep "^test_${test[^\W]}*.total_allocations:" "$tmp/output" | cut -d: -f1 | cut -d. -f1 | sort | uniq)
+    done < <(grep "^test_${test}[^\W]*.total_allocations:" "$tmp/output" | cut -d: -f1 | cut -d. -f1 | sort | uniq)
 done
