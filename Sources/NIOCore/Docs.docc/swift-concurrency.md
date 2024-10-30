@@ -299,12 +299,12 @@ case .notUpgraded:
 
 ### NIOAny
 
-In NIO 2.77.0, a number of methods that took ``NIOAny`` as a parameter started
+In NIO 2.77.0, a number of methods that took `NIOAny` as a parameter started
 emitting deprecation warnings. These deprecation warnings are a substitute for the
 concurrency warnings that you might otherwise see.
 
 The problem with these methods (most of which were defined on ``ChannelInvoker``)
-is that they frequently would send a ``NIOAny`` across an event loop boundary.
+is that they frequently would send a `NIOAny` across an event loop boundary.
 Most commonly users will encounter this when calling methods on ``Channel`` types
 (which conform to ``ChannelInvoker``), though they may encounter it on
 ``ChannelPipeline`` as well.
@@ -314,9 +314,9 @@ of the ``EventLoop`` to which a ``Channel`` is bound. That means that they must 
 capable of sending the value across an isolation domain, into the ``EventLoop``.
 That requires the parameter to be `Sendable` (or to be `sending`).
 
-``NIOAny`` cannot be made to be `Sendable`, so these methods are now deprecated.
+`NIOAny` cannot be made to be `Sendable`, so these methods are now deprecated.
 They have been replaced with equivalent methods that take a generic type that
-must be `Sendable`, and they take charge of wrapping the type in ``NIOAny``. If
+must be `Sendable`, and they take charge of wrapping the type in `NIOAny`. If
 you encounter such a warning, this is the most common change.
 
 In cases where a non-`Sendable` value must actually be sent into the pipeline, there
