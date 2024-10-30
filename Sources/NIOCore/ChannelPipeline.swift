@@ -705,7 +705,11 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    @available(*, deprecated, message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning.")
+    @available(
+        *,
+        deprecated,
+        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
+    )
     public func fireChannelRead(_ data: NIOAny) {
         if eventLoop.inEventLoop {
             _fireChannelRead0(data)
@@ -800,7 +804,11 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    @available(*, deprecated, message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning.")
+    @available(
+        *,
+        deprecated,
+        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
+    )
     public func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             _write0(data, promise: promise)
@@ -824,7 +832,11 @@ public final class ChannelPipeline: ChannelInvoker {
         }
     }
 
-    @available(*, deprecated, message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning.")
+    @available(
+        *,
+        deprecated,
+        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
+    )
     public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         if eventLoop.inEventLoop {
             _writeAndFlush0(data, promise: promise)

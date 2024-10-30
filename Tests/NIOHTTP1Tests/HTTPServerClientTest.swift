@@ -406,7 +406,10 @@ class HTTPServerClientTest: XCTestCase {
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-            clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: promise)
+            clientChannel.pipeline.syncOperations.writeAndFlush(
+                NIOAny(HTTPClientRequestPart.end(nil)),
+                promise: promise
+            )
             return promise.futureResult
         }.wait()
 
@@ -471,7 +474,10 @@ class HTTPServerClientTest: XCTestCase {
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-            clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: promise)
+            clientChannel.pipeline.syncOperations.writeAndFlush(
+                NIOAny(HTTPClientRequestPart.end(nil)),
+                promise: promise
+            )
             return promise.futureResult
         }.wait()
         accumulation.syncWaitForCompletion()
@@ -534,7 +540,10 @@ class HTTPServerClientTest: XCTestCase {
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-            clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: promise)
+            clientChannel.pipeline.syncOperations.writeAndFlush(
+                NIOAny(HTTPClientRequestPart.end(nil)),
+                promise: promise
+            )
             return promise.futureResult
         }.wait()
         accumulation.syncWaitForCompletion()
@@ -596,7 +605,10 @@ class HTTPServerClientTest: XCTestCase {
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-            clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: promise)
+            clientChannel.pipeline.syncOperations.writeAndFlush(
+                NIOAny(HTTPClientRequestPart.end(nil)),
+                promise: promise
+            )
             return promise.futureResult
         }.wait()
 
@@ -706,7 +718,10 @@ class HTTPServerClientTest: XCTestCase {
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-            clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: promise)
+            clientChannel.pipeline.syncOperations.writeAndFlush(
+                NIOAny(HTTPClientRequestPart.end(nil)),
+                promise: promise
+            )
             return promise.futureResult
         }.wait()
 
@@ -757,7 +772,10 @@ class HTTPServerClientTest: XCTestCase {
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-            clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: promise)
+            clientChannel.pipeline.syncOperations.writeAndFlush(
+                NIOAny(HTTPClientRequestPart.end(nil)),
+                promise: promise
+            )
             return promise.futureResult
         }.wait()
 

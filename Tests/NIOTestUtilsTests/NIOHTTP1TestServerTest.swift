@@ -41,7 +41,9 @@ extension SendableRequestPart {
         case .body(.byteBuffer(let body)):
             self = .body(body)
         case .body(.fileRegion):
-            throw NIOHTTP1TestServerError(reason: "FileRegion is not Sendable and cannot be passed across concurrency domains")
+            throw NIOHTTP1TestServerError(
+                reason: "FileRegion is not Sendable and cannot be passed across concurrency domains"
+            )
         case .end(let end):
             self = .end(end)
         }

@@ -65,7 +65,8 @@ class FileRegionTest: XCTestCase {
                 let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: bytes.count)
                 let promise = clientChannel.eventLoop.makePromise(of: Void.self)
                 clientChannel.pipeline.syncOperations.writeAndFlush(
-                    NIOAny(fr), promise: promise
+                    NIOAny(fr),
+                    promise: promise
                 )
 
                 let bound = NIOLoopBound(handle, eventLoop: clientChannel.eventLoop)
@@ -189,7 +190,8 @@ class FileRegionTest: XCTestCase {
                 let loopBoundFr2 = NIOLoopBound(fr2, eventLoop: clientChannel.eventLoop)
                 let loopBoundHandles = NIOLoopBound((fh1, fh2), eventLoop: clientChannel.eventLoop)
 
-                return clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(fr1)).flatMap { () -> EventLoopFuture<Void> in
+                return clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(fr1)).flatMap {
+                    () -> EventLoopFuture<Void> in
                     let frFuture = clientChannel.pipeline.syncOperations.write(NIOAny(loopBoundFr2.value))
                     var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
                     buffer.writeBytes(bytes)

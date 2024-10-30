@@ -201,7 +201,11 @@ extension Channel {
         pipeline.connect(to: address, promise: promise)
     }
 
-    @available(*, deprecated, message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning.")
+    @available(
+        *,
+        deprecated,
+        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
+    )
     public func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         pipeline.write(data, promise: promise)
     }
@@ -214,7 +218,11 @@ extension Channel {
         pipeline.flush()
     }
 
-    @available(*, deprecated, message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning.")
+    @available(
+        *,
+        deprecated,
+        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
+    )
     public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
         pipeline.writeAndFlush(data, promise: promise)
     }

@@ -694,7 +694,10 @@ measureAndPrint(desc: "http1_1k_reqs_100_conns") {
         try! clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-            clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: promise)
+            clientChannel.pipeline.syncOperations.writeAndFlush(
+                NIOAny(HTTPClientRequestPart.end(nil)),
+                promise: promise
+            )
             return promise.futureResult
         }.wait()
         reqs.append(try! repeatedRequestsHandler.wait())

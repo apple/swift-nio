@@ -141,7 +141,11 @@ extension ChannelOutboundInvoker {
     ///     - data: the data to write
     /// - returns: the future which will be notified once the `write` operation completes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @available(*, deprecated, message: "NIOAny is not Sendable: avoid wrapping the value in NIOAny to silence this warning.")
+    @available(
+        *,
+        deprecated,
+        message: "NIOAny is not Sendable: avoid wrapping the value in NIOAny to silence this warning."
+    )
     public func writeAndFlush(_ data: NIOAny, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.writeAndFlush(data, file: file, line: line).get()
     }
@@ -163,7 +167,11 @@ extension ChannelOutboundInvoker {
     /// - returns: the future which will be notified once the operation completes.
     @preconcurrency
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func triggerUserOutboundEvent(_ event: Any & Sendable, file: StaticString = #fileID, line: UInt = #line) async throws {
+    public func triggerUserOutboundEvent(
+        _ event: Any & Sendable,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) async throws {
         try await self.triggerUserOutboundEvent(event, file: file, line: line).get()
     }
 }
