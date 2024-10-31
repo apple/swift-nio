@@ -2317,3 +2317,126 @@ extension ChannelPipeline: CustomDebugStringConvertible {
         return handlers
     }
 }
+
+extension ChannelPipeline {
+    private enum BufferingDirection: Equatable {
+        case inbound
+        case outbound
+    }
+
+    /// Retrieve the total number of bytes buffered for outbound.
+    public func outboundBufferedBytes() -> EventLoopFuture<Int> {
+        let future: EventLoopFuture<Int>
+
+        if self.eventLoop.inEventLoop {
+            future = self.eventLoop.makeSucceededFuture(countAllBufferedBytes(direction: .outbound))
+        } else {
+            future = self.eventLoop.submit {
+                self.countAllBufferedBytes(direction: .outbound)
+            }
+        }
+
+        return future
+    }
+
+    /// Retrieve the total number of bytes buffered for inbound.
+    public func inboundBufferedBytes() -> EventLoopFuture<Int> {
+        let future: EventLoopFuture<Int>
+
+        if self.eventLoop.inEventLoop {
+            future = self.eventLoop.makeSucceededFuture(countAllBufferedBytes(direction: .inbound))
+        } else {
+            future = self.eventLoop.submit {
+                self.countAllBufferedBytes(direction: .inbound)
+            }
+        }
+
+        return future
+    }
+
+    private static func countBufferedBytes(context: ChannelHandlerContext, direction: BufferingDirection) -> Int? {
+        switch direction {
+        case .inbound:
+            guard let handler = context.handler as? NIOInboundByteBufferingChannelHandler else {
+                return nil
+            }
+            return handler.inboundBufferedBytes
+        case .outbound:
+            guard let handler = context.handler as? NIOOutboundByteBufferingChannelHandler else {
+                return nil
+            }
+            return handler.outboundBufferedBytes
+        }
+
+    }
+
+    private func countAllBufferedBytes(direction: BufferingDirection) -> Int {
+        self.eventLoop.assertInEventLoop()
+        var total = 0
+        var current = self.head?.next
+        switch direction {
+        case .inbound:
+            while let c = current, c !== self.tail {
+                if let inboundHandler = c.handler as? NIOInboundByteBufferingChannelHandler {
+                    total += inboundHandler.inboundBufferedBytes
+                }
+                current = current?.next
+            }
+        case .outbound:
+            while let c = current, c !== self.tail {
+                if let outboundHandler = c.handler as? NIOOutboundByteBufferingChannelHandler {
+                    total += outboundHandler.outboundBufferedBytes
+                }
+                current = current?.next
+            }
+        }
+
+        return total
+    }
+}
+
+extension ChannelPipeline.SynchronousOperations {
+    /// Retrieve the total number of bytes buffered for outbound.
+    ///
+    /// - Important: This *must* be called on the event loop.
+    public func outboundBufferedBytes() -> Int {
+        self.eventLoop.assertInEventLoop()
+        return self._pipeline.countAllBufferedBytes(direction: .outbound)
+    }
+
+    /// Retrieve the number of outbound bytes buffered in the `ChannelHandler` associated with the given`ChannelHandlerContext`.
+    ///
+    /// - Parameters:
+    ///     - in: the `ChannelHandlerContext` from which the outbound buffered bytes of the `ChannelHandler` will be retrieved.
+    /// - Important: This *must* be called on the event loop.
+    ///
+    /// - Returns: The number of bytes currently buffered in the `ChannelHandler` referenced by the `ChannelHandlerContext` parameter `in`.
+    ///            If the `ChannelHandler` in the given `ChannelHandlerContext` does not conform to
+    ///            `NIOOutboundByteBufferingChannelHandler`, this method will return `nil`.
+    public func outboundBufferedBytes(in context: ChannelHandlerContext) -> Int? {
+        self.eventLoop.assertInEventLoop()
+        return ChannelPipeline.countBufferedBytes(context: context, direction: .outbound)
+    }
+
+    /// Retrieve total number of bytes buffered for inbound.
+    ///
+    /// - Important: This *must* be called on the event loop.
+    public func inboundBufferedBytes() -> Int {
+        self.eventLoop.assertInEventLoop()
+        return self._pipeline.countAllBufferedBytes(direction: .inbound)
+    }
+
+    /// Retrieve the number of inbound bytes buffered in the `ChannelHandler` associated with the given `ChannelHandlerContext`.
+    ///
+    /// - Parameters:
+    ///     - in: the `ChannelHandlerContext` from which the inbound buffered bytes of the `handler` will be retrieved.
+    /// - Important: This *must* be called on the event loop.
+    ///
+    /// - Returns: The number of bytes currently buffered in the `ChannelHandler` referenced by the `ChannelHandlerContext` parameter `in`.
+    ///            If the `ChannelHandler` in the given `ChannelHandlerContext` does not conform to
+    ///            `NIOInboundByteBufferingChannelHandler`, this method will return `nil`.
+    public func inboundBufferedBytes(in context: ChannelHandlerContext) -> Int? {
+        self.eventLoop.assertInEventLoop()
+        return ChannelPipeline.countBufferedBytes(context: context, direction: .inbound)
+    }
+}
