@@ -394,17 +394,10 @@ class AsyncTestingChannelTests: XCTestCase {
         let channel = NIOAsyncTestingChannel()
         let buffer = ByteBufferAllocator().buffer(capacity: 5)
         let socketAddress = try SocketAddress(unixDomainSocketPath: "path")
-        let handle = NIOFileHandle(descriptor: 1)
-        let fileRegion = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
-        defer {
-            // fake descriptor, so shouldn't be closed.
-            XCTAssertNoThrow(try handle.takeDescriptorOwnership())
-        }
+
         try await channel.writeAndFlush(1)
         try await channel.writeAndFlush("1")
         try await channel.writeAndFlush(buffer)
-        try await channel.writeAndFlush(IOData.byteBuffer(buffer))
-        try await channel.writeAndFlush(IOData.fileRegion(fileRegion))
         try await channel.writeAndFlush(AddressedEnvelope(remoteAddress: socketAddress, data: buffer))
     }
 

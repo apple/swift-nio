@@ -268,6 +268,9 @@ public struct NIOAny {
 }
 
 @available(*, unavailable)
+extension NIOAny._NIOAny: Sendable {}
+
+@available(*, unavailable)
 extension NIOAny: Sendable {}
 
 extension NIOAny: CustomStringConvertible {

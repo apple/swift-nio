@@ -18,6 +18,50 @@ import NIOPosix
 import NIOTestUtils
 import XCTest
 
+typealias SendableRequestPart = HTTPPart<HTTPRequestHead, ByteBuffer>
+
+extension HTTPClientRequestPart {
+    init(_ target: SendableRequestPart) {
+        switch target {
+        case .head(let head):
+            self = .head(head)
+        case .body(let body):
+            self = .body(.byteBuffer(body))
+        case .end(let end):
+            self = .end(end)
+        }
+    }
+}
+
+extension SendableRequestPart {
+    init(_ target: HTTPClientRequestPart) throws {
+        switch target {
+        case .head(let head):
+            self = .head(head)
+        case .body(.byteBuffer(let body)):
+            self = .body(body)
+        case .body(.fileRegion):
+            throw NIOHTTP1TestServerError(
+                reason: "FileRegion is not Sendable and cannot be passed across concurrency domains"
+            )
+        case .end(let end):
+            self = .end(end)
+        }
+    }
+}
+
+/// A helper handler to transform a Sendable request into a
+/// non-Sendable one, to manage warnings.
+private final class TransformerHandler: ChannelOutboundHandler {
+    typealias OutboundIn = SendableRequestPart
+    typealias OutboundOut = HTTPClientRequestPart
+
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        let response = self.unwrapOutboundIn(data)
+        context.write(self.wrapOutboundOut(.init(response)), promise: nil)
+    }
+}
+
 class NIOHTTP1TestServerTest: XCTestCase {
     private var group: EventLoopGroup!
     private let allocator = ByteBufferAllocator()
@@ -42,6 +86,8 @@ class NIOHTTP1TestServerTest: XCTestCase {
                     channel.pipeline.addHandler(AggregateBodyHandler())
                 }.flatMap {
                     channel.pipeline.addHandler(TestHTTPHandler(responsePromise: responsePromise))
+                }.flatMap {
+                    channel.pipeline.addHandler(TransformerHandler())
                 }
             }
         return bootstrap.connect(host: "127.0.0.1", port: serverPort)
@@ -60,9 +106,9 @@ class NIOHTTP1TestServerTest: XCTestCase {
             headers: headers
         )
 
-        channel.write(NIOAny(HTTPClientRequestPart.head(requestHead)), promise: nil)
-        channel.write(NIOAny(HTTPClientRequestPart.body(.byteBuffer(requestBuffer))), promise: nil)
-        channel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
+        channel.write(SendableRequestPart.head(requestHead), promise: nil)
+        channel.write(SendableRequestPart.body(requestBuffer), promise: nil)
+        channel.writeAndFlush(SendableRequestPart.end(nil), promise: nil)
     }
 
     private func sendRequestTo(_ url: URL, body: String) throws -> EventLoopFuture<String> {
@@ -381,7 +427,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         let requestHead = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri", headers: headers)
-        channel.writeAndFlush(NIOAny(HTTPClientRequestPart.head(requestHead)), promise: nil)
+        channel.writeAndFlush(SendableRequestPart.head(requestHead), promise: nil)
         XCTAssertNoThrow(
             try testServer.receiveHeadAndVerify { head in
                 XCTAssertEqual(head.uri, "/uri")
@@ -392,7 +438,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
 
         for _ in 0..<10 {
             channel.writeAndFlush(
-                NIOAny(HTTPClientRequestPart.body(.byteBuffer(ByteBuffer(string: "ping")))),
+                SendableRequestPart.body(ByteBuffer(string: "ping")),
                 promise: nil
             )
             XCTAssertNoThrow(
@@ -403,7 +449,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
             XCTAssertNoThrow(try testServer.writeOutbound(.body(.byteBuffer(ByteBuffer(string: "pong")))))
         }
 
-        channel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: nil)
+        channel.writeAndFlush(SendableRequestPart.end(nil), promise: nil)
         XCTAssertNoThrow(
             try testServer.receiveEndAndVerify { trailers in
                 XCTAssertNil(trailers)
