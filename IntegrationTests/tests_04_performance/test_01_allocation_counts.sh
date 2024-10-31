@@ -31,6 +31,20 @@ done
 
 "$here/test_01_resources/run-nio-alloc-counter-tests.sh" -t "$tmp" > "$tmp/output"
 
+observed_allocations="{"
+for test in "${all_tests[@]}"; do
+    while read -r test_case; do
+        test_case=${test_case#test_*}
+        total_allocations=$(grep "^test_$test_case.total_allocations:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
+        observed_allocations="${observed_allocations}
+    \"${test_case}\": ${total_allocations},"
+    done < <(grep "^test_${test}[^\W]*.total_allocations:" "$tmp/output" | cut -d: -f1 | cut -d. -f1 | sort | uniq)
+done
+observed_allocations="${observed_allocations}
+}"
+info "observed allocations:
+${observed_allocations}"
+
 for test in "${all_tests[@]}"; do
     cat "$tmp/output"  # helps debugging
 
