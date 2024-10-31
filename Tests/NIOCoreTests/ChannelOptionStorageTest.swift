@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
 import NIOCore
 import NIOEmbedded
 import XCTest
@@ -110,8 +111,16 @@ class ChannelOptionStorageTest: XCTestCase {
     }
 }
 
-class OptionsCollectingChannel: Channel {
-    var allOptions: [(Any, Any)] = []
+final class OptionsCollectingChannel: Channel {
+    private let _allOptions = NIOLockedValueBox<[(any Sendable, any Sendable)]>([])
+    var allOptions: [(any Sendable, any Sendable)] {
+        get {
+            self._allOptions.withLockedValue { $0 }
+        }
+        set {
+            self._allOptions.withLockedValue { $0 = newValue }
+        }
+    }
 
     var allocator: ByteBufferAllocator { fatalError() }
 
