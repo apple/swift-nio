@@ -611,7 +611,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
             let iterator = sequence.makeAsyncIterator()
             let element = try await iterator.next()
             resumed.fulfill()
-            await fulfillment(of: [cancelled], timeout: 1)
+            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
             return element
         }
 
@@ -655,7 +655,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task: Task<Int?, Error> = Task {
-            await fulfillment(of: [cancelled], timeout: 1)
+            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
             let iterator = sequence.makeAsyncIterator()
             return try await iterator.next()
         }
@@ -686,7 +686,7 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task: Task<Int?, Error> = Task {
-            await fulfillment(of: [cancelled], timeout: 1)
+            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
             let iterator = sequence.makeAsyncIterator()
             return try await iterator.next()
         }
@@ -879,12 +879,13 @@ final class NIOThrowingAsyncSequenceProducerTests: XCTestCase {
 
     func testIteratorThrows_whenCancelled() async {
         _ = self.source.yield(contentsOf: Array(1...100))
+        guard let sequence = self.sequence else {
+            return XCTFail("Expected to have an AsyncSequence")
+        }
+
         await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 var itemsYieldedCounter = 0
-                guard let sequence = self.sequence else {
-                    return XCTFail("Expected to have an AsyncSequence")
-                }
 
                 do {
                     for try await next in sequence {
