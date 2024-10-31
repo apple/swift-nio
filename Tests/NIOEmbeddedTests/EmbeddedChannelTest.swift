@@ -396,8 +396,8 @@ class EmbeddedChannelTest: XCTestCase {
         try channel.writeAndFlush(1).wait()
         try channel.writeAndFlush("1").wait()
         try channel.writeAndFlush(buffer).wait()
-        try channel.writeAndFlush(IOData.byteBuffer(buffer)).wait()
-        try channel.writeAndFlush(IOData.fileRegion(fileRegion)).wait()
+        try channel.writeOutbound(IOData.byteBuffer(buffer))
+        try channel.writeOutbound(IOData.fileRegion(fileRegion))
         try channel.writeAndFlush(AddressedEnvelope(remoteAddress: socketAddress, data: buffer)).wait()
     }
 
