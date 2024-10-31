@@ -253,7 +253,8 @@ final class AsyncChannelTests: XCTestCase {
             let strongSentinel: Sentinel? = Sentinel()
             sentinel = strongSentinel!
             try await XCTAsyncAssertNotNil(
-                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).map { _ -> Bool in
+                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).map {
+                    _ -> Bool in
                     true
                 }.get()
             )
