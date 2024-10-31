@@ -1,7 +1,7 @@
 {
     "10000000_asyncsequenceproducer": 19,
     "1000000_asyncwriter": 1000013,
-    "1000_addHandlers": 43000,
+    "1000_addHandlers": 44000,
     "1000_addHandlers_sync": 36000,
     "1000_addRemoveHandlers_handlercontext": 8032,
     "1000_addRemoveHandlers_handlername": 8032,
