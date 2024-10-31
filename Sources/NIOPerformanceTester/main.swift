@@ -664,8 +664,12 @@ measureAndPrint(desc: "http1_1k_reqs_1_conn") {
         .connect(to: serverChannel.localAddress!)
         .wait()
 
-    clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-    try! clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
+    try! clientChannel.eventLoop.flatSubmit {
+        let promise = clientChannel.eventLoop.makePromise(of: Void.self)
+        clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+        clientChannel.pipeline.syncOperations.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil)), promise: promise)
+        return promise.futureResult
+    }.wait()
     return try! repeatedRequestsHandler.wait()
 }
 
@@ -687,8 +691,15 @@ measureAndPrint(desc: "http1_1k_reqs_100_conns") {
             .connect(to: serverChannel.localAddress!)
             .wait()
 
-        clientChannel.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
-        try! clientChannel.writeAndFlush(NIOAny(HTTPClientRequestPart.end(nil))).wait()
+        try! clientChannel.eventLoop.flatSubmit {
+            let promise = clientChannel.eventLoop.makePromise(of: Void.self)
+            clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
+            clientChannel.pipeline.syncOperations.writeAndFlush(
+                NIOAny(HTTPClientRequestPart.end(nil)),
+                promise: promise
+            )
+            return promise.futureResult
+        }.wait()
         reqs.append(try! repeatedRequestsHandler.wait())
     }
     return reqs.reduce(0, +) / numConns
