@@ -358,7 +358,7 @@ public final class NIOThreadPool {
 
         func threadCount() -> Int {
             self.conditionLock.withLock {
-                return (unlockWith: nil, result: self.threads?.count ?? -1)
+                (unlockWith: nil, result: self.threads?.count ?? -1)
             }
         }
         assert(threadCount() == self.numberOfThreads)
