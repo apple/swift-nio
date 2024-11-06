@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOCore
 
 /// A writer which buffers bytes in memory before writing them to the file system.
@@ -244,5 +243,3 @@ extension WritableFileHandleProtocol {
         }
     }
 }
-
-#endif

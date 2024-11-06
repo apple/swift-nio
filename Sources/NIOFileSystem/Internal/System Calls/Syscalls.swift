@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import SystemPackage
 
 #if canImport(Darwin)
@@ -482,4 +481,3 @@ internal func libc_fts_close(
 ) -> CInt {
     fts_close(fts)
 }
-#endif

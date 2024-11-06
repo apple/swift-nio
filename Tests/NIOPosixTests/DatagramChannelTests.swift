@@ -153,7 +153,7 @@ class DatagramChannelTests: XCTestCase {
         var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(writeData).wait())
 
         let reads = try self.secondChannel.waitForDatagrams(count: 1)
         XCTAssertEqual(reads.count, 1)
@@ -165,7 +165,7 @@ class DatagramChannelTests: XCTestCase {
     func testEmptyDatagram() throws {
         let buffer = self.firstChannel.allocator.buffer(capacity: 0)
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(writeData).wait())
 
         let reads = try self.secondChannel.waitForDatagrams(count: 1)
         XCTAssertEqual(reads.count, 1)
@@ -180,7 +180,7 @@ class DatagramChannelTests: XCTestCase {
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
         var writeFutures: [EventLoopFuture<Void>] = []
         for _ in 0..<5 {
-            writeFutures.append(self.firstChannel.write(NIOAny(writeData)))
+            writeFutures.append(self.firstChannel.write(writeData))
         }
         self.firstChannel.flush()
         XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(writeFutures, on: self.firstChannel.eventLoop).wait())
@@ -210,7 +210,7 @@ class DatagramChannelTests: XCTestCase {
             // We submit to the loop here to make sure that we synchronously process the writes and checks
             // on writability.
             let writable: Bool = try self.firstChannel.eventLoop.submit {
-                self.firstChannel.write(NIOAny(writeData), promise: nil)
+                self.firstChannel.write(writeData, promise: nil)
                 return self.firstChannel.isWritable
             }.wait()
             XCTAssertTrue(writable)
@@ -219,7 +219,7 @@ class DatagramChannelTests: XCTestCase {
         let lastWritePromise = self.firstChannel.eventLoop.makePromise(of: Void.self)
         // The last write will push us over the edge.
         var writable: Bool = try self.firstChannel.eventLoop.submit {
-            self.firstChannel.write(NIOAny(writeData), promise: lastWritePromise)
+            self.firstChannel.write(writeData, promise: lastWritePromise)
             return self.firstChannel.isWritable
         }.wait()
         XCTAssertFalse(writable)
@@ -234,7 +234,7 @@ class DatagramChannelTests: XCTestCase {
         var buffer = self.firstChannel.allocator.buffer(capacity: 256)
         buffer.writeStaticString("hello, world!")
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        let promises = (0..<5).map { _ in self.firstChannel.write(NIOAny(writeData)) }
+        let promises = (0..<5).map { _ in self.firstChannel.write(writeData) }
 
         // Now close the channel. When that completes, all the futures should be complete too.
         let fulfilled = try self.firstChannel.close().map {
@@ -259,7 +259,7 @@ class DatagramChannelTests: XCTestCase {
             var buffer = self.firstChannel.allocator.buffer(capacity: 1)
             buffer.writeString("a")
             let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-            self.firstChannel.write(NIOAny(envelope), promise: myPromise)
+            self.firstChannel.write(envelope, promise: myPromise)
             overall = EventLoopFuture.andAllSucceed([overall, myPromise.futureResult], on: self.firstChannel.eventLoop)
         }
         self.firstChannel.flush()
@@ -285,7 +285,7 @@ class DatagramChannelTests: XCTestCase {
             let lotsOfData = Int(Int32.max)
             var written: Int64 = 0
             while written <= lotsOfData {
-                self.firstChannel.write(NIOAny(envelope), promise: myPromise)
+                self.firstChannel.write(envelope, promise: myPromise)
                 overall = EventLoopFuture.andAllSucceed(
                     [overall, myPromise.futureResult],
                     on: self.firstChannel.eventLoop
@@ -306,7 +306,7 @@ class DatagramChannelTests: XCTestCase {
         buffer.writeRepeatingByte(4, count: bufferSize)
         let envelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
-        let writeFut = self.firstChannel.write(NIOAny(envelope))
+        let writeFut = self.firstChannel.write(envelope)
         self.firstChannel.flush()
 
         XCTAssertThrowsError(try writeFut.wait()) { error in
@@ -328,9 +328,9 @@ class DatagramChannelTests: XCTestCase {
         let secondEnvelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
         // Now, three writes. We're sandwiching the big write between two small ones.
-        let firstWrite = self.firstChannel.write(NIOAny(firstEnvelope))
-        let secondWrite = self.firstChannel.write(NIOAny(secondEnvelope))
-        let thirdWrite = self.firstChannel.writeAndFlush(NIOAny(firstEnvelope))
+        let firstWrite = self.firstChannel.write(firstEnvelope)
+        let secondWrite = self.firstChannel.write(secondEnvelope)
+        let thirdWrite = self.firstChannel.writeAndFlush(firstEnvelope)
 
         // The first and third writes should be fine.
         XCTAssertNoThrow(try firstWrite.wait())
@@ -356,9 +356,9 @@ class DatagramChannelTests: XCTestCase {
         let secondEnvelope = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
         // Now, three writes. We're sandwiching the big write between two small ones.
-        let firstWrite = self.firstChannel.write(NIOAny(firstEnvelope))
-        let secondWrite = self.firstChannel.write(NIOAny(secondEnvelope))
-        let thirdWrite = self.firstChannel.writeAndFlush(NIOAny(firstEnvelope))
+        let firstWrite = self.firstChannel.write(firstEnvelope)
+        let secondWrite = self.firstChannel.write(secondEnvelope)
+        let thirdWrite = self.firstChannel.writeAndFlush(firstEnvelope)
 
         // The first and third writes should be fine.
         XCTAssertNoThrow(try firstWrite.wait())
@@ -550,8 +550,8 @@ class DatagramChannelTests: XCTestCase {
             data: buffer.getSlice(at: buffer.readerIndex, length: 5)!
         )
         let secondWrite = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        self.firstChannel.write(NIOAny(firstWrite), promise: nil)
-        self.firstChannel.write(NIOAny(secondWrite), promise: nil)
+        self.firstChannel.write(firstWrite, promise: nil)
+        self.firstChannel.write(secondWrite, promise: nil)
         self.firstChannel.flush()
 
         let reads = try self.secondChannel.waitForDatagrams(count: 2)
@@ -609,9 +609,9 @@ class DatagramChannelTests: XCTestCase {
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
         // We write this in three times.
-        self.firstChannel.write(NIOAny(writeData), promise: nil)
-        self.firstChannel.write(NIOAny(writeData), promise: nil)
-        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(writeData, promise: nil)
+        self.firstChannel.write(writeData, promise: nil)
+        self.firstChannel.write(writeData, promise: nil)
         self.firstChannel.flush()
 
         let reads = try self.secondChannel.waitForDatagrams(count: 3)
@@ -641,9 +641,9 @@ class DatagramChannelTests: XCTestCase {
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
 
         // We write this in three times.
-        self.firstChannel.write(NIOAny(writeData), promise: nil)
-        self.firstChannel.write(NIOAny(writeData), promise: nil)
-        self.firstChannel.write(NIOAny(writeData), promise: nil)
+        self.firstChannel.write(writeData, promise: nil)
+        self.firstChannel.write(writeData, promise: nil)
+        self.firstChannel.write(writeData, promise: nil)
         self.firstChannel.flush()
 
         let reads = try self.secondChannel.waitForDatagrams(count: 3)
@@ -675,9 +675,9 @@ class DatagramChannelTests: XCTestCase {
 
         // Ok, now we're good. Let's queue up a bunch of datagrams. We've configured to receive 10 at a time, so we'll send 30.
         for _ in 0..<29 {
-            self.firstChannel.write(NIOAny(writeData), promise: nil)
+            self.firstChannel.write(writeData, promise: nil)
         }
-        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(writeData).wait())
 
         // Now we read. Rather than issue many read() calls, we'll turn autoread back on.
         XCTAssertNoThrow(try self.secondChannel.setOption(.autoRead, value: true).wait())
@@ -1144,16 +1144,13 @@ class DatagramChannelTests: XCTestCase {
         line: UInt = #line
     ) throws {
         // Wrap data in AddressedEnvelope if required.
-        let writePayload: NIOAny
+        let writeResult: EventLoopFuture<Void>
         if shouldWrapInAddressedEnvelope {
             let envelope = AddressedEnvelope(remoteAddress: destinationChannel.localAddress!, data: data)
-            writePayload = NIOAny(envelope)
+            writeResult = sourceChannel.writeAndFlush(envelope)
         } else {
-            writePayload = NIOAny(data)
+            writeResult = sourceChannel.writeAndFlush(data)
         }
-
-        // Write and flush.
-        let writeResult = sourceChannel.writeAndFlush(writePayload)
 
         // Check the expected result.
         switch expectedResult {
@@ -1424,7 +1421,7 @@ class DatagramChannelTests: XCTestCase {
 
         // Write the single large buffer.
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait())
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(writeData).wait())
 
         // The receiver will receive separate segments.
         let receivedBuffers = try self.secondChannel.waitForDatagrams(count: segments)
@@ -1469,8 +1466,8 @@ class DatagramChannelTests: XCTestCase {
 
         // Write the single large buffer.
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-        let write1 = self.firstChannel.write(NIOAny(writeData))
-        let write2 = self.firstChannel.write(NIOAny(writeData))
+        let write1 = self.firstChannel.write(writeData)
+        let write2 = self.firstChannel.write(writeData)
         self.firstChannel.flush()
         XCTAssertNoThrow(try write1.wait())
         XCTAssertNoThrow(try write2.wait())
@@ -1506,7 +1503,7 @@ class DatagramChannelTests: XCTestCase {
         func send(byteCount: Int) throws {
             let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: byteCount)
             let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-            try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait()
+            try self.firstChannel.writeAndFlush(writeData).wait()
         }
 
         do {
@@ -1538,7 +1535,7 @@ class DatagramChannelTests: XCTestCase {
         let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * udpMaxSegments + 1)
         let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
         // The kernel limits messages to a maximum of UDP_MAX_SEGMENTS segments; any more should result in an error.
-        XCTAssertThrowsError(try self.firstChannel.writeAndFlush(NIOAny(writeData)).wait()) {
+        XCTAssertThrowsError(try self.firstChannel.writeAndFlush(writeData).wait()) {
             XCTAssert($0 is IOError)
         }
     }
@@ -1608,7 +1605,7 @@ class DatagramChannelTests: XCTestCase {
         // Write to the channel with GRO enabled.
         do {
             let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
-            let promises = (0..<writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
+            let promises = (0..<writes).map { _ in self.firstChannel.write(writeData) }
             self.firstChannel.flush()
             XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
 
@@ -1622,7 +1619,7 @@ class DatagramChannelTests: XCTestCase {
         // Write to the channel whithout GRO.
         do {
             let writeData = AddressedEnvelope(remoteAddress: self.thirdChannel.localAddress!, data: buffer)
-            let promises = (0..<writes).map { _ in self.firstChannel.write(NIOAny(writeData)) }
+            let promises = (0..<writes).map { _ in self.firstChannel.write(writeData) }
             self.firstChannel.flush()
             XCTAssertNoThrow(try EventLoopFuture.andAllSucceed(promises, on: self.firstChannel.eventLoop).wait())
 
@@ -1655,7 +1652,7 @@ class DatagramChannelTests: XCTestCase {
         let data = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
         let writeCount = 3
 
-        let promises = (0..<writeCount).map { _ in self.firstChannel.write(NIOAny(data)) }
+        let promises = (0..<writeCount).map { _ in self.firstChannel.write(data) }
         let bufferedAmount = try self.firstChannel.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmount, buffer.readableBytes * writeCount)
         self.firstChannel.flush()
@@ -1684,7 +1681,7 @@ class DatagramChannelTests: XCTestCase {
         var promises: [EventLoopFuture<Void>] = []
 
         for i in 0..<writeCount {
-            let promise = self.firstChannel.write(NIOAny(data))
+            let promise = self.firstChannel.write(data)
             promises.append(promise)
             do {
                 if i % 2 == 0 {
@@ -1750,7 +1747,7 @@ class DatagramChannelTests: XCTestCase {
 
         let buffer = self.firstChannel.allocator.buffer(repeating: 1, count: segmentSize * segments)
         let writeData = AddressedEnvelope(remoteAddress: receiver.localAddress!, data: buffer)
-        XCTAssertNoThrow(try sender.writeAndFlush(NIOAny(writeData)).wait())
+        XCTAssertNoThrow(try sender.writeAndFlush(writeData).wait())
 
         let received = try receiver.waitForDatagrams(count: 1)
         let hasGoodGROSupport = received.first!.data.readableBytes == buffer.readableBytes

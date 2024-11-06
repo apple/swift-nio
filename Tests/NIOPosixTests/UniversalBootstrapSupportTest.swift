@@ -128,7 +128,7 @@ class UniversalBootstrapSupportTest: XCTestCase {
                 // let's check that the order is right
                 XCTAssertNoThrow(
                     try client.eventLoop.submit {
-                        client.pipeline.fireChannelRead(NIOAny(buffer))
+                        client.pipeline.fireChannelRead(buffer)
                         client.pipeline.fireUserInboundEventTriggered(buffer)
                     }.wait()
                 )

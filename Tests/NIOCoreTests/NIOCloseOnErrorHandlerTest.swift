@@ -16,7 +16,7 @@ import NIOCore
 import NIOEmbedded
 import XCTest
 
-final class DummyFailingHandler1: ChannelInboundHandler {
+final class DummyFailingHandler1: ChannelInboundHandler, Sendable {
     typealias InboundIn = NIOAny
 
     struct DummyError1: Error {}

@@ -27,7 +27,7 @@ final class PromiseOnReadHandler: ChannelInboundHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         self.promise.succeed(Self.unwrapInboundIn(data))
-        _ = context.pipeline.removeHandler(context: context)
+        context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
     }
 }
 

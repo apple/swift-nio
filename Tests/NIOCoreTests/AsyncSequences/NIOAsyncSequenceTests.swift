@@ -149,6 +149,42 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         XCTAssertEqual(self.source.yield(contentsOf: [7, 8, 9, 10, 11]), .stopProducing)
     }
 
+    func testWatermarkBackpressure_whenBelowLowwatermark_andOutstandingDemand() async {
+        let newSequence = NIOAsyncSequenceProducer.makeSequence(
+            elementType: Int.self,
+            backPressureStrategy: NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark(
+                lowWatermark: 2,
+                highWatermark: 5
+            ),
+            finishOnDeinit: false,
+            delegate: self.delegate
+        )
+        let iterator = newSequence.sequence.makeAsyncIterator()
+        var eventsIterator = self.delegate.events.makeAsyncIterator()
+        let source = newSequence.source
+
+        XCTAssertEqual(source.yield(1), .produceMore)
+        XCTAssertEqual(source.yield(2), .produceMore)
+        XCTAssertEqual(source.yield(3), .produceMore)
+        XCTAssertEqual(source.yield(4), .produceMore)
+        XCTAssertEqual(source.yield(5), .stopProducing)
+        XCTAssertEqualWithoutAutoclosure(await iterator.next(), 1)
+        XCTAssertEqualWithoutAutoclosure(await iterator.next(), 2)
+        XCTAssertEqualWithoutAutoclosure(await iterator.next(), 3)
+        XCTAssertEqualWithoutAutoclosure(await iterator.next(), 4)
+        XCTAssertEqualWithoutAutoclosure(await iterator.next(), 5)
+        XCTAssertEqualWithoutAutoclosure(await eventsIterator.next(), .produceMore)
+        XCTAssertEqual(source.yield(6), .produceMore)
+        XCTAssertEqual(source.yield(7), .produceMore)
+        XCTAssertEqual(source.yield(8), .produceMore)
+        XCTAssertEqualWithoutAutoclosure(await iterator.next(), 6)
+        XCTAssertEqualWithoutAutoclosure(await iterator.next(), 7)
+        XCTAssertEqualWithoutAutoclosure(await iterator.next(), 8)
+        source.finish()
+        XCTAssertEqualWithoutAutoclosure(await iterator.next(), nil)
+        XCTAssertEqualWithoutAutoclosure(await eventsIterator.next(), .didTerminate)
+    }
+
     // MARK: - Yield
 
     func testYield_whenInitial_andStopDemanding() async {
@@ -483,7 +519,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
             let value = await iterator.next()
             resumed.fulfill()
 
-            await fulfillment(of: [cancelled], timeout: 1)
+            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
             return value
         }
 
@@ -526,7 +562,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task: Task<Int?, Never> = Task {
-            await fulfillment(of: [cancelled], timeout: 1)
+            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
             let iterator = sequence.makeAsyncIterator()
             return await iterator.next()
         }

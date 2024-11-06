@@ -143,16 +143,16 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         let writerIndex = buffer.writerIndex
         buffer.moveWriterIndex(to: writerIndex - 1)
 
-        channel.pipeline.fireChannelRead(NIOAny(buffer))
+        channel.pipeline.fireChannelRead(buffer)
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
         buffer.moveWriterIndex(to: writerIndex)
-        channel.pipeline.fireChannelRead(NIOAny(buffer.getSlice(at: writerIndex - 1, length: 1)!))
+        channel.pipeline.fireChannelRead(buffer.getSlice(at: writerIndex - 1, length: 1)!)
 
         var buffer2 = channel.allocator.buffer(capacity: 32)
         buffer2.writeInteger(Int32(2))
         buffer2.writeInteger(Int32(3))
-        channel.pipeline.fireChannelRead(NIOAny(buffer2))
+        channel.pipeline.fireChannelRead(buffer2)
 
         XCTAssertNoThrow(try channel.finish())
 
@@ -173,7 +173,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
 
         var buffer = channel.allocator.buffer(capacity: 32)
         buffer.writeInteger(Int32(1))
-        channel.pipeline.fireChannelRead(NIOAny(buffer))
+        channel.pipeline.fireChannelRead(buffer)
         XCTAssertNoThrow(XCTAssertEqual(Int32(1), try channel.readInbound()))
 
         XCTAssertFalse(inactivePromiser.channelInactivePromise.futureResult.isFulfilled)
@@ -203,7 +203,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         inputBuffer.writeStaticString("whatwhat")
 
         for _ in 0..<10 {
-            channel.pipeline.fireChannelRead(NIOAny(inputBuffer))
+            channel.pipeline.fireChannelRead(inputBuffer)
         }
 
         // We get one extra malloc the first time around the loop, when we have aliased the buffer. From then on it's
@@ -385,13 +385,13 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                     self.hasReentranced = true
                     reentrantWriteBuffer.clear()
                     reentrantWriteBuffer.writeStaticString("3")
-                    context.channel.pipeline.fireChannelRead(Self.wrapInboundOut(reentrantWriteBuffer))
+                    context.channel.pipeline.syncOperations.fireChannelRead(Self.wrapInboundOut(reentrantWriteBuffer))
                 }
                 context.fireChannelRead(Self.wrapInboundOut(buffer.readSlice(length: 1)!))
                 if self.numberOfDecodeCalls == 2 {
                     reentrantWriteBuffer.clear()
                     reentrantWriteBuffer.writeStaticString("4")
-                    context.channel.pipeline.fireChannelRead(Self.wrapInboundOut(reentrantWriteBuffer))
+                    context.channel.pipeline.syncOperations.fireChannelRead(Self.wrapInboundOut(reentrantWriteBuffer))
                 }
                 return .continue
             }
@@ -616,7 +616,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).flatMap { context in
-            channel.pipeline.removeHandler(context: context)
+            channel.pipeline.syncOperations.removeHandler(context: context)
         }.whenFailure { error in
             XCTFail("unexpected error: \(error)")
         }
@@ -834,7 +834,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 if let slice = buffer.readSlice(length: 16) {
                     context.fireChannelRead(Self.wrapInboundOut(slice))
-                    context.pipeline.removeHandler(context: context).whenFailure { error in
+                    context.pipeline.syncOperations.removeHandler(context: context).whenFailure { error in
                         XCTFail("unexpected error: \(error)")
                     }
                     return .continue
@@ -943,7 +943,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                         )
                     )
                 )
-                context.pipeline.removeHandler(context: context).whenFailure { error in
+                context.pipeline.syncOperations.removeHandler(context: context).whenFailure { error in
                     XCTFail("unexpected error: \(error)")
                 }
                 return .continue
@@ -1101,7 +1101,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         buffer.writeString("x")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         let removalFuture = channel.pipeline.context(handlerType: ByteToMessageHandler<Decoder>.self).flatMap {
-            channel.pipeline.removeHandler(context: $0)
+            channel.pipeline.syncOperations.removeHandler(context: $0)
         }
         channel.embeddedEventLoop.run()
         XCTAssertNoThrow(try removalFuture.wait())
@@ -1135,7 +1135,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
         let removalFuture = channel.pipeline.context(handlerType: ByteToMessageHandler<Decoder>.self).flatMap {
-            channel.pipeline.removeHandler(context: $0)
+            channel.pipeline.syncOperations.removeHandler(context: $0)
         }
         channel.embeddedEventLoop.run()
         XCTAssertNoThrow(try removalFuture.wait())
@@ -1901,7 +1901,7 @@ public final class MessageToByteEncoderTest: XCTestCase {
             line: line
         )
 
-        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny(Int32(5))).wait(), file: (file), line: line)
+        XCTAssertNoThrow(try channel.writeAndFlush(Int32(5)).wait(), file: (file), line: line)
 
         if var buffer = try channel.readOutbound(as: ByteBuffer.self) {
             XCTAssertEqual(Int32(5), buffer.readInteger())

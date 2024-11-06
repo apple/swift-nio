@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-
 extension String {
     @inlinable
     init(
@@ -61,5 +59,3 @@ extension String {
         }
     }
 }
-
-#endif

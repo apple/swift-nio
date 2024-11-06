@@ -12,11 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 import NIOConcurrencyHelpers
 import NIOCore
 import NIOPosix
-@preconcurrency import SystemPackage
+import SystemPackage
 
 /// An `AsyncSequence` of ordered chunks read from a file.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -544,4 +543,3 @@ extension ProducerState.Producing {
         return .moreToRead
     }
 }
-#endif

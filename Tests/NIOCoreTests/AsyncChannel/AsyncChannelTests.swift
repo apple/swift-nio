@@ -253,7 +253,8 @@ final class AsyncChannelTests: XCTestCase {
             let strongSentinel: Sentinel? = Sentinel()
             sentinel = strongSentinel!
             try await XCTAsyncAssertNotNil(
-                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).map { _ in
+                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).map {
+                    _ -> Bool in
                     true
                 }.get()
             )
@@ -292,9 +293,9 @@ final class AsyncChannelTests: XCTestCase {
 
         // Push 3 elements into the buffer. Reads continue to work.
         try await channel.testingEventLoop.executeInContext {
-            channel.pipeline.fireChannelRead(NIOAny(()))
-            channel.pipeline.fireChannelRead(NIOAny(()))
-            channel.pipeline.fireChannelRead(NIOAny(()))
+            channel.pipeline.fireChannelRead(())
+            channel.pipeline.fireChannelRead(())
+            channel.pipeline.fireChannelRead(())
             channel.pipeline.fireChannelReadComplete()
 
             channel.pipeline.read()
@@ -305,7 +306,7 @@ final class AsyncChannelTests: XCTestCase {
 
         // Add one more element into the buffer. This should flip our backpressure mode, and the reads should now be delayed.
         try await channel.testingEventLoop.executeInContext {
-            channel.pipeline.fireChannelRead(NIOAny(()))
+            channel.pipeline.fireChannelRead(())
             channel.pipeline.fireChannelReadComplete()
 
             channel.pipeline.read()
@@ -316,7 +317,7 @@ final class AsyncChannelTests: XCTestCase {
 
         // More elements don't help.
         try await channel.testingEventLoop.executeInContext {
-            channel.pipeline.fireChannelRead(NIOAny(()))
+            channel.pipeline.fireChannelRead(())
             channel.pipeline.fireChannelReadComplete()
 
             channel.pipeline.read()
@@ -345,7 +346,7 @@ final class AsyncChannelTests: XCTestCase {
                 channel.pipeline.read()
                 channel.pipeline.read()
 
-                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelRead(())
                 channel.pipeline.fireChannelReadComplete()
 
                 channel.pipeline.read()
@@ -357,8 +358,8 @@ final class AsyncChannelTests: XCTestCase {
             // The next reads arriving pushes us past the limit again.
             // This time we won't read.
             try await channel.testingEventLoop.executeInContext {
-                channel.pipeline.fireChannelRead(NIOAny(()))
-                channel.pipeline.fireChannelRead(NIOAny(()))
+                channel.pipeline.fireChannelRead(())
+                channel.pipeline.fireChannelRead(())
                 channel.pipeline.fireChannelReadComplete()
             }
             XCTAssertEqual(readCounter.readCount, 13)
@@ -428,9 +429,8 @@ private final class CloseRecorder: ChannelOutboundHandler, @unchecked Sendable {
     }
 }
 
-private final class CloseSuppressor: ChannelOutboundHandler, RemovableChannelHandler {
+private final class CloseSuppressor: ChannelOutboundHandler, RemovableChannelHandler, Sendable {
     typealias OutboundIn = Any
-    typealias outbound = Any
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         // We drop the close here.
@@ -442,7 +442,7 @@ private final class CloseSuppressor: ChannelOutboundHandler, RemovableChannelHan
 extension NIOAsyncTestingChannel {
     fileprivate func closeIgnoringSuppression() async throws {
         try await self.pipeline.context(handlerType: CloseSuppressor.self).flatMap {
-            self.pipeline.removeHandler(context: $0)
+            self.pipeline.syncOperations.removeHandler(context: $0)
         }.flatMap {
             self.close()
         }.get()

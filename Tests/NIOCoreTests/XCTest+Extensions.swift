@@ -57,7 +57,7 @@ func assertNoThrowWithValue<T>(
 
 func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle, String) throws -> T) throws -> T {
     let temporaryFilePath = "\(temporaryDirectory)/nio_\(UUID())"
-    FileManager.default.createFile(atPath: temporaryFilePath, contents: content?.data(using: .utf8))
+    _ = FileManager.default.createFile(atPath: temporaryFilePath, contents: content?.data(using: .utf8))
     defer {
         XCTAssertNoThrow(try FileManager.default.removeItem(atPath: temporaryFilePath))
     }

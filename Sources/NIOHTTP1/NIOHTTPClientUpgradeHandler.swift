@@ -356,7 +356,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
                     self.upgradeState = .upgradeComplete
                 }
                 .whenComplete { _ in
-                    context.pipeline.removeHandler(context: context, promise: nil)
+                    context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
                 }
         }
     }
@@ -397,7 +397,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         context.fireChannelRead(Self.wrapInboundOut(data))
 
         // We've delivered the data. We can now remove ourselves, which should happen synchronously.
-        context.pipeline.removeHandler(context: context, promise: nil)
+        context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
     }
 }
 

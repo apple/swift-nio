@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
 @usableFromInline
 struct UnsafeTransfer<Value>: @unchecked Sendable {
     @usableFromInline
@@ -23,4 +22,3 @@ struct UnsafeTransfer<Value>: @unchecked Sendable {
         self.wrappedValue = wrappedValue
     }
 }
-#endif

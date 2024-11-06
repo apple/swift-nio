@@ -12,12 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(Linux) || os(Android)
-import NIOCore
-@_spi(Testing) @testable import _NIOFileSystem
-@preconcurrency import SystemPackage
-import XCTest
 import NIOConcurrencyHelpers
+import NIOCore
+import SystemPackage
+import XCTest
+@_spi(Testing) @testable import _NIOFileSystem
 
 extension FilePath {
     static let testData = FilePath(#filePath)
@@ -1864,5 +1863,4 @@ extension XCTestCase {
         wait(for: expectations, timeout: seconds)
     }
 }
-#endif
 #endif
