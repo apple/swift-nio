@@ -80,7 +80,7 @@ import NIOCore
 ///         using writeInbound()                using readOutbound()
 /// ```
 ///
-/// - note: ``NIOAsyncTestingChannel`` is currently only compatible with
+/// - Note: ``NIOAsyncTestingChannel`` is currently only compatible with
 ///   ``NIOAsyncTestingEventLoop``s and cannot be used with `SelectableEventLoop`s from
 ///   for example `MultiThreadedEventLoopGroup`.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -168,7 +168,7 @@ public final class NIOAsyncTestingChannel: Channel {
     ///
     /// An active ``NIOAsyncTestingChannel`` can be closed by calling `close` or ``finish()`` on the ``NIOAsyncTestingChannel``.
     ///
-    /// - note: An ``NIOAsyncTestingChannel`` starts _inactive_ and can be activated, for example by calling `connect`.
+    /// - Note: An ``NIOAsyncTestingChannel`` starts _inactive_ and can be activated, for example by calling `connect`.
     public var isActive: Bool { channelcore.isActive }
 
     /// - see: `ChannelOptions.Types.AllowRemoteHalfClosureOption`
@@ -268,8 +268,8 @@ public final class NIOAsyncTestingChannel: Channel {
     ///
     /// During creation it will automatically also register itself on the ``NIOAsyncTestingEventLoop``.
     ///
-    /// - parameters:
-    ///     - loop: The ``NIOAsyncTestingEventLoop`` to use.
+    /// - Parameters:
+    ///   - loop: The ``NIOAsyncTestingEventLoop`` to use.
     public init(loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) {
         self.testingEventLoop = loop
         self._pipeline = ChannelPipeline(channel: self)
@@ -280,9 +280,9 @@ public final class NIOAsyncTestingChannel: Channel {
     ///
     /// During creation it will automatically also register itself on the ``NIOAsyncTestingEventLoop``.
     ///
-    /// - parameters:
-    ///     - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register.
-    ///     - loop: The ``NIOAsyncTestingEventLoop`` to use.
+    /// - Parameters:
+    ///   - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register.
+    ///   - loop: The ``NIOAsyncTestingEventLoop`` to use.
     public convenience init(handler: ChannelHandler, loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) async
     {
         await self.init(handlers: [handler], loop: loop)
@@ -292,9 +292,9 @@ public final class NIOAsyncTestingChannel: Channel {
     ///
     /// During creation it will automatically also register itself on the ``NIOAsyncTestingEventLoop``.
     ///
-    /// - parameters:
-    ///     - handlers: The `ChannelHandler`s to add to the `ChannelPipeline` before register.
-    ///     - loop: The ``NIOAsyncTestingEventLoop`` to use.
+    /// - Parameters:
+    ///   - handlers: The `ChannelHandler`s to add to the `ChannelPipeline` before register.
+    ///   - loop: The ``NIOAsyncTestingEventLoop`` to use.
     public convenience init(
         handlers: [ChannelHandler],
         loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()
@@ -311,9 +311,9 @@ public final class NIOAsyncTestingChannel: Channel {
     ///
     /// Errors in the ``NIOAsyncTestingChannel`` can be consumed using ``throwIfErrorCaught()``.
     ///
-    /// - parameters:
-    ///     - acceptAlreadyClosed: Whether ``finish()`` should throw if the ``NIOAsyncTestingChannel`` has been previously `close`d.
-    /// - returns: The ``LeftOverState`` of the ``NIOAsyncTestingChannel``. If all the inbound and outbound events have been
+    /// - Parameters:
+    ///   - acceptAlreadyClosed: Whether ``finish()`` should throw if the ``NIOAsyncTestingChannel`` has been previously `close`d.
+    /// - Returns: The ``LeftOverState`` of the ``NIOAsyncTestingChannel``. If all the inbound and outbound events have been
     ///            consumed (using ``readInbound(as:)`` / ``readOutbound(as:)``) and there are no pending outbound events (unflushed
     ///            writes) this will be ``LeftOverState/clean``. If there are any unconsumed inbound, outbound, or pending outbound
     ///            events, the ``NIOAsyncTestingChannel`` will returns those as ``LeftOverState/leftOvers(inbound:outbound:pendingOutbound:)``.
@@ -353,7 +353,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// This method will throw if the `Channel` hit any unconsumed errors or if the `close` fails. Errors in the
     /// ``NIOAsyncTestingChannel`` can be consumed using ``throwIfErrorCaught()``.
     ///
-    /// - returns: The ``LeftOverState`` of the ``NIOAsyncTestingChannel``. If all the inbound and outbound events have been
+    /// - Returns: The ``LeftOverState`` of the ``NIOAsyncTestingChannel``. If all the inbound and outbound events have been
     ///            consumed (using ``readInbound(as:)`` / ``readOutbound(as:)``) and there are no pending outbound events (unflushed
     ///            writes) this will be ``LeftOverState/clean``. If there are any unconsumed inbound, outbound, or pending outbound
     ///            events, the ``NIOAsyncTestingChannel`` will returns those as ``LeftOverState/leftOvers(inbound:outbound:pendingOutbound:)``.
@@ -370,8 +370,8 @@ public final class NIOAsyncTestingChannel: Channel {
     /// first `ChannelHandler` must have written and flushed it either explicitly (by calling
     /// `ChannelHandlerContext.write` and `flush`) or implicitly by not implementing `write`/`flush`.
     ///
-    /// - note: Outbound events travel the `ChannelPipeline` _back to front_.
-    /// - note: ``NIOAsyncTestingChannel/writeOutbound(_:)`` will `write` data through the `ChannelPipeline`, starting with last
+    /// - Note: Outbound events travel the `ChannelPipeline` _back to front_.
+    /// - Note: ``NIOAsyncTestingChannel/writeOutbound(_:)`` will `write` data through the `ChannelPipeline`, starting with last
     ///         `ChannelHandler`.
     @inlinable
     public func readOutbound<T: Sendable>(as type: T.Type = T.self) async throws -> T? {
@@ -390,8 +390,8 @@ public final class NIOAsyncTestingChannel: Channel {
     /// first `ChannelHandler` must have written and flushed it either explicitly (by calling
     /// `ChannelHandlerContext.write` and `flush`) or implicitly by not implementing `write`/`flush`.
     ///
-    /// - note: Outbound events travel the `ChannelPipeline` _back to front_.
-    /// - note: ``NIOAsyncTestingChannel/writeOutbound(_:)`` will `write` data through the `ChannelPipeline`, starting with last
+    /// - Note: Outbound events travel the `ChannelPipeline` _back to front_.
+    /// - Note: ``NIOAsyncTestingChannel/writeOutbound(_:)`` will `write` data through the `ChannelPipeline`, starting with last
     ///         `ChannelHandler`.
     public func waitForOutboundWrite<T: Sendable>(as type: T.Type = T.self) async throws -> T {
         try await withCheckedThrowingContinuation { continuation in
@@ -424,7 +424,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// last `ChannelHandler` must have send the event either explicitly (by calling
     /// `ChannelHandlerContext.fireChannelRead`) or implicitly by not implementing `channelRead`.
     ///
-    /// - note: ``NIOAsyncTestingChannel/writeInbound(_:)`` will fire data through the `ChannelPipeline` using `fireChannelRead`.
+    /// - Note: ``NIOAsyncTestingChannel/writeInbound(_:)`` will fire data through the `ChannelPipeline` using `fireChannelRead`.
     @inlinable
     public func readInbound<T: Sendable>(as type: T.Type = T.self) async throws -> T? {
         try await self.testingEventLoop.executeInContext {
@@ -442,7 +442,7 @@ public final class NIOAsyncTestingChannel: Channel {
     /// last `ChannelHandler` must have send the event either explicitly (by calling
     /// `ChannelHandlerContext.fireChannelRead`) or implicitly by not implementing `channelRead`.
     ///
-    /// - note: ``NIOAsyncTestingChannel/writeInbound(_:)`` will fire data through the `ChannelPipeline` using `fireChannelRead`.
+    /// - Note: ``NIOAsyncTestingChannel/writeInbound(_:)`` will fire data through the `ChannelPipeline` using `fireChannelRead`.
     public func waitForInboundWrite<T: Sendable>(as type: T.Type = T.self) async throws -> T {
         try await withCheckedThrowingContinuation { continuation in
             self.testingEventLoop.execute {
@@ -470,9 +470,9 @@ public final class NIOAsyncTestingChannel: Channel {
     /// The immediate effect being that the first `ChannelInboundHandler` will get its `channelRead` method called
     /// with the data you provide.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///    - data: The data to fire through the pipeline.
-    /// - returns: The state of the inbound buffer which contains all the events that travelled the `ChannelPipeline`
+    /// - Returns: The state of the inbound buffer which contains all the events that travelled the `ChannelPipeline`
     //             all the way.
     @inlinable
     @discardableResult public func writeInbound<T: Sendable>(_ data: T) async throws -> BufferState {
@@ -490,9 +490,9 @@ public final class NIOAsyncTestingChannel: Channel {
     /// with the data you provide. Note that the first `ChannelOutboundHandler` in the pipeline is the _last_ handler
     /// because outbound events travel the pipeline from back to front.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///    - data: The data to fire through the pipeline.
-    /// - returns: The state of the outbound buffer which contains all the events that travelled the `ChannelPipeline`
+    /// - Returns: The state of the outbound buffer which contains all the events that travelled the `ChannelPipeline`
     //             all the way.
     @inlinable
     @discardableResult public func writeOutbound<T: Sendable>(_ data: T) async throws -> BufferState {
@@ -596,9 +596,9 @@ public final class NIOAsyncTestingChannel: Channel {
     /// happens when it travels the `ChannelPipeline` all the way to the front, this will also set the
     /// ``NIOAsyncTestingChannel``'s ``localAddress``.
     ///
-    /// - parameters:
-    ///     - address: The address to fake-bind to.
-    ///     - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
+    /// - Parameters:
+    ///   - address: The address to fake-bind to.
+    ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.futureResult.whenSuccess {
             self.localAddress = address
@@ -616,9 +616,9 @@ public final class NIOAsyncTestingChannel: Channel {
     /// which happens when it travels the `ChannelPipeline` all the way to the front, this will also set the
     /// ``NIOAsyncTestingChannel``'s ``remoteAddress``.
     ///
-    /// - parameters:
-    ///     - address: The address to fake-bind to.
-    ///     - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
+    /// - Parameters:
+    ///   - address: The address to fake-bind to.
+    ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         promise?.futureResult.whenSuccess {
             self.remoteAddress = address

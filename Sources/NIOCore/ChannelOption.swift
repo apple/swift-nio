@@ -95,9 +95,9 @@ extension ChannelOptions {
             #if !os(Windows)
             /// Create a new `SocketOption`.
             ///
-            /// - parameters:
-            ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
-            ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
+            /// - Parameters:
+            ///   - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+            ///   - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
             public init(level: SocketOptionLevel, name: SocketOptionName) {
                 self.optionLevel = NIOBSDSocket.OptionLevel(rawValue: CInt(level))
                 self.optionName = NIOBSDSocket.Option(rawValue: CInt(name))
@@ -106,9 +106,9 @@ extension ChannelOptions {
 
             /// Create a new `SocketOption`.
             ///
-            /// - parameters:
-            ///     - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
-            ///     - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
+            /// - Parameters:
+            ///   - level: The level for the option as defined in `man setsockopt`, e.g. SO_SOCKET.
+            ///   - name: The name of the option as defined in `man setsockopt`, e.g. `SO_REUSEADDR`.
             public init(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) {
                 self.optionLevel = level
                 self.optionName = name
@@ -241,7 +241,7 @@ extension ChannelOptions {
             ///
             /// Valid initialization is restricted to `1 <= low <= high`.
             ///
-            /// - parameters:
+            /// - Parameters:
             ///      - low: The low watermark.
             ///      - high: The high watermark.
             public init(low: Int, high: Int) {
@@ -484,9 +484,9 @@ extension ChannelOptions {
 
         /// Add `Options`, a `ChannelOption` to the `ChannelOptions.Storage`.
         ///
-        /// - parameters:
-        ///    - key: the key for the option
-        ///    - value: the value for the option
+        /// - Parameters:
+        ///    - newKey: the key for the option
+        ///    - newValue: the value for the option
         @inlinable
         public mutating func append<Option: ChannelOption>(key newKey: Option, value newValue: Option.Value) {
             @Sendable
@@ -512,9 +512,9 @@ extension ChannelOptions {
 
         /// Apply all stored `ChannelOption`s to `Channel`.
         ///
-        /// - parameters:
+        /// - Parameters:
         ///    - channel: The `Channel` to apply the `ChannelOption`s to
-        /// - returns:
+        /// - Returns:
         ///    - An `EventLoopFuture` that is fulfilled when all `ChannelOption`s have been applied to the `Channel`.
         public func applyAllChannelOptions(to channel: Channel) -> EventLoopFuture<Void> {
             let applyPromise = channel.eventLoop.makePromise(of: Void.self)
@@ -557,8 +557,8 @@ extension ChannelOptions {
         /// from the ``ChannelOptions/Storage``, as if none had been added. This is useful in rare
         /// cases where a bootstrap knows that some configuration must purge options of a certain kind.
         ///
-        /// - parameters:
-        ///     - key: The ``ChannelOption`` to remove.
+        /// - Parameters:
+        ///   - key: The ``ChannelOption`` to remove.
         public mutating func remove<Option: ChannelOption>(key: Option) {
             self._storage.removeAll(where: { existingKey, _ in
                 (existingKey as? Option) == key

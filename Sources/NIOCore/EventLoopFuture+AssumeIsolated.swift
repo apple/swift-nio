@@ -36,9 +36,9 @@ struct IsolatedEventLoop {
 
     /// Submit a given task to be executed by the `EventLoop`. Once the execution is complete the returned `EventLoopFuture` is notified.
     ///
-    /// - parameters:
-    ///     - task: The closure that will be submitted to the `EventLoop` for execution.
-    /// - returns: `EventLoopFuture` that is notified once the task was executed.
+    /// - Parameters:
+    ///   - task: The closure that will be submitted to the `EventLoop` for execution.
+    /// - Returns: `EventLoopFuture` that is notified once the task was executed.
     @inlinable
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
         self._wrapped.assertInEventLoop()
@@ -50,12 +50,12 @@ struct IsolatedEventLoop {
 
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
     ///
-    /// - parameters:
-    ///     - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
-    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    /// - Parameters:
+    ///   - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - Returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the completion of the task.
     ///
-    /// - note: You can only cancel a task before it has started executing.
+    /// - Note: You can only cancel a task before it has started executing.
     @discardableResult
     @inlinable
     func scheduleTask<T>(
@@ -71,13 +71,13 @@ struct IsolatedEventLoop {
 
     /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
     ///
-    /// - parameters:
-    ///     - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
-    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    /// - Parameters:
+    ///   - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - Returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the completion of the task.
     ///
-    /// - note: You can only cancel a task before it has started executing.
-    /// - note: The `in` value is clamped to a maximum when running on a Darwin-kernel.
+    /// - Note: You can only cancel a task before it has started executing.
+    /// - Note: The `in` value is clamped to a maximum when running on a Darwin-kernel.
     @discardableResult
     @inlinable
     func scheduleTask<T>(
@@ -96,12 +96,12 @@ struct IsolatedEventLoop {
     /// - Note: The `T` must be `Sendable` since the isolation domains of the event loop future returned from `task` and
     /// this event loop might differ.
     ///
-    /// - parameters:
-    ///     - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
-    /// - returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
+    /// - Parameters:
+    ///   - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
+    /// - Returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the full execution of the task, including its returned `EventLoopFuture`.
     ///
-    /// - note: You can only cancel a task before it has started executing.
+    /// - Note: You can only cancel a task before it has started executing.
     @discardableResult
     @inlinable
     func flatScheduleTask<T: Sendable>(
@@ -162,10 +162,10 @@ extension EventLoopFuture {
         ///
         /// Note: In a sense, the `EventLoopFuture<NewValue>` is returned before it's created.
         ///
-        /// - parameters:
-        ///     - callback: Function that will receive the value of this `EventLoopFuture` and return
+        /// - Parameters:
+        ///   - callback: Function that will receive the value of this `EventLoopFuture` and return
         ///         a new `EventLoopFuture`.
-        /// - returns: A future that will receive the eventual value.
+        /// - Returns: A future that will receive the eventual value.
         @inlinable
         func flatMap<NewValue: Sendable>(
             _ callback: @escaping (Value) -> EventLoopFuture<NewValue>
@@ -187,10 +187,10 @@ extension EventLoopFuture {
         ///
         /// If your callback function throws, the returned `EventLoopFuture` will error.
         ///
-        /// - parameters:
-        ///     - callback: Function that will receive the value of this `EventLoopFuture` and return
+        /// - Parameters:
+        ///   - callback: Function that will receive the value of this `EventLoopFuture` and return
         ///         a new value lifted into a new `EventLoopFuture`.
-        /// - returns: A future that will receive the eventual value.
+        /// - Returns: A future that will receive the eventual value.
         @inlinable
         func flatMapThrowing<NewValue>(
             _ callback: @escaping (Value) throws -> NewValue
@@ -212,10 +212,10 @@ extension EventLoopFuture {
         ///
         /// If your callback function throws, the returned `EventLoopFuture` will error.
         ///
-        /// - parameters:
-        ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
+        /// - Parameters:
+        ///   - callback: Function that will receive the error value of this `EventLoopFuture` and return
         ///         a new value lifted into a new `EventLoopFuture`.
-        /// - returns: A future that will receive the eventual value or a rethrown error.
+        /// - Returns: A future that will receive the eventual value or a rethrown error.
         @inlinable
         func flatMapErrorThrowing(
             _ callback: @escaping (Error) throws -> Value
@@ -249,10 +249,10 @@ extension EventLoopFuture {
         /// }
         /// ```
         ///
-        /// - parameters:
-        ///     - callback: Function that will receive the value of this `EventLoopFuture` and return
+        /// - Parameters:
+        ///   - callback: Function that will receive the value of this `EventLoopFuture` and return
         ///         a new value lifted into a new `EventLoopFuture`.
-        /// - returns: A future that will receive the eventual value.
+        /// - Returns: A future that will receive the eventual value.
         @inlinable
         func map<NewValue>(
             _ callback: @escaping (Value) -> (NewValue)
@@ -274,10 +274,10 @@ extension EventLoopFuture {
         /// - Note: The `Value` must be `Sendable` since the isolation domains of this future and the future returned from the callback
         /// might differ i.e. they might be bound to different event loops.
         ///
-        /// - parameters:
-        ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
+        /// - Parameters:
+        ///   - callback: Function that will receive the error value of this `EventLoopFuture` and return
         ///         a new value lifted into a new `EventLoopFuture`.
-        /// - returns: A future that will receive the recovered value.
+        /// - Returns: A future that will receive the recovered value.
         @inlinable
         func flatMapError(
             _ callback: @escaping (Error) -> EventLoopFuture<Value>
@@ -298,10 +298,10 @@ extension EventLoopFuture {
         /// performs a simple data transformation that can potentially error.
         ///
         ///
-        /// - parameters:
-        ///     - body: Function that will receive the value of this `EventLoopFuture` and return
+        /// - Parameters:
+        ///   - body: Function that will receive the value of this `EventLoopFuture` and return
         ///         a new value or error lifted into a new `EventLoopFuture`.
-        /// - returns: A future that will receive the eventual value.
+        /// - Returns: A future that will receive the eventual value.
         @inlinable
         func flatMapResult<NewValue, SomeError: Error>(
             _ body: @escaping (Value) -> Result<NewValue, SomeError>
@@ -321,10 +321,10 @@ extension EventLoopFuture {
         /// event loop. `recover` is intended for use when you have the ability to synchronously
         /// recover from errors.
         ///
-        /// - parameters:
-        ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
+        /// - Parameters:
+        ///   - callback: Function that will receive the error value of this `EventLoopFuture` and return
         ///         a new value lifted into a new `EventLoopFuture`.
-        /// - returns: A future that will receive the recovered value.
+        /// - Returns: A future that will receive the recovered value.
         @inlinable
         func recover(
             _ callback: @escaping (Error) -> Value
@@ -344,8 +344,8 @@ extension EventLoopFuture {
         /// If you find yourself passing the results from this `EventLoopFuture` to a new `EventLoopPromise`
         /// in the body of this function, consider using `cascade` instead.
         ///
-        /// - parameters:
-        ///     - callback: The callback that is called with the successful result of the `EventLoopFuture`.
+        /// - Parameters:
+        ///   - callback: The callback that is called with the successful result of the `EventLoopFuture`.
         @inlinable
         func whenSuccess(_ callback: @escaping (Value) -> Void) {
             self._wrapped.eventLoop.assertInEventLoop()
@@ -363,8 +363,8 @@ extension EventLoopFuture {
         /// If you find yourself passing the results from this `EventLoopFuture` to a new `EventLoopPromise`
         /// in the body of this function, consider using `cascade` instead.
         ///
-        /// - parameters:
-        ///     - callback: The callback that is called with the failed result of the `EventLoopFuture`.
+        /// - Parameters:
+        ///   - callback: The callback that is called with the failed result of the `EventLoopFuture`.
         @inlinable
         func whenFailure(_ callback: @escaping (Error) -> Void) {
             self._wrapped.eventLoop.assertInEventLoop()
@@ -377,8 +377,8 @@ extension EventLoopFuture {
         /// Adds an observer callback to this `EventLoopFuture` that is called when the
         /// `EventLoopFuture` has any result.
         ///
-        /// - parameters:
-        ///     - callback: The callback that is called when the `EventLoopFuture` is fulfilled.
+        /// - Parameters:
+        ///   - callback: The callback that is called when the `EventLoopFuture` is fulfilled.
         @inlinable
         func whenComplete(
             _ callback: @escaping (Result<Value, Error>) -> Void
@@ -393,9 +393,9 @@ extension EventLoopFuture {
         /// Adds an observer callback to this `EventLoopFuture` that is called when the
         /// `EventLoopFuture` has any result.
         ///
-        /// - parameters:
-        ///     - callback: the callback that is called when the `EventLoopFuture` is fulfilled.
-        /// - returns: the current `EventLoopFuture`
+        /// - Parameters:
+        ///   - callback: the callback that is called when the `EventLoopFuture` is fulfilled.
+        /// - Returns: the current `EventLoopFuture`
         @inlinable
         func always(
             _ callback: @escaping (Result<Value, Error>) -> Void
@@ -415,9 +415,9 @@ extension EventLoopFuture {
         /// promise.futureResult.unwrap(orReplace: 42).wait()
         /// ```
         ///
-        /// - parameters:
-        ///     - orReplace: the value of the returned `EventLoopFuture` when then resolved future's value is `Optional.some()`.
-        /// - returns: an new `EventLoopFuture` with new type parameter `NewValue` and the value passed in the `orReplace` parameter.
+        /// - Parameters:
+        ///   - orReplace: the value of the returned `EventLoopFuture` when then resolved future's value is `Optional.some()`.
+        /// - Returns: an new `EventLoopFuture` with new type parameter `NewValue` and the value passed in the `orReplace` parameter.
         @inlinable
         func unwrap<NewValue>(
             orReplace replacement: NewValue
@@ -439,10 +439,10 @@ extension EventLoopFuture {
         /// promise.futureResult.unwrap(orElse: { x * 2 }).wait()
         /// ```
         ///
-        /// - parameters:
-        ///     - orElse: a closure that returns the value of the returned `EventLoopFuture` when then resolved future's value
+        /// - Parameters:
+        ///   - orElse: a closure that returns the value of the returned `EventLoopFuture` when then resolved future's value
         ///         is `Optional.some()`.
-        /// - returns: an new `EventLoopFuture` with new type parameter `NewValue` and with the value returned by the closure
+        /// - Returns: an new `EventLoopFuture` with new type parameter `NewValue` and with the value returned by the closure
         ///     passed in the `orElse` parameter.
         @inlinable
         func unwrap<NewValue>(
@@ -481,8 +481,8 @@ extension EventLoopPromise {
 
         /// Deliver a successful result to the associated `EventLoopFuture<Value>` object.
         ///
-        /// - parameters:
-        ///     - value: The successful result of the operation.
+        /// - Parameters:
+        ///   - value: The successful result of the operation.
         @inlinable
         func succeed(_ value: Value) {
             self._wrapped.futureResult.eventLoop.assertInEventLoop()
@@ -501,8 +501,8 @@ extension EventLoopPromise {
         /// }
         /// ```
         ///
-        /// - parameters:
-        ///     - result: The result which will be used to succeed or fail this promise.
+        /// - Parameters:
+        ///   - result: The result which will be used to succeed or fail this promise.
         @inlinable
         func completeWith(_ result: Result<Value, Error>) {
             self._wrapped.futureResult.eventLoop.assertInEventLoop()

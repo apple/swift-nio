@@ -448,7 +448,7 @@ func assertFailure<Value>(_ result: Result<Value, Error>, file: StaticString = #
 
 /// Fulfills the promise when the respective event is first received.
 ///
-/// - note: Once this is used more widely and shows value, we might want to put it into `NIOTestUtils`.
+/// - Note: Once this is used more widely and shows value, we might want to put it into `NIOTestUtils`.
 final class FulfillOnFirstEventHandler: ChannelDuplexHandler {
     typealias InboundIn = Any
     typealias OutboundIn = Any

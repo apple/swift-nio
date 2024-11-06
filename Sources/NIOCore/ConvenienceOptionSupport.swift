@@ -15,9 +15,9 @@
 // MARK:  Universal Client Bootstrap
 extension NIOClientTCPBootstrapProtocol {
     /// Apply any understood convenience options to the bootstrap, removing them from the set of options if they are consumed.
-    /// - parameters:
-    ///     - options:  The options to try applying - the options applied should be consumed from here.
-    /// - returns: The updated bootstrap with and options applied.
+    /// - Parameters:
+    ///   - options:  The options to try applying - the options applied should be consumed from here.
+    /// - Returns: The updated bootstrap with and options applied.
     public func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.TCPConvenienceOptions) -> Self {
         // Default is to consume no options and not update self.
         self

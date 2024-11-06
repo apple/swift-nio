@@ -58,7 +58,7 @@ extension KQueueEventFilterSet {
     /// Calculate the kqueue filter changes that are necessary to transition from `previousKQueueFilterSet` to `self`.
     /// The `body` closure is then called with the changes necessary expressed as a number of `kevent`.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///    - previousKQueueFilterSet: The previous filter set that is currently registered with kqueue.
     ///    - fileDescriptor: The file descriptor the `kevent`s should be generated to.
     ///    - body: The closure that will then apply the change set.
@@ -248,9 +248,9 @@ extension Selector: _SelectorBackendProtocol {
 
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///
-    /// - parameters:
-    ///     - strategy: The `SelectorStrategy` to apply
-    ///     - body: The function to execute for each `SelectorEvent` that was produced.
+    /// - Parameters:
+    ///   - strategy: The `SelectorStrategy` to apply
+    ///   - body: The function to execute for each `SelectorEvent` that was produced.
     func whenReady0(
         strategy: SelectorStrategy,
         onLoopBegin loopStart: () -> Void,

@@ -274,52 +274,51 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// Creates a new IPv4 `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
-    ///     - host: the hostname that resolved to the ipaddress.
+    /// - Parameters:
+    ///   - addr: the `sockaddr_in` that holds the ipaddress and port.
+    ///   - host: the hostname that resolved to the ipaddress.
     public init(_ addr: sockaddr_in, host: String) {
         self = .v4(.init(address: addr, host: host))
     }
 
     /// Creates a new IPv6 `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
-    ///     - host: the hostname that resolved to the ipaddress.
+    /// - Parameters:
+    ///   - addr: the `sockaddr_in` that holds the ipaddress and port.
+    ///   - host: the hostname that resolved to the ipaddress.
     public init(_ addr: sockaddr_in6, host: String) {
         self = .v6(.init(address: addr, host: host))
     }
 
     /// Creates a new IPv4 `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
+    /// - Parameters:
+    ///   - addr: the `sockaddr_in` that holds the ipaddress and port.
     public init(_ addr: sockaddr_in) {
         self = .v4(.init(address: addr, host: addr.addressDescription()))
     }
 
     /// Creates a new IPv6 `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - addr: the `sockaddr_in` that holds the ipaddress and port.
+    /// - Parameters:
+    ///   - addr: the `sockaddr_in` that holds the ipaddress and port.
     public init(_ addr: sockaddr_in6) {
         self = .v6(.init(address: addr, host: addr.addressDescription()))
     }
 
     /// Creates a new Unix Domain Socket `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - addr: the `sockaddr_un` that holds the socket path.
+    /// - Parameters:
+    ///   - addr: the `sockaddr_un` that holds the socket path.
     public init(_ addr: sockaddr_un) {
         self = .unixDomainSocket(.init(address: addr))
     }
 
     /// Creates a new UDS `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - path: the path to use for the `SocketAddress`.
-    /// - returns: the `SocketAddress` for the given path.
-    /// - throws: may throw `SocketAddressError.unixDomainSocketPathTooLong` if the path is too long.
+    /// - Parameters:
+    ///   - unixDomainSocketPath: the path to use for the `SocketAddress`.
+    /// - Throws: may throw `SocketAddressError.unixDomainSocketPathTooLong` if the path is too long.
     public init(unixDomainSocketPath: String) throws {
         guard unixDomainSocketPath.utf8.count <= 103 else {
             throw SocketAddressError.unixDomainSocketPathTooLong
@@ -343,11 +342,10 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// Create a new `SocketAddress` for an IP address in string form.
     ///
-    /// - parameters:
-    ///     - string: The IP address, in string form.
-    ///     - port: The target port.
-    /// - returns: the `SocketAddress` corresponding to this string and port combination.
-    /// - throws: may throw `SocketAddressError.failedToParseIPString` if the IP address cannot be parsed.
+    /// - Parameters:
+    ///   - ipAddress: The IP address, in string form.
+    ///   - port: The target port.
+    /// - Throws: may throw `SocketAddressError.failedToParseIPString` if the IP address cannot be parsed.
     public init(ipAddress: String, port: Int) throws {
         self = try ipAddress.withCString {
             do {
@@ -387,11 +385,10 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
 
     /// Create a new `SocketAddress` for an IP address in ByteBuffer form.
     ///
-    /// - parameters:
-    ///     - packedIPAddress: The IP address, in ByteBuffer form.
-    ///     - port: The target port.
-    /// - returns: the `SocketAddress` corresponding to this string and port combination.
-    /// - throws: may throw `SocketAddressError.failedToParseIPByteBuffer` if the IP address cannot be parsed.
+    /// - Parameters:
+    ///   - packedIPAddress: The IP address, in ByteBuffer form.
+    ///   - port: The target port.
+    /// - Throws: may throw `SocketAddressError.failedToParseIPByteBuffer` if the IP address cannot be parsed.
     public init(packedIPAddress: ByteBuffer, port: Int) throws {
         let packed = packedIPAddress.readableBytesView
 
@@ -418,9 +415,9 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     /// As an example, consider the subnet "127.0.0.1/8". The "subnet prefix" is "8", and the corresponding netmask is "255.0.0.0".
     /// This initializer will produce a `SocketAddress` that contains "255.0.0.0".
     ///
-    /// - parameters:
-    ///     - prefix: The prefix of the subnet.
-    /// - returns: A `SocketAddress` containing the associated netmask.
+    /// - Parameters:
+    ///   - prefix: The prefix of the subnet.
+    /// - Returns: A `SocketAddress` containing the associated netmask.
     internal init(ipv4MaskForPrefix prefix: Int) {
         precondition((0...32).contains(prefix))
 
@@ -437,9 +434,9 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     /// As an example, consider the subnet "fe80::/10". The "subnet prefix" is "10", and the corresponding netmask is "ff30::".
     /// This initializer will produce a `SocketAddress` that contains "ff30::".
     ///
-    /// - parameters:
-    ///     - prefix: The prefix of the subnet.
-    /// - returns: A `SocketAddress` containing the associated netmask.
+    /// - Parameters:
+    ///   - prefix: The prefix of the subnet.
+    /// - Returns: A `SocketAddress` containing the associated netmask.
     internal init(ipv6MaskForPrefix prefix: Int) {
         precondition((0...128).contains(prefix))
 
@@ -462,11 +459,11 @@ public enum SocketAddress: CustomStringConvertible, Sendable {
     ///
     /// - warning: This is a blocking call, so please avoid calling this from an `EventLoop`.
     ///
-    /// - parameters:
-    ///     - host: the hostname which should be resolved.
-    ///     - port: the port itself
-    /// - returns: the `SocketAddress` for the host / port pair.
-    /// - throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
+    /// - Parameters:
+    ///   - host: the hostname which should be resolved.
+    ///   - port: the port itself
+    /// - Returns: the `SocketAddress` for the host / port pair.
+    /// - Throws: a `SocketAddressError.unknown` if we could not resolve the `host`, or `SocketAddressError.unsupported` if the address itself is not supported (yet).
     public static func makeAddressResolvingHost(_ host: String, port: Int) throws -> SocketAddress {
         #if os(WASI)
         throw SocketAddressError.unsupported

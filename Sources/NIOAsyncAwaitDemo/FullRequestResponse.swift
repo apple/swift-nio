@@ -65,7 +65,7 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
 
     /// Create a new `RequestResponseHandler`.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///    - initialBufferCapacity: `RequestResponseHandler` saves the promises for all outstanding responses in a
     ///          buffer. `initialBufferCapacity` is the initial capacity for this buffer. You usually do not need to set
     ///          this parameter unless you intend to pipeline very deeply and don't want the buffer to resize.
