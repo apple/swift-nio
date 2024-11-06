@@ -95,7 +95,13 @@ SwiftNIO uses the [swift-format](https://github.com/swiftlang/swift-format) tool
 
 If you want to apply the formatting to your local repo before you commit then you can either run [check-swift-format.sh](https://github.com/swiftlang/github-workflows/blob/main/.github/workflows/scripts/check-swift-format.sh) which will use your current toolchain, or to match the CI checks exactly you can use `act` (see [act section](#act)):
 ```
-act --action-offline-mode --bind workflow_call -j format-check --input format_check_enabled=true
+act --action-offline-mode --bind workflow_call --job soundness --input format_check_enabled=true
+```
+
+If you're using a machine with an ARM64 architecture (such as an Apple Silicon Mac) then
+you'll also need to specify the container architecture:
+```
+act --container-architecture linux/amd64 --action-offline-mode --bind workflow_call --job soundness --input format_check_enabled=true
 ```
 
 This will run the format checks, binding to your local checkout so the edits made are to your own source.
