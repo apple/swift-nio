@@ -303,6 +303,16 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     }
     #endif
 
+    public func preconditionInEventLoop(file: StaticString, line: UInt) {
+        self.checkCorrectThread()
+        // Currently, inEventLoop is always true so this always passes.
+    }
+
+    public func preconditionNotInEventLoop(file: StaticString, line: UInt) {
+        // As inEventLoop always returns true, this must always preconditon.
+        preconditionFailure("Always in EmbeddedEventLoop", file: file, line: line)
+    }
+
     public func _preconditionSafeToWait(file: StaticString, line: UInt) {
         self.checkCorrectThread()
         // EmbeddedEventLoop always allows a wait, as waiting will essentially always block
