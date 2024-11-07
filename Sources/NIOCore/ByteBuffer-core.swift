@@ -80,7 +80,7 @@ extension _ByteBufferSlice: CustomStringConvertible {
 /// The preferred allocator for `ByteBuffer` values. The allocation strategy is opaque but is currently libc's
 /// `malloc`, `realloc` and `free`.
 ///
-/// - note: `ByteBufferAllocator` is thread-safe.
+/// - Note: `ByteBufferAllocator` is thread-safe.
 public struct ByteBufferAllocator: Sendable {
 
     /// Create a fresh `ByteBufferAllocator`. In the future the allocator might use for example allocation pools and
@@ -110,13 +110,13 @@ public struct ByteBufferAllocator: Sendable {
 
     /// Request a freshly allocated `ByteBuffer` of size `capacity` or larger.
     ///
-    /// - note: The passed `capacity` is the `ByteBuffer`'s initial capacity, it will grow automatically if necessary.
+    /// - Note: The passed `capacity` is the `ByteBuffer`'s initial capacity, it will grow automatically if necessary.
     ///
-    /// - note: If `capacity` is `0`, this function will not allocate. If you want to trigger an allocation immediately,
+    /// - Note: If `capacity` is `0`, this function will not allocate. If you want to trigger an allocation immediately,
     ///         also call `.clear()`.
     ///
-    /// - parameters:
-    ///     - capacity: The initial capacity of the returned `ByteBuffer`.
+    /// - Parameters:
+    ///   - capacity: The initial capacity of the returned `ByteBuffer`.
     @inlinable
     public func buffer(capacity: Int) -> ByteBuffer {
         precondition(capacity >= 0, "ByteBuffer capacity must be positive.")
@@ -597,8 +597,8 @@ public struct ByteBuffer {
     /// If the buffer already has space to store the requested number of bytes, this method will be
     /// a no-op.
     ///
-    /// - parameters:
-    ///     - minimumCapacity: The minimum number of bytes this buffer must be able to store.
+    /// - Parameters:
+    ///   - minimumCapacity: The minimum number of bytes this buffer must be able to store.
     @inlinable
     public mutating func reserveCapacity(_ minimumCapacity: Int) {
         guard minimumCapacity > self.capacity else {
@@ -649,9 +649,9 @@ public struct ByteBuffer {
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
-    /// - parameters:
-    ///     - body: The closure that will accept the yielded bytes.
-    /// - returns: The value returned by `body`.
+    /// - Parameters:
+    ///   - body: The closure that will accept the yielded bytes.
+    /// - Returns: The value returned by `body`.
     @inlinable
     public mutating func withUnsafeMutableReadableBytes<T>(
         _ body: (UnsafeMutableRawBufferPointer) throws -> T
@@ -665,13 +665,13 @@ public struct ByteBuffer {
     /// Yields the bytes currently writable (`bytesWritable` = `capacity` - `writerIndex`). Before reading those bytes you must first
     /// write to them otherwise you will trigger undefined behaviour. The writer index will remain unchanged.
     ///
-    /// - note: In almost all cases you should use `writeWithUnsafeMutableBytes` which will move the write pointer instead of this method
+    /// - Note: In almost all cases you should use `writeWithUnsafeMutableBytes` which will move the write pointer instead of this method
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
-    /// - parameters:
-    ///     - body: The closure that will accept the yielded bytes and return the number of bytes written.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - body: The closure that will accept the yielded bytes and return the number of bytes written.
+    /// - Returns: The number of bytes written.
     @inlinable
     public mutating func withUnsafeMutableWritableBytes<T>(
         _ body: (UnsafeMutableRawBufferPointer) throws -> T
@@ -684,10 +684,10 @@ public struct ByteBuffer {
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
-    /// - parameters:
-    ///     - minimumWritableBytes: The number of writable bytes to reserve capacity for before vending the `ByteBuffer` pointer to `body`.
-    ///     - body: The closure that will accept the yielded bytes and return the number of bytes written.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - minimumWritableBytes: The number of writable bytes to reserve capacity for before vending the `ByteBuffer` pointer to `body`.
+    ///   - body: The closure that will accept the yielded bytes and return the number of bytes written.
+    /// - Returns: The number of bytes written.
     @discardableResult
     @inlinable
     public mutating func writeWithUnsafeMutableBytes(
@@ -741,9 +741,9 @@ public struct ByteBuffer {
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     ///
-    /// - parameters:
-    ///     - body: The closure that will accept the yielded bytes.
-    /// - returns: The value returned by `body`.
+    /// - Parameters:
+    ///   - body: The closure that will accept the yielded bytes.
+    /// - Returns: The value returned by `body`.
     @inlinable
     public func withUnsafeReadableBytes<T>(_ body: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
         // This is safe, writerIndex >= readerIndex
@@ -759,9 +759,9 @@ public struct ByteBuffer {
     /// the bytes and you also must call `storageManagement.release()` if you no longer require those bytes. Calls to
     /// `retain` and `release` must be balanced.
     ///
-    /// - parameters:
-    ///     - body: The closure that will accept the yielded bytes and the `storageManagement`.
-    /// - returns: The value returned by `body`.
+    /// - Parameters:
+    ///   - body: The closure that will accept the yielded bytes and the `storageManagement`.
+    /// - Returns: The value returned by `body`.
     @inlinable
     public func withUnsafeReadableBytesWithStorageManagement<T>(
         _ body: (UnsafeRawBufferPointer, Unmanaged<AnyObject>) throws -> T
@@ -798,10 +798,10 @@ public struct ByteBuffer {
     ///
     /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - parameters:
-    ///     - index: The index the requested slice starts at.
-    ///     - length: The length of the requested slice.
-    /// - returns: A `ByteBuffer` containing the selected bytes as readable bytes or `nil` if the selected bytes were
+    /// - Parameters:
+    ///   - index: The index the requested slice starts at.
+    ///   - length: The length of the requested slice.
+    /// - Returns: A `ByteBuffer` containing the selected bytes as readable bytes or `nil` if the selected bytes were
     ///            not readable in the initial `ByteBuffer`.
     @inlinable
     public func getSlice(at index: Int, length: Int) -> ByteBuffer? {
@@ -859,7 +859,7 @@ public struct ByteBuffer {
     /// Discard the bytes before the reader index. The byte at index `readerIndex` before calling this method will be
     /// at index `0` after the call returns.
     ///
-    /// - returns: `true` if one or more bytes have been discarded, `false` if there are no bytes to discard.
+    /// - Returns: `true` if one or more bytes have been discarded, `false` if there are no bytes to discard.
     @inlinable
     @discardableResult public mutating func discardReadBytes() -> Bool {
         guard self._readerIndex > 0 else {
@@ -930,7 +930,7 @@ public struct ByteBuffer {
     /// of a freshly allocated one, if possible without allocations. This is the cheapest way to recycle a `ByteBuffer`
     /// for a new use-case.
     ///
-    /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
+    /// - Note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
     ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
     @inlinable
     public mutating func clear() {
@@ -946,11 +946,11 @@ public struct ByteBuffer {
     /// of a freshly allocated one, if possible without allocations. This is the cheapest way to recycle a `ByteBuffer`
     /// for a new use-case.
     ///
-    /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
+    /// - Note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
     ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
     ///
-    /// - parameters:
-    ///     - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
+    /// - Parameters:
+    ///   - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
     @available(*, deprecated, message: "Use an `Int` as the argument")
     public mutating func clear(minimumCapacity: UInt32) {
         self.clear(minimumCapacity: Int(minimumCapacity))
@@ -960,11 +960,11 @@ public struct ByteBuffer {
     /// of a freshly allocated one, if possible without allocations. This is the cheapest way to recycle a `ByteBuffer`
     /// for a new use-case.
     ///
-    /// - note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
+    /// - Note: This method will allocate if the underlying storage is referenced by another `ByteBuffer`. Even if an
     ///         allocation is necessary this will be cheaper as the copy of the storage is elided.
     ///
-    /// - parameters:
-    ///     - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
+    /// - Parameters:
+    ///   - minimumCapacity: The minimum capacity that will be (re)allocated for this buffer
     @inlinable
     public mutating func clear(minimumCapacity: Int) {
         precondition(minimumCapacity >= 0, "Cannot have a minimum capacity < 0")
@@ -993,7 +993,7 @@ extension ByteBuffer: CustomStringConvertible, CustomDebugStringConvertible {
     /// Buffers larger that 64 bytes will get truncated when printing out.
     /// The format of the description is not API.
     ///
-    /// - returns: A description of this `ByteBuffer`.
+    /// - Returns: A description of this `ByteBuffer`.
     public var description: String {
         "[\(self.hexDump(format: .compact(maxBytes: 64)))](\(self.readableBytes) bytes)"
     }
@@ -1024,7 +1024,7 @@ extension ByteBuffer {
     /// - warning: By contract the bytes between (including) `readerIndex` and (excluding) `writerIndex` must be
     ///            initialised, ie. have been written before. Also the `readerIndex` must always be less than or equal
     ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
-    /// - parameters:
+    /// - Parameters:
     ///   - offset: The number of bytes to move the reader index forward by.
     @inlinable
     public mutating func moveReaderIndex(forwardBy offset: Int) {
@@ -1041,7 +1041,7 @@ extension ByteBuffer {
     /// - warning: By contract the bytes between (including) `readerIndex` and (excluding) `writerIndex` must be
     ///            initialised, ie. have been written before. Also the `readerIndex` must always be less than or equal
     ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
-    /// - parameters:
+    /// - Parameters:
     ///   - offset: The offset in bytes to set the reader index to.
     @inlinable
     public mutating func moveReaderIndex(to offset: Int) {
@@ -1058,7 +1058,7 @@ extension ByteBuffer {
     /// - warning: By contract the bytes between (including) `readerIndex` and (excluding) `writerIndex` must be
     ///            initialised, ie. have been written before. Also the `readerIndex` must always be less than or equal
     ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
-    /// - parameters:
+    /// - Parameters:
     ///   - offset: The number of bytes to move the writer index forward by.
     @inlinable
     public mutating func moveWriterIndex(forwardBy offset: Int) {
@@ -1075,7 +1075,7 @@ extension ByteBuffer {
     /// - warning: By contract the bytes between (including) `readerIndex` and (excluding) `writerIndex` must be
     ///            initialised, ie. have been written before. Also the `readerIndex` must always be less than or equal
     ///            to the `writerIndex`. Failing to meet either of these requirements leads to undefined behaviour.
-    /// - parameters:
+    /// - Parameters:
     ///   - offset: The offset in bytes to set the reader index to.
     @inlinable
     public mutating func moveWriterIndex(to offset: Int) {
@@ -1199,9 +1199,9 @@ extension ByteBuffer {
     /// This function will execute the provided block only if it is guaranteed to be able to avoid a copy-on-write
     /// operation. If it cannot execute the block the returned value will be `nil`.
     ///
-    /// - parameters:
-    ///     - body: The modification operation to execute, with this `ByteBuffer` passed `inout` as an argument.
-    /// - returns: The return value of `body`.
+    /// - Parameters:
+    ///   - body: The modification operation to execute, with this `ByteBuffer` passed `inout` as an argument.
+    /// - Returns: The return value of `body`.
     @inlinable
     public mutating func modifyIfUniquelyOwned<T>(_ body: (inout ByteBuffer) throws -> T) rethrows -> T? {
         if isKnownUniquelyReferenced(&self._storage) {

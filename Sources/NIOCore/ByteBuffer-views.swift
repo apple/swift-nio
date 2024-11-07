@@ -253,10 +253,10 @@ extension ByteBuffer {
 
     /// Returns a view into some portion of the readable bytes of a `ByteBuffer`.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///   - index: The index the view should start at
     ///   - length: The length of the view (in bytes)
-    /// - returns: A view into a portion of a `ByteBuffer` or `nil` if the requested bytes were not readable.
+    /// - Returns: A view into a portion of a `ByteBuffer` or `nil` if the requested bytes were not readable.
     @inlinable
     public func viewBytes(at index: Int, length: Int) -> ByteBufferView? {
         guard length >= 0 && index >= self.readerIndex && index <= self.writerIndex - length else {
@@ -268,7 +268,7 @@ extension ByteBuffer {
 
     /// Create a `ByteBuffer` from the given `ByteBufferView`s range.
     ///
-    /// - parameter view: The `ByteBufferView` which you want to get a `ByteBuffer` from.
+    /// - Parameter view: The `ByteBufferView` which you want to get a `ByteBuffer` from.
     @inlinable
     public init(_ view: ByteBufferView) {
         self = view._buffer.getSlice(at: view.startIndex, length: view.count)!

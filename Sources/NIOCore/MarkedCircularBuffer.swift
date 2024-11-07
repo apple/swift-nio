@@ -23,8 +23,8 @@ public struct MarkedCircularBuffer<Element>: CustomStringConvertible {
 
     /// Create a new instance.
     ///
-    /// - parameters:
-    ///     - initialCapacity: The initial capacity of the internal storage.
+    /// - Parameters:
+    ///   - initialCapacity: The initial capacity of the internal storage.
     @inlinable
     public init(initialCapacity: Int) {
         self._buffer = CircularBuffer(initialCapacity: initialCapacity)

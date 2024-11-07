@@ -85,7 +85,7 @@ public enum WebSocketErrorCode: Sendable {
     /// Create an error code from a raw 16-bit integer as sent on the
     /// network.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///     integer: The integer form of the status code.
     internal init(networkInteger integer: UInt16) {
         switch integer {
@@ -116,8 +116,8 @@ public enum WebSocketErrorCode: Sendable {
     ///
     /// Will trap if the error code is not in the valid range.
     ///
-    /// - parameters:
-    ///     - codeNumber: The integer form of the status code.
+    /// - Parameters:
+    ///   - codeNumber: The integer form of the status code.
     public init(codeNumber: Int) {
         self.init(networkInteger: UInt16(codeNumber))
     }
@@ -130,7 +130,7 @@ extension ByteBuffer {
     ///
     /// This method increments the reader index.
     ///
-    /// - returns: The error code, or `nil` if there were not enough readable bytes.
+    /// - Returns: The error code, or `nil` if there were not enough readable bytes.
     public mutating func readWebSocketErrorCode() -> WebSocketErrorCode? {
         self.readInteger(as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
     }
@@ -140,17 +140,17 @@ extension ByteBuffer {
     /// This method does not increment the reader index, and may be used to read an error
     /// code from outside the readable range of bytes.
     ///
-    /// - parameters:
-    ///     - index: The index into the buffer to read the error code from.
-    /// - returns: The error code, or `nil` if there were not enough bytes at that index.
+    /// - Parameters:
+    ///   - index: The index into the buffer to read the error code from.
+    /// - Returns: The error code, or `nil` if there were not enough bytes at that index.
     public func getWebSocketErrorCode(at index: Int) -> WebSocketErrorCode? {
         self.getInteger(at: index, as: UInt16.self).map { WebSocketErrorCode(networkInteger: $0) }
     }
 
     /// Write the given error code to the buffer.
     ///
-    /// - parameters:
-    ///     - code: The code to write into the buffer.
+    /// - Parameters:
+    ///   - code: The code to write into the buffer.
     public mutating func write(webSocketErrorCode code: WebSocketErrorCode) {
         self.writeInteger(UInt16(webSocketErrorCode: code))
     }
@@ -159,8 +159,8 @@ extension ByteBuffer {
 extension UInt16 {
     /// Create a UInt16 corresponding to a given `WebSocketErrorCode`.
     ///
-    /// - parameters:
-    ///     - code: The `WebSocketErrorCode`.
+    /// - Parameters:
+    ///   - code: The `WebSocketErrorCode`.
     public init(webSocketErrorCode code: WebSocketErrorCode) {
         switch code {
         case .normalClosure:

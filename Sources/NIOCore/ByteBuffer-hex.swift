@@ -71,8 +71,8 @@ extension ByteBuffer {
 
     /// Shared logic for `hexDumpPlain` and `hexDumpCompact`.
     /// Returns a `String` of hexadecimals digits of the readable bytes in the buffer.
-    /// - parameter
-    ///     - separateWithWhitespace: Controls whether the hex deump will be separated by whitespaces.
+    /// - Parameter
+    ///   - separateWithWhitespace: Controls whether the hex deump will be separated by whitespaces.
     private func _hexDump(separateWithWhitespace: Bool) -> String {
         var hexString = ""
         var capacity: Int
@@ -101,9 +101,9 @@ extension ByteBuffer {
 
     /// Shared logic for `hexDumpPlain(maxBytes: Int)` and `hexDumpCompact(maxBytes: Int)`.
     ///
-    /// - parameters:
-    ///     - maxBytes: The maximum amount of bytes presented in the dump.
-    ///     - separateWithWhitespace: Controls whether the dump will be separated by whitespaces.
+    /// - Parameters:
+    ///   - maxBytes: The maximum amount of bytes presented in the dump.
+    ///   - separateWithWhitespace: Controls whether the dump will be separated by whitespaces.
     private func _hexDump(maxBytes: Int, separateWithWhitespace: Bool) -> String {
         // If the buffer length fits in the max bytes limit in the hex dump, just dump the whole thing.
         if self.readableBytes <= maxBytes {
@@ -143,8 +143,8 @@ extension ByteBuffer {
     /// If the dump contains more than the `maxBytes` bytes, this function will return the first `maxBytes/2`
     /// and the last `maxBytes/2` of that, replacing the rest with `...`, i.e. `01 02 03 ... 09 11 12`.
     ///
-    /// - parameters:
-    ///     - maxBytes: The maximum amount of bytes presented in the dump.
+    /// - Parameters:
+    ///   - maxBytes: The maximum amount of bytes presented in the dump.
     private func hexDumpPlain(maxBytes: Int) -> String {
         self._hexDump(maxBytes: maxBytes, separateWithWhitespace: true)
     }
@@ -163,18 +163,18 @@ extension ByteBuffer {
     /// If the dump contains more than the `maxBytes` bytes, this function will return the first `maxBytes/2`
     /// and the last `maxBytes/2` of that, replacing the rest with `...`, i.e. `010203...091112`.
     ///
-    /// - parameters:
-    ///     - maxBytes: The maximum amount of bytes presented in the dump.
+    /// - Parameters:
+    ///   - maxBytes: The maximum amount of bytes presented in the dump.
     private func hexDumpCompact(maxBytes: Int) -> String {
         self._hexDump(maxBytes: maxBytes, separateWithWhitespace: false)
     }
 
     /// Returns a `String` containing a detailed hex dump of this buffer.
     /// Intended to be used internally in ``hexDump(format:)``
-    /// - parameters:
-    ///     - lineOffset: an offset from the beginning of the outer buffer that is being dumped. It's used to print the line offset in hexdump -C format.
-    ///     - paddingBefore: the amount of space to pad before the first byte dumped on this line, used in center and right columns.
-    ///     - paddingAfter: the amount of sapce to pad after the last byte on this line, used in center and right columns.
+    /// - Parameters:
+    ///   - lineOffset: an offset from the beginning of the outer buffer that is being dumped. It's used to print the line offset in hexdump -C format.
+    ///   - paddingBefore: the amount of space to pad before the first byte dumped on this line, used in center and right columns.
+    ///   - paddingAfter: the amount of sapce to pad after the last byte on this line, used in center and right columns.
     private func _hexDumpLine(lineOffset: Int, paddingBefore: Int = 0, paddingAfter: Int = 0) -> String {
         // Each line takes 78 visible characters + \n
         var result = ""
@@ -255,8 +255,8 @@ extension ByteBuffer {
     /// with formatting sort of compatible with `hexdump -C`, but clipped on length.
     /// Dumps limit/2 first and limit/2 last bytes, with a separator line in between.
     ///
-    /// - parameters:
-    ///     - maxBytes: Max bytes to dump.
+    /// - Parameters:
+    ///   - maxBytes: Max bytes to dump.
     private func hexDumpDetailed(maxBytes: Int) -> String {
         if self.readableBytes <= maxBytes {
             return self.hexdumpDetailed()
@@ -320,16 +320,16 @@ extension ByteBuffer {
 
     /// Returns a hex dump of  this `ByteBuffer` in a preferred `HexDumpFormat`.
     ///
-    /// `hexDump` provides four formats:
-    ///     - `.plain` — plain hex dump format with hex bytes separated by spaces, i.e. `48 65 6c 6c 6f` for `Hello`. This format is compatible with `xxd -r`.
-    ///     - `.plain(maxBytes: Int)` — like `.plain`, but clipped to maximum bytes dumped.
-    ///     - `.compact` — plain hexd dump without whitespaces.
-    ///     - `.compact(maxBytes: Int)` — like `.compact`, but  clipped to maximum bytes dumped.
-    ///     - `.detailed` — detailed hex dump format with both hex, and ASCII representation of the bytes. This format is compatible with what `hexdump -C` outputs.
-    ///     - `.detailed(maxBytes: Int)` — like `.detailed`, but  clipped to maximum bytes dumped.
+    /// `hexDump` provides several formats:
+    ///   - `.plain` — plain hex dump format with hex bytes separated by spaces, i.e. `48 65 6c 6c 6f` for `Hello`. This format is compatible with `xxd -r`.
+    ///   - `.plain(maxBytes: Int)` — like `.plain`, but clipped to maximum bytes dumped.
+    ///   - `.compact` — plain hexd dump without whitespaces.
+    ///   - `.compact(maxBytes: Int)` — like `.compact`, but  clipped to maximum bytes dumped.
+    ///   - `.detailed` — detailed hex dump format with both hex, and ASCII representation of the bytes. This format is compatible with what `hexdump -C` outputs.
+    ///   - `.detailed(maxBytes: Int)` — like `.detailed`, but  clipped to maximum bytes dumped.
     ///
-    /// - parameters:
-    ///     - format: ``HexDumpFormat`` to use for the dump.
+    /// - Parameters:
+    ///   - format: ``HexDumpFormat`` to use for the dump.
     public func hexDump(format: HexDumpFormat) -> String {
         switch format.value {
         case .plain(let maxBytes):

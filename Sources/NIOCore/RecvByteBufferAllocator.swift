@@ -22,9 +22,9 @@ public protocol RecvByteBufferAllocator: _NIOPreconcurrencySendable {
 
     /// Records the actual number of bytes that were read by the last socket call.
     ///
-    /// - parameters:
-    ///     - actualReadBytes: The number of bytes that were used by the previous allocated `ByteBuffer`
-    /// - returns: `true` if the next call to `buffer` may return a bigger buffer then the last call to `buffer`.
+    /// - Parameters:
+    ///   - actualReadBytes: The number of bytes that were used by the previous allocated `ByteBuffer`
+    /// - Returns: `true` if the next call to `buffer` may return a bigger buffer then the last call to `buffer`.
     mutating func record(actualReadBytes: Int) -> Bool
 }
 

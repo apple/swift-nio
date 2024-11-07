@@ -36,11 +36,11 @@ public typealias NIOHTTPServerUpgradeConfiguration = (
 extension ChannelPipeline {
     /// Configure a `ChannelPipeline` for use as a HTTP client.
     ///
-    /// - parameters:
-    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
-    ///     - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
+    /// - Parameters:
+    ///   - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
+    ///   - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
     ///         from the pipeline.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func addHTTPClientHandlers(
         position: Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes
@@ -54,15 +54,15 @@ extension ChannelPipeline {
 
     /// Configure a `ChannelPipeline` for use as a HTTP client with a client upgrader configuration.
     ///
-    /// - parameters:
-    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
-    ///     - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
+    /// - Parameters:
+    ///   - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
+    ///   - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
     ///         from the pipeline.
-    ///     - upgrade: Add a `HTTPClientUpgradeHandler` to the pipeline, configured for
+    ///   - upgrade: Add a `HTTPClientUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Should be a tuple of an array of `HTTPClientProtocolUpgrader` and
     ///         the upgrade completion handler. See the documentation on `HTTPClientUpgradeHandler`
     ///         for more details.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
     public func addHTTPClientHandlers(
         position: Position = .last,
@@ -107,17 +107,17 @@ extension ChannelPipeline {
 
     /// Configure a `ChannelPipeline` for use as a HTTP client.
     ///
-    /// - parameters:
-    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
-    ///     - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
+    /// - Parameters:
+    ///   - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
+    ///   - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
     ///         from the pipeline.
-    ///     - enableOutboundHeaderValidation: Whether the pipeline should confirm that outbound headers are well-formed.
+    ///   - enableOutboundHeaderValidation: Whether the pipeline should confirm that outbound headers are well-formed.
     ///         Defaults to `true`.
-    ///     - upgrade: Add a ``NIOHTTPClientUpgradeHandler`` to the pipeline, configured for
+    ///   - upgrade: Add a ``NIOHTTPClientUpgradeHandler`` to the pipeline, configured for
     ///         HTTP upgrade. Should be a tuple of an array of ``NIOHTTPClientUpgradeHandler`` and
     ///         the upgrade completion handler. See the documentation on ``NIOHTTPClientUpgradeHandler``
     ///         for more details.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func addHTTPClientHandlers(
         position: Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
@@ -152,18 +152,18 @@ extension ChannelPipeline {
 
     /// Configure a `ChannelPipeline` for use as a HTTP client.
     ///
-    /// - parameters:
-    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
-    ///     - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
+    /// - Parameters:
+    ///   - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
+    ///   - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
     ///         from the pipeline.
-    ///     - enableOutboundHeaderValidation: Whether the pipeline should confirm that outbound headers are well-formed.
+    ///   - enableOutboundHeaderValidation: Whether the pipeline should confirm that outbound headers are well-formed.
     ///         Defaults to `true`.
-    ///     - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
-    ///     - upgrade: Add a ``NIOHTTPClientUpgradeHandler`` to the pipeline, configured for
+    ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
+    ///   - upgrade: Add a ``NIOHTTPClientUpgradeHandler`` to the pipeline, configured for
     ///         HTTP upgrade. Should be a tuple of an array of ``NIOHTTPClientUpgradeHandler`` and
     ///         the upgrade completion handler. See the documentation on ``NIOHTTPClientUpgradeHandler``
     ///         for more details.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func addHTTPClientHandlers(
         position: Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
@@ -211,19 +211,19 @@ extension ChannelPipeline {
     /// This method will likely be extended in future with more support for other first-party
     /// features.
     ///
-    /// - parameters:
-    ///     - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
-    ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
+    /// - Parameters:
+    ///   - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
+    ///   - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
-    ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
+    ///   - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
     ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
     ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
     ///         details.
-    ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
+    ///   - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     @preconcurrency
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
@@ -253,21 +253,21 @@ extension ChannelPipeline {
     /// This method will likely be extended in future with more support for other first-party
     /// features.
     ///
-    /// - parameters:
-    ///     - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
-    ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
+    /// - Parameters:
+    ///   - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
+    ///   - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
-    ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
+    ///   - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
     ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
     ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
     ///         details.
-    ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
+    ///   - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
-    ///     - headerValidation: Whether to validate outbound request headers to confirm that they meet
+    ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
     ///         spec compliance. Defaults to `true`.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -298,22 +298,22 @@ extension ChannelPipeline {
     /// This method will likely be extended in future with more support for other first-party
     /// features.
     ///
-    /// - parameters:
-    ///     - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
-    ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
+    /// - Parameters:
+    ///   - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
+    ///   - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
-    ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
+    ///   - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
     ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
     ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
     ///         details.
-    ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
+    ///   - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
-    ///     - headerValidation: Whether to validate outbound request headers to confirm that they meet
+    ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
     ///         spec compliance. Defaults to `true`.
-    ///     - encoderConfiguration: The configuration for the ``HTTPResponseEncoder``.
-    /// - returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    ///   - encoderConfiguration: The configuration for the ``HTTPResponseEncoder``.
+    /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -375,15 +375,15 @@ extension ChannelPipeline.SynchronousOperations {
     /// Configure a `ChannelPipeline` for use as a HTTP client with a client upgrader configuration.
     ///
     /// - important: This **must** be called on the Channel's event loop.
-    /// - parameters:
-    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
-    ///     - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
+    /// - Parameters:
+    ///   - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
+    ///   - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
     ///         from the pipeline.
-    ///     - upgrade: Add a `HTTPClientUpgradeHandler` to the pipeline, configured for
+    ///   - upgrade: Add a `HTTPClientUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Should be a tuple of an array of `HTTPClientProtocolUpgrader` and
     ///         the upgrade completion handler. See the documentation on `HTTPClientUpgradeHandler`
     ///         for more details.
-    /// - throws: If the pipeline could not be configured.
+    /// - Throws: If the pipeline could not be configured.
     @preconcurrency
     public func addHTTPClientHandlers(
         position: ChannelPipeline.Position = .last,
@@ -400,15 +400,16 @@ extension ChannelPipeline.SynchronousOperations {
     /// Configure a `ChannelPipeline` for use as a HTTP client.
     ///
     /// - important: This **must** be called on the Channel's event loop.
-    /// - parameters:
-    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
-    ///     - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
+    /// - Parameters:
+    ///   - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
+    ///   - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
     ///         from the pipeline.
-    ///     - upgrade: Add a ``NIOHTTPClientUpgradeHandler`` to the pipeline, configured for
+    ///   - enableOutboundHeaderValidation: Whether or not request header validation is enforced.
+    ///   - upgrade: Add a ``NIOHTTPClientUpgradeHandler`` to the pipeline, configured for
     ///         HTTP upgrade. Should be a tuple of an array of ``NIOHTTPClientProtocolUpgrader`` and
     ///         the upgrade completion handler. See the documentation on ``NIOHTTPClientUpgradeHandler``
     ///         for more details.
-    /// - throws: If the pipeline could not be configured.
+    /// - Throws: If the pipeline could not be configured.
     public func addHTTPClientHandlers(
         position: ChannelPipeline.Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
@@ -426,16 +427,17 @@ extension ChannelPipeline.SynchronousOperations {
     /// Configure a `ChannelPipeline` for use as a HTTP client.
     ///
     /// - important: This **must** be called on the Channel's event loop.
-    /// - parameters:
-    ///     - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
-    ///     - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
+    /// - Parameters:
+    ///   - position: The position in the `ChannelPipeline` where to add the HTTP client handlers. Defaults to `.last`.
+    ///   - leftOverBytesStrategy: The strategy to use when dealing with leftover bytes after removing the `HTTPDecoder`
     ///         from the pipeline.
-    ///     - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
-    ///     - upgrade: Add a ``NIOHTTPClientUpgradeHandler`` to the pipeline, configured for
+    ///   - enableOutboundHeaderValidation: Whether or not request header validation is enforced.
+    ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
+    ///   - upgrade: Add a ``NIOHTTPClientUpgradeHandler`` to the pipeline, configured for
     ///         HTTP upgrade. Should be a tuple of an array of ``NIOHTTPClientProtocolUpgrader`` and
     ///         the upgrade completion handler. See the documentation on ``NIOHTTPClientUpgradeHandler``
     ///         for more details.
-    /// - throws: If the pipeline could not be configured.
+    /// - Throws: If the pipeline could not be configured.
     public func addHTTPClientHandlers(
         position: ChannelPipeline.Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
@@ -533,19 +535,19 @@ extension ChannelPipeline.SynchronousOperations {
     /// features.
     ///
     /// - important: This **must** be called on the Channel's event loop.
-    /// - parameters:
-    ///     - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
-    ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
+    /// - Parameters:
+    ///   - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
+    ///   - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
-    ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
+    ///   - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
     ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
     ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
     ///         details.
-    ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
+    ///   - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
-    /// - throws: If the pipeline could not be configured.
+    /// - Throws: If the pipeline could not be configured.
     @preconcurrency
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
@@ -576,21 +578,21 @@ extension ChannelPipeline.SynchronousOperations {
     /// features.
     ///
     /// - important: This **must** be called on the Channel's event loop.
-    /// - parameters:
-    ///     - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
-    ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
+    /// - Parameters:
+    ///   - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
+    ///   - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
-    ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
+    ///   - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
     ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
     ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
     ///         details.
-    ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
+    ///   - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
-    ///     - headerValidation: Whether to validate outbound request headers to confirm that they meet
+    ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
     ///         spec compliance. Defaults to `true`.
-    /// - throws: If the pipeline could not be configured.
+    /// - Throws: If the pipeline could not be configured.
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
@@ -622,22 +624,22 @@ extension ChannelPipeline.SynchronousOperations {
     /// features.
     ///
     /// - important: This **must** be called on the Channel's event loop.
-    /// - parameters:
-    ///     - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
-    ///     - pipelining: Whether to provide assistance handling HTTP clients that pipeline
+    /// - Parameters:
+    ///   - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
+    ///   - pipelining: Whether to provide assistance handling HTTP clients that pipeline
     ///         their requests. Defaults to `true`. If `false`, users will need to handle
     ///         clients that pipeline themselves.
-    ///     - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
+    ///   - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
     ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
     ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
     ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
     ///         details.
-    ///     - errorHandling: Whether to provide assistance handling protocol errors (e.g.
+    ///   - errorHandling: Whether to provide assistance handling protocol errors (e.g.
     ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
-    ///     - headerValidation: Whether to validate outbound request headers to confirm that they meet
+    ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
     ///         spec compliance. Defaults to `true`.
-    ///     - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
-    /// - throws: If the pipeline could not be configured.
+    ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
+    /// - Throws: If the pipeline could not be configured.
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,

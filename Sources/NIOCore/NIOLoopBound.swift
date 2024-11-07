@@ -40,7 +40,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
 
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///
-    /// - note: ``NIOLoopBound`` itself is value-typed, so any writes will only affect the current value.
+    /// - Note: ``NIOLoopBound`` itself is value-typed, so any writes will only affect the current value.
     @inlinable
     public var value: Value {
         get {
@@ -129,7 +129,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
 
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///
-    /// - note: ``NIOLoopBoundBox`` itself is reference-typed, so any writes will affect anybody sharing this reference.
+    /// - Note: ``NIOLoopBoundBox`` itself is reference-typed, so any writes will affect anybody sharing this reference.
     @inlinable
     public var value: Value {
         get {

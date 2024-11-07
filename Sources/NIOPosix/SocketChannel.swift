@@ -48,7 +48,7 @@ extension ByteBuffer {
 
 /// A `Channel` for a client socket.
 ///
-/// - note: All operations on `SocketChannel` are thread-safe.
+/// - Note: All operations on `SocketChannel` are thread-safe.
 final class SocketChannel: BaseStreamSocketChannel<Socket> {
     private var connectTimeout: TimeAmount? = nil
 
@@ -190,7 +190,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
 
 /// A `Channel` for a server socket.
 ///
-/// - note: All operations on `ServerSocketChannel` are thread-safe.
+/// - Note: All operations on `ServerSocketChannel` are thread-safe.
 final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 
     private var backlog: Int32 = 128
@@ -1022,10 +1022,10 @@ extension DatagramChannel: MulticastChannel {
         /// Given a socket option level, returns the appropriate socket option name for
         /// this group operation.
         ///
-        /// - parameters:
-        ///     - level: The socket option level. Must be one of `IPPROTO_IP` or
+        /// - Parameters:
+        ///   - level: The socket option level. Must be one of `IPPROTO_IP` or
         ///         `IPPROTO_IPV6`. Will trap if an invalid value is provided.
-        /// - returns: The socket option name to use for this group operation.
+        /// - Returns: The socket option name to use for this group operation.
         func optionName(level: NIOBSDSocket.OptionLevel) -> NIOBSDSocket.Option {
             switch (self, level) {
             case (.join, .ip):

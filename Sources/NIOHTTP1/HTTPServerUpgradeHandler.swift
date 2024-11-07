@@ -194,7 +194,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
 
     /// The core of the upgrade handling logic.
     ///
-    /// - returns: An `EventLoopFuture` that will contain a callback to invoke if upgrade is requested, or nil if upgrade has failed. Never returns a failed future.
+    /// - Returns: An `EventLoopFuture` that will contain a callback to invoke if upgrade is requested, or nil if upgrade has failed. Never returns a failed future.
     private func handleUpgrade(
         context: ChannelHandlerContext,
         request: HTTPRequestHead,
