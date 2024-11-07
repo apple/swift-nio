@@ -41,7 +41,9 @@ protocol ThreadOps {
 ///
 /// All methods exposed are thread-safe.
 final class NIOThread {
-    internal typealias ThreadBoxValue = (body: (NIOThread) -> Void, name: String?)
+    internal typealias ThreadBoxValue = (
+        body: (NIOThread) -> Void, name: String?, configuration: NIOThreadConfiguration
+    )
     internal typealias ThreadBox = Box<ThreadBoxValue>
 
     private let desiredName: String?
@@ -78,6 +80,14 @@ final class NIOThread {
         ThreadOpsSystem.joinThread(self.handle)
     }
 
+    static func spawnAndRunBasic(
+        body: @escaping (NIOThread) -> Void
+    ) {
+        var threadConfig = NIOThreadConfiguration.defaultForEventLoopGroups
+        threadConfig.threadNamePrefix = "UnitTest-"
+        self.spawnAndRun(name: nil, configuration: threadConfig, detachThread: true, body: body)
+    }
+
     /// Spawns and runs some task in a `NIOThread`.
     ///
     /// - arguments:
@@ -85,7 +95,8 @@ final class NIOThread {
     ///   - body: The function to execute within the spawned `NIOThread`.
     ///   - detach: Whether to detach the thread. If the thread is not detached it must be `join`ed.
     static func spawnAndRun(
-        name: String? = nil,
+        name: String?,
+        configuration: NIOThreadConfiguration,
         detachThread: Bool = true,
         body: @escaping (NIOThread) -> Void
     ) {
@@ -93,7 +104,7 @@ final class NIOThread {
 
         // Store everything we want to pass into the c function in a Box so we
         // can hand-over the reference.
-        let tuple: ThreadBoxValue = (body: body, name: name)
+        let tuple: ThreadBoxValue = (body: body, name: name, configuration: configuration)
         let box = ThreadBox(tuple)
 
         ThreadOpsSystem.run(handle: &handle, args: box, detachThread: detachThread)

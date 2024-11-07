@@ -96,9 +96,11 @@ private let singletonMTELG: MultiThreadedEventLoopGroup = {
         )
     }
     let threadCount = NIOSingletons.groupLoopCountSuggestion
+    var threadConfig = NIOThreadConfiguration.defaultForEventLoopGroups
+    threadConfig.threadNamePrefix = "NIO-SGLTN-"
     let group = MultiThreadedEventLoopGroup._makePerpetualGroup(
-        threadNamePrefix: "NIO-SGLTN-",
-        numberOfThreads: threadCount
+        numberOfThreads: threadCount,
+        threadConfiguration: threadConfig
     )
     _ = Unmanaged.passUnretained(group).retain()  // Never gonna give you up,
     return group
@@ -113,9 +115,11 @@ private let globalPosixBlockingPool: NIOThreadPool = {
             """
         )
     }
+    var threadConfig = NIOThreadConfiguration.defaultForOffloadThreadPool
+    threadConfig.threadNamePrefix = "SGLTN-TP-#"
     let pool = NIOThreadPool._makePerpetualStartedPool(
         numberOfThreads: NIOSingletons.blockingPoolThreadCountSuggestion,
-        threadNamePrefix: "SGLTN-TP-#"
+        threadConfiguration: threadConfig
     )
     _ = Unmanaged.passRetained(pool)  // never gonna let you down.
     return pool

@@ -79,6 +79,7 @@ public final class NIOThreadPool {
         /// It should never be "leaked" outside of the lock block.
         case modifying
     }
+    private let threadConfiguration: NIOThreadConfiguration
     private let semaphore = DispatchSemaphore(value: 0)
     private let lock = NIOLock()
     private var threads: [NIOThread]? = nil  // protected by `lock`
@@ -194,21 +195,61 @@ public final class NIOThreadPool {
     /// - Parameters:
     ///   - numberOfThreads: The number of threads to use for the thread pool.
     public convenience init(numberOfThreads: Int) {
-        self.init(numberOfThreads: numberOfThreads, canBeStopped: true)
+        self.init(
+            numberOfThreads: numberOfThreads,
+            threadConfiguration: .defaultForOffloadThreadPool,
+            canBeStopped: true
+        )
+    }
+
+    /// Initialize a `NIOThreadPool` thread pool with `numberOfThreads` threads.
+    ///
+    /// - parameters:
+    ///   - numberOfThreads: The number of threads to use for the thread pool.
+    public convenience init(numberOfThreads: Int, threadConfiguration: NIOThreadConfiguration) {
+        self.init(
+            numberOfThreads: numberOfThreads,
+            threadConfiguration: .defaultForOffloadThreadPool,
+            canBeStopped: true
+        )
     }
 
     /// Create a ``NIOThreadPool`` that is already started, cannot be shut down and must not be `deinit`ed.
     ///
     /// This is only useful for global singletons.
+    @available(
+        *,
+        deprecated,
+        renamed: "_makePerpetualStartedPool(numberOfThreads:threadConfiguration:threadNamePrefix:)"
+    )
     public static func _makePerpetualStartedPool(numberOfThreads: Int, threadNamePrefix: String) -> NIOThreadPool {
-        let pool = self.init(numberOfThreads: numberOfThreads, canBeStopped: false)
-        pool._start(threadNamePrefix: threadNamePrefix)
+        var threadConfig = NIOThreadConfiguration.defaultForOffloadThreadPool
+        threadConfig.threadNamePrefix = threadNamePrefix
+        let pool = self.init(numberOfThreads: numberOfThreads, threadConfiguration: threadConfig, canBeStopped: false)
+        pool.start()
         return pool
     }
 
-    private init(numberOfThreads: Int, canBeStopped: Bool) {
+    /// Create a ``NIOThreadPool`` that is already started, cannot be shut down and must not be `deinit`ed.
+    ///
+    /// This is only useful for global singletons.
+    public static func _makePerpetualStartedPool(
+        numberOfThreads: Int,
+        threadConfiguration: NIOThreadConfiguration
+    ) -> NIOThreadPool {
+        let pool = self.init(
+            numberOfThreads: numberOfThreads,
+            threadConfiguration: threadConfiguration,
+            canBeStopped: false
+        )
+        pool.start()
+        return pool
+    }
+
+    private init(numberOfThreads: Int, threadConfiguration: NIOThreadConfiguration, canBeStopped: Bool) {
         self.numberOfThreads = numberOfThreads
         self.canBeStopped = canBeStopped
+        self.threadConfiguration = threadConfiguration
     }
 
     private func process(identifier: Int) {
@@ -252,10 +293,6 @@ public final class NIOThreadPool {
 
     /// Start the `NIOThreadPool` if not already started.
     public func start() {
-        self._start(threadNamePrefix: "TP-#")
-    }
-
-    public func _start(threadNamePrefix: String) {
         let alreadyRunning: Bool = self.lock.withLock {
             switch self.state {
             case .running(_):
@@ -286,9 +323,14 @@ public final class NIOThreadPool {
             self.threads?.reserveCapacity(self.numberOfThreads)
         }
 
+        let threadNamePrefix = self.threadConfiguration.threadNamePrefix
         for id in 0..<self.numberOfThreads {
             // We should keep thread names under 16 characters because Linux doesn't allow more.
-            NIOThread.spawnAndRun(name: "\(threadNamePrefix)\(id)", detachThread: false) { thread in
+            NIOThread.spawnAndRun(
+                name: "\(threadNamePrefix)\(id)",
+                configuration: self.threadConfiguration,
+                detachThread: false
+            ) { thread in
                 self.lock.withLock {
                     self.threads!.append(thread)
                     cond.lock()
