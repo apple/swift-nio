@@ -99,44 +99,154 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  generate-matrix:
+    name: Generate Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      linux-matrix: ${{ steps.set-matrix.outputs.linux-matrix }}
+      windows-matrix: ${{ steps.set-matrix.outputs.windows-matrix }}
+      windows-nightly-matrix: ${{ steps.set-matrix.outputs.windows-nightly-matrix }}
+    steps:
+      - id: set-matrix
+        env:
+          LINUX_5_9_ENABLED: ${{ inputs.matrix_linux_5_9_enabled }}
+          LINUX_5_10_ENABLED: ${{ inputs.matrix_linux_5_10_enabled }}
+          LINUX_6_0_ENABLED: ${{ inputs.matrix_linux_6_0_enabled }}
+          LINUX_NIGHTLY_6_0_ENABLED: ${{ inputs.matrix_linux_nightly_6_0_enabled }}
+          LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.matrix_linux_nightly_main_enabled }}
+          WINDOWS_6_0_ENABLED: ${{ inputs.matrix_windows_6_0_enabled }}
+          WINDOWS_NIGHTLY_6_0_ENABLED: ${{ inputs.matrix_windows_nightly_6_0_enabled }}
+          WINDOWS_NIGHTLY_MAIN_ENABLED: ${{ inputs.matrix_windows_nightly_main_enabled }}
+        run: |
+          linux_matrix='{"swift": []}'
+          if [[ "${LINUX_5_9_ENABLED}" == "true" ]]; then
+              linux_matrix=$(echo "$linux_matrix" | jq '.swift[.swift| length] |= . + { "image": "${{ inputs.matrix_linux_5_9_container_image }}", "swift_version": "5.9" }')
+          fi
+
+          if [[ "${LINUX_5_10_ENABLED}" == "true" ]]; then
+              linux_matrix=$(echo "$linux_matrix" | jq '.swift[.swift| length] |= . + { "image": "${{ inputs.matrix_linux_5_10_container_image }}", "swift_version": "5.10" }')
+          fi
+
+          if [[ "${LINUX_6_0_ENABLED}" == "true" ]]; then
+              linux_matrix=$(echo "$linux_matrix" | jq '.swift[.swift| length] |= . + { "image": "${{ inputs.matrix_linux_6_0_container_image }}", "swift_version": "6.0" }')
+          fi
+
+          if [[ "${LINUX_NIGHTLY_6_0_ENABLED}" == "true" ]]; then
+              linux_matrix=$(echo "$linux_matrix" | jq '.swift[.swift| length] |= . + { "image": "${{ inputs.matrix_linux_nightly_6_0_container_image }}", "swift_version": "nightly-6.0" }')
+          fi
+
+          if [[ "${LINUX_NIGHTLY_MAIN_ENABLED}" == "true" ]]; then
+              linux_matrix=$(echo "$linux_matrix" | jq '.swift[.swift| length] |= . + { "image": "${{ inputs.matrix_linux_nightly_main_container_image }}", "swift_version": "nightly-main" }')
+          fi
+
+          {
+            echo 'linux-matrix<<EOF'
+            echo $linux_matrix
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+          windows_matrix='{"swift": []}'
+          if [[ "${WINDOWS_6_0_ENABLED}" == "true" ]]; then
+              windows_matrix=$(echo "$windows_matrix" | jq '.swift[.swift| length] |= . + { "image": "swift:6.0-windowsservercore-ltsc2022", "swift_version": "6.0" }')
+          fi
+
+          {
+            echo 'windows-matrix<<EOF'
+            echo $windows_matrix
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+          windows_nightly_matrix='{"swift": []}'
+          if [[ "${WINDOWS_NIGHTLY_6_0_ENABLED}" == "true" ]]; then
+              windows_nightly_matrix=$(echo "$windows_nightly_matrix" | jq '.swift[.swift| length] |= . + { "image": "swiftlang/swift:nightly-6.0-windowsservercore-1809", "swift_version": "nightly-6.0" }')
+          fi
+
+          if [[ "${WINDOWS_NIGHTLY_MAIN_ENABLED}" == "true" ]]; then
+              windows_nightly_matrix=$(echo "$windows_nightly_matrix" | jq '.swift[.swift| length] |= . + { "image": "swiftlang/swift:nightly-main-windowsservercore-1809", "swift_version": "nightly-main" }')
+          fi
+
+          {
+            echo 'windows-nightly-matrix<<EOF'
+            echo $windows_nightly_matrix
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+      - name: Echo matrix configuration
+        run: |
+          echo "${{ steps.set-matrix.outputs.linux-matrix }}"
+          echo "${{ steps.set-matrix.outputs.windows-matrix }}"
+          echo "${{ steps.set-matrix.outputs.windows-nightly-matrix }}"
+      - name: Generate workflow file
+        run: |
+          {
+            echo "name: Matrix
+
+            on:
+              workflow_call
+
+            concurrency:
+              group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
+              cancel-in-progress: true
+
+            jobs:
+            "
+            if [[ ${{ steps.set-matrix.outputs.linux-matrix }} == '{"swift": []}' ]]; then
+              echo "  linux:
+                  name: Linux (${\{ matrix.swift.swift_version }})
+                  runs-on: ubuntu-latest
+                  strategy:
+                  fail-fast: false
+                  matrix: ${{fromJson(steps.set-matrix.outputs.linux-matrix)}}
+                  container:
+                  image: ${\{ matrix.swift.image }}
+                  steps:
+                  - name: Checkout repository
+                      uses: actions/checkout@v4
+                      with:
+                      persist-credentials: false
+                  - name: Mark the workspace as safe
+                      # https://github.com/actions/checkout/issues/766
+                      run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+                  - name: Run matrix job
+                      env:
+                      SWIFT_VERSION: ${\{ matrix.swift.swift_version }}
+                      COMMAND: ${{ inputs.matrix_linux_command }}
+                      COMMAND_OVERRIDE_5_9: ${{ inputs.matrix_linux_5_9_command_override }}
+                      COMMAND_OVERRIDE_5_10: ${{ inputs.matrix_linux_5_10_command_override }}
+                      COMMAND_OVERRIDE_6_0: ${{ inputs.matrix_linux_6_0_command_override }}
+                      COMMAND_OVERRIDE_NIGHTLY_6_0: ${{ inputs.matrix_linux_nightly_6_0_command_override }}
+                      COMMAND_OVERRIDE_NIGHTLY_MAIN: ${{ inputs.matrix_linux_nightly_main_command_override }}
+                      run: |
+                      apt-get -qq update && apt-get -qq -y install curl
+                      curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash"
+            fi
+          } >> .github/workflows/__matrix_workflow.yml
+
+          cat .github/workflows/__matrix_workflow.yml
+
+
+  call-matrix:
+    name: Matrix
+    uses: ./.github/workflows/__matrix_workflow.yml
+
   linux:
     name: Linux (${{ matrix.swift.swift_version }})
+    needs: generate-matrix
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        # We are specifying only the major and minor of the docker images to automatically pick up the latest patch release
-        swift:
-          - image: ${{ inputs.matrix_linux_5_9_container_image }}
-            swift_version: "5.9"
-            enabled: ${{ inputs.matrix_linux_5_9_enabled }}
-          - image: ${{ inputs.matrix_linux_5_10_container_image }}
-            swift_version: "5.10"
-            enabled: ${{ inputs.matrix_linux_5_10_enabled }}
-          - image: ${{ inputs.matrix_linux_6_0_container_image }}
-            swift_version: "6.0"
-            enabled: ${{ inputs.matrix_linux_6_0_enabled }}
-          - image: ${{ inputs.matrix_linux_nightly_6_0_container_image }}
-            swift_version: "nightly-6.0"
-            enabled: ${{ inputs.matrix_linux_nightly_6_0_enabled }}
-          - image: ${{ inputs.matrix_linux_nightly_main_container_image }}
-            swift_version: "nightly-main"
-            enabled: ${{ inputs.matrix_linux_nightly_main_enabled }}
+      matrix: ${{fromJson(needs.generate-matrix.outputs.linux-matrix)}}
     container:
       image: ${{ matrix.swift.image }}
     steps:
       - name: Checkout repository
-        if: ${{ matrix.swift.enabled }}
         uses: actions/checkout@v4
         with:
           persist-credentials: false
           submodules: true
       - name: Mark the workspace as safe
-        if: ${{ matrix.swift.enabled }}
         # https://github.com/actions/checkout/issues/766
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
       - name: Run matrix job
-        if: ${{ matrix.swift.enabled }}
         env:
           SWIFT_VERSION: ${{ matrix.swift.swift_version }}
           COMMAND: ${{ inputs.matrix_linux_command }}
@@ -151,60 +261,42 @@ jobs:
 
   windows:
     name: Windows (${{ matrix.swift.swift_version }})
+    needs: generate-matrix
+    if: false
     runs-on: windows-2022
     strategy:
       fail-fast: false
-      matrix:
-        # We are specifying only the major and minor of the docker images to automatically pick up the latest patch release
-        swift:
-          - image: swift:6.0-windowsservercore-ltsc2022
-            swift_version: "6.0"
-            enabled: ${{ inputs.matrix_windows_6_0_enabled }}
+      matrix: ${{fromJson(needs.generate-matrix.outputs.windows-matrix)}}
     steps:
       - name: Pull Docker image
-        if: ${{ matrix.swift.enabled }}
         run: docker pull ${{ matrix.swift.image }}
       - name: Checkout repository
-        if: ${{ matrix.swift.enabled }}
         uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Donwload matrix script
-        if: ${{ matrix.swift.enabled }}
         run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
       - name: Run matrix job
-        if: ${{ matrix.swift.enabled }}
         run: |
           docker run --env SWIFT_VERSION="${{ matrix.swift.swift_version }}" --env COMMAND="${{ inputs.matrix_windows_command }}" --env COMMAND_OVERRIDE_6_0="${{ inputs.matrix_windows_6_0_command_override }}" -v ${{ github.workspace }}:C:\source ${{ matrix.swift.image }} cmd /s /c  "swift --version & cd C:\source\ & powershell -File __check-matrix-job.ps1"
 
   windows-nightly:
     name: Windows (${{ matrix.swift.swift_version }})
+    needs: generate-matrix
     runs-on: windows-2019
     strategy:
       fail-fast: false
-      matrix:
-        # We are specifying only the major and minor of the docker images to automatically pick up the latest patch release
-        swift:
-          - image: swiftlang/swift:nightly-6.0-windowsservercore-1809
-            swift_version: "nightly-6.0"
-            enabled: ${{ inputs.matrix_windows_nightly_6_0_enabled }}
-          - image: swiftlang/swift:nightly-main-windowsservercore-1809
-            swift_version: "nightly-main"
-            enabled: ${{ inputs.matrix_windows_nightly_main_enabled }}
+      matrix: ${{fromJson(needs.generate-matrix.outputs.windows-nightly-matrix)}}
     steps:
       - name: Pull Docker image
-        if: ${{ matrix.swift.enabled }}
         run: docker pull ${{ matrix.swift.image }}
       - name: Checkout repository
-        if: ${{ matrix.swift.enabled }}
         uses: actions/checkout@v4
         with:
           persist-credentials: false
           submodules: true
       - name: Donwload matrix script
-        if: ${{ matrix.swift.enabled }}
         run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
       - name: Run matrix job
-        if: ${{ matrix.swift.enabled }}
         run: |
           docker run --env SWIFT_VERSION="${{ matrix.swift.swift_version }}" --env COMMAND="${{ inputs.matrix_windows_command }}" --env COMMAND_OVERRIDE_NIGHTLY_6_0="${{ inputs.matrix_windows_nightly_6_0_command_override }}" --env COMMAND_OVERRIDE_NIGHTLY_MAIN="${{ inputs.matrix_windows_nightly_main_command_override }}" -v ${{ github.workspace }}:C:\source ${{ matrix.swift.image }} cmd /s /c  "swift --version & cd C:\source\ & powershell -File __check-matrix-job.ps1"
