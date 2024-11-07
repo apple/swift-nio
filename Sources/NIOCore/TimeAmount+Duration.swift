@@ -16,7 +16,7 @@ extension TimeAmount {
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     /// Creates a new `TimeAmount` for the given `Duration`, truncating and clamping if necessary.
     ///
-    /// - returns: `TimeAmount`, truncated to nanosecond precision, and clamped to `Int64.max` nanoseconds.
+    /// - Returns: `TimeAmount`, truncated to nanosecond precision, and clamped to `Int64.max` nanoseconds.
     public init(_ duration: Swift.Duration) {
         self = .nanoseconds(duration.nanosecondsClamped)
     }
@@ -25,8 +25,6 @@ extension TimeAmount {
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 extension Swift.Duration {
     /// Construct a `Duration` given a number of nanoseconds represented as a `TimeAmount`.
-    ///
-    /// - returns: A `Duration` representing a given number of nanoseconds.
     public init(_ timeAmount: TimeAmount) {
         self = .nanoseconds(timeAmount.nanoseconds)
     }

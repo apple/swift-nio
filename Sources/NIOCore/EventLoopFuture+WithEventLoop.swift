@@ -35,10 +35,10 @@ extension EventLoopFuture {
     ///
     /// Note: In a sense, the `EventLoopFuture<NewValue>` is returned before it's created.
     ///
-    /// - parameters:
-    ///     - callback: Function that will receive the value of this `EventLoopFuture` and return
+    /// - Parameters:
+    ///   - callback: Function that will receive the value of this `EventLoopFuture` and return
     ///         a new `EventLoopFuture`.
-    /// - returns: A future that will receive the eventual value.
+    /// - Returns: A future that will receive the eventual value.
     @inlinable
     @preconcurrency
     public func flatMapWithEventLoop<NewValue: Sendable>(
@@ -71,10 +71,10 @@ extension EventLoopFuture {
     ///
     /// If the callback cannot recover it should return a failed `EventLoopFuture`.
     ///
-    /// - parameters:
-    ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
+    /// - Parameters:
+    ///   - callback: Function that will receive the error value of this `EventLoopFuture` and return
     ///         a new value lifted into a new `EventLoopFuture`.
-    /// - returns: A future that will receive the recovered value.
+    /// - Returns: A future that will receive the recovered value.
     @inlinable
     @preconcurrency
     public func flatMapErrorWithEventLoop(
@@ -112,10 +112,10 @@ extension EventLoopFuture {
     /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
     /// a failure is encountered, it will immediately fail the overall EventLoopFuture.
     ///
-    /// - parameters:
-    ///     - futures: An array of `EventLoopFuture<NewValue>` to wait for.
-    ///     - with: A function that will be used to fold the values of two `EventLoopFuture`s and return a new value wrapped in an `EventLoopFuture`.
-    /// - returns: A new `EventLoopFuture` with the folded value whose callbacks run on `self.eventLoop`.
+    /// - Parameters:
+    ///   - futures: An array of `EventLoopFuture<NewValue>` to wait for.
+    ///   - combiningFunction: A function that will be used to fold the values of two `EventLoopFuture`s and return a new value wrapped in an `EventLoopFuture`.
+    /// - Returns: A new `EventLoopFuture` with the folded value whose callbacks run on `self.eventLoop`.
     @inlinable
     @preconcurrency
     public func foldWithEventLoop<OtherValue: Sendable>(

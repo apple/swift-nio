@@ -290,7 +290,7 @@ extension NIOAsyncSequenceProducer {
         /// This can be called more than once and returns to the caller immediately
         /// without blocking for any awaiting consumption from the iteration.
         ///
-        /// - Parameter contentsOf: The sequence to yield.
+        /// - Parameter sequence: The sequence to yield.
         /// - Returns: A ``NIOAsyncSequenceProducer/Source/YieldResult`` that indicates if the yield was successful
         /// and if more elements should be produced.
         @inlinable

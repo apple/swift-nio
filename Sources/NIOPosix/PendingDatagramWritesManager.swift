@@ -50,7 +50,7 @@ private struct PendingDatagramWrite {
 extension Error {
     /// Returns whether the error is "recoverable" from the perspective of datagram sending.
     ///
-    /// - returns: `true` if the error is recoverable, `false` otherwise.
+    /// - Returns: `true` if the error is recoverable, `false` otherwise.
     fileprivate var isRecoverable: Bool {
         switch self {
         case let e as IOError where e.errnoCode == EMSGSIZE,
@@ -193,7 +193,7 @@ private struct PendingDatagramWritesState {
 
     /// Indicates that the first outstanding write was written.
     ///
-    /// - returns: The promise that the caller must fire, along with an error to fire it with if it needs one.
+    /// - Returns: The promise that the caller must fire, along with an error to fire it with if it needs one.
     private mutating func wroteFirst(error: Error? = nil) -> DatagramWritePromiseFiller? {
         let first = self.pendingWrites.removeFirst()
         self.chunks -= 1
@@ -242,10 +242,10 @@ private struct PendingDatagramWritesState {
     ///
     /// - warning: The closure will simply fulfill all the promises in order. If one of those promises does for example close the `Channel` we might see subsequent writes fail out of order. Example: Imagine the user issues three writes: `A`, `B` and `C`. Imagine that `A` and `B` both get successfully written in one write operation but the user closes the `Channel` in `A`'s callback. Then overall the promises will be fulfilled in this order: 1) `A`: success 2) `C`: error 3) `B`: success. Note how `B` and `C` get fulfilled out of order.
     ///
-    /// - parameters:
-    ///     - data: The result of the write operation: namely, for each datagram we attempted to write, the number of bytes we wrote.
-    ///     - messages: The vector messages written, if any.
-    /// - returns: A promise and the error that should be sent to it, if any, and a `WriteResult` which indicates if we could write everything or not.
+    /// - Parameters:
+    ///   - data: The result of the write operation: namely, for each datagram we attempted to write, the number of bytes we wrote.
+    ///   - messages: The vector messages written, if any.
+    /// - Returns: A promise and the error that should be sent to it, if any, and a `WriteResult` which indicates if we could write everything or not.
     public mutating func didWrite(
         _ data: IOResult<Int>,
         messages: UnsafeMutableBufferPointer<MMsgHdr>?
@@ -273,10 +273,10 @@ private struct PendingDatagramWritesState {
 
     /// Indicates that a vector write succeeded.
     ///
-    /// - parameters:
-    ///     - written: The number of messages successfully written.
-    ///     - messages: The list of message objects.
-    /// - returns: A closure that the caller _needs_ to run which will fulfill the promises of the writes, and a `WriteResult` that indicates if we could write
+    /// - Parameters:
+    ///   - written: The number of messages successfully written.
+    ///   - messages: The list of message objects.
+    /// - Returns: A closure that the caller _needs_ to run which will fulfill the promises of the writes, and a `WriteResult` that indicates if we could write
     ///     everything or not.
     private mutating func didVectorWrite(
         written: Int,
@@ -309,9 +309,9 @@ private struct PendingDatagramWritesState {
 
     /// Indicates that a scalar write succeeded.
     ///
-    /// - parameters:
-    ///     - written: The number of bytes successfully written.
-    /// - returns: All the promises that must be fired, and a `WriteResult` that indicates if we could write
+    /// - Parameters:
+    ///   - written: The number of bytes successfully written.
+    /// - Returns: All the promises that must be fired, and a `WriteResult` that indicates if we could write
     ///     everything or not.
     private mutating func didScalarWrite(written: Int) -> (DatagramWritePromiseFiller?, OneWriteOperationResult) {
         precondition(
@@ -333,7 +333,7 @@ private struct PendingDatagramWritesState {
     ///
     /// - warning: See the warning for `didWrite`.
     ///
-    /// - returns: Nothing
+    /// - Returns: Nothing
     public mutating func failAll(error: Error) {
         var promises: [EventLoopPromise<Void>] = []
         promises.reserveCapacity(self.pendingWrites.count)
@@ -423,9 +423,9 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// `EventLoop` always runs on one and the same thread. That means that there can't be any writes of more than
     /// one `Channel` on the same `EventLoop` at the same time.
     ///
-    /// - parameters:
-    ///     - bufferPool: a pool of buffers to be used for IOVector and storage references
-    ///     - msgBufferPool: a pool of buffers to be usded for `MMsgHdr`, `sockaddr_storage` and cmsghdr elements
+    /// - Parameters:
+    ///   - bufferPool: a pool of buffers to be used for IOVector and storage references
+    ///   - msgBufferPool: a pool of buffers to be usded for `MMsgHdr`, `sockaddr_storage` and cmsghdr elements
     init(bufferPool: Pool<PooledBuffer>, msgBufferPool: Pool<PooledMsgBuffer>) {
         self.bufferPool = bufferPool
         self.msgBufferPool = msgBufferPool
@@ -471,10 +471,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     /// Add a pending write, with an `AddressedEnvelope`, usually on an unconnected socket.
     ///
-    /// - parameters:
-    ///     - envelope: The `AddressedEnvelope<ByteBuffer>` to write.
-    ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
-    /// - returns: If the `Channel` is still writable after adding the write of `data`.
+    /// - Parameters:
+    ///   - envelope: The `AddressedEnvelope<ByteBuffer>` to write.
+    ///   - promise: Optionally an `EventLoopPromise` that will get the write operation's result
+    /// - Returns: If the `Channel` is still writable after adding the write of `data`.
     ///
     /// - warning: If the socket is connected, then the `envelope.remoteAddress` _must_ match the
     /// address of the connected peer, otherwise this function will throw a fatal error.
@@ -508,10 +508,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     /// Add a pending write, without an `AddressedEnvelope`, on a connected socket.
     ///
-    /// - parameters:
-    ///     - data: The `ByteBuffer` to write.
-    ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
-    /// - returns: If the `Channel` is still writable after adding the write of `data`.
+    /// - Parameters:
+    ///   - data: The `ByteBuffer` to write.
+    ///   - promise: Optionally an `EventLoopPromise` that will get the write operation's result
+    /// - Returns: If the `Channel` is still writable after adding the write of `data`.
     func add(data: ByteBuffer, promise: EventLoopPromise<Void>?) -> Bool {
         self.add(
             PendingDatagramWrite(
@@ -531,10 +531,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// Triggers the appropriate write operation. This is a fancy way of saying trigger either `sendto` or `sendmmsg`.
     /// On platforms that do not support a gathering write operation,
     ///
-    /// - parameters:
-    ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendmsg`).
-    ///     - vectorWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `sendmmsg`).
-    /// - returns: The `WriteResult` and whether the `Channel` is now writable.
+    /// - Parameters:
+    ///   - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendmsg`).
+    ///   - vectorWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `sendmmsg`).
+    /// - Returns: The `WriteResult` and whether the `Channel` is now writable.
     func triggerAppropriateWriteOperations(
         scalarWriteOperation: (
             UnsafeRawBufferPointer, UnsafePointer<sockaddr>?, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?
@@ -571,8 +571,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// To be called after a write operation (usually selected and run by `triggerAppropriateWriteOperation`) has
     /// completed.
     ///
-    /// - parameters:
-    ///     - data: The result of the write operation.
+    /// - Parameters:
+    ///   - data: The result of the write operation.
     private func didWrite(
         _ data: IOResult<Int>,
         messages: UnsafeMutableBufferPointer<MMsgHdr>?
@@ -591,10 +591,10 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     /// useful errors and fail the individual write, rather than fail the entire connection. If the error cannot
     /// be tolerated by a datagram application, will rethrow the error.
     ///
-    /// - parameters:
-    ///     - error: The error we hit.
-    /// - returns: A `WriteResult` indicating whether the writes should continue.
-    /// - throws: Any error that cannot be ignored by a datagram write.
+    /// - Parameters:
+    ///   - error: The error we hit.
+    /// - Returns: A `WriteResult` indicating whether the writes should continue.
+    /// - Throws: Any error that cannot be ignored by a datagram write.
     private func handleError(_ error: Error) throws -> OneWriteOperationResult {
         switch error {
         case let e as IOError where e.errnoCode == EMSGSIZE:
@@ -612,8 +612,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     /// Trigger a write of a single object where an object can either be a contiguous array of bytes or a region of a file.
     ///
-    /// - parameters:
-    ///     - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
+    /// - Parameters:
+    ///   - scalarWriteOperation: An operation that writes a single, contiguous array of bytes (usually `sendto`).
     private func triggerScalarBufferWrite(
         scalarWriteOperation: (
             UnsafeRawBufferPointer, UnsafePointer<sockaddr>?, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?
@@ -655,8 +655,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
 
     /// Trigger a vector write operation. In other words: Write multiple contiguous arrays of bytes.
     ///
-    /// - parameters:
-    ///     - vectorWriteOperation: The vector write operation to use. Usually `sendmmsg`.
+    /// - Parameters:
+    ///   - vectorWriteOperation: The vector write operation to use. Usually `sendmmsg`.
     private func triggerVectorBufferWrite(
         vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>
     ) throws -> OneWriteOperationResult {

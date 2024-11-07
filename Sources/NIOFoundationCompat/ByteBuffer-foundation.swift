@@ -55,9 +55,9 @@ extension ByteBuffer {
     /// underlying storage from the returned `Data` value. If you want manual control over the byte transferring
     /// behaviour, please use `readData(length:byteTransferStrategy:)`.
     ///
-    /// - parameters:
-    ///     - length: The number of bytes to be read from this `ByteBuffer`.
-    /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
+    /// - Parameters:
+    ///   - length: The number of bytes to be read from this `ByteBuffer`.
+    /// - Returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     public mutating func readData(length: Int) -> Data? {
         self.readData(length: length, byteTransferStrategy: .automatic)
     }
@@ -65,11 +65,11 @@ extension ByteBuffer {
     /// Read `length` bytes off this `ByteBuffer`, move the reader index forward by `length` bytes and return the result
     /// as `Data`.
     ///
-    /// - parameters:
-    ///     - length: The number of bytes to be read from this `ByteBuffer`.
-    ///     - byteTransferStrategy: Controls how to transfer the bytes. See `ByteTransferStrategy` for an explanation
+    /// - Parameters:
+    ///   - length: The number of bytes to be read from this `ByteBuffer`.
+    ///   - byteTransferStrategy: Controls how to transfer the bytes. See `ByteTransferStrategy` for an explanation
     ///                             of the options.
-    /// - returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
+    /// - Returns: A `Data` value containing `length` bytes or `nil` if there aren't at least `length` bytes readable.
     public mutating func readData(length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
         guard
             let result = self.getData(at: self.readerIndex, length: length, byteTransferStrategy: byteTransferStrategy)
@@ -87,10 +87,10 @@ extension ByteBuffer {
     /// underlying storage from the returned `Data` value. If you want manual control over the byte transferring
     /// behaviour, please use `getData(at:byteTransferStrategy:)`.
     ///
-    /// - parameters:
-    ///     - index: The starting index of the bytes of interest into the `ByteBuffer`
-    ///     - length: The number of bytes of interest
-    /// - returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
+    /// - Parameters:
+    ///   - index: The starting index of the bytes of interest into the `ByteBuffer`
+    ///   - length: The number of bytes of interest
+    /// - Returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
     public func getData(at index: Int, length: Int) -> Data? {
         self.getData(at: index, length: length, byteTransferStrategy: .automatic)
     }
@@ -98,14 +98,14 @@ extension ByteBuffer {
     /// Return `length` bytes starting at `index` and return the result as `Data`. This will not change the reader index.
     /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - parameters:
-    ///     - index: The starting index of the bytes of interest into the `ByteBuffer`
-    ///     - length: The number of bytes of interest
-    ///     - byteTransferStrategy: Controls how to transfer the bytes. See `ByteTransferStrategy` for an explanation
+    /// - Parameters:
+    ///   - index: The starting index of the bytes of interest into the `ByteBuffer`
+    ///   - length: The number of bytes of interest
+    ///   - byteTransferStrategy: Controls how to transfer the bytes. See `ByteTransferStrategy` for an explanation
     ///                             of the options.
-    /// - returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
-    public func getData(at index0: Int, length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
-        let index = index0 - self.readerIndex
+    /// - Returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
+    public func getData(at index: Int, length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
+        let index = index - self.readerIndex
         guard index >= 0 && length >= 0 && index <= self.readableBytes - length else {
             return nil
         }
@@ -141,11 +141,11 @@ extension ByteBuffer {
     /// Get a `String` decoding `length` bytes starting at `index` with `encoding`. This will not change the reader index.
     /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - parameters:
-    ///     - index: The starting index of the bytes of interest into the `ByteBuffer`.
-    ///     - length: The number of bytes of interest.
-    ///     - encoding: The `String` encoding to be used.
-    /// - returns: A `String` value containing the bytes of interest or `nil` if the selected bytes are not readable or
+    /// - Parameters:
+    ///   - index: The starting index of the bytes of interest into the `ByteBuffer`.
+    ///   - length: The number of bytes of interest.
+    ///   - encoding: The `String` encoding to be used.
+    /// - Returns: A `String` value containing the bytes of interest or `nil` if the selected bytes are not readable or
     ///            cannot be decoded with the given encoding.
     public func getString(at index: Int, length: Int, encoding: String.Encoding) -> String? {
         guard let data = self.getData(at: index, length: length) else {
@@ -156,10 +156,10 @@ extension ByteBuffer {
 
     /// Read a `String` decoding `length` bytes with `encoding` from the `readerIndex`, moving the `readerIndex` appropriately.
     ///
-    /// - parameters:
-    ///     - length: The number of bytes to read.
-    ///     - encoding: The `String` encoding to be used.
-    /// - returns: A `String` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain enough bytes, or
+    /// - Parameters:
+    ///   - length: The number of bytes to read.
+    ///   - encoding: The `String` encoding to be used.
+    /// - Returns: A `String` value containing the bytes of interest or `nil` if the `ByteBuffer` doesn't contain enough bytes, or
     ///     if those bytes cannot be decoded with the given encoding.
     public mutating func readString(length: Int, encoding: String.Encoding) -> String? {
         guard length <= self.readableBytes else {
@@ -175,10 +175,10 @@ extension ByteBuffer {
 
     /// Write `string` into this `ByteBuffer` using the encoding `encoding`, moving the writer index forward appropriately.
     ///
-    /// - parameters:
-    ///     - string: The string to write.
-    ///     - encoding: The encoding to use to encode the string.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - string: The string to write.
+    ///   - encoding: The encoding to use to encode the string.
+    /// - Returns: The number of bytes written.
     @discardableResult
     public mutating func writeString(_ string: String, encoding: String.Encoding) throws -> Int {
         let written = try self.setString(string, encoding: encoding, at: self.writerIndex)
@@ -188,11 +188,11 @@ extension ByteBuffer {
 
     /// Write `string` into this `ByteBuffer` at `index` using the encoding `encoding`. Does not move the writer index.
     ///
-    /// - parameters:
-    ///     - string: The string to write.
-    ///     - encoding: The encoding to use to encode the string.
-    ///     - index: The index for the first serialized byte.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - string: The string to write.
+    ///   - encoding: The encoding to use to encode the string.
+    ///   - index: The index for the first serialized byte.
+    /// - Returns: The number of bytes written.
     @discardableResult
     public mutating func setString(_ string: String, encoding: String.Encoding, at index: Int) throws -> Int {
         guard let data = string.data(using: encoding) else {
@@ -208,9 +208,9 @@ extension ByteBuffer {
     // MARK: ContiguousBytes and DataProtocol
     /// Write `bytes` into this `ByteBuffer` at the writer index, moving the writer index forward appropriately.
     ///
-    /// - parameters:
-    ///     - bytes: The bytes to write.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - bytes: The bytes to write.
+    /// - Returns: The number of bytes written.
     @inlinable
     @discardableResult
     public mutating func writeContiguousBytes<Bytes: ContiguousBytes>(_ bytes: Bytes) -> Int {
@@ -221,10 +221,10 @@ extension ByteBuffer {
 
     /// Write `bytes` into this `ByteBuffer` at `index`. Does not move the writer index.
     ///
-    /// - parameters:
-    ///     - bytes: The bytes to write.
-    ///     - index: The index for the first byte.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - bytes: The bytes to write.
+    ///   - index: The index for the first byte.
+    /// - Returns: The number of bytes written.
     @inlinable
     @discardableResult
     public mutating func setContiguousBytes<Bytes: ContiguousBytes>(_ bytes: Bytes, at index: Int) -> Int {
@@ -235,9 +235,9 @@ extension ByteBuffer {
 
     /// Write the bytes of `data` into this `ByteBuffer` at the writer index, moving the writer index forward appropriately.
     ///
-    /// - parameters:
-    ///     - data: The data to write.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - data: The data to write.
+    /// - Returns: The number of bytes written.
     @inlinable
     @discardableResult
     public mutating func writeData<D: DataProtocol>(_ data: D) -> Int {
@@ -248,10 +248,10 @@ extension ByteBuffer {
 
     /// Write the bytes of `data` into this `ByteBuffer` at `index`. Does not move the writer index.
     ///
-    /// - parameters:
-    ///     - data: The data to write.
-    ///     - index: The index for the first byte.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - data: The data to write.
+    ///   - index: The index for the first byte.
+    /// - Returns: The number of bytes written.
     @inlinable
     @discardableResult
     public mutating func setData<D: DataProtocol>(_ data: D, at index: Int) -> Int {
@@ -399,7 +399,10 @@ extension ByteBufferView {
 extension Data {
 
     /// Creates a `Data` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
-    /// - parameter buffer: The buffer to read.
+    /// - Parameters:
+    ///   - buffer: The buffer to read.
+    ///   - byteTransferStrategy: Controls how to transfer the bytes. See `ByteTransferStrategy` for an explanation
+    ///                             of the options.
     public init(buffer: ByteBuffer, byteTransferStrategy: ByteBuffer.ByteTransferStrategy = .automatic) {
         var buffer = buffer
         self = buffer.readData(length: buffer.readableBytes, byteTransferStrategy: byteTransferStrategy)!

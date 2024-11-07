@@ -53,8 +53,8 @@ public struct WebSocketMaskingKey: Sendable {
     /// Creates a websocket masking key from the network-encoded
     /// representation.
     ///
-    /// - parameters:
-    ///     - integer: The encoded network representation of the
+    /// - Parameters:
+    ///   - integer: The encoded network representation of the
     ///         masking key.
     @usableFromInline
     internal init(networkRepresentation integer: UInt32) {
@@ -290,23 +290,23 @@ public struct WebSocketFrame {
 
     /// Creates an empty `WebSocketFrame`.
     ///
-    /// - parameters:
-    ///     - allocator: The `ByteBufferAllocator` to use when editing the empty buffers.
+    /// - Parameters:
+    ///   - allocator: The `ByteBufferAllocator` to use when editing the empty buffers.
     public init(allocator: ByteBufferAllocator) {
         self._storage = .init(data: allocator.buffer(capacity: 0), extensionData: nil)
     }
 
     /// Create a `WebSocketFrame` with the given properties.
     ///
-    /// - parameters:
-    ///     - fin: The value of the `fin` bit. Defaults to `false`.
-    ///     - rsv1: The value of the first reserved bit. Defaults to `false`.
-    ///     - rsv2: The value of the second reserved bit. Defaults to `false`.
-    ///     - rsv3: The value of the third reserved bit. Defaults to `false`.
-    ///     - opcode: The opcode for the frame. Defaults to `.continuation`.
-    ///     - maskKey: The masking key for the frame, if any. Defaults to `nil`.
-    ///     - data: The application data for the frame.
-    ///     - extensionData: The extension data for the frame.
+    /// - Parameters:
+    ///   - fin: The value of the `fin` bit. Defaults to `false`.
+    ///   - rsv1: The value of the first reserved bit. Defaults to `false`.
+    ///   - rsv2: The value of the second reserved bit. Defaults to `false`.
+    ///   - rsv3: The value of the third reserved bit. Defaults to `false`.
+    ///   - opcode: The opcode for the frame. Defaults to `.continuation`.
+    ///   - maskKey: The masking key for the frame, if any. Defaults to `nil`.
+    ///   - data: The application data for the frame.
+    ///   - extensionData: The extension data for the frame.
     public init(
         fin: Bool = false,
         rsv1: Bool = false,
@@ -383,7 +383,7 @@ extension WebSocketFrame: CustomStringConvertible {
     ///
     /// The format of the description is not API.
     ///
-    /// - returns: A description of this `WebSocketFrame`.
+    /// - Returns: A description of this `WebSocketFrame`.
     public var description: String {
         """
         maskKey: \(String(describing: self.maskKey)), \

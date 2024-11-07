@@ -42,8 +42,12 @@ extension WebSocketErrorCode {
 extension ByteBuffer {
     /// Applies the WebSocket unmasking operation.
     ///
-    /// - parameters:
-    ///     - maskingKey: The masking key.
+    /// - Parameters:
+    ///   - maskingKey: The masking key.
+    ///   - indexOffset: An integer offset to apply to the index into the masking key.
+    ///         This is used when masking multiple "contiguous" byte buffers, to ensure that
+    ///         the masking key is applied uniformly to the collection rather than from the
+    ///         start each time.
     public mutating func webSocketUnmask(_ maskingKey: WebSocketMaskingKey, indexOffset: Int = 0) {
         /// Shhhh: secretly unmasking and masking are the same operation!
         webSocketMask(maskingKey, indexOffset: indexOffset)
@@ -51,9 +55,9 @@ extension ByteBuffer {
 
     /// Applies the websocket masking operation.
     ///
-    /// - parameters:
-    ///     - maskingKey: The masking key.
-    ///     - indexOffset: An integer offset to apply to the index into the masking key.
+    /// - Parameters:
+    ///   - maskingKey: The masking key.
+    ///   - indexOffset: An integer offset to apply to the index into the masking key.
     ///         This is used when masking multiple "contiguous" byte buffers, to ensure that
     ///         the masking key is applied uniformly to the collection rather than from the
     ///         start each time.
@@ -237,8 +241,8 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
 
     /// Construct a new `WebSocketFrameDecoder`
     ///
-    /// - parameters:
-    ///     - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
+    /// - Parameters:
+    ///   - maxFrameSize: The maximum frame size the decoder is willing to tolerate from the
     ///         remote peer. WebSockets in principle allows frame sizes up to `2**64` bytes, but
     ///         this is an objectively unreasonable maximum value (on AMD64 systems it is not
     ///         possible to even allocate a buffer large enough to handle this size), so we
@@ -247,9 +251,6 @@ public final class WebSocketFrameDecoder: ByteToMessageDecoder {
     ///         Users are strongly encouraged not to increase this value unless they absolutely
     ///         must, as the decoder will not produce partial frames, meaning that it will hold
     ///         on to data until the *entire* body is received.
-    ///     - automaticErrorHandling: Whether this `ChannelHandler` should automatically handle
-    ///         protocol errors in frame serialization, or whether it should allow the pipeline
-    ///         to handle them.
     public init(maxFrameSize: Int = 1 << 14) {
         precondition(maxFrameSize <= UInt32.max, "invalid overlarge max frame size")
         self.maxFrameSize = maxFrameSize

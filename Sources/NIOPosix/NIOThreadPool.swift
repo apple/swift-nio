@@ -44,7 +44,7 @@ public enum NIOThreadPoolError {
 /// APIs exist. In those cases `NIOThreadPool` can be used but should be
 /// treated as a last resort.
 ///
-/// - note: The prime example for missing non-blocking APIs is file IO on UNIX.
+/// - Note: The prime example for missing non-blocking APIs is file IO on UNIX.
 ///   The OS does not provide a usable and truly non-blocking API but with
 ///   `NonBlockingFileIO` NIO provides a high-level API for file IO that should
 ///   be preferred to running blocking file IO system calls directly on
@@ -114,9 +114,9 @@ public final class NIOThreadPool {
 
     /// Gracefully shutdown this `NIOThreadPool`. All tasks will be run before shutdown will take place.
     ///
-    /// - parameters:
-    ///     - queue: The `DispatchQueue` used to executed the callback
-    ///     - callback: The function to be executed once the shutdown is complete.
+    /// - Parameters:
+    ///   - queue: The `DispatchQueue` used to executed the callback
+    ///   - callback: The function to be executed once the shutdown is complete.
     @preconcurrency
     public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable (Error?) -> Void) {
         self._shutdownGracefully(queue: queue, callback)
@@ -167,10 +167,10 @@ public final class NIOThreadPool {
 
     /// Submit a `WorkItem` to process.
     ///
-    /// - note: This is a low-level method, in most cases the `runIfActive` method should be used.
+    /// - Note: This is a low-level method, in most cases the `runIfActive` method should be used.
     ///
-    /// - parameters:
-    ///     - body: The `WorkItem` to process by the `NIOThreadPool`.
+    /// - Parameters:
+    ///   - body: The `WorkItem` to process by the `NIOThreadPool`.
     @preconcurrency
     public func submit(_ body: @escaping WorkItem) {
         self._submit(id: nil, body)
@@ -208,7 +208,7 @@ public final class NIOThreadPool {
 
     /// Initialize a `NIOThreadPool` thread pool with `numberOfThreads` threads.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///   - numberOfThreads: The number of threads to use for the thread pool.
     public convenience init(numberOfThreads: Int) {
         self.init(numberOfThreads: numberOfThreads, canBeStopped: true)
@@ -385,10 +385,10 @@ extension NIOThreadPool {
     /// Runs the submitted closure if the thread pool is still active, otherwise fails the promise.
     /// The closure will be run on the thread pool so can do blocking work.
     ///
-    /// - parameters:
-    ///     - eventLoop: The `EventLoop` the returned `EventLoopFuture` will fire on.
-    ///     - body: The closure which performs some blocking work to be done on the thread pool.
-    /// - returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
+    /// - Parameters:
+    ///   - eventLoop: The `EventLoop` the returned `EventLoopFuture` will fire on.
+    ///   - body: The closure which performs some blocking work to be done on the thread pool.
+    /// - Returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
     @preconcurrency
     public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
         self._runIfActive(eventLoop: eventLoop, body)
@@ -413,9 +413,9 @@ extension NIOThreadPool {
     /// Runs the submitted closure if the thread pool is still active, otherwise throw an error.
     /// The closure will be run on the thread pool so can do blocking work.
     ///
-    /// - parameters:
-    ///     - body: The closure which performs some blocking work to be done on the thread pool.
-    /// - returns: result of the passed closure.
+    /// - Parameters:
+    ///   - body: The closure which performs some blocking work to be done on the thread pool.
+    /// - Returns: result of the passed closure.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func runIfActive<T: Sendable>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
         let workID = self.nextWorkID.loadThenWrappingIncrement(ordering: .relaxed)

@@ -23,7 +23,7 @@ struct LinuxCPUSet {
     /// Create a new instance
     ///
     /// - arguments:
-    ///     - cpuIds: The `Set` of CPU ids. It must be non-empty and can not contain invalid ids.
+    ///   - cpuIds: The `Set` of CPU ids. It must be non-empty and can not contain invalid ids.
     init(cpuIds: Set<Int>) {
         precondition(!cpuIds.isEmpty)
         self.cpuIds = cpuIds
@@ -32,7 +32,7 @@ struct LinuxCPUSet {
     /// Create a new instance
     ///
     /// - arguments:
-    ///     - cpuId: The CPU id.
+    ///   - cpuId: The CPU id.
     init(_ cpuId: Int) {
         let ids: Set<Int> = [cpuId]
         self.init(cpuIds: ids)
@@ -87,7 +87,7 @@ extension MultiThreadedEventLoopGroup {
     /// Create a new `MultiThreadedEventLoopGroup` that create as many `NIOThread`s as `pinnedCPUIds`. Each `NIOThread` will be pinned to the CPU with the id.
     ///
     /// - arguments:
-    ///     - pinnedCPUIds: The CPU ids to apply to the `NIOThread`s.
+    ///   - pinnedCPUIds: The CPU ids to apply to the `NIOThread`s.
     convenience init(pinnedCPUIds: [Int]) {
         let initializers: [ThreadInitializer] = pinnedCPUIds.map { id in
             // This will also take care of validation of the provided id.

@@ -93,11 +93,11 @@ public struct HTTPRequestHead: Equatable {
 
     /// Create a `HTTPRequestHead`
     ///
-    /// - parameters:
-    ///     - version: The version for this HTTP request.
-    ///     - method: The HTTP method for this request.
-    ///     - uri: The URI used on this request.
-    ///     - headers: This request's HTTP headers.
+    /// - Parameters:
+    ///   - version: The version for this HTTP request.
+    ///   - method: The HTTP method for this request.
+    ///   - uri: The URI used on this request.
+    ///   - headers: This request's HTTP headers.
     public init(version: HTTPVersion, method: HTTPMethod, uri: String, headers: HTTPHeaders) {
         self._storage = .init(method: method, uri: uri, version: version)
         self.headers = headers
@@ -331,9 +331,9 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
 
     /// Construct a `HTTPHeaders` structure.
     ///
-    /// - parameters
-    ///     - headers: An initial set of headers to use to populate the header block.
-    ///     - allocator: The allocator to use to allocate the underlying storage.
+    /// - Parameters
+    ///   - headers: An initial set of headers to use to populate the header block.
+    ///   - allocator: The allocator to use to allocate the underlying storage.
     public init(_ headers: [(String, String)] = []) {
         // Note: this initializer exists because of https://bugs.swift.org/browse/SR-7415.
         // Otherwise we'd only have the one below with a default argument for `allocator`.
@@ -342,8 +342,8 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
 
     /// Construct a `HTTPHeaders` structure.
     ///
-    /// - parameters
-    ///     - elements: name, value pairs provided by a dictionary literal.
+    /// - Parameters
+    ///   - elements: name, value pairs provided by a dictionary literal.
     public init(dictionaryLiteral elements: (String, String)...) {
         self.init(elements)
     }
@@ -370,7 +370,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// This method is strictly additive: if there are other entries with the same header
     /// name already in the block, this will add new entries.
     ///
-    /// - Parameter contentsOf: The sequence of header name/value pairs. For maximum compatibility
+    /// - Parameter other: The sequence of header name/value pairs. For maximum compatibility
     ///     the header should be an ASCII string. For future-proofing with HTTP/2 lowercase header
     ///     names are strongly recommended.
     @inlinable
@@ -383,7 +383,7 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
 
     /// Add another block of headers to the block.
     ///
-    /// - Parameter contentsOf: The block of headers to add to these headers.
+    /// - Parameter other: The block of headers to add to these headers.
     public mutating func add(contentsOf other: HTTPHeaders) {
         self.headers.append(contentsOf: other.headers)
         if other.keepAliveState == .unknown {
@@ -417,16 +417,16 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     /// This method uses case-insensitive comparisons for the header field name.
     ///
     /// - Parameter name: The name of the header field to remove from the block.
-    public mutating func remove(name nameToRemove: String) {
-        if self.isConnectionHeader(nameToRemove) {
+    public mutating func remove(name: String) {
+        if self.isConnectionHeader(name) {
             self.keepAliveState = .unknown
         }
-        self.headers.removeAll { (name, _) in
-            if nameToRemove.utf8.count != name.utf8.count {
+        self.headers.removeAll { (headerName, _) in
+            if name.utf8.count != headerName.utf8.count {
                 return false
             }
 
-            return nameToRemove.utf8.compareCaseInsensitiveASCIIBytes(to: name.utf8)
+            return name.utf8.compareCaseInsensitiveASCIIBytes(to: headerName.utf8)
         }
     }
 
@@ -471,8 +471,8 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
 
     /// Checks if a header is present
     ///
-    /// - parameters:
-    ///     - name: The name of the header
+    /// - Parameters:
+    ///   - name: The name of the header
     //  - returns: `true` if a header with the name (and value) exists, `false` otherwise.
     public func contains(name: String) -> Bool {
         for kv in self.headers {

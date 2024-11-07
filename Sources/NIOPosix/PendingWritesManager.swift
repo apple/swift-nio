@@ -22,11 +22,11 @@ private struct PendingStreamWrite {
 
 /// Does the setup required to issue a writev.
 ///
-/// - parameters:
+/// - Parameters:
 ///    - pending: The currently pending writes.
 ///    - bufferPool: Pool of buffers to use for iovecs and storageRefs
 ///    - body: The function that actually does the vector write (usually `writev`).
-/// - returns: A tuple of the number of items attempted to write and the result of the write operation.
+/// - Returns: A tuple of the number of items attempted to write and the result of the write operation.
 private func doPendingWriteVectorOperation(
     pending: PendingStreamWritesState,
     bufferPool: Pool<PooledBuffer>,
@@ -134,7 +134,7 @@ private struct PendingStreamWritesState {
 
     /// Indicates that the first outstanding write was written in its entirety.
     ///
-    /// - returns: The `EventLoopPromise` of the write or `nil` if none was provided. The promise needs to be fulfilled by the caller.
+    /// - Returns: The `EventLoopPromise` of the write or `nil` if none was provided. The promise needs to be fulfilled by the caller.
     ///
     private mutating func fullyWrittenFirst() -> EventLoopPromise<Void>? {
         let first = self.pendingWrites.removeFirst()
@@ -144,8 +144,8 @@ private struct PendingStreamWritesState {
 
     /// Indicates that the first outstanding object has been partially written.
     ///
-    /// - parameters:
-    ///     - bytes: How many bytes of the item were written.
+    /// - Parameters:
+    ///   - bytes: How many bytes of the item were written.
     private mutating func partiallyWrittenFirst(bytes: Int) {
         self.pendingWrites[self.pendingWrites.startIndex].data.moveReaderIndex(forwardBy: bytes)
         self.subtractOutstanding(bytes: bytes)
@@ -193,9 +193,9 @@ private struct PendingStreamWritesState {
     ///
     /// - warning: The promises will be returned in order. If one of those promises does for example close the `Channel` we might see subsequent writes fail out of order. Example: Imagine the user issues three writes: `A`, `B` and `C`. Imagine that `A` and `B` both get successfully written in one write operation but the user closes the `Channel` in `A`'s callback. Then overall the promises will be fulfilled in this order: 1) `A`: success 2) `C`: error 3) `B`: success. Note how `B` and `C` get fulfilled out of order.
     ///
-    /// - parameters:
-    ///     - writeResult: The result of the write operation.
-    /// - returns: A tuple of a promise and a `OneWriteResult`. The promise is the first promise that needs to be notified of the write result.
+    /// - Parameters:
+    ///   - writeResult: The result of the write operation.
+    /// - Returns: A tuple of a promise and a `OneWriteResult`. The promise is the first promise that needs to be notified of the write result.
     ///            This promise will cascade the result to all other promises that need notifying. If no promises need to be notified, will be `nil`.
     ///            The write result will indicate whether we were able to write everything or not.
     public mutating func didWrite(
@@ -246,7 +246,7 @@ private struct PendingStreamWritesState {
     ///
     /// - warning: See the warning for `didWrite`.
     ///
-    /// - returns: promise that needs to be failed, or `nil` if there were no pending writes.
+    /// - Returns: promise that needs to be failed, or `nil` if there were no pending writes.
     public mutating func removeAll() -> EventLoopPromise<Void>? {
         var promise0: EventLoopPromise<Void>?
 
@@ -330,9 +330,9 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     /// Add a pending write alongside its promise.
     ///
-    /// - parameters:
-    ///     - data: The `IOData` to write.
-    ///     - promise: Optionally an `EventLoopPromise` that will get the write operation's result
+    /// - Parameters:
+    ///   - data: The `IOData` to write.
+    ///   - promise: Optionally an `EventLoopPromise` that will get the write operation's result
     /// - result: If the `Channel` is still writable after adding the write of `data`.
     func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
         assert(self.isOpen)
@@ -356,11 +356,11 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// Triggers the appropriate write operation. This is a fancy way of saying trigger either `write`, `writev` or
     /// `sendfile`.
     ///
-    /// - parameters:
-    ///     - scalarBufferWriteOperation: An operation that writes a single, contiguous array of bytes (usually `write`).
-    ///     - vectorBufferWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `writev`).
-    ///     - scalarFileWriteOperation: An operation that writes a region of a file descriptor (usually `sendfile`).
-    /// - returns: The `OneWriteOperationResult` and whether the `Channel` is now writable.
+    /// - Parameters:
+    ///   - scalarBufferWriteOperation: An operation that writes a single, contiguous array of bytes (usually `write`).
+    ///   - vectorBufferWriteOperation: An operation that writes multiple contiguous arrays of bytes (usually `writev`).
+    ///   - scalarFileWriteOperation: An operation that writes a region of a file descriptor (usually `sendfile`).
+    /// - Returns: The `OneWriteOperationResult` and whether the `Channel` is now writable.
     func triggerAppropriateWriteOperations(
         scalarBufferWriteOperation: (UnsafeRawBufferPointer) throws -> IOResult<Int>,
         vectorBufferWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
@@ -384,9 +384,9 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// To be called after a write operation (usually selected and run by `triggerAppropriateWriteOperation`) has
     /// completed.
     ///
-    /// - parameters:
-    ///     - itemCount: The number of items we tried to write.
-    ///     - result: The result of the write operation.
+    /// - Parameters:
+    ///   - itemCount: The number of items we tried to write.
+    ///   - result: The result of the write operation.
     private func didWrite(itemCount: Int, result: IOResult<Int>) -> OneWriteOperationResult {
         let (promise, result) = self.state.didWrite(itemCount: itemCount, result: result)
 
@@ -400,8 +400,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     /// Trigger a write of a single `ByteBuffer` (usually using `write(2)`).
     ///
-    /// - parameters:
-    ///     - operation: An operation that writes a single, contiguous array of bytes (usually `write`).
+    /// - Parameters:
+    ///   - operation: An operation that writes a single, contiguous array of bytes (usually `write`).
     private func triggerScalarBufferWrite(
         _ operation: (UnsafeRawBufferPointer) throws -> IOResult<Int>
     ) throws -> OneWriteOperationResult {
@@ -420,8 +420,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     /// Trigger a write of a single `FileRegion` (usually using `sendfile(2)`).
     ///
-    /// - parameters:
-    ///     - operation: An operation that writes a region of a file descriptor.
+    /// - Parameters:
+    ///   - operation: An operation that writes a region of a file descriptor.
     private func triggerScalarFileWrite(
         _ operation: (CInt, Int, Int) throws -> IOResult<Int>
     ) throws -> OneWriteOperationResult {
@@ -444,8 +444,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     /// Trigger a vector write operation. In other words: Write multiple contiguous arrays of bytes.
     ///
-    /// - parameters:
-    ///     - operation: The vector write operation to use. Usually `writev`.
+    /// - Parameters:
+    ///   - operation: The vector write operation to use. Usually `writev`.
     private func triggerVectorBufferWrite(
         _ operation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>
     ) throws -> OneWriteOperationResult {
@@ -478,8 +478,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// `EventLoop` always runs on one and the same thread. That means that there can't be any writes of more than
     /// one `Channel` on the same `EventLoop` at the same time.
     ///
-    /// - parameters:
-    ///     - bufferPool: Pool of buffers to be used for iovecs and storage references
+    /// - Parameters:
+    ///   - bufferPool: Pool of buffers to be used for iovecs and storage references
     init(bufferPool: Pool<PooledBuffer>) {
         self.bufferPool = bufferPool
     }

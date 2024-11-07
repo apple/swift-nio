@@ -25,18 +25,18 @@ import NIOCore
 public protocol Resolver {
     /// Initiate a DNS A query for a given host.
     ///
-    /// - parameters:
-    ///     - host: The hostname to do an A lookup on.
-    ///     - port: The port we'll be connecting to.
-    /// - returns: An `EventLoopFuture` that fires with the result of the lookup.
+    /// - Parameters:
+    ///   - host: The hostname to do an A lookup on.
+    ///   - port: The port we'll be connecting to.
+    /// - Returns: An `EventLoopFuture` that fires with the result of the lookup.
     func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]>
 
     /// Initiate a DNS AAAA query for a given host.
     ///
-    /// - parameters:
-    ///     - host: The hostname to do an AAAA lookup on.
-    ///     - port: The port we'll be connecting to.
-    /// - returns: An `EventLoopFuture` that fires with the result of the lookup.
+    /// - Parameters:
+    ///   - host: The hostname to do an AAAA lookup on.
+    ///   - port: The port we'll be connecting to.
+    /// - Returns: An `EventLoopFuture` that fires with the result of the lookup.
     func initiateAAAAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]>
 
     /// Cancel all outstanding DNS queries.

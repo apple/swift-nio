@@ -44,10 +44,9 @@ public struct VsockAddress: Hashable, Sendable {
 
     /// Creates a new vsock address.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///   - cid: the context ID.
     ///   - port: the target port.
-    /// - returns: the address for the given context ID and port combination.
     public init(cid: ContextID, port: Port) {
         self.cid = cid
         self.port = port

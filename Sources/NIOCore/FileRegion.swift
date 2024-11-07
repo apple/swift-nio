@@ -37,7 +37,7 @@ import WASILibc
 /// One important note, depending your `ChannelPipeline` setup it may not be possible to use a `FileRegion` as a `ChannelHandler` may
 /// need access to the bytes (in a `ByteBuffer`) to transform these.
 ///
-/// - note: It is important to manually manage the lifetime of the `NIOFileHandle` used to create a `FileRegion`.
+/// - Note: It is important to manually manage the lifetime of the `NIOFileHandle` used to create a `FileRegion`.
 /// - warning: `FileRegion` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
 public struct FileRegion {
 
@@ -64,10 +64,10 @@ public struct FileRegion {
 
     /// Create a new `FileRegion` from an open `NIOFileHandle`.
     ///
-    /// - parameters:
-    ///     - fileHandle: the `NIOFileHandle` to use.
-    ///     - readerIndex: the index (offset) on which the reading will start.
-    ///     - endIndex: the index which represent the end of the readable portion.
+    /// - Parameters:
+    ///   - fileHandle: the `NIOFileHandle` to use.
+    ///   - readerIndex: the index (offset) on which the reading will start.
+    ///   - endIndex: the index which represent the end of the readable portion.
     public init(fileHandle: NIOFileHandle, readerIndex: Int, endIndex: Int) {
         precondition(readerIndex <= endIndex, "readerIndex(\(readerIndex) must be <= endIndex(\(endIndex).")
 
@@ -95,8 +95,8 @@ extension FileRegion: Sendable {}
 extension FileRegion {
     /// Create a new `FileRegion` forming a complete file.
     ///
-    /// - parameters:
-    ///     - fileHandle: An open `NIOFileHandle` to the file.
+    /// - Parameters:
+    ///   - fileHandle: An open `NIOFileHandle` to the file.
     public init(fileHandle: NIOFileHandle) throws {
         let eof = try fileHandle.withUnsafeFileDescriptor { (fd: CInt) throws -> off_t in
             let eof = try SystemCalls.lseek(descriptor: fd, offset: 0, whence: SEEK_END)

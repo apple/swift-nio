@@ -29,13 +29,13 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Create a new instance.
     ///
-    /// - parameters:
-    ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
-    ///     - type: The type of the socket to create.
-    ///     - protocolSubtype: The subtype of the protocol, corresponding to the `protocolSubtype`
+    /// - Parameters:
+    ///   - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
+    ///   - type: The type of the socket to create.
+    ///   - protocolSubtype: The subtype of the protocol, corresponding to the `protocolSubtype`
     ///         argument to the socket syscall. Defaults to 0.
-    ///     - setNonBlocking: Set non-blocking mode on the socket.
-    /// - throws: An `IOError` if creation of the socket failed.
+    ///   - setNonBlocking: Set non-blocking mode on the socket.
+    /// - Throws: An `IOError` if creation of the socket failed.
     init(
         protocolFamily: NIOBSDSocket.ProtocolFamily,
         type: NIOBSDSocket.SocketType,
@@ -53,10 +53,10 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Create a new instance out of an already established socket.
     ///
-    /// - parameters:
-    ///     - descriptor: The existing socket descriptor.
-    ///     - setNonBlocking: Set non-blocking mode on the socket.
-    /// - throws: An `IOError` if could not change the socket into non-blocking
+    /// - Parameters:
+    ///   - descriptor: The existing socket descriptor.
+    ///   - setNonBlocking: Set non-blocking mode on the socket.
+    /// - Throws: An `IOError` if could not change the socket into non-blocking
     #if !os(Windows)
     @available(*, deprecated, renamed: "init(socket:setNonBlocking:)")
     convenience init(descriptor: CInt, setNonBlocking: Bool) throws {
@@ -66,10 +66,10 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Create a new instance out of an already established socket.
     ///
-    /// - parameters:
-    ///     - descriptor: The existing socket descriptor.
-    ///     - setNonBlocking: Set non-blocking mode on the socket.
-    /// - throws: An `IOError` if could not change the socket into non-blocking
+    /// - Parameters:
+    ///   - descriptor: The existing socket descriptor.
+    ///   - setNonBlocking: Set non-blocking mode on the socket.
+    /// - Throws: An `IOError` if could not change the socket into non-blocking
     init(socket: NIOBSDSocket.Handle, setNonBlocking: Bool) throws {
         try super.init(socket: socket)
         if setNonBlocking {
@@ -82,8 +82,8 @@ class Socket: BaseSocket, SocketProtocol {
     /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
     /// file descriptor once it's not needed / used anymore.
     ///
-    /// - parameters:
-    ///     - descriptor: The file descriptor to wrap.
+    /// - Parameters:
+    ///   - descriptor: The file descriptor to wrap.
     #if !os(Windows)
     @available(*, deprecated, renamed: "init(socket:)")
     convenience init(descriptor: CInt) throws {
@@ -96,18 +96,18 @@ class Socket: BaseSocket, SocketProtocol {
     /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
     /// file descriptor once it's not needed / used anymore.
     ///
-    /// - parameters:
-    ///     - descriptor: The file descriptor to wrap.
+    /// - Parameters:
+    ///   - descriptor: The file descriptor to wrap.
     override init(socket: NIOBSDSocket.Handle) throws {
         try super.init(socket: socket)
     }
 
     /// Connect to the `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - address: The `SocketAddress` to which the connection should be established.
-    /// - returns: `true` if the connection attempt completes, `false` if `finishConnect` must be called later to complete the connection attempt.
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - address: The `SocketAddress` to which the connection should be established.
+    /// - Returns: `true` if the connection attempt completes, `false` if `finishConnect` must be called later to complete the connection attempt.
+    /// - Throws: An `IOError` if the operation failed.
     func connect(to address: SocketAddress) throws -> Bool {
         try withUnsafeHandle { fd in
             try address.withSockAddr { (ptr, size) in
@@ -134,7 +134,7 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Finish a previous non-blocking `connect` operation.
     ///
-    /// - throws: An `IOError` if the operation failed.
+    /// - Throws: An `IOError` if the operation failed.
     func finishConnect() throws {
         let result: Int32 = try getOption(level: .socket, name: .so_error)
         if result != 0 {
@@ -144,10 +144,10 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Write data to the remote peer.
     ///
-    /// - parameters:
-    ///     - pointer: Pointer (and size) to data to write.
-    /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - pointer: Pointer (and size) to data to write.
+    /// - Returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
+    /// - Throws: An `IOError` if the operation failed.
     func write(pointer: UnsafeRawBufferPointer) throws -> IOResult<Int> {
         try withUnsafeHandle {
             try NIOBSDSocket.send(
@@ -160,10 +160,10 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Write data to the remote peer (gathering writes).
     ///
-    /// - parameters:
-    ///     - iovecs: The `IOVector`s to write.
-    /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - iovecs: The `IOVector`s to write.
+    /// - Returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written (because the socket is in non-blocking mode).
+    /// - Throws: An `IOError` if the operation failed.
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         try withUnsafeHandle {
             try Posix.writev(descriptor: $0, iovecs: iovecs)
@@ -172,14 +172,14 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Send data to a destination.
     ///
-    /// - parameters:
-    ///     - pointer: Pointer (and size) to the data to send.
-    ///     - destinationPtr: The destination to which the data should be sent.
-    ///     - destinationSize: The size of the destination address given.
-    ///     - controlBytes: Extra `cmsghdr` information.
-    /// - returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written
+    /// - Parameters:
+    ///   - pointer: Pointer (and size) to the data to send.
+    ///   - destinationPtr: The destination to which the data should be sent.
+    ///   - destinationSize: The size of the destination address given.
+    ///   - controlBytes: Extra `cmsghdr` information.
+    /// - Returns: The `IOResult` which indicates how much data could be written and if the operation returned before all could be written
     /// (because the socket is in non-blocking mode).
-    /// - throws: An `IOError` if the operation failed.
+    /// - Throws: An `IOError` if the operation failed.
     func sendmsg(
         pointer: UnsafeRawBufferPointer,
         destinationPtr: UnsafePointer<sockaddr>?,
@@ -232,10 +232,10 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Read data from the socket.
     ///
-    /// - parameters:
-    ///     - pointer: The pointer (and size) to the storage into which the data should be read.
-    /// - returns: The `IOResult` which indicates how much data could be read and if the operation returned before all could be read (because the socket is in non-blocking mode).
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - pointer: The pointer (and size) to the storage into which the data should be read.
+    /// - Returns: The `IOResult` which indicates how much data could be read and if the operation returned before all could be read (because the socket is in non-blocking mode).
+    /// - Throws: An `IOError` if the operation failed.
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
         try withUnsafeHandle {
             try Posix.read(descriptor: $0, pointer: pointer.baseAddress!, size: pointer.count)
@@ -244,14 +244,14 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Receive data from the socket, along with aditional control information.
     ///
-    /// - parameters:
-    ///     - pointer: The pointer (and size) to the storage into which the data should be read.
-    ///     - storage: The address from which the data was received
-    ///     - storageLen: The size of the storage itself.
-    ///     - controlBytes: A buffer in memory for use receiving control bytes. This parameter will be modified to hold any data actually received.
-    /// - returns: The `IOResult` which indicates how much data could be received and if the operation returned before all the data could be received
+    /// - Parameters:
+    ///   - pointer: The pointer (and size) to the storage into which the data should be read.
+    ///   - storage: The address from which the data was received
+    ///   - storageLen: The size of the storage itself.
+    ///   - controlBytes: A buffer in memory for use receiving control bytes. This parameter will be modified to hold any data actually received.
+    /// - Returns: The `IOResult` which indicates how much data could be received and if the operation returned before all the data could be received
     ///     (because the socket is in non-blocking mode)
-    /// - throws: An `IOError` if the operation failed.
+    /// - Throws: An `IOError` if the operation failed.
     func recvmsg(
         pointer: UnsafeMutableRawBufferPointer,
         storage: inout sockaddr_storage,
@@ -316,12 +316,12 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Send the content of a file descriptor to the remote peer (if possible a zero-copy strategy is applied).
     ///
-    /// - parameters:
-    ///     - fd: The file descriptor of the file to send.
-    ///     - offset: The offset in the file.
-    ///     - count: The number of bytes to send.
-    /// - returns: The `IOResult` which indicates how much data could be send and if the operation returned before all could be send (because the socket is in non-blocking mode).
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - fd: The file descriptor of the file to send.
+    ///   - offset: The offset in the file.
+    ///   - count: The number of bytes to send.
+    /// - Returns: The `IOResult` which indicates how much data could be send and if the operation returned before all could be send (because the socket is in non-blocking mode).
+    /// - Throws: An `IOError` if the operation failed.
     func sendFile(fd: CInt, offset: Int, count: Int) throws -> IOResult<Int> {
         try withUnsafeHandle {
             try NIOBSDSocket.sendfile(
@@ -335,10 +335,10 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Receive `MMsgHdr`s.
     ///
-    /// - parameters:
-    ///     - msgs: The pointer to the `MMsgHdr`s into which the received message will be stored.
-    /// - returns: The `IOResult` which indicates how many messages could be received and if the operation returned before all messages could be received (because the socket is in non-blocking mode).
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - msgs: The pointer to the `MMsgHdr`s into which the received message will be stored.
+    /// - Returns: The `IOResult` which indicates how many messages could be received and if the operation returned before all messages could be received (because the socket is in non-blocking mode).
+    /// - Throws: An `IOError` if the operation failed.
     func recvmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
         try withUnsafeHandle {
             try NIOBSDSocket.recvmmsg(
@@ -353,10 +353,10 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Send `MMsgHdr`s.
     ///
-    /// - parameters:
-    ///     - msgs: The pointer to the `MMsgHdr`s which will be send.
-    /// - returns: The `IOResult` which indicates how many messages could be send and if the operation returned before all messages could be send (because the socket is in non-blocking mode).
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - msgs: The pointer to the `MMsgHdr`s which will be send.
+    /// - Returns: The `IOResult` which indicates how many messages could be send and if the operation returned before all messages could be send (because the socket is in non-blocking mode).
+    /// - Throws: An `IOError` if the operation failed.
     func sendmmsg(msgs: UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int> {
         try withUnsafeHandle {
             try NIOBSDSocket.sendmmsg(
@@ -370,9 +370,9 @@ class Socket: BaseSocket, SocketProtocol {
 
     /// Shutdown the socket.
     ///
-    /// - parameters:
-    ///     - how: the mode of `Shutdown`.
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - how: the mode of `Shutdown`.
+    /// - Throws: An `IOError` if the operation failed.
     func shutdown(how: Shutdown) throws {
         try withUnsafeHandle {
             try NIOBSDSocket.shutdown(socket: $0, how: how)
