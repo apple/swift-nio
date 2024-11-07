@@ -29,10 +29,10 @@ struct UnsafeControlMessageStorage: Collection {
     private let deallocateBuffer: Bool
 
     /// Initialise which includes allocating memory
-    /// parameter:
-    /// - bytesPerMessage: How many bytes have been allocated for each supported message.
-    /// - buffer: The memory allocated to use for control messages.
-    /// - deallocateBuffer: buffer owning indicator
+    /// - Parameters:
+    ///   - bytesPerMessage: How many bytes have been allocated for each supported message.
+    ///   - buffer: The memory allocated to use for control messages.
+    ///   - deallocateBuffer: buffer owning indicator
     private init(bytesPerMessage: Int, buffer: UnsafeMutableRawBufferPointer, deallocateBuffer: Bool) {
         self.bytesPerMessage = bytesPerMessage
         self.buffer = buffer
@@ -43,7 +43,7 @@ struct UnsafeControlMessageStorage: Collection {
     static var bytesPerMessage: Int { NIOBSDSocketControlMessage.space(payloadSize: MemoryLayout<Int32>.stride) * 4 }
 
     /// Allocate new memory - Caller must call `deallocate` when no longer required.
-    /// parameter:
+    /// - Parameters:
     ///   - msghdrCount: How many `msghdr` structures will be fed from this buffer - we assume 4 Int32 cmsgs for each.
     static func allocate(msghdrCount: Int) -> UnsafeControlMessageStorage {
         let bytesPerMessage = Self.bytesPerMessage
@@ -55,9 +55,9 @@ struct UnsafeControlMessageStorage: Collection {
     }
 
     /// Create an instance not owning the buffer
-    /// parameter:
-    /// - bytesPerMessage: How many bytes have been allocated for each supported message.
-    /// - buffer: The memory allocated to use for control messages.
+    /// - Parameters:
+    ///   - bytesPerMessage: How many bytes have been allocated for each supported message.
+    ///   - buffer: The memory allocated to use for control messages.
     static func makeNotOwning(
         bytesPerMessage: Int,
         buffer: UnsafeMutableRawBufferPointer
@@ -350,8 +350,8 @@ struct UnsafeOutboundControlBytes {
 extension UnsafeOutboundControlBytes {
     /// Add a message describing the explicit congestion state if requested in metadata and valid for this protocol.
     ///  Parameters:
-    ///     - metadata:   Metadata from the addressed envelope which will describe any desired state.
-    ///     - protocolFamily:  The type of protocol to encode for.
+    ///   - metadata:   Metadata from the addressed envelope which will describe any desired state.
+    ///   - protocolFamily:  The type of protocol to encode for.
     internal mutating func appendExplicitCongestionState(
         metadata: AddressedEnvelope<ByteBuffer>.Metadata?,
         protocolFamily: NIOBSDSocket.ProtocolFamily?

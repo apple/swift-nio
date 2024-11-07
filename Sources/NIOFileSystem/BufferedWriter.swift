@@ -121,7 +121,7 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     ///
     /// To manually flush bytes use ``flush()``.
     ///
-    /// - Parameter bytes: The `AsyncSequence` of byte chunks to write to the buffer.
+    /// - Parameter chunks: The `AsyncSequence` of byte chunks to write to the buffer.
     /// - Returns: The number of bytes written into the buffered writer.
     @discardableResult
     public mutating func write<Chunks: AsyncSequence>(
@@ -157,7 +157,7 @@ public struct BufferedWriter<Handle: WritableFileHandleProtocol> {
     ///
     /// To manually flush bytes use ``flush()``.
     ///
-    /// - Parameter bytes: The `AsyncSequence` of `ByteBuffer`s to write.
+    /// - Parameter chunks: The `AsyncSequence` of `ByteBuffer`s to write.
     /// - Returns: The number of bytes written into the buffered writer.
     @discardableResult
     public mutating func write<Chunks: AsyncSequence>(

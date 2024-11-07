@@ -89,9 +89,9 @@ struct PooledBuffer: PoolElement {
     /// the bytes and you also must call `storageManagement.release()` if you no longer require those bytes. Calls to
     /// `retain` and `release` must be balanced.
     ///
-    /// - parameters:
-    ///     - body: The closure that will accept the yielded pointers and the `storageManagement`.
-    /// - returns: The value returned by `body`.
+    /// - Parameters:
+    ///   - body: The closure that will accept the yielded pointers and the `storageManagement`.
+    /// - Returns: The value returned by `body`.
     func withUnsafePointersWithStorageManagement<ReturnValue>(
         _ body: (
             UnsafeMutableBufferPointer<IOVector>, UnsafeMutableBufferPointer<Unmanaged<AnyObject>>, Unmanaged<AnyObject>

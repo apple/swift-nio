@@ -155,8 +155,8 @@ public protocol FileHandleProtocol {
     /// > The seconds component must also be positive: if it's not, zero will be used as the value instead.
     ///
     /// - Parameters:
-    ///   - lastAccessTime: The new value of the file's last access time, as time elapsed since the Epoch.
-    ///   - lastDataModificationTime: The new value of the file's last data modification time, as time elapsed since the Epoch.
+    ///   - lastAccess: The new value of the file's last access time, as time elapsed since the Epoch.
+    ///   - lastDataModification: The new value of the file's last data modification time, as time elapsed since the Epoch.
     ///
     /// - Throws: If there's an error updating the times. If this happens, the original values won't be modified.
     func setTimes(
@@ -212,7 +212,6 @@ extension ReadableFileHandleProtocol {
     /// - Parameters:
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
-    ///   - as: Type of chunk to read.
     /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
@@ -227,7 +226,6 @@ extension ReadableFileHandleProtocol {
     /// - Parameters:
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
-    ///   - as: Type of chunk to read.
     /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
@@ -242,7 +240,6 @@ extension ReadableFileHandleProtocol {
     /// - Parameters:
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
-    ///   - as: Type of chunk to read.
     /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
@@ -258,7 +255,6 @@ extension ReadableFileHandleProtocol {
     /// - Parameters:
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
-    ///   - as: Type of chunk to read.
     /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
@@ -274,7 +270,6 @@ extension ReadableFileHandleProtocol {
     /// - Parameters:
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
-    ///   - as: Type of chunk to read.
     /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
@@ -290,7 +285,6 @@ extension ReadableFileHandleProtocol {
     /// - Parameters:
     ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
-    ///   - as: Type of chunk to read.
     /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
@@ -303,9 +297,7 @@ extension ReadableFileHandleProtocol {
     /// Returns an asynchronous sequence of chunks read from the file.
     ///
     /// - Parameters:
-    ///   - range: A range of offsets in the file to read.
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
-    ///   - as: Type of chunk to read.
     /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
@@ -757,6 +749,7 @@ extension DirectoryFileHandleProtocol {
     ///
     /// - Parameters:
     ///   - path: The path of the directory to open.
+    ///   - options: How the directory should be opened.
     ///   - body: A closure which provides access to the directory.
     /// - Important: The handle passed to `execute` must not escape the closure.
     /// - Returns: The result of the `execute` closure.

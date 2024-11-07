@@ -30,8 +30,8 @@ public protocol NIOClientTCPBootstrapProtocol {
     ///            might be called multiple times and it's important not to share stateful `ChannelHandler`s in more
     ///            than one `Channel`.
     ///
-    /// - parameters:
-    ///     - handler: A closure that initializes the provided `Channel`.
+    /// - Parameters:
+    ///   - handler: A closure that initializes the provided `Channel`.
     @preconcurrency
     func channelInitializer(_ handler: @escaping @Sendable (Channel) -> EventLoopFuture<Void>) -> Self
 
@@ -46,42 +46,42 @@ public protocol NIOClientTCPBootstrapProtocol {
 
     /// Specifies a `ChannelOption` to be applied to the `SocketChannel`.
     ///
-    /// - parameters:
-    ///     - option: The option to be applied.
-    ///     - value: The value for the option.
+    /// - Parameters:
+    ///   - option: The option to be applied.
+    ///   - value: The value for the option.
     func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> Self
 
     /// Apply any understood convenience options to the bootstrap, removing them from the set of options if they are consumed.
     /// Method is optional to implement and should never be directly called by users.
-    /// - parameters:
-    ///     - options:  The options to try applying - the options applied should be consumed from here.
-    /// - returns: The updated bootstrap with and options applied.
+    /// - Parameters:
+    ///   - options:  The options to try applying - the options applied should be consumed from here.
+    /// - Returns: The updated bootstrap with and options applied.
     func _applyChannelConvenienceOptions(_ options: inout ChannelOptions.TCPConvenienceOptions) -> Self
 
-    /// - parameters:
-    ///     - timeout: The timeout that will apply to the connection attempt.
+    /// - Parameters:
+    ///   - timeout: The timeout that will apply to the connection attempt.
     func connectTimeout(_ timeout: TimeAmount) -> Self
 
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///
-    /// - parameters:
-    ///     - host: The host to connect to.
-    ///     - port: The port to connect to.
-    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
+    /// - Parameters:
+    ///   - host: The host to connect to.
+    ///   - port: The port to connect to.
+    /// - Returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     func connect(host: String, port: Int) -> EventLoopFuture<Channel>
 
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
     ///
-    /// - parameters:
-    ///     - address: The address to connect to.
-    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
+    /// - Parameters:
+    ///   - address: The address to connect to.
+    /// - Returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     func connect(to address: SocketAddress) -> EventLoopFuture<Channel>
 
     /// Specify the `unixDomainSocket` path to connect to for the UDS `Channel` that will be established.
     ///
-    /// - parameters:
-    ///     - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
-    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
+    /// - Parameters:
+    ///   - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
+    /// - Returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel>
 }
 
@@ -148,12 +148,12 @@ public struct NIOClientTCPBootstrap {
     /// Initialize a `NIOClientTCPBootstrap` using the underlying `Bootstrap` alongside a compatible `TLS`
     /// implementation.
     ///
-    /// - note: If you do not require `TLS`, you can use `NIOInsecureNoTLS` which supports only plain-text
+    /// - Note: If you do not require `TLS`, you can use `NIOInsecureNoTLS` which supports only plain-text
     ///         connections. We highly recommend to always use TLS.
     ///
-    /// - parameters:
-    ///     - bootstrap: The underlying bootstrap to use.
-    ///     - tls: The TLS implementation to use, needs to be compatible with `Bootstrap`.
+    /// - Parameters:
+    ///   - bootstrap: The underlying bootstrap to use.
+    ///   - tls: The TLS implementation to use, needs to be compatible with `Bootstrap`.
     public init<
         Bootstrap: NIOClientTCPBootstrapProtocol,
         TLS: NIOClientTLSProvider
@@ -192,8 +192,8 @@ public struct NIOClientTCPBootstrap {
     ///            might be called multiple times and it's important not to share stateful `ChannelHandler`s in more
     ///            than one `Channel`.
     ///
-    /// - parameters:
-    ///     - handler: A closure that initializes the provided `Channel`.
+    /// - Parameters:
+    ///   - handler: A closure that initializes the provided `Channel`.
     public func channelInitializer(
         _ handler: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
     ) -> NIOClientTCPBootstrap {
@@ -205,9 +205,9 @@ public struct NIOClientTCPBootstrap {
 
     /// Specifies a `ChannelOption` to be applied to the `SocketChannel`.
     ///
-    /// - parameters:
-    ///     - option: The option to be applied.
-    ///     - value: The value for the option.
+    /// - Parameters:
+    ///   - option: The option to be applied.
+    ///   - value: The value for the option.
     public func channelOption<Option: ChannelOption>(_ option: Option, value: Option.Value) -> NIOClientTCPBootstrap {
         NIOClientTCPBootstrap(
             self.underlyingBootstrap.channelOption(option, value: value),
@@ -215,8 +215,8 @@ public struct NIOClientTCPBootstrap {
         )
     }
 
-    /// - parameters:
-    ///     - timeout: The timeout that will apply to the connection attempt.
+    /// - Parameters:
+    ///   - timeout: The timeout that will apply to the connection attempt.
     public func connectTimeout(_ timeout: TimeAmount) -> NIOClientTCPBootstrap {
         NIOClientTCPBootstrap(
             self.underlyingBootstrap.connectTimeout(timeout),
@@ -226,28 +226,28 @@ public struct NIOClientTCPBootstrap {
 
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
     ///
-    /// - parameters:
-    ///     - host: The host to connect to.
-    ///     - port: The port to connect to.
-    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
+    /// - Parameters:
+    ///   - host: The host to connect to.
+    ///   - port: The port to connect to.
+    /// - Returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(host: String, port: Int) -> EventLoopFuture<Channel> {
         self.underlyingBootstrap.connect(host: host, port: port)
     }
 
     /// Specify the `address` to connect to for the TCP `Channel` that will be established.
     ///
-    /// - parameters:
-    ///     - address: The address to connect to.
-    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
+    /// - Parameters:
+    ///   - address: The address to connect to.
+    /// - Returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(to address: SocketAddress) -> EventLoopFuture<Channel> {
         self.underlyingBootstrap.connect(to: address)
     }
 
     /// Specify the `unixDomainSocket` path to connect to for the UDS `Channel` that will be established.
     ///
-    /// - parameters:
-    ///     - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
-    /// - returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
+    /// - Parameters:
+    ///   - unixDomainSocketPath: The _Unix domain socket_ path to connect to.
+    /// - Returns: An `EventLoopFuture<Channel>` to deliver the `Channel` when connected.
     public func connect(unixDomainSocketPath: String) -> EventLoopFuture<Channel> {
         self.underlyingBootstrap.connect(unixDomainSocketPath: unixDomainSocketPath)
     }

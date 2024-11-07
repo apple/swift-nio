@@ -29,9 +29,9 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     /// returned and the `ByteBuffer` contains more readable bytes, this method will immediately be invoked again, unless `decodeLast` needs
     /// to be invoked instead.
     ///
-    /// - parameters:
-    ///     - buffer: The `ByteBuffer` from which we decode.
-    /// - returns: A message if one can be decoded or `nil` if it should be called again once more data is present in the `ByteBuffer`.
+    /// - Parameters:
+    ///   - buffer: The `ByteBuffer` from which we decode.
+    /// - Returns: A message if one can be decoded or `nil` if it should be called again once more data is present in the `ByteBuffer`.
     mutating func decode(buffer: inout ByteBuffer) throws -> InboundOut?
 
     /// Decode from a `ByteBuffer` when no more data is incoming.
@@ -43,10 +43,10 @@ public protocol NIOSingleStepByteToMessageDecoder: ByteToMessageDecoder {
     /// Once `nil` is returned, neither `decode` nor `decodeLast` will be called again. If there are no bytes left, `decodeLast` will be called
     /// once with an empty buffer.
     ///
-    /// - parameters:
-    ///     - buffer: The `ByteBuffer` from which we decode.
-    ///     - seenEOF: `true` if EOF has been seen.
-    /// - returns: A message if one can be decoded or `nil` if no more messages can be produced.
+    /// - Parameters:
+    ///   - buffer: The `ByteBuffer` from which we decode.
+    ///   - seenEOF: `true` if EOF has been seen.
+    /// - Returns: A message if one can be decoded or `nil` if no more messages can be produced.
     mutating func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> InboundOut?
 }
 
@@ -203,9 +203,9 @@ public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByt
 
     /// Initialize a `NIOSingleStepByteToMessageProcessor`.
     ///
-    /// - parameters:
-    ///     - decoder: The `NIOSingleStepByteToMessageDecoder` to decode the bytes into message.
-    ///     - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
+    /// - Parameters:
+    ///   - decoder: The `NIOSingleStepByteToMessageDecoder` to decode the bytes into message.
+    ///   - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
     @inlinable
     public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.decoder = decoder
@@ -294,9 +294,9 @@ extension NIOSingleStepByteToMessageProcessor {
 
     /// Feed data into the `NIOSingleStepByteToMessageProcessor`
     ///
-    /// - parameters:
-    ///     - buffer: The `ByteBuffer` containing the next data in the stream
-    ///     - messageReceiver: A closure called for each message produced by the `Decoder`
+    /// - Parameters:
+    ///   - buffer: The `ByteBuffer` containing the next data in the stream
+    ///   - messageReceiver: A closure called for each message produced by the `Decoder`
     @inlinable
     public func process(buffer: ByteBuffer, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
         self._append(buffer)
@@ -306,9 +306,9 @@ extension NIOSingleStepByteToMessageProcessor {
     /// Call when there is no data left in the stream. Calls `Decoder`.`decodeLast` one or more times. If there is no data left
     /// `decodeLast` will be called one time with an empty `ByteBuffer`.
     ///
-    /// - parameters:
-    ///     - seenEOF: Whether an EOF was seen on the stream.
-    ///     - messageReceiver: A closure called for each message produced by the `Decoder`.
+    /// - Parameters:
+    ///   - seenEOF: Whether an EOF was seen on the stream.
+    ///   - messageReceiver: A closure called for each message produced by the `Decoder`.
     @inlinable
     public func finishProcessing(seenEOF: Bool, _ messageReceiver: (Decoder.InboundOut) throws -> Void) throws {
         try self._decodeLoop(decodeMode: .last, seenEOF: seenEOF, messageReceiver)

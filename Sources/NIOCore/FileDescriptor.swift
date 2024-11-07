@@ -20,9 +20,9 @@ public protocol FileDescriptor {
     /// The ownership of the file descriptor must not escape the `body` as it's completely managed by the
     /// implementation of the `FileDescriptor` protocol.
     ///
-    /// - parameters:
-    ///     - body: The closure to execute if the `FileDescriptor` is still open.
-    /// - throws: If either the `FileDescriptor` was closed before or the closure throws by itself.
+    /// - Parameters:
+    ///   - body: The closure to execute if the `FileDescriptor` is still open.
+    /// - Throws: If either the `FileDescriptor` was closed before or the closure throws by itself.
     func withUnsafeFileDescriptor<T>(_ body: (CInt) throws -> T) throws -> T
 
     /// `true` if this `FileDescriptor` is open (which means it was not closed yet).

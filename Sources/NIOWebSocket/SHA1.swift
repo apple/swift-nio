@@ -42,8 +42,8 @@ internal struct SHA1 {
 
     /// Feed the given string into the hash context as a sequence of UTF-8 bytes.
     ///
-    /// - parameters:
-    ///     - string: The string that will be UTF-8 encoded and fed into the
+    /// - Parameters:
+    ///   - string: The string that will be UTF-8 encoded and fed into the
     ///         hash context.
     mutating func update(string: String) {
         let isAvailable: ()? = string.utf8.withContiguousStorageIfAvailable {
@@ -60,15 +60,15 @@ internal struct SHA1 {
 
     /// Feed the bytes into the hash context.
     ///
-    /// - parameters:
-    ///     - bytes: The bytes to feed into the hash context.
+    /// - Parameters:
+    ///   - bytes: The bytes to feed into the hash context.
     mutating func update(_ bytes: UnsafeBufferPointer<UInt8>) {
         c_nio_sha1_loop(&self.sha1Ctx, bytes.baseAddress!, bytes.count)
     }
 
     /// Complete the hashing.
     ///
-    /// - returns: A 20-byte array of bytes.
+    /// - Returns: A 20-byte array of bytes.
     mutating func finish() -> [UInt8] {
         var hashResult: [UInt8] = Array(repeating: 0, count: 20)
         hashResult.withUnsafeMutableBufferPointer {

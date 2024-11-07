@@ -161,7 +161,7 @@ extension NIOBSDSocket.ProtocolSubtype {
 
     /// The protocol subtype for MPTCP.
     ///
-    /// - returns: nil if MPTCP is not supported.
+    /// - Returns: nil if MPTCP is not supported.
     public static var mptcp: Self? {
         #if os(Linux)
         // Defined by the linux kernel, this is IPPROTO_MPTCP.

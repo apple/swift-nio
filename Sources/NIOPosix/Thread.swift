@@ -52,7 +52,7 @@ final class NIOThread {
     /// Create a new instance
     ///
     /// - arguments:
-    ///     - handle: The `ThreadOpsSystem.ThreadHandle` that is wrapped and used by the `NIOThread`.
+    ///   - handle: The `ThreadOpsSystem.ThreadHandle` that is wrapped and used by the `NIOThread`.
     internal init(handle: ThreadOpsSystem.ThreadHandle, desiredName: String?) {
         self.handle = handle
         self.desiredName = desiredName
@@ -62,9 +62,9 @@ final class NIOThread {
     ///
     /// - warning: Do not escape `pthread_t` from the closure for later use.
     ///
-    /// - parameters:
-    ///     - body: The closure that will accept the `pthread_t`.
-    /// - returns: The value returned by `body`.
+    /// - Parameters:
+    ///   - body: The closure that will accept the `pthread_t`.
+    /// - Returns: The value returned by `body`.
     internal func withUnsafeThreadHandle<T>(_ body: (ThreadOpsSystem.ThreadHandle) throws -> T) rethrows -> T {
         try body(self.handle)
     }
@@ -81,9 +81,9 @@ final class NIOThread {
     /// Spawns and runs some task in a `NIOThread`.
     ///
     /// - arguments:
-    ///     - name: The name of the `NIOThread` or `nil` if no specific name should be set.
-    ///     - body: The function to execute within the spawned `NIOThread`.
-    ///     - detach: Whether to detach the thread. If the thread is not detached it must be `join`ed.
+    ///   - name: The name of the `NIOThread` or `nil` if no specific name should be set.
+    ///   - body: The function to execute within the spawned `NIOThread`.
+    ///   - detach: Whether to detach the thread. If the thread is not detached it must be `join`ed.
     static func spawnAndRun(
         name: String? = nil,
         detachThread: Bool = true,
@@ -187,7 +187,7 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
     /// Initialize a new `ThreadSpecificVariable` with `value` for the calling thread. After calling this, the calling
     /// thread will see `currentValue == value` but on all other threads `currentValue` will be `nil` until changed.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///   - value: The value to set for the calling thread.
     public convenience init(value: Value) {
         self.init()

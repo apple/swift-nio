@@ -22,7 +22,7 @@ import NIOCore
 /// Adding `EventCounterHandler` to any point of your `ChannelPipeline` should not change the program's behaviour.
 /// `EventCounterHandler` is mostly useful in unit tests to validate other `ChannelHandler`'s behaviour.
 ///
-/// - note: Contrary to most `ChannelHandler`s, all of `EventCounterHandler`'s API is thread-safe meaning that you can
+/// - Note: Contrary to most `ChannelHandler`s, all of `EventCounterHandler`'s API is thread-safe meaning that you can
 ///         query the events received from any thread.
 public final class EventCounterHandler: Sendable {
     private let _channelRegisteredCalls = ManagedAtomic<Int>(0)
@@ -149,7 +149,7 @@ extension EventCounterHandler {
     /// `register` event and you call `checkValidity`, it will throw `EventCounterHandler.ValidityError` with an
     /// appropriate explanation.
     ///
-    /// - note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
+    /// - Note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
     ///         call it whilst the `Channel` this `ChannelHandler` is in is still in use.
     public func checkValidity() throws {
         guard self.channelRegisteredCalls <= 1 else {
@@ -179,7 +179,7 @@ extension EventCounterHandler {
     ///
     /// This is most useful in unit tests where you want to make sure only certain events have been triggered.
     ///
-    /// - note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
+    /// - Note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
     ///         call it whilst the `Channel` this `ChannelHandler` is in is still in use.
     public func allTriggeredEvents() -> Set<String> {
         var allEvents: Set<String> = []

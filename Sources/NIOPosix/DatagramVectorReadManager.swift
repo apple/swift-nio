@@ -90,10 +90,10 @@ struct DatagramVectorReadManager {
     ///     obtain a pointer to the entire buffer storage. This is because they assume they own the entire
     ///     buffer.
     ///
-    /// - parameters:
-    ///     - socket: The underlying socket from which to read.
-    ///     - buffer: The single large buffer into which reads will be written.
-    ///     - parseControlMessages: Should control messages be reported up using metadata.
+    /// - Parameters:
+    ///   - socket: The underlying socket from which to read.
+    ///   - buffer: The single large buffer into which reads will be written.
+    ///   - parseControlMessages: Should control messages be reported up using metadata.
     func readFromSocket(
         socket: Socket,
         buffer: inout ByteBuffer,
@@ -216,8 +216,8 @@ struct DatagramVectorReadManager {
 extension DatagramVectorReadManager {
     /// Allocates and initializes a new DatagramVectorReadManager.
     ///
-    /// - parameters:
-    ///     - messageCount: The number of vector reads to support initially.
+    /// - Parameters:
+    ///   - messageCount: The number of vector reads to support initially.
     static func allocate(messageCount: Int) -> DatagramVectorReadManager {
         let messageVector = UnsafeMutableBufferPointer.allocateAndInitialize(
             repeating: MMsgHdr(msg_hdr: msghdr(), msg_len: 0),

@@ -189,6 +189,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// - Parameters:
     ///   - path: The path of the directory to open.
+    ///   - options: How the directory should be opened.
     /// - Returns: A handle to the opened directory.
     public func openDirectory(
         atPath path: FilePath,
@@ -387,6 +388,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// - Parameters:
     ///   - path: The path to delete.
+    ///   - removeItemRecursively: Whether or not to remove items recursively.
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
     public func removeItem(
@@ -546,7 +548,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// Uses the `link(2)` system call.
     ///
     /// - Parameters:
-    ///   - path: The path at which to create the symbolic link.
+    ///   - linkPath: The path at which to create the symbolic link.
     ///   - destinationPath: The path that contains the item that the symbolic link points to.`
     public func createSymbolicLink(
         at linkPath: FilePath,
@@ -647,7 +649,7 @@ extension NIOSingletons {
     /// The thread count is the system's available core count unless the environment variable
     /// `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` is set or this value was set manually by the user.
     ///
-    /// - note: This value must be set _before_ any singletons are used and must only be set once.
+    /// - Note: This value must be set _before_ any singletons are used and must only be set once.
     @available(*, deprecated, renamed: "blockingPoolThreadCountSuggestion")
     public static var fileSystemThreadCountSuggestion: Int {
         set { Self.blockingPoolThreadCountSuggestion = newValue }

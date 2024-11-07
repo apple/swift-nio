@@ -201,9 +201,9 @@ extension Selector: _SelectorBackendProtocol {
 
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///
-    /// - parameters:
-    ///     - strategy: The `SelectorStrategy` to apply
-    ///     - body: The function to execute for each `SelectorEvent` that was produced.
+    /// - Parameters:
+    ///   - strategy: The `SelectorStrategy` to apply
+    ///   - body: The function to execute for each `SelectorEvent` that was produced.
     func whenReady0(
         strategy: SelectorStrategy,
         onLoopBegin loopStart: () -> Void,

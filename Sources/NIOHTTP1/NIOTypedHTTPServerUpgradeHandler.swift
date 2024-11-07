@@ -106,12 +106,12 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     ///
     /// - Parameters:
     ///   - httpEncoder: The ``HTTPResponseEncoder`` encoding responses from this handler and which will
-    ///     be removed from the pipeline once the upgrade response is sent. This is used to ensure
-    ///     that the pipeline will be in a clean state after upgrade.
-    ///  - extraHTTPHandlers: Any other handlers that are directly related to handling HTTP. At the very least
-    ///     this should include the `HTTPDecoder`, but should also include any other handler that cannot tolerate
-    ///     receiving non-HTTP data.
-    ///  - upgradeConfiguration: The upgrade configuration.
+    ///   be removed from the pipeline once the upgrade response is sent. This is used to ensure
+    ///   that the pipeline will be in a clean state after upgrade.
+    ///   - extraHTTPHandlers: Any other handlers that are directly related to handling HTTP. At the very least
+    ///   this should include the `HTTPDecoder`, but should also include any other handler that cannot tolerate
+    ///   receiving non-HTTP data.
+    ///   - upgradeConfiguration: The upgrade configuration.
     public init(
         httpEncoder: HTTPResponseEncoder,
         extraHTTPHandlers: [RemovableChannelHandler],

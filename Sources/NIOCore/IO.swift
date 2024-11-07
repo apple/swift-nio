@@ -98,32 +98,32 @@ public struct IOError: Swift.Error {
 
     /// Creates a new `IOError``
     ///
-    /// - parameters:
-    ///     - errorCode: the `errno` that was set for the operation.
-    ///     - reason: the actual reason (in an human-readable form).
-    public init(errnoCode code: CInt, reason: String) {
-        self.error = .errno(code)
+    /// - Parameters:
+    ///   - errnoCode: the `errno` that was set for the operation.
+    ///   - reason: the actual reason (in an human-readable form).
+    public init(errnoCode: CInt, reason: String) {
+        self.error = .errno(errnoCode)
         self.failureDescription = reason
     }
 
     /// Creates a new `IOError``
     ///
-    /// - parameters:
-    ///     - errorCode: the `errno` that was set for the operation.
-    ///     - function: The function the error happened in, the human readable description will be generated automatically when needed.
+    /// - Parameters:
+    ///   - errnoCode: the `errno` that was set for the operation.
+    ///   - function: The function the error happened in, the human readable description will be generated automatically when needed.
     @available(*, deprecated, renamed: "init(errnoCode:reason:)")
-    public init(errnoCode code: CInt, function: StaticString) {
-        self.error = .errno(code)
+    public init(errnoCode: CInt, function: StaticString) {
+        self.error = .errno(errnoCode)
         self.failureDescription = "\(function)"
     }
 }
 
 /// Returns a reason to use when constructing a `IOError`.
 ///
-/// - parameters:
-///     - errorCode: the `errno` that was set for the operation.
-///     - reason: what failed
-/// - returns: the constructed reason.
+/// - Parameters:
+///   - errnoCode: the `errno` that was set for the operation.
+///   - reason: what failed
+/// - Returns: the constructed reason.
 private func reasonForError(errnoCode: CInt, reason: String) -> String {
     if let errorDescC = strerror(errnoCode) {
         return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"

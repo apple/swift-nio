@@ -76,7 +76,7 @@ struct SelectorEventSet: OptionSet, Equatable {
 
     /// EOF at the write/output end of a `Selectable`.
     ///
-    /// - note: This is rarely used because in many cases, there is no signal that this happened.
+    /// - Note: This is rarely used because in many cases, there is no signal that this happened.
     static let writeEOF = SelectorEventSet(rawValue: 1 << 4)
 
     init(rawValue: SelectorEventSet.RawValue) {
@@ -124,9 +124,9 @@ protocol _SelectorBackendProtocol {
     func wakeup0() throws
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///
-    /// - parameters:
-    ///     - strategy: The `SelectorStrategy` to apply
-    ///     - body: The function to execute for each `SelectorEvent` that was produced.
+    /// - Parameters:
+    ///   - strategy: The `SelectorStrategy` to apply
+    ///   - body: The function to execute for each `SelectorEvent` that was produced.
     func whenReady0(
         strategy: SelectorStrategy,
         onLoopBegin: () -> Void,
@@ -227,10 +227,10 @@ internal class Selector<R: Registration> {
 
     /// Register `Selectable` on the `Selector`.
     ///
-    /// - parameters:
-    ///     - selectable: The `Selectable` to register.
-    ///     - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
-    ///     - makeRegistration: Creates the registration data for the given `SelectorEventSet`.
+    /// - Parameters:
+    ///   - selectable: The `Selectable` to register.
+    ///   - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
+    ///   - makeRegistration: Creates the registration data for the given `SelectorEventSet`.
     func register<S: Selectable>(
         selectable: S,
         interested: SelectorEventSet,
@@ -257,9 +257,9 @@ internal class Selector<R: Registration> {
 
     /// Re-register `Selectable`, must be registered via `register` before.
     ///
-    /// - parameters:
-    ///     - selectable: The `Selectable` to re-register.
-    ///     - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
+    /// - Parameters:
+    ///   - selectable: The `Selectable` to re-register.
+    ///   - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
     func reregister<S: Selectable>(selectable: S, interested: SelectorEventSet) throws {
         assert(self.myThread == NIOThread.current)
         guard self.lifecycleState == .open else {
@@ -284,8 +284,8 @@ internal class Selector<R: Registration> {
     ///
     /// After the `Selectable is deregistered no `SelectorEventSet` will be produced anymore for the `Selectable`.
     ///
-    /// - parameters:
-    ///     - selectable: The `Selectable` to deregister.
+    /// - Parameters:
+    ///   - selectable: The `Selectable` to deregister.
     func deregister<S: Selectable>(selectable: S) throws {
         assert(self.myThread == NIOThread.current)
         guard self.lifecycleState == .open else {
@@ -307,10 +307,10 @@ internal class Selector<R: Registration> {
 
     /// Apply the given `SelectorStrategy` and execute `body` once it's complete (which may produce `SelectorEvent`s to handle).
     ///
-    /// - parameters:
-    ///     - strategy: The `SelectorStrategy` to apply
-    ///     - onLoopBegin: A function executed after the selector returns, just before the main loop begins..
-    ///     - body: The function to execute for each `SelectorEvent` that was produced.
+    /// - Parameters:
+    ///   - strategy: The `SelectorStrategy` to apply
+    ///   - onLoopBegin: A function executed after the selector returns, just before the main loop begins..
+    ///   - body: The function to execute for each `SelectorEvent` that was produced.
     func whenReady(
         strategy: SelectorStrategy,
         onLoopBegin loopStart: () -> Void,
@@ -361,9 +361,9 @@ struct SelectorEvent<R> {
 
     /// Create new instance
     ///
-    /// - parameters:
-    ///     - io: The `SelectorEventSet` that triggered this event.
-    ///     - registration: The registration that belongs to the event.
+    /// - Parameters:
+    ///   - io: The `SelectorEventSet` that triggered this event.
+    ///   - registration: The registration that belongs to the event.
     init(io: SelectorEventSet, registration: R) {
         self.io = io
         self.registration = registration
