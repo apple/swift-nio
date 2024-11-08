@@ -148,7 +148,7 @@ public final class NIOThreadPool {
                 return (unlockWith: .hasWork, result: threads)
 
             case .shuttingDown, .stopped:
-                return (unlockWith: .hasWork, result: [])
+                return (unlockWith: nil, result: [])
 
             case .modifying:
                 fatalError(".modifying state misuse")
