@@ -86,6 +86,13 @@ public final class NIOThreadPool {
         case hasNoWork
     }
 
+    // The condition lock is used in place of a lock and a semaphore to avoid warnings from the
+    // thread performance checker.
+    //
+    // Only the worker threads wait for the condition lock to take a value, no other threads need
+    // to wait for a given value. The value indicates whether the thread has some work to do. Work
+    // in this case can be either processing a work item or exiting the threads processing
+    // loop (i.e. shutting down).
     private let conditionLock: ConditionLock<WorkState>
     private var threads: [NIOThread]? = nil  // protected by `conditionLock`
     private var state: State = .stopped
@@ -190,7 +197,7 @@ public final class NIOThreadPool {
                 submitted = true
 
             case .shuttingDown, .stopped:
-                workState = .hasWork
+                workState = .hasNoWork
                 submitted = false
 
             case .modifying:
