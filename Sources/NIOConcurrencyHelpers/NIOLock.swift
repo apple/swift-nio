@@ -185,8 +185,6 @@ final class LockStorage<Value>: ManagedBuffer<Value, LockPrimitive> {
     }
 }
 
-extension LockStorage: @unchecked Sendable {}
-
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///
 /// - Note: ``NIOLock`` has reference semantics.
@@ -253,7 +251,7 @@ extension NIOLock {
     }
 }
 
-extension NIOLock: Sendable {}
+extension NIOLock: @unchecked Sendable {}
 
 extension UnsafeMutablePointer {
     @inlinable
