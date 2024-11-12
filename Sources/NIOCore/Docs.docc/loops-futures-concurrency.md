@@ -189,7 +189,7 @@ you can use ``NIOLoopBound`` and ``NIOLoopBoundBox`` to make these callbacks saf
     before using these types.
 
 From NIO 2.77.0, a new type was introduced to make this common problem easier. This type is
-``EventLoop/Isolated``. This isolated view type can only be constructed from an existing
+``NIOIsolatedEventLoop``. This isolated view type can only be constructed from an existing
 ``EventLoop``, and it can only be constructed on the ``EventLoop`` that is being wrapped.
 Because this type is not `Sendable`, we can be confident that this value never escapes the
 isolation domain in which it was created, which must be the same isolation domain where the

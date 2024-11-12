@@ -16,7 +16,7 @@
 /// are coming from the event loop.
 ///
 /// This type is explicitly not `Sendable`. It may only be constructed on an event loop,
-/// using ``EventLoop/assumeIsolated``, and may not subsequently be passed to other isolation
+/// using ``EventLoop/assumeIsolated()``, and may not subsequently be passed to other isolation
 /// domains.
 ///
 /// Using this type relaxes the need to have the closures for ``EventLoop/execute(_:)``,
@@ -75,6 +75,7 @@ public struct NIOIsolatedEventLoop {
     /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
     ///
     /// - Parameters:
+    ///   - delay: The time to wait before running the task.
     ///   - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
     /// - Returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the completion of the task.
@@ -99,6 +100,9 @@ public struct NIOIsolatedEventLoop {
     /// this event loop might differ.
     ///
     /// - Parameters:
+    ///   - deadline: The time at which we should run the asynchronous task.
+    ///   - file: The file in which the task is scheduled.
+    ///   - line: The line of the `file` in which the task is scheduled.
     ///   - task: The asynchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
     /// - Returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the full execution of the task, including its returned `EventLoopFuture`.
@@ -153,7 +157,7 @@ extension EventLoopFuture {
     /// are coming from the event loop of the future.
     ///
     /// This type is explicitly not `Sendable`. It may only be constructed on an event loop,
-    /// using ``EventLoopFuture/assumeIsolated``, and may not subsequently be passed to other isolation
+    /// using ``EventLoopFuture/assumeIsolated()``, and may not subsequently be passed to other isolation
     /// domains.
     ///
     /// Using this type relaxes the need to have the closures for the various ``EventLoopFuture``
@@ -436,7 +440,7 @@ extension EventLoopFuture {
         /// ```
         ///
         /// - Parameters:
-        ///   - orReplace: the value of the returned `EventLoopFuture` when then resolved future's value is `Optional.some()`.
+        ///   - replacement: the value of the returned `EventLoopFuture` when then resolved future's value is `Optional.some()`.
         /// - Returns: an new `EventLoopFuture` with new type parameter `NewValue` and the value passed in the `orReplace` parameter.
         @inlinable
         public func unwrap<NewValue>(
@@ -460,7 +464,7 @@ extension EventLoopFuture {
         /// ```
         ///
         /// - Parameters:
-        ///   - orElse: a closure that returns the value of the returned `EventLoopFuture` when then resolved future's value
+        ///   - callback: a closure that returns the value of the returned `EventLoopFuture` when then resolved future's value
         ///         is `Optional.some()`.
         /// - Returns: an new `EventLoopFuture` with new type parameter `NewValue` and with the value returned by the closure
         ///     passed in the `orElse` parameter.
@@ -516,10 +520,10 @@ extension EventLoopPromise {
     /// are coming from the event loop of the promise.
     ///
     /// This type is explicitly not `Sendable`. It may only be constructed on an event loop,
-    /// using ``EventLoopPromise/assumeIsolated``, and may not subsequently be passed to other isolation
+    /// using ``EventLoopPromise/assumeIsolated()``, and may not subsequently be passed to other isolation
     /// domains.
     ///
-    /// Using this type relaxes the need to have the promise completion functions accept ``Sendable``
+    /// Using this type relaxes the need to have the promise completion functions accept `Sendable`
     /// values, as this type can only be handled on the ``EventLoop``.
     ///
     /// This type does not offer the full suite of completion functions that ``EventLoopPromise``
