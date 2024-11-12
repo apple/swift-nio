@@ -33,7 +33,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
             let value = SuperNotSendable()
             promise.assumeIsolated().succeed(value)
             return promise.futureResult.assumeIsolated().map { val in
-                XCTAssertTrue(val === value)
+                XCTAssertIdentical(val, value)
             }.nonisolated()
         }.wait()
     }
@@ -47,7 +47,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
             let value = SuperNotSendable()
             promise.assumeIsolated().completeWith(.success(value))
             return promise.futureResult.assumeIsolated().map { val in
-                XCTAssertTrue(val === value)
+                XCTAssertIdentical(val, value)
             }.nonisolated()
         }.wait()
     }
@@ -61,7 +61,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
             let value = SuperNotSendable()
             promise.assumeIsolatedUnsafeUnchecked().succeed(value)
             return promise.futureResult.assumeIsolatedUnsafeUnchecked().map { val in
-                XCTAssertTrue(val === value)
+                XCTAssertIdentical(val, value)
             }.nonisolated()
         }.wait()
     }
@@ -75,7 +75,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
             let value = SuperNotSendable()
             promise.assumeIsolatedUnsafeUnchecked().completeWith(.success(value))
             return promise.futureResult.assumeIsolatedUnsafeUnchecked().map { val in
-                XCTAssertTrue(val === value)
+                XCTAssertIdentical(val, value)
             }.nonisolated()
         }.wait()
     }
@@ -127,7 +127,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
 
             // This block is the main happy path.
             let newFuture = future.flatMap { result in
-                XCTAssertTrue(originalValue === result)
+                XCTAssertIdentical(originalValue, result)
                 let promise = loop.makePromise(of: Int.self)
                 promise.succeed(4)
                 return promise.futureResult
@@ -135,10 +135,10 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                 XCTAssertEqual(result, 4)
                 return originalValue
             }.flatMapThrowing { (result: SuperNotSendable) in
-                XCTAssertTrue(originalValue === result)
+                XCTAssertIdentical(originalValue, result)
                 return SuperNotSendable()
             }.flatMapResult { (result: SuperNotSendable) -> Result<SuperNotSendable, any Error> in
-                XCTAssertFalse(originalValue === result)
+                XCTAssertNotIdentical(originalValue, result)
                 return .failure(TestError.error)
             }.recover { err in
                 XCTAssertTrue(err is TestError)
@@ -152,10 +152,10 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                     XCTFail("Unexpected error")
                     return
                 }
-                XCTAssertTrue(r === originalValue)
+                XCTAssertIdentical(r, originalValue)
             }
             newFuture.whenSuccess { result in
-                XCTAssertTrue(result === originalValue)
+                XCTAssertIdentical(result, originalValue)
             }
 
             // This block covers the flatMapError and whenFailure tests
@@ -182,7 +182,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                     XCTFail("Unexpected error")
                     return
                 }
-                XCTAssertTrue(r === originalValue)
+                XCTAssertIdentical(r, originalValue)
             }
             throwingFuture.map { _ in 5 }.flatMapError { (error: any Error) -> EventLoopFuture<Int> in
                 guard let error = error as? TestError, error == .error else {
@@ -205,14 +205,14 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
             }.unwrap(orReplace: originalValue).unwrap(
                 orReplace: SuperNotSendable()
             ).map { x -> SuperNotSendable? in
-                XCTAssertTrue(x === originalValue)
+                XCTAssertIdentical(x, originalValue)
                 return nil
             }.unwrap(orElse: {
                 originalValue
             }).unwrap(orElse: {
                 SuperNotSendable()
             }).whenSuccess { x in
-                XCTAssertTrue(x === originalValue)
+                XCTAssertIdentical(x, originalValue)
             }
 
             promise.assumeIsolated().succeed(originalValue)
@@ -230,7 +230,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
             // Again, all of these need to close over value. In addition,
             // many need to return it as well.
             let isolated = loop.assumeIsolated()
-            XCTAssertTrue(isolated.nonisolated() === loop)
+            XCTAssertIdentical(isolated.nonisolated(), loop)
             isolated.execute {
                 XCTAssertEqual(value.x, 5)
             }
@@ -278,7 +278,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
             // Again, all of these need to close over value. In addition,
             // many need to return it as well.
             let isolated = loop.assumeIsolatedUnsafeUnchecked()
-            XCTAssertTrue(isolated.nonisolated() === loop)
+            XCTAssertIdentical(isolated.nonisolated(), loop)
             isolated.execute {
                 XCTAssertEqual(value.x, 5)
             }
