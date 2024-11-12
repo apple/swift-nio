@@ -416,16 +416,16 @@ extension WebSocketFrame {
             self.rawValue = rawValue
         }
 
-        public static var rsv1: Self { .init(rawValue: 0x40)}
-        public static var rsv2: Self { .init(rawValue: 0x20)}
-        public static var rsv3: Self { .init(rawValue: 0x10)}
-        public static var all: Self { .init(rawValue: 0x70)}
+        public static var rsv1: Self { .init(rawValue: 0x40) }
+        public static var rsv2: Self { .init(rawValue: 0x20) }
+        public static var rsv3: Self { .init(rawValue: 0x10) }
+        public static var all: Self { .init(rawValue: 0x70) }
     }
 
     /// The value of all the reserved bits. Must be `empty` unless using an extension that defines their use.
     public var reservedBits: ReservedBits {
         get {
-            return .init(rawValue: self.firstByte & 0x70)
+            .init(rawValue: self.firstByte & 0x70)
         }
         set {
             self.firstByte = (self.firstByte & 0x8F) + newValue.rawValue
