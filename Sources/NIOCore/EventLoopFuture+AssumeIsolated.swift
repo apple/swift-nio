@@ -21,7 +21,7 @@
 ///
 /// Using this type relaxes the need to have the closures for ``EventLoop/execute(_:)``,
 /// ``EventLoop/submit(_:)``, and ``EventLoop/scheduleTask(in:_:)`` to be `@Sendable`.
-public struct IsolatedEventLoop {
+public struct NIOIsolatedEventLoop {
     @usableFromInline
     let _wrapped: EventLoop
 
@@ -128,9 +128,9 @@ public struct IsolatedEventLoop {
 extension EventLoop {
     /// Assumes the calling context is isolated to the event loop.
     @inlinable
-    public func assumeIsolated() -> IsolatedEventLoop {
+    public func assumeIsolated() -> NIOIsolatedEventLoop {
         self.preconditionInEventLoop()
-        return IsolatedEventLoop(self)
+        return NIOIsolatedEventLoop(self)
     }
 
     /// Assumes the calling context is isolated to the event loop.
@@ -139,14 +139,14 @@ extension EventLoop {
     /// isolation check in release builds. It retains it in debug mode to
     /// ensure correctness.
     @inlinable
-    public func assumeIsolatedUnsafeUnchecked() -> IsolatedEventLoop {
+    public func assumeIsolatedUnsafeUnchecked() -> NIOIsolatedEventLoop {
         self.assertInEventLoop()
-        return IsolatedEventLoop(self)
+        return NIOIsolatedEventLoop(self)
     }
 }
 
 @available(*, unavailable)
-extension IsolatedEventLoop: Sendable {}
+extension NIOIsolatedEventLoop: Sendable {}
 
 extension EventLoopFuture {
     /// A struct wrapping an ``EventLoopFuture`` that ensures all calls to any method on this struct
