@@ -55,6 +55,7 @@ public struct NIOIsolatedEventLoop {
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
     ///
     /// - Parameters:
+    ///   - deadline: The time at which the task should run.
     ///   - task: The synchronous task to run. As with everything that runs on the `EventLoop`, it must not block.
     /// - Returns: A `Scheduled` object which may be used to cancel the task if it has not yet run, or to wait
     ///            on the completion of the task.
