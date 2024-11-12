@@ -25,11 +25,7 @@ extension SuperNotSendable: Sendable {}
 
 final class EventLoopFutureIsolatedTest: XCTestCase {
     func testCompletingPromiseWithNonSendableValue() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
+        let group = MultiThreadedEventLoopGroup.singleton
         let loop = group.next()
 
         try loop.flatSubmit {
@@ -43,11 +39,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     }
 
     func testCompletingPromiseWithNonSendableResult() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
+        let group = MultiThreadedEventLoopGroup.singleton
         let loop = group.next()
 
         try loop.flatSubmit {
@@ -61,11 +53,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     }
 
     func testCompletingPromiseWithNonSendableValueUnchecked() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
+        let group = MultiThreadedEventLoopGroup.singleton
         let loop = group.next()
 
         try loop.flatSubmit {
@@ -79,11 +67,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     }
 
     func testCompletingPromiseWithNonSendableResultUnchecked() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
+        let group = MultiThreadedEventLoopGroup.singleton
         let loop = group.next()
 
         try loop.flatSubmit {
@@ -97,11 +81,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     }
 
     func testBackAndForthUnwrapping() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
+        let group = MultiThreadedEventLoopGroup.singleton
         let loop = group.next()
 
         try loop.submit {
@@ -115,11 +95,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     }
 
     func testBackAndForthUnwrappingUnchecked() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
+        let group = MultiThreadedEventLoopGroup.singleton
         let loop = group.next()
 
         try loop.submit {
@@ -137,12 +113,9 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
             case error
         }
 
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
+        let group = MultiThreadedEventLoopGroup.singleton
         let loop = group.next()
+
         try loop.flatSubmit {
             let promise = loop.makePromise(of: SuperNotSendable.self)
             let future = promise.futureResult.assumeIsolated()
@@ -248,11 +221,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     }
 
     func testEventLoopIsolated() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
+        let group = MultiThreadedEventLoopGroup.singleton
         let loop = group.next()
 
         let result: Int = try loop.flatSubmit {
@@ -300,11 +269,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     }
 
     func testEventLoopIsolatedUnchecked() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-
+        let group = MultiThreadedEventLoopGroup.singleton
         let loop = group.next()
 
         let result: Int = try loop.flatSubmit {
