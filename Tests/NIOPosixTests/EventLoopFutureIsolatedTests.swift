@@ -316,4 +316,3 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
         XCTAssertEqual(result, 6 * 4)
     }
 }
-
