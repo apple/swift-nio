@@ -2369,5 +2369,34 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
         XCTAssertEqual(upgradePerformed.wrappedValue, true)
     }
+
+    /// Test that sending an unfinished upgrade request and closing immediately throws 
+    /// an input closed error
+    func testSendUnfinishedRequestCloseImmediately() throws {
+        let errorCaught = UnsafeMutableTransferBox<Bool>(false)
+
+        let upgrader = SuccessfulUpgrader(forProtocol: "myproto", requiringHeaders: ["kafkaesque"]) { _ in
+        }
+        let (_, client, connectedServer) = try setUpTestWithAutoremoval(
+            upgraders: [upgrader],
+            extraHandlers: [],
+            upgradeErrorHandler: { error in
+                switch error {
+                case ChannelError.inputClosed:
+                    errorCaught.wrappedValue = true
+                default:
+                    XCTFail("Error: \(error)")
+                }
+            }
+        ) { (context) in
+        }
+
+        let request =
+            "OPTIONS * HTTP/1.1\r\nHost: localhost\r\ncontent-length: 10\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
+        XCTAssertNoThrow(try client.writeAndFlush(client.allocator.buffer(string: request)).wait())
+        try client.close(mode: .output).wait()
+        try connectedServer.pipeline.waitForUpgraderToBeRemoved()
+        XCTAssertEqual(errorCaught.wrappedValue, true)
+    }
 }
 #endif

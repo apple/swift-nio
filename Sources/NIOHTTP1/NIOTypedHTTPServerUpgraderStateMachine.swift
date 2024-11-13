@@ -434,10 +434,12 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
             self.state = .upgrading(upgrading)
             return .continue
 
-        case .upgraderReady(var upgraderReady):
-            upgraderReady.buffer.append(.inputClosed)
-            self.state = .upgraderReady(upgraderReady)
-            return .continue
+        case .upgraderReady:
+            // if the state is `upgraderReady` we have received a `.head` but not an `.end`.
+            // If input is closed then there is no way to move this forward so we should
+            // close.
+            self.state = .finished
+            return .close
 
         case .unbuffering(var unbuffering):
             unbuffering.buffer.append(.inputClosed)
