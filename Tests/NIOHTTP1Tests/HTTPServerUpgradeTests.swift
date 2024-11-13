@@ -2337,9 +2337,9 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
                 default:
                     break
                 }
-            }
-        ) { (context) in
-        }
+            },
+            { _ in }
+        )
 
         try client.close(mode: .output).wait()
         try connectedServer.closeFuture.wait()
@@ -2358,9 +2358,9 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
             extraHandlers: [],
             upgradeErrorHandler: { error in
                 XCTFail("Error: \(error)")
-            }
-        ) { (context) in
-        }
+            },
+            { _ in }
+        )
 
         let request =
             "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
@@ -2370,7 +2370,7 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         XCTAssertEqual(upgradePerformed.wrappedValue, true)
     }
 
-    /// Test that sending an unfinished upgrade request and closing immediately throws 
+    /// Test that sending an unfinished upgrade request and closing immediately throws
     /// an input closed error
     func testSendUnfinishedRequestCloseImmediately() throws {
         let errorCaught = UnsafeMutableTransferBox<Bool>(false)
@@ -2387,9 +2387,9 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
                 default:
                     XCTFail("Error: \(error)")
                 }
-            }
-        ) { (context) in
-        }
+            },
+            { _ in }
+        )
 
         let request =
             "OPTIONS * HTTP/1.1\r\nHost: localhost\r\ncontent-length: 10\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
