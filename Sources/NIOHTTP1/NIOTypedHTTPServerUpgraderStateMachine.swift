@@ -372,6 +372,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
         case close
         case fireChannelRead(NIOAny)
         case fireChannelReadCompleteAndRemoveHandler
+        case fireInputClosedEvent
     }
 
     @inlinable
@@ -389,7 +390,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
                 case .data(let data):
                     return .fireChannelRead(data)
                 case .inputClosed:
-                    return .close
+                    return .fireInputClosedEvent
                 }
             } else {
                 self.state = .finished
@@ -404,13 +405,14 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
     }
 
     @usableFromInline
-    enum CloseInboundAction {
+    enum InputClosedAction {
         case close
         case `continue`
+        case fireInputClosedEvent
     }
 
     @inlinable
-    mutating func closeInbound() -> CloseInboundAction {
+    mutating func inputClosed() -> InputClosedAction {
         switch self.state {
         case .initial:
             self.state = .finished
@@ -442,8 +444,11 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
             self.state = .unbuffering(unbuffering)
             return .continue
 
-        case .modifying, .finished:
-            return .continue
+        case .finished:
+            return .fireInputClosedEvent
+
+        case .modifying:
+            fatalError("Internal inconsistency in HTTPServerUpgradeStateMachine")
         }
     }
 

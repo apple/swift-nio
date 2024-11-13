@@ -158,12 +158,14 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         switch event {
         case let evt as ChannelEvent where evt == ChannelEvent.inputClosed:
             // The remote peer half-closed the channel during the upgrade. Should we close the other side
-            switch self.stateMachine.closeInbound() {
+            switch self.stateMachine.inputClosed() {
             case .close:
                 self.upgradeResultPromise.fail(ChannelError.inputClosed)
                 context.close(promise: nil)
             case .continue:
                 break
+            case .fireInputClosedEvent:
+                context.fireUserInboundEventTriggered(event)
             }
 
         default:
@@ -418,6 +420,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
             switch self.stateMachine.unbuffer() {
             case .close:
                 context.close(promise: nil)
+
             case .fireChannelRead(let data):
                 context.fireChannelRead(data)
 
@@ -425,6 +428,9 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
                 context.fireChannelReadComplete()
                 context.pipeline.removeHandler(self, promise: nil)
                 return
+
+            case .fireInputClosedEvent:
+                context.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
             }
         }
     }

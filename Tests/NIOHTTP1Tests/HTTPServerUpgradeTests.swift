@@ -2364,11 +2364,10 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
 
         let request =
             "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nKafkaesque: yup\r\nConnection: upgrade\r\nConnection: kafkaesque\r\n\r\n"
-        XCTAssertNoThrow(try client.writeAndFlush(NIOAny(client.allocator.buffer(string: request))).wait())
+        XCTAssertNoThrow(try client.writeAndFlush(client.allocator.buffer(string: request)).wait())
         try client.close(mode: .output).wait()
         try connectedServer.pipeline.waitForUpgraderToBeRemoved()
         XCTAssertEqual(upgradePerformed.wrappedValue, true)
     }
-
 }
 #endif
