@@ -409,7 +409,7 @@ extension WebSocketFrame: CustomDebugStringConvertible {
 
 extension WebSocketFrame {
     /// WebSocketFrame reserved bits option set
-    public struct ReservedBits: OptionSet {
+    public struct ReservedBits: OptionSet, Sendable {
         public var rawValue: UInt8
 
         public init(rawValue: UInt8) {
