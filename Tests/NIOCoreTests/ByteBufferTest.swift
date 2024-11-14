@@ -1320,18 +1320,24 @@ class ByteBufferTest: XCTestCase {
         buf.clear()
         let expected = "hello"
         buf.writeString(expected)
-        let actual = buf.readUTF8ValidatedString(length: expected.utf8.count)
+        let actual = try buf.readUTF8ValidatedString(length: expected.utf8.count)
         XCTAssertEqual(expected, actual)
-        XCTAssertEqual("", buf.readUTF8ValidatedString(length: 0))
-        XCTAssertNil(buf.readUTF8ValidatedString(length: 1))
+        XCTAssertEqual("", try buf.readUTF8ValidatedString(length: 0))
+        XCTAssertNil(try buf.readUTF8ValidatedString(length: 1))
     }
 
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testReadUTF8InvalidString() throws {
         buf.clear()
         buf.writeBytes([UInt8](repeating: 255, count: 16))
-        let actual = buf.readUTF8ValidatedString(length: 16)
-        XCTAssertNil(actual)
+        XCTAssertThrowsError(try buf.readUTF8ValidatedString(length: 16)) { error in
+            switch error {
+            case is ByteBuffer.ReadUTF8ValidationError:
+                break
+            default:
+                XCTFail("Error: \(error)")
+            }
+        }
         XCTAssertEqual(buf.readableBytes, 16)
     }
 
