@@ -946,4 +946,4 @@ extension ByteBuffer {
         return result
     }
 }
-#endif // compiler(>=6)
+#endif  // compiler(>=6)
