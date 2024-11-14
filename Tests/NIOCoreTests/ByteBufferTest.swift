@@ -1316,21 +1316,21 @@ class ByteBufferTest: XCTestCase {
     }
 
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-    func testReadValidatedString() throws {
+    func testReadUTF8ValidatedString() throws {
         buf.clear()
         let expected = "hello"
         buf.writeString(expected)
-        let actual = buf.readValidatedString(length: expected.utf8.count)
+        let actual = buf.readUTF8ValidatedString(length: expected.utf8.count)
         XCTAssertEqual(expected, actual)
-        XCTAssertEqual("", buf.readValidatedString(length: 0))
-        XCTAssertNil(buf.readValidatedString(length: 1))
+        XCTAssertEqual("", buf.readUTF8ValidatedString(length: 0))
+        XCTAssertNil(buf.readUTF8ValidatedString(length: 1))
     }
 
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
-    func testReadInvalidString() throws {
+    func testReadUTF8InvalidString() throws {
         buf.clear()
         buf.writeBytes([UInt8](repeating: 255, count: 16))
-        let actual = buf.readValidatedString(length: 16)
+        let actual = buf.readUTF8ValidatedString(length: 16)
         XCTAssertNil(actual)
         XCTAssertEqual(buf.readableBytes, 16)
     }
