@@ -264,6 +264,47 @@ extension ByteBuffer {
         return result
     }
 
+    /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
+    ///
+    /// This is an alternative to `ByteBuffer.getString(at:length:)` which ensures the returned string is valid UTF8
+    ///
+    /// - Parameters:
+    ///   - index: The starting index into `ByteBuffer` containing the string of interest.
+    ///   - length: The number of bytes making up the string.
+    /// - Returns: A `String` value containing the UTF-8 decoded selected bytes from this `ByteBuffer` or `nil` if
+    ///            the requested bytes are not readable.
+    @inlinable
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public func getValidatedString(at index: Int, length: Int) -> String? {
+        guard let range = self.rangeWithinReadableBytes(index: index, length: length) else {
+            return nil
+        }
+        return self.withUnsafeReadableBytes { pointer in
+            assert(range.lowerBound >= 0 && (range.upperBound - range.lowerBound) <= pointer.count)
+            return String(validating: UnsafeRawBufferPointer(fastRebase: pointer[range]), as: Unicode.UTF8.self)
+        }
+    }
+
+    /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Move the reader index
+    /// forward by `length`.
+    ///
+    /// This is an alternative to `ByteBuffer.readString(length:)` which ensures the returned string is valid UTF8. If the 
+    /// string is not valid UTF8 then the reader index is not advanced.
+    ///
+    /// - Parameters:
+    ///   - length: The number of bytes making up the string.
+    /// - Returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
+    @inlinable
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public mutating func readValidatedString(length: Int) -> String? {
+        guard let result = self.getValidatedString(at: self.readerIndex, length: length) else {
+            return nil
+        }
+        self.moveReaderIndex(forwardBy: length)
+        return result
+    }
+
     // MARK: Substring APIs
     /// Write `substring` into this `ByteBuffer` using UTF-8 encoding, moving the writer index forward appropriately.
     ///

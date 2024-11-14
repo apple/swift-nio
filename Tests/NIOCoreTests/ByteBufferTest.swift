@@ -1315,6 +1315,26 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("a", buf.readString(length: 1))
     }
 
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReadValidatedString() throws {
+        buf.clear()
+        let expected = "hello"
+        buf.writeString(expected)
+        let actual = buf.readValidatedString(length: expected.utf8.count)
+        XCTAssertEqual(expected, actual)
+        XCTAssertEqual("", buf.readValidatedString(length: 0))
+        XCTAssertNil(buf.readValidatedString(length: 1))
+    }
+
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReadInvalidString() throws {
+        buf.clear()
+        buf.writeBytes([UInt8](repeating: 255, count: 16))
+        let actual = buf.readValidatedString(length: 16)
+        XCTAssertNil(actual)
+        XCTAssertEqual(buf.readableBytes, 16)
+    }
+
     func testSetIntegerBeyondCapacity() throws {
         var buf = ByteBufferAllocator().buffer(capacity: 32)
         XCTAssertLessThan(buf.capacity, 200)
