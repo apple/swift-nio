@@ -289,7 +289,7 @@ extension ByteBuffer {
     /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Move the reader index
     /// forward by `length`.
     ///
-    /// This is an alternative to `ByteBuffer.readString(length:)` which ensures the returned string is valid UTF8. If the 
+    /// This is an alternative to `ByteBuffer.readString(length:)` which ensures the returned string is valid UTF8. If the
     /// string is not valid UTF8 then the reader index is not advanced.
     ///
     /// - Parameters:
