@@ -420,8 +420,8 @@ extension WebSocketFrame {
     /// WebSocketFrame reserved bits option set
     public struct ReservedBits: OptionSet, Sendable {
         public var rawValue: UInt8
-        
-        @inlinable 
+
+        @inlinable
         public init(rawValue: UInt8) {
             self.rawValue = rawValue
         }
