@@ -31,6 +31,7 @@ public struct NIOIsolatedEventLoop {
     }
 
     /// Submit a given task to be executed by the `EventLoop`
+    @available(*, noasync)
     @inlinable
     public func execute(_ task: @escaping () -> Void) {
         let unsafeTransfer = UnsafeTransfer(task)
@@ -44,6 +45,7 @@ public struct NIOIsolatedEventLoop {
     /// - Parameters:
     ///   - task: The closure that will be submitted to the `EventLoop` for execution.
     /// - Returns: `EventLoopFuture` that is notified once the task was executed.
+    @available(*, noasync)
     @inlinable
     public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
         let unsafeTransfer = UnsafeTransfer(task)
@@ -62,6 +64,7 @@ public struct NIOIsolatedEventLoop {
     ///
     /// - Note: You can only cancel a task before it has started executing.
     @discardableResult
+    @available(*, noasync)
     @inlinable
     public func scheduleTask<T>(
         deadline: NIODeadline,
@@ -84,6 +87,7 @@ public struct NIOIsolatedEventLoop {
     /// - Note: You can only cancel a task before it has started executing.
     /// - Note: The `in` value is clamped to a maximum when running on a Darwin-kernel.
     @discardableResult
+    @available(*, noasync)
     @inlinable
     public func scheduleTask<T>(
         in delay: TimeAmount,
@@ -110,6 +114,7 @@ public struct NIOIsolatedEventLoop {
     ///
     /// - Note: You can only cancel a task before it has started executing.
     @discardableResult
+    @available(*, noasync)
     @inlinable
     public func flatScheduleTask<T: Sendable>(
         deadline: NIODeadline,
@@ -133,6 +138,7 @@ public struct NIOIsolatedEventLoop {
 extension EventLoop {
     /// Assumes the calling context is isolated to the event loop.
     @inlinable
+    @available(*, noasync)
     public func assumeIsolated() -> NIOIsolatedEventLoop {
         self.preconditionInEventLoop()
         return NIOIsolatedEventLoop(self)
@@ -203,6 +209,7 @@ extension EventLoopFuture {
         ///         a new `EventLoopFuture`.
         /// - Returns: A future that will receive the eventual value.
         @inlinable
+        @available(*, noasync)
         public func flatMap<NewValue: Sendable>(
             _ callback: @escaping (Value) -> EventLoopFuture<NewValue>
         ) -> EventLoopFuture<NewValue>.Isolated {
@@ -227,6 +234,7 @@ extension EventLoopFuture {
         ///         a new value lifted into a new `EventLoopFuture`.
         /// - Returns: A future that will receive the eventual value.
         @inlinable
+        @available(*, noasync)
         public func flatMapThrowing<NewValue>(
             _ callback: @escaping (Value) throws -> NewValue
         ) -> EventLoopFuture<NewValue>.Isolated {
@@ -251,6 +259,7 @@ extension EventLoopFuture {
         ///         a new value lifted into a new `EventLoopFuture`.
         /// - Returns: A future that will receive the eventual value or a rethrown error.
         @inlinable
+        @available(*, noasync)
         public func flatMapErrorThrowing(
             _ callback: @escaping (Error) throws -> Value
         ) -> EventLoopFuture<Value>.Isolated {
@@ -287,6 +296,7 @@ extension EventLoopFuture {
         ///         a new value lifted into a new `EventLoopFuture`.
         /// - Returns: A future that will receive the eventual value.
         @inlinable
+        @available(*, noasync)
         public func map<NewValue>(
             _ callback: @escaping (Value) -> (NewValue)
         ) -> EventLoopFuture<NewValue>.Isolated {
@@ -311,6 +321,7 @@ extension EventLoopFuture {
         ///         a new value lifted into a new `EventLoopFuture`.
         /// - Returns: A future that will receive the recovered value.
         @inlinable
+        @available(*, noasync)
         public func flatMapError(
             _ callback: @escaping (Error) -> EventLoopFuture<Value>
         ) -> EventLoopFuture<Value>.Isolated where Value: Sendable {
@@ -334,6 +345,7 @@ extension EventLoopFuture {
         ///         a new value or error lifted into a new `EventLoopFuture`.
         /// - Returns: A future that will receive the eventual value.
         @inlinable
+        @available(*, noasync)
         public func flatMapResult<NewValue, SomeError: Error>(
             _ body: @escaping (Value) -> Result<NewValue, SomeError>
         ) -> EventLoopFuture<NewValue>.Isolated {
@@ -356,6 +368,7 @@ extension EventLoopFuture {
         ///         a new value lifted into a new `EventLoopFuture`.
         /// - Returns: A future that will receive the recovered value.
         @inlinable
+        @available(*, noasync)
         public func recover(
             _ callback: @escaping (Error) -> Value
         ) -> EventLoopFuture<Value>.Isolated {
@@ -376,6 +389,7 @@ extension EventLoopFuture {
         /// - Parameters:
         ///   - callback: The callback that is called with the successful result of the `EventLoopFuture`.
         @inlinable
+        @available(*, noasync)
         public func whenSuccess(_ callback: @escaping (Value) -> Void) {
             let unsafeTransfer = UnsafeTransfer(callback)
             return self._wrapped.whenSuccess {
@@ -394,6 +408,7 @@ extension EventLoopFuture {
         /// - Parameters:
         ///   - callback: The callback that is called with the failed result of the `EventLoopFuture`.
         @inlinable
+        @available(*, noasync)
         public func whenFailure(_ callback: @escaping (Error) -> Void) {
             let unsafeTransfer = UnsafeTransfer(callback)
             return self._wrapped.whenFailure {
@@ -407,6 +422,7 @@ extension EventLoopFuture {
         /// - Parameters:
         ///   - callback: The callback that is called when the `EventLoopFuture` is fulfilled.
         @inlinable
+        @available(*, noasync)
         public func whenComplete(
             _ callback: @escaping (Result<Value, Error>) -> Void
         ) {
@@ -423,6 +439,7 @@ extension EventLoopFuture {
         ///   - callback: the callback that is called when the `EventLoopFuture` is fulfilled.
         /// - Returns: the current `EventLoopFuture`
         @inlinable
+        @available(*, noasync)
         public func always(
             _ callback: @escaping (Result<Value, Error>) -> Void
         ) -> EventLoopFuture<Value>.Isolated {
@@ -444,6 +461,7 @@ extension EventLoopFuture {
         ///   - replacement: the value of the returned `EventLoopFuture` when then resolved future's value is `Optional.some()`.
         /// - Returns: an new `EventLoopFuture` with new type parameter `NewValue` and the value passed in the `orReplace` parameter.
         @inlinable
+        @available(*, noasync)
         public func unwrap<NewValue>(
             orReplace replacement: NewValue
         ) -> EventLoopFuture<NewValue>.Isolated where Value == NewValue? {
@@ -470,6 +488,7 @@ extension EventLoopFuture {
         /// - Returns: an new `EventLoopFuture` with new type parameter `NewValue` and with the value returned by the closure
         ///     passed in the `orElse` parameter.
         @inlinable
+        @available(*, noasync)
         public func unwrap<NewValue>(
             orElse callback: @escaping () -> NewValue
         ) -> EventLoopFuture<NewValue>.Isolated where Value == NewValue? {
@@ -493,6 +512,7 @@ extension EventLoopFuture {
     /// ``EventLoop`` to which this ``EventLoopFuture`` is bound, will crash
     /// if that invariant fails to be met.
     @inlinable
+    @available(*, noasync)
     public func assumeIsolated() -> Isolated {
         self.eventLoop.preconditionInEventLoop()
         return Isolated(_wrapped: self)
@@ -507,6 +527,7 @@ extension EventLoopFuture {
     /// omits the runtime check in release builds. This improves performance, but
     /// should only be used sparingly.
     @inlinable
+    @available(*, noasync)
     public func assumeIsolatedUnsafeUnchecked() -> Isolated {
         self.eventLoop.assertInEventLoop()
         return Isolated(_wrapped: self)
@@ -546,6 +567,7 @@ extension EventLoopPromise {
         /// - Parameters:
         ///   - value: The successful result of the operation.
         @inlinable
+        @available(*, noasync)
         public func succeed(_ value: Value) {
             self._wrapped._setValue(value: .success(value))._run()
         }
@@ -565,6 +587,7 @@ extension EventLoopPromise {
         /// - Parameters:
         ///   - result: The result which will be used to succeed or fail this promise.
         @inlinable
+        @available(*, noasync)
         public func completeWith(_ result: Result<Value, Error>) {
             self._wrapped._setValue(value: result)._run()
         }
@@ -581,6 +604,7 @@ extension EventLoopPromise {
     /// ``EventLoop`` to which this ``EventLoopPromise`` is bound, will crash
     /// if that invariant fails to be met.
     @inlinable
+    @available(*, noasync)
     public func assumeIsolated() -> Isolated {
         self.futureResult.eventLoop.preconditionInEventLoop()
         return Isolated(_wrapped: self)

@@ -173,6 +173,14 @@ These isolated views can be obtained by calling ``EventLoopFuture/assumeIsolated
     ``EventLoop``, use ``EventLoopFuture/hop(to:)`` to move it to your isolation domain
     before using these types.
 
+> Warning: ``EventLoopFuture/assumeIsolated()`` and ``EventLoopPromise/assumeIsolated()``
+    **must not** be called from a Swift concurrency context, either an async method or
+    from within an actor. This is because it uses runtime checking of the event loop
+    to confirm that the value is not being sent to a different concurrency domain.
+    
+    When using an ``EventLoop`` as a custom actor executor, this API can be used to retrieve
+    a value that region based isolation will then allow to be sent to another domain.
+
 ## Interacting with Event Loops on the Event Loop
 
 As with Futures, there are occasionally times where it is necessary to schedule
@@ -204,3 +212,11 @@ This isolated view can be obtained by calling ``EventLoop/assumeIsolated()``.
     runtime ones. This makes it possible to introduce crashes in your code. Please ensure
     that you are 100% confident that the isolation domains align. If you are not sure that
     the your code is running on the relevant ``EventLoop``, prefer the non-isolated type.
+
+> Warning: ``EventLoop/assumeIsolated()`` **must not** be called from a Swift concurrency
+    context, either an async method or from within an actor. This is because it uses runtime
+    checking of the event loop to confirm that the value is not being sent to a different
+    concurrency domain.
+    
+    When using an ``EventLoop`` as a custom actor executor, this API can be used to retrieve
+    a value that region based isolation will then allow to be sent to another domain.
