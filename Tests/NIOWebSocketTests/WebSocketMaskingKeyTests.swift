@@ -43,4 +43,41 @@ final class WebSocketMaskingKeyTests: XCTestCase {
             "at least 1 of 1000 random masking keys with default generator should not be all zeros"
         )
     }
+
+    func testGetReservedBits() {
+        let frame = WebSocketFrame(rsv1: true, opcode: .binary, data: .init())
+        XCTAssertEqual(frame.reservedBits.contains(.rsv1), true)
+        XCTAssertEqual(frame.reservedBits.contains(.rsv2), false)
+        XCTAssertEqual(frame.reservedBits.contains(.rsv3), false)
+        let frame2 = WebSocketFrame(rsv2: true, opcode: .binary, data: .init())
+        XCTAssertEqual(frame2.reservedBits.contains(.rsv1), false)
+        XCTAssertEqual(frame2.reservedBits.contains(.rsv2), true)
+        XCTAssertEqual(frame2.reservedBits.contains(.rsv3), false)
+        let frame3 = WebSocketFrame(rsv3: true, opcode: .binary, data: .init())
+        XCTAssertEqual(frame3.reservedBits.contains(.rsv1), false)
+        XCTAssertEqual(frame3.reservedBits.contains(.rsv2), false)
+        XCTAssertEqual(frame3.reservedBits.contains(.rsv3), true)
+    }
+
+    func testSetReservedBits() {
+        var frame = WebSocketFrame(opcode: .binary, data: .init())
+        frame.reservedBits = .rsv1
+        XCTAssertEqual(frame.reservedBits.contains(.rsv1), true)
+        XCTAssertEqual(frame.reservedBits.contains(.rsv2), false)
+        XCTAssertEqual(frame.reservedBits.contains(.rsv3), false)
+        XCTAssertEqual(frame.fin, false)
+        XCTAssertEqual(frame.opcode, .binary)
+        frame.reservedBits = .rsv2
+        XCTAssertEqual(frame.reservedBits.contains(.rsv1), false)
+        XCTAssertEqual(frame.reservedBits.contains(.rsv2), true)
+        XCTAssertEqual(frame.reservedBits.contains(.rsv3), false)
+        XCTAssertEqual(frame.fin, false)
+        XCTAssertEqual(frame.opcode, .binary)
+        frame.reservedBits = .rsv3
+        XCTAssertEqual(frame.reservedBits.contains(.rsv1), false)
+        XCTAssertEqual(frame.reservedBits.contains(.rsv2), false)
+        XCTAssertEqual(frame.reservedBits.contains(.rsv3), true)
+        XCTAssertEqual(frame.fin, false)
+        XCTAssertEqual(frame.opcode, .binary)
+    }
 }
