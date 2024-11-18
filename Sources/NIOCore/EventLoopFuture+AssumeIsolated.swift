@@ -147,8 +147,8 @@ extension EventLoop {
     /// Assumes the calling context is isolated to the event loop.
     ///
     /// This version of ``EventLoop/assumeIsolated()`` omits the runtime
-    /// isolation check in release builds. It retains it in debug mode to
-    /// ensure correctness.
+    /// isolation check in release builds and doesn't prevent you using it
+    /// from using it in async contexts.
     @inlinable
     public func assumeIsolatedUnsafeUnchecked() -> NIOIsolatedEventLoop {
         self.assertInEventLoop()
@@ -524,8 +524,8 @@ extension EventLoopFuture {
     /// if that invariant fails to be met.
     ///
     /// This is an unsafe version of ``EventLoopFuture/assumeIsolated()`` which
-    /// omits the runtime check in release builds. This improves performance, but
-    /// should only be used sparingly.
+    /// omits the runtime check in release builds and doesn't prevent you using it
+    /// from using it in async contexts.
     @inlinable
     @available(*, noasync)
     public func assumeIsolatedUnsafeUnchecked() -> Isolated {
@@ -616,8 +616,8 @@ extension EventLoopPromise {
     /// if that invariant fails to be met.
     ///
     /// This is an unsafe version of ``EventLoopPromise/assumeIsolated()`` which
-    /// omits the runtime check in release builds. This improves performance, but
-    /// should only be used sparingly.
+    /// omits the runtime check in release builds and doesn't prevent you using it
+    /// from using it in async contexts.
     @inlinable
     public func assumeIsolatedUnsafeUnchecked() -> Isolated {
         self.futureResult.eventLoop.assertInEventLoop()
