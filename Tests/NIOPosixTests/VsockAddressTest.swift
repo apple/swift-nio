@@ -63,10 +63,10 @@ class VsockAddressTest: XCTestCase {
         let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
         defer { try? socket.close() }
 
-        // Check the local CID is valid: higher than reserved values, but not VMADDR_CID_ANY.
+        // Check we can get the local CID using the static property on ContextID.
         let localCID = try socket.withUnsafeHandle(VsockAddress.ContextID.getLocalContextID)
-        XCTAssertNotEqual(localCID, .any)
-        XCTAssertGreaterThan(localCID.rawValue, VsockAddress.ContextID.host.rawValue)
+
+        // Check the local CID from the socket matches.
         XCTAssertEqual(try socket.getLocalVsockContextID(), localCID)
 
         // Check the local CID from the channel option matches.

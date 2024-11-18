@@ -217,7 +217,7 @@ extension VsockAddress.ContextID {
     /// - On Darwin, the `ioctl()` request operates on a socket.
     /// - On Linux, the `ioctl()` request operates on the `/dev/vsock` device.
     ///
-    /// - Note: On Linux, ``local`` may be a better choice.
+    /// - Note: The semantics of this `ioctl` vary between vsock transports on Linux; ``local`` may be more suitable.
     static func getLocalContextID(_ socketFD: NIOBSDSocket.Handle) throws -> Self {
         #if canImport(Darwin)
         let request = CNIODarwin_IOCTL_VM_SOCKETS_GET_LOCAL_CID
