@@ -366,6 +366,16 @@ function analyse_process() {
     analyse_syscalls "$pid"
 }
 
+function produce_network_stats() {
+    declare -a command
+
+    command=( netstat -s )
+
+    output "### System-wide network statistics"
+    output
+    run_and_print "${command[@]}"
+}
+
 number_of_nio_pids=0
 
 output "# NIO diagnose ($(shasum "${BASH_SOURCE[0]}"))"
@@ -378,6 +388,7 @@ analyse_system_versions
 analyse_tcp_conns
 analyse_udp
 analyse_uds
+produce_network_stats
 analyse_procs
 analyse_ulimit
 
