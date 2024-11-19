@@ -149,7 +149,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 // Next, we expect a reregistration which adds the `.write` notification
                 try self.assertReregister { selectable, eventSet in
                     XCTAssert(selectable as? Socket === channel.socket)
-                    XCTAssertEqual([.read, .reset, .readEOF, .write], eventSet)
+                    XCTAssertEqual([.read, .reset, .error, .readEOF, .write], eventSet)
                     return true
                 }
 
@@ -201,7 +201,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 // And lastly, after having written everything, we'd expect to unregister for write
                 try self.assertReregister { selectable, eventSet in
                     XCTAssert(selectable as? Socket === channel.socket)
-                    XCTAssertEqual([.read, .reset, .readEOF], eventSet)
+                    XCTAssertEqual([.read, .reset, .error, .readEOF], eventSet)
                     return true
                 }
 
@@ -315,11 +315,11 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertLocalAddress(address: localAddress)
                 try self.assertRemoteAddress(address: localAddress)
                 try self.assertRegister { selectable, event, Registration in
-                    XCTAssertEqual([.reset], event)
+                    XCTAssertEqual([.reset, .error], event)
                     return true
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF], event)
+                    XCTAssertEqual([.reset, .error, .readEOF], event)
                     return true
                 }
                 try self.assertDeregister { selectable in
@@ -360,11 +360,11 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertLocalAddress(address: localAddress)
                 try self.assertRemoteAddress(address: localAddress)
                 try self.assertRegister { selectable, event, Registration in
-                    XCTAssertEqual([.reset], event)
+                    XCTAssertEqual([.reset, .error], event)
                     return true
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF], event)
+                    XCTAssertEqual([.reset, .error, .readEOF], event)
                     return true
                 }
                 try self.assertDeregister { selectable in
@@ -431,19 +431,19 @@ final class SALChannelTest: XCTestCase, SALTest {
                         XCTAssertEqual(localAddress, channel.localAddress)
                         XCTAssertEqual(remoteAddress, channel.remoteAddress)
                         XCTAssertEqual(eventSet, registrationEventSet)
-                        XCTAssertEqual(.reset, eventSet)
+                        XCTAssertEqual([.reset, .error], eventSet)
                         return true
                     } else {
                         return false
                     }
                 }
                 try self.assertReregister { selectable, eventSet in
-                    XCTAssertEqual([.reset, .readEOF], eventSet)
+                    XCTAssertEqual([.reset, .error, .readEOF], eventSet)
                     return true
                 }
                 // because autoRead is on by default
                 try self.assertReregister { selectable, eventSet in
-                    XCTAssertEqual([.reset, .readEOF, .read], eventSet)
+                    XCTAssertEqual([.reset, .error, .readEOF, .read], eventSet)
                     return true
                 }
 
@@ -504,19 +504,19 @@ final class SALChannelTest: XCTestCase, SALTest {
                         XCTAssertEqual(localAddress, channel.localAddress)
                         XCTAssertEqual(remoteAddress, channel.remoteAddress)
                         XCTAssertEqual(eventSet, registrationEventSet)
-                        XCTAssertEqual(.reset, eventSet)
+                        XCTAssertEqual([.reset, .error], eventSet)
                         return true
                     } else {
                         return false
                     }
                 }
                 try self.assertReregister { selectable, eventSet in
-                    XCTAssertEqual([.reset, .readEOF], eventSet)
+                    XCTAssertEqual([.reset, .error, .readEOF], eventSet)
                     return true
                 }
                 // because autoRead is on by default
                 try self.assertReregister { selectable, eventSet in
-                    XCTAssertEqual([.reset, .readEOF, .read], eventSet)
+                    XCTAssertEqual([.reset, .error, .readEOF, .read], eventSet)
                     return true
                 }
 
@@ -549,11 +549,11 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertConnect(expectedAddress: serverAddress, result: false)
                 try self.assertLocalAddress(address: localAddress)
                 try self.assertRegister { selectable, event, Registration in
-                    XCTAssertEqual([.reset], event)
+                    XCTAssertEqual([.reset, .error], event)
                     return true
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .write], event)
+                    XCTAssertEqual([.reset, .error, .write], event)
                     return true
                 }
 
@@ -570,7 +570,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertRemoteAddress(address: serverAddress)
 
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF, .write], event)
+                    XCTAssertEqual([.reset, .error, .readEOF, .write], event)
                     return true
                 }
                 try self.assertWritev(
@@ -621,11 +621,11 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertLocalAddress(address: localAddress)
                 try self.assertRemoteAddress(address: serverAddress)
                 try self.assertRegister { selectable, event, Registration in
-                    XCTAssertEqual([.reset], event)
+                    XCTAssertEqual([.reset, .error], event)
                     return true
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF], event)
+                    XCTAssertEqual([.reset, .error, .readEOF], event)
                     return true
                 }
                 try self.assertWritev(
@@ -676,11 +676,11 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertLocalAddress(address: localAddress)
                 try self.assertRemoteAddress(address: serverAddress)
                 try self.assertRegister { selectable, event, Registration in
-                    XCTAssertEqual([.reset], event)
+                    XCTAssertEqual([.reset, .error], event)
                     return true
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF], event)
+                    XCTAssertEqual([.reset, .error, .readEOF], event)
                     return true
                 }
                 try self.assertWritev(
@@ -690,7 +690,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 )
                 try self.assertWrite(expectedFD: .max, expectedBytes: secondWrite, return: .wouldBlock(0))
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF, .write], event)
+                    XCTAssertEqual([.reset, .error, .readEOF, .write], event)
                     return true
                 }
 
@@ -741,11 +741,11 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertLocalAddress(address: localAddress)
                 try self.assertRemoteAddress(address: serverAddress)
                 try self.assertRegister { selectable, event, Registration in
-                    XCTAssertEqual([.reset], event)
+                    XCTAssertEqual([.reset, .error], event)
                     return true
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF], event)
+                    XCTAssertEqual([.reset, .error, .readEOF], event)
                     return true
                 }
                 try self.assertWritev(
@@ -815,14 +815,14 @@ final class SALChannelTest: XCTestCase, SALTest {
                         XCTAssertEqual(localAddress, channel.localAddress)
                         XCTAssertEqual(remoteAddress, channel.remoteAddress)
                         XCTAssertEqual(eventSet, registrationEventSet)
-                        XCTAssertEqual(.reset, eventSet)
+                        XCTAssertEqual([.reset, .error], eventSet)
                         return true
                     } else {
                         return false
                     }
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF], event)
+                    XCTAssertEqual([.reset, .error, .readEOF], event)
                     return true
                 }
 
@@ -895,14 +895,14 @@ final class SALChannelTest: XCTestCase, SALTest {
                         XCTAssertEqual(localAddress, channel.localAddress)
                         XCTAssertEqual(remoteAddress, channel.remoteAddress)
                         XCTAssertEqual(eventSet, registrationEventSet)
-                        XCTAssertEqual(.reset, eventSet)
+                        XCTAssertEqual([.reset, .error], eventSet)
                         return true
                     } else {
                         return false
                     }
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF], event)
+                    XCTAssertEqual([.reset, .error, .readEOF], event)
                     return true
                 }
 
@@ -913,7 +913,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 )
                 try self.assertWrite(expectedFD: .max, expectedBytes: secondWrite, return: .wouldBlock(0))
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF, .write], event)
+                    XCTAssertEqual([.reset, .error, .readEOF, .write], event)
                     return true
                 }
 
@@ -983,14 +983,14 @@ final class SALChannelTest: XCTestCase, SALTest {
                         XCTAssertEqual(localAddress, channel.localAddress)
                         XCTAssertEqual(remoteAddress, channel.remoteAddress)
                         XCTAssertEqual(eventSet, registrationEventSet)
-                        XCTAssertEqual(.reset, eventSet)
+                        XCTAssertEqual([.reset, .error], eventSet)
                         return true
                     } else {
                         return false
                     }
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF], event)
+                    XCTAssertEqual([.reset, .error, .readEOF], event)
                     return true
                 }
 
@@ -1064,11 +1064,11 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertConnect(expectedAddress: serverAddress, result: false)
                 try self.assertLocalAddress(address: localAddress)
                 try self.assertRegister { selectable, event, Registration in
-                    XCTAssertEqual([.reset], event)
+                    XCTAssertEqual([.reset, .error], event)
                     return true
                 }
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .write], event)
+                    XCTAssertEqual([.reset, .error, .write], event)
                     return true
                 }
 
@@ -1085,7 +1085,7 @@ final class SALChannelTest: XCTestCase, SALTest {
                 try self.assertRemoteAddress(address: serverAddress)
 
                 try self.assertReregister { selectable, event in
-                    XCTAssertEqual([.reset, .readEOF, .write], event)
+                    XCTAssertEqual([.reset, .error, .readEOF, .write], event)
                     return true
                 }
                 try self.assertWritev(

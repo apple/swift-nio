@@ -240,7 +240,7 @@ extension Selector: _SelectorBackendProtocol {
     ) throws {
         try kqueueUpdateEventNotifications(
             selectable: selectable,
-            interested: .reset,
+            interested: [.reset, .error],
             oldInterested: oldInterested,
             registrationID: registrationID
         )
