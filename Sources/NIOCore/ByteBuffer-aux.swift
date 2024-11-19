@@ -919,14 +919,13 @@ extension ByteBuffer {
     @inlinable
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     public func getUTF8ValidatedString(at index: Int, length: Int) throws -> String? {
-        guard let range = self.rangeWithinReadableBytes(index: index, length: length) else {
+        guard let slice = self.getSlice(at: index, length: length) else {
             return nil
         }
-        return try self.withUnsafeReadableBytes { pointer in
-            assert(range.lowerBound >= 0 && (range.upperBound - range.lowerBound) <= pointer.count)
+        return try slice.withUnsafeReadableBytes { pointer in
             guard
                 let string = String(
-                    validating: UnsafeRawBufferPointer(fastRebase: pointer[range]),
+                    validating: pointer,
                     as: Unicode.UTF8.self
                 )
             else {

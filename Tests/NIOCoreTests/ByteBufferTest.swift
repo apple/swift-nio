@@ -1327,6 +1327,15 @@ class ByteBufferTest: XCTestCase {
     }
 
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testGetUTF8ValidatedString() throws {
+        buf.clear()
+        let expected = "hello, goodbye"
+        buf.writeString(expected)
+        let actual = try buf.getUTF8ValidatedString(at: 7, length: 7)
+        XCTAssertEqual("goodbye", actual)
+    }
+
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testReadUTF8InvalidString() throws {
         buf.clear()
         buf.writeBytes([UInt8](repeating: 255, count: 16))
