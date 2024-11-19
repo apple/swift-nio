@@ -52,7 +52,7 @@ extension timespec {
 /// receives a connection reset, express interest with `[.read, .write, .reset]`.
 /// If then suddenly the socket becomes both readable and writable, the eventing mechanism will tell you about that
 /// fact using `[.read, .write]`.
-struct SelectorEventSet: OptionSet, Equatable, CustomStringConvertible {
+struct SelectorEventSet: OptionSet, Equatable {
 
     typealias RawValue = UInt8
 
@@ -84,36 +84,6 @@ struct SelectorEventSet: OptionSet, Equatable, CustomStringConvertible {
 
     init(rawValue: SelectorEventSet.RawValue) {
         self.rawValue = rawValue
-    }
-
-    var description: String {
-        var values: [String] = []
-        if self.contains(.reset) {
-            values.append("reset")
-        }
-
-        if self.contains(.readEOF) {
-            values.append("readEOF")
-        }
-
-        if self.contains(.read) {
-            values.append("read")
-        }
-
-        if self.contains(.write) {
-            values.append("write")
-        }
-
-        if self.contains(.writeEOF) {
-            values.append("writeEOF")
-        }
-
-        let remaining = self.subtracting([.reset, .readEOF, .read, .write, .writeEOF])
-        if remaining.rawValue != 0 {
-            values.append("unknown(0x\(String(remaining.rawValue, radix: 16)))")
-        }
-
-        return "[\(values.joined(separator: ", "))]"
     }
 }
 
@@ -298,7 +268,10 @@ internal class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
-        assert(interested.contains([.reset, .error]), "must register for at least .reset & .error but tried registering for \(interested)")
+        assert(
+            interested.contains([.reset, .error]),
+            "must register for at least .reset & .error but tried registering for \(interested)"
+        )
         try selectable.withUnsafeHandle { fd in
             var reg = registrations[Int(fd)]!
             try self.reregister0(
