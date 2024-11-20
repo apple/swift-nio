@@ -100,7 +100,7 @@ public final class ChannelTests: XCTestCase {
 
         var buffer = clientChannel.allocator.buffer(capacity: 1)
         buffer.writeString("a")
-        try clientChannel.writeAndFlush(buffer).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         let serverAcceptedChannel = try serverAcceptedChannelPromise.futureResult.wait()
 
@@ -153,11 +153,11 @@ public final class ChannelTests: XCTestCase {
         for _ in 0..<Socket.writevLimitIOVectors {
             buffer.clear()
             buffer.writeString("a")
-            clientChannel.write(buffer, promise: nil)
+            clientChannel.write(NIOAny(buffer), promise: nil)
         }
         buffer.clear()
         buffer.writeString("a")
-        try clientChannel.writeAndFlush(buffer).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         // Start shutting stuff down.
         XCTAssertNoThrow(try clientChannel.close().wait())
@@ -189,11 +189,11 @@ public final class ChannelTests: XCTestCase {
         let lotsOfData = Int(Int32.max)
         var written: Int64 = 0
         while written <= lotsOfData {
-            clientChannel.write(buffer, promise: nil)
+            clientChannel.write(NIOAny(buffer), promise: nil)
             written += Int64(bufferSize)
         }
 
-        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
 
         // Start shutting stuff down.
         XCTAssertNoThrow(try clientChannel.close().wait())
@@ -1440,11 +1440,11 @@ public final class ChannelTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.writeString("1234")
 
-        try channel.writeAndFlush(buffer).wait()
+        try channel.writeAndFlush(NIOAny(buffer)).wait()
         try channel.close(mode: .output).wait()
 
         verificationHandler.waitForEvent()
-        XCTAssertThrowsError(try channel.writeAndFlush(buffer).wait()) { error in
+        XCTAssertThrowsError(try channel.writeAndFlush(NIOAny(buffer)).wait()) { error in
             XCTAssertEqual(.outputClosed, error as? ChannelError)
         }
         let written = try buffer.withUnsafeReadableBytes { p in
@@ -1565,7 +1565,7 @@ public final class ChannelTests: XCTestCase {
         var buffer = channel.allocator.buffer(capacity: 12)
         buffer.writeString("1234")
 
-        try channel.writeAndFlush(buffer).wait()
+        try channel.writeAndFlush(NIOAny(buffer)).wait()
     }
 
     func testInputAndOutputClosedResultsInFullClosure() throws {
@@ -1791,7 +1791,7 @@ public final class ChannelTests: XCTestCase {
             try pipeline.eventLoop.submit { () -> Channel in
                 XCTAssertTrue(pipeline.channel is DeadChannel)
                 return pipeline.channel
-            }.wait().writeAndFlush(()).wait()
+            }.wait().writeAndFlush(NIOAny(())).wait()
         ) { error in
             XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
         }
@@ -2580,7 +2580,7 @@ public final class ChannelTests: XCTestCase {
                 .childChannelInitializer { channel in
                     var buffer = channel.allocator.buffer(capacity: 4)
                     buffer.writeString("foo")
-                    channel.writeAndFlush(buffer, promise: nil)
+                    channel.writeAndFlush(NIOAny(buffer), promise: nil)
                     return channel.eventLoop.makeSucceededVoidFuture()
                 }
                 .bind(host: "127.0.0.1", port: 0)
@@ -2953,7 +2953,7 @@ public final class ChannelTests: XCTestCase {
             func channelActive(context: ChannelHandlerContext) {
                 var buffer = context.channel.allocator.buffer(capacity: 1)
                 buffer.writeStaticString("X")
-                context.channel.writeAndFlush(buffer).map { context.channel }.cascade(
+                context.channel.writeAndFlush(Self.wrapOutboundOut(buffer)).map { context.channel }.cascade(
                     to: self.channelAvailablePromise
                 )
             }
@@ -3435,7 +3435,7 @@ public final class ChannelTests: XCTestCase {
         let buffer = client.allocator.buffer(string: "abcd")
         let writeCount = 3
 
-        let promises = (0..<writeCount).map { _ in client.write(buffer) }
+        let promises = (0..<writeCount).map { _ in client.write(NIOAny(buffer)) }
         let bufferedAmount = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertEqual(bufferedAmount, buffer.readableBytes * writeCount)
         client.flush()
@@ -3464,10 +3464,10 @@ public final class ChannelTests: XCTestCase {
         let buffer = client.allocator.buffer(string: "abcd")
         let writeCount = 20
 
-        var promises = (0..<writeCount).map { _ in client.writeAndFlush(buffer) }
+        var promises = (0..<writeCount).map { _ in client.writeAndFlush(NIOAny(buffer)) }
         var bufferedAmount = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertTrue(bufferedAmount >= 0 && bufferedAmount <= buffer.readableBytes * writeCount)
-        promises.append(client.write(buffer))
+        promises.append(client.write(NIOAny(buffer)))
         bufferedAmount = try client.getOption(.bufferedWritableBytes).wait()
         XCTAssertTrue(
             bufferedAmount >= buffer.readableBytes && bufferedAmount <= buffer.readableBytes * (writeCount + 1)

@@ -477,7 +477,7 @@ public final class NIOAsyncTestingChannel: Channel {
     @inlinable
     @discardableResult public func writeInbound<T: Sendable>(_ data: T) async throws -> BufferState {
         try await self.testingEventLoop.executeInContext {
-            self.pipeline.fireChannelRead(data)
+            self.pipeline.fireChannelRead(NIOAny(data))
             self.pipeline.fireChannelReadComplete()
             try self._throwIfErrorCaught()
             return self.channelcore.inboundBuffer.isEmpty ? .empty : .full(self.channelcore.inboundBuffer)
@@ -496,7 +496,7 @@ public final class NIOAsyncTestingChannel: Channel {
     //             all the way.
     @inlinable
     @discardableResult public func writeOutbound<T: Sendable>(_ data: T) async throws -> BufferState {
-        try await self.writeAndFlush(data)
+        try await self.writeAndFlush(NIOAny(data))
 
         return try await self.testingEventLoop.executeInContext {
             self.channelcore.outboundBuffer.isEmpty ? .empty : .full(self.channelcore.outboundBuffer)

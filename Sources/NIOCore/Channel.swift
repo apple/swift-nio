@@ -145,30 +145,6 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
     /// The default implementation returns `nil`, and `Channel` implementations must opt in to
     /// support this behavior.
     var syncOptions: NIOSynchronousChannelOptions? { get }
-
-    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
-    ///
-    /// - seealso: `ChannelOutboundInvoker.write`.
-    @preconcurrency
-    func write<T: Sendable>(_ any: T) -> EventLoopFuture<Void>
-
-    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
-    ///
-    /// - seealso: `ChannelOutboundInvoker.write`.
-    @preconcurrency
-    func write<T: Sendable>(_ any: T, promise: EventLoopPromise<Void>?)
-
-    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
-    ///
-    /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    @preconcurrency
-    func writeAndFlush<T: Sendable>(_ any: T) -> EventLoopFuture<Void>
-
-    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
-    ///
-    /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    @preconcurrency
-    func writeAndFlush<T: Sendable>(_ any: T, promise: EventLoopPromise<Void>?)
 }
 
 extension Channel {
@@ -201,16 +177,7 @@ extension Channel {
         pipeline.connect(to: address, promise: promise)
     }
 
-    @available(
-        *,
-        deprecated,
-        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
-    )
     public func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
-        pipeline.write(data, promise: promise)
-    }
-
-    public func write<T: Sendable>(_ data: T, promise: EventLoopPromise<Void>?) {
         pipeline.write(data, promise: promise)
     }
 
@@ -218,16 +185,7 @@ extension Channel {
         pipeline.flush()
     }
 
-    @available(
-        *,
-        deprecated,
-        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
-    )
     public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
-        pipeline.writeAndFlush(data, promise: promise)
-    }
-
-    public func writeAndFlush<T: Sendable>(_ data: T, promise: EventLoopPromise<Void>?) {
         pipeline.writeAndFlush(data, promise: promise)
     }
 
@@ -247,8 +205,7 @@ extension Channel {
         promise?.fail(ChannelError._operationUnsupported)
     }
 
-    @preconcurrency
-    public func triggerUserOutboundEvent(_ event: Any & Sendable, promise: EventLoopPromise<Void>?) {
+    public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
         pipeline.triggerUserOutboundEvent(event, promise: promise)
     }
 }
@@ -256,24 +213,32 @@ extension Channel {
 /// Provides special extension to make writing data to the `Channel` easier by removing the need to wrap data in `NIOAny` manually.
 extension Channel {
 
-    /// Write data into the `Channel`.
+    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    @preconcurrency
-    public func write<T: Sendable>(_ any: T) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.makePromise(of: Void.self)
-        self.write(any, promise: promise)
-        return promise.futureResult
+    public func write<T>(_ any: T) -> EventLoopFuture<Void> {
+        self.write(NIOAny(any))
     }
 
-    /// Write and flush data into the `Channel`.
+    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.write`.
+    public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+        self.write(NIOAny(any), promise: promise)
+    }
+
+    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    @preconcurrency
-    public func writeAndFlush<T: Sendable>(_ any: T) -> EventLoopFuture<Void> {
-        let promise = self.eventLoop.makePromise(of: Void.self)
-        self.writeAndFlush(any, promise: promise)
-        return promise.futureResult
+    public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
+        self.writeAndFlush(NIOAny(any))
+    }
+
+    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
+    public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
+        self.writeAndFlush(NIOAny(any), promise: promise)
     }
 }
 

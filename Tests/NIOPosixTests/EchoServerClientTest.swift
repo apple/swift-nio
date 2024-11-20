@@ -57,7 +57,7 @@ class EchoServerClientTest: XCTestCase {
             buffer.writeInteger(UInt8(i % 256))
         }
 
-        try clientChannel.writeAndFlush(buffer).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -139,7 +139,7 @@ class EchoServerClientTest: XCTestCase {
                 buffer.writeInteger(UInt8(i % 256))
             }
 
-            XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+            XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
 
             XCTAssertNoThrow(try countingHandler.assertReceived(buffer: buffer))
         }
@@ -184,7 +184,7 @@ class EchoServerClientTest: XCTestCase {
                 buffer.writeInteger(UInt8(i % 256))
             }
 
-            try clientChannel.writeAndFlush(buffer).wait()
+            try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
             try countingHandler.assertReceived(buffer: buffer)
         }
@@ -274,7 +274,7 @@ class EchoServerClientTest: XCTestCase {
             buffer.writeInteger(UInt8(i % 256))
         }
 
-        try clientChannel.writeAndFlush(buffer).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }
@@ -343,7 +343,7 @@ class EchoServerClientTest: XCTestCase {
         for i in 0..<numBytes {
             buffer.writeInteger(UInt8(i % 256))
         }
-        XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+        XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
 
         XCTAssertNoThrow(try countingHandler.assertReceived(buffer: buffer))
     }
@@ -592,7 +592,7 @@ class EchoServerClientTest: XCTestCase {
 
         // First we confirm that the channel really is up by sending in the appropriate number of bytes.
         let bytesToWrite = clientChannel.allocator.buffer(string: writingBytes)
-        let lastWriteFuture = clientChannel.writeAndFlush(bytesToWrite)
+        let lastWriteFuture = clientChannel.writeAndFlush(NIOAny(bytesToWrite))
 
         // When we've received all the bytes we know the connection is up.
         _ = try bytesReceivedPromise.futureResult.wait()
@@ -718,7 +718,7 @@ class EchoServerClientTest: XCTestCase {
         )
 
         let buffer = clientChannel.allocator.buffer(string: str)
-        try clientChannel.writeAndFlush(buffer).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
 
@@ -979,7 +979,7 @@ class EchoServerClientTest: XCTestCase {
             buffer.writeInteger(UInt8(i % 256))
         }
 
-        try clientChannel.writeAndFlush(buffer).wait()
+        try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
         try countingHandler.assertReceived(buffer: buffer)
     }

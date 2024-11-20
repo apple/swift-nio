@@ -270,7 +270,7 @@ class BootstrapTest: XCTestCase {
 
             var buffer = clientChannel.allocator.buffer(capacity: 1)
             buffer.writeString("a")
-            try clientChannel.writeAndFlush(buffer).wait()
+            try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
 
             let serverAcceptedChannel = try serverAcceptedChannelPromise.futureResult.wait()
 

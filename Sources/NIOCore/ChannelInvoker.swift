@@ -45,11 +45,6 @@ public protocol ChannelOutboundInvoker {
     ///   - data: the data to write
     ///   - promise: the `EventLoopPromise` that will be notified once the operation completes,
     ///                or `nil` if not interested in the outcome of the operation.
-    @available(
-        *,
-        deprecated,
-        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
-    )
     func write(_ data: NIOAny, promise: EventLoopPromise<Void>?)
 
     /// Flush data that was previously written via `write` to the remote peer.
@@ -61,11 +56,6 @@ public protocol ChannelOutboundInvoker {
     ///   - data: the data to write
     ///   - promise: the `EventLoopPromise` that will be notified once the `write` operation completes,
     ///                or `nil` if not interested in the outcome of the operation.
-    @available(
-        *,
-        deprecated,
-        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
-    )
     func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?)
 
     /// Signal that we want to read from the `Channel` once there is data ready.
@@ -89,8 +79,7 @@ public protocol ChannelOutboundInvoker {
     ///   - event: The event itself.
     ///   - promise: the `EventLoopPromise` that will be notified once the operation completes,
     ///                or `nil` if not interested in the outcome of the operation.
-    @preconcurrency
-    func triggerUserOutboundEvent(_ event: Any & Sendable, promise: EventLoopPromise<Void>?)
+    func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?)
 
     /// The `EventLoop` which is used by this `ChannelOutboundInvoker` for execution.
     var eventLoop: EventLoop { get }
@@ -155,11 +144,6 @@ extension ChannelOutboundInvoker {
     ///   - file: The file this function was called in, for debugging purposes.
     ///   - line: The line this function was called on, for debugging purposes.
     /// - Returns: the future which will be notified once the operation completes.
-    @available(
-        *,
-        deprecated,
-        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
-    )
     public func write(_ data: NIOAny, file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Void> {
         let promise = makePromise(file: file, line: line)
         write(data, promise: promise)
@@ -173,11 +157,6 @@ extension ChannelOutboundInvoker {
     ///   - file: The file this function was called in, for debugging purposes.
     ///   - line: The line this function was called on, for debugging purposes.
     /// - Returns: the future which will be notified once the `write` operation completes.
-    @available(
-        *,
-        deprecated,
-        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
-    )
     public func writeAndFlush(_ data: NIOAny, file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Void>
     {
         let promise = makePromise(file: file, line: line)
@@ -206,9 +185,8 @@ extension ChannelOutboundInvoker {
     ///   - file: The file this function was called in, for debugging purposes.
     ///   - line: The line this function was called on, for debugging purposes.
     /// - Returns: the future which will be notified once the operation completes.
-    @preconcurrency
     public func triggerUserOutboundEvent(
-        _ event: Any & Sendable,
+        _ event: Any,
         file: StaticString = #fileID,
         line: UInt = #line
     ) -> EventLoopFuture<Void> {
@@ -247,11 +225,6 @@ public protocol ChannelInboundInvoker {
     ///
     /// - Parameters:
     ///   - data: the data that was read and is ready to be processed.
-    @available(
-        *,
-        deprecated,
-        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
-    )
     func fireChannelRead(_ data: NIOAny)
 
     /// Called once there is no more data to read immediately on a `Channel`. Any new data received will be handled later.
@@ -280,8 +253,7 @@ public protocol ChannelInboundInvoker {
     ///
     /// - Parameters:
     ///   - event: the event itself.
-    @preconcurrency
-    func fireUserInboundEventTriggered(_ event: Any & Sendable)
+    func fireUserInboundEventTriggered(_ event: Any)
 }
 
 /// A protocol that signals that outbound and inbound events are triggered by this invoker.

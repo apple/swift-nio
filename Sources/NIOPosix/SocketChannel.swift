@@ -825,7 +825,7 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
 
                 var messageIterator = results.makeIterator()
                 while self.isActive, let message = messageIterator.next() {
-                    pipeline.fireChannelRead(message)
+                    pipeline.fireChannelRead(NIOAny(message))
                 }
 
                 readResult = .some

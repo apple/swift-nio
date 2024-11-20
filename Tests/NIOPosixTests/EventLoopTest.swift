@@ -500,7 +500,7 @@ public final class EventLoopTest: XCTestCase {
                 buffer.writeInteger(UInt8(i % 256))
             }
 
-            try clientChannel.writeAndFlush(buffer).wait()
+            try clientChannel.writeAndFlush(NIOAny(buffer)).wait()
         }
 
         // We should now shut down gracefully.

@@ -104,7 +104,7 @@ class IdleStateHandlerTest: XCTestCase {
         if !writeToChannel {
             var buffer = clientChannel.allocator.buffer(capacity: 4)
             buffer.writeStaticString("test")
-            XCTAssertNoThrow(try clientChannel.writeAndFlush(buffer).wait())
+            XCTAssertNoThrow(try clientChannel.writeAndFlush(NIOAny(buffer)).wait())
         }
         XCTAssertNoThrow(try clientChannel.closeFuture.wait())
     }
@@ -178,7 +178,7 @@ class IdleStateHandlerTest: XCTestCase {
 
         channel.pipeline.fireChannelRegistered()
         channel.pipeline.fireChannelActive()
-        channel.pipeline.fireChannelRead("")
+        channel.pipeline.fireChannelRead(NIOAny(""))
         channel.pipeline.fireChannelReadComplete()
         channel.pipeline.fireErrorCaught(ChannelError.alreadyClosed)
         channel.pipeline.fireUserInboundEventTriggered("")

@@ -216,7 +216,7 @@ class ChannelPipelineTest: XCTestCase {
             }
         ).wait()
 
-        XCTAssertNoThrow(try channel.writeAndFlush("msg").wait() as Void)
+        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny("msg")).wait() as Void)
         if let data = try channel.readOutbound(as: ByteBuffer.self) {
             XCTAssertEqual(buf, data)
         } else {
