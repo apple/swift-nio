@@ -90,7 +90,10 @@ extension SelectorEventSet {
         if epollEvent.events & Epoll.EPOLLRDHUP != 0 {
             selectorEventSet.formUnion(.readEOF)
         }
-        if epollEvent.events & Epoll.EPOLLHUP != 0 || epollEvent.events & Epoll.EPOLLERR != 0 {
+        if epollEvent.events & Epoll.EPOLLERR != 0 {
+            selectorEventSet.formUnion(.error)
+        }
+        if epollEvent.events & Epoll.EPOLLHUP != 0 {
             selectorEventSet.formUnion(.reset)
         }
         self = selectorEventSet

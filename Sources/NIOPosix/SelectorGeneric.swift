@@ -62,7 +62,7 @@ struct SelectorEventSet: OptionSet, Equatable {
     /// of flags or to compare against spurious wakeups.
     static let _none = SelectorEventSet([])
 
-    /// Connection reset or other errors.
+    /// Connection reset.
     static let reset = SelectorEventSet(rawValue: 1 << 0)
 
     /// EOF at the read/input end of a `Selectable`.
@@ -78,6 +78,9 @@ struct SelectorEventSet: OptionSet, Equatable {
     ///
     /// - Note: This is rarely used because in many cases, there is no signal that this happened.
     static let writeEOF = SelectorEventSet(rawValue: 1 << 4)
+
+    /// Error encountered.
+    static let error = SelectorEventSet(rawValue: 1 << 5)
 
     init(rawValue: SelectorEventSet.RawValue) {
         self.rawValue = rawValue
@@ -237,7 +240,7 @@ internal class Selector<R: Registration> {
         makeRegistration: (SelectorEventSet, SelectorRegistrationID) -> R
     ) throws {
         assert(self.myThread == NIOThread.current)
-        assert(interested.contains(.reset))
+        assert(interested.contains([.reset, .error]))
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
         }
@@ -265,7 +268,10 @@ internal class Selector<R: Registration> {
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
-        assert(interested.contains(.reset), "must register for at least .reset but tried registering for \(interested)")
+        assert(
+            interested.contains([.reset, .error]),
+            "must register for at least .reset & .error but tried registering for \(interested)"
+        )
         try selectable.withUnsafeHandle { fd in
             var reg = registrations[Int(fd)]!
             try self.reregister0(
