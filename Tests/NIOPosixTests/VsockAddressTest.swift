@@ -58,7 +58,7 @@ class VsockAddressTest: XCTestCase {
     }
 
     func testGetLocalCID() throws {
-        try XCTSkipUnless(System.supportsVsock)
+        try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
 
         let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
         defer { try? socket.close() }
