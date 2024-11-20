@@ -840,10 +840,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         #endif
     }
 
-    override func shouldCloseOnReadError(_ err: Error) -> Bool {
-        guard let err = err as? IOError else { return true }
-
-        switch err.errnoCode {
+    private func shouldCloseOnErrnoCode(_ errnoCode: CInt) -> Bool {
+        switch errnoCode {
         // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
         // See also:
         // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
@@ -854,6 +852,31 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return false
         default:
             return true
+        }
+    }
+
+    override func shouldCloseOnReadError(_ err: Error) -> Bool {
+        guard let err = err as? IOError else { return true }
+        return self.shouldCloseOnErrnoCode(err.errnoCode)
+    }
+
+    override func error() -> ErrorResult {
+        // Assume we can get the error from the socket.
+        do {
+            let errnoCode: CInt = try self.socket.getOption(level: .socket, name: .so_error)
+            if self.shouldCloseOnErrnoCode(errnoCode) {
+                self.reset()
+                return .fatal
+            } else {
+                self.pipeline.syncOperations.fireErrorCaught(
+                    IOError(errnoCode: errnoCode, reason: "so_error")
+                )
+                return .nonFatal
+            }
+        } catch {
+            // Unknown error, fatal.
+            self.reset()
+            return .fatal
         }
     }
 

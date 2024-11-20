@@ -443,6 +443,18 @@ internal final class SelectableEventLoop: EventLoop {
         if ev.contains(.reset) {
             channel.reset()
         } else {
+            if ev.contains(.error) {
+                switch channel.error() {
+                case .fatal:
+                    return
+                case .nonFatal:
+                    break
+                }
+
+                guard channel.isOpen else {
+                    return
+                }
+            }
             if ev.contains(.writeEOF) {
                 channel.writeEOF()
 
@@ -746,10 +758,10 @@ internal final class SelectableEventLoop: EventLoop {
                         self.handleEvent(ev.io, channel: chan)
                     case .pipeChannel(let chan, let direction):
                         var ev = ev
-                        if ev.io.contains(.reset) {
-                            // .reset needs special treatment here because we're dealing with two separate pipes instead
+                        if ev.io.contains(.reset) || ev.io.contains(.error) {
+                            // .reset and .error needs special treatment here because we're dealing with two separate pipes instead
                             // of one socket. So we turn .reset input .readEOF/.writeEOF.
-                            ev.io.subtract([.reset])
+                            ev.io.subtract([.reset, .error])
                             ev.io.formUnion([direction == .input ? .readEOF : .writeEOF])
                         }
                         self.handleEvent(ev.io, channel: chan)

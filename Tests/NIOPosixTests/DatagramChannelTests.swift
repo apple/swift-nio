@@ -34,6 +34,17 @@ extension Channel {
         }.wait()
     }
 
+    func waitForErrors(count: Int) throws -> [any Error] {
+        try self.pipeline.context(name: "ByteReadRecorder").flatMap { context in
+            if let future = (context.handler as? DatagramReadRecorder<ByteBuffer>)?.notifyForErrors(count) {
+                return future
+            }
+
+            XCTFail("Could not wait for errors")
+            return self.eventLoop.makeSucceededFuture([])
+        }.wait()
+    }
+
     func readCompleteCount() throws -> Int {
         try self.pipeline.context(name: "ByteReadRecorder").map { context in
             (context.handler as! DatagramReadRecorder<ByteBuffer>).readCompleteCount
@@ -66,10 +77,12 @@ final class DatagramReadRecorder<DataType>: ChannelInboundHandler {
     }
 
     var reads: [AddressedEnvelope<DataType>] = []
+    var errors: [any Error] = []
     var loop: EventLoop? = nil
     var state: State = .fresh
 
     var readWaiters: [Int: EventLoopPromise<[AddressedEnvelope<DataType>]>] = [:]
+    var errorWaiters: [Int: EventLoopPromise<[any Error]>] = [:]
     var readCompleteCount = 0
 
     func channelRegistered(context: ChannelHandlerContext) {
@@ -95,6 +108,16 @@ final class DatagramReadRecorder<DataType>: ChannelInboundHandler {
         context.fireChannelRead(Self.wrapInboundOut(data))
     }
 
+    func errorCaught(context: ChannelHandlerContext, error: any Error) {
+        self.errors.append(error)
+
+        if let promise = self.errorWaiters.removeValue(forKey: self.errors.count) {
+            promise.succeed(self.errors)
+        }
+
+        context.fireErrorCaught(error)
+    }
+
     func channelReadComplete(context: ChannelHandlerContext) {
         self.readCompleteCount += 1
         context.fireChannelReadComplete()
@@ -107,6 +130,15 @@ final class DatagramReadRecorder<DataType>: ChannelInboundHandler {
 
         readWaiters[count] = loop!.makePromise()
         return readWaiters[count]!.futureResult
+    }
+
+    func notifyForErrors(_ count: Int) -> EventLoopFuture<[any Error]> {
+        guard self.errors.count < count else {
+            return self.loop!.makeSucceededFuture(.init(self.errors.prefix(count)))
+        }
+
+        self.errorWaiters[count] = self.loop!.makePromise()
+        return self.errorWaiters[count]!.futureResult
     }
 }
 
@@ -1713,6 +1745,29 @@ class DatagramChannelTests: XCTestCase {
         for datagram in datagrams {
             XCTAssertEqual(datagram.data.readableBytes, buffer.readableBytes)
         }
+    }
+
+    func testShutdownReadOnConnectedUDP() throws {
+        var buffer = self.firstChannel.allocator.buffer(capacity: 256)
+        buffer.writeStaticString("hello, world!")
+
+        // Connect and write
+        XCTAssertNoThrow(try self.firstChannel.connect(to: self.secondChannel.localAddress!).wait())
+
+        let writeData = AddressedEnvelope(remoteAddress: self.secondChannel.localAddress!, data: buffer)
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(writeData).wait())
+        _ = try self.secondChannel.waitForDatagrams(count: 1)
+
+        // Ok, close on the second channel.
+        XCTAssertNoThrow(try self.secondChannel.close(mode: .all).wait())
+        print("closed")
+
+        // Write again.
+        XCTAssertNoThrow(try self.firstChannel.writeAndFlush(writeData).wait())
+
+        // This should trigger an error.
+        let errors = try self.firstChannel.waitForErrors(count: 1)
+        XCTAssertEqual((errors[0] as? IOError)?.errnoCode, ECONNREFUSED)
     }
 
     private func hasGoodGROSupport() throws -> Bool {
