@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Atomics
 import NIOFoundationCompat
 import XCTest
 import _NIOBase64
@@ -2441,8 +2440,8 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testReserveCapacityLargerUniquelyReferencedCallsRealloc() throws {
-        testReserveCapacityLarger_reallocCount.store(0, ordering: .sequentiallyConsistent)
-        testReserveCapacityLarger_mallocCount.store(0, ordering: .sequentiallyConsistent)
+        testReserveCapacityLarger_reallocCount = 0
+        testReserveCapacityLarger_mallocCount = 0
 
         let alloc = ByteBufferAllocator(
             hookedMalloc: testReserveCapacityLarger_mallocHook,
@@ -2454,17 +2453,17 @@ class ByteBufferTest: XCTestCase {
 
         let oldCapacity = buf.capacity
 
-        XCTAssertEqual(testReserveCapacityLarger_mallocCount.load(ordering: .sequentiallyConsistent), 1)
-        XCTAssertEqual(testReserveCapacityLarger_reallocCount.load(ordering: .sequentiallyConsistent), 0)
+        XCTAssertEqual(testReserveCapacityLarger_mallocCount, 1)
+        XCTAssertEqual(testReserveCapacityLarger_reallocCount, 0)
         buf.reserveCapacity(32)
-        XCTAssertEqual(testReserveCapacityLarger_mallocCount.load(ordering: .sequentiallyConsistent), 1)
-        XCTAssertEqual(testReserveCapacityLarger_reallocCount.load(ordering: .sequentiallyConsistent), 1)
+        XCTAssertEqual(testReserveCapacityLarger_mallocCount, 1)
+        XCTAssertEqual(testReserveCapacityLarger_reallocCount, 1)
         XCTAssertNotEqual(buf.capacity, oldCapacity)
     }
 
     func testReserveCapacityLargerMultipleReferenceCallsMalloc() throws {
-        testReserveCapacityLarger_reallocCount.store(0, ordering: .sequentiallyConsistent)
-        testReserveCapacityLarger_mallocCount.store(0, ordering: .sequentiallyConsistent)
+        testReserveCapacityLarger_reallocCount = 0
+        testReserveCapacityLarger_mallocCount = 0
 
         let alloc = ByteBufferAllocator(
             hookedMalloc: testReserveCapacityLarger_mallocHook,
@@ -2481,11 +2480,11 @@ class ByteBufferTest: XCTestCase {
                 UInt(bitPattern: $0.baseAddress!)
             }
 
-            XCTAssertEqual(testReserveCapacityLarger_mallocCount.load(ordering: .sequentiallyConsistent), 1)
-            XCTAssertEqual(testReserveCapacityLarger_reallocCount.load(ordering: .sequentiallyConsistent), 0)
+            XCTAssertEqual(testReserveCapacityLarger_mallocCount, 1)
+            XCTAssertEqual(testReserveCapacityLarger_reallocCount, 0)
             buf.reserveCapacity(32)
-            XCTAssertEqual(testReserveCapacityLarger_mallocCount.load(ordering: .sequentiallyConsistent), 2)
-            XCTAssertEqual(testReserveCapacityLarger_reallocCount.load(ordering: .sequentiallyConsistent), 0)
+            XCTAssertEqual(testReserveCapacityLarger_mallocCount, 2)
+            XCTAssertEqual(testReserveCapacityLarger_reallocCount, 0)
 
             let newPtrVal = buf.withVeryUnsafeBytes {
                 UInt(bitPattern: $0.baseAddress!)
@@ -3355,15 +3354,7 @@ private enum AllocationExpectationState: Int {
     case freeDone
 }
 
-private let _testAllocationOfReallyBigByteBuffer_state = ManagedAtomic<Int>(AllocationExpectationState.begin.rawValue)
-private var testAllocationOfReallyBigByteBuffer_state: AllocationExpectationState {
-    get {
-        .init(rawValue: _testAllocationOfReallyBigByteBuffer_state.load(ordering: .acquiring))!
-    }
-    set {
-        _testAllocationOfReallyBigByteBuffer_state.store(newValue.rawValue, ordering: .releasing)
-    }
-}
+private var testAllocationOfReallyBigByteBuffer_state = AllocationExpectationState.begin
 private func testAllocationOfReallyBigByteBuffer_freeHook(_ ptr: UnsafeMutableRawPointer?) {
     precondition(AllocationExpectationState.reallocDone == testAllocationOfReallyBigByteBuffer_state)
     testAllocationOfReallyBigByteBuffer_state = .freeDone
@@ -3396,14 +3387,14 @@ private func testAllocationOfReallyBigByteBuffer_memcpyHook(
     // not actually doing any copies
 }
 
-private let testReserveCapacityLarger_reallocCount = ManagedAtomic(0)
-private let testReserveCapacityLarger_mallocCount = ManagedAtomic(0)
+private var testReserveCapacityLarger_reallocCount = 0
+private var testReserveCapacityLarger_mallocCount = 0
 private func testReserveCapacityLarger_freeHook(_ ptr: UnsafeMutableRawPointer) {
     free(ptr)
 }
 
 private func testReserveCapacityLarger_mallocHook(_ size: Int) -> UnsafeMutableRawPointer? {
-    testReserveCapacityLarger_mallocCount.wrappingIncrement(ordering: .sequentiallyConsistent)
+    testReserveCapacityLarger_mallocCount += 1
     return malloc(size)
 }
 
@@ -3411,7 +3402,7 @@ private func testReserveCapacityLarger_reallocHook(
     _ ptr: UnsafeMutableRawPointer?,
     _ count: Int
 ) -> UnsafeMutableRawPointer? {
-    testReserveCapacityLarger_reallocCount.wrappingIncrement(ordering: .sequentiallyConsistent)
+    testReserveCapacityLarger_reallocCount += 1
     return realloc(ptr, count)
 }
 

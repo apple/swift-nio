@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Atomics
 import Dispatch
 import NIOCore
 import NIOEmbedded
@@ -31,7 +30,7 @@ class DispatchQueueWithFutureTest: XCTestCase {
         }
         let eventLoop = group.next()
         let sem = DispatchSemaphore(value: 0)
-        let nonBlockingRan = ManagedAtomic(false)
+        var nonBlockingRan = false
         let futureResult: EventLoopFuture<String> = DispatchQueue.global().asyncWithFuture(eventLoop: eventLoop) {
             () -> String in
             sem.wait()  // Block in callback
@@ -39,12 +38,12 @@ class DispatchQueueWithFutureTest: XCTestCase {
         }
         futureResult.whenSuccess { value in
             XCTAssertEqual(value, "hello")
-            XCTAssertTrue(nonBlockingRan.load(ordering: .sequentiallyConsistent))
+            XCTAssertTrue(nonBlockingRan)
         }
 
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
-            nonBlockingRan.store(true, ordering: .sequentiallyConsistent)
+            nonBlockingRan = true
         }
         p2.succeed(true)
 
@@ -58,7 +57,7 @@ class DispatchQueueWithFutureTest: XCTestCase {
         }
         let eventLoop = group.next()
         let sem = DispatchSemaphore(value: 0)
-        let nonBlockingRan = ManagedAtomic(false)
+        var nonBlockingRan = false
         let futureResult: EventLoopFuture<String> = DispatchQueue.global().asyncWithFuture(eventLoop: eventLoop) {
             () -> String in
             sem.wait()  // Block in callback
@@ -66,12 +65,12 @@ class DispatchQueueWithFutureTest: XCTestCase {
         }
         futureResult.whenFailure { err in
             XCTAssertEqual(err as! DispatchQueueTestError, DispatchQueueTestError.example)
-            XCTAssertTrue(nonBlockingRan.load(ordering: .sequentiallyConsistent))
+            XCTAssertTrue(nonBlockingRan)
         }
 
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
-            nonBlockingRan.store(true, ordering: .sequentiallyConsistent)
+            nonBlockingRan = true
         }
         p2.succeed(true)
 

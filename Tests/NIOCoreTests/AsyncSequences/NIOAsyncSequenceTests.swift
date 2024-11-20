@@ -519,7 +519,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
             let value = await iterator.next()
             resumed.fulfill()
 
-            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
+            await fulfillment(of: [cancelled], timeout: 1)
             return value
         }
 
@@ -562,7 +562,7 @@ final class NIOAsyncSequenceProducerTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task: Task<Int?, Never> = Task {
-            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
+            await fulfillment(of: [cancelled], timeout: 1)
             let iterator = sequence.makeAsyncIterator()
             return await iterator.next()
         }

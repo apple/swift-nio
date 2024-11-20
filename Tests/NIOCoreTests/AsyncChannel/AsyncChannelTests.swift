@@ -253,8 +253,7 @@ final class AsyncChannelTests: XCTestCase {
             let strongSentinel: Sentinel? = Sentinel()
             sentinel = strongSentinel!
             try await XCTAsyncAssertNotNil(
-                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).map {
-                    _ -> Bool in
+                await channel.pipeline.handler(type: NIOAsyncChannelHandler<Sentinel, Sentinel, Never>.self).map { _ in
                     true
                 }.get()
             )
@@ -429,8 +428,9 @@ private final class CloseRecorder: ChannelOutboundHandler, @unchecked Sendable {
     }
 }
 
-private final class CloseSuppressor: ChannelOutboundHandler, RemovableChannelHandler, Sendable {
+private final class CloseSuppressor: ChannelOutboundHandler, RemovableChannelHandler {
     typealias OutboundIn = Any
+    typealias outbound = Any
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         // We drop the close here.

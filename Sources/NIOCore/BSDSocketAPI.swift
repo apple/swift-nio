@@ -121,7 +121,7 @@ let SO_TIMESTAMP = CNIOLinux_SO_TIMESTAMP
 let SO_RCVTIMEO = CNIOLinux_SO_RCVTIMEO
 #endif
 
-public enum NIOBSDSocket: Sendable {
+public enum NIOBSDSocket {
     #if os(Windows)
     public typealias Handle = SOCKET
     #else

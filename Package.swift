@@ -86,8 +86,7 @@ let package = Package(
                 "_NIODataStructures",
                 swiftCollections,
                 swiftAtomics,
-            ],
-            swiftSettings: strictConcurrencySettings
+            ]
         ),
         .target(
             name: "_NIODataStructures",
@@ -415,13 +414,11 @@ let package = Package(
         .testTarget(
             name: "NIOCoreTests",
             dependencies: [
-                "NIOConcurrencyHelpers",
                 "NIOCore",
                 "NIOEmbedded",
                 "NIOFoundationCompat",
                 swiftAtomics,
-            ],
-            swiftSettings: strictConcurrencySettings
+            ]
         ),
         .testTarget(
             name: "NIOEmbeddedTests",

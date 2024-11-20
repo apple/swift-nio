@@ -69,8 +69,7 @@ final class NIOAsyncWriterTests: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        let delegate = MockAsyncWriterDelegate()
-        self.delegate = delegate
+        self.delegate = .init()
         let newWriter = NIOAsyncWriter.makeWriter(
             elementType: String.self,
             isWritable: true,
@@ -79,7 +78,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         )
         self.writer = newWriter.writer
         self.sink = newWriter.sink
-        self.sink._storage._setDidSuspend { delegate.didSuspend() }
+        self.sink._storage._setDidSuspend { self.delegate.didSuspend() }
     }
 
     override func tearDown() {
@@ -412,7 +411,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
+            await fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message2")
         }
 
@@ -471,7 +470,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
+            await fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message1")
         }
 
@@ -492,7 +491,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
+            await fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message2")
         }
 
@@ -546,7 +545,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
+            await fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message1")
         }
 
