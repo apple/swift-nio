@@ -290,7 +290,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                         )
                         self.upgradeState = .upgradeComplete
                         // When we remove ourselves we'll be delivering any buffered data.
-                        context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
+                        context.pipeline.removeHandler(context: context, promise: nil)
 
                     case .failure(let error):
                         // Remain in the '.upgrading' state.
@@ -357,7 +357,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         context.fireChannelReadComplete()
 
         // Ok, we've delivered all the parts. We can now remove ourselves, which should happen synchronously.
-        context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
+        context.pipeline.removeHandler(context: context, promise: nil)
     }
 
     /// Builds the initial mandatory HTTP headers for HTTP upgrade responses.

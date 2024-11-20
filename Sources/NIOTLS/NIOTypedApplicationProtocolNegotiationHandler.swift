@@ -138,7 +138,7 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
         case .fireErrorCaughtAndRemoveHandler(let error):
             self.negotiatedPromise.fail(error)
             context.fireErrorCaught(error)
-            context.pipeline.syncOperations.removeHandler(self, promise: nil)
+            context.pipeline.removeHandler(self, promise: nil)
 
         case .fireErrorCaughtAndStartUnbuffering(let error):
             self.negotiatedPromise.fail(error)
@@ -151,7 +151,7 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
 
         case .removeHandler(let value):
             self.negotiatedPromise.succeed(value)
-            context.pipeline.syncOperations.removeHandler(self, promise: nil)
+            context.pipeline.removeHandler(self, promise: nil)
 
         case .none:
             break
@@ -166,7 +166,7 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
 
             case .fireChannelReadCompleteAndRemoveHandler:
                 context.fireChannelReadComplete()
-                context.pipeline.syncOperations.removeHandler(self, promise: nil)
+                context.pipeline.removeHandler(self, promise: nil)
                 return
             }
         }

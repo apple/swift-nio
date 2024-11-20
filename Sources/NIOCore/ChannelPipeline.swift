@@ -167,9 +167,8 @@ public final class ChannelPipeline: ChannelInvoker {
     ///   - handler: the `ChannelHandler` to add
     ///   - position: The position in the `ChannelPipeline` to add `handler`. Defaults to `.last`.
     /// - Returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was added.
-    @preconcurrency
     public func addHandler(
-        _ handler: ChannelHandler & Sendable,
+        _ handler: ChannelHandler,
         name: String? = nil,
         position: ChannelPipeline.Position = .last
     ) -> EventLoopFuture<Void> {
@@ -350,8 +349,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Parameters:
     ///   - handler: the `ChannelHandler` to remove.
     /// - Returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    @preconcurrency
-    public func removeHandler(_ handler: RemovableChannelHandler & Sendable) -> EventLoopFuture<Void> {
+    public func removeHandler(_ handler: RemovableChannelHandler) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
         self.removeHandler(handler, promise: promise)
         return promise.futureResult
@@ -373,11 +371,6 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Parameters:
     ///   - context: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     /// - Returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-    @available(
-        *,
-        deprecated,
-        message: "Use .syncOperations.removeHandler(context:) instead, this method is not Sendable-safe."
-    )
     public func removeHandler(context: ChannelHandlerContext) -> EventLoopFuture<Void> {
         let promise = self.eventLoop.makePromise(of: Void.self)
         self.removeHandler(context: context, promise: promise)
@@ -389,11 +382,14 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Parameters:
     ///   - handler: the `ChannelHandler` to remove.
     ///   - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    @preconcurrency
-    public func removeHandler(_ handler: RemovableChannelHandler & Sendable, promise: EventLoopPromise<Void>?) {
-        @Sendable
+    public func removeHandler(_ handler: RemovableChannelHandler, promise: EventLoopPromise<Void>?) {
         func removeHandler0() {
-            self.syncOperations.removeHandler(handler, promise: promise)
+            switch self.contextSync(handler: handler) {
+            case .success(let context):
+                self.removeHandler(context: context, promise: promise)
+            case .failure(let error):
+                promise?.fail(error)
+            }
         }
 
         if self.eventLoop.inEventLoop {
@@ -411,9 +407,13 @@ public final class ChannelPipeline: ChannelInvoker {
     ///   - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
     ///   - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
     public func removeHandler(name: String, promise: EventLoopPromise<Void>?) {
-        @Sendable
         func removeHandler0() {
-            self.syncOperations.removeHandler(name: name, promise: promise)
+            switch self.contextSync(name: name) {
+            case .success(let context):
+                self.removeHandler(context: context, promise: promise)
+            case .failure(let error):
+                promise?.fail(error)
+            }
         }
 
         if self.eventLoop.inEventLoop {
@@ -430,22 +430,13 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Parameters:
     ///   - context: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
     ///   - promise: An `EventLoopPromise` that will complete when the `ChannelHandler` is removed.
-    @available(
-        *,
-        deprecated,
-        message: "Use .syncOperations.removeHandler(context:) instead, this method is not Sendable-safe."
-    )
     public func removeHandler(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-        let sendableView = context.sendableView
-
-        guard sendableView.channelHandlerIsRemovable else {
+        guard context.handler is RemovableChannelHandler else {
             promise?.fail(ChannelError._unremovableHandler)
             return
         }
-
-        @Sendable
         func removeHandler0() {
-            sendableView.wrappedValue.startUserTriggeredRemoval(promise: promise)
+            context.startUserTriggeredRemoval(promise: promise)
         }
 
         if self.eventLoop.inEventLoop {
@@ -462,13 +453,7 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Parameters:
     ///   - handler: the `ChannelHandler` for which the `ChannelHandlerContext` should be returned
     /// - Returns: the `EventLoopFuture` which will be notified once the the operation completes.
-    @available(
-        *,
-        deprecated,
-        message: "This method is not strict concurrency safe. Prefer .syncOperations.context(handler:)"
-    )
-    @preconcurrency
-    public func context(handler: ChannelHandler & Sendable) -> EventLoopFuture<ChannelHandlerContext> {
+    public func context(handler: ChannelHandler) -> EventLoopFuture<ChannelHandlerContext> {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
 
         if self.eventLoop.inEventLoop {
@@ -1020,9 +1005,8 @@ extension ChannelPipeline {
     ///   - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
     ///
     /// - Returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
-    @preconcurrency
     public func addHandlers(
-        _ handlers: [ChannelHandler & Sendable],
+        _ handlers: [ChannelHandler],
         position: ChannelPipeline.Position = .last
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
@@ -1046,9 +1030,8 @@ extension ChannelPipeline {
     ///   - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
     ///
     /// - Returns: A future that will be completed when all of the supplied `ChannelHandler`s were added.
-    @preconcurrency
     public func addHandlers(
-        _ handlers: (ChannelHandler & Sendable)...,
+        _ handlers: ChannelHandler...,
         position: ChannelPipeline.Position = .last
     ) -> EventLoopFuture<Void> {
         self.addHandlers(handlers, position: position)
@@ -1166,49 +1149,16 @@ extension ChannelPipeline {
         /// - Parameters:
         ///   - handler: the `ChannelHandler` to remove.
         /// - Returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
+        @preconcurrency
         public func removeHandler(_ handler: RemovableChannelHandler) -> EventLoopFuture<Void> {
             let promise = self.eventLoop.makePromise(of: Void.self)
-            self.removeHandler(handler, promise: promise)
-            return promise.futureResult
-        }
-
-        /// Remove a ``ChannelHandler`` from the ``ChannelPipeline``.
-        ///
-        /// - Parameters:
-        ///   - handler: the ``ChannelHandler`` to remove.
-        ///   - promise: an ``EventLoopPromise`` to notify when the ``ChannelHandler`` was removed.
-        public func removeHandler(_ handler: RemovableChannelHandler, promise: EventLoopPromise<Void>?) {
             switch self._pipeline.contextSync(handler: handler) {
             case .success(let context):
-                self.removeHandler(context: context, promise: promise)
+                self._pipeline.removeHandler(context: context, promise: promise)
             case .failure(let error):
-                promise?.fail(error)
+                promise.fail(error)
             }
-        }
-
-        /// Remove a `ChannelHandler` from the `ChannelPipeline`.
-        ///
-        /// - Parameters:
-        ///   - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
-        /// - Returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
-        public func removeHandler(name: String) -> EventLoopFuture<Void> {
-            let promise = self.eventLoop.makePromise(of: Void.self)
-            self.removeHandler(name: name, promise: promise)
             return promise.futureResult
-        }
-
-        /// Remove a ``ChannelHandler`` from the ``ChannelPipeline``.
-        ///
-        /// - Parameters:
-        ///   - name: the name that was used to add the `ChannelHandler` to the `ChannelPipeline` before.
-        ///   - promise: an ``EventLoopPromise`` to notify when the ``ChannelHandler`` was removed.
-        public func removeHandler(name: String, promise: EventLoopPromise<Void>?) {
-            switch self._pipeline.contextSync(name: name) {
-            case .success(let context):
-                self.removeHandler(context: context, promise: promise)
-            case .failure(let error):
-                promise?.fail(error)
-            }
         }
 
         /// Remove a `ChannelHandler` from the `ChannelPipeline`.
@@ -1218,21 +1168,8 @@ extension ChannelPipeline {
         /// - Returns: the `EventLoopFuture` which will be notified once the `ChannelHandler` was removed.
         public func removeHandler(context: ChannelHandlerContext) -> EventLoopFuture<Void> {
             let promise = self.eventLoop.makePromise(of: Void.self)
-            self.removeHandler(context: context, promise: promise)
+            self._pipeline.removeHandler(context: context, promise: promise)
             return promise.futureResult
-        }
-
-        /// Remove a `ChannelHandler` from the `ChannelPipeline`.
-        ///
-        /// - Parameters:
-        ///   - context: the `ChannelHandlerContext` that belongs to `ChannelHandler` that should be removed.
-        ///   - promise: an ``EventLoopPromise`` to notify when the ``ChannelHandler`` was removed.
-        public func removeHandler(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?) {
-            if context.handler is RemovableChannelHandler {
-                context.startUserTriggeredRemoval(promise: promise)
-            } else {
-                promise?.fail(ChannelError.unremovableHandler)
-            }
         }
 
         /// Returns the `ChannelHandlerContext` for the given handler instance if it is in
@@ -1430,8 +1367,7 @@ extension ChannelPipeline.SynchronousOperations: Sendable {}
 
 extension ChannelPipeline {
     /// A `Position` within the `ChannelPipeline` used to insert handlers into the `ChannelPipeline`.
-    @preconcurrency
-    public enum Position: Sendable {
+    public enum Position {
         /// The first `ChannelHandler` -- the front of the `ChannelPipeline`.
         case first
 
@@ -1439,15 +1375,18 @@ extension ChannelPipeline {
         case last
 
         /// Before the given `ChannelHandler`.
-        case before(ChannelHandler & Sendable)
+        case before(ChannelHandler)
 
         /// After the given `ChannelHandler`.
-        case after(ChannelHandler & Sendable)
+        case after(ChannelHandler)
     }
 }
 
+@available(*, unavailable)
+extension ChannelPipeline.Position: Sendable {}
+
 /// Special `ChannelHandler` that forwards all events to the `Channel.Unsafe` implementation.
-final class HeadChannelHandler: _ChannelOutboundHandler, Sendable {
+final class HeadChannelHandler: _ChannelOutboundHandler {
 
     static let name = "head"
     static let sharedInstance = HeadChannelHandler()
@@ -1503,7 +1442,7 @@ extension CloseMode {
 }
 
 /// Special `ChannelInboundHandler` which will consume all inbound events.
-final class TailChannelHandler: _ChannelInboundHandler, Sendable {
+final class TailChannelHandler: _ChannelInboundHandler {
 
     static let name = "tail"
     static let sharedInstance = TailChannelHandler()
@@ -2078,42 +2017,6 @@ extension ChannelHandlerContext {
             context: self,
             removalToken: .init(promise: promise)
         )
-    }
-}
-
-extension ChannelHandlerContext {
-    var sendableView: SendableView {
-        SendableView(wrapping: self)
-    }
-
-    /// A wrapper over ``ChannelHandlerContext`` that allows access to the thread-safe API
-    /// surface on the type.
-    ///
-    /// Very little of ``ChannelHandlerContext`` is thread-safe, but in a rare few places
-    /// there are things we can access. This type makes those available.
-    struct SendableView: @unchecked Sendable {
-        private let context: ChannelHandlerContext
-
-        fileprivate init(wrapping context: ChannelHandlerContext) {
-            self.context = context
-        }
-
-        /// Whether the ``ChannelHandler`` associated with this context conforms to
-        /// ``RemovableChannelHandler``.
-        var channelHandlerIsRemovable: Bool {
-            // `context.handler` is not mutable, and set at construction, so this access is
-            // acceptable. The protocol conformance check is also safe.
-            self.context.handler is RemovableChannelHandler
-        }
-
-        /// Grabs the underlying ``ChannelHandlerContext``. May only be called on the
-        /// event loop.
-        var wrappedValue: ChannelHandlerContext {
-            // The event loop lookup here is also thread-safe, so we can grab the value out
-            // and use it.
-            self.context.eventLoop.preconditionInEventLoop()
-            return self.context
-        }
     }
 }
 

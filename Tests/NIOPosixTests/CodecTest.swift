@@ -616,7 +616,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(buffer))
 
         channel.pipeline.context(handlerType: ByteToMessageHandler<PairOfBytesDecoder>.self).flatMap { context in
-            channel.pipeline.syncOperations.removeHandler(context: context)
+            channel.pipeline.removeHandler(context: context)
         }.whenFailure { error in
             XCTFail("unexpected error: \(error)")
         }
@@ -834,7 +834,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
             mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
                 if let slice = buffer.readSlice(length: 16) {
                     context.fireChannelRead(Self.wrapInboundOut(slice))
-                    context.pipeline.syncOperations.removeHandler(context: context).whenFailure { error in
+                    context.pipeline.removeHandler(context: context).whenFailure { error in
                         XCTFail("unexpected error: \(error)")
                     }
                     return .continue
@@ -943,7 +943,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
                         )
                     )
                 )
-                context.pipeline.syncOperations.removeHandler(context: context).whenFailure { error in
+                context.pipeline.removeHandler(context: context).whenFailure { error in
                     XCTFail("unexpected error: \(error)")
                 }
                 return .continue
@@ -1101,7 +1101,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         buffer.writeString("x")
         XCTAssertNoThrow(try channel.writeInbound(buffer))
         let removalFuture = channel.pipeline.context(handlerType: ByteToMessageHandler<Decoder>.self).flatMap {
-            channel.pipeline.syncOperations.removeHandler(context: $0)
+            channel.pipeline.removeHandler(context: $0)
         }
         channel.embeddedEventLoop.run()
         XCTAssertNoThrow(try removalFuture.wait())
@@ -1135,7 +1135,7 @@ public final class ByteToMessageDecoderTest: XCTestCase {
         let channel = EmbeddedChannel(handler: ByteToMessageHandler(decoder))
         XCTAssertNoThrow(try channel.connect(to: SocketAddress(ipAddress: "1.2.3.4", port: 5678)).wait())
         let removalFuture = channel.pipeline.context(handlerType: ByteToMessageHandler<Decoder>.self).flatMap {
-            channel.pipeline.syncOperations.removeHandler(context: $0)
+            channel.pipeline.removeHandler(context: $0)
         }
         channel.embeddedEventLoop.run()
         XCTAssertNoThrow(try removalFuture.wait())

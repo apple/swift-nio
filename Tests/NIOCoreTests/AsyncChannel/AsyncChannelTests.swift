@@ -442,7 +442,7 @@ private final class CloseSuppressor: ChannelOutboundHandler, RemovableChannelHan
 extension NIOAsyncTestingChannel {
     fileprivate func closeIgnoringSuppression() async throws {
         try await self.pipeline.context(handlerType: CloseSuppressor.self).flatMap {
-            self.pipeline.syncOperations.removeHandler(context: $0)
+            self.pipeline.removeHandler(context: $0)
         }.flatMap {
             self.close()
         }.get()

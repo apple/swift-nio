@@ -810,7 +810,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.syncOperations.removeHandler(context: context, promise: removalPromise)
+        channel.pipeline.removeHandler(context: context, promise: removalPromise)
 
         XCTAssertNoThrow(try removalPromise.futureResult.wait())
         guard case .some(.byteBuffer(let receivedBuffer)) = try channel.readOutbound(as: IOData.self) else {
@@ -845,7 +845,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.syncOperations.removeHandler(context: context).whenSuccess {
+        channel.pipeline.removeHandler(context: context).whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -1058,7 +1058,7 @@ class ChannelPipelineTest: XCTestCase {
         // let's trigger the removal process
         XCTAssertNoThrow(
             try channel.pipeline.context(handlerType: NeverCompleteRemovalHandler.self).map { handler in
-                channel.pipeline.syncOperations.removeHandler(context: handler, promise: nil)
+                channel.pipeline.removeHandler(context: handler, promise: nil)
             }.wait()
         )
 
@@ -1111,7 +1111,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "the first one to remove").wait())
         XCTAssertNoThrow(try channel.pipeline.removeHandler(allHandlers[1]).wait())
-        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(context: lastContext).wait())
+        XCTAssertNoThrow(try channel.pipeline.removeHandler(context: lastContext).wait())
 
         for handler in allHandlers {
             XCTAssertTrue(handler.removeHandlerCalled)
@@ -1187,7 +1187,7 @@ class ChannelPipelineTest: XCTestCase {
                 XCTFail("unexpected error: \(error)")
             }
         }
-        XCTAssertThrowsError(try channel.pipeline.syncOperations.removeHandler(context: lastContext).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.removeHandler(context: lastContext).wait()) { error in
             if let error = error as? ChannelError {
                 XCTAssertEqual(ChannelError.unremovableHandler, error)
             } else {

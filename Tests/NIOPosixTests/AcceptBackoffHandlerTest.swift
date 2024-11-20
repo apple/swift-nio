@@ -344,8 +344,8 @@ public final class AcceptBackoffHandlerTest: XCTestCase {
 
         XCTAssertNoThrow(try serverChannel.setOption(.autoRead, value: false).wait())
         XCTAssertNoThrow(
-            try serverChannel.pipeline.addHandler(readCountHandler).flatMapThrowing { _ in
-                try serverChannel.pipeline.syncOperations.addHandler(
+            try serverChannel.pipeline.addHandler(readCountHandler).flatMap { _ in
+                serverChannel.pipeline.addHandler(
                     AcceptBackoffHandler(backoffProvider: backoffProvider),
                     name: self.acceptHandlerName
                 )
