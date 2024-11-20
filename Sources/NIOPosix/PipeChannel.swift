@@ -68,7 +68,7 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
         if let inputFD = self.pipePair.inputFD {
             try selector.register(
                 selectable: inputFD,
-                interested: interested.intersection([.read, .reset]),
+                interested: interested.intersection([.read, .reset, .error]),
                 makeRegistration: self.registrationForInput
             )
         }
@@ -76,7 +76,7 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
         if let outputFD = self.pipePair.outputFD {
             try selector.register(
                 selectable: outputFD,
-                interested: interested.intersection([.write, .reset]),
+                interested: interested.intersection([.write, .reset, .error]),
                 makeRegistration: self.registrationForOutput
             )
         }
@@ -95,13 +95,13 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
         if let inputFD = self.pipePair.inputFD, inputFD.isOpen {
             try selector.reregister(
                 selectable: inputFD,
-                interested: interested.intersection([.read, .reset])
+                interested: interested.intersection([.read, .reset, .error])
             )
         }
         if let outputFD = self.pipePair.outputFD, outputFD.isOpen {
             try selector.reregister(
                 selectable: outputFD,
-                interested: interested.intersection([.write, .reset])
+                interested: interested.intersection([.write, .reset, .error])
             )
         }
     }
