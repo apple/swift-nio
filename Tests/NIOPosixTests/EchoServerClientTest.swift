@@ -234,7 +234,7 @@ class EchoServerClientTest: XCTestCase {
     }
 
     func testEchoVsock() throws {
-        try XCTSkipUnless(System.supportsVsock, "No vsock transport available")
+        try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
