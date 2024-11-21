@@ -922,10 +922,12 @@ extension ByteBuffer {
         guard let slice = self.getSlice(at: index, length: length) else {
             return nil
         }
-        guard let string = String(
-            validating: slice.readableBytesView,
-            as: Unicode.UTF8.self
-        ) else {
+        guard
+            let string = String(
+                validating: slice.readableBytesView,
+                as: Unicode.UTF8.self
+            )
+        else {
             throw ReadUTF8ValidationError.invalidUTF8
         }
         return string
