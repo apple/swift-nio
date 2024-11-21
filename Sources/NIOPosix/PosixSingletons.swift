@@ -117,6 +117,6 @@ private let globalPosixBlockingPool: NIOThreadPool = {
         numberOfThreads: NIOSingletons.blockingPoolThreadCountSuggestion,
         threadNamePrefix: "SGLTN-TP-#"
     )
-    _ = Unmanaged.passUnretained(pool).retain()  // never gonna let you down.
+    _ = Unmanaged.passRetained(pool)  // never gonna let you down.
     return pool
 }()
