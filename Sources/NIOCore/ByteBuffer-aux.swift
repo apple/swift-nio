@@ -922,17 +922,13 @@ extension ByteBuffer {
         guard let slice = self.getSlice(at: index, length: length) else {
             return nil
         }
-        return try slice.withUnsafeReadableBytes { pointer in
-            guard
-                let string = String(
-                    validating: pointer,
-                    as: Unicode.UTF8.self
-                )
-            else {
-                throw ReadUTF8ValidationError.invalidUTF8
-            }
-            return string
+        guard let string = String(
+            validating: slice.readableBytesView,
+            as: Unicode.UTF8.self
+        ) else {
+            throw ReadUTF8ValidationError.invalidUTF8
         }
+        return string
     }
 
     /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Move the reader index
