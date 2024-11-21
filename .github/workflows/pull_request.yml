@@ -41,3 +41,21 @@ jobs:
     with:
       name: "Integration tests"
       matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"
+
+  vsock-tests:
+    name: Vsock tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Load vsock_loopback kernel module
+        run: sudo modprobe vsock_loopback
+      - name: Build package tests
+        run: swift build --build-tests
+      - name: Run Vsock tests
+        shell: bash  # explicitly choose bash, which ensures -o pipefail
+        run: swift test --filter "(?i)vsock" | tee test.out
+      - name: Check for skipped tests
+        run: test -r test.out && ! grep -i skipped test.out
