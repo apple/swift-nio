@@ -30,19 +30,10 @@ extension System {
         }
     }
 
-    static var supportsVsock: Bool {
-        #if canImport(Darwin) || os(Linux) || os(Android)
-        guard let socket = try? Socket(protocolFamily: .vsock, type: .stream) else { return false }
-        XCTAssertNoThrow(try socket.close())
-        #if !canImport(Darwin)
-        do {
-            let fd = try Posix.open(file: "/dev/vsock", oFlag: O_RDONLY | O_CLOEXEC)
-            try Posix.close(descriptor: fd)
-        } catch {
-            return false
-        }
-        #endif
-        return true
+    static var supportsVsockLoopback: Bool {
+        #if os(Linux) || os(Android)
+        guard let modules = try? String(contentsOf: URL(fileURLWithPath: "/proc/modules")) else { return false }
+        return modules.split(separator: "\n").compactMap({ $0.split(separator: " ").first }).contains("vsock_loopback")
         #else
         return false
         #endif

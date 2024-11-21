@@ -1141,7 +1141,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     // MARK: VSock
 
     func testVSock() async throws {
-        try XCTSkipUnless(System.supportsVsock, "No vsock transport available")
+        try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
         let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
         defer {
             try! eventLoopGroup.syncShutdownGracefully()
