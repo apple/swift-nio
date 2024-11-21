@@ -1314,6 +1314,53 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("a", buf.readString(length: 1))
     }
 
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReadUTF8ValidatedString() throws {
+        #if compiler(>=6)
+        buf.clear()
+        let expected = "hello"
+        buf.writeString(expected)
+        let actual = try buf.readUTF8ValidatedString(length: expected.utf8.count)
+        XCTAssertEqual(expected, actual)
+        XCTAssertEqual("", try buf.readUTF8ValidatedString(length: 0))
+        XCTAssertNil(try buf.readUTF8ValidatedString(length: 1))
+        #else
+        throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
+        #endif  // compiler(>=6)
+    }
+
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testGetUTF8ValidatedString() throws {
+        #if compiler(>=6)
+        buf.clear()
+        let expected = "hello, goodbye"
+        buf.writeString(expected)
+        let actual = try buf.getUTF8ValidatedString(at: 7, length: 7)
+        XCTAssertEqual("goodbye", actual)
+        #else
+        throw XCTSkip("'getUTF8ValidatedString' is only available in Swift 6 and later")
+        #endif  // compiler(>=6)
+    }
+
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testReadUTF8InvalidString() throws {
+        #if compiler(>=6)
+        buf.clear()
+        buf.writeBytes([UInt8](repeating: 255, count: 16))
+        XCTAssertThrowsError(try buf.readUTF8ValidatedString(length: 16)) { error in
+            switch error {
+            case is ByteBuffer.ReadUTF8ValidationError:
+                break
+            default:
+                XCTFail("Error: \(error)")
+            }
+        }
+        XCTAssertEqual(buf.readableBytes, 16)
+        #else
+        throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
+        #endif  // compiler(>=6)
+    }
+
     func testSetIntegerBeyondCapacity() throws {
         var buf = ByteBufferAllocator().buffer(capacity: 32)
         XCTAssertLessThan(buf.capacity, 200)
