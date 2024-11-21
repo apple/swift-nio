@@ -1315,6 +1315,7 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("a", buf.readString(length: 1))
     }
 
+    #if compiler(>=6)
     @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testReadUTF8ValidatedString() throws {
         buf.clear()
@@ -1349,6 +1350,7 @@ class ByteBufferTest: XCTestCase {
         }
         XCTAssertEqual(buf.readableBytes, 16)
     }
+    #endif  // compiler(>=6)
 
     func testSetIntegerBeyondCapacity() throws {
         var buf = ByteBufferAllocator().buffer(capacity: 32)
