@@ -367,8 +367,8 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
 
     /// Spin the state machine.
     ///
-    /// - parameters:
-    ///     - input: The input to the state machine.
+    /// - Parameters:
+    ///   - input: The input to the state machine.
     private func processInput(_ input: ConnectorInput) {
         switch (state, input) {
         // Only one valid transition from idle: to start resolving.
@@ -584,8 +584,8 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
 
     /// Called to connect to a given target.
     ///
-    /// - parameters:
-    ///     - target: The address to connect to.
+    /// - Parameters:
+    ///   - target: The address to connect to.
     private func connectToTarget(_ target: SocketAddress) {
         let channelFuture = channelBuilderCallback(self.loop, target.protocol)
         pendingConnections.append(channelFuture)

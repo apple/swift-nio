@@ -24,9 +24,9 @@ extension DispatchQueue {
     ///     }
     ///     try let value = futureResult.wait()
     ///
-    /// - parameters:
-    ///     - eventLoop: the `EventLoop` on which to processes the IO / task specified by `callbackMayBlock`.
-    ///     - callbackMayBlock: The scheduled callback for the IO / task.
+    /// - Parameters:
+    ///   - eventLoop: the `EventLoop` on which to processes the IO / task specified by `callbackMayBlock`.
+    ///   - callbackMayBlock: The scheduled callback for the IO / task.
     /// - returns a new `EventLoopFuture<ReturnType>` with value returned by the `block` parameter.
     @inlinable
     @preconcurrency

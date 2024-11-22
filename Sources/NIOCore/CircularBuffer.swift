@@ -60,7 +60,7 @@ public struct CircularBuffer<Element>: CustomStringConvertible {
     /// You may get indices offset from other indices by using `CircularBuffer.index(:offsetBy:)`,
     /// `CircularBuffer.index(before:)`, or `CircularBuffer.index(after:)`.
     ///
-    /// - note: Every index is invalidated as soon as you perform a length-changing operating on the `CircularBuffer`
+    /// - Note: Every index is invalidated as soon as you perform a length-changing operating on the `CircularBuffer`
     ///         but remains valid when you replace one item by another using the subscript.
     public struct Index: Comparable, Sendable {
         @usableFromInline private(set) var _backingIndex: UInt32
@@ -122,7 +122,7 @@ extension CircularBuffer: Collection, MutableCollection {
     /// collection `c`, calling `c.index(after: i)` returns the same index every
     /// time.
     ///
-    /// - Parameter i: A valid index of the collection. `i` must be less than
+    /// - Parameter after: A valid index of the collection. `i` must be less than
     ///   `endIndex`.
     /// - Returns: The index value immediately after `i`.
     @inlinable
@@ -495,9 +495,9 @@ extension CircularBuffer {
     /// are interested in using this function for performance you *must* test and verify that the optimisation applies
     /// correctly in your situation.
     ///
-    /// - parameters:
-    ///     - index: The index of the object that should be modified. If this index is invalid this function will trap.
-    ///     - modifyFunc: The function to apply to the modified object.
+    /// - Parameters:
+    ///   - index: The index of the object that should be modified. If this index is invalid this function will trap.
+    ///   - modifyFunc: The function to apply to the modified object.
     @inlinable
     public mutating func modify<Result>(
         _ index: Index,

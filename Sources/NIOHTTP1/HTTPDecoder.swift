@@ -541,8 +541,8 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
 
     /// Creates a new instance of `HTTPDecoder`.
     ///
-    /// - parameters:
-    ///     - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
+    /// - Parameters:
+    ///   - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
     ///                              detected. Note that this does not affect what happens on EOF.
     public convenience init(leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes) {
         self.init(leftOverBytesStrategy: leftOverBytesStrategy, informationalResponseStrategy: .drop)
@@ -550,10 +550,10 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
 
     /// Creates a new instance of `HTTPDecoder`.
     ///
-    /// - parameters:
-    ///     - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
+    /// - Parameters:
+    ///   - leftOverBytesStrategy: The strategy to use when removing the decoder from the pipeline and an upgrade was,
     ///                              detected. Note that this does not affect what happens on EOF.
-    ///     - informationalResponseStrategy: Should informational responses (like http status 100) be forwarded or dropped.
+    ///   - informationalResponseStrategy: Should informational responses (like http status 100) be forwarded or dropped.
     ///                              Default is `.drop`. This property is only respected when decoding responses.
     public init(
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,

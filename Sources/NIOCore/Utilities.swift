@@ -81,7 +81,7 @@ public enum System {
     /// On Linux the value returned will take account of cgroup or cpuset restrictions.
     /// The result will be rounded up to the nearest whole number where fractional CPUs have been assigned.
     ///
-    /// - returns: The logical core count on the system.
+    /// - Returns: The logical core count on the system.
     public static var coreCount: Int {
         #if os(Windows)
         var dwLength: DWORD = 0
@@ -138,8 +138,8 @@ public enum System {
     /// change, and the returned values will not change to reflect them. This function must be called
     /// again to get new results.
     ///
-    /// - returns: An array of network interfaces available on this machine.
-    /// - throws: If an error is encountered while enumerating interfaces.
+    /// - Returns: An array of network interfaces available on this machine.
+    /// - Throws: If an error is encountered while enumerating interfaces.
     @available(*, deprecated, renamed: "enumerateDevices")
     public static func enumerateInterfaces() throws -> [NIONetworkInterface] {
         var interfaces: [NIONetworkInterface] = []
@@ -169,8 +169,8 @@ public enum System {
     /// change, and the returned values will not change to reflect them. This function must be called
     /// again to get new results.
     ///
-    /// - returns: An array of network devices available on this machine.
-    /// - throws: If an error is encountered while enumerating interfaces.
+    /// - Returns: An array of network devices available on this machine.
+    /// - Throws: If an error is encountered while enumerating interfaces.
     public static func enumerateDevices() throws -> [NIONetworkDevice] {
         var devices: [NIONetworkDevice] = []
         devices.reserveCapacity(12)  // Arbitrary choice.

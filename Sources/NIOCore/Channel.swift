@@ -18,7 +18,7 @@ import NIOConcurrencyHelpers
 ///
 /// - warning: If you are not implementing a custom `Channel` type, you should never call any of these.
 ///
-/// - note: All methods must be called from the `EventLoop` thread.
+/// - Note: All methods must be called from the `EventLoop` thread.
 public protocol ChannelCore: AnyObject {
     /// Returns the local bound `SocketAddress`.
     func localAddress0() throws -> SocketAddress
@@ -28,34 +28,34 @@ public protocol ChannelCore: AnyObject {
 
     /// Register with the `EventLoop` to receive I/O notifications.
     ///
-    /// - parameters:
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func register0(promise: EventLoopPromise<Void>?)
 
     /// Register channel as already connected or bound socket.
-    /// - parameters:
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?)
 
     /// Bind to a `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - to: The `SocketAddress` to which we should bind the `Channel`.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - to: The `SocketAddress` to which we should bind the `Channel`.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?)
 
     /// Connect to a `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - to: The `SocketAddress` to which we should connect the `Channel`.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - to: The `SocketAddress` to which we should connect the `Channel`.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?)
 
     /// Write the given data to the outbound buffer.
     ///
-    /// - parameters:
-    ///     - data: The data to write, wrapped in a `NIOAny`.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - data: The data to write, wrapped in a `NIOAny`.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?)
 
     /// Try to flush out all previous written messages that are pending.
@@ -66,36 +66,36 @@ public protocol ChannelCore: AnyObject {
 
     /// Close the `Channel`.
     ///
-    /// - parameters:
-    ///     - error: The `Error` which will be used to fail any pending writes.
-    ///     - mode: The `CloseMode` to apply.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - error: The `Error` which will be used to fail any pending writes.
+    ///   - mode: The `CloseMode` to apply.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?)
 
     /// Trigger an outbound event.
     ///
-    /// - parameters:
-    ///     - event: The triggered event.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - event: The triggered event.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?)
 
     /// Called when data was read from the `Channel` but it was not consumed by any `ChannelInboundHandler` in the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - data: The data that was read, wrapped in a `NIOAny`.
+    /// - Parameters:
+    ///   - data: The data that was read, wrapped in a `NIOAny`.
     func channelRead0(_ data: NIOAny)
 
     /// Called when an inbound error was encountered but was not consumed by any `ChannelInboundHandler` in the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - error: The `Error` that was encountered.
+    /// - Parameters:
+    ///   - error: The `Error` that was encountered.
     func errorCaught0(error: Error)
 }
 
 /// A `Channel` is easiest thought of as a network socket. But it can be anything that is capable of I/O operations such
 /// as read, write, connect, and bind.
 ///
-/// - note: All operations on `Channel` are thread-safe.
+/// - Note: All operations on `Channel` are thread-safe.
 ///
 /// In SwiftNIO, all I/O operations are asynchronous and hence all operations on `Channel` are asynchronous too. This means
 /// that all I/O operations will return immediately, usually before the work has been completed. The `EventLoopPromise`s
@@ -254,10 +254,10 @@ extension ChannelCore {
     /// types are supported, consider using a tagged union to store the type information like
     /// NIO's own `IOData`, which will minimise the amount of runtime type checking.
     ///
-    /// - parameters:
-    ///     - data: The `NIOAny` to unwrap.
-    ///     - as: The type to extract from the `NIOAny`.
-    /// - returns: The content of the `NIOAny`.
+    /// - Parameters:
+    ///   - data: The `NIOAny` to unwrap.
+    ///   - as: The type to extract from the `NIOAny`.
+    /// - Returns: The content of the `NIOAny`.
     @inlinable
     public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
         data.forceAs()
@@ -274,10 +274,10 @@ extension ChannelCore {
     /// using `unwrapData` instead. This method exists for rare use-cases where tolerating type
     /// mismatches is acceptable.
     ///
-    /// - parameters:
-    ///     - data: The `NIOAny` to unwrap.
-    ///     - as: The type to extract from the `NIOAny`.
-    /// - returns: The content of the `NIOAny`, or `nil` if the type is incorrect.
+    /// - Parameters:
+    ///   - data: The `NIOAny` to unwrap.
+    ///   - as: The type to extract from the `NIOAny`.
+    /// - Returns: The content of the `NIOAny`, or `nil` if the type is incorrect.
     /// - warning: If you are implementing a `ChannelCore`, you should use `unwrapData` unless you
     ///     are doing something _extremely_ unusual.
     @inlinable
@@ -292,8 +292,8 @@ extension ChannelCore {
     /// This can be called from `close0` to tear down the `ChannelPipeline` when closure is
     /// complete.
     ///
-    /// - parameters:
-    ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
+    /// - Parameters:
+    ///   - channel: The `Channel` whose `ChannelPipeline` will be closed.
     @available(*, deprecated, renamed: "removeHandlers(pipeline:)")
     public func removeHandlers(channel: Channel) {
         self.removeHandlers(pipeline: channel.pipeline)
@@ -306,8 +306,8 @@ extension ChannelCore {
     /// This can be called from `close0` to tear down the `ChannelPipeline` when closure is
     /// complete.
     ///
-    /// - parameters:
-    ///     - pipeline: The `ChannelPipline` to be closed.
+    /// - Parameters:
+    ///   - pipeline: The `ChannelPipline` to be closed.
     public func removeHandlers(pipeline: ChannelPipeline) {
         pipeline.removeHandlers()
     }

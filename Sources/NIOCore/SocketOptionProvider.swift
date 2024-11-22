@@ -55,7 +55,7 @@ import WASILibc
 /// represents a convenient shorthand for using this protocol where the type allows,
 /// as well as avoiding the need to cast to this protocol.
 ///
-/// - note: Like the `Channel` protocol, all methods in this protocol are
+/// - Note: Like the `Channel` protocol, all methods in this protocol are
 ///     thread-safe.
 public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     /// The `EventLoop` which is used by this `SocketOptionProvider` for execution.
@@ -69,11 +69,11 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     /// and thereby read uninitialized or invalid memory. If at all possible, please use one of
     /// the safe functions defined by this protocol.
     ///
-    /// - parameters:
-    ///     - level: The socket option level, e.g. `SOL_SOCKET` or `IPPROTO_IP`.
-    ///     - name: The name of the socket option, e.g. `SO_REUSEADDR`.
-    ///     - value: The value to set the socket option to.
-    /// - returns: An `EventLoopFuture` that fires when the option has been set,
+    /// - Parameters:
+    ///   - level: The socket option level, e.g. `SOL_SOCKET` or `IPPROTO_IP`.
+    ///   - name: The name of the socket option, e.g. `SO_REUSEADDR`.
+    ///   - value: The value to set the socket option to.
+    /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     func unsafeSetSocketOption<Value>(
         level: SocketOptionLevel,
@@ -89,11 +89,11 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     /// and thereby read uninitialized or invalid memory. If at all possible, please use one of
     /// the safe functions defined by this protocol.
     ///
-    /// - parameters:
-    ///     - level: The socket option level, e.g. `SOL_SOCKET` or `IPPROTO_IP`.
-    ///     - name: The name of the socket option, e.g. `SO_REUSEADDR`.
-    ///     - value: The value to set the socket option to.
-    /// - returns: An `EventLoopFuture` that fires when the option has been set,
+    /// - Parameters:
+    ///   - level: The socket option level, e.g. `SOL_SOCKET` or `IPPROTO_IP`.
+    ///   - name: The name of the socket option, e.g. `SO_REUSEADDR`.
+    ///   - value: The value to set the socket option to.
+    /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     func unsafeSetSocketOption<Value>(
         level: NIOBSDSocket.OptionLevel,
@@ -109,10 +109,10 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     /// and thereby read uninitialized or invalid memory. If at all possible, please use one of
     /// the safe functions defined by this protocol.
     ///
-    /// - parameters:
-    ///     - level: The socket option level, e.g. `SOL_SOCKET` or `IPPROTO_IP`.
-    ///     - name: The name of the socket option, e.g. `SO_REUSEADDR`.
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Parameters:
+    ///   - level: The socket option level, e.g. `SOL_SOCKET` or `IPPROTO_IP`.
+    ///   - name: The name of the socket option, e.g. `SO_REUSEADDR`.
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     func unsafeGetSocketOption<Value>(level: SocketOptionLevel, name: SocketOptionName) -> EventLoopFuture<Value>
     #endif
@@ -124,10 +124,10 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     /// and thereby read uninitialized or invalid memory. If at all possible, please use one of
     /// the safe functions defined by this protocol.
     ///
-    /// - parameters:
-    ///     - level: The socket option level, e.g. `SOL_SOCKET` or `IPPROTO_IP`.
-    ///     - name: The name of the socket option, e.g. `SO_REUSEADDR`.
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Parameters:
+    ///   - level: The socket option level, e.g. `SOL_SOCKET` or `IPPROTO_IP`.
+    ///   - name: The name of the socket option, e.g. `SO_REUSEADDR`.
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     func unsafeGetSocketOption<Value>(
         level: NIOBSDSocket.OptionLevel,
@@ -178,9 +178,9 @@ public typealias NIOLinger = linger
 extension SocketOptionProvider {
     /// Sets the socket option SO_LINGER to `value`.
     ///
-    /// - parameters:
-    ///     - value: The value to set SO_LINGER to.
-    /// - returns: An `EventLoopFuture` that fires when the option has been set,
+    /// - Parameters:
+    ///   - value: The value to set SO_LINGER to.
+    /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     public func setSoLinger(_ value: linger) -> EventLoopFuture<Void> {
         #if os(WASI)
@@ -192,7 +192,7 @@ extension SocketOptionProvider {
 
     /// Gets the value of the socket option SO_LINGER.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getSoLinger() -> EventLoopFuture<NIOLinger> {
         #if os(WASI)
@@ -204,9 +204,9 @@ extension SocketOptionProvider {
 
     /// Sets the socket option IP_MULTICAST_IF to `value`.
     ///
-    /// - parameters:
-    ///     - value: The value to set IP_MULTICAST_IF to.
-    /// - returns: An `EventLoopFuture` that fires when the option has been set,
+    /// - Parameters:
+    ///   - value: The value to set IP_MULTICAST_IF to.
+    /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     public func setIPMulticastIF(_ value: in_addr) -> EventLoopFuture<Void> {
         self.unsafeSetSocketOption(level: .ip, name: .ip_multicast_if, value: value)
@@ -214,7 +214,7 @@ extension SocketOptionProvider {
 
     /// Gets the value of the socket option IP_MULTICAST_IF.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getIPMulticastIF() -> EventLoopFuture<in_addr> {
         self.unsafeGetSocketOption(level: .ip, name: .ip_multicast_if)
@@ -222,9 +222,9 @@ extension SocketOptionProvider {
 
     /// Sets the socket option IP_MULTICAST_TTL to `value`.
     ///
-    /// - parameters:
-    ///     - value: The value to set IP_MULTICAST_TTL to.
-    /// - returns: An `EventLoopFuture` that fires when the option has been set,
+    /// - Parameters:
+    ///   - value: The value to set IP_MULTICAST_TTL to.
+    /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     public func setIPMulticastTTL(_ value: CUnsignedChar) -> EventLoopFuture<Void> {
         self.unsafeSetSocketOption(level: .ip, name: .ip_multicast_ttl, value: value)
@@ -232,7 +232,7 @@ extension SocketOptionProvider {
 
     /// Gets the value of the socket option IP_MULTICAST_TTL.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getIPMulticastTTL() -> EventLoopFuture<CUnsignedChar> {
         self.unsafeGetSocketOption(level: .ip, name: .ip_multicast_ttl)
@@ -240,9 +240,9 @@ extension SocketOptionProvider {
 
     /// Sets the socket option IP_MULTICAST_LOOP to `value`.
     ///
-    /// - parameters:
-    ///     - value: The value to set IP_MULTICAST_LOOP to.
-    /// - returns: An `EventLoopFuture` that fires when the option has been set,
+    /// - Parameters:
+    ///   - value: The value to set IP_MULTICAST_LOOP to.
+    /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     public func setIPMulticastLoop(_ value: CUnsignedChar) -> EventLoopFuture<Void> {
         self.unsafeSetSocketOption(level: .ip, name: .ip_multicast_loop, value: value)
@@ -250,7 +250,7 @@ extension SocketOptionProvider {
 
     /// Gets the value of the socket option IP_MULTICAST_LOOP.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getIPMulticastLoop() -> EventLoopFuture<CUnsignedChar> {
         self.unsafeGetSocketOption(level: .ip, name: .ip_multicast_loop)
@@ -258,9 +258,9 @@ extension SocketOptionProvider {
 
     /// Sets the socket option IPV6_MULTICAST_IF to `value`.
     ///
-    /// - parameters:
-    ///     - value: The value to set IPV6_MULTICAST_IF to.
-    /// - returns: An `EventLoopFuture` that fires when the option has been set,
+    /// - Parameters:
+    ///   - value: The value to set IPV6_MULTICAST_IF to.
+    /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     public func setIPv6MulticastIF(_ value: CUnsignedInt) -> EventLoopFuture<Void> {
         self.unsafeSetSocketOption(level: .ipv6, name: .ipv6_multicast_if, value: value)
@@ -268,7 +268,7 @@ extension SocketOptionProvider {
 
     /// Gets the value of the socket option IPV6_MULTICAST_IF.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getIPv6MulticastIF() -> EventLoopFuture<CUnsignedInt> {
         self.unsafeGetSocketOption(level: .ipv6, name: .ipv6_multicast_if)
@@ -276,9 +276,9 @@ extension SocketOptionProvider {
 
     /// Sets the socket option IPV6_MULTICAST_HOPS to `value`.
     ///
-    /// - parameters:
-    ///     - value: The value to set IPV6_MULTICAST_HOPS to.
-    /// - returns: An `EventLoopFuture` that fires when the option has been set,
+    /// - Parameters:
+    ///   - value: The value to set IPV6_MULTICAST_HOPS to.
+    /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     public func setIPv6MulticastHops(_ value: CInt) -> EventLoopFuture<Void> {
         self.unsafeSetSocketOption(level: .ipv6, name: .ipv6_multicast_hops, value: value)
@@ -286,7 +286,7 @@ extension SocketOptionProvider {
 
     /// Gets the value of the socket option IPV6_MULTICAST_HOPS.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getIPv6MulticastHops() -> EventLoopFuture<CInt> {
         self.unsafeGetSocketOption(level: .ipv6, name: .ipv6_multicast_hops)
@@ -294,9 +294,9 @@ extension SocketOptionProvider {
 
     /// Sets the socket option IPV6_MULTICAST_LOOP to `value`.
     ///
-    /// - parameters:
-    ///     - value: The value to set IPV6_MULTICAST_LOOP to.
-    /// - returns: An `EventLoopFuture` that fires when the option has been set,
+    /// - Parameters:
+    ///   - value: The value to set IPV6_MULTICAST_LOOP to.
+    /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
     public func setIPv6MulticastLoop(_ value: CUnsignedInt) -> EventLoopFuture<Void> {
         self.unsafeSetSocketOption(level: .ipv6, name: .ipv6_multicast_loop, value: value)
@@ -304,7 +304,7 @@ extension SocketOptionProvider {
 
     /// Gets the value of the socket option IPV6_MULTICAST_LOOP.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getIPv6MulticastLoop() -> EventLoopFuture<CUnsignedInt> {
         self.unsafeGetSocketOption(level: .ipv6, name: .ipv6_multicast_loop)
@@ -315,7 +315,7 @@ extension SocketOptionProvider {
     ///
     /// This socket option cannot be set.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getTCPInfo() -> EventLoopFuture<tcp_info> {
         self.unsafeGetSocketOption(level: .tcp, name: .tcp_info)
@@ -327,7 +327,7 @@ extension SocketOptionProvider {
     ///
     /// This socket option cannot be set.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getTCPConnectionInfo() -> EventLoopFuture<tcp_connection_info> {
         self.unsafeGetSocketOption(level: .tcp, name: .tcp_connection_info)
@@ -339,7 +339,7 @@ extension SocketOptionProvider {
     ///
     /// This socket option cannot be set.
     ///
-    /// - returns: An `EventLoopFuture` containing the value of the socket option, or
+    /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     public func getMPTCPInfo() -> EventLoopFuture<mptcp_info> {
         self.unsafeGetSocketOption(level: .mptcp, name: .mptcp_info)

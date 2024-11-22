@@ -33,8 +33,8 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
 
     /// Create a new instance
     ///
-    /// - parameters:
-    ///     - backoffProvider: returns a `TimeAmount` which will be the amount of time to wait before attempting another `read`.
+    /// - Parameters:
+    ///   - backoffProvider: returns a `TimeAmount` which will be the amount of time to wait before attempting another `read`.
     public init(backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider) {
         self.backoffProvider = backoffProvider
         self.nextReadDeadlineNS = nil
@@ -44,9 +44,9 @@ public final class AcceptBackoffHandler: ChannelDuplexHandler, RemovableChannelH
 
     /// Create a new instance
     ///
-    /// - parameters:
-    ///     - shouldForwardIOErrorCaught: A boolean indicating if a caught IOError should be forwarded.
-    ///     - backoffProvider: returns a `TimeAmount` which will be the amount of time to wait before attempting another `read`.
+    /// - Parameters:
+    ///   - shouldForwardIOErrorCaught: A boolean indicating if a caught IOError should be forwarded.
+    ///   - backoffProvider: returns a `TimeAmount` which will be the amount of time to wait before attempting another `read`.
     public init(
         shouldForwardIOErrorCaught: Bool,
         backoffProvider: @escaping (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider

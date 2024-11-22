@@ -58,9 +58,9 @@ extension EventLoopPromise {
     ///
     /// This function can be used to bridge the `async` world into an `EventLoopPromise`.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///   - body: The `async` function to run.
-    /// - returns: A `Task` which was created to `await` the `body`.
+    /// - Returns: A `Task` which was created to `await` the `body`.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @discardableResult
     @preconcurrency
@@ -82,17 +82,18 @@ extension EventLoopPromise {
 extension Channel {
     /// Shortcut for calling `write` and `flush`.
     ///
-    /// - parameters:
-    ///     - data: the data to write
-    ///     - promise: the `EventLoopPromise` that will be notified once the `write` operation completes,
-    ///                or `nil` if not interested in the outcome of the operation.
+    /// - Parameters:
+    ///   - data: the data to write
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
-    public func writeAndFlush<T>(_ any: T) async throws {
-        try await self.writeAndFlush(any).get()
+    public func writeAndFlush<T>(_ data: T) async throws {
+        try await self.writeAndFlush(data).get()
     }
 
     /// Set `option` to `value` on this `Channel`.
+    /// - Parameters:
+    ///   - option: The option to set.
+    ///   - value: The new value of the option.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) async throws {
@@ -100,6 +101,8 @@ extension Channel {
     }
 
     /// Get the value of `option` for this `Channel`.
+    /// - Parameter option: The option to get.
+    /// - Returns: The value of the option.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func getOption<Option: ChannelOption>(_ option: Option) async throws -> Option.Value {
@@ -109,26 +112,29 @@ extension Channel {
 
 extension ChannelOutboundInvoker {
     /// Register on an `EventLoop` and so have all its IO handled.
-    ///
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func register(file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.register(file: file, line: line).get()
     }
 
     /// Bind to a `SocketAddress`.
-    /// - parameters:
-    ///     - to: the `SocketAddress` to which we should bind the `Channel`.
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - address: the `SocketAddress` to which we should bind the `Channel`.
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func bind(to address: SocketAddress, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.bind(to: address, file: file, line: line).get()
     }
 
     /// Connect to a `SocketAddress`.
-    /// - parameters:
-    ///     - to: the `SocketAddress` to which we should connect the `Channel`.
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - address: the `SocketAddress` to which we should connect the `Channel`.
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func connect(to address: SocketAddress, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.connect(to: address, file: file, line: line).get()
@@ -136,9 +142,10 @@ extension ChannelOutboundInvoker {
 
     /// Shortcut for calling `write` and `flush`.
     ///
-    /// - parameters:
-    ///     - data: the data to write
-    /// - returns: the future which will be notified once the `write` operation completes.
+    /// - Parameters:
+    ///   - data: the data to write
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func writeAndFlush(_ data: NIOAny, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.writeAndFlush(data, file: file, line: line).get()
@@ -146,9 +153,10 @@ extension ChannelOutboundInvoker {
 
     /// Close the `Channel` and so the connection if one exists.
     ///
-    /// - parameters:
-    ///     - mode: the `CloseMode` that is used
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - mode: the `CloseMode` that is used
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func close(mode: CloseMode = .all, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.close(mode: mode, file: file, line: line).get()
@@ -156,9 +164,10 @@ extension ChannelOutboundInvoker {
 
     /// Trigger a custom user outbound event which will flow through the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - event: the event itself.
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - event: the event itself.
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func triggerUserOutboundEvent(_ event: Any, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.triggerUserOutboundEvent(event, file: file, line: line).get()

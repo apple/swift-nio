@@ -279,7 +279,7 @@ public struct NIOAsyncWriter<
     ///
     /// This can be called more than once and from multiple `Task`s at the same time.
     ///
-    /// - Parameter contentsOf: The sequence to yield.
+    /// - Parameter sequence: The sequence to yield.
     @inlinable
     public func yield<S: Sequence>(contentsOf sequence: S) async throws where S.Element == Element {
         try await self._storage.yield(contentsOf: sequence)

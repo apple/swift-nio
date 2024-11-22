@@ -39,7 +39,7 @@ public typealias NIOPOSIXFileMode = mode_t
 /// When creating a `NIOFileHandle` it takes ownership of the underlying file descriptor. When a `NIOFileHandle` is no longer
 /// needed you must `close` it or take back ownership of the file descriptor using `takeDescriptorOwnership`.
 ///
-/// - note: One underlying file descriptor should usually be managed by one `NIOFileHandle` only.
+/// - Note: One underlying file descriptor should usually be managed by one `NIOFileHandle` only.
 ///
 /// - warning: Failing to manage the lifetime of a `NIOFileHandle` correctly will result in undefined behaviour.
 ///
@@ -68,7 +68,7 @@ public final class NIOFileHandle: FileDescriptor {
     ///
     /// - warning: The returned `NIOFileHandle` is not fully independent, the seek pointer is shared as documented by `dup(2)`.
     ///
-    /// - returns: A new `NIOFileHandle` with a fresh underlying file descriptor but shared seek pointer.
+    /// - Returns: A new `NIOFileHandle` with a fresh underlying file descriptor but shared seek pointer.
     public func duplicate() throws -> NIOFileHandle {
         try withUnsafeFileDescriptor { fd in
             NIOFileHandle(descriptor: try SystemCalls.dup(descriptor: fd))
@@ -81,7 +81,7 @@ public final class NIOFileHandle: FileDescriptor {
     ///
     /// After calling this, the `NIOFileHandle` cannot be used for anything else and all the operations will throw.
     ///
-    /// - returns: The underlying file descriptor, now owned by the caller.
+    /// - Returns: The underlying file descriptor, now owned by the caller.
     public func takeDescriptorOwnership() throws -> CInt {
         guard self.isOpen else {
             throw IOError(errnoCode: EBADF, reason: "can't close file (as it's not open anymore).")
@@ -152,8 +152,8 @@ extension NIOFileHandle {
 
         /// Allows file creation when opening file for writing. File owner is set to the effective user ID of the process.
         ///
-        /// - parameters:
-        ///     - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
+        /// - Parameters:
+        ///   - posixMode: `file mode` applied when file is created. Default permissions are: read and write for fileowner, read for owners group and others.
         public static func allowFileCreation(posixMode: NIOPOSIXFileMode = defaultPermissions) -> Flags {
             #if os(WASI)
             let flags = CNIOWASI_O_CREAT()
@@ -165,10 +165,10 @@ extension NIOFileHandle {
 
         /// Allows the specification of POSIX flags (e.g. `O_TRUNC`) and mode (e.g. `S_IWUSR`)
         ///
-        /// - parameters:
-        ///     - flags: The POSIX open flags (the second parameter for `open(2)`).
-        ///     - mode: The POSIX mode (the third parameter for `open(2)`).
-        /// - returns: A `NIOFileHandle.Mode` equivalent to the given POSIX flags and mode.
+        /// - Parameters:
+        ///   - flags: The POSIX open flags (the second parameter for `open(2)`).
+        ///   - mode: The POSIX mode (the third parameter for `open(2)`).
+        /// - Returns: A `NIOFileHandle.Mode` equivalent to the given POSIX flags and mode.
         public static func posix(flags: CInt, mode: NIOPOSIXFileMode) -> Flags {
             Flags(posixMode: mode, posixFlags: flags)
         }
@@ -176,10 +176,10 @@ extension NIOFileHandle {
 
     /// Open a new `NIOFileHandle`. This operation is blocking.
     ///
-    /// - parameters:
-    ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
-    ///     - mode: Access mode. Default mode is `.read`.
-    ///     - flags: Additional POSIX flags.
+    /// - Parameters:
+    ///   - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
+    ///   - mode: Access mode. Default mode is `.read`.
+    ///   - flags: Additional POSIX flags.
     public convenience init(path: String, mode: Mode = .read, flags: Flags = .default) throws {
         #if os(Windows)
         let fl = mode.posixFlags | flags.posixFlags | _O_NOINHERIT
@@ -192,8 +192,8 @@ extension NIOFileHandle {
 
     /// Open a new `NIOFileHandle`. This operation is blocking.
     ///
-    /// - parameters:
-    ///     - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
+    /// - Parameters:
+    ///   - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
     public convenience init(path: String) throws {
         // This function is here because we had a function like this in NIO 2.0, and the one above doesn't quite match. Sadly we can't
         // really deprecate this either, because it'll be preferred to the one above in many cases.

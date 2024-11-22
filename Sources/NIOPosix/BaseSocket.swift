@@ -125,8 +125,8 @@ class BaseSocket: BaseSocketProtocol {
 
     /// Returns the local bound `SocketAddress` of the socket.
     ///
-    /// - returns: The local bound address.
-    /// - throws: An `IOError` if the retrieval of the address failed.
+    /// - Returns: The local bound address.
+    /// - Throws: An `IOError` if the retrieval of the address failed.
     func localAddress() throws -> SocketAddress {
         try get_addr {
             try NIOBSDSocket.getsockname(socket: $0, address: $1, address_len: $2)
@@ -135,8 +135,8 @@ class BaseSocket: BaseSocketProtocol {
 
     /// Returns the connected `SocketAddress` of the socket.
     ///
-    /// - returns: The connected address.
-    /// - throws: An `IOError` if the retrieval of the address failed.
+    /// - Returns: The connected address.
+    /// - Throws: An `IOError` if the retrieval of the address failed.
     func remoteAddress() throws -> SocketAddress {
         try get_addr {
             try NIOBSDSocket.getpeername(socket: $0, address: $1, address_len: $2)
@@ -161,12 +161,12 @@ class BaseSocket: BaseSocketProtocol {
 
     /// Create a new socket and return the file descriptor of it.
     ///
-    /// - parameters:
-    ///     - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
-    ///     - type: The type of the socket to create.
-    ///     - setNonBlocking: Set non-blocking mode on the socket.
-    /// - returns: the file descriptor of the socket that was created.
-    /// - throws: An `IOError` if creation of the socket failed.
+    /// - Parameters:
+    ///   - protocolFamily: The protocol family to use (usually `AF_INET6` or `AF_INET`).
+    ///   - type: The type of the socket to create.
+    ///   - setNonBlocking: Set non-blocking mode on the socket.
+    /// - Returns: the file descriptor of the socket that was created.
+    /// - Throws: An `IOError` if creation of the socket failed.
     static func makeSocket(
         protocolFamily: NIOBSDSocket.ProtocolFamily,
         type: NIOBSDSocket.SocketType,
@@ -223,9 +223,9 @@ class BaseSocket: BaseSocketProtocol {
     ///
     /// Deletes the associated file if it exists and has socket type. Does nothing if pathname does not exist.
     ///
-    /// - parameters:
-    ///     - unixDomainSocketPath: The pathname of the UDS.
-    /// - throws: An `UnixDomainSocketPathWrongType` if the pathname exists and is not a socket.
+    /// - Parameters:
+    ///   - unixDomainSocketPath: The pathname of the UDS.
+    /// - Throws: An `UnixDomainSocketPathWrongType` if the pathname exists and is not a socket.
     static func cleanupSocket(unixDomainSocketPath: String) throws {
         try NIOBSDSocket.cleanupUnixDomainSocket(atPath: unixDomainSocketPath)
     }
@@ -235,8 +235,8 @@ class BaseSocket: BaseSocketProtocol {
     /// The ownership of the passed in descriptor is transferred to this class. A user must call `close` to close the underlying
     /// file descriptor once it's not needed / used anymore.
     ///
-    /// - parameters:
-    ///     - descriptor: The file descriptor to wrap.
+    /// - Parameters:
+    ///   - descriptor: The file descriptor to wrap.
     init(socket descriptor: NIOBSDSocket.Handle) throws {
         #if os(Windows)
         precondition(descriptor != NIOBSDSocket.invalidHandle, "invalid socket")
@@ -276,11 +276,11 @@ class BaseSocket: BaseSocketProtocol {
     ///
     /// This basically just delegates to `setsockopt` syscall.
     ///
-    /// - parameters:
-    ///     - level: The protocol level (see `man setsockopt`).
-    ///     - name: The name of the option to set.
-    ///     - value: The value for the option.
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - level: The protocol level (see `man setsockopt`).
+    ///   - name: The name of the option to set.
+    ///   - value: The value for the option.
+    /// - Throws: An `IOError` if the operation failed.
     func setOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option, value: T) throws {
         if level == .tcp && name == .tcp_nodelay {
             switch try? self.localAddress().protocol {
@@ -309,10 +309,10 @@ class BaseSocket: BaseSocketProtocol {
     ///
     /// This basically just delegates to `getsockopt` syscall.
     ///
-    /// - parameters:
-    ///     - level: The protocol level (see `man getsockopt`).
-    ///     - name: The name of the option to set.
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - level: The protocol level (see `man getsockopt`).
+    ///   - name: The name of the option to set.
+    /// - Throws: An `IOError` if the operation failed.
     func getOption<T>(level: NIOBSDSocket.OptionLevel, name: NIOBSDSocket.Option) throws -> T {
         try self.withUnsafeHandle { fd in
             var length = socklen_t(MemoryLayout<T>.size)
@@ -342,9 +342,9 @@ class BaseSocket: BaseSocketProtocol {
 
     /// Bind the socket to the given `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - address: The `SocketAddress` to which the socket should be bound.
-    /// - throws: An `IOError` if the operation failed.
+    /// - Parameters:
+    ///   - address: The `SocketAddress` to which the socket should be bound.
+    /// - Throws: An `IOError` if the operation failed.
     func bind(to address: SocketAddress) throws {
         try self.withUnsafeHandle { fd in
             try address.withSockAddr {
@@ -357,7 +357,7 @@ class BaseSocket: BaseSocketProtocol {
     ///
     /// After the socket was closed all other methods will throw an `IOError` when called.
     ///
-    /// - throws: An `IOError` if the operation failed.
+    /// - Throws: An `IOError` if the operation failed.
     func close() throws {
         try NIOBSDSocket.close(socket: try self.takeDescriptorOwnership())
     }
@@ -367,7 +367,7 @@ class BaseSocket: BaseSocketProtocol {
     /// After this call, `BaseSocket` considers itself to be closed and the caller is responsible for actually closing
     /// the underlying file descriptor.
     ///
-    /// - throws: An `IOError` if the operation failed.
+    /// - Throws: An `IOError` if the operation failed.
     final func takeDescriptorOwnership() throws -> NIOBSDSocket.Handle {
         try self.withUnsafeHandle {
             self.descriptor = NIOBSDSocket.invalidHandle

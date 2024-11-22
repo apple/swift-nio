@@ -189,7 +189,7 @@ extension LockStorage: @unchecked Sendable {}
 
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///
-/// - note: ``NIOLock`` has reference semantics.
+/// - Note: ``NIOLock`` has reference semantics.
 ///
 /// This object provides a lock on top of a single `pthread_mutex_t`. This kind
 /// of lock is safe to use with `libpthread`-based threading models, such as the

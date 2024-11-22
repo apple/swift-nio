@@ -387,7 +387,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     /// Read data from the underlying socket and dispatch it to the `ChannelPipeline`
     ///
-    /// - returns: `true` if any data was read, `false` otherwise.
+    /// - Returns: `true` if any data was read, `false` otherwise.
     @discardableResult func readFromSocket() throws -> ReadResult {
         fatalError("this must be overridden by sub class")
     }
@@ -426,18 +426,18 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     /// Begin connection of the underlying socket.
     ///
-    /// - parameters:
-    ///     - to: The `SocketAddress` to connect to.
-    /// - returns: `true` if the socket connected synchronously, `false` otherwise.
+    /// - Parameters:
+    ///   - to: The `SocketAddress` to connect to.
+    /// - Returns: `true` if the socket connected synchronously, `false` otherwise.
     func connectSocket(to address: SocketAddress) throws -> Bool {
         fatalError("this must be overridden by sub class")
     }
 
     /// Begin connection of the underlying socket.
     ///
-    /// - parameters:
-    ///     - to: The `VsockAddress` to connect to.
-    /// - returns: `true` if the socket connected synchronously, `false` otherwise.
+    /// - Parameters:
+    ///   - to: The `VsockAddress` to connect to.
+    /// - Returns: `true` if the socket connected synchronously, `false` otherwise.
     func connectSocket(to address: VsockAddress) throws -> Bool {
         fatalError("this must be overridden by sub class")
     }
@@ -449,9 +449,9 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     /// Begin connection of the underlying socket.
     ///
-    /// - parameters:
-    ///     - to: The target to connect to.
-    /// - returns: `true` if the socket connected synchronously, `false` otherwise.
+    /// - Parameters:
+    ///   - to: The target to connect to.
+    /// - Returns: `true` if the socket connected synchronously, `false` otherwise.
     final func connectSocket(to target: ConnectTarget) throws -> Bool {
         switch target {
         case .socketAddress(let address):
@@ -542,7 +542,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     /// This method can be called re-entrantly but it will return immediately because the first call is responsible
     /// for sending all flushed writes, even the ones that are accumulated whilst `flushNow()` is running.
     ///
-    /// - returns: If this socket should be registered for write notifications. Ie. `IONotificationState.register` if
+    /// - Returns: If this socket should be registered for write notifications. Ie. `IONotificationState.register` if
     ///            _not_ all data could be written, so notifications are necessary; and `IONotificationState.unregister`
     ///             if everything was written and we don't need to be notified about writability at the moment.
     func flushNow() -> IONotificationState {
@@ -696,7 +696,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     /// Triggers a `ChannelPipeline.read()` if `autoRead` is enabled.`
     ///
-    /// - returns: `true` if `readPending` is `true`, `false` otherwise.
+    /// - Returns: `true` if `readPending` is `true`, `false` otherwise.
     @discardableResult func readIfNeeded0() -> Bool {
         self.eventLoop.assertInEventLoop()
         if !self.lifecycleManager.isActive {
@@ -843,7 +843,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     /// So unless either the deregistration or the close itself fails, `promise` will be succeeded regardless of
     /// `error`. `error` is used to fail outstanding writes (if any) and the `connectPromise` if set.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///    - error: The error to fail the outstanding (if any) writes/connect with.
     ///    - mode: The close mode, must be `.all` for `BaseSocketChannel`
     ///    - promise: The promise that gets notified about the result of the deregistration/close operations.
@@ -1202,9 +1202,9 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
 
     /// Returns `true` if the `Channel` should be closed as result of the given `Error` which happened during `readFromSocket`.
     ///
-    /// - parameters:
-    ///     - err: The `Error` which was thrown by `readFromSocket`.
-    /// - returns: `true` if the `Channel` should be closed, `false` otherwise.
+    /// - Parameters:
+    ///   - err: The `Error` which was thrown by `readFromSocket`.
+    /// - Returns: `true` if the `Channel` should be closed, `false` otherwise.
     func shouldCloseOnReadError(_ err: Error) -> Bool {
         true
     }

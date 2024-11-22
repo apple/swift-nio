@@ -151,10 +151,10 @@ public protocol ByteToMessageDecoder {
     /// contains more readable bytes, this method will immediately be invoked again, unless `decodeLast` needs
     /// to be invoked instead.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
-    ///     - buffer: The `ByteBuffer` from which we decode.
-    /// - returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    ///   - buffer: The `ByteBuffer` from which we decode.
+    /// - Returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
     ///            again once more data is present in the `ByteBuffer`.
     mutating func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState
 
@@ -168,11 +168,11 @@ public protocol ByteToMessageDecoder {
     /// or until the input `ByteBuffer` has no more readable bytes. If `DecodingState.continue` is returned and the `ByteBuffer`
     /// contains more readable bytes, this method will immediately be invoked again.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
-    ///     - buffer: The `ByteBuffer` from which we decode.
-    ///     - seenEOF: `true` if EOF has been seen. Usually if this is `false` the handler has been removed.
-    /// - returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    ///   - buffer: The `ByteBuffer` from which we decode.
+    ///   - seenEOF: `true` if EOF has been seen. Usually if this is `false` the handler has been removed.
+    /// - Returns: `DecodingState.continue` if we should continue calling this method or `DecodingState.needMoreData` if it should be called
     ///            again when more data is present in the `ByteBuffer`.
     mutating func decodeLast(
         context: ChannelHandlerContext,
@@ -182,21 +182,21 @@ public protocol ByteToMessageDecoder {
 
     /// Called once this `ByteToMessageDecoder` is removed from the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     mutating func decoderRemoved(context: ChannelHandlerContext)
 
     /// Called when this `ByteToMessageDecoder` is added to the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ByteToMessageDecoder` belongs to.
     mutating func decoderAdded(context: ChannelHandlerContext)
 
     /// Determine if the read bytes in the given `ByteBuffer` should be reclaimed and their associated memory freed.
     /// Be aware that reclaiming memory may involve memory copies and so is not free.
     ///
-    /// - parameters:
-    ///     - buffer: The `ByteBuffer` to check
+    /// - Parameters:
+    ///   - buffer: The `ByteBuffer` to check
     /// - return: `true` if memory should be reclaimed, `false` otherwise.
     mutating func shouldReclaimBytes(buffer: ByteBuffer) -> Bool
 }
@@ -212,7 +212,7 @@ public protocol WriteObservingByteToMessageDecoder: ByteToMessageDecoder {
 
     /// `write` is called for every incoming `write` incoming to the corresponding `ByteToMessageHandler`.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///    - data: The data that was written.
     mutating func write(data: OutboundIn)
 }
@@ -483,9 +483,9 @@ public final class ByteToMessageHandler<Decoder: ByteToMessageDecoder> {
 
     /// Initialize a `ByteToMessageHandler`.
     ///
-    /// - parameters:
-    ///     - decoder: The `ByteToMessageDecoder` to decode the bytes into message.
-    ///     - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
+    /// - Parameters:
+    ///   - decoder: The `ByteToMessageDecoder` to decode the bytes into message.
+    ///   - maximumBufferSize: The maximum number of bytes to aggregate in-memory.
     public init(_ decoder: Decoder, maximumBufferSize: Int? = nil) {
         self.decoder = decoder
         self.maximumBufferSize = maximumBufferSize
@@ -739,9 +739,9 @@ public protocol MessageToByteEncoder {
 
     /// Called once there is data to encode.
     ///
-    /// - parameters:
-    ///     - data: The data to encode into a `ByteBuffer`.
-    ///     - out: The `ByteBuffer` into which we want to encode.
+    /// - Parameters:
+    ///   - data: The data to encode into a `ByteBuffer`.
+    ///   - out: The `ByteBuffer` into which we want to encode.
     func encode(data: OutboundIn, out: inout ByteBuffer) throws
 }
 

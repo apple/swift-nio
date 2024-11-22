@@ -111,8 +111,8 @@ extension ByteBuffer {
     /// Therefore, this function is most performant if the strategy is able to use the same number of bytes that it reserved.
     ///
     /// - Parameters:
-    ///     - strategy: The strategy to use for encoding the length.
-    ///     - writeData: A closure that takes a buffer, writes some data to it, and returns the number of bytes written.
+    ///   - strategy: The strategy to use for encoding the length.
+    ///   - writeData: A closure that takes a buffer, writes some data to it, and returns the number of bytes written.
     /// - Returns: Number of total bytes written. This is the length of the written data + the number of bytes used to write the length before it.
     @discardableResult
     @inlinable

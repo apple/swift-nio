@@ -19,7 +19,7 @@ import Dispatch
 extension Array where Element == UInt8 {
 
     /// Creates a `[UInt8]` from the given buffer. The entire readable portion of the buffer will be read.
-    /// - parameter buffer: The buffer to read.
+    /// - Parameter buffer: The buffer to read.
     @inlinable
     public init(buffer: ByteBuffer) {
         var buffer = buffer
@@ -31,7 +31,7 @@ extension Array where Element == UInt8 {
 extension String {
 
     /// Creates a `String` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
-    /// - parameter buffer: The buffer to read.
+    /// - Parameter buffer: The buffer to read.
     @inlinable
     public init(buffer: ByteBuffer) {
         var buffer = buffer
@@ -40,9 +40,9 @@ extension String {
 
     /// Creates a `String` from a given `Int` with a given base (`radix`), padded with zeroes to the provided `padding` size.
     ///
-    /// - parameters:
-    ///     - radix: radix base to use for conversion.
-    ///     - padding: the desired length of the resulting string.
+    /// - Parameters:
+    ///   - radix: radix base to use for conversion.
+    ///   - padding: the desired length of the resulting string.
     @inlinable
     internal init<Value>(_ value: Value, radix: Int, padding: Int) where Value: BinaryInteger {
         let formatted = String(value, radix: radix)
@@ -54,7 +54,7 @@ extension String {
 extension DispatchData {
 
     /// Creates a `DispatchData` from a given `ByteBuffer`. The entire readable portion of the buffer will be read.
-    /// - parameter buffer: The buffer to read.
+    /// - Parameter buffer: The buffer to read.
     @inlinable
     public init(buffer: ByteBuffer) {
         var buffer = buffer

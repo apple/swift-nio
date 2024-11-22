@@ -18,12 +18,12 @@ import NIOCore
 extension ByteBuffer {
     /// Attempts to decode the `length` bytes from `index` using the `JSONDecoder` `decoder` as `T`.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///    - type: The type type that is attempted to be decoded.
     ///    - decoder: The `JSONDecoder` that is used for the decoding.
     ///    - index: The index of the first byte to decode.
     ///    - length: The number of bytes to decode.
-    /// - returns: The decoded value if successful or `nil` if there are not enough readable bytes available.
+    /// - Returns: The decoded value if successful or `nil` if there are not enough readable bytes available.
     @inlinable
     public func getJSONDecodable<T: Decodable>(
         _ type: T.Type,
@@ -39,11 +39,11 @@ extension ByteBuffer {
 
     /// Reads `length` bytes from this `ByteBuffer` and then attempts to decode them using the `JSONDecoder` `decoder`.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///    - type: The type type that is attempted to be decoded.
     ///    - decoder: The `JSONDecoder` that is used for the decoding.
     ///    - length: The number of bytes to decode.
-    /// - returns: The decoded value is successful or `nil` if there are not enough readable bytes available.
+    /// - Returns: The decoded value is successful or `nil` if there are not enough readable bytes available.
     @inlinable
     public mutating func readJSONDecodable<T: Decodable>(
         _ type: T.Type,
@@ -67,12 +67,13 @@ extension ByteBuffer {
     /// Encodes `value` using the `JSONEncoder` `encoder` and set the resulting bytes into this `ByteBuffer` at the
     /// given `index`.
     ///
-    /// - note: The `writerIndex` remains unchanged.
+    /// - Note: The `writerIndex` remains unchanged.
     ///
-    /// - parameters:
-    ///     - value: An `Encodable` value to encode.
-    ///     - encoder: The `JSONEncoder` to encode `value` with.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - value: An `Encodable` value to encode.
+    ///   - encoder: The `JSONEncoder` to encode `value` with.
+    ///   - index: The starting index of the bytes for the value into the `ByteBuffer`.
+    /// - Returns: The number of bytes written.
     @inlinable
     @discardableResult
     public mutating func setJSONEncodable<T: Encodable>(
@@ -88,10 +89,10 @@ extension ByteBuffer {
     ///
     /// If successful, this will move the writer index forward by the number of bytes written.
     ///
-    /// - parameters:
-    ///     - value: An `Encodable` value to encode.
-    ///     - encoder: The `JSONEncoder` to encode `value` with.
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - value: An `Encodable` value to encode.
+    ///   - encoder: The `JSONEncoder` to encode `value` with.
+    /// - Returns: The number of bytes written.
     @inlinable
     @discardableResult
     public mutating func writeJSONEncodable<T: Encodable>(
@@ -111,13 +112,13 @@ extension JSONDecoder {
     /// `DecodingError.dataCorrupted(_:)` error. If a value within the JSON
     /// fails to decode, this method throws the corresponding error.
     ///
-    /// - note: The provided `ByteBuffer` remains unchanged, neither the `readerIndex` nor the `writerIndex` will move.
+    /// - Note: The provided `ByteBuffer` remains unchanged, neither the `readerIndex` nor the `writerIndex` will move.
     ///         If you would like the `readerIndex` to move, consider using `ByteBuffer.readJSONDecodable(_:length:)`.
     ///
-    /// - parameters:
-    ///     - type: The type of the value to decode from the supplied JSON object.
-    ///     - buffer: The `ByteBuffer` that contains JSON object to decode.
-    /// - returns: The decoded object.
+    /// - Parameters:
+    ///   - type: The type of the value to decode from the supplied JSON object.
+    ///   - buffer: The `ByteBuffer` that contains JSON object to decode.
+    /// - Returns: The decoded object.
     public func decode<T: Decodable>(_ type: T.Type, from buffer: ByteBuffer) throws -> T {
         try buffer.getJSONDecodable(
             T.self,
@@ -131,9 +132,9 @@ extension JSONDecoder {
 extension JSONEncoder {
     /// Writes a JSON-encoded representation of the value you supply into the supplied `ByteBuffer`.
     ///
-    /// - parameters:
-    ///     - value: The value to encode as JSON.
-    ///     - buffer: The `ByteBuffer` to encode into.
+    /// - Parameters:
+    ///   - value: The value to encode as JSON.
+    ///   - buffer: The `ByteBuffer` to encode into.
     public func encode<T: Encodable>(
         _ value: T,
         into buffer: inout ByteBuffer
@@ -143,10 +144,10 @@ extension JSONEncoder {
 
     /// Writes a JSON-encoded representation of the value you supply into a `ByteBuffer` that is freshly allocated.
     ///
-    /// - parameters:
-    ///     - value: The value to encode as JSON.
-    ///     - allocator: The `ByteBufferAllocator` which is used to allocate the `ByteBuffer` to be returned.
-    /// - returns: The `ByteBuffer` containing the encoded JSON.
+    /// - Parameters:
+    ///   - value: The value to encode as JSON.
+    ///   - allocator: The `ByteBufferAllocator` which is used to allocate the `ByteBuffer` to be returned.
+    /// - Returns: The `ByteBuffer` containing the encoded JSON.
     public func encodeAsByteBuffer<T: Encodable>(_ value: T, allocator: ByteBufferAllocator) throws -> ByteBuffer {
         let data = try self.encode(value)
         var buffer = allocator.buffer(capacity: data.count)

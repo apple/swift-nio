@@ -77,6 +77,7 @@ public protocol FileSystemProtocol: Sendable {
     ///
     /// - Parameters:
     ///   - path: The path of the directory to open.
+    ///   - options: How the directory should be opened.
     /// - Returns: A handle to the opened directory.
     func openDirectory(
         atPath path: FilePath,
@@ -181,7 +182,7 @@ public protocol FileSystemProtocol: Sendable {
     /// - Parameters:
     ///   - sourcePath: The path to the item to copy.
     ///   - destinationPath: The path at which to place the copy.
-    ///   - strategy: How to deal with concurrent aspects of the copy, only relevant to directories.
+    ///   - copyStrategy: How to deal with concurrent aspects of the copy, only relevant to directories.
     ///   - shouldProceedAfterError: A closure which is executed to determine whether to continue
     ///       copying files if an error is encountered during the operation. See Errors section for full details.
     ///   - shouldCopyItem: A closure which is executed before each copy to determine whether each
