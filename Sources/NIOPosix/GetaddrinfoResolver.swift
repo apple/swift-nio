@@ -11,7 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
 import NIOCore
+
+#if canImport(Dispatch)
+import Dispatch
+#endif
 
 /// A DNS resolver built on top of the libc `getaddrinfo` function.
 ///
@@ -23,8 +28,6 @@ import NIOCore
 /// needed to implement it.
 ///
 /// This resolver is a single-use object: it can only be used to perform a single host resolution.
-
-import Dispatch
 
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
@@ -47,7 +50,6 @@ import struct WinSDK.SOCKADDR_IN6
 // A thread-specific variable where we store the offload queue if we're on an `SelectableEventLoop`.
 let offloadQueueTSV = ThreadSpecificVariable<DispatchQueue>()
 
-
 internal class GetaddrinfoResolver: Resolver {
     private let v4Future: EventLoopPromise<[SocketAddress]>
     private let v6Future: EventLoopPromise<[SocketAddress]>
@@ -56,12 +58,15 @@ internal class GetaddrinfoResolver: Resolver {
 
     /// Create a new resolver.
     ///
-    /// - parameters:
-    ///     - loop: The `EventLoop` whose thread this resolver will block.
-    ///     - aiSocktype: The sock type to use as hint when calling getaddrinfo.
-    ///     - aiProtocol: the protocol to use as hint when calling getaddrinfo.
-    init(loop: EventLoop, aiSocktype: NIOBSDSocket.SocketType,
-         aiProtocol: NIOBSDSocket.OptionLevel) {
+    /// - Parameters:
+    ///   - loop: The `EventLoop` whose thread this resolver will block.
+    ///   - aiSocktype: The sock type to use as hint when calling getaddrinfo.
+    ///   - aiProtocol: the protocol to use as hint when calling getaddrinfo.
+    init(
+        loop: EventLoop,
+        aiSocktype: NIOBSDSocket.SocketType,
+        aiProtocol: NIOBSDSocket.OptionLevel
+    ) {
         self.v4Future = loop.makePromise()
         self.v6Future = loop.makePromise()
         self.aiSocktype = aiSocktype
@@ -74,12 +79,12 @@ internal class GetaddrinfoResolver: Resolver {
     /// That means this just returns the future for the A results, which in practice will always have been
     /// satisfied by the time this function is called.
     ///
-    /// - parameters:
-    ///     - host: The hostname to do an A lookup on.
-    ///     - port: The port we'll be connecting to.
-    /// - returns: An `EventLoopFuture` that fires with the result of the lookup.
+    /// - Parameters:
+    ///   - host: The hostname to do an A lookup on.
+    ///   - port: The port we'll be connecting to.
+    /// - Returns: An `EventLoopFuture` that fires with the result of the lookup.
     func initiateAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
-        return v4Future.futureResult
+        v4Future.futureResult
     }
 
     /// Initiate a DNS AAAA query for a given host.
@@ -87,10 +92,10 @@ internal class GetaddrinfoResolver: Resolver {
     /// Due to the nature of `getaddrinfo`, we only actually call the function once, in this function.
     /// That means this function call actually blocks: sorry!
     ///
-    /// - parameters:
-    ///     - host: The hostname to do an AAAA lookup on.
-    ///     - port: The port we'll be connecting to.
-    /// - returns: An `EventLoopFuture` that fires with the result of the lookup.
+    /// - Parameters:
+    ///   - host: The hostname to do an AAAA lookup on.
+    ///   - port: The port we'll be connecting to.
+    /// - Returns: An `EventLoopFuture` that fires with the result of the lookup.
     func initiateAAAAQuery(host: String, port: Int) -> EventLoopFuture<[SocketAddress]> {
         self.offloadQueue().async {
             self.resolveBlocking(host: host, port: port)
@@ -120,15 +125,15 @@ internal class GetaddrinfoResolver: Resolver {
     /// clean up their state.
     ///
     /// In the getaddrinfo case this is a no-op, as the resolver blocks.
-    func cancelQueries() { }
+    func cancelQueries() {}
 
     /// Perform the DNS queries and record the result.
     ///
-    /// - parameters:
-    ///     - host: The hostname to do the DNS queries on.
-    ///     - port: The port we'll be connecting to.
+    /// - Parameters:
+    ///   - host: The hostname to do the DNS queries on.
+    ///   - port: The port we'll be connecting to.
     private func resolveBlocking(host: String, port: Int) {
-#if os(Windows)
+        #if os(Windows)
         host.withCString(encodedAs: UTF16.self) { wszHost in
             String(port).withCString(encodedAs: UTF16.self) { wszPort in
                 var pResult: UnsafeMutablePointer<ADDRINFOW>?
@@ -151,7 +156,7 @@ internal class GetaddrinfoResolver: Resolver {
                 }
             }
         }
-#else
+        #else
         var info: UnsafeMutablePointer<addrinfo>?
 
         var hint = addrinfo()
@@ -166,22 +171,22 @@ internal class GetaddrinfoResolver: Resolver {
             self.parseAndPublishResults(info, host: host)
             freeaddrinfo(info)
         } else {
-            /* this is odd, getaddrinfo returned NULL */
+            // this is odd, getaddrinfo returned NULL
             self.fail(SocketAddressError.unsupported)
         }
-#endif
+        #endif
     }
 
     /// Parses the DNS results from the `addrinfo` linked list.
     ///
-    /// - parameters:
-    ///     - info: The pointer to the first of the `addrinfo` structures in the list.
-    ///     - host: The hostname we resolved.
-#if os(Windows)
+    /// - Parameters:
+    ///   - info: The pointer to the first of the `addrinfo` structures in the list.
+    ///   - host: The hostname we resolved.
+    #if os(Windows)
     internal typealias CAddrInfo = ADDRINFOW
-#else
+    #else
     internal typealias CAddrInfo = addrinfo
-#endif
+    #endif
 
     private func parseAndPublishResults(_ info: UnsafeMutablePointer<CAddrInfo>, host: String) {
         var v4Results: [SocketAddress] = []
@@ -215,8 +220,8 @@ internal class GetaddrinfoResolver: Resolver {
 
     /// Record an error and fail the lookup process.
     ///
-    /// - parameters:
-    ///     - error: The error encountered during lookup.
+    /// - Parameters:
+    ///   - error: The error encountered during lookup.
     private func fail(_ error: Error) {
         self.v6Future.fail(error)
         self.v4Future.fail(error)

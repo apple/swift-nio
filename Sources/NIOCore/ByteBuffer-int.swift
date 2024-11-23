@@ -14,7 +14,7 @@
 
 extension ByteBuffer {
     @inlinable
-    func _toEndianness<T: FixedWidthInteger> (value: T, endianness: Endianness) -> T {
+    func _toEndianness<T: FixedWidthInteger>(value: T, endianness: Endianness) -> T {
         switch endianness {
         case .little:
             return value.littleEndian
@@ -25,10 +25,10 @@ extension ByteBuffer {
 
     /// Read an integer off this `ByteBuffer`, move the reader index forward by the integer's byte size and return the result.
     ///
-    /// - parameters:
-    ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
-    ///     - as: the desired `FixedWidthInteger` type (optional parameter)
-    /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
+    /// - Parameters:
+    ///   - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
+    ///   - as: the desired `FixedWidthInteger` type (optional parameter)
+    /// - Returns: An integer value deserialized from this `ByteBuffer` or `nil` if there aren't enough bytes readable.
     @inlinable
     public mutating func readInteger<T: FixedWidthInteger>(endianness: Endianness = .big, as: T.Type = T.self) -> T? {
         guard let result = self.getInteger(at: self.readerIndex, endianness: endianness, as: T.self) else {
@@ -41,14 +41,18 @@ extension ByteBuffer {
     /// Get the integer at `index` from this `ByteBuffer`. Does not move the reader index.
     /// The selected bytes must be readable or else `nil` will be returned.
     ///
-    /// - parameters:
-    ///     - index: The starting index of the bytes for the integer into the `ByteBuffer`.
-    ///     - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
-    ///     - as: the desired `FixedWidthInteger` type (optional parameter)
-    /// - returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest are not
+    /// - Parameters:
+    ///   - index: The starting index of the bytes for the integer into the `ByteBuffer`.
+    ///   - endianness: The endianness of the integer in this `ByteBuffer` (defaults to big endian).
+    ///   - as: the desired `FixedWidthInteger` type (optional parameter)
+    /// - Returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes of interest are not
     ///            readable.
     @inlinable
-    public func getInteger<T: FixedWidthInteger>(at index: Int, endianness: Endianness = Endianness.big, as: T.Type = T.self) -> T? {
+    public func getInteger<T: FixedWidthInteger>(
+        at index: Int,
+        endianness: Endianness = Endianness.big,
+        as: T.Type = T.self
+    ) -> T? {
         guard let range = self.rangeWithinReadableBytes(index: index, length: MemoryLayout<T>.size) else {
             return nil
         }
@@ -71,16 +75,18 @@ extension ByteBuffer {
 
     /// Write `integer` into this `ByteBuffer`, moving the writer index forward appropriately.
     ///
-    /// - parameters:
-    ///     - integer: The integer to serialize.
-    ///     - endianness: The endianness to use, defaults to big endian.
-    ///     - as: the desired `FixedWidthInteger` type (optional parameter)
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - integer: The integer to serialize.
+    ///   - endianness: The endianness to use, defaults to big endian.
+    ///   - as: the desired `FixedWidthInteger` type (optional parameter)
+    /// - Returns: The number of bytes written.
     @discardableResult
     @inlinable
-    public mutating func writeInteger<T: FixedWidthInteger>(_ integer: T,
-                                                            endianness: Endianness = .big,
-                                                            as: T.Type = T.self) -> Int {
+    public mutating func writeInteger<T: FixedWidthInteger>(
+        _ integer: T,
+        endianness: Endianness = .big,
+        as: T.Type = T.self
+    ) -> Int {
         let bytesWritten = self.setInteger(integer, at: self.writerIndex, endianness: endianness)
         self._moveWriterIndex(forwardBy: bytesWritten)
         return Int(bytesWritten)
@@ -88,15 +94,20 @@ extension ByteBuffer {
 
     /// Write `integer` into this `ByteBuffer` starting at `index`. This does not alter the writer index.
     ///
-    /// - parameters:
-    ///     - integer: The integer to serialize.
-    ///     - index: The index of the first byte to write.
-    ///     - endianness: The endianness to use, defaults to big endian.
-    ///     - as: the desired `FixedWidthInteger` type (optional parameter)
-    /// - returns: The number of bytes written.
+    /// - Parameters:
+    ///   - integer: The integer to serialize.
+    ///   - index: The index of the first byte to write.
+    ///   - endianness: The endianness to use, defaults to big endian.
+    ///   - as: the desired `FixedWidthInteger` type (optional parameter)
+    /// - Returns: The number of bytes written.
     @discardableResult
     @inlinable
-    public mutating func setInteger<T: FixedWidthInteger>(_ integer: T, at index: Int, endianness: Endianness = .big, as: T.Type = T.self) -> Int {
+    public mutating func setInteger<T: FixedWidthInteger>(
+        _ integer: T,
+        at index: Int,
+        endianness: Endianness = .big,
+        as: T.Type = T.self
+    ) -> Int {
         var value = _toEndianness(value: integer, endianness: endianness)
         return Swift.withUnsafeBytes(of: &value) { ptr in
             self.setBytes(ptr, at: index)
@@ -137,7 +148,7 @@ extension UInt32 {
 
         var n = self
 
-        #if arch(arm) || arch(i386)
+        #if arch(arm) || arch(i386) || arch(arm64_32)
         // on 32-bit platforms we can't make use of a whole UInt32.max (as it doesn't fit in an Int)
         let max = UInt32(Int.max)
         #else
@@ -166,7 +177,7 @@ public enum Endianness: Sendable {
     public static let host: Endianness = hostEndianness0()
 
     private static func hostEndianness0() -> Endianness {
-        let number: UInt32 = 0x12345678
+        let number: UInt32 = 0x1234_5678
         return number == number.bigEndian ? .big : .little
     }
 
@@ -176,5 +187,3 @@ public enum Endianness: Sendable {
     /// little endian, the least significant byte (LSB) is at the lowest address
     case little
 }
-
-

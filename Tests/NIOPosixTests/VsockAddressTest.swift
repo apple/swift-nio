@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import XCTest
+
 @testable import NIOCore
 @testable import NIOPosix
 
@@ -27,19 +28,22 @@ class VsockAddressTest: XCTestCase {
     func testInitializeFromIntegerLiteral() throws {
         XCTAssertEqual(VsockAddress.ContextID(integerLiteral: 0), 0)
         XCTAssertEqual(VsockAddress.Port(integerLiteral: 0), 0)
-        XCTAssertEqual(VsockAddress.ContextID(integerLiteral: 4294967295), 4294967295)
-        XCTAssertEqual(VsockAddress.Port(integerLiteral: 4294967295), 4294967295)
+        XCTAssertEqual(VsockAddress.ContextID(integerLiteral: 4_294_967_295), 4_294_967_295)
+        XCTAssertEqual(VsockAddress.Port(integerLiteral: 4_294_967_295), 4_294_967_295)
     }
 
     func testInitializeFromInt() throws {
         XCTAssertEqual(VsockAddress.ContextID(0), 0)
-        XCTAssertEqual(VsockAddress.ContextID(4294967295), 4294967295)
+        XCTAssertEqual(VsockAddress.ContextID(4_294_967_295), 4_294_967_295)
         XCTAssertEqual(VsockAddress.Port(0), 0)
-        XCTAssertEqual(VsockAddress.Port(4294967295), 4294967295)
+        XCTAssertEqual(VsockAddress.Port(4_294_967_295), 4_294_967_295)
     }
 
     func testSocketAddressEqualitySpecialValues() throws {
-        XCTAssertEqual(VsockAddress(cid: .any, port: 12345), .init(cid: .init(rawValue: UInt32(bitPattern: -1)), port: 12345))
+        XCTAssertEqual(
+            VsockAddress(cid: .any, port: 12345),
+            .init(cid: .init(rawValue: UInt32(bitPattern: -1)), port: 12345)
+        )
         XCTAssertEqual(VsockAddress(cid: .hypervisor, port: 12345), .init(cid: 0, port: 12345))
         XCTAssertEqual(VsockAddress(cid: .host, port: 12345), .init(cid: 2, port: 12345))
     }
@@ -54,22 +58,26 @@ class VsockAddressTest: XCTestCase {
     }
 
     func testGetLocalCID() throws {
-        try XCTSkipUnless(System.supportsVsock)
+        try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
 
         let socket = try ServerSocket(protocolFamily: .vsock, setNonBlocking: true)
         defer { try? socket.close() }
 
-        // Check the local CID is valid: higher than reserved values, but not VMADDR_CID_ANY.
+        // Check we can get the local CID using the static property on ContextID.
         let localCID = try socket.withUnsafeHandle(VsockAddress.ContextID.getLocalContextID)
-        XCTAssertNotEqual(localCID, .any)
-        XCTAssertGreaterThan(localCID.rawValue, VsockAddress.ContextID.host.rawValue)
+
+        // Check the local CID from the socket matches.
         XCTAssertEqual(try socket.getLocalVsockContextID(), localCID)
 
         // Check the local CID from the channel option matches.
         let singleThreadedELG = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try singleThreadedELG.syncShutdownGracefully()) }
         let eventLoop = singleThreadedELG.next()
-        let channel = try ServerSocketChannel(serverSocket: socket, eventLoop: eventLoop as! SelectableEventLoop, group: singleThreadedELG)
-        XCTAssertEqual(try channel.getOption(ChannelOptions.localVsockContextID).wait(), localCID)
+        let channel = try ServerSocketChannel(
+            serverSocket: socket,
+            eventLoop: eventLoop as! SelectableEventLoop,
+            group: singleThreadedELG
+        )
+        XCTAssertEqual(try channel.getOption(.localVsockContextID).wait(), localCID)
     }
 }

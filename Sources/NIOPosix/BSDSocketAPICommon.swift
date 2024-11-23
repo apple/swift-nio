@@ -38,11 +38,11 @@ internal enum Shutdown: _SocketShutdownProtocol {
 }
 
 extension NIOBSDSocket {
-#if os(Windows)
+    #if os(Windows)
     internal static let invalidHandle: Handle = INVALID_SOCKET
-#else
+    #else
     internal static let invalidHandle: Handle = -1
-#endif
+    #endif
 }
 
 extension NIOBSDSocket {
@@ -67,29 +67,29 @@ extension NIOBSDSocket.SocketType {
     /// Supports datagrams, which are connectionless, unreliable messages of a
     /// fixed (typically small) maximum length.
     #if os(Linux) && !canImport(Musl)
-        internal static let datagram: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: CInt(SOCK_DGRAM.rawValue))
+    internal static let datagram: NIOBSDSocket.SocketType =
+        NIOBSDSocket.SocketType(rawValue: CInt(SOCK_DGRAM.rawValue))
     #else
-        internal static let datagram: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: SOCK_DGRAM)
+    internal static let datagram: NIOBSDSocket.SocketType =
+        NIOBSDSocket.SocketType(rawValue: SOCK_DGRAM)
     #endif
 
     /// Supports reliable, two-way, connection-based byte streams without
     /// duplication of data and without preservation of boundaries.
     #if os(Linux) && !canImport(Musl)
-        internal static let stream: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: CInt(SOCK_STREAM.rawValue))
+    internal static let stream: NIOBSDSocket.SocketType =
+        NIOBSDSocket.SocketType(rawValue: CInt(SOCK_STREAM.rawValue))
     #else
-        internal static let stream: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: SOCK_STREAM)
+    internal static let stream: NIOBSDSocket.SocketType =
+        NIOBSDSocket.SocketType(rawValue: SOCK_STREAM)
     #endif
 
     #if os(Linux) && !canImport(Musl)
-        internal static let raw: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: CInt(SOCK_RAW.rawValue))
+    internal static let raw: NIOBSDSocket.SocketType =
+        NIOBSDSocket.SocketType(rawValue: CInt(SOCK_RAW.rawValue))
     #else
-        internal static let raw: NIOBSDSocket.SocketType =
-                NIOBSDSocket.SocketType(rawValue: SOCK_RAW)
+    internal static let raw: NIOBSDSocket.SocketType =
+        NIOBSDSocket.SocketType(rawValue: SOCK_RAW)
     #endif
 }
 
@@ -102,7 +102,7 @@ extension NIOBSDSocket.Option {
     /// `ChannelOptions.explicitCongestionNotification` which works for both
     /// IPv4 and IPv6.
     static let ip_recv_tos: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IP_RECVTOS)
+        NIOBSDSocket.Option(rawValue: IP_RECVTOS)
 
     /// Request that we are passed destination address and the receiving interface index when
     /// receiving datagrams.
@@ -111,7 +111,7 @@ extension NIOBSDSocket.Option {
     /// `ChannelOptions.receivePacketInfo` which works for both
     /// IPv4 and IPv6.
     static let ip_recv_pktinfo: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
+        NIOBSDSocket.Option(rawValue: Posix.IP_RECVPKTINFO)
 }
 
 // IPv6 Options
@@ -123,7 +123,7 @@ extension NIOBSDSocket.Option {
     /// `ChannelOptions.explicitCongestionNotification` which works for both
     /// IPv4 and IPv6.
     static let ipv6_recv_tclass: NIOBSDSocket.Option =
-            NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
+        NIOBSDSocket.Option(rawValue: IPV6_RECVTCLASS)
 
     /// Request that we are passed destination address and the receiving interface index when
     /// receiving datagrams.
@@ -161,7 +161,7 @@ extension NIOBSDSocket.ProtocolSubtype {
 
     /// The protocol subtype for MPTCP.
     ///
-    /// - returns: nil if MPTCP is not supported.
+    /// - Returns: nil if MPTCP is not supported.
     public static var mptcp: Self? {
         #if os(Linux)
         // Defined by the linux kernel, this is IPPROTO_MPTCP.
@@ -179,118 +179,156 @@ extension NIOBSDSocket.ProtocolSubtype {
     }
 }
 
-
 /// This protocol defines the methods that are expected to be found on
 /// `NIOBSDSocket`. While defined as a protocol there is no expectation that any
 /// object other than `NIOBSDSocket` will implement this protocol: instead, this
 /// protocol acts as a reference for what new supported operating systems must
 /// implement.
 protocol _BSDSocketProtocol {
-    static func accept(socket s: NIOBSDSocket.Handle,
-                       address addr: UnsafeMutablePointer<sockaddr>?,
-                       address_len addrlen: UnsafeMutablePointer<socklen_t>?) throws -> NIOBSDSocket.Handle?
+    static func accept(
+        socket s: NIOBSDSocket.Handle,
+        address addr: UnsafeMutablePointer<sockaddr>?,
+        address_len addrlen: UnsafeMutablePointer<socklen_t>?
+    ) throws -> NIOBSDSocket.Handle?
 
-    static func bind(socket s: NIOBSDSocket.Handle,
-                     address addr: UnsafePointer<sockaddr>,
-                     address_len namelen: socklen_t) throws
+    static func bind(
+        socket s: NIOBSDSocket.Handle,
+        address addr: UnsafePointer<sockaddr>,
+        address_len namelen: socklen_t
+    ) throws
 
     static func close(socket s: NIOBSDSocket.Handle) throws
 
-    static func connect(socket s: NIOBSDSocket.Handle,
-                        address name: UnsafePointer<sockaddr>,
-                        address_len namelen: socklen_t) throws -> Bool
+    static func connect(
+        socket s: NIOBSDSocket.Handle,
+        address name: UnsafePointer<sockaddr>,
+        address_len namelen: socklen_t
+    ) throws -> Bool
 
-    static func getpeername(socket s: NIOBSDSocket.Handle,
-                            address name: UnsafeMutablePointer<sockaddr>,
-                            address_len namelen: UnsafeMutablePointer<socklen_t>) throws
+    static func getpeername(
+        socket s: NIOBSDSocket.Handle,
+        address name: UnsafeMutablePointer<sockaddr>,
+        address_len namelen: UnsafeMutablePointer<socklen_t>
+    ) throws
 
-    static func getsockname(socket s: NIOBSDSocket.Handle,
-                            address name: UnsafeMutablePointer<sockaddr>,
-                            address_len namelen: UnsafeMutablePointer<socklen_t>) throws
+    static func getsockname(
+        socket s: NIOBSDSocket.Handle,
+        address name: UnsafeMutablePointer<sockaddr>,
+        address_len namelen: UnsafeMutablePointer<socklen_t>
+    ) throws
 
-    static func getsockopt(socket: NIOBSDSocket.Handle,
-                           level: NIOBSDSocket.OptionLevel,
-                           option_name optname: NIOBSDSocket.Option,
-                           option_value optval: UnsafeMutableRawPointer,
-                           option_len optlen: UnsafeMutablePointer<socklen_t>) throws
+    static func getsockopt(
+        socket: NIOBSDSocket.Handle,
+        level: NIOBSDSocket.OptionLevel,
+        option_name optname: NIOBSDSocket.Option,
+        option_value optval: UnsafeMutableRawPointer,
+        option_len optlen: UnsafeMutablePointer<socklen_t>
+    ) throws
 
     static func listen(socket s: NIOBSDSocket.Handle, backlog: CInt) throws
 
-    static func recv(socket s: NIOBSDSocket.Handle,
-                     buffer buf: UnsafeMutableRawPointer,
-                     length len: size_t) throws -> IOResult<size_t>
+    static func recv(
+        socket s: NIOBSDSocket.Handle,
+        buffer buf: UnsafeMutableRawPointer,
+        length len: size_t
+    ) throws -> IOResult<size_t>
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard
     // type, and defining that type is difficult.  Opt to return a `size_t`
     // which is the same size, but is unsigned.
-    static func recvmsg(socket: NIOBSDSocket.Handle,
-                        msgHdr: UnsafeMutablePointer<msghdr>, flags: CInt)
-            throws -> IOResult<size_t>
+    static func recvmsg(
+        socket: NIOBSDSocket.Handle,
+        msgHdr: UnsafeMutablePointer<msghdr>,
+        flags: CInt
+    )
+        throws -> IOResult<size_t>
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard
     // type, and defining that type is difficult.  Opt to return a `size_t`
     // which is the same size, but is unsigned.
-    static func sendmsg(socket: NIOBSDSocket.Handle,
-                        msgHdr: UnsafePointer<msghdr>, flags: CInt)
-            throws -> IOResult<size_t>
+    static func sendmsg(
+        socket: NIOBSDSocket.Handle,
+        msgHdr: UnsafePointer<msghdr>,
+        flags: CInt
+    )
+        throws -> IOResult<size_t>
 
-    static func send(socket s: NIOBSDSocket.Handle,
-                     buffer buf: UnsafeRawPointer,
-                     length len: size_t) throws -> IOResult<size_t>
+    static func send(
+        socket s: NIOBSDSocket.Handle,
+        buffer buf: UnsafeRawPointer,
+        length len: size_t
+    ) throws -> IOResult<size_t>
 
-    static func setsockopt(socket: NIOBSDSocket.Handle,
-                           level: NIOBSDSocket.OptionLevel,
-                           option_name optname: NIOBSDSocket.Option,
-                           option_value optval: UnsafeRawPointer,
-                           option_len optlen: socklen_t) throws
+    static func setsockopt(
+        socket: NIOBSDSocket.Handle,
+        level: NIOBSDSocket.OptionLevel,
+        option_name optname: NIOBSDSocket.Option,
+        option_value optval: UnsafeRawPointer,
+        option_len optlen: socklen_t
+    ) throws
 
     static func shutdown(socket: NIOBSDSocket.Handle, how: Shutdown) throws
 
-    static func socket(domain af: NIOBSDSocket.ProtocolFamily,
-                       type: NIOBSDSocket.SocketType,
-                       protocolSubtype: NIOBSDSocket.ProtocolSubtype) throws -> NIOBSDSocket.Handle
+    static func socket(
+        domain af: NIOBSDSocket.ProtocolFamily,
+        type: NIOBSDSocket.SocketType,
+        protocolSubtype: NIOBSDSocket.ProtocolSubtype
+    ) throws -> NIOBSDSocket.Handle
 
-    static func recvmmsg(socket: NIOBSDSocket.Handle,
-                         msgvec: UnsafeMutablePointer<MMsgHdr>,
-                         vlen: CUnsignedInt,
-                         flags: CInt,
-                         timeout: UnsafeMutablePointer<timespec>?) throws -> IOResult<Int>
+    static func recvmmsg(
+        socket: NIOBSDSocket.Handle,
+        msgvec: UnsafeMutablePointer<MMsgHdr>,
+        vlen: CUnsignedInt,
+        flags: CInt,
+        timeout: UnsafeMutablePointer<timespec>?
+    ) throws -> IOResult<Int>
 
-    static func sendmmsg(socket: NIOBSDSocket.Handle,
-                         msgvec: UnsafeMutablePointer<MMsgHdr>,
-                         vlen: CUnsignedInt,
-                         flags: CInt) throws -> IOResult<Int>
-
-    // NOTE: this should return a `ssize_t`, however, that is not a standard
-    // type, and defining that type is difficult.  Opt to return a `size_t`
-    // which is the same size, but is unsigned.
-    static func pread(socket: NIOBSDSocket.Handle,
-                      pointer: UnsafeMutableRawPointer,
-                      size: size_t,
-                      offset: off_t) throws -> IOResult<size_t>
+    static func sendmmsg(
+        socket: NIOBSDSocket.Handle,
+        msgvec: UnsafeMutablePointer<MMsgHdr>,
+        vlen: CUnsignedInt,
+        flags: CInt
+    ) throws -> IOResult<Int>
 
     // NOTE: this should return a `ssize_t`, however, that is not a standard
     // type, and defining that type is difficult.  Opt to return a `size_t`
     // which is the same size, but is unsigned.
-    static func pwrite(socket: NIOBSDSocket.Handle,
-                       pointer: UnsafeRawPointer,
-                       size: size_t,
-                       offset: off_t) throws -> IOResult<size_t>
+    static func pread(
+        socket: NIOBSDSocket.Handle,
+        pointer: UnsafeMutableRawPointer,
+        size: size_t,
+        offset: off_t
+    ) throws -> IOResult<size_t>
 
-#if !os(Windows)
+    // NOTE: this should return a `ssize_t`, however, that is not a standard
+    // type, and defining that type is difficult.  Opt to return a `size_t`
+    // which is the same size, but is unsigned.
+    static func pwrite(
+        socket: NIOBSDSocket.Handle,
+        pointer: UnsafeRawPointer,
+        size: size_t,
+        offset: off_t
+    ) throws -> IOResult<size_t>
+
+    #if !os(Windows)
     // NOTE: We do not support this on Windows as WSAPoll behaves differently
     // from poll with reporting of failed connections (Connect Report 309411),
     // which recommended that you use NetAPI instead.
     //
     // This is safe to exclude as this is a testing-only API.
-    static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t,
-                     timeout: CInt) throws -> CInt
-#endif
+    static func poll(
+        fds: UnsafeMutablePointer<pollfd>,
+        nfds: nfds_t,
+        timeout: CInt
+    ) throws -> CInt
+    #endif
 
-    static func sendfile(socket s: NIOBSDSocket.Handle,
-                         fd: CInt,
-                         offset: off_t,
-                         len: off_t) throws -> IOResult<Int>
+    static func sendfile(
+        socket s: NIOBSDSocket.Handle,
+        fd: CInt,
+        offset: off_t,
+        len: off_t
+    ) throws -> IOResult<Int>
 
     // MARK: non-BSD APIs added by NIO
 
@@ -301,7 +339,7 @@ protocol _BSDSocketProtocol {
 
 /// If this extension is hitting a compile error, your platform is missing one
 /// of the functions defined above!
-extension NIOBSDSocket: _BSDSocketProtocol { }
+extension NIOBSDSocket: _BSDSocketProtocol {}
 
 /// This protocol defines the methods that are expected to be found on
 /// `NIOBSDControlMessage`. While defined as a protocol there is no expectation
@@ -309,18 +347,26 @@ extension NIOBSDSocket: _BSDSocketProtocol { }
 /// protocol: instead, this protocol acts as a reference for what new supported
 /// operating systems must implement.
 protocol _BSDSocketControlMessageProtocol {
-    static func firstHeader(inside msghdr: UnsafePointer<msghdr>)
-            -> UnsafeMutablePointer<cmsghdr>?
+    static func firstHeader(
+        inside msghdr: UnsafePointer<msghdr>
+    )
+        -> UnsafeMutablePointer<cmsghdr>?
 
-    static func nextHeader(inside msghdr: UnsafeMutablePointer<msghdr>,
-                           after: UnsafeMutablePointer<cmsghdr>)
-            -> UnsafeMutablePointer<cmsghdr>?
+    static func nextHeader(
+        inside msghdr: UnsafeMutablePointer<msghdr>,
+        after: UnsafeMutablePointer<cmsghdr>
+    )
+        -> UnsafeMutablePointer<cmsghdr>?
 
-    static func data(for header: UnsafePointer<cmsghdr>)
-            -> UnsafeRawBufferPointer?
+    static func data(
+        for header: UnsafePointer<cmsghdr>
+    )
+        -> UnsafeRawBufferPointer?
 
-    static func data(for header: UnsafeMutablePointer<cmsghdr>)
-            -> UnsafeMutableRawBufferPointer?
+    static func data(
+        for header: UnsafeMutablePointer<cmsghdr>
+    )
+        -> UnsafeMutableRawBufferPointer?
 
     static func length(payloadSize: size_t) -> size_t
 
@@ -329,7 +375,7 @@ protocol _BSDSocketControlMessageProtocol {
 
 /// If this extension is hitting a compile error, your platform is missing one
 /// of the functions defined above!
-enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol { }
+enum NIOBSDSocketControlMessage: _BSDSocketControlMessageProtocol {}
 
 /// The requested UDS path exists and has wrong type (not a socket).
 public struct UnixDomainSocketPathWrongType: Error {}

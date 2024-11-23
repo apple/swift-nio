@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Foundation
 import NIOCore
 import NIOPosix
-import Foundation
+import XCTest
 
 final class NIOSingletonsTests: XCTestCase {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
@@ -47,8 +47,10 @@ final class NIOSingletonsTests: XCTestCase {
     }
 
     func testMultiGroupThreadPrefix() {
-        XCTAssert(MultiThreadedEventLoopGroup.singleton.description.contains("NIO-SGLTN-"),
-                  "\(MultiThreadedEventLoopGroup.singleton.description)")
+        XCTAssert(
+            MultiThreadedEventLoopGroup.singleton.description.contains("NIO-SGLTN-"),
+            "\(MultiThreadedEventLoopGroup.singleton.description)"
+        )
 
         for _ in 0..<100 {
             let someEL = MultiThreadedEventLoopGroup.singleton.next()

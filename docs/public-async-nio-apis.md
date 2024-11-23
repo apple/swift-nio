@@ -676,22 +676,22 @@ final public class NIOTypedHTTPClientUpgradeHandler<UpgradeResult> : NIOCore.Cha
 
     /// Called when this `ChannelHandler` is added to the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     public func handlerAdded(context: NIOCore.ChannelHandlerContext)
 
     /// Called when this `ChannelHandler` is removed from the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     public func handlerRemoved(context: NIOCore.ChannelHandlerContext)
 
     /// Called when the `Channel` has become active, and is able to send and receive data.
     ///
     /// This should call `context.fireChannelActive` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     public func channelActive(context: NIOCore.ChannelHandlerContext)
 
     /// Called to request a write operation. The write operation will write the messages through the
@@ -701,19 +701,19 @@ final public class NIOTypedHTTPClientUpgradeHandler<UpgradeResult> : NIOCore.Cha
     /// This should call `context.write` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
     /// complete the `EventLoopPromise` to let the caller know that the operation completed.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - data: The data to write through the `Channel`, wrapped in a `NIOAny`.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - data: The data to write through the `Channel`, wrapped in a `NIOAny`.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     public func write(context: NIOCore.ChannelHandlerContext, data: NIOCore.NIOAny, promise: NIOCore.EventLoopPromise<Void>?)
 
     /// Called when some data has been read from the remote peer.
     ///
     /// This should call `context.fireChannelRead` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - data: The data read from the remote peer, wrapped in a `NIOAny`.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - data: The data read from the remote peer, wrapped in a `NIOAny`.
     public func channelRead(context: NIOCore.ChannelHandlerContext, data: NIOCore.NIOAny)
 }
 
@@ -795,23 +795,23 @@ final public class NIOTypedHTTPServerUpgradeHandler<UpgradeResult> : NIOCore.Cha
 
     /// Called when this `ChannelHandler` is added to the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     public func handlerAdded(context: NIOCore.ChannelHandlerContext)
 
     /// Called when this `ChannelHandler` is removed from the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     public func handlerRemoved(context: NIOCore.ChannelHandlerContext)
 
     /// Called when some data has been read from the remote peer.
     ///
     /// This should call `context.fireChannelRead` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - data: The data read from the remote peer, wrapped in a `NIOAny`.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - data: The data read from the remote peer, wrapped in a `NIOAny`.
     public func channelRead(context: NIOCore.ChannelHandlerContext, data: NIOCore.NIOAny)
 }
 ```
@@ -960,40 +960,40 @@ final public class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
 
     /// Called when this `ChannelHandler` is added to the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     public func handlerAdded(context: NIOCore.ChannelHandlerContext)
 
     /// Called when this `ChannelHandler` is removed from the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     public func handlerRemoved(context: NIOCore.ChannelHandlerContext)
 
     /// Called when a user inbound event has been triggered.
     ///
     /// This should call `context.fireUserInboundEventTriggered` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - event: The event.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - event: The event.
     public func userInboundEventTriggered(context: NIOCore.ChannelHandlerContext, event: Any)
 
     /// Called when some data has been read from the remote peer.
     ///
     /// This should call `context.fireChannelRead` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - data: The data read from the remote peer, wrapped in a `NIOAny`.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - data: The data read from the remote peer, wrapped in a `NIOAny`.
     public func channelRead(context: NIOCore.ChannelHandlerContext, data: NIOCore.NIOAny)
 
     /// Called when the `Channel` has become inactive and is no longer able to send and receive data.
     ///
     /// This should call `context.fireChannelInactive` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     public func channelInactive(context: NIOCore.ChannelHandlerContext)
 }
 ```

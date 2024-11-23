@@ -13,6 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 token=$(create_token)
@@ -31,6 +32,6 @@ do_curl "$token" \
     "http://foobar.com/dynamic/trailers" \
     "http://foobar.com/dynamic/trailers" \
     "http://foobar.com/dynamic/trailers" \
-    > "$tmp/out.txt"
-assert_equal_files "$htdocs/some_file.txt" "$tmp/out.txt"
+    > "${tmp:?"tmp variable not set"}/out.txt"
+assert_equal_files "$htdocs/some_file.txt" "${tmp}/out.txt"
 stop_server "$token"

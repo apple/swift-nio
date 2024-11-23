@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.9)
 import NIOCore
 import NIOPosix
 
@@ -100,7 +99,7 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
         if let firstLine = readableBytes.firstIndex(of: self.newLine).map({ readableBytes[..<$0] }) {
             buffer.moveReaderIndex(forwardBy: firstLine.count + 1)
             // Fire a read without a newline
-            context.fireChannelRead(self.wrapInboundOut(String(buffer: ByteBuffer(firstLine))))
+            context.fireChannelRead(Self.wrapInboundOut(String(buffer: ByteBuffer(firstLine))))
             return .continue
         } else {
             return .needMoreData
@@ -112,11 +111,3 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
         out.writeInteger(self.newLine)
     }
 }
-#else
-@main
-struct Client {
-    static func main() {
-        fatalError("Requires at least Swift 5.9")
-    }
-}
-#endif

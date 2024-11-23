@@ -27,8 +27,8 @@ public struct WebSocketOpcode: Sendable {
 
     /// Create an opcode from the encoded representation.
     ///
-    /// - parameters
-    ///     - encoded: The encoded representation of the opcode as an 8-bit integer.
+    /// - Parameters
+    ///   - encoded: The encoded representation of the opcode as an 8-bit integer.
     ///          Must be no more than 4 bits large.
     public init?(encodedWebSocketOpcode encoded: UInt8) {
         guard encoded < 0x10 else {
@@ -48,13 +48,13 @@ public struct WebSocketOpcode: Sendable {
     /// Whether the opcode is in the control range: that is, if the
     /// high bit of the opcode nibble is `1`.
     public var isControlOpcode: Bool {
-        return self.networkRepresentation & 0x8 == 0x8
+        self.networkRepresentation & 0x8 == 0x8
     }
 }
 
-extension WebSocketOpcode: Equatable { }
+extension WebSocketOpcode: Equatable {}
 
-extension WebSocketOpcode: Hashable { }
+extension WebSocketOpcode: Hashable {}
 
 extension WebSocketOpcode: CaseIterable {
     public static var allCases = (0..<0x10).map { WebSocketOpcode(rawValue: $0) }
@@ -89,8 +89,8 @@ extension UInt8 {
     /// This places the opcode in the four least-significant bits, in
     /// a form suitable for sending on the wire.
     ///
-    /// - parameters:
-    ///     - opcode: The `WebSocketOpcode`.
+    /// - Parameters:
+    ///   - opcode: The `WebSocketOpcode`.
     public init(webSocketOpcode opcode: WebSocketOpcode) {
         precondition(opcode.networkRepresentation < 0x10)
         self = opcode.networkRepresentation
@@ -100,8 +100,8 @@ extension UInt8 {
 extension Int {
     /// Create a UInt8 corresponding to the integer value for a given `WebSocketOpcode`.
     ///
-    /// - parameters:
-    ///     - opcode: The `WebSocketOpcode`.
+    /// - Parameters:
+    ///   - opcode: The `WebSocketOpcode`.
     public init(webSocketOpcode opcode: WebSocketOpcode) {
         precondition(opcode.networkRepresentation < 0x10)
         self = Int(opcode.networkRepresentation)

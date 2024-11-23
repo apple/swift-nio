@@ -27,8 +27,8 @@ import NIOCore
 // We naturally still use an enum to hold our state, but the FSM is now inside a class, which makes the shared
 // state nature of this FSM a bit clearer.
 
-private extension Array where Element == EventLoopFuture<Channel> {
-    mutating func remove(element: Element) {
+extension Array where Element == EventLoopFuture<Channel> {
+    fileprivate mutating func remove(element: Element) {
         guard let channelIndex = self.firstIndex(where: { $0 === element }) else {
             return
         }
@@ -226,7 +226,8 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     /// than intended.
     ///
     /// The channel builder callback takes an event loop and a protocol family as arguments.
-    private let channelBuilderCallback: (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<(Channel, ChannelBuilderResult)>
+    private let channelBuilderCallback:
+        (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<(Channel, ChannelBuilderResult)>
 
     /// The amount of time to wait for an AAAA response to come in after a A response is
     /// received. By default this is 50ms.
@@ -278,14 +279,18 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     private var error: NIOConnectionError
 
     @inlinable
-    init(resolver: Resolver,
-         loop: EventLoop,
-         host: String,
-         port: Int,
-         connectTimeout: TimeAmount,
-         resolutionDelay: TimeAmount = .milliseconds(50),
-         connectionDelay: TimeAmount = .milliseconds(250),
-         channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<(Channel, ChannelBuilderResult)>) {
+    init(
+        resolver: Resolver,
+        loop: EventLoop,
+        host: String,
+        port: Int,
+        connectTimeout: TimeAmount,
+        resolutionDelay: TimeAmount = .milliseconds(50),
+        connectionDelay: TimeAmount = .milliseconds(250),
+        channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<
+            (Channel, ChannelBuilderResult)
+        >
+    ) {
         self.resolver = resolver
         self.loop = loop
         self.host = host
@@ -300,10 +305,16 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         self.resolutionPromise = self.loop.makePromise()
         self.error = NIOConnectionError(host: host, port: port)
 
-        precondition(resolutionDelay.nanoseconds > 0, "Resolution delay must be greater than zero, got \(resolutionDelay).")
+        precondition(
+            resolutionDelay.nanoseconds > 0,
+            "Resolution delay must be greater than zero, got \(resolutionDelay)."
+        )
         self.resolutionDelay = resolutionDelay
 
-        precondition(connectionDelay >= .milliseconds(100) && connectionDelay <= .milliseconds(2000), "Connection delay must be between 100 and 2000 ms, got \(connectionDelay)")
+        precondition(
+            connectionDelay >= .milliseconds(100) && connectionDelay <= .milliseconds(2000),
+            "Connection delay must be between 100 and 2000 ms, got \(connectionDelay)"
+        )
         self.connectionDelay = connectionDelay
     }
 
@@ -325,9 +336,10 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
             port: port,
             connectTimeout: connectTimeout,
             resolutionDelay: resolutionDelay,
-            connectionDelay: connectionDelay) { loop, protocolFamily in
-                channelBuilderCallback(loop, protocolFamily).map { ($0, ()) }
-            }
+            connectionDelay: connectionDelay
+        ) { loop, protocolFamily in
+            channelBuilderCallback(loop, protocolFamily).map { ($0, ()) }
+        }
     }
 
     /// Initiate a DNS resolution attempt using Happy Eyeballs 2.
@@ -337,7 +349,9 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
     func resolveAndConnect() -> EventLoopFuture<(Channel, ChannelBuilderResult)> {
         // We dispatch ourselves onto the event loop, rather than do all the rest of our processing from outside it.
         self.loop.execute {
-            self.timeoutTask = self.loop.scheduleTask(in: self.connectTimeout) { self.processInput(.connectTimeoutElapsed) }
+            self.timeoutTask = self.loop.scheduleTask(in: self.connectTimeout) {
+                self.processInput(.connectTimeoutElapsed)
+            }
             self.processInput(.resolve)
         }
         return resolutionPromise.futureResult
@@ -353,8 +367,8 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
 
     /// Spin the state machine.
     ///
-    /// - parameters:
-    ///     - input: The input to the state machine.
+    /// - Parameters:
+    ///   - input: The input to the state machine.
     private func processInput(_ input: ConnectorInput) {
         switch (state, input) {
         // Only one valid transition from idle: to start resolving.
@@ -451,12 +465,12 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
         // ignore these, as our transition into the complete state should have already sent
         // cleanup messages to all of these things.
         case (.complete, .resolverACompleted),
-             (.complete, .resolverAAAACompleted),
-             (.complete, .connectSuccess),
-             (.complete, .connectFailed),
-             (.complete, .connectDelayElapsed),
-             (.complete, .connectTimeoutElapsed),
-             (.complete, .resolutionDelayElapsed):
+            (.complete, .resolverAAAACompleted),
+            (.complete, .connectSuccess),
+            (.complete, .connectFailed),
+            (.complete, .connectDelayElapsed),
+            (.complete, .connectTimeoutElapsed),
+            (.complete, .resolutionDelayElapsed):
             break
         default:
             fatalError("Invalid FSM transition attempt: state \(state), input \(input)")
@@ -570,8 +584,8 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
 
     /// Called to connect to a given target.
     ///
-    /// - parameters:
-    ///     - target: The address to connect to.
+    /// - Parameters:
+    ///   - target: The address to connect to.
     private func connectToTarget(_ target: SocketAddress) {
         let channelFuture = channelBuilderCallback(self.loop, target.protocol)
         pendingConnections.append(channelFuture)
@@ -600,7 +614,10 @@ internal final class HappyEyeballsConnector<ChannelBuilderResult> {
                     // The connection attempt failed. If we're in the complete state then there's nothing
                     // to do. Otherwise, notify the state machine of the failure.
                     if case .complete = self.state {
-                        assert(self.pendingConnections.firstIndex { $0 === channelFuture } == nil, "failed but was still in pending connections")
+                        assert(
+                            self.pendingConnections.firstIndex { $0 === channelFuture } == nil,
+                            "failed but was still in pending connections"
+                        )
                     } else {
                         self.error.connectionErrors.append(SingleConnectionFailure(target: target, error: err))
                         self.pendingConnections.removeAll { $0 === channelFuture }

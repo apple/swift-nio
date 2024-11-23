@@ -35,13 +35,15 @@ extension EventLoopFuture {
     ///
     /// Note: In a sense, the `EventLoopFuture<NewValue>` is returned before it's created.
     ///
-    /// - parameters:
-    ///     - callback: Function that will receive the value of this `EventLoopFuture` and return
+    /// - Parameters:
+    ///   - callback: Function that will receive the value of this `EventLoopFuture` and return
     ///         a new `EventLoopFuture`.
-    /// - returns: A future that will receive the eventual value.
+    /// - Returns: A future that will receive the eventual value.
     @inlinable
     @preconcurrency
-    public func flatMapWithEventLoop<NewValue>(_ callback: @escaping @Sendable (Value, EventLoop) -> EventLoopFuture<NewValue>) -> EventLoopFuture<NewValue> {
+    public func flatMapWithEventLoop<NewValue: Sendable>(
+        _ callback: @escaping @Sendable (Value, EventLoop) -> EventLoopFuture<NewValue>
+    ) -> EventLoopFuture<NewValue> {
         let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete { [eventLoop = self.eventLoop] in
             switch self._value! {
@@ -61,7 +63,7 @@ extension EventLoopFuture {
         }
         return next.futureResult
     }
-    
+
     /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
     /// may recover from the error by returning an `EventLoopFuture<NewValue>`. The callback is intended to potentially
     /// recover from the error by returning a new `EventLoopFuture` that will eventually contain the recovered
@@ -69,13 +71,15 @@ extension EventLoopFuture {
     ///
     /// If the callback cannot recover it should return a failed `EventLoopFuture`.
     ///
-    /// - parameters:
-    ///     - callback: Function that will receive the error value of this `EventLoopFuture` and return
+    /// - Parameters:
+    ///   - callback: Function that will receive the error value of this `EventLoopFuture` and return
     ///         a new value lifted into a new `EventLoopFuture`.
-    /// - returns: A future that will receive the recovered value.
+    /// - Returns: A future that will receive the recovered value.
     @inlinable
     @preconcurrency
-    public func flatMapErrorWithEventLoop(_ callback: @escaping @Sendable (Error, EventLoop) -> EventLoopFuture<Value>) -> EventLoopFuture<Value> {
+    public func flatMapErrorWithEventLoop(
+        _ callback: @escaping @Sendable (Error, EventLoop) -> EventLoopFuture<Value>
+    ) -> EventLoopFuture<Value> where Value: Sendable {
         let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self.eventLoop)
         self._whenComplete { [eventLoop = self.eventLoop] in
             switch self._value! {
@@ -108,18 +112,20 @@ extension EventLoopFuture {
     /// `EventLoopFuture` objects will no longer be waited for. This function therefore fails fast: once
     /// a failure is encountered, it will immediately fail the overall EventLoopFuture.
     ///
-    /// - parameters:
-    ///     - futures: An array of `EventLoopFuture<NewValue>` to wait for.
-    ///     - with: A function that will be used to fold the values of two `EventLoopFuture`s and return a new value wrapped in an `EventLoopFuture`.
-    /// - returns: A new `EventLoopFuture` with the folded value whose callbacks run on `self.eventLoop`.
+    /// - Parameters:
+    ///   - futures: An array of `EventLoopFuture<NewValue>` to wait for.
+    ///   - combiningFunction: A function that will be used to fold the values of two `EventLoopFuture`s and return a new value wrapped in an `EventLoopFuture`.
+    /// - Returns: A new `EventLoopFuture` with the folded value whose callbacks run on `self.eventLoop`.
     @inlinable
     @preconcurrency
-    public func foldWithEventLoop<OtherValue>(
+    public func foldWithEventLoop<OtherValue: Sendable>(
         _ futures: [EventLoopFuture<OtherValue>],
         with combiningFunction: @escaping @Sendable (Value, OtherValue, EventLoop) -> EventLoopFuture<Value>
-    ) -> EventLoopFuture<Value> {
+    ) -> EventLoopFuture<Value> where Value: Sendable {
+        @Sendable
         func fold0(eventLoop: EventLoop) -> EventLoopFuture<Value> {
-            let body = futures.reduce(self) { (f1: EventLoopFuture<Value>, f2: EventLoopFuture<OtherValue>) -> EventLoopFuture<Value> in
+            let body = futures.reduce(self) {
+                (f1: EventLoopFuture<Value>, f2: EventLoopFuture<OtherValue>) -> EventLoopFuture<Value> in
                 let newFuture = f1.and(f2).flatMap { (args: (Value, OtherValue)) -> EventLoopFuture<Value> in
                     let (f1Value, f2Value) = args
                     self.eventLoop.assertInEventLoop()

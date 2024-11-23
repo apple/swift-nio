@@ -13,10 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 @testable import _NIODataStructures
 
 public func getRandomNumbers(count: Int) -> [UInt8] {
-    return (0..<count).map { _ in
+    (0..<count).map { _ in
         UInt8.random(in: .min ... .max)
     }
 }
@@ -34,14 +35,14 @@ class HeapTests: XCTestCase {
     func testSortedDesc() throws {
         var minHeap = Heap<Int>()
 
-        let input = [16, 14, 10, 9, 8, 7, 4, 3, 2, 1]
-        input.forEach {
-            minHeap.append($0)
+        let inputs = [16, 14, 10, 9, 8, 7, 4, 3, 2, 1]
+        for input in inputs {
+            minHeap.append(input)
             XCTAssertTrue(minHeap.checkHeapProperty())
         }
-        var minHeapInputPtr = input.count - 1
+        var minHeapInputPtr = inputs.count - 1
         while let minE = minHeap.removeRoot() {
-            XCTAssertEqual(minE, input[minHeapInputPtr])
+            XCTAssertEqual(minE, inputs[minHeapInputPtr])
             minHeapInputPtr -= 1
             XCTAssertTrue(minHeap.checkHeapProperty(), "\(minHeap.debugDescription)")
         }
@@ -51,16 +52,16 @@ class HeapTests: XCTestCase {
     func testSortedAsc() throws {
         var minHeap = Heap<Int>()
 
-        let input = Array([16, 14, 10, 9, 8, 7, 4, 3, 2, 1].reversed())
-        input.forEach {
-            minHeap.append($0)
+        let inputs = Array([16, 14, 10, 9, 8, 7, 4, 3, 2, 1].reversed())
+        for input in inputs {
+            minHeap.append(input)
         }
         var minHeapInputPtr = 0
         while let minE = minHeap.removeRoot() {
-            XCTAssertEqual(minE, input[minHeapInputPtr])
+            XCTAssertEqual(minE, inputs[minHeapInputPtr])
             minHeapInputPtr += 1
         }
-        XCTAssertEqual(input.count, minHeapInputPtr)
+        XCTAssertEqual(inputs.count, minHeapInputPtr)
     }
 
     func testAddAndRemoveRandomNumbers() throws {
@@ -76,7 +77,7 @@ class HeapTests: XCTestCase {
             XCTAssertEqual(Array(minHeap.sorted()), Array(minHeap))
         }
 
-        for _ in 0..<N/2 {
+        for _ in 0..<N / 2 {
             let value = minHeap.removeRoot()!
             XCTAssertGreaterThanOrEqual(value, minHeapLast)
             minHeapLast = value
@@ -93,7 +94,7 @@ class HeapTests: XCTestCase {
             XCTAssertTrue(minHeap.checkHeapProperty(), minHeap.debugDescription)
         }
 
-        for _ in 0..<N/2+N {
+        for _ in 0..<N / 2 + N {
             let value = minHeap.removeRoot()!
             XCTAssertGreaterThanOrEqual(value, minHeapLast)
             minHeapLast = value

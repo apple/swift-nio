@@ -13,9 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import DequeModule
-@testable import NIOCore
-import XCTest
 import NIOConcurrencyHelpers
+import XCTest
+
+@testable import NIOCore
 
 private struct SomeError: Error, Hashable {}
 
@@ -68,7 +69,8 @@ final class NIOAsyncWriterTests: XCTestCase {
     override func setUp() {
         super.setUp()
 
-        self.delegate = .init()
+        let delegate = MockAsyncWriterDelegate()
+        self.delegate = delegate
         let newWriter = NIOAsyncWriter.makeWriter(
             elementType: String.self,
             isWritable: true,
@@ -77,7 +79,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         )
         self.writer = newWriter.writer
         self.sink = newWriter.sink
-        self.sink._storage._didSuspend = self.delegate.didSuspend
+        self.sink._storage._setDidSuspend { delegate.didSuspend() }
     }
 
     override func tearDown() {
@@ -101,9 +103,21 @@ final class NIOAsyncWriterTests: XCTestCase {
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        XCTAssertEqual(self.delegate.didSuspendCallCount, suspendCallCount, "Unexpeced suspends", file: file, line: line)
+        XCTAssertEqual(
+            self.delegate.didSuspendCallCount,
+            suspendCallCount,
+            "Unexpeced suspends",
+            file: file,
+            line: line
+        )
         XCTAssertEqual(self.delegate.didYieldCallCount, yieldCallCount, "Unexpected yields", file: file, line: line)
-        XCTAssertEqual(self.delegate.didTerminateCallCount, terminateCallCount, "Unexpected terminates", file: file, line: line)
+        XCTAssertEqual(
+            self.delegate.didTerminateCallCount,
+            terminateCallCount,
+            "Unexpected terminates",
+            file: file,
+            line: line
+        )
     }
 
     func testMultipleConcurrentWrites() async throws {
@@ -161,7 +175,7 @@ final class NIOAsyncWriterTests: XCTestCase {
     // MARK: - WriterDeinitialized
 
     func testWriterDeinitialized_whenInitial() async throws {
-        var newWriter: NIOAsyncWriter<String, MockAsyncWriterDelegate>.NewWriter? =  NIOAsyncWriter.makeWriter(
+        var newWriter: NIOAsyncWriter<String, MockAsyncWriterDelegate>.NewWriter? = NIOAsyncWriter.makeWriter(
             elementType: String.self,
             isWritable: true,
             finishOnDeinit: true,
@@ -180,7 +194,7 @@ final class NIOAsyncWriterTests: XCTestCase {
     }
 
     func testWriterDeinitialized_whenStreaming() async throws {
-        var newWriter: NIOAsyncWriter<String, MockAsyncWriterDelegate>.NewWriter? =  NIOAsyncWriter.makeWriter(
+        var newWriter: NIOAsyncWriter<String, MockAsyncWriterDelegate>.NewWriter? = NIOAsyncWriter.makeWriter(
             elementType: String.self,
             isWritable: true,
             finishOnDeinit: true,
@@ -398,7 +412,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            await fulfillment(of: [cancelled], timeout: 1)
+            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message2")
         }
 
@@ -457,7 +471,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            await fulfillment(of: [cancelled], timeout: 1)
+            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message1")
         }
 
@@ -478,7 +492,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            await fulfillment(of: [cancelled], timeout: 1)
+            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message2")
         }
 
@@ -532,7 +546,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         let cancelled = expectation(description: "task cancelled")
 
         let task = Task { [writer] in
-            await fulfillment(of: [cancelled], timeout: 1)
+            await XCTWaiter().fulfillment(of: [cancelled], timeout: 1)
             try await writer!.yield("message1")
         }
 
@@ -570,7 +584,6 @@ final class NIOAsyncWriterTests: XCTestCase {
     func testWriterFinish_whenStreaming_AndBufferedElements() async throws {
         // We are setting up a suspended yield here to check that it gets resumed
         self.sink.setWritability(to: false)
-
 
         let suspended = expectation(description: "suspended on yield")
         self.delegate.didSuspendHandler = {

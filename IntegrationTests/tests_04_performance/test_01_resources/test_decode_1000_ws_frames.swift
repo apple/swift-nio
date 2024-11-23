@@ -21,8 +21,8 @@ class UnboxingChannelHandler: ChannelInboundHandler {
     typealias InboundOut = WebSocketFrame
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let data = self.unwrapInboundIn(data)
-        context.fireChannelRead(self.wrapInboundOut(data))
+        let data = Self.unwrapInboundIn(data)
+        context.fireChannelRead(Self.wrapInboundOut(data))
     }
 }
 
@@ -30,7 +30,7 @@ func run(identifier: String) {
     let channel = EmbeddedChannel()
     try! channel.pipeline.addHandler(ByteToMessageHandler(WebSocketFrameDecoder())).wait()
     try! channel.pipeline.addHandler(UnboxingChannelHandler()).wait()
-    let data = ByteBuffer(bytes: [0x81, 0x00]) // empty websocket
+    let data = ByteBuffer(bytes: [0x81, 0x00])  // empty websocket
 
     measure(identifier: identifier) {
         for _ in 0..<1000 {

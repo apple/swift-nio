@@ -15,12 +15,14 @@
 
 set -eu
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 swift_binary=swift
+# shellcheck disable=SC2034 # Used in defines.sh
 here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if [[ ! -z "${SWIFT_EXEC-}" ]]; then
+if [[ -n "${SWIFT_EXEC-}" ]]; then
     swift_binary="$(dirname "$SWIFT_EXEC")/swift"
 elif [[ "$(uname -s)" == "Linux" ]]; then
     swift_binary=$(which swift)
@@ -68,7 +70,7 @@ make_package
 
 for mode in debug release; do
     for error in EFAULT EBADF; do
-        temp_file="$tmp/stderr"
+        temp_file="${tmp:?"tmp variable not set"}/stderr"
         if "$swift_binary" run -c "$mode" -Xswiftc -DRUNNING_INTEGRATION_TESTS \
             syscallwrapper "$error" 2> "$temp_file"; then
 

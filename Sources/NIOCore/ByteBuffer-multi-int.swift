@@ -17,7 +17,10 @@
 extension ByteBuffer {
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2).Type = (T1, T2).self) -> (T1, T2)? {
+    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger>(
+        endianness: Endianness = .big,
+        as: (T1, T2).Type = (T1, T2).self
+    ) -> (T1, T2)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
 
@@ -30,7 +33,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -53,7 +56,12 @@ extension ByteBuffer {
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger>(_ value1: T1, _ value2: T2, endianness: Endianness = .big, as: (T1, T2).Type = (T1, T2).self) -> Int {
+    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger>(
+        _ value1: T1,
+        _ value2: T2,
+        endianness: Endianness = .big,
+        as: (T1, T2).Type = (T1, T2).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         switch endianness {
@@ -71,7 +79,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -83,7 +91,10 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3).Type = (T1, T2, T3).self) -> (T1, T2, T3)? {
+    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger>(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3).Type = (T1, T2, T3).self
+    ) -> (T1, T2, T3)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -98,7 +109,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -125,7 +136,13 @@ extension ByteBuffer {
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, endianness: Endianness = .big, as: (T1, T2, T3).Type = (T1, T2, T3).self) -> Int {
+    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger>(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3).Type = (T1, T2, T3).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -147,7 +164,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -161,7 +178,12 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4).Type = (T1, T2, T3, T4).self) -> (T1, T2, T3, T4)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger
+    >(endianness: Endianness = .big, as: (T1, T2, T3, T4).Type = (T1, T2, T3, T4).self) -> (T1, T2, T3, T4)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -178,7 +200,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -209,7 +231,19 @@ extension ByteBuffer {
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, endianness: Endianness = .big, as: (T1, T2, T3, T4).Type = (T1, T2, T3, T4).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4).Type = (T1, T2, T3, T4).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -235,7 +269,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -251,7 +285,14 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5).Type = (T1, T2, T3, T4, T5).self) -> (T1, T2, T3, T4, T5)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger
+    >(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5).Type = (T1, T2, T3, T4, T5).self) -> (T1, T2, T3, T4, T5)?
+    {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -270,7 +311,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -298,14 +339,31 @@ extension ByteBuffer {
         case .big:
             return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5))
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5).Type = (T1, T2, T3, T4, T5).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5).Type = (T1, T2, T3, T4, T5).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -335,7 +393,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -353,7 +411,17 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6).Type = (T1, T2, T3, T4, T5, T6).self) -> (T1, T2, T3, T4, T5, T6)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6).Type = (T1, T2, T3, T4, T5, T6).self
+    ) -> (T1, T2, T3, T4, T5, T6)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -374,7 +442,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -404,16 +472,38 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6).Type = (T1, T2, T3, T4, T5, T6).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6).Type = (T1, T2, T3, T4, T5, T6).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -447,7 +537,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -467,7 +557,18 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7).Type = (T1, T2, T3, T4, T5, T6, T7).self) -> (T1, T2, T3, T4, T5, T6, T7)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7).Type = (T1, T2, T3, T4, T5, T6, T7).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -490,7 +591,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -524,16 +625,40 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6), T7(bigEndian: v7))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, _ value7: T7, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7).Type = (T1, T2, T3, T4, T5, T6, T7).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7).Type = (T1, T2, T3, T4, T5, T6, T7).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -571,7 +696,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -593,7 +718,19 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8).Type = (T1, T2, T3, T4, T5, T6, T7, T8).self) -> (T1, T2, T3, T4, T5, T6, T7, T8)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8).Type = (T1, T2, T3, T4, T5, T6, T7, T8).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -618,7 +755,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -656,16 +793,42 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, _ value7: T7, _ value8: T8, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8).Type = (T1, T2, T3, T4, T5, T6, T7, T8).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8).Type = (T1, T2, T3, T4, T5, T6, T7, T8).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -707,7 +870,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -731,7 +894,20 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9).self) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -758,7 +934,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -800,16 +976,45 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8), T9(littleEndian: v9))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, _ value7: T7, _ value8: T8, _ value9: T9, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -855,7 +1060,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -881,7 +1086,21 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).self) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -910,7 +1129,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -956,16 +1175,47 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8), T9(littleEndian: v9), T10(littleEndian: v10))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, _ value7: T7, _ value8: T8, _ value9: T9, _ value10: T10, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -1015,7 +1265,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -1043,7 +1293,22 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).self) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -1074,7 +1339,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -1124,16 +1389,50 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10), T11(bigEndian: v11))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8), T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, _ value7: T7, _ value8: T8, _ value9: T9, _ value10: T10, _ value11: T11, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -1187,7 +1486,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -1217,7 +1516,25 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger, T12: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12).self) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -1250,7 +1567,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -1304,16 +1621,54 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10), T11(bigEndian: v11), T12(bigEndian: v12))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11), T12(bigEndian: v12)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8), T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger, T12: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, _ value7: T7, _ value8: T8, _ value9: T9, _ value10: T10, _ value11: T11, _ value12: T12, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        _ value12: T12,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12
+        ).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -1371,7 +1726,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -1403,7 +1758,26 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger, T12: FixedWidthInteger, T13: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13).self) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -1438,7 +1812,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -1496,16 +1870,57 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10), T11(bigEndian: v11), T12(bigEndian: v12), T13(bigEndian: v13))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11), T12(bigEndian: v12), T13(bigEndian: v13)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8), T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12), T13(littleEndian: v13))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12),
+                T13(littleEndian: v13)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger, T12: FixedWidthInteger, T13: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, _ value7: T7, _ value8: T8, _ value9: T9, _ value10: T10, _ value11: T11, _ value12: T12, _ value13: T13, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        _ value12: T12,
+        _ value13: T13,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
+        ).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -1567,7 +1982,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -1601,7 +2016,27 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger, T12: FixedWidthInteger, T13: FixedWidthInteger, T14: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14).self) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -1638,7 +2073,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -1700,16 +2135,59 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10), T11(bigEndian: v11), T12(bigEndian: v12), T13(bigEndian: v13), T14(bigEndian: v14))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11), T12(bigEndian: v12), T13(bigEndian: v13), T14(bigEndian: v14)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8), T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12), T13(littleEndian: v13), T14(littleEndian: v14))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12),
+                T13(littleEndian: v13), T14(littleEndian: v14)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger, T12: FixedWidthInteger, T13: FixedWidthInteger, T14: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, _ value7: T7, _ value8: T8, _ value9: T9, _ value10: T10, _ value11: T11, _ value12: T12, _ value13: T13, _ value14: T14, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        _ value12: T12,
+        _ value13: T13,
+        _ value14: T14,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14
+        ).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -1775,7 +2253,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)
@@ -1811,7 +2289,28 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
-    public mutating func readMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger, T12: FixedWidthInteger, T13: FixedWidthInteger, T14: FixedWidthInteger, T15: FixedWidthInteger>(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15).self) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15)? {
+    public mutating func readMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger,
+        T15: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15)? {
         var bytesRequired: Int = MemoryLayout<T1>.size
         bytesRequired &+= MemoryLayout<T2>.size
         bytesRequired &+= MemoryLayout<T3>.size
@@ -1850,7 +2349,7 @@ extension ByteBuffer {
         var offset = 0
         self.readWithUnsafeReadableBytes { ptr -> Int in
             assert(ptr.count >= bytesRequired)
-            let basePtr = ptr.baseAddress! // safe, ptr is non-empty
+            let basePtr = ptr.baseAddress!  // safe, ptr is non-empty
             withUnsafeMutableBytes(of: &v1) { destPtr in
                 destPtr.baseAddress!.copyMemory(from: basePtr + offset, byteCount: MemoryLayout<T1>.size)
             }
@@ -1916,16 +2415,61 @@ extension ByteBuffer {
         }
         switch endianness {
         case .big:
-            return (T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5), T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10), T11(bigEndian: v11), T12(bigEndian: v12), T13(bigEndian: v13), T14(bigEndian: v14), T15(bigEndian: v15))
+            return (
+                T1(bigEndian: v1), T2(bigEndian: v2), T3(bigEndian: v3), T4(bigEndian: v4), T5(bigEndian: v5),
+                T6(bigEndian: v6), T7(bigEndian: v7), T8(bigEndian: v8), T9(bigEndian: v9), T10(bigEndian: v10),
+                T11(bigEndian: v11), T12(bigEndian: v12), T13(bigEndian: v13), T14(bigEndian: v14), T15(bigEndian: v15)
+            )
         case .little:
-            return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4), T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8), T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12), T13(littleEndian: v13), T14(littleEndian: v14), T15(littleEndian: v15))
+            return (
+                T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4),
+                T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8),
+                T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12),
+                T13(littleEndian: v13), T14(littleEndian: v14), T15(littleEndian: v15)
+            )
         }
     }
 
     @inlinable
     @_alwaysEmitIntoClient
     @discardableResult
-    public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger, T4: FixedWidthInteger, T5: FixedWidthInteger, T6: FixedWidthInteger, T7: FixedWidthInteger, T8: FixedWidthInteger, T9: FixedWidthInteger, T10: FixedWidthInteger, T11: FixedWidthInteger, T12: FixedWidthInteger, T13: FixedWidthInteger, T14: FixedWidthInteger, T15: FixedWidthInteger>(_ value1: T1, _ value2: T2, _ value3: T3, _ value4: T4, _ value5: T5, _ value6: T6, _ value7: T7, _ value8: T8, _ value9: T9, _ value10: T10, _ value11: T11, _ value12: T12, _ value13: T13, _ value14: T14, _ value15: T15, endianness: Endianness = .big, as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15).self) -> Int {
+    public mutating func writeMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger,
+        T15: FixedWidthInteger
+    >(
+        _ value1: T1,
+        _ value2: T2,
+        _ value3: T3,
+        _ value4: T4,
+        _ value5: T5,
+        _ value6: T6,
+        _ value7: T7,
+        _ value8: T8,
+        _ value9: T9,
+        _ value10: T10,
+        _ value11: T11,
+        _ value12: T12,
+        _ value13: T13,
+        _ value14: T14,
+        _ value15: T15,
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15
+        ).self
+    ) -> Int {
         var v1: T1
         var v2: T2
         var v3: T3
@@ -1995,7 +2539,7 @@ extension ByteBuffer {
         return self.writeWithUnsafeMutableBytes(minimumWritableBytes: spaceNeeded) { ptr -> Int in
             assert(ptr.count >= spaceNeeded)
             var offset = 0
-            let basePtr = ptr.baseAddress! // safe: pointer is non zero length
+            let basePtr = ptr.baseAddress!  // safe: pointer is non zero length
             (basePtr + offset).copyMemory(from: &v1, byteCount: MemoryLayout<T1>.size)
             offset = offset &+ MemoryLayout<T1>.size
             (basePtr + offset).copyMemory(from: &v2, byteCount: MemoryLayout<T2>.size)

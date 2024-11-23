@@ -19,10 +19,13 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
+#elseif canImport(Bionic)
+import Bionic
+#elseif canImport(WASILibc)
+import WASILibc
 #else
 #error("The File Region module was unable to identify your C library.")
 #endif
-
 
 /// A `FileRegion` represent a readable portion usually created to be sent over the network.
 ///
@@ -34,7 +37,7 @@ import Musl
 /// One important note, depending your `ChannelPipeline` setup it may not be possible to use a `FileRegion` as a `ChannelHandler` may
 /// need access to the bytes (in a `ByteBuffer`) to transform these.
 ///
-/// - note: It is important to manually manage the lifetime of the `NIOFileHandle` used to create a `FileRegion`.
+/// - Note: It is important to manually manage the lifetime of the `NIOFileHandle` used to create a `FileRegion`.
 /// - warning: `FileRegion` objects are not thread-safe and are mutable. They also cannot be fully thread-safe as they refer to a global underlying file descriptor.
 public struct FileRegion {
 
@@ -47,7 +50,7 @@ public struct FileRegion {
     /// The current reader index of this `FileRegion`
     private(set) public var readerIndex: Int {
         get {
-            return Int(self._readerIndex)
+            Int(self._readerIndex)
         }
         set {
             self._readerIndex = _UInt56(newValue)
@@ -56,15 +59,15 @@ public struct FileRegion {
 
     /// The end index of this `FileRegion`.
     public var endIndex: Int {
-        return Int(self._endIndex)
+        Int(self._endIndex)
     }
 
     /// Create a new `FileRegion` from an open `NIOFileHandle`.
     ///
-    /// - parameters:
-    ///     - fileHandle: the `NIOFileHandle` to use.
-    ///     - readerIndex: the index (offset) on which the reading will start.
-    ///     - endIndex: the index which represent the end of the readable portion.
+    /// - Parameters:
+    ///   - fileHandle: the `NIOFileHandle` to use.
+    ///   - readerIndex: the index (offset) on which the reading will start.
+    ///   - endIndex: the index which represent the end of the readable portion.
     public init(fileHandle: NIOFileHandle, readerIndex: Int, endIndex: Int) {
         precondition(readerIndex <= endIndex, "readerIndex(\(readerIndex) must be <= endIndex(\(endIndex).")
 
@@ -75,7 +78,7 @@ public struct FileRegion {
 
     /// The number of readable bytes within this FileRegion (taking the `readerIndex` and `endIndex` into account).
     public var readableBytes: Int {
-        return endIndex - readerIndex
+        endIndex - readerIndex
     }
 
     /// Move the readerIndex forward by `offset`.
@@ -92,8 +95,8 @@ extension FileRegion: Sendable {}
 extension FileRegion {
     /// Create a new `FileRegion` forming a complete file.
     ///
-    /// - parameters:
-    ///     - fileHandle: An open `NIOFileHandle` to the file.
+    /// - Parameters:
+    ///   - fileHandle: An open `NIOFileHandle` to the file.
     public init(fileHandle: NIOFileHandle) throws {
         let eof = try fileHandle.withUnsafeFileDescriptor { (fd: CInt) throws -> off_t in
             let eof = try SystemCalls.lseek(descriptor: fd, offset: 0, whence: SEEK_END)
@@ -106,13 +109,13 @@ extension FileRegion {
 }
 
 extension FileRegion: Equatable {
-    public static func ==(lhs: FileRegion, rhs: FileRegion) -> Bool {
-        return lhs.fileHandle === rhs.fileHandle && lhs.readerIndex == rhs.readerIndex && lhs.endIndex == rhs.endIndex
+    public static func == (lhs: FileRegion, rhs: FileRegion) -> Bool {
+        lhs.fileHandle === rhs.fileHandle && lhs.readerIndex == rhs.readerIndex && lhs.endIndex == rhs.endIndex
     }
 }
 
 extension FileRegion: CustomStringConvertible {
     public var description: String {
-        return "FileRegion { handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex) }"
+        "FileRegion { handle: \(self.fileHandle), readerIndex: \(self.readerIndex), endIndex: \(self.endIndex) }"
     }
 }

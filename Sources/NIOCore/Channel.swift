@@ -18,7 +18,7 @@ import NIOConcurrencyHelpers
 ///
 /// - warning: If you are not implementing a custom `Channel` type, you should never call any of these.
 ///
-/// - note: All methods must be called from the `EventLoop` thread.
+/// - Note: All methods must be called from the `EventLoop` thread.
 public protocol ChannelCore: AnyObject {
     /// Returns the local bound `SocketAddress`.
     func localAddress0() throws -> SocketAddress
@@ -28,34 +28,34 @@ public protocol ChannelCore: AnyObject {
 
     /// Register with the `EventLoop` to receive I/O notifications.
     ///
-    /// - parameters:
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func register0(promise: EventLoopPromise<Void>?)
 
     /// Register channel as already connected or bound socket.
-    /// - parameters:
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?)
 
     /// Bind to a `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - to: The `SocketAddress` to which we should bind the `Channel`.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - to: The `SocketAddress` to which we should bind the `Channel`.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func bind0(to: SocketAddress, promise: EventLoopPromise<Void>?)
 
     /// Connect to a `SocketAddress`.
     ///
-    /// - parameters:
-    ///     - to: The `SocketAddress` to which we should connect the `Channel`.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - to: The `SocketAddress` to which we should connect the `Channel`.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func connect0(to: SocketAddress, promise: EventLoopPromise<Void>?)
 
     /// Write the given data to the outbound buffer.
     ///
-    /// - parameters:
-    ///     - data: The data to write, wrapped in a `NIOAny`.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - data: The data to write, wrapped in a `NIOAny`.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func write0(_ data: NIOAny, promise: EventLoopPromise<Void>?)
 
     /// Try to flush out all previous written messages that are pending.
@@ -66,36 +66,36 @@ public protocol ChannelCore: AnyObject {
 
     /// Close the `Channel`.
     ///
-    /// - parameters:
-    ///     - error: The `Error` which will be used to fail any pending writes.
-    ///     - mode: The `CloseMode` to apply.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - error: The `Error` which will be used to fail any pending writes.
+    ///   - mode: The `CloseMode` to apply.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func close0(error: Error, mode: CloseMode, promise: EventLoopPromise<Void>?)
 
     /// Trigger an outbound event.
     ///
-    /// - parameters:
-    ///     - event: The triggered event.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - event: The triggered event.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func triggerUserOutboundEvent0(_ event: Any, promise: EventLoopPromise<Void>?)
 
     /// Called when data was read from the `Channel` but it was not consumed by any `ChannelInboundHandler` in the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - data: The data that was read, wrapped in a `NIOAny`.
+    /// - Parameters:
+    ///   - data: The data that was read, wrapped in a `NIOAny`.
     func channelRead0(_ data: NIOAny)
 
     /// Called when an inbound error was encountered but was not consumed by any `ChannelInboundHandler` in the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - error: The `Error` that was encountered.
+    /// - Parameters:
+    ///   - error: The `Error` that was encountered.
     func errorCaught0(error: Error)
 }
 
 /// A `Channel` is easiest thought of as a network socket. But it can be anything that is capable of I/O operations such
 /// as read, write, connect, and bind.
 ///
-/// - note: All operations on `Channel` are thread-safe.
+/// - Note: All operations on `Channel` are thread-safe.
 ///
 /// In SwiftNIO, all I/O operations are asynchronous and hence all operations on `Channel` are asynchronous too. This means
 /// that all I/O operations will return immediately, usually before the work has been completed. The `EventLoopPromise`s
@@ -145,12 +145,36 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
     /// The default implementation returns `nil`, and `Channel` implementations must opt in to
     /// support this behavior.
     var syncOptions: NIOSynchronousChannelOptions? { get }
+
+    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.write`.
+    @preconcurrency
+    func write<T: Sendable>(_ any: T) -> EventLoopFuture<Void>
+
+    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.write`.
+    @preconcurrency
+    func write<T: Sendable>(_ any: T, promise: EventLoopPromise<Void>?)
+
+    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
+    @preconcurrency
+    func writeAndFlush<T: Sendable>(_ any: T) -> EventLoopFuture<Void>
+
+    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
+    ///
+    /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
+    @preconcurrency
+    func writeAndFlush<T: Sendable>(_ any: T, promise: EventLoopPromise<Void>?)
 }
 
 extension Channel {
     /// Default implementation: `NIOSynchronousChannelOptions` are not supported.
     public var syncOptions: NIOSynchronousChannelOptions? {
-        return nil
+        nil
     }
 }
 
@@ -177,7 +201,16 @@ extension Channel {
         pipeline.connect(to: address, promise: promise)
     }
 
+    @available(
+        *,
+        deprecated,
+        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
+    )
     public func write(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+        pipeline.write(data, promise: promise)
+    }
+
+    public func write<T: Sendable>(_ data: T, promise: EventLoopPromise<Void>?) {
         pipeline.write(data, promise: promise)
     }
 
@@ -185,7 +218,16 @@ extension Channel {
         pipeline.flush()
     }
 
+    @available(
+        *,
+        deprecated,
+        message: "NIOAny is not Sendable. Avoid wrapping the value in NIOAny to silence this warning."
+    )
     public func writeAndFlush(_ data: NIOAny, promise: EventLoopPromise<Void>?) {
+        pipeline.writeAndFlush(data, promise: promise)
+    }
+
+    public func writeAndFlush<T: Sendable>(_ data: T, promise: EventLoopPromise<Void>?) {
         pipeline.writeAndFlush(data, promise: promise)
     }
 
@@ -202,45 +244,36 @@ extension Channel {
     }
 
     public func registerAlreadyConfigured0(promise: EventLoopPromise<Void>?) {
-        promise?.fail(ChannelError.operationUnsupported)
+        promise?.fail(ChannelError._operationUnsupported)
     }
 
-    public func triggerUserOutboundEvent(_ event: Any, promise: EventLoopPromise<Void>?) {
+    @preconcurrency
+    public func triggerUserOutboundEvent(_ event: Any & Sendable, promise: EventLoopPromise<Void>?) {
         pipeline.triggerUserOutboundEvent(event, promise: promise)
     }
 }
 
-
 /// Provides special extension to make writing data to the `Channel` easier by removing the need to wrap data in `NIOAny` manually.
 extension Channel {
 
-    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
+    /// Write data into the `Channel`.
     ///
     /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.write(NIOAny(any))
+    @preconcurrency
+    public func write<T: Sendable>(_ any: T) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
+        self.write(any, promise: promise)
+        return promise.futureResult
     }
 
-    /// Write data into the `Channel`, automatically wrapping with `NIOAny`.
-    ///
-    /// - seealso: `ChannelOutboundInvoker.write`.
-    public func write<T>(_ any: T, promise: EventLoopPromise<Void>?) {
-        self.write(NIOAny(any), promise: promise)
-    }
-
-    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
+    /// Write and flush data into the `Channel`.
     ///
     /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T) -> EventLoopFuture<Void> {
-        return self.writeAndFlush(NIOAny(any))
-    }
-
-
-    /// Write and flush data into the `Channel`, automatically wrapping with `NIOAny`.
-    ///
-    /// - seealso: `ChannelOutboundInvoker.writeAndFlush`.
-    public func writeAndFlush<T>(_ any: T, promise: EventLoopPromise<Void>?) {
-        self.writeAndFlush(NIOAny(any), promise: promise)
+    @preconcurrency
+    public func writeAndFlush<T: Sendable>(_ any: T) -> EventLoopFuture<Void> {
+        let promise = self.eventLoop.makePromise(of: Void.self)
+        self.writeAndFlush(any, promise: promise)
+        return promise.futureResult
     }
 }
 
@@ -256,13 +289,13 @@ extension ChannelCore {
     /// types are supported, consider using a tagged union to store the type information like
     /// NIO's own `IOData`, which will minimise the amount of runtime type checking.
     ///
-    /// - parameters:
-    ///     - data: The `NIOAny` to unwrap.
-    ///     - as: The type to extract from the `NIOAny`.
-    /// - returns: The content of the `NIOAny`.
+    /// - Parameters:
+    ///   - data: The `NIOAny` to unwrap.
+    ///   - as: The type to extract from the `NIOAny`.
+    /// - Returns: The content of the `NIOAny`.
     @inlinable
     public func unwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T {
-        return data.forceAs()
+        data.forceAs()
     }
 
     /// Attempts to unwrap the given `NIOAny` as a specific concrete type.
@@ -276,15 +309,15 @@ extension ChannelCore {
     /// using `unwrapData` instead. This method exists for rare use-cases where tolerating type
     /// mismatches is acceptable.
     ///
-    /// - parameters:
-    ///     - data: The `NIOAny` to unwrap.
-    ///     - as: The type to extract from the `NIOAny`.
-    /// - returns: The content of the `NIOAny`, or `nil` if the type is incorrect.
+    /// - Parameters:
+    ///   - data: The `NIOAny` to unwrap.
+    ///   - as: The type to extract from the `NIOAny`.
+    /// - Returns: The content of the `NIOAny`, or `nil` if the type is incorrect.
     /// - warning: If you are implementing a `ChannelCore`, you should use `unwrapData` unless you
     ///     are doing something _extremely_ unusual.
     @inlinable
     public func tryUnwrapData<T>(_ data: NIOAny, as: T.Type = T.self) -> T? {
-        return data.tryAs()
+        data.tryAs()
     }
 
     /// Removes the `ChannelHandler`s from the `ChannelPipeline` belonging to `channel`, and
@@ -294,8 +327,8 @@ extension ChannelCore {
     /// This can be called from `close0` to tear down the `ChannelPipeline` when closure is
     /// complete.
     ///
-    /// - parameters:
-    ///     - channel: The `Channel` whose `ChannelPipeline` will be closed.
+    /// - Parameters:
+    ///   - channel: The `Channel` whose `ChannelPipeline` will be closed.
     @available(*, deprecated, renamed: "removeHandlers(pipeline:)")
     public func removeHandlers(channel: Channel) {
         self.removeHandlers(pipeline: channel.pipeline)
@@ -308,8 +341,8 @@ extension ChannelCore {
     /// This can be called from `close0` to tear down the `ChannelPipeline` when closure is
     /// complete.
     ///
-    /// - parameters:
-    ///     - pipeline: The `ChannelPipline` to be closed.
+    /// - Parameters:
+    ///   - pipeline: The `ChannelPipline` to be closed.
     public func removeHandlers(pipeline: ChannelPipeline) {
         pipeline.removeHandlers()
     }
@@ -362,9 +395,11 @@ public enum ChannelError: Error {
     /// address.
     case illegalMulticastAddress(SocketAddress)
 
+    #if !os(WASI)
     /// Multicast is not supported on Interface
     @available(*, deprecated, renamed: "NIOMulticastNotSupportedError")
     case multicastNotSupported(NIONetworkInterface)
+    #endif
 
     /// An operation that was inappropriate given the current `Channel` state was attempted.
     case inappropriateOperationForState
@@ -373,7 +408,18 @@ public enum ChannelError: Error {
     case unremovableHandler
 }
 
-extension ChannelError: Equatable { }
+extension ChannelError {
+    // 'any Error' is unconditionally boxed, avoid allocating per use by statically boxing them.
+    static let _alreadyClosed: any Error = ChannelError.alreadyClosed
+    static let _inputClosed: any Error = ChannelError.inputClosed
+    @usableFromInline
+    static let _ioOnClosedChannel: any Error = ChannelError.ioOnClosedChannel
+    static let _operationUnsupported: any Error = ChannelError.operationUnsupported
+    static let _outputClosed: any Error = ChannelError.outputClosed
+    static let _unremovableHandler: any Error = ChannelError.unremovableHandler
+}
+
+extension ChannelError: Equatable {}
 
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}

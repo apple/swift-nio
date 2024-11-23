@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 
 /// A `SelectableChannel` is a `Channel` that can be used with a `Selector` which notifies a user when certain events
 /// are possible. On UNIX a `Selector` is usually an abstraction of `select`, `poll`, `epoll` or `kqueue`.
@@ -44,9 +44,17 @@ internal protocol SelectableChannel: Channel {
     /// Called when the `SelectableChannel` was reset (ie. is now unusable)
     func reset()
 
+    /// Called when the `SelectableChannel` had an error reported on the selector.
+    func error() -> ErrorResult
+
     func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws
 
     func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws
 
     func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws
+}
+
+internal enum ErrorResult {
+    case fatal
+    case nonFatal
 }

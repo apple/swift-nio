@@ -28,7 +28,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     public let _eventLoop: EventLoop
 
     @usableFromInline
-    /* private */ var _value: Value
+    var _value: Value
 
     /// Initialise a ``NIOLoopBound`` to `value` with the precondition that the code is running on `eventLoop`.
     @inlinable
@@ -40,16 +40,16 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
 
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///
-    /// - note: ``NIOLoopBound`` itself is value-typed, so any writes will only affect the current value.
+    /// - Note: ``NIOLoopBound`` itself is value-typed, so any writes will only affect the current value.
     @inlinable
     public var value: Value {
         get {
             self._eventLoop.preconditionInEventLoop()
             return self._value
         }
-        set {
+        _modify {
             self._eventLoop.preconditionInEventLoop()
-            self._value = newValue
+            yield &self._value
         }
     }
 }
@@ -75,7 +75,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     public let _eventLoop: EventLoop
 
     @usableFromInline
-    /* private */var _value: Value
+    var _value: Value
 
     @inlinable
     internal init(_value value: Value, uncheckedEventLoop eventLoop: EventLoop) {
@@ -96,7 +96,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     public static func makeEmptyBox<NonOptionalValue>(
         valueType: NonOptionalValue.Type = NonOptionalValue.self,
         eventLoop: EventLoop
-    ) -> NIOLoopBoundBox<Value> where Optional<NonOptionalValue> == Value {
+    ) -> NIOLoopBoundBox<Value> where NonOptionalValue? == Value {
         // Here, we -- possibly surprisingly -- do not precondition being on the EventLoop. This is okay for a few
         // reasons:
         // - We write the `Optional.none` value which we know is _not_ a value of the potentially non-Sendable type
@@ -104,22 +104,41 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         // - Because of Swift's Definitive Initialisation (DI), we know that we did write `self._value` before `init`
         //   returns.
         // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
-        return .init(_value: nil, uncheckedEventLoop: eventLoop)
+        .init(_value: nil, uncheckedEventLoop: eventLoop)
+    }
+
+    /// Initialise a ``NIOLoopBoundBox`` by sending a `Sendable` value, validly callable off `eventLoop`.
+    ///
+    /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because we know that `value` is `Sendable`.
+    /// So we don't need to protect `value` itself, we just need to protect the ``NIOLoopBoundBox`` against mutations which we do because the ``value``
+    /// accessors are checking that we're on `eventLoop`.
+    public static func makeBoxSendingValue(
+        _ value: Value,
+        as: Value.Type = Value.self,
+        eventLoop: EventLoop
+    ) -> NIOLoopBoundBox<Value> where Value: Sendable {
+        // Here, we -- possibly surprisingly -- do not precondition being on the EventLoop. This is okay for a few
+        // reasons:
+        // - This function only works with `Sendable` values, so we don't need to worry about somebody
+        //   still holding a reference to this.
+        // - Because of Swift's Definitive Initialisation (DI), we know that we did write `self._value` before `init`
+        //   returns.
+        // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
+        .init(_value: value, uncheckedEventLoop: eventLoop)
     }
 
     /// Access the `value` with the precondition that the code is running on `eventLoop`.
     ///
-    /// - note: ``NIOLoopBoundBox`` itself is reference-typed, so any writes will affect anybody sharing this reference.
+    /// - Note: ``NIOLoopBoundBox`` itself is reference-typed, so any writes will affect anybody sharing this reference.
     @inlinable
     public var value: Value {
         get {
             self._eventLoop.preconditionInEventLoop()
             return self._value
         }
-        set {
+        _modify {
             self._eventLoop.preconditionInEventLoop()
-            self._value = newValue
+            yield &self._value
         }
     }
 }
-

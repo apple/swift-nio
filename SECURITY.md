@@ -64,8 +64,8 @@ with the [details usually included with bug reports][issue-template].
   and the [SSWG][sswg] will announce the vulnerability on the [Swift
   forums][swift-forums-sec].
 
-[issue-template]: https://github.com/apple/swift-nio/blob/main/.github/ISSUE_TEMPLATE.md
+[issue-template]: https://github.com/apple/swift-nio/blob/main/.github/ISSUE_TEMPLATE/bug-report.md
 [sswg]: https://github.com/swift-server/sswg
-[sswg-security]: https://github.com/swift-server/sswg/blob/main/process/incubation.md#security-best-practices
+[sswg-security]: https://www.swift.org/sswg/security/
 [swift-forums-sec]: https://forums.swift.org/c/server/security-updates/
 [mitre]: https://cveform.mitre.org/

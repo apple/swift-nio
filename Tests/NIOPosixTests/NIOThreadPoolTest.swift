@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
-@testable import NIOPosix
 import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
 import NIOEmbedded
+import XCTest
+
+@testable import NIOPosix
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class NIOThreadPoolTest: XCTestCase {
@@ -51,11 +52,11 @@ class NIOThreadPoolTest: XCTestCase {
         }
 
         // now, let's wait for all the threads to have done their work
-        (0..<numberOfThreads).forEach { _ in
+        for _ in (0..<numberOfThreads) {
             threadNameCollectionSem.wait()
         }
         // and finally, let them exit
-        (0..<numberOfThreads).forEach { _ in
+        for _ in (0..<numberOfThreads) {
             threadBlockingSem.signal()
         }
 
@@ -152,8 +153,31 @@ class NIOThreadPoolTest: XCTestCase {
             }
             XCTFail("Should not get here as thread pool isn't active")
         } catch {
-            XCTAssertNotNil(error as? NIOThreadPoolError.ThreadPoolInactive, "Error thrown should be of type ThreadPoolError")
+            XCTAssertNotNil(error as? CancellationError, "Error thrown should be of type CancellationError")
         }
+        try await pool.shutdownGracefully()
+    }
+
+    func testAsyncThreadPoolCancellation() async throws {
+        let pool = NIOThreadPool(numberOfThreads: 1)
+        pool.start()
+
+        await withThrowingTaskGroup(of: Void.self) { group in
+            group.cancelAll()
+            group.addTask {
+                try await pool.runIfActive {
+                    XCTFail("Should be cancelled before executed")
+                }
+            }
+
+            do {
+                try await group.waitForAll()
+                XCTFail("Expected CancellationError to be thrown")
+            } catch {
+                XCTAssert(error is CancellationError)
+            }
+        }
+
         try await pool.shutdownGracefully()
     }
 
@@ -167,6 +191,6 @@ class NIOThreadPoolTest: XCTestCase {
         let future = threadPool.runIfActive(eventLoop: eventLoop) {
             XCTFail("This shouldn't run because the pool is shutdown.")
         }
-        await XCTAssertThrowsError(try await future.get())
+        await XCTAssertThrowsError { try await future.get() }
     }
 }

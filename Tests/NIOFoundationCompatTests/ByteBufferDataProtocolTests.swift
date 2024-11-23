@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
-import XCTest
 import NIOCore
 import NIOFoundationCompat
+import XCTest
 
 struct FakeContiguousBytes: ContiguousBytes {
     func withUnsafeBytes<T>(_ block: (UnsafeRawBufferPointer) throws -> T) rethrows -> T {
@@ -68,8 +68,10 @@ class ByteBufferDataProtocolTests: XCTestCase {
         buffer.writeInteger(UInt64.max)
         buffer.writeInteger(UInt64.max)
         buffer.setData(dd, at: 4)
-        XCTAssertEqual(buffer.readBytes(length: buffer.readableBytes),
-                       [0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0xFF, 0xFF, 0xFF, 0xFF])
+        XCTAssertEqual(
+            buffer.readBytes(length: buffer.readableBytes),
+            [0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x02, 0x03, 0x04, 0x01, 0x02, 0x03, 0x04, 0xFF, 0xFF, 0xFF, 0xFF]
+        )
     }
 
     func testWriteContiguousBytes() {
@@ -87,7 +89,9 @@ class ByteBufferDataProtocolTests: XCTestCase {
         b.writeInteger(UInt64.min)
         b.setContiguousBytes(fake, at: 4)
 
-        XCTAssertEqual(b.readBytes(length: b.readableBytes),
-                       [0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00])
+        XCTAssertEqual(
+            b.readBytes(length: b.readableBytes),
+            [0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00]
+        )
     }
 }

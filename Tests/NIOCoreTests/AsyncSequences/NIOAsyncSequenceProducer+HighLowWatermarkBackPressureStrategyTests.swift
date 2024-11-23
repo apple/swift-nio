@@ -51,10 +51,10 @@ final class NIOAsyncSequenceProducerBackPressureStrategiesHighLowWatermarkTests:
     }
 
     func testDidConsume_whenAboveLowWatermark() {
-        XCTAssertFalse(self.strategy.didConsume(bufferDepth: 6))
+        XCTAssertTrue(self.strategy.didConsume(bufferDepth: 6))
     }
 
     func testDidConsume_whenAtLowWatermark() {
-        XCTAssertFalse(self.strategy.didConsume(bufferDepth: 5))
+        XCTAssertTrue(self.strategy.didConsume(bufferDepth: 5))
     }
 }

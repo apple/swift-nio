@@ -18,9 +18,10 @@ extension EventLoopFuture {
     /// This function can be used to bridge an `EventLoopFuture` into the `async` world. Ie. if you're in an `async`
     /// function and want to get the result of this future.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @preconcurrency
     @inlinable
-    public func get() async throws -> Value {
-        return try await withUnsafeThrowingContinuation { (cont: UnsafeContinuation<UnsafeTransfer<Value>, Error>) in
+    public func get() async throws -> Value where Value: Sendable {
+        try await withUnsafeThrowingContinuation { (cont: UnsafeContinuation<UnsafeTransfer<Value>, Error>) in
             self.whenComplete { result in
                 switch result {
                 case .success(let value):
@@ -33,12 +34,13 @@ extension EventLoopFuture {
     }
 }
 
+#if canImport(Dispatch)
 extension EventLoopGroup {
     /// Shuts down the event loop gracefully.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func shutdownGracefully() async throws {
-        return try await withCheckedThrowingContinuation { cont in
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             self.shutdownGracefully { error in
                 if let error = error {
                     cont.resume(throwing: error)
@@ -49,19 +51,23 @@ extension EventLoopGroup {
         }
     }
 }
+#endif
 
 extension EventLoopPromise {
     /// Complete a future with the result (or error) of the `async` function `body`.
     ///
     /// This function can be used to bridge the `async` world into an `EventLoopPromise`.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///   - body: The `async` function to run.
-    /// - returns: A `Task` which was created to `await` the `body`.
+    /// - Returns: A `Task` which was created to `await` the `body`.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @discardableResult
+    @preconcurrency
     @inlinable
-    public func completeWithTask(_ body: @escaping @Sendable () async throws -> Value) -> Task<Void, Never> {
+    public func completeWithTask(
+        _ body: @escaping @Sendable () async throws -> Value
+    ) -> Task<Void, Never> where Value: Sendable {
         Task {
             do {
                 let value = try await body()
@@ -76,17 +82,19 @@ extension EventLoopPromise {
 extension Channel {
     /// Shortcut for calling `write` and `flush`.
     ///
-    /// - parameters:
-    ///     - data: the data to write
-    ///     - promise: the `EventLoopPromise` that will be notified once the `write` operation completes,
-    ///                or `nil` if not interested in the outcome of the operation.
+    /// - Parameters:
+    ///   - data: the data to write
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
-    public func writeAndFlush<T>(_ any: T) async throws {
-        try await self.writeAndFlush(any).get()
+    @preconcurrency
+    public func writeAndFlush<T: Sendable>(_ data: T) async throws {
+        try await self.writeAndFlush(data).get()
     }
 
     /// Set `option` to `value` on this `Channel`.
+    /// - Parameters:
+    ///   - option: The option to set.
+    ///   - value: The new value of the option.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func setOption<Option: ChannelOption>(_ option: Option, value: Option.Value) async throws {
@@ -94,35 +102,40 @@ extension Channel {
     }
 
     /// Get the value of `option` for this `Channel`.
+    /// - Parameter option: The option to get.
+    /// - Returns: The value of the option.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func getOption<Option: ChannelOption>(_ option: Option) async throws -> Option.Value {
-        return try await self.getOption(option).get()
+        try await self.getOption(option).get()
     }
 }
 
 extension ChannelOutboundInvoker {
     /// Register on an `EventLoop` and so have all its IO handled.
-    ///
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func register(file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.register(file: file, line: line).get()
     }
 
     /// Bind to a `SocketAddress`.
-    /// - parameters:
-    ///     - to: the `SocketAddress` to which we should bind the `Channel`.
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - address: the `SocketAddress` to which we should bind the `Channel`.
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func bind(to address: SocketAddress, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.bind(to: address, file: file, line: line).get()
     }
 
     /// Connect to a `SocketAddress`.
-    /// - parameters:
-    ///     - to: the `SocketAddress` to which we should connect the `Channel`.
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - address: the `SocketAddress` to which we should connect the `Channel`.
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func connect(to address: SocketAddress, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.connect(to: address, file: file, line: line).get()
@@ -130,19 +143,26 @@ extension ChannelOutboundInvoker {
 
     /// Shortcut for calling `write` and `flush`.
     ///
-    /// - parameters:
-    ///     - data: the data to write
-    /// - returns: the future which will be notified once the `write` operation completes.
+    /// - Parameters:
+    ///   - data: the data to write
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(
+        *,
+        deprecated,
+        message: "NIOAny is not Sendable: avoid wrapping the value in NIOAny to silence this warning."
+    )
     public func writeAndFlush(_ data: NIOAny, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.writeAndFlush(data, file: file, line: line).get()
     }
 
     /// Close the `Channel` and so the connection if one exists.
     ///
-    /// - parameters:
-    ///     - mode: the `CloseMode` that is used
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - mode: the `CloseMode` that is used
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func close(mode: CloseMode = .all, file: StaticString = #fileID, line: UInt = #line) async throws {
         try await self.close(mode: mode, file: file, line: line).get()
@@ -150,25 +170,35 @@ extension ChannelOutboundInvoker {
 
     /// Trigger a custom user outbound event which will flow through the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - event: the event itself.
-    /// - returns: the future which will be notified once the operation completes.
+    /// - Parameters:
+    ///   - event: the event itself.
+    ///   - file: The file this function was called in, for debugging purposes.
+    ///   - line: The line this function was called on, for debugging purposes.
+    @preconcurrency
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func triggerUserOutboundEvent(_ event: Any, file: StaticString = #fileID, line: UInt = #line) async throws {
+    public func triggerUserOutboundEvent(
+        _ event: Any & Sendable,
+        file: StaticString = #fileID,
+        line: UInt = #line
+    ) async throws {
         try await self.triggerUserOutboundEvent(event, file: file, line: line).get()
     }
 }
 
 extension ChannelPipeline {
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func addHandler(_ handler: ChannelHandler,
-                           name: String? = nil,
-                           position: ChannelPipeline.Position = .last) async throws {
+    @preconcurrency
+    public func addHandler(
+        _ handler: ChannelHandler & Sendable,
+        name: String? = nil,
+        position: ChannelPipeline.Position = .last
+    ) async throws {
         try await self.addHandler(handler, name: name, position: position).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func removeHandler(_ handler: RemovableChannelHandler) async throws {
+    @preconcurrency
+    public func removeHandler(_ handler: RemovableChannelHandler & Sendable) async throws {
         try await self.removeHandler(handler).get()
     }
 
@@ -178,49 +208,111 @@ extension ChannelPipeline {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @available(
+        *,
+        deprecated,
+        message: "Use .syncOperations.removeHandler(context:) instead, this method is not Sendable-safe."
+    )
     public func removeHandler(context: ChannelHandlerContext) async throws {
         try await self.removeHandler(context: context).get()
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
-    public func context(handler: ChannelHandler) async throws -> ChannelHandlerContext {
-        return try await self.context(handler: handler).get()
+    @available(
+        *,
+        deprecated,
+        message:
+            "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop"
+    )
+    @preconcurrency
+    public func context(handler: ChannelHandler & Sendable) async throws -> ChannelHandlerContext {
+        try await self.context(handler: handler).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
+    @available(
+        *,
+        deprecated,
+        message:
+            "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop"
+    )
     public func context(name: String) async throws -> ChannelHandlerContext {
-        return try await self.context(name: name).get()
+        try await self.context(name: name).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    @available(*, deprecated, message: "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop")
+    @available(
+        *,
+        deprecated,
+        message:
+            "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop"
+    )
     @inlinable
     public func context<Handler: ChannelHandler>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
-        return try await self.context(handlerType: handlerType).get()
+        try await self.context(handlerType: handlerType).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func addHandlers(_ handlers: [ChannelHandler],
-                            position: ChannelPipeline.Position = .last) async throws {
-        try await self.addHandlers(handlers, position: position).get()
+    @preconcurrency
+    public func addHandlers(
+        _ handlers: [ChannelHandler & Sendable],
+        position: ChannelPipeline.Position = .last
+    ) async throws {
+        try await self.addHandlers(handlers, position: position).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    public func addHandlers(_ handlers: ChannelHandler...,
-                            position: ChannelPipeline.Position = .last) async throws {
+    @preconcurrency
+    public func addHandlers(
+        _ handlers: (ChannelHandler & Sendable)...,
+        position: ChannelPipeline.Position = .last
+    ) async throws {
         try await self.addHandlers(handlers, position: position)
     }
 }
 
-public struct NIOTooManyBytesError: Error, Hashable {
-     public init() {}
- }
+/// An error that is thrown when the number of bytes in an AsyncSequence exceeds the limit.
+///
+/// When collecting the bytes from an AsyncSequence, there is a limit up to where the content
+/// exceeds a certain threshold beyond which the content isn't matching an expected reasonable
+/// size to be processed. This error is generally thrown when it is discovered that there are more
+/// more bytes in a sequence than what was specified as the maximum. It could be that this upTo
+/// limit should be increased, or that the sequence has unexpected content in it.
+public struct NIOTooManyBytesError: Error {
+    /// Current limit on the maximum number of bytes in the sequence
+    public var maxBytes: Int?
+
+    @available(
+        *,
+        deprecated,
+        message: "Construct the NIOTooManyBytesError with the maxBytes limit that triggered this error"
+    )
+    public init() {
+        self.maxBytes = nil
+    }
+
+    public init(maxBytes: Int) {
+        self.maxBytes = maxBytes
+    }
+}
+
+extension NIOTooManyBytesError: Equatable {
+    public static func == (lhs: NIOTooManyBytesError, rhs: NIOTooManyBytesError) -> Bool {
+        // Equality of the maxBytes isn't of consequence
+        true
+    }
+}
+
+extension NIOTooManyBytesError: Hashable {
+    public func hash(into hasher: inout Hasher) {
+        // All errors of this type hash to the same value since maxBytes isn't of consequence
+        hasher.combine(7)
+    }
+}
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension AsyncSequence where Element: RandomAccessCollection, Element.Element == UInt8 {
-    /// Accumulates an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single `accumulationBuffer`.
+    /// Accumulates an `AsyncSequence` of `RandomAccessCollection`s into a single `accumulationBuffer`.
     /// - Parameters:
     ///   - accumulationBuffer: buffer to write all the elements of `self` into
     ///   - maxBytes: The maximum number of bytes this method is allowed to write into `accumulationBuffer`
@@ -236,13 +328,13 @@ extension AsyncSequence where Element: RandomAccessCollection, Element.Element =
         for try await fragment in self {
             bytesRead += fragment.count
             guard bytesRead <= maxBytes else {
-                throw NIOTooManyBytesError()
+                throw NIOTooManyBytesError(maxBytes: maxBytes)
             }
             accumulationBuffer.writeBytes(fragment)
         }
     }
-    
-    /// Accumulates an ``Swift/AsyncSequence`` of ``Swift/RandomAccessCollection``s into a single ``ByteBuffer``.
+
+    /// Accumulates an `AsyncSequence` of `RandomAccessCollection`s into a single ``ByteBuffer``.
     /// - Parameters:
     ///   - maxBytes: The maximum number of bytes this method is allowed to accumulate
     ///   - allocator: Allocator used for allocating the result `ByteBuffer`
@@ -279,12 +371,12 @@ extension AsyncSequence where Element == ByteBuffer {
         for try await fragment in self {
             bytesRead += fragment.readableBytes
             guard bytesRead <= maxBytes else {
-                throw NIOTooManyBytesError()
+                throw NIOTooManyBytesError(maxBytes: maxBytes)
             }
             accumulationBuffer.writeImmutableBuffer(fragment)
         }
     }
-    
+
     /// Accumulates an `AsyncSequence` of ``ByteBuffer``s into a single ``ByteBuffer``.
     /// - Parameters:
     ///   - maxBytes: The maximum number of bytes this method is allowed to accumulate
@@ -302,9 +394,9 @@ extension AsyncSequence where Element == ByteBuffer {
             return ByteBuffer()
         }
         guard head.readableBytes <= maxBytes else {
-            throw NIOTooManyBytesError()
+            throw NIOTooManyBytesError(maxBytes: maxBytes)
         }
-        
+
         let tail = AsyncSequenceFromIterator(iterator)
         // it is guaranteed that
         // `maxBytes >= 0 && head.readableBytes >= 0 && head.readableBytes <= maxBytes`
@@ -319,13 +411,13 @@ extension AsyncSequence where Element == ByteBuffer {
 @usableFromInline
 struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSequence {
     @usableFromInline typealias Element = AsyncIterator.Element
-    
+
     @usableFromInline var iterator: AsyncIterator
-    
+
     @inlinable init(_ iterator: AsyncIterator) {
         self.iterator = iterator
     }
-    
+
     @inlinable func makeAsyncIterator() -> AsyncIterator {
         self.iterator
     }
@@ -333,8 +425,11 @@ struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSeq
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension EventLoop {
+    @preconcurrency
     @inlinable
-    public func makeFutureWithTask<Return>(_ body: @Sendable @escaping () async throws -> Return) -> EventLoopFuture<Return> {
+    public func makeFutureWithTask<Return: Sendable>(
+        _ body: @Sendable @escaping () async throws -> Return
+    ) -> EventLoopFuture<Return> {
         let promise = self.makePromise(of: Return.self)
         promise.completeWithTask(body)
         return promise.futureResult

@@ -12,14 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if compiler(>=5.9)
 /// A helper protocol that can be mixed in to a NIO ``EventLoop`` to provide an
 /// automatic conformance to `SerialExecutor`.
 ///
 /// Implementers of `EventLoop` should consider conforming to this protocol as
 /// well on Swift 5.9 and later.
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
-public protocol NIOSerialEventLoopExecutor: EventLoop, SerialExecutor { }
+public protocol NIOSerialEventLoopExecutor: EventLoop, SerialExecutor {}
 
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
 extension NIOSerialEventLoopExecutor {
@@ -36,12 +35,24 @@ extension NIOSerialEventLoopExecutor {
 
     @inlinable
     public func asUnownedSerialExecutor() -> UnownedSerialExecutor {
-        UnownedSerialExecutor(ordinary: self)
+        UnownedSerialExecutor(complexEquality: self)
     }
 
     @inlinable
     public var executor: any SerialExecutor {
         self
+    }
+
+    @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
+    @inlinable
+    public func isSameExclusiveExecutionContext(other: Self) -> Bool {
+        other === self
+    }
+
+    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, *)
+    @inlinable
+    public func checkIsolated() {
+        self.preconditionInEventLoop()
     }
 }
 
@@ -79,4 +90,3 @@ extension NIODefaultSerialEventLoopExecutor: SerialExecutor {
         self.loop === other.loop
     }
 }
-#endif

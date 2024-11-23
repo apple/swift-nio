@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
 import NIOHTTP1
+import XCTest
 
 final class ContentLengthTests: XCTestCase {
 
@@ -73,7 +73,8 @@ final class ContentLengthTests: XCTestCase {
         // First one is fine, the extra bytes will be treated as the next request
         XCTAssertNoThrow(try channel.receiveRequestAndSendResponse(request: badRequest, sendResponse: true))
         // Which means the next request is now malformed
-        XCTAssertThrowsError(try channel.receiveRequestAndSendResponse(request: badRequest, sendResponse: true)) { error in
+        XCTAssertThrowsError(try channel.receiveRequestAndSendResponse(request: badRequest, sendResponse: true)) {
+            error in
             XCTAssertEqual(error as? HTTPParserError, .invalidMethod)
         }
 
@@ -96,7 +97,8 @@ final class ContentLengthTests: XCTestCase {
         // The original request is still 26 bytes short. Sending the request once more will complete it
         XCTAssertNoThrow(try channel.receiveRequestAndSendResponse(request: badRequest, sendResponse: true))
         // The leftover bytes from the previous write (we wrote 100 bytes where it wanted 26) will form a new malformed request
-        XCTAssertThrowsError(try channel.receiveRequestAndSendResponse(request: badRequest, sendResponse: true)) { error in
+        XCTAssertThrowsError(try channel.receiveRequestAndSendResponse(request: badRequest, sendResponse: true)) {
+            error in
             XCTAssertEqual(error as? HTTPParserError, .invalidMethod)
         }
 
@@ -110,7 +112,9 @@ extension EmbeddedChannel {
     /// Throws if receiving the response fails
     fileprivate func sendRequestAndReceiveResponse(response: String) throws {
         // Send a request
-        XCTAssertNoThrow(try self.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1, method: .GET, uri: "/"))))
+        XCTAssertNoThrow(
+            try self.writeOutbound(HTTPClientRequestPart.head(.init(version: .http1_1, method: .GET, uri: "/")))
+        )
         XCTAssertNoThrow(try self.writeOutbound(HTTPClientRequestPart.end(nil)))
         // Receive a response
         try self.writeInbound(ByteBuffer(string: response))

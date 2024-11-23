@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 import NIOCore
-import NIOPosix
 import NIOFoundationCompat
+import NIOPosix
+
 import class Foundation.Pipe
 
 internal struct OutputGrepper {
@@ -28,18 +29,24 @@ internal struct OutputGrepper {
 
         // We gotta `dup` everything because Pipe is bad and closes file descriptors on `deinit` :(
         let channelFuture = NIOPipeBootstrap(group: group)
-            .channelOption(ChannelOptions.allowRemoteHalfClosure, value: true)
+            .channelOption(.allowRemoteHalfClosure, value: true)
             .channelInitializer { channel in
-                channel.pipeline.addHandlers([ByteToMessageHandler(NewlineFramer()),
-                                              GrepHandler(promise: outputPromise)])
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandlers([
+                        ByteToMessageHandler(NewlineFramer()),
+                        GrepHandler(promise: outputPromise),
+                    ])
+                }
             }
             .takingOwnershipOfDescriptor(input: dup(processToChannel.fileHandleForReading.fileDescriptor))
         let processOutputPipe = NIOFileHandle(descriptor: dup(processToChannel.fileHandleForWriting.fileDescriptor))
         processToChannel.fileHandleForReading.closeFile()
         processToChannel.fileHandleForWriting.closeFile()
         channelFuture.cascadeFailure(to: outputPromise)
-        return OutputGrepper(result: outputPromise.futureResult,
-                             processOutputPipe: processOutputPipe)
+        return OutputGrepper(
+            result: outputPromise.futureResult,
+            processOutputPipe: processOutputPipe
+        )
     }
 }
 
@@ -60,10 +67,10 @@ private final class GrepHandler: ChannelInboundHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        let line = self.unwrapInboundIn(data)
-        if line.lowercased().contains("fatal error") ||
-            line.lowercased().contains("precondition failed") ||
-            line.lowercased().contains("assertion failed") {
+        let line = Self.unwrapInboundIn(data)
+        if line.lowercased().contains("fatal error") || line.lowercased().contains("precondition failed")
+            || line.lowercased().contains("assertion failed")
+        {
             self.promise.succeed(line)
             context.close(promise: nil)
         }
@@ -87,7 +94,7 @@ private struct NewlineFramer: ByteToMessageDecoder {
     func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         if let firstNewline = buffer.readableBytesView.firstIndex(of: UInt8(ascii: "\n")) {
             let length = firstNewline - buffer.readerIndex + 1
-            context.fireChannelRead(self.wrapInboundOut(String(buffer.readString(length: length)!.dropLast())))
+            context.fireChannelRead(Self.wrapInboundOut(String(buffer.readString(length: length)!.dropLast())))
             return .continue
         } else {
             return .needMoreData

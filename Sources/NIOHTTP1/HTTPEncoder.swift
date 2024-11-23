@@ -14,7 +14,13 @@
 
 import NIOCore
 
-private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHandlerContext, isChunked: Bool, chunk: IOData, promise: EventLoopPromise<Void>?) {
+private func writeChunk(
+    wrapOutboundOut: (IOData) -> NIOAny,
+    context: ChannelHandlerContext,
+    isChunked: Bool,
+    chunk: IOData,
+    promise: EventLoopPromise<Void>?
+) {
     let readableBytes = chunk.readableBytes
 
     // we don't want to copy the chunk unnecessarily and therefore call write an annoyingly large number of times
@@ -24,15 +30,19 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHan
         let (mW1, mW2, mW3): (EventLoopPromise<Void>?, EventLoopPromise<Void>?, EventLoopPromise<Void>?)
 
         if let p = promise {
-            /* chunked encoding and the user's interested: we need three promises and need to cascade into the users promise */
-            let (w1, w2, w3) = (context.eventLoop.makePromise() as EventLoopPromise<Void>, context.eventLoop.makePromise() as EventLoopPromise<Void>, context.eventLoop.makePromise() as EventLoopPromise<Void>)
+            // chunked encoding and the user's interested: we need three promises and need to cascade into the users promise
+            let (w1, w2, w3) = (
+                context.eventLoop.makePromise() as EventLoopPromise<Void>,
+                context.eventLoop.makePromise() as EventLoopPromise<Void>,
+                context.eventLoop.makePromise() as EventLoopPromise<Void>
+            )
             w1.futureResult.and(w2.futureResult).and(w3.futureResult).map { (_: ((((), ()), ()))) in }.cascade(to: p)
             (mW1, mW2, mW3) = (w1, w2, w3)
         } else {
-            /* user isn't interested, let's not bother even allocating promises */
+            // user isn't interested, let's not bother even allocating promises
             (mW1, mW2, mW3) = (nil, nil, nil)
         }
-        
+
         var buffer = context.channel.allocator.buffer(capacity: 32)
         let len = String(readableBytes, radix: 16)
         buffer.writeString(len)
@@ -49,14 +59,20 @@ private func writeChunk(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHan
     }
 }
 
-private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, context: ChannelHandlerContext, isChunked: Bool, trailers: HTTPHeaders?, promise: EventLoopPromise<Void>?) {
+private func writeTrailers(
+    wrapOutboundOut: (IOData) -> NIOAny,
+    context: ChannelHandlerContext,
+    isChunked: Bool,
+    trailers: HTTPHeaders?,
+    promise: EventLoopPromise<Void>?
+) {
     switch (isChunked, promise) {
     case (true, let p):
         var buffer: ByteBuffer
         if let trailers = trailers {
             buffer = context.channel.allocator.buffer(capacity: 256)
             buffer.writeStaticString("0\r\n")
-            buffer.write(headers: trailers) // Includes trailing CRLF.
+            buffer.write(headers: trailers)  // Includes trailing CRLF.
         } else {
             buffer = context.channel.allocator.buffer(capacity: 8)
             buffer.writeStaticString("0\r\n\r\n")
@@ -75,7 +91,13 @@ private func writeTrailers(wrapOutboundOut: (IOData) -> NIOAny, context: Channel
 // starting about swift-5.0-DEVELOPMENT-SNAPSHOT-2019-01-20-a, this doesn't get automatically inlined, which costs
 // 2 extra allocations so we need to help the optimiser out.
 @inline(__always)
-private func writeHead(wrapOutboundOut: (IOData) -> NIOAny, writeStartLine: (inout ByteBuffer) -> Void, context: ChannelHandlerContext, headers: HTTPHeaders, promise: EventLoopPromise<Void>?) {
+private func writeHead(
+    wrapOutboundOut: (IOData) -> NIOAny,
+    writeStartLine: (inout ByteBuffer) -> Void,
+    context: ChannelHandlerContext,
+    headers: HTTPHeaders,
+    promise: EventLoopPromise<Void>?
+) {
 
     var buffer = context.channel.allocator.buffer(capacity: 256)
     writeStartLine(&buffer)
@@ -99,7 +121,11 @@ private enum BodyFraming {
 ///
 /// Note that for HTTP/1.0 if there is no Content-Length then the response should be followed
 /// by connection close. We require that the user send that connection close: we don't do it.
-private func correctlyFrameTransportHeaders(hasBody: HTTPMethod.HasBody, headers: inout HTTPHeaders, version: HTTPVersion) -> BodyFraming {
+private func correctlyFrameTransportHeaders(
+    hasBody: HTTPMethod.HasBody,
+    headers: inout HTTPHeaders,
+    version: HTTPVersion
+) -> BodyFraming {
     switch hasBody {
     case .no:
         headers.remove(name: "content-length")
@@ -175,27 +201,50 @@ public final class HTTPRequestEncoder: ChannelOutboundHandler, RemovableChannelH
         self.configuration = configuration
     }
 
-
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(var request):
-            assert(!(request.headers.contains(name: "content-length") &&
-                        request.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
-                     "illegal HTTP sent: \(request) contains both a content-length and transfer-encoding:chunked")
+            assert(
+                !(request.headers.contains(name: "content-length")
+                    && request.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
+                "illegal HTTP sent: \(request) contains both a content-length and transfer-encoding:chunked"
+            )
             if self.configuration.automaticallySetFramingHeaders {
-                self.isChunked = correctlyFrameTransportHeaders(hasBody: request.method.hasRequestBody,
-                                                                headers: &request.headers, version: request.version) == .chunked
+                self.isChunked =
+                    correctlyFrameTransportHeaders(
+                        hasBody: request.method.hasRequestBody,
+                        headers: &request.headers,
+                        version: request.version
+                    ) == .chunked
             } else {
                 self.isChunked = messageIsChunked(headers: request.headers, version: request.version)
             }
 
-            writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
-                buffer.write(request: request)
-            }, context: context, headers: request.headers, promise: promise)
+            writeHead(
+                wrapOutboundOut: Self.wrapOutboundOut,
+                writeStartLine: { buffer in
+                    buffer.write(request: request)
+                },
+                context: context,
+                headers: request.headers,
+                promise: promise
+            )
         case .body(let bodyPart):
-            writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
+            writeChunk(
+                wrapOutboundOut: Self.wrapOutboundOut,
+                context: context,
+                isChunked: self.isChunked,
+                chunk: bodyPart,
+                promise: promise
+            )
         case .end(let trailers):
-            writeTrailers(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
+            writeTrailers(
+                wrapOutboundOut: Self.wrapOutboundOut,
+                context: context,
+                isChunked: self.isChunked,
+                trailers: trailers,
+                promise: promise
+            )
         }
     }
 }
@@ -243,26 +292,50 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch self.unwrapOutboundIn(data) {
+        switch Self.unwrapOutboundIn(data) {
         case .head(var response):
-            assert(!(response.headers.contains(name: "content-length") &&
-                        response.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
-                     "illegal HTTP sent: \(response) contains both a content-length and transfer-encoding:chunked")
+            assert(
+                !(response.headers.contains(name: "content-length")
+                    && response.headers[canonicalForm: "transfer-encoding"].contains("chunked"[...])),
+                "illegal HTTP sent: \(response) contains both a content-length and transfer-encoding:chunked"
+            )
 
             if self.configuration.automaticallySetFramingHeaders {
-                self.isChunked = correctlyFrameTransportHeaders(hasBody: response.status.mayHaveResponseBody ? .yes : .no,
-                                                                headers: &response.headers, version: response.version) == .chunked
+                self.isChunked =
+                    correctlyFrameTransportHeaders(
+                        hasBody: response.status.mayHaveResponseBody ? .yes : .no,
+                        headers: &response.headers,
+                        version: response.version
+                    ) == .chunked
             } else {
                 self.isChunked = messageIsChunked(headers: response.headers, version: response.version)
             }
 
-            writeHead(wrapOutboundOut: self.wrapOutboundOut, writeStartLine: { buffer in
-                buffer.write(response: response)
-            }, context: context, headers: response.headers, promise: promise)
+            writeHead(
+                wrapOutboundOut: Self.wrapOutboundOut,
+                writeStartLine: { buffer in
+                    buffer.write(response: response)
+                },
+                context: context,
+                headers: response.headers,
+                promise: promise
+            )
         case .body(let bodyPart):
-            writeChunk(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, chunk: bodyPart, promise: promise)
+            writeChunk(
+                wrapOutboundOut: Self.wrapOutboundOut,
+                context: context,
+                isChunked: self.isChunked,
+                chunk: bodyPart,
+                promise: promise
+            )
         case .end(let trailers):
-            writeTrailers(wrapOutboundOut: self.wrapOutboundOut, context: context, isChunked: self.isChunked, trailers: trailers, promise: promise)
+            writeTrailers(
+                wrapOutboundOut: Self.wrapOutboundOut,
+                context: context,
+                isChunked: self.isChunked,
+                trailers: trailers,
+                promise: promise
+            )
         }
     }
 }
@@ -270,14 +343,14 @@ public final class HTTPResponseEncoder: ChannelOutboundHandler, RemovableChannel
 @available(*, unavailable)
 extension HTTPResponseEncoder: Sendable {}
 
-private extension ByteBuffer {
+extension ByteBuffer {
     private mutating func write(status: HTTPResponseStatus) {
         self.writeString(String(status.code))
         self.writeWhitespace()
         self.writeString(status.reasonPhrase)
     }
 
-    mutating func write(response: HTTPResponseHead) {
+    fileprivate mutating func write(response: HTTPResponseHead) {
         switch (response.version.major, response.version.minor, response.status) {
         // Optimization for HTTP/1.0
         case (1, 0, .custom(_, _)):
@@ -550,7 +623,7 @@ private extension ByteBuffer {
         }
     }
 
-    mutating func write(request: HTTPRequestHead) {
+    fileprivate mutating func write(request: HTTPRequestHead) {
         self.write(method: request.method)
         self.writeWhitespace()
         self.writeString(request.uri)
@@ -559,7 +632,7 @@ private extension ByteBuffer {
         self.writeStaticString("\r\n")
     }
 
-    mutating func writeWhitespace() {
+    fileprivate mutating func writeWhitespace() {
         self.writeInteger(32, as: UInt8.self)
     }
 

@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import Atomics
-@testable import NIOCore
 import NIOEmbedded
 import NIOPosix
 import NIOTestUtils
+import XCTest
+
+@testable import NIOCore
 
 private final class IndexWritingHandler: ChannelDuplexHandler {
     typealias InboundIn = ByteBuffer
@@ -32,35 +33,43 @@ private final class IndexWritingHandler: ChannelDuplexHandler {
     }
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buf = self.unwrapInboundIn(data)
+        var buf = Self.unwrapInboundIn(data)
         buf.writeInteger(UInt8(self.index))
-        context.fireChannelRead(self.wrapInboundOut(buf))
+        context.fireChannelRead(Self.wrapInboundOut(buf))
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        var buf = self.unwrapOutboundIn(data)
+        var buf = Self.unwrapOutboundIn(data)
         buf.writeInteger(UInt8(self.index))
-        context.write(self.wrapOutboundOut(buf), promise: promise)
+        context.write(Self.wrapOutboundOut(buf), promise: promise)
     }
 }
 
-private extension EmbeddedChannel {
-    func assertReadIndexOrder(_ order: [UInt8]) {
+extension EmbeddedChannel {
+    fileprivate func assertReadIndexOrder(_ order: [UInt8]) {
         XCTAssertTrue(try self.writeInbound(self.allocator.buffer(capacity: 32)).isFull)
-        XCTAssertNoThrow(XCTAssertEqual(order,
-                                        try self.readInbound(as: ByteBuffer.self).flatMap { buffer in
-                                            var buffer = buffer
-                                            return buffer.readBytes(length: buffer.readableBytes)
-            }))
+        XCTAssertNoThrow(
+            XCTAssertEqual(
+                order,
+                try self.readInbound(as: ByteBuffer.self).flatMap { buffer in
+                    var buffer = buffer
+                    return buffer.readBytes(length: buffer.readableBytes)
+                }
+            )
+        )
     }
 
-    func assertWriteIndexOrder(_ order: [UInt8]) {
+    fileprivate func assertWriteIndexOrder(_ order: [UInt8]) {
         XCTAssertTrue(try self.writeOutbound(self.allocator.buffer(capacity: 32)).isFull)
-        XCTAssertNoThrow(XCTAssertEqual(order,
-                                        try self.readOutbound(as: ByteBuffer.self).flatMap { buffer in
-                                            var buffer = buffer
-                                            return buffer.readBytes(length: buffer.readableBytes)
-            }))
+        XCTAssertNoThrow(
+            XCTAssertEqual(
+                order,
+                try self.readOutbound(as: ByteBuffer.self).flatMap { buffer in
+                    var buffer = buffer
+                    return buffer.readBytes(length: buffer.readableBytes)
+                }
+            )
+        )
     }
 }
 
@@ -80,7 +89,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler1 = SimpleTypedHandler1()
         let handler2 = SimpleTypedHandler2()
         let handler3 = SimpleTypedHandler3()
-        
+
         let channel = EmbeddedChannel()
         defer {
             XCTAssertNoThrow(try channel.finish())
@@ -88,19 +97,34 @@ class ChannelPipelineTest: XCTestCase {
         try channel.pipeline.addHandlers([
             handler1,
             handler2,
-            handler3
+            handler3,
         ]).wait()
-        
+
         let result1 = try channel.pipeline.handler(type: SimpleTypedHandler1.self).wait()
         XCTAssertTrue(result1 === handler1)
-        
+
         let result2 = try channel.pipeline.handler(type: SimpleTypedHandler2.self).wait()
         XCTAssertTrue(result2 === handler2)
 
         let result3 = try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()
         XCTAssertTrue(result3 === handler3)
     }
-    
+
+    func testContainsHandler() throws {
+        let handler1 = SimpleTypedHandler1()
+        let handler2 = SimpleTypedHandler2()
+
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+        try channel.pipeline.syncOperations.addHandler(handler1)
+        try channel.pipeline.syncOperations.addHandler(handler2, name: "Handler2")
+
+        try channel.pipeline.containsHandler(type: SimpleTypedHandler1.self).wait()
+        try channel.pipeline.containsHandler(name: "Handler2").wait()
+    }
+
     func testGetFirstHandler() throws {
         let sameTypeHandler1 = SimpleTypedHandler1()
         let sameTypeHandler2 = SimpleTypedHandler1()
@@ -113,17 +137,17 @@ class ChannelPipelineTest: XCTestCase {
         try channel.pipeline.addHandlers([
             sameTypeHandler1,
             sameTypeHandler2,
-            otherHandler
+            otherHandler,
         ]).wait()
-        
+
         let result = try channel.pipeline.handler(type: SimpleTypedHandler1.self).wait()
         XCTAssertTrue(result === sameTypeHandler1)
     }
-    
+
     func testGetNotAddedHandler() throws {
         let handler1 = SimpleTypedHandler1()
         let handler2 = SimpleTypedHandler2()
-        
+
         let channel = EmbeddedChannel()
         defer {
             XCTAssertNoThrow(try channel.finish())
@@ -132,10 +156,12 @@ class ChannelPipelineTest: XCTestCase {
             handler1,
             handler2,
         ]).wait()
-        
-        XCTAssertThrowsError(try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()) { XCTAssertTrue($0 is ChannelPipelineError )}
+
+        XCTAssertThrowsError(try channel.pipeline.handler(type: SimpleTypedHandler3.self).wait()) {
+            XCTAssertTrue($0 is ChannelPipelineError)
+        }
     }
-    
+
     func testAddAfterClose() throws {
 
         let channel = EmbeddedChannel()
@@ -176,17 +202,21 @@ class ChannelPipelineTest: XCTestCase {
         var buf = channel.allocator.buffer(capacity: 1024)
         buf.writeString("hello")
 
-        _ = try channel.pipeline.addHandler(TestChannelOutboundHandler<Int, ByteBuffer> { data in
-            XCTAssertEqual(1, data)
-            return buf
-        }).wait()
+        _ = try channel.pipeline.addHandler(
+            TestChannelOutboundHandler<Int, ByteBuffer> { data in
+                XCTAssertEqual(1, data)
+                return buf
+            }
+        ).wait()
 
-        _ = try channel.pipeline.addHandler(TestChannelOutboundHandler<String, Int> { data in
-            XCTAssertEqual("msg", data)
-            return 1
-        }).wait()
+        _ = try channel.pipeline.addHandler(
+            TestChannelOutboundHandler<String, Int> { data in
+                XCTAssertEqual("msg", data)
+                return 1
+            }
+        ).wait()
 
-        XCTAssertNoThrow(try channel.writeAndFlush(NIOAny("msg")).wait() as Void)
+        XCTAssertNoThrow(try channel.writeAndFlush("msg").wait() as Void)
         if let data = try channel.readOutbound(as: ByteBuffer.self) {
             XCTAssertEqual(buf, data)
         } else {
@@ -207,9 +237,13 @@ class ChannelPipelineTest: XCTestCase {
         let sa = SocketAddress(ipv4SocketAddress, host: "foobar.com")
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoBindAllowed()).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
-            data
-        }).wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.addHandler(
+                TestChannelOutboundHandler<ByteBuffer, ByteBuffer> { data in
+                    data
+                }
+            ).wait()
+        )
 
         XCTAssertNoThrow(try channel.connect(to: sa).wait())
     }
@@ -226,7 +260,7 @@ class ChannelPipelineTest: XCTestCase {
 
         public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
             do {
-                context.write(self.wrapOutboundOut(try body(self.unwrapOutboundIn(data))), promise: promise)
+                context.write(Self.wrapOutboundOut(try body(Self.unwrapOutboundIn(data))), promise: promise)
             } catch let err {
                 promise!.fail(err)
             }
@@ -251,7 +285,7 @@ class ChannelPipelineTest: XCTestCase {
         typealias InboundOut = Int
 
         public func handlerRemoved(context: ChannelHandlerContext) {
-            context.fireChannelRead(self.wrapInboundOut(1))
+            context.fireChannelRead(Self.wrapInboundOut(1))
         }
     }
 
@@ -313,8 +347,8 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let data = self.unwrapInboundIn(data)
-                context.fireChannelRead(self.wrapInboundOut(data + [self.no]))
+                let data = Self.unwrapInboundIn(data)
+                context.fireChannelRead(Self.wrapInboundOut(data + [self.no]))
             }
         }
 
@@ -330,8 +364,8 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-                let data = self.unwrapOutboundIn(data)
-                context.write(self.wrapOutboundOut(data + [self.no]), promise: promise)
+                let data = Self.unwrapOutboundIn(data)
+                context.write(Self.wrapOutboundOut(data + [self.no]), promise: promise)
             }
         }
 
@@ -342,9 +376,9 @@ class ChannelPipelineTest: XCTestCase {
             typealias OutboundOut = [Int]
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let data = self.unwrapInboundIn(data)
-                context.writeAndFlush(self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
-                context.fireChannelRead(self.wrapInboundOut(data))
+                let data = Self.unwrapInboundIn(data)
+                context.writeAndFlush(Self.wrapOutboundOut(data.map { $0 * -1 }), promise: nil)
+                context.fireChannelRead(Self.wrapInboundOut(data))
             }
         }
 
@@ -354,10 +388,10 @@ class ChannelPipelineTest: XCTestCase {
             typealias OutboundOut = ByteBuffer
 
             func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-                let data = self.unwrapOutboundIn(data)
+                let data = Self.unwrapOutboundIn(data)
                 var buf = context.channel.allocator.buffer(capacity: 123)
                 buf.writeString(String(describing: data))
-                context.write(self.wrapOutboundOut(buf), promise: promise)
+                context.write(Self.wrapOutboundOut(buf), promise: promise)
             }
         }
 
@@ -377,7 +411,7 @@ class ChannelPipelineTest: XCTestCase {
         loop.run()
         XCTAssertNoThrow(XCTAssertEqual([2, 6], try channel.readInbound()!))
 
-        /* the first thing, we should receive is `[-2]` as it shouldn't hit any `MarkingOutboundHandler`s (`4`) */
+        // the first thing, we should receive is `[-2]` as it shouldn't hit any `MarkingOutboundHandler`s (`4`)
         var outbound = try channel.readOutbound(as: ByteBuffer.self)
         if var buf = outbound {
             XCTAssertEqual("[-2]", buf.readString(length: buf.readableBytes))
@@ -385,7 +419,7 @@ class ChannelPipelineTest: XCTestCase {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
-        /* the next thing we should receive is `[-2, 4]` as the first `WriteOnReadHandler` (receiving `[2]`) is behind the `MarkingOutboundHandler` (`4`) */
+        // the next thing we should receive is `[-2, 4]` as the first `WriteOnReadHandler` (receiving `[2]`) is behind the `MarkingOutboundHandler` (`4`)
         outbound = try channel.readOutbound()
         if var buf = outbound {
             XCTAssertEqual("[-2, 4]", buf.readString(length: buf.readableBytes))
@@ -393,7 +427,7 @@ class ChannelPipelineTest: XCTestCase {
             XCTFail("wrong contents: \(outbound.debugDescription)")
         }
 
-        /* and finally, we're waiting for `[-2, -6, 4]` as the second `WriteOnReadHandler`s (receiving `[2, 4]`) is behind the `MarkingOutboundHandler` (`4`) */
+        // and finally, we're waiting for `[-2, -6, 4]` as the second `WriteOnReadHandler`s (receiving `[2, 4]`) is behind the `MarkingOutboundHandler` (`4`)
         outbound = try channel.readOutbound()
         if var buf = outbound {
             XCTAssertEqual("[-2, -6, 4]", buf.readString(length: buf.readableBytes))
@@ -430,7 +464,7 @@ class ChannelPipelineTest: XCTestCase {
             weak var weakHandlerContext1: ChannelHandlerContext?
             weak var weakHandlerContext2: ChannelHandlerContext?
 
-            () /* needed because Swift's grammar is so ambiguous that you can't remove this :\ */
+            ()  // needed because Swift's grammar is so ambiguous that you can't remove this :\
 
             try {
                 let handler1 = SomeHandler { context in
@@ -441,9 +475,11 @@ class ChannelPipelineTest: XCTestCase {
                     weakHandlerContext2 = context
                 }
                 weakHandler2 = handler2
-                XCTAssertNoThrow(try channel.pipeline.addHandler(handler1).flatMap {
-                    channel.pipeline.addHandler(handler2)
-                    }.wait())
+                XCTAssertNoThrow(
+                    try channel.pipeline.addHandler(handler1).flatMap {
+                        channel.pipeline.addHandler(handler2)
+                    }.wait()
+                )
             }()
 
             XCTAssertNotNil(weakHandler1)
@@ -488,7 +524,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if let dataString = data.tryAs(type: String.self) {
-                    context.fireChannelRead(self.wrapInboundOut(dataString.count))
+                    context.fireChannelRead(Self.wrapInboundOut(dataString.count))
                 }
             }
         }
@@ -499,7 +535,7 @@ class ChannelPipelineTest: XCTestCase {
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 if var buffer = data.tryAs(type: ByteBuffer.self) {
-                    context.fireChannelRead(self.wrapInboundOut(buffer.readString(length: buffer.readableBytes)!))
+                    context.fireChannelRead(Self.wrapInboundOut(buffer.readString(length: buffer.readableBytes)!))
                 }
             }
         }
@@ -517,9 +553,11 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertTrue(try channel.writeInbound(buffer).isEmpty)
         XCTAssertEqual(countHandler.intReadCount, 0)
 
-        try channel.pipeline.addHandlers(TransformByteBufferToStringHandler(),
-                                         TransformStringToIntHandler(),
-                                         position: .first).wait()
+        try channel.pipeline.addHandlers(
+            TransformByteBufferToStringHandler(),
+            TransformStringToIntHandler(),
+            position: .first
+        ).wait()
         XCTAssertTrue(try channel.writeInbound(buffer).isEmpty)
         XCTAssertEqual(countHandler.intReadCount, 1)
     }
@@ -533,8 +571,12 @@ class ChannelPipelineTest: XCTestCase {
         let firstHandler = IndexWritingHandler(1)
         XCTAssertNoThrow(try channel.pipeline.addHandler(firstHandler).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(2)).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(3),
-                                                         position: .after(firstHandler)).wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.addHandler(
+                IndexWritingHandler(3),
+                position: .after(firstHandler)
+            ).wait()
+        )
 
         channel.assertReadIndexOrder([1, 3, 2])
         channel.assertWriteIndexOrder([2, 3, 1])
@@ -549,8 +591,12 @@ class ChannelPipelineTest: XCTestCase {
         let secondHandler = IndexWritingHandler(2)
         XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(1)).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(secondHandler).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(3),
-                                                         position: .before(secondHandler)).wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.addHandler(
+                IndexWritingHandler(3),
+                position: .before(secondHandler)
+            ).wait()
+        )
 
         channel.assertReadIndexOrder([1, 3, 2])
         channel.assertWriteIndexOrder([2, 3, 1])
@@ -565,8 +611,12 @@ class ChannelPipelineTest: XCTestCase {
         let secondHandler = IndexWritingHandler(2)
         XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(1)).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(secondHandler).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(3),
-                                                         position: .after(secondHandler)).wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.addHandler(
+                IndexWritingHandler(3),
+                position: .after(secondHandler)
+            ).wait()
+        )
 
         channel.assertReadIndexOrder([1, 2, 3])
         channel.assertWriteIndexOrder([3, 2, 1])
@@ -581,8 +631,12 @@ class ChannelPipelineTest: XCTestCase {
         let firstHandler = IndexWritingHandler(1)
         XCTAssertNoThrow(try channel.pipeline.addHandler(firstHandler).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(2)).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(3),
-                                                         position: .before(firstHandler)).wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.addHandler(
+                IndexWritingHandler(3),
+                position: .before(firstHandler)
+            ).wait()
+        )
 
         channel.assertReadIndexOrder([3, 1, 2])
         channel.assertWriteIndexOrder([2, 1, 3])
@@ -601,8 +655,12 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.close().wait())
         channel.embeddedEventLoop.run()
 
-        XCTAssertThrowsError(try channel.pipeline.addHandler(IndexWritingHandler(2),
-                                                             position: .after(handler)).wait()) { error in
+        XCTAssertThrowsError(
+            try channel.pipeline.addHandler(
+                IndexWritingHandler(2),
+                position: .after(handler)
+            ).wait()
+        ) { error in
             XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
         }
     }
@@ -620,8 +678,12 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.close().wait())
         channel.embeddedEventLoop.run()
 
-        XCTAssertThrowsError(try channel.pipeline.addHandler(IndexWritingHandler(2),
-                                                             position: .before(handler)).wait()) { error in
+        XCTAssertThrowsError(
+            try channel.pipeline.addHandler(
+                IndexWritingHandler(2),
+                position: .before(handler)
+            ).wait()
+        ) { error in
             XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
         }
     }
@@ -652,10 +714,10 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(h1).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(h2).wait())
 
-        XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TypeAHandler.self).wait().handler)
-        XCTAssertTrue(try h2 === channel.pipeline.context(handlerType: TypeBHandler.self).wait().handler)
+        XCTAssertTrue(try h1 === channel.pipeline.syncOperations.context(handlerType: TypeAHandler.self).handler)
+        XCTAssertTrue(try h2 === channel.pipeline.syncOperations.context(handlerType: TypeBHandler.self).handler)
 
-        XCTAssertThrowsError(try channel.pipeline.context(handlerType: TypeCHandler.self).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(handlerType: TypeCHandler.self)) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
@@ -676,8 +738,8 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(h1).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(h2).wait())
 
-        XCTAssertTrue(try h1 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
-        XCTAssertFalse(try h2 === channel.pipeline.context(handlerType: TestHandler.self).wait().handler)
+        XCTAssertTrue(try h1 === channel.pipeline.syncOperations.context(handlerType: TestHandler.self).handler)
+        XCTAssertFalse(try h2 === channel.pipeline.syncOperations.context(handlerType: TestHandler.self).handler)
     }
 
     func testContextForHeadOrTail() throws {
@@ -687,19 +749,21 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertTrue(try channel.finish().isClean)
         }
 
-        XCTAssertThrowsError(try channel.pipeline.context(name: HeadChannelHandler.name).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(name: HeadChannelHandler.name)) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
 
-        XCTAssertThrowsError(try channel.pipeline.context(handlerType: HeadChannelHandler.self).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(handlerType: HeadChannelHandler.self)) {
+            error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
 
-        XCTAssertThrowsError(try channel.pipeline.context(name: TailChannelHandler.name).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(name: TailChannelHandler.name)) { error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
 
-        XCTAssertThrowsError(try channel.pipeline.context(handlerType: TailChannelHandler.self).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.context(handlerType: TailChannelHandler.self)) {
+            error in
             XCTAssertEqual(.notFound, error as? ChannelPipelineError)
         }
     }
@@ -723,7 +787,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -733,7 +797,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler()).wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -746,7 +810,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.removeHandler(context: context, promise: removalPromise)
+        channel.pipeline.syncOperations.removeHandler(context: context, promise: removalPromise)
 
         XCTAssertNoThrow(try removalPromise.futureResult.wait())
         guard case .some(.byteBuffer(let receivedBuffer)) = try channel.readOutbound(as: IOData.self) else {
@@ -764,7 +828,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -774,14 +838,14 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler()).wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
 
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
-        channel.pipeline.removeHandler(context: context).whenSuccess {
+        channel.pipeline.syncOperations.removeHandler(context: context).whenSuccess {
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -793,7 +857,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -803,7 +867,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler(), name: "TestHandler").wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -831,7 +895,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -841,7 +905,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(try channel.pipeline.addHandler(NoOpHandler(), name: "TestHandler").wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -860,7 +924,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -871,7 +935,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler = NoOpHandler()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -897,7 +961,7 @@ class ChannelPipelineTest: XCTestCase {
         class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
             typealias InboundIn = Never
         }
-        class DummyError: Error { }
+        class DummyError: Error {}
 
         let channel = EmbeddedChannel()
         defer {
@@ -908,7 +972,7 @@ class ChannelPipelineTest: XCTestCase {
         let handler = NoOpHandler()
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
 
-        let context = try assertNoThrowWithValue(channel.pipeline.context(handlerType: NoOpHandler.self).wait())
+        let context = try assertNoThrowWithValue(channel.pipeline.syncOperations.context(handlerType: NoOpHandler.self))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("Hello, world!")
@@ -929,7 +993,7 @@ class ChannelPipelineTest: XCTestCase {
             typealias InboundOut = ()
 
             func channelInactive(context: ChannelHandlerContext) {
-                context.fireChannelRead(self.wrapInboundOut(()))
+                context.fireChannelRead(Self.wrapInboundOut(()))
             }
         }
         let handler = FireWhenInactiveHandler()
@@ -941,12 +1005,14 @@ class ChannelPipelineTest: XCTestCase {
         defer {
             XCTAssertNoThrow(try server.close().wait())
         }
-        let client = try assertNoThrowWithValue(ClientBootstrap(group: group)
-            .channelInitializer { channel in
-                channel.pipeline.addHandler(handler)
-            }
-            .connect(to: server.localAddress!)
-            .wait())
+        let client = try assertNoThrowWithValue(
+            ClientBootstrap(group: group)
+                .channelInitializer { channel in
+                    channel.pipeline.addHandler(handler)
+                }
+                .connect(to: server.localAddress!)
+                .wait()
+        )
         XCTAssertNoThrow(try client.close().wait())
     }
 
@@ -957,8 +1023,10 @@ class ChannelPipelineTest: XCTestCase {
             private let removalTokenPromise: EventLoopPromise<ChannelHandlerContext.RemovalToken>
             private let handlerRemovedPromise: EventLoopPromise<Void>
 
-            init(removalTokenPromise: EventLoopPromise<ChannelHandlerContext.RemovalToken>,
-                 handlerRemovedPromise: EventLoopPromise<Void>) {
+            init(
+                removalTokenPromise: EventLoopPromise<ChannelHandlerContext.RemovalToken>,
+                handlerRemovedPromise: EventLoopPromise<Void>
+            ) {
                 self.removalTokenPromise = removalTokenPromise
                 self.handlerRemovedPromise = handlerRemovedPromise
             }
@@ -976,25 +1044,33 @@ class ChannelPipelineTest: XCTestCase {
         let removalTokenPromise = eventLoop.makePromise(of: ChannelHandlerContext.RemovalToken.self)
         let handlerRemovedPromise = eventLoop.makePromise(of: Void.self)
 
-        let channel = EmbeddedChannel(handler: NeverCompleteRemovalHandler(removalTokenPromise: removalTokenPromise,
-                                                                           handlerRemovedPromise: handlerRemovedPromise),
-                                      loop: eventLoop)
+        let channel = EmbeddedChannel(
+            handler: NeverCompleteRemovalHandler(
+                removalTokenPromise: removalTokenPromise,
+                handlerRemovedPromise: handlerRemovedPromise
+            ),
+            loop: eventLoop
+        )
 
         // pretend we're real and connect
         XCTAssertNoThrow(try channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait())
 
         // let's trigger the removal process
-        XCTAssertNoThrow(try channel.pipeline.context(handlerType: NeverCompleteRemovalHandler.self).map { handler in
-            channel.pipeline.removeHandler(context: handler, promise: nil)
-        }.wait())
+        XCTAssertNoThrow(
+            try channel.pipeline.context(handlerType: NeverCompleteRemovalHandler.self).map { handler in
+                channel.pipeline.syncOperations.removeHandler(context: handler, promise: nil)
+            }.wait()
+        )
 
-        XCTAssertNoThrow(try removalTokenPromise.futureResult.map { removalToken in
-            // we know that the removal process has been started, so let's tear down the pipeline
-            func workaroundSR9815withAUselessFunction() {
-                XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
-            }
-            workaroundSR9815withAUselessFunction()
-        }.wait())
+        XCTAssertNoThrow(
+            try removalTokenPromise.futureResult.map { removalToken in
+                // we know that the removal process has been started, so let's tear down the pipeline
+                func workaroundSR9815withAUselessFunction() {
+                    XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+                }
+                workaroundSR9815withAUselessFunction()
+            }.wait()
+        )
 
         // verify that the handler has now been removed, despite the fact it should be mid-removal
         XCTAssertNoThrow(try handlerRemovedPromise.futureResult.wait())
@@ -1031,15 +1107,60 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[1]).wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[2], name: "the last one to remove").wait())
 
-        let lastContext = try! channel.pipeline.context(name: "the last one to remove").wait()
+        let lastContext = try! channel.pipeline.syncOperations.context(name: "the last one to remove")
 
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "the first one to remove").wait())
         XCTAssertNoThrow(try channel.pipeline.removeHandler(allHandlers[1]).wait())
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(context: lastContext).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(context: lastContext).wait())
 
-        allHandlers.forEach {
-            XCTAssertTrue($0.removeHandlerCalled)
-            XCTAssertFalse($0.withinRemoveHandler)
+        for handler in allHandlers {
+            XCTAssertTrue(handler.removeHandlerCalled)
+            XCTAssertFalse(handler.withinRemoveHandler)
+        }
+    }
+
+    func testRemovingByContexSync() throws {
+        class Handler: ChannelInboundHandler, RemovableChannelHandler {
+            typealias InboundIn = Never
+
+            var removeHandlerCalled = false
+            var withinRemoveHandler = false
+
+            func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+                self.removeHandlerCalled = true
+                self.withinRemoveHandler = true
+                defer {
+                    self.withinRemoveHandler = false
+                }
+                context.leavePipeline(removalToken: removalToken)
+            }
+
+            func handlerRemoved(context: ChannelHandlerContext) {
+                XCTAssertTrue(self.removeHandlerCalled)
+                XCTAssertTrue(self.withinRemoveHandler)
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
+        }
+        let allHandlers = [Handler(), Handler(), Handler()]
+        XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[0], name: "the first one to remove").wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[1], name: "the second one to remove").wait())
+        XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[2], name: "the last one to remove").wait())
+
+        let firstContext = try! channel.pipeline.syncOperations.context(name: "the first one to remove")
+        let secondContext = try! channel.pipeline.syncOperations.context(name: "the second one to remove")
+        let lastContext = try! channel.pipeline.syncOperations.context(name: "the last one to remove")
+
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(context: firstContext).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(context: secondContext).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(context: lastContext).wait())
+
+        for handler in allHandlers {
+            XCTAssertTrue(handler.removeHandlerCalled)
+            XCTAssertFalse(handler.withinRemoveHandler)
         }
     }
 
@@ -1057,7 +1178,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[0], name: "1").wait())
         XCTAssertNoThrow(try channel.pipeline.addHandler(allHandlers[1], name: "2").wait())
 
-        let lastContext = try! channel.pipeline.context(name: "1").wait()
+        let lastContext = try! channel.pipeline.syncOperations.context(name: "1")
 
         XCTAssertThrowsError(try channel.pipeline.removeHandler(name: "2").wait()) { error in
             if let error = error as? ChannelError {
@@ -1066,7 +1187,7 @@ class ChannelPipelineTest: XCTestCase {
                 XCTFail("unexpected error: \(error)")
             }
         }
-        XCTAssertThrowsError(try channel.pipeline.removeHandler(context: lastContext).wait()) { error in
+        XCTAssertThrowsError(try channel.pipeline.syncOperations.removeHandler(context: lastContext).wait()) { error in
             if let error = error as? ChannelError {
                 XCTAssertEqual(ChannelError.unremovableHandler, error)
             } else {
@@ -1104,7 +1225,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertEqual([a, b, c, d, e, f, g, h, i, j], Handler.allHandlers)
     }
-    
+
     func testPipelineDebugDescription() {
         final class HTTPRequestParser: ChannelInboundHandler {
             typealias InboundIn = Never
@@ -1123,18 +1244,24 @@ class ChannelPipelineTest: XCTestCase {
         let parser = HTTPRequestParser()
         let serializer = HTTPResponseSerializer()
         let handler = HTTPHandler()
-        XCTAssertEqual(channel.pipeline.debugDescription, """
-        ChannelPipeline[\(ObjectIdentifier(channel.pipeline))]:
-         <no handlers>
-        """)
+        XCTAssertEqual(
+            channel.pipeline.debugDescription,
+            """
+            ChannelPipeline[\(ObjectIdentifier(channel.pipeline))]:
+             <no handlers>
+            """
+        )
         XCTAssertNoThrow(try channel.pipeline.addHandlers([parser, serializer, handler]).wait())
-        XCTAssertEqual(channel.pipeline.debugDescription, """
-        ChannelPipeline[\(ObjectIdentifier(channel.pipeline))]:
-                       [I] ↓↑ [O]
-         HTTPRequestParser ↓↑                        [handler0]
-                           ↓↑ HTTPResponseSerializer [handler1]
-               HTTPHandler ↓↑ HTTPHandler            [handler2]
-        """)
+        XCTAssertEqual(
+            channel.pipeline.debugDescription,
+            """
+            ChannelPipeline[\(ObjectIdentifier(channel.pipeline))]:
+                           [I] ↓↑ [O]
+             HTTPRequestParser ↓↑                        [handler0]
+                               ↓↑ HTTPResponseSerializer [handler1]
+                   HTTPHandler ↓↑ HTTPHandler            [handler2]
+            """
+        )
     }
 
     func testWeDontCallHandlerRemovedTwiceIfAHandlerCompletesRemovalOnlyAfterChannelTeardown() {
@@ -1176,12 +1303,12 @@ class ChannelPipelineTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                let step = self.unwrapInboundIn(data)
+                let step = Self.unwrapInboundIn(data)
                 self.state.next()
                 XCTAssertEqual(self.state, step)
 
                 // just to communicate to the outside where we are in our state machine
-                context.fireChannelRead(self.wrapInboundOut(self.state))
+                context.fireChannelRead(Self.wrapInboundOut(self.state))
 
                 switch step {
                 case .triggerEventRead:
@@ -1216,7 +1343,7 @@ class ChannelPipelineTest: XCTestCase {
                 XCTAssertEqual(.handlerRemovedCalled, self.state)
 
                 // just to communicate to the outside where we are in our state machine
-                context.fireChannelRead(self.wrapInboundOut(self.state))
+                context.fireChannelRead(Self.wrapInboundOut(self.state))
 
                 // Step 4: This happens when the pipeline is being torn down, so let's now also finish the manual
                 // removal process.
@@ -1235,19 +1362,21 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual(State.triggerEventRead, try channel.readInbound()))
         XCTAssertNoThrow(XCTAssertNil(try channel.readInbound()))
 
-        XCTAssertNoThrow(try {
-            // we'll get a left-over event on close which triggers the pipeline teardown and therefore continues the
-            // process.
-            switch try channel.finish() {
-            case .clean:
-                XCTFail("expected output")
-            case .leftOvers(inbound: let inbound, outbound: let outbound, pendingOutbound: let pendingOutbound):
-                XCTAssertEqual(0, outbound.count)
-                XCTAssertEqual(0, pendingOutbound.count)
-                XCTAssertEqual(1, inbound.count)
-                XCTAssertEqual(.handlerRemovedCalled, inbound.first?.tryAs(type: State.self))
-            }
-        }())
+        XCTAssertNoThrow(
+            try {
+                // we'll get a left-over event on close which triggers the pipeline teardown and therefore continues the
+                // process.
+                switch try channel.finish() {
+                case .clean:
+                    XCTFail("expected output")
+                case .leftOvers(let inbound, let outbound, let pendingOutbound):
+                    XCTAssertEqual(0, outbound.count)
+                    XCTAssertEqual(0, pendingOutbound.count)
+                    XCTAssertEqual(1, inbound.count)
+                    XCTAssertEqual(.handlerRemovedCalled, inbound.first?.tryAs(type: State.self))
+                }
+            }()
+        )
 
         XCTAssertEqual(.manualRemovalCompleted, handler.state)
 
@@ -1262,8 +1391,10 @@ class ChannelPipelineTest: XCTestCase {
             private let continueRemovalFuture: EventLoopFuture<Void>
             private var removeHandlerCalls = 0
 
-            init(removalTriggeredPromise: EventLoopPromise<Void>,
-                 continueRemovalFuture: EventLoopFuture<Void>) {
+            init(
+                removalTriggeredPromise: EventLoopPromise<Void>,
+                continueRemovalFuture: EventLoopFuture<Void>
+            ) {
                 self.removalTriggeredPromise = removalTriggeredPromise
                 self.continueRemovalFuture = continueRemovalFuture
             }
@@ -1282,13 +1413,17 @@ class ChannelPipelineTest: XCTestCase {
         let removalTriggeredPromise: EventLoopPromise<Void> = channel.eventLoop.makePromise()
         let continueRemovalPromise: EventLoopPromise<Void> = channel.eventLoop.makePromise()
 
-        let handler = Handler(removalTriggeredPromise: removalTriggeredPromise,
-                              continueRemovalFuture: continueRemovalPromise.futureResult)
+        let handler = Handler(
+            removalTriggeredPromise: removalTriggeredPromise,
+            continueRemovalFuture: continueRemovalPromise.futureResult
+        )
         XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
         let removal1Future = channel.pipeline.removeHandler(handler)
         XCTAssertThrowsError(try channel.pipeline.removeHandler(handler).wait()) { error in
-            XCTAssert(error is NIOAttemptedToRemoveHandlerMultipleTimesError,
-                      "unexpected error: \(error)")
+            XCTAssert(
+                error is NIOAttemptedToRemoveHandlerMultipleTimesError,
+                "unexpected error: \(error)"
+            )
         }
         continueRemovalPromise.succeed(())
         XCTAssertThrowsError(try channel.pipeline.removeHandler(handler).wait()) { error in
@@ -1337,7 +1472,12 @@ class ChannelPipelineTest: XCTestCase {
         let firstHandler = IndexWritingHandler(1)
         XCTAssertNoThrow(try operations.addHandler(firstHandler))
         XCTAssertNoThrow(try operations.addHandlers(IndexWritingHandler(2), IndexWritingHandler(3)))
-        XCTAssertNoThrow(try operations.addHandlers([IndexWritingHandler(4), IndexWritingHandler(5)], position: .before(firstHandler)))
+        XCTAssertNoThrow(
+            try operations.addHandlers(
+                [IndexWritingHandler(4), IndexWritingHandler(5)],
+                position: .before(firstHandler)
+            )
+        )
 
         channel.assertReadIndexOrder([4, 5, 1, 2, 3])
         channel.assertWriteIndexOrder([3, 2, 1, 5, 4])
@@ -1364,7 +1504,9 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertTrue(simpleTypedHandler2Context.handler is SimpleTypedHandler2)
 
         // By type.
-        let simpleTypedHandler3Context = try assertNoThrowWithValue(operations.context(handlerType: SimpleTypedHandler3.self))
+        let simpleTypedHandler3Context = try assertNoThrowWithValue(
+            operations.context(handlerType: SimpleTypedHandler3.self)
+        )
         XCTAssertTrue(simpleTypedHandler3Context.handler is SimpleTypedHandler3)
     }
 
@@ -1386,7 +1528,7 @@ class ChannelPipelineTest: XCTestCase {
     }
 
     func testSynchronousViewPerformOperations() throws {
-        struct MyError: Error { }
+        struct MyError: Error {}
 
         let eventCounter = EventCounterHandler()
         let channel = EmbeddedChannel(handler: eventCounter)
@@ -1409,7 +1551,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertEqual(eventCounter.channelInactiveCalls, 0)
         XCTAssertEqual(eventCounter.channelReadCalls, 0)
         XCTAssertEqual(eventCounter.channelReadCompleteCalls, 0)
-        XCTAssertEqual(eventCounter.channelRegisteredCalls, 2) // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.channelRegisteredCalls, 2)  // EmbeddedChannel itself does one, we did the other.
         XCTAssertEqual(eventCounter.channelUnregisteredCalls, 0)
         XCTAssertEqual(eventCounter.channelWritabilityChangedCalls, 0)
         XCTAssertEqual(eventCounter.closeCalls, 0)
@@ -1417,7 +1559,7 @@ class ChannelPipelineTest: XCTestCase {
         XCTAssertEqual(eventCounter.errorCaughtCalls, 0)
         XCTAssertEqual(eventCounter.flushCalls, 2)  // flush, and writeAndFlush
         XCTAssertEqual(eventCounter.readCalls, 1)
-        XCTAssertEqual(eventCounter.registerCalls, 2) // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.registerCalls, 2)  // EmbeddedChannel itself does one, we did the other.
         XCTAssertEqual(eventCounter.triggerUserOutboundEventCalls, 1)
         XCTAssertEqual(eventCounter.userInboundEventTriggeredCalls, 0)
         XCTAssertEqual(eventCounter.writeCalls, 2)  // write, and writeAndFlush
@@ -1436,23 +1578,1106 @@ class ChannelPipelineTest: XCTestCase {
         // And now close
         operations.close(promise: nil)
 
+        // EmbeddedChannel itself does one, we did the other.
         XCTAssertEqual(eventCounter.bindCalls, 1)
         XCTAssertEqual(eventCounter.channelActiveCalls, 2)
-        XCTAssertEqual(eventCounter.channelInactiveCalls, 2)  // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.channelInactiveCalls, 2)
         XCTAssertEqual(eventCounter.channelReadCalls, 1)
         XCTAssertEqual(eventCounter.channelReadCompleteCalls, 1)
-        XCTAssertEqual(eventCounter.channelRegisteredCalls, 3)  // EmbeddedChannel itself does one, we did the other two.
-        XCTAssertEqual(eventCounter.channelUnregisteredCalls, 2)  // EmbeddedChannel itself does one, we did the other.
+        // EmbeddedChannel itself does one, we did the other two.
+        XCTAssertEqual(eventCounter.channelRegisteredCalls, 3)
+        // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.channelUnregisteredCalls, 2)
         XCTAssertEqual(eventCounter.channelWritabilityChangedCalls, 1)
         XCTAssertEqual(eventCounter.closeCalls, 1)
         XCTAssertEqual(eventCounter.connectCalls, 1)
         XCTAssertEqual(eventCounter.errorCaughtCalls, 1)
-        XCTAssertEqual(eventCounter.flushCalls, 2)   // flush, and writeAndFlush
+        XCTAssertEqual(eventCounter.flushCalls, 2)  // flush, and writeAndFlush
         XCTAssertEqual(eventCounter.readCalls, 1)
-        XCTAssertEqual(eventCounter.registerCalls, 2)  // EmbeddedChannel itself does one, we did the other.
+        // EmbeddedChannel itself does one, we did the other.
+        XCTAssertEqual(eventCounter.registerCalls, 2)
         XCTAssertEqual(eventCounter.triggerUserOutboundEventCalls, 1)
         XCTAssertEqual(eventCounter.userInboundEventTriggeredCalls, 1)
         XCTAssertEqual(eventCounter.writeCalls, 2)  // write, and writeAndFlush
+    }
+
+    func testRetrieveInboundBufferedBytesFromChannelWithZeroHandler() throws {
+        let channel = EmbeddedChannel()
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeInbound(data)
+            let bufferedBytes = try channel.pipeline.inboundBufferedBytes().wait()
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readInbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveOutboundBufferedBytesFromChannelWithZeroHandler() throws {
+        let channel = EmbeddedChannel()
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeOutbound(data)
+            let bufferedBytes = try channel.pipeline.outboundBufferedBytes().wait()
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readOutbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveInboundBufferedBytesFromChannelWithOneHandler() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                buffer.writeImmutableBuffer(self.unwrapInboundIn(data))
+            }
+
+            var inboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers([InboundBufferHandler()])
+
+        let data = ByteBuffer(string: "1234")
+        for cnt in 1...5 {
+            try channel.writeInbound(data)
+            let bufferedBytes = try channel.pipeline.inboundBufferedBytes().wait()
+            XCTAssertEqual(bufferedBytes, cnt * data.readableBytes)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readInbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveOutboundBufferedBytesFromChannelWithOneHandler() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                buffer.writeImmutableBuffer(self.unwrapOutboundIn(data))
+                promise?.succeed()
+            }
+
+            var outboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers([OutboundBufferHandler()])
+
+        let data = ByteBuffer(string: "1234")
+        for cnt in 1...5 {
+            try channel.writeOutbound(data)
+            let bufferedBytes = try channel.pipeline.outboundBufferedBytes().wait()
+            XCTAssertEqual(bufferedBytes, cnt * data.readableBytes)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readOutbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveInboundBufferedBytesFromChannelWithEmptyBuffer() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                context.fireChannelRead(data)
+            }
+
+            var inboundBufferedBytes: Int { 0 }
+        }
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers([InboundBufferHandler(), InboundBufferHandler()])
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeInbound(data)
+            let bufferedBytes = try channel.pipeline.inboundBufferedBytes().wait()
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readInbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveOutboundBufferedBytesFromChannelWithEmptyBuffer() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                context.write(data, promise: promise)
+            }
+
+            var outboundBufferedBytes: Int { 0 }
+        }
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers([OutboundBufferHandler(), OutboundBufferHandler()])
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeOutbound(data)
+            let bufferedBytes = try channel.pipeline.outboundBufferedBytes().wait()
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readOutbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveInboundBufferedBytesFromChannelWithMultipleHandlers() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+            private let expectedBufferCount: Int
+
+            init(expectedBufferCount: Int) {
+                self.expectedBufferCount = expectedBufferCount
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                var buf = self.unwrapInboundIn(data)
+                let readSize = min(expectedBufferCount, buf.readableBytes)
+                if let b = buf.readSlice(length: readSize) {
+                    buffer.writeImmutableBuffer(b)
+                }
+                context.fireChannelRead(self.wrapInboundOut(buf))
+            }
+
+            var inboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let handlers = (0..<5).map { InboundBufferHandler(expectedBufferCount: $0) }
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers(handlers)
+
+        let data = ByteBuffer(string: "1234")
+        try channel.writeInbound(data)
+        let bufferedBytes = try channel.pipeline.inboundBufferedBytes().wait()
+        XCTAssertEqual(bufferedBytes, data.readableBytes)
+
+        _ = try channel.readInbound(as: ByteBuffer.self)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveOutboundBufferedBytesFromChannelWithMultipleHandlers() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+            private let expectedBufferCount: Int
+
+            init(expectedBufferCount: Int) {
+                self.expectedBufferCount = expectedBufferCount
+            }
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                var buf = self.unwrapOutboundIn(data)
+                let readSize = min(expectedBufferCount, buf.readableBytes)
+                if let b = buf.readSlice(length: readSize) {
+                    buffer.writeImmutableBuffer(b)
+                }
+
+                context.write(self.wrapOutboundOut(buf), promise: promise)
+            }
+
+            var outboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let handlers = (0..<5).map { OutboundBufferHandler(expectedBufferCount: $0) }
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers(handlers)
+
+        let data = ByteBuffer(string: "1234")
+        try channel.writeOutbound(data)
+        let bufferedBytes = try channel.pipeline.outboundBufferedBytes().wait()
+        XCTAssertEqual(bufferedBytes, data.readableBytes)
+
+        _ = try channel.readOutbound(as: ByteBuffer.self)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveInboundBufferedBytesFromChannelWithHandlersRemoved() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler,
+            RemovableChannelHandler
+        {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+            let expectedBufferCount: Int
+
+            init(expectedBufferCount: Int) {
+                self.expectedBufferCount = expectedBufferCount
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                var buf = self.unwrapInboundIn(data)
+                let readSize = min(expectedBufferCount, buf.readableBytes)
+                if let b = buf.readBytes(length: readSize) {
+                    buffer.writeBytes(b)
+                    context.fireChannelRead(self.wrapInboundOut(buf))
+                }
+            }
+
+            var inboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let handlers = (0..<5).map { InboundBufferHandler(expectedBufferCount: $0) }
+
+        let channel = EmbeddedChannel()
+        for handler in handlers {
+            try channel.pipeline.syncOperations.addHandler(handler, position: .last)
+        }
+
+        let data = ByteBuffer(string: "1234")
+        try channel.writeInbound(data)
+        var total = try channel.pipeline.inboundBufferedBytes().wait()
+        XCTAssertEqual(total, data.readableBytes)
+        let expectedBufferedBytes = handlers.map { $0.inboundBufferedBytes }
+        print(expectedBufferedBytes)
+
+        for (expectedBufferedByte, handler) in zip(expectedBufferedBytes, handlers) {
+            let expectedRemaining = total - expectedBufferedByte
+            channel.pipeline.removeHandler(handler).flatMap { _ in
+                channel.pipeline.inboundBufferedBytes()
+            }.and(value: expectedRemaining).whenSuccess { (remaining, expectedRemaining) in
+                XCTAssertEqual(remaining, expectedRemaining)
+            }
+            total -= expectedBufferedByte
+        }
+
+        _ = try channel.readInbound(as: ByteBuffer.self)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveOutboundBufferedBytesFromChannelWithHandlersRemoved() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler,
+            RemovableChannelHandler
+        {
+
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+            let expectedBufferCount: Int
+
+            init(expectedBufferCount: Int) {
+                self.expectedBufferCount = expectedBufferCount
+            }
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                var buf = self.unwrapOutboundIn(data)
+                let readSize = min(expectedBufferCount, buf.readableBytes)
+                if let b = buf.readBytes(length: readSize) {
+                    buffer.writeBytes(b)
+                    context.write(self.wrapOutboundOut(buf), promise: promise)
+                }
+            }
+
+            var outboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let handlers = (0..<5).map { OutboundBufferHandler(expectedBufferCount: $0) }
+
+        let channel = EmbeddedChannel()
+        for handler in handlers {
+            try channel.pipeline.syncOperations.addHandler(handler, position: .first)
+        }
+
+        let data = ByteBuffer(string: "1234")
+        try channel.writeOutbound(data)
+        var total = try channel.pipeline.outboundBufferedBytes().wait()
+        XCTAssertEqual(total, data.readableBytes)
+        let expectedBufferedBytes = handlers.map { $0.outboundBufferedBytes }
+
+        for (expectedBufferedByte, handler) in zip(expectedBufferedBytes, handlers) {
+            let expectedRemaining = total - expectedBufferedByte
+            channel.pipeline.removeHandler(handler).flatMap { _ in
+                channel.pipeline.outboundBufferedBytes()
+            }.and(value: expectedRemaining).whenSuccess { (remaining, expectedRemaining) in
+                XCTAssertEqual(remaining, expectedRemaining)
+            }
+            total -= expectedBufferedByte
+        }
+
+        _ = try channel.readOutbound(as: ByteBuffer.self)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testRetrieveBufferedBytesFromChannelWithMixedHandlers() throws {
+        // A inbound channel handler that buffers incoming byte buffer when the total number of
+        // calls to the channelRead() is even.
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+            var count: Int
+            var bb: ByteBuffer
+
+            init() {
+                self.count = 0
+                self.bb = ByteBuffer()
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                var d = unwrapInboundIn(data)
+                self.bb.writeBuffer(&d)
+
+                if count % 2 == 1 {
+                    context.fireChannelRead(self.wrapInboundOut(self.bb))
+                    self.bb.moveReaderIndex(forwardBy: self.bb.readableBytes)
+                }
+
+                count += 1
+            }
+
+            var inboundBufferedBytes: Int {
+                bb.readableBytes
+            }
+        }
+
+        // A outbound channel handler that buffers incoming byte buffer when the total number of
+        // calls to the write() is odd.
+        class OutboundBufferedHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+            var count: Int
+            var bb: ByteBuffer
+
+            init() {
+                self.count = 0
+                self.bb = ByteBuffer()
+            }
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                var d = unwrapOutboundIn(data)
+                self.bb.writeBuffer(&d)
+                if count % 2 == 0 {
+                    promise?.succeed()
+                } else {
+                    context.write(self.wrapOutboundOut(self.bb), promise: promise)
+                    self.bb.moveWriterIndex(forwardBy: self.bb.writableBytes)
+                }
+                count += 1
+            }
+
+            var outboundBufferedBytes: Int {
+                bb.writableBytes
+            }
+        }
+
+        let channel = EmbeddedChannel(handlers: [InboundBufferHandler(), OutboundBufferedHandler()])
+
+        let data = ByteBuffer(string: "123")
+        try channel.writeAndFlush(data).wait()
+
+        channel.pipeline.outboundBufferedBytes().whenSuccess { result in
+            XCTAssertEqual(result, data.writableBytes)
+        }
+        _ = try channel.readOutbound(as: ByteBuffer.self)
+
+        try channel.writeAndFlush(data).wait()
+
+        channel.pipeline.outboundBufferedBytes().whenSuccess { result in
+            XCTAssertEqual(result, 0)
+        }
+
+        _ = try channel.readOutbound(as: ByteBuffer.self)
+
+        try channel.writeInbound(data)
+
+        channel.pipeline.inboundBufferedBytes().whenSuccess { result in
+            XCTAssertEqual(result, data.readableBytes)
+        }
+
+        _ = try channel.readInbound(as: ByteBuffer.self)
+
+        try channel.writeInbound(data)
+
+        channel.pipeline.inboundBufferedBytes().whenSuccess { result in
+            XCTAssertEqual(result, 0)
+        }
+
+        _ = try channel.readInbound(as: ByteBuffer.self)
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveInboundBufferedBytesWhenChannelHandlerNotConformToProtocol() throws {
+        class InboundBufferHandler: ChannelInboundHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                context.fireChannelRead(data)
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        let inboundChannelHandlerName = "InboundBufferHandler"
+        try channel.pipeline.syncOperations.addHandler(InboundBufferHandler(), name: inboundChannelHandlerName)
+        let context = try channel.pipeline.syncOperations.context(name: inboundChannelHandlerName)
+        let bufferedBytes = channel.pipeline.syncOperations.inboundBufferedBytes(in: context)
+
+        XCTAssertNil(bufferedBytes)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveOutboundBufferedBytesWhenChannelHandlerNotConformToProtocol() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler {
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                context.write(data, promise: promise)
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        let outboundChannelHandlerName = "outboundBufferHandler"
+        try channel.pipeline.syncOperations.addHandler(OutboundBufferHandler(), name: outboundChannelHandlerName)
+        let context = try channel.pipeline.syncOperations.context(name: outboundChannelHandlerName)
+        let bufferedBytes = channel.pipeline.syncOperations.outboundBufferedBytes(in: context)
+
+        XCTAssertNil(bufferedBytes)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveInboundBufferedBytesFromOneHandler() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                buffer.writeImmutableBuffer(self.unwrapInboundIn(data))
+            }
+
+            var inboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        let inboundChannelHandlerName = "InboundBufferHandler"
+        try channel.pipeline.syncOperations.addHandler(InboundBufferHandler(), name: inboundChannelHandlerName)
+
+        let data = ByteBuffer(string: "1234")
+        for cnt in 1...5 {
+            try channel.writeInbound(data)
+            let context = try channel.pipeline.syncOperations.context(name: inboundChannelHandlerName)
+            let bufferedBytes = channel.pipeline.syncOperations.inboundBufferedBytes(in: context)
+            XCTAssertNotNil(bufferedBytes)
+            XCTAssertEqual(bufferedBytes, data.readableBytes * cnt)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readInbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveOutboundBufferedBytesFromOneHandler() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                buffer.writeImmutableBuffer(self.unwrapOutboundIn(data))
+                promise?.succeed()
+            }
+
+            var outboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        let outboundChannelHandlerName = "outboundBufferHandler"
+        try channel.pipeline.syncOperations.addHandler(OutboundBufferHandler(), name: outboundChannelHandlerName)
+
+        let data = ByteBuffer(string: "1234")
+        for cnt in 1...5 {
+            try channel.writeOutbound(data)
+            let context = try channel.pipeline.syncOperations.context(name: outboundChannelHandlerName)
+            let bufferedBytes = channel.pipeline.syncOperations.outboundBufferedBytes(in: context)
+
+            XCTAssertNotNil(bufferedBytes)
+            XCTAssertEqual(bufferedBytes, data.readableBytes * cnt)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readOutbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveEmptyInboundBufferedBytes() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                context.fireChannelRead(data)
+            }
+
+            var inboundBufferedBytes: Int { 0 }
+        }
+
+        let channel = EmbeddedChannel()
+        let inboundChannelHandlerName = "InboundBufferHandler"
+        try channel.pipeline.syncOperations.addHandler(InboundBufferHandler(), name: inboundChannelHandlerName)
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeInbound(data)
+            let context = try channel.pipeline.syncOperations.context(name: inboundChannelHandlerName)
+            let bufferedBytes = channel.pipeline.syncOperations.inboundBufferedBytes(in: context)
+
+            XCTAssertNotNil(bufferedBytes)
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readInbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveEmptyOutboundBufferedBytes() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                context.write(data, promise: promise)
+            }
+
+            var outboundBufferedBytes: Int { 0 }
+        }
+
+        let channel = EmbeddedChannel()
+        let outboundChannelHandlerName = "outboundBufferHandler"
+        try channel.pipeline.syncOperations.addHandler(OutboundBufferHandler(), name: outboundChannelHandlerName)
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeOutbound(data)
+            let context = try channel.pipeline.syncOperations.context(name: outboundChannelHandlerName)
+            let bufferedBytes = channel.pipeline.syncOperations.outboundBufferedBytes(in: context)
+
+            XCTAssertNotNil(bufferedBytes)
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readOutbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveInboundBufferedBytesFromChannelWithZeroHandler() throws {
+        let channel = EmbeddedChannel()
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeInbound(data)
+            let bufferedBytes = channel.pipeline.syncOperations.inboundBufferedBytes()
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readInbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveOutboundBufferedBytesFromChannelWithZeroHandler() throws {
+        let channel = EmbeddedChannel()
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeOutbound(data)
+            let bufferedBytes = channel.pipeline.syncOperations.outboundBufferedBytes()
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readOutbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveInboundBufferedBytesFromChannelWithOneHandler() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                buffer.writeImmutableBuffer(self.unwrapInboundIn(data))
+            }
+
+            var inboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers([InboundBufferHandler()])
+
+        let data = ByteBuffer(string: "1234")
+        for cnt in 1...5 {
+            try channel.writeInbound(data)
+            let bufferedBytes = channel.pipeline.syncOperations.inboundBufferedBytes()
+            XCTAssertEqual(bufferedBytes, cnt * data.readableBytes)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readInbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveOutboundBufferedBytesFromChannelWithOneHandler() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                buffer.writeImmutableBuffer(self.unwrapOutboundIn(data))
+                promise?.succeed()
+            }
+
+            var outboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers([OutboundBufferHandler()])
+
+        let data = ByteBuffer(string: "1234")
+        for cnt in 1...5 {
+            try channel.writeOutbound(data)
+            let bufferedBytes = channel.pipeline.syncOperations.outboundBufferedBytes()
+            XCTAssertEqual(bufferedBytes, cnt * data.readableBytes)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readOutbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveInboundBufferedBytesFromChannelWithEmptyBuffer() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                context.fireChannelRead(data)
+            }
+
+            var inboundBufferedBytes: Int { 0 }
+        }
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers([InboundBufferHandler(), InboundBufferHandler()])
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeInbound(data)
+            let bufferedBytes = channel.pipeline.syncOperations.inboundBufferedBytes()
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readInbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveOutboundBufferedBytesFromChannelWithEmptyBuffer() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                context.write(data, promise: promise)
+            }
+
+            var outboundBufferedBytes: Int { 0 }
+        }
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers([OutboundBufferHandler(), OutboundBufferHandler()])
+
+        let data = ByteBuffer(string: "1234")
+        for _ in 1...5 {
+            try channel.writeOutbound(data)
+            let bufferedBytes = channel.pipeline.syncOperations.outboundBufferedBytes()
+            XCTAssertEqual(bufferedBytes, 0)
+        }
+
+        for _ in 1...5 {
+            _ = try channel.readOutbound(as: ByteBuffer.self)
+        }
+
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveInboundBufferedBytesFromChannelWithMultipleHandlers() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+            private let expectedBufferCount: Int
+
+            init(expectedBufferCount: Int) {
+                self.expectedBufferCount = expectedBufferCount
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                var buf = self.unwrapInboundIn(data)
+                let readSize = min(expectedBufferCount, buf.readableBytes)
+                if let b = buf.readSlice(length: readSize) {
+                    buffer.writeImmutableBuffer(b)
+                }
+                context.fireChannelRead(self.wrapInboundOut(buf))
+            }
+
+            var inboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let handlers = (0..<5).map { InboundBufferHandler(expectedBufferCount: $0) }
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers(handlers)
+
+        let data = ByteBuffer(string: "1234")
+        try channel.writeInbound(data)
+        let bufferedBytes = channel.pipeline.syncOperations.inboundBufferedBytes()
+        XCTAssertEqual(bufferedBytes, data.readableBytes)
+
+        _ = try channel.readInbound(as: ByteBuffer.self)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveOutboundBufferedBytesFromChannelWithMultipleHandlers() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+            private let expectedBufferCount: Int
+
+            init(expectedBufferCount: Int) {
+                self.expectedBufferCount = expectedBufferCount
+            }
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                var buf = self.unwrapOutboundIn(data)
+                let readSize = min(expectedBufferCount, buf.readableBytes)
+                if let b = buf.readSlice(length: readSize) {
+                    buffer.writeImmutableBuffer(b)
+                }
+
+                context.write(self.wrapOutboundOut(buf), promise: promise)
+            }
+
+            var outboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let handlers = (0..<5).map { OutboundBufferHandler(expectedBufferCount: $0) }
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandlers(handlers)
+
+        let data = ByteBuffer(string: "1234")
+        try channel.writeOutbound(data)
+        let bufferedBytes = channel.pipeline.syncOperations.outboundBufferedBytes()
+        XCTAssertEqual(bufferedBytes, data.readableBytes)
+
+        _ = try channel.readOutbound(as: ByteBuffer.self)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveInboundBufferedBytesFromChannelWithHandlersRemoved() throws {
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler,
+            RemovableChannelHandler
+        {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+            let expectedBufferCount: Int
+
+            init(expectedBufferCount: Int) {
+                self.expectedBufferCount = expectedBufferCount
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                var buf = self.unwrapInboundIn(data)
+                let readSize = min(expectedBufferCount, buf.readableBytes)
+                if let b = buf.readBytes(length: readSize) {
+                    buffer.writeBytes(b)
+                    context.fireChannelRead(self.wrapInboundOut(buf))
+                }
+            }
+
+            var inboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let handlers = (0..<5).map { InboundBufferHandler(expectedBufferCount: $0) }
+
+        let channel = EmbeddedChannel()
+        for handler in handlers {
+            try channel.pipeline.syncOperations.addHandler(handler, position: .last)
+        }
+
+        let data = ByteBuffer(string: "1234")
+        try channel.writeInbound(data)
+        var total = channel.pipeline.syncOperations.inboundBufferedBytes()
+        XCTAssertEqual(total, data.readableBytes)
+        let expectedBufferedBytes = handlers.map { $0.inboundBufferedBytes }
+        print(expectedBufferedBytes)
+
+        for (expectedBufferedByte, handler) in zip(expectedBufferedBytes, handlers) {
+            let expectedRemaining = total - expectedBufferedByte
+            channel.pipeline.syncOperations
+                .removeHandler(handler)
+                .and(value: expectedRemaining)
+                .whenSuccess { (_, expectedRemaining) in
+                    let remaining = channel.pipeline.syncOperations.inboundBufferedBytes()
+                    XCTAssertEqual(remaining, expectedRemaining)
+                }
+            total -= expectedBufferedByte
+        }
+
+        _ = try channel.readInbound(as: ByteBuffer.self)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveOutboundBufferedBytesFromChannelWithHandlersRemoved() throws {
+        class OutboundBufferHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler,
+            RemovableChannelHandler
+        {
+
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+
+            private var buffer = ByteBuffer()
+            let expectedBufferCount: Int
+
+            init(expectedBufferCount: Int) {
+                self.expectedBufferCount = expectedBufferCount
+            }
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                var buf = self.unwrapOutboundIn(data)
+                let readSize = min(expectedBufferCount, buf.readableBytes)
+                if let b = buf.readBytes(length: readSize) {
+                    buffer.writeBytes(b)
+                    context.write(self.wrapOutboundOut(buf), promise: promise)
+                }
+            }
+
+            var outboundBufferedBytes: Int {
+                self.buffer.readableBytes
+            }
+        }
+
+        let handlers = (0..<5).map { OutboundBufferHandler(expectedBufferCount: $0) }
+
+        let channel = EmbeddedChannel()
+        for handler in handlers {
+            try channel.pipeline.syncOperations.addHandler(handler, position: .first)
+        }
+
+        let data = ByteBuffer(string: "1234")
+        try channel.writeOutbound(data)
+        var total = channel.pipeline.syncOperations.outboundBufferedBytes()
+        XCTAssertEqual(total, data.readableBytes)
+        let expectedBufferedBytes = handlers.map { $0.outboundBufferedBytes }
+
+        for (expectedBufferedByte, handler) in zip(expectedBufferedBytes, handlers) {
+            let expectedRemaining = total - expectedBufferedByte
+            channel.pipeline.syncOperations
+                .removeHandler(handler)
+                .and(value: expectedRemaining)
+                .whenSuccess { (_, expectedRemaining) in
+                    let remaining = channel.pipeline.syncOperations.outboundBufferedBytes()
+                    XCTAssertEqual(remaining, expectedRemaining)
+                }
+            total -= expectedBufferedByte
+        }
+
+        _ = try channel.readOutbound(as: ByteBuffer.self)
+        XCTAssertTrue(try channel.finish().isClean)
+    }
+
+    func testSynchronouslyRetrieveBufferedBytesFromChannelWithMixedHandlers() throws {
+        // A inbound channel handler that buffers incoming byte buffer when the total number of
+        // calls to the channelRead() is even.
+        class InboundBufferHandler: ChannelInboundHandler, NIOInboundByteBufferingChannelHandler {
+            typealias InboundIn = ByteBuffer
+            typealias InboundOut = ByteBuffer
+            var count: Int
+            var bb: ByteBuffer
+
+            init() {
+                self.count = 0
+                self.bb = ByteBuffer()
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                var d = unwrapInboundIn(data)
+                self.bb.writeBuffer(&d)
+
+                if count % 2 == 1 {
+                    context.fireChannelRead(self.wrapInboundOut(self.bb))
+                    self.bb.moveReaderIndex(forwardBy: self.bb.readableBytes)
+                }
+
+                count += 1
+            }
+
+            var inboundBufferedBytes: Int {
+                bb.readableBytes
+            }
+        }
+
+        // A outbound channel handler that buffers incoming byte buffer when the total number of
+        // calls to the write() is odd.
+        class OutboundBufferedHandler: ChannelOutboundHandler, NIOOutboundByteBufferingChannelHandler {
+            typealias OutboundIn = ByteBuffer
+            typealias OutboundOut = ByteBuffer
+            var count: Int
+            var bb: ByteBuffer
+
+            init() {
+                self.count = 0
+                self.bb = ByteBuffer()
+            }
+
+            func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+                var d = unwrapOutboundIn(data)
+                self.bb.writeBuffer(&d)
+                if count % 2 == 0 {
+                    promise?.succeed()
+                } else {
+                    context.write(self.wrapOutboundOut(self.bb), promise: promise)
+                    self.bb.moveWriterIndex(forwardBy: self.bb.writableBytes)
+                }
+                count += 1
+            }
+
+            var outboundBufferedBytes: Int {
+                bb.writableBytes
+            }
+        }
+
+        let channel = EmbeddedChannel(handlers: [InboundBufferHandler(), OutboundBufferedHandler()])
+
+        let data = ByteBuffer(string: "123")
+        try channel.writeAndFlush(data).wait()
+
+        var result = channel.pipeline.syncOperations.outboundBufferedBytes()
+        XCTAssertEqual(result, data.writableBytes)
+
+        _ = try channel.readOutbound(as: ByteBuffer.self)
+
+        try channel.writeAndFlush(data).wait()
+
+        result = channel.pipeline.syncOperations.outboundBufferedBytes()
+        XCTAssertEqual(result, 0)
+
+        _ = try channel.readOutbound(as: ByteBuffer.self)
+
+        try channel.writeInbound(data)
+
+        result = channel.pipeline.syncOperations.inboundBufferedBytes()
+        XCTAssertEqual(result, data.readableBytes)
+
+        _ = try channel.readInbound(as: ByteBuffer.self)
+
+        try channel.writeInbound(data)
+
+        result = channel.pipeline.syncOperations.inboundBufferedBytes()
+        XCTAssertEqual(result, 0)
+
+        _ = try channel.readInbound(as: ByteBuffer.self)
+
+        XCTAssertTrue(try channel.finish().isClean)
     }
 }
 
@@ -1470,8 +2695,10 @@ final class TestAddMultipleHandlersHandlerWorkingAroundSR9956: ChannelDuplexHand
         context.fireUserInboundEventTriggered(event)
     }
 
-    public static func == (lhs: TestAddMultipleHandlersHandlerWorkingAroundSR9956,
-                           rhs: TestAddMultipleHandlersHandlerWorkingAroundSR9956) -> Bool {
-        return lhs === rhs
+    public static func == (
+        lhs: TestAddMultipleHandlersHandlerWorkingAroundSR9956,
+        rhs: TestAddMultipleHandlersHandlerWorkingAroundSR9956
+    ) -> Bool {
+        lhs === rhs
     }
 }

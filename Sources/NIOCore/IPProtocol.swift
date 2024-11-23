@@ -16,10 +16,10 @@
 /// called "Protocol" to identify the next level protocol.  This is an 8
 /// bit field.  In Internet Protocol version 6 (IPv6) [RFC8200], this field
 /// is called the "Next Header" field.
-public struct NIOIPProtocol: RawRepresentable, Hashable {
+public struct NIOIPProtocol: RawRepresentable, Hashable, Sendable {
     public typealias RawValue = UInt8
     public var rawValue: RawValue
-    
+
     @inlinable
     public init(rawValue: RawValue) {
         self.rawValue = rawValue
@@ -169,7 +169,7 @@ extension NIOIPProtocol: CustomStringConvertible {
         default: return nil
         }
     }
-    
+
     public var description: String {
         let name = self.name ?? "Unknown Protocol"
         return "\(name) - \(rawValue)"

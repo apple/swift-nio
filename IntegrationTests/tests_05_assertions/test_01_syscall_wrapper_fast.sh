@@ -15,18 +15,19 @@
 
 set -eu
 
+# shellcheck source=IntegrationTests/tests_01_http/defines.sh
 source defines.sh
 
 swift_binary=swiftc
 here="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if [[ ! -z "${SWIFT_EXEC-}" ]]; then
+if [[ -n "${SWIFT_EXEC-}" ]]; then
     swift_binary="$(dirname "$SWIFT_EXEC")/swiftc"
 elif [[ "$(uname -s)" == "Linux" ]]; then
     swift_binary=$(which swiftc)
 fi
 
-cp "$here/../../Sources/NIOConcurrencyHelpers/"{lock,NIOLock}.swift "$tmp"
+cp "$here/../../Sources/NIOConcurrencyHelpers/"{lock,NIOLock}.swift "${tmp:?"tmp variable not set"}"
 cat > "$tmp/main.swift" <<"EOF"
 let l = NIOLock()
 l.lock()

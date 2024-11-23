@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-import NIOConcurrencyHelpers
 import Atomics
+import NIOConcurrencyHelpers
+import NIOCore
 
 /// `EventCounterHandler` is a `ChannelHandler` that counts and forwards all the events that it sees coming through
 /// the `ChannelPipeline`.
@@ -22,7 +22,7 @@ import Atomics
 /// Adding `EventCounterHandler` to any point of your `ChannelPipeline` should not change the program's behaviour.
 /// `EventCounterHandler` is mostly useful in unit tests to validate other `ChannelHandler`'s behaviour.
 ///
-/// - note: Contrary to most `ChannelHandler`s, all of `EventCounterHandler`'s API is thread-safe meaning that you can
+/// - Note: Contrary to most `ChannelHandler`s, all of `EventCounterHandler`'s API is thread-safe meaning that you can
 ///         query the events received from any thread.
 public final class EventCounterHandler: Sendable {
     private let _channelRegisteredCalls = ManagedAtomic<Int>(0)
@@ -58,87 +58,87 @@ extension EventCounterHandler {
 
     /// Returns the number of `channelRegistered` events seen so far in the `ChannelPipeline`.
     public var channelRegisteredCalls: Int {
-        return self._channelRegisteredCalls.load(ordering: .relaxed)
+        self._channelRegisteredCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `channelUnregistered` events seen so far in the `ChannelPipeline`.
     public var channelUnregisteredCalls: Int {
-        return self._channelUnregisteredCalls.load(ordering: .relaxed)
+        self._channelUnregisteredCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `channelActive` events seen so far in the `ChannelPipeline`.
     public var channelActiveCalls: Int {
-        return self._channelActiveCalls.load(ordering: .relaxed)
+        self._channelActiveCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `channelInactive` events seen so far in the `ChannelPipeline`.
     public var channelInactiveCalls: Int {
-        return self._channelInactiveCalls.load(ordering: .relaxed)
+        self._channelInactiveCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `channelRead` events seen so far in the `ChannelPipeline`.
     public var channelReadCalls: Int {
-        return self._channelReadCalls.load(ordering: .relaxed)
+        self._channelReadCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `channelReadComplete` events seen so far in the `ChannelPipeline`.
     public var channelReadCompleteCalls: Int {
-        return self._channelReadCompleteCalls.load(ordering: .relaxed)
+        self._channelReadCompleteCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `channelWritabilityChanged` events seen so far in the `ChannelPipeline`.
     public var channelWritabilityChangedCalls: Int {
-        return self._channelWritabilityChangedCalls.load(ordering: .relaxed)
+        self._channelWritabilityChangedCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `userInboundEventTriggered` events seen so far in the `ChannelPipeline`.
     public var userInboundEventTriggeredCalls: Int {
-        return self._userInboundEventTriggeredCalls.load(ordering: .relaxed)
+        self._userInboundEventTriggeredCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `errorCaught` events seen so far in the `ChannelPipeline`.
     public var errorCaughtCalls: Int {
-        return self._errorCaughtCalls.load(ordering: .relaxed)
+        self._errorCaughtCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `register` events seen so far in the `ChannelPipeline`.
     public var registerCalls: Int {
-        return self._registerCalls.load(ordering: .relaxed)
+        self._registerCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `bind` events seen so far in the `ChannelPipeline`.
     public var bindCalls: Int {
-        return self._bindCalls.load(ordering: .relaxed)
+        self._bindCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `connect` events seen so far in the `ChannelPipeline`.
     public var connectCalls: Int {
-        return self._connectCalls.load(ordering: .relaxed)
+        self._connectCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `write` events seen so far in the `ChannelPipeline`.
     public var writeCalls: Int {
-        return self._writeCalls.load(ordering: .relaxed)
+        self._writeCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `flush` events seen so far in the `ChannelPipeline`.
     public var flushCalls: Int {
-        return self._flushCalls.load(ordering: .relaxed)
+        self._flushCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `read` events seen so far in the `ChannelPipeline`.
     public var readCalls: Int {
-        return self._readCalls.load(ordering: .relaxed)
+        self._readCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `close` events seen so far in the `ChannelPipeline`.
     public var closeCalls: Int {
-        return self._closeCalls.load(ordering: .relaxed)
+        self._closeCalls.load(ordering: .relaxed)
     }
 
     /// Returns the number of `triggerUserOutboundEvent` events seen so far in the `ChannelPipeline`.
     public var triggerUserOutboundEventCalls: Int {
-        return self._triggerUserOutboundEventCalls.load(ordering: .relaxed)
+        self._triggerUserOutboundEventCalls.load(ordering: .relaxed)
     }
 
     /// Validate some basic assumptions about the number of events and if any of those assumptions are violated, throw
@@ -149,7 +149,7 @@ extension EventCounterHandler {
     /// `register` event and you call `checkValidity`, it will throw `EventCounterHandler.ValidityError` with an
     /// appropriate explanation.
     ///
-    /// - note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
+    /// - Note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
     ///         call it whilst the `Channel` this `ChannelHandler` is in is still in use.
     public func checkValidity() throws {
         guard self.channelRegisteredCalls <= 1 else {
@@ -179,7 +179,7 @@ extension EventCounterHandler {
     ///
     /// This is most useful in unit tests where you want to make sure only certain events have been triggered.
     ///
-    /// - note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
+    /// - Note: This API is thread-safe, you may call it from any thread. The results of this API may vary though if you
     ///         call it whilst the `Channel` this `ChannelHandler` is in is still in use.
     public func allTriggeredEvents() -> Set<String> {
         var allEvents: Set<String> = []
@@ -292,7 +292,7 @@ extension EventCounterHandler: ChannelDuplexHandler {
         self._channelReadCalls.wrappingIncrement(ordering: .relaxed)
         context.fireChannelRead(data)
     }
-    
+
     /// @see: `_ChannelInboundHandler.channelReadComplete`
     public func channelReadComplete(context: ChannelHandlerContext) {
         self._channelReadCompleteCalls.wrappingIncrement(ordering: .relaxed)
@@ -310,7 +310,7 @@ extension EventCounterHandler: ChannelDuplexHandler {
         self._userInboundEventTriggeredCalls.wrappingIncrement(ordering: .relaxed)
         context.fireUserInboundEventTriggered(event)
     }
-    
+
     /// @see: `_ChannelInboundHandler.errorCaught`
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         self._errorCaughtCalls.wrappingIncrement(ordering: .relaxed)

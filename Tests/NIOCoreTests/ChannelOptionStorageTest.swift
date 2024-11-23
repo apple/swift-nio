@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import NIOConcurrencyHelpers
 import NIOCore
 import NIOEmbedded
+import XCTest
 
 class ChannelOptionStorageTest: XCTestCase {
     func testWeStartWithNoOptions() throws {
@@ -27,15 +28,17 @@ class ChannelOptionStorageTest: XCTestCase {
     func testSetTwoOptionsOfDifferentType() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        cos.append(key: ChannelOptions.backlog, value: 2)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 1)
+        cos.append(key: .backlog, value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
     }
 
     func testSetTwoOptionsOfSameType() throws {
-        let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [(ChannelOptions.socketOption(.so_reuseaddr), 1),
-                                                            (ChannelOptions.socketOption(.so_rcvtimeo), 2)]
+        let options: [(ChannelOptions.Types.SocketOption, SocketOptionValue)] = [
+            (.socketOption(.so_reuseaddr), 1),
+            (.socketOption(.so_rcvtimeo), 2),
+        ]
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
         for kv in options {
@@ -43,59 +46,81 @@ class ChannelOptionStorageTest: XCTestCase {
         }
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
-        XCTAssertEqual(options.map { $0.0 },
-                       optionsCollector.allOptions.map { option in
-                           return option.0 as! ChannelOptions.Types.SocketOption
-                       })
-        XCTAssertEqual(options.map { $0.1 },
-                       optionsCollector.allOptions.map { option in
-                           return option.1 as! SocketOptionValue
-                       })
+        XCTAssertEqual(
+            options.map { $0.0 },
+            optionsCollector.allOptions.map { option in
+                option.0 as! ChannelOptions.Types.SocketOption
+            }
+        )
+        XCTAssertEqual(
+            options.map { $0.1 },
+            optionsCollector.allOptions.map { option in
+                option.1 as! SocketOptionValue
+            }
+        )
     }
 
     func testSetOneOptionTwice() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 2)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 1)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 2)
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(1, optionsCollector.allOptions.count)
-        XCTAssertEqual([ChannelOptions.socketOption(.so_reuseaddr)],
-                       optionsCollector.allOptions.map { option in
-                           return option.0 as! ChannelOptions.Types.SocketOption
-                       })
-        XCTAssertEqual([SocketOptionValue(2)],
-                       optionsCollector.allOptions.map { option in
-                           return option.1 as! SocketOptionValue
-                       })
+        XCTAssertEqual(
+            [.socketOption(.so_reuseaddr)],
+            optionsCollector.allOptions.map { option in
+                option.0 as! ChannelOptions.Types.SocketOption
+            }
+        )
+        XCTAssertEqual(
+            [SocketOptionValue(2)],
+            optionsCollector.allOptions.map { option in
+                option.1 as! SocketOptionValue
+            }
+        )
     }
 
     func testClearingOptions() throws {
         var cos = ChannelOptions.Storage()
         let optionsCollector = OptionsCollectingChannel()
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 2)
-        cos.append(key: ChannelOptions.socketOption(.so_keepalive), value: 3)
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 4)
-        cos.append(key: ChannelOptions.socketOption(.so_rcvbuf), value: 5)
-        cos.append(key: ChannelOptions.socketOption(.so_reuseaddr), value: 6)
-        cos.remove(key: ChannelOptions.socketOption(.so_reuseaddr))
+        cos.append(key: .socketOption(.so_reuseaddr), value: 1)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 2)
+        cos.append(key: .socketOption(.so_keepalive), value: 3)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 4)
+        cos.append(key: .socketOption(.so_rcvbuf), value: 5)
+        cos.append(key: .socketOption(.so_reuseaddr), value: 6)
+        cos.remove(key: .socketOption(.so_reuseaddr))
         XCTAssertNoThrow(try cos.applyAllChannelOptions(to: optionsCollector).wait())
         XCTAssertEqual(2, optionsCollector.allOptions.count)
-        XCTAssertEqual([ChannelOptions.socketOption(.so_keepalive),
-                        ChannelOptions.socketOption(.so_rcvbuf)],
-                       optionsCollector.allOptions.map { option in
-                           return option.0 as! ChannelOptions.Types.SocketOption
-                       })
-        XCTAssertEqual([SocketOptionValue(3), SocketOptionValue(5)],
-                       optionsCollector.allOptions.map { option in
-                           return option.1 as! SocketOptionValue
-                       })
+        XCTAssertEqual(
+            [
+                .socketOption(.so_keepalive),
+                .socketOption(.so_rcvbuf),
+            ],
+            optionsCollector.allOptions.map { option in
+                option.0 as! ChannelOptions.Types.SocketOption
+            }
+        )
+        XCTAssertEqual(
+            [SocketOptionValue(3), SocketOptionValue(5)],
+            optionsCollector.allOptions.map { option in
+                option.1 as! SocketOptionValue
+            }
+        )
     }
 }
 
-class OptionsCollectingChannel: Channel {
-    var allOptions: [(Any, Any)] = []
+final class OptionsCollectingChannel: Channel {
+    private let _allOptions = NIOLockedValueBox<[(any Sendable, any Sendable)]>([])
+    var allOptions: [(any Sendable, any Sendable)] {
+        get {
+            self._allOptions.withLockedValue { $0 }
+        }
+        set {
+            self._allOptions.withLockedValue { $0 = newValue }
+        }
+    }
 
     var allocator: ByteBufferAllocator { fatalError() }
 
@@ -125,6 +150,6 @@ class OptionsCollectingChannel: Channel {
     var _channelCore: ChannelCore { fatalError() }
 
     var eventLoop: EventLoop {
-        return EmbeddedEventLoop()
+        EmbeddedEventLoop()
     }
 }

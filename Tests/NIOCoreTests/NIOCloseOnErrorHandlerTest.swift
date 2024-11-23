@@ -12,11 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 import NIOCore
 import NIOEmbedded
+import XCTest
 
-final class DummyFailingHandler1: ChannelInboundHandler {
+final class DummyFailingHandler1: ChannelInboundHandler, Sendable {
     typealias InboundIn = NIOAny
 
     struct DummyError1: Error {}
@@ -47,14 +47,18 @@ class NIOCloseOnErrorHandlerTest: XCTestCase {
     }
 
     func testChannelCloseOnError() throws {
-        XCTAssertNoThrow(self.channel.pipeline.addHandlers([
-            DummyFailingHandler1(),
-            NIOCloseOnErrorHandler()
-        ]))
+        XCTAssertNoThrow(
+            self.channel.pipeline.addHandlers([
+                DummyFailingHandler1(),
+                NIOCloseOnErrorHandler(),
+            ])
+        )
 
         XCTAssertNoThrow(try self.channel.connect(to: .init(ipAddress: "1.2.3.4", port: 5)).wait())
         XCTAssertTrue(self.channel.isActive)
-        XCTAssertThrowsError(try self.channel.writeInbound("Hello World")) { XCTAssertTrue($0 is DummyFailingHandler1.DummyError1) }
+        XCTAssertThrowsError(try self.channel.writeInbound("Hello World")) {
+            XCTAssertTrue($0 is DummyFailingHandler1.DummyError1)
+        }
         XCTAssertFalse(self.channel.isActive)
     }
 

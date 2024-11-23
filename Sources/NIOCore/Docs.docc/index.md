@@ -14,6 +14,8 @@ More specialized modules provide concrete implementations of many of the abstrac
 ### Articles
 
 - <doc:swift-concurrency>
+- <doc:ByteBuffer-lengthPrefix>
+- <doc:loops-futures-concurrency>
 
 ### Event Loops and Event Loop Groups
 

@@ -20,14 +20,14 @@
 public protocol ChannelHandler: AnyObject {
     /// Called when this `ChannelHandler` is added to the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func handlerAdded(context: ChannelHandlerContext)
 
     /// Called when this `ChannelHandler` is removed from the `ChannelPipeline`.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func handlerRemoved(context: ChannelHandlerContext)
 }
 
@@ -45,9 +45,9 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// This should call `context.register` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
     /// complete the `EventLoopPromise` to let the caller know that the operation completed.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func register(context: ChannelHandlerContext, promise: EventLoopPromise<Void>?)
 
     /// Called to request that the `Channel` bind to a specific `SocketAddress`.
@@ -55,10 +55,10 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// This should call `context.bind` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
     /// complete the `EventLoopPromise` to let the caller know that the operation completed.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - to: The `SocketAddress` to which this `Channel` should bind.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - to: The `SocketAddress` to which this `Channel` should bind.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func bind(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?)
 
     /// Called to request that the `Channel` connect to a given `SocketAddress`.
@@ -66,10 +66,10 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// This should call `context.connect` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
     /// complete the `EventLoopPromise` to let the caller know that the operation completed.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - to: The `SocketAddress` to which the the `Channel` should connect.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - to: The `SocketAddress` to which the the `Channel` should connect.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func connect(context: ChannelHandlerContext, to: SocketAddress, promise: EventLoopPromise<Void>?)
 
     /// Called to request a write operation. The write operation will write the messages through the
@@ -79,10 +79,10 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// This should call `context.write` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
     /// complete the `EventLoopPromise` to let the caller know that the operation completed.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - data: The data to write through the `Channel`, wrapped in a `NIOAny`.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - data: The data to write through the `Channel`, wrapped in a `NIOAny`.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?)
 
     /// Called to request that the `Channel` flush all pending writes. The flush operation will try to flush out all previous written messages
@@ -91,8 +91,8 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// This should call `context.flush` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or just
     /// discard it if the flush should be suppressed.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func flush(context: ChannelHandlerContext)
 
     /// Called to request that the `Channel` perform a read when data is ready. The read operation will signal that we are ready to read more data.
@@ -100,8 +100,8 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// This should call `context.read` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or just
     /// discard it if the read should be suppressed.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func read(context: ChannelHandlerContext)
 
     /// Called to request that the `Channel` close itself down.
@@ -109,10 +109,10 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// This should call `context.close` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
     /// complete the `EventLoopPromise` to let the caller know that the operation completed.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - mode: The `CloseMode` to apply
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - mode: The `CloseMode` to apply
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?)
 
     /// Called when an user outbound event is triggered.
@@ -120,10 +120,10 @@ public protocol _ChannelOutboundHandler: ChannelHandler {
     /// This should call `context.triggerUserOutboundEvent` to forward the operation to the next `_ChannelOutboundHandler` in the `ChannelPipeline` or
     /// complete the `EventLoopPromise` to let the caller know that the operation completed.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - event: The triggered event.
-    ///     - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - event: The triggered event.
+    ///   - promise: The `EventLoopPromise` which should be notified once the operation completes, or nil if no notification should take place.
     func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?)
 }
 
@@ -141,41 +141,41 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     ///
     /// This should call `context.fireChannelRegistered` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelRegistered(context: ChannelHandlerContext)
 
     /// Called when the `Channel` has unregistered from its `EventLoop`, and so will no longer be receiving I/O events.
     ///
     /// This should call `context.fireChannelUnregistered` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelUnregistered(context: ChannelHandlerContext)
 
     /// Called when the `Channel` has become active, and is able to send and receive data.
     ///
     /// This should call `context.fireChannelActive` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelActive(context: ChannelHandlerContext)
 
     /// Called when the `Channel` has become inactive and is no longer able to send and receive data.
     ///
     /// This should call `context.fireChannelInactive` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelInactive(context: ChannelHandlerContext)
 
     /// Called when some data has been read from the remote peer.
     ///
     /// This should call `context.fireChannelRead` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - data: The data read from the remote peer, wrapped in a `NIOAny`.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - data: The data read from the remote peer, wrapped in a `NIOAny`.
     func channelRead(context: ChannelHandlerContext, data: NIOAny)
 
     /// Called when the `Channel` has completed its current read loop, either because no more data is available to read from the transport at this time, or because the `Channel` needs to yield to the event loop to process other I/O events for other `Channel`s.
@@ -183,8 +183,8 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     ///
     /// This should call `context.fireChannelReadComplete` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelReadComplete(context: ChannelHandlerContext)
 
     /// The writability state of the `Channel` has changed, either because it has buffered more data than the writability high water mark, or because the amount of buffered data has dropped below the writability low water mark.
@@ -192,26 +192,26 @@ public protocol _ChannelInboundHandler: ChannelHandler {
     ///
     /// This should call `context.fireChannelWritabilityChanged` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
     func channelWritabilityChanged(context: ChannelHandlerContext)
 
     /// Called when a user inbound event has been triggered.
     ///
     /// This should call `context.fireUserInboundEventTriggered` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the event.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - event: The event.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - event: The event.
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any)
 
     /// An error was encountered earlier in the inbound `ChannelPipeline`.
     ///
     /// This should call `context.fireErrorCaught` to forward the operation to the next `_ChannelInboundHandler` in the `ChannelPipeline` if you want to allow the next handler to also handle the error.
     ///
-    /// - parameters:
-    ///     - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
-    ///     - error: The `Error` that was encountered.
+    /// - Parameters:
+    ///   - context: The `ChannelHandlerContext` which this `ChannelHandler` belongs to.
+    ///   - error: The `Error` that was encountered.
     func errorCaught(context: ChannelHandlerContext, error: Error)
 }
 
@@ -314,7 +314,7 @@ extension _ChannelInboundHandler {
 /// A `RemovableChannelHandler` is required to remove itself from the `ChannelPipeline` (using
 /// `ChannelHandlerContext.leavePipeline`) as soon as possible.
 ///
-/// - note: When a `Channel` gets torn down, every `ChannelHandler` in the `Channel`'s `ChannelPipeline` will be
+/// - Note: When a `Channel` gets torn down, every `ChannelHandler` in the `Channel`'s `ChannelPipeline` will be
 ///         removed from the `ChannelPipeline`. Those removals however happen synchronously and are not going through
 ///         the methods of this protocol.
 public protocol RemovableChannelHandler: ChannelHandler {
@@ -324,10 +324,10 @@ public protocol RemovableChannelHandler: ChannelHandler {
     /// invocation of this method and the call to `ChannelHandlerContext.leavePipeline` that triggers the actual
     /// removal.
     ///
-    /// - note: Like the other `ChannelHandler` methods, this method should not be invoked by the user directly. To
+    /// - Note: Like the other `ChannelHandler` methods, this method should not be invoked by the user directly. To
     ///         remove a `RemovableChannelHandler` from the `ChannelPipeline`, use `ChannelPipeline.removeHandler`.
     ///
-    /// - parameters:
+    /// - Parameters:
     ///    - context: The `ChannelHandlerContext` of the `RemovableChannelHandler` to be removed from the `ChannelPipeline`.
     ///    - removalToken: The removal token to hand to `ChannelHandlerContext.leavePipeline` to trigger the actual
     ///                    removal from the `ChannelPipeline`.
@@ -342,4 +342,20 @@ extension RemovableChannelHandler {
         precondition(context.handler === self)
         context.leavePipeline(removalToken: removalToken)
     }
+}
+
+/// A `NIOOutboundByteBufferingChannelHandler` is a `ChannelHandler` that
+/// reports the number of bytes buffered for outbound direction.
+public protocol NIOOutboundByteBufferingChannelHandler {
+    /// The number of bytes buffered in the channel handler, which are queued to be sent to
+    /// the next outbound channel handler.
+    var outboundBufferedBytes: Int { get }
+}
+
+/// A `NIOInboundByteBufferingChannelHandler` is a `ChannelHandler` that
+/// reports the number of bytes buffered for inbound direction.
+public protocol NIOInboundByteBufferingChannelHandler {
+    /// The number of bytes buffered in the channel handler, which are queued to be sent to
+    /// the next inbound channel handler.
+    var inboundBufferedBytes: Int { get }
 }

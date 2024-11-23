@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal extension IOResult where T: FixedWidthInteger {
+extension IOResult where T: FixedWidthInteger {
     var result: T {
         switch self {
         case .processed(let value):

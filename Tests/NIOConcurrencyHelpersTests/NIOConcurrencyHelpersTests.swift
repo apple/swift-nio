@@ -11,23 +11,28 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+import Dispatch
+import NIOCore
+import XCTest
+
+@testable import NIOConcurrencyHelpers
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Bionic)
+import Bionic
 #else
 #error("The Concurrency helpers test module was unable to identify your C library.")
 #endif
-import Dispatch
-import XCTest
-import NIOCore
-@testable import NIOConcurrencyHelpers
 
 class NIOConcurrencyHelpersTests: XCTestCase {
     private func sumOfIntegers(until n: UInt64) -> UInt64 {
-        return n*(n+1)/2
+        n * (n + 1) / 2
     }
-    
+
     #if canImport(Darwin)
     let noAsyncs: UInt64 = 50
     #else
@@ -41,7 +46,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
     @available(*, deprecated, message: "deprecated because it tests deprecated functionality")
     func testLargeContendedAtomicSum() {
-        
+
         let noCounts: UInt64 = 2_000
 
         let q = DispatchQueue(label: "q", attributes: .concurrent)
@@ -118,7 +123,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
             var counter = max
             for _ in 0..<255 {
-                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter-1))
+                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter - 1))
                 counter = counter - 1
             }
         }
@@ -149,7 +154,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
             var counter = upperBound
             for _ in 0..<255 {
-                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter-1))
+                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter - 1))
                 XCTAssertFalse(ab.compareAndExchange(expected: counter, desired: counter))
                 counter = counter - 1
             }
@@ -330,7 +335,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
             var counter = max
             for _ in 0..<255 {
-                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter-1))
+                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter - 1))
                 counter = counter - 1
             }
         }
@@ -361,7 +366,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
             var counter = upperBound
             for _ in 0..<255 {
-                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter-1))
+                XCTAssertTrue(ab.compareAndExchange(expected: counter, desired: counter - 1))
                 XCTAssertFalse(ab.compareAndExchange(expected: counter, desired: counter))
                 counter = counter - 1
             }
@@ -471,11 +476,14 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         testFor(UInt.self)
     }
 
-
     func testLockMutualExclusion() {
         let l = NIOLock()
 
+        #if compiler(>=5.10)
+        nonisolated(unsafe) var x = 1
+        #else
         var x = 1
+        #endif
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
@@ -492,8 +500,10 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         }
 
         sem1.wait()
-        XCTAssertEqual(DispatchTimeoutResult.timedOut,
-                       g.wait(timeout: .now() + 0.1))
+        XCTAssertEqual(
+            DispatchTimeoutResult.timedOut,
+            g.wait(timeout: .now() + 0.1)
+        )
         XCTAssertEqual(1, x)
 
         l.unlock()
@@ -507,7 +517,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testWithLockMutualExclusion() {
         let l = NIOLock()
 
+        #if compiler(>=5.10)
+        nonisolated(unsafe) var x = 1
+        #else
         var x = 1
+        #endif
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
@@ -523,8 +537,10 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             }
 
             sem1.wait()
-            XCTAssertEqual(DispatchTimeoutResult.timedOut,
-                           g.wait(timeout: .now() + 0.1))
+            XCTAssertEqual(
+                DispatchTimeoutResult.timedOut,
+                g.wait(timeout: .now() + 0.1)
+            )
             XCTAssertEqual(1, x)
         }
         sem2.wait()
@@ -537,7 +553,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testConditionLockMutualExclusion() {
         let l = ConditionLock(value: 0)
 
+        #if compiler(>=5.10)
+        nonisolated(unsafe) var x = 1
+        #else
         var x = 1
+        #endif
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
@@ -554,8 +574,10 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         }
 
         sem1.wait()
-        XCTAssertEqual(DispatchTimeoutResult.timedOut,
-                       g.wait(timeout: .now() + 0.1))
+        XCTAssertEqual(
+            DispatchTimeoutResult.timedOut,
+            g.wait(timeout: .now() + 0.1)
+        )
         XCTAssertEqual(1, x)
 
         l.unlock()
@@ -644,13 +666,13 @@ class NIOConcurrencyHelpersTests: XCTestCase {
             l.lock()
             l.unlock(withValue: 1)
 
-            doneSem.wait() /* job on 'q1' is done */
+            doneSem.wait()  // job on 'q1' is done
 
             XCTAssertEqual(1, l.value)
             l.lock()
             l.unlock(withValue: 2)
 
-            doneSem.wait() /* job on 'q2' is done */
+            doneSem.wait()  // job on 'q2' is done
         }
     }
 
@@ -778,7 +800,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
         let sem2 = DispatchSemaphore(value: 0)
-        class SomeClass {}
+        final class SomeClass: Sendable {}
         weak var weakInstance: SomeClass?
         ({
             let instance = SomeClass()
@@ -814,15 +836,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
         let go = DispatchSemaphore(value: 0)
         let iterations = 100_000
 
-        class Foo {
-            var x: Int
+        final class Foo: Sendable {
+            let x: Int
 
             init(_ x: Int) {
                 self.x = x
-            }
-
-            deinit {
-                self.x = -1
             }
         }
 
@@ -890,12 +908,12 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
             spawnAndJoinRacingThreads(count: 6) { i in
                 switch i {
-                case 0: // writer
-                    for i in 1 ... iterations {
+                case 0:  // writer
+                    for i in 1...iterations {
                         let nextObject = box.exchange(with: .init(i, allDeallocations: allDeallocations))
                         XCTAssertEqual(nextObject.value, i - 1)
                     }
-                default: // readers
+                default:  // readers
                     while true {
                         if box.load().value < 0 || box.load().value > iterations {
                             XCTFail("bad")
@@ -923,11 +941,11 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
             spawnAndJoinRacingThreads(count: 6) { i in
                 switch i {
-                case 0: // writer
-                    for i in 1 ... iterations {
+                case 0:  // writer
+                    for i in 1...iterations {
                         box.store(IntHolderWithDeallocationTracking(i, allDeallocations: allDeallocations))
                     }
-                default: // readers
+                default:  // readers
                     while true {
                         if box.load().value < 0 || box.load().value > iterations {
                             XCTFail("loaded the wrong value")
@@ -955,16 +973,18 @@ class NIOConcurrencyHelpersTests: XCTestCase {
 
             spawnAndJoinRacingThreads(count: 6) { i in
                 switch i {
-                case 0: // writer
-                    for i in 1 ... iterations {
+                case 0:  // writer
+                    for i in 1...iterations {
                         let old = box.load()
                         XCTAssertEqual(i - 1, old.value)
-                        if !box.compareAndExchange(expected: old,
-                                                   desired: .init(i, allDeallocations: allDeallocations)) {
+                        if !box.compareAndExchange(
+                            expected: old,
+                            desired: .init(i, allDeallocations: allDeallocations)
+                        ) {
                             XCTFail("compare and exchange didn't work but it should have")
                         }
                     }
-                default: // readers
+                default:  // readers
                     while true {
                         if box.load().value < 0 || box.load().value > iterations {
                             XCTFail("loaded wrong value")
@@ -1055,9 +1075,9 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     }
 }
 
-func spawnAndJoinRacingThreads(count: Int, _ body: @escaping (Int) -> Void) {
-    let go = DispatchSemaphore(value: 0) // will be incremented when the threads are supposed to run (and race).
-    let arrived = Array(repeating: DispatchSemaphore(value: 0), count: count) // waiting for all threads to arrive
+func spawnAndJoinRacingThreads(count: Int, _ body: @Sendable @escaping (Int) -> Void) {
+    let go = DispatchSemaphore(value: 0)  // will be incremented when the threads are supposed to run (and race).
+    let arrived = Array(repeating: DispatchSemaphore(value: 0), count: count)  // waiting for all threads to arrive
 
     let group = DispatchGroup()
     for i in 0..<count {
@@ -1079,14 +1099,21 @@ func spawnAndJoinRacingThreads(count: Int, _ body: @escaping (Int) -> Void) {
     group.wait()
 }
 
-func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testInterval: TimeAmount? = nil, _ message: String = "condition not satisfied in time", file: StaticString = #filePath, line: UInt = #line) {
+func assert(
+    _ condition: @autoclosure () -> Bool,
+    within time: TimeAmount,
+    testInterval: TimeAmount? = nil,
+    _ message: String = "condition not satisfied in time",
+    file: StaticString = #filePath,
+    line: UInt = #line
+) {
     let testInterval = testInterval ?? TimeAmount.nanoseconds(time.nanoseconds / 5)
     let endTime = NIODeadline.now() + time
 
     repeat {
         if condition() { return }
         usleep(UInt32(testInterval.nanoseconds / 1000))
-    } while (NIODeadline.now() < endTime)
+    } while NIODeadline.now() < endTime
 
     if !condition() {
         XCTFail(message, file: (file), line: line)
@@ -1094,8 +1121,8 @@ func assert(_ condition: @autoclosure () -> Bool, within time: TimeAmount, testI
 }
 
 @available(*, deprecated, message: "deprecated because it is used to test deprecated functionality")
-fileprivate class IntHolderWithDeallocationTracking {
-    private(set) var value: Int
+private final class IntHolderWithDeallocationTracking: Sendable {
+    let value: Int
     let allDeallocations: NIOAtomic<Int>
 
     init(_ x: Int, allDeallocations: NIOAtomic<Int>) {
@@ -1104,7 +1131,6 @@ fileprivate class IntHolderWithDeallocationTracking {
     }
 
     deinit {
-        self.value = -1
         self.allDeallocations.add(1)
     }
 }
