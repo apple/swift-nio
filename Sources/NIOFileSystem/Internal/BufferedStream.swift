@@ -243,7 +243,6 @@ extension BufferedStream {
         }
 
         /// A type that indicates the result of writing elements to the source.
-        @frozen
         internal enum WriteResult: Sendable {
             /// A token that is returned when the asynchronous stream's backpressure strategy indicated that production should
             /// be suspended. Use this token to enqueue a callback by  calling the ``enqueueCallback(_:)`` method.

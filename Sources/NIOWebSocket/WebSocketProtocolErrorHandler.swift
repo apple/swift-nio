@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -25,6 +25,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
     public init() {}
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
+        let loopBoundContext = context.loopBound
         if let error = error as? NIOWebSocketError {
             var data = context.channel.allocator.buffer(capacity: 2)
             data.write(webSocketErrorCode: WebSocketErrorCode(error))
@@ -34,6 +35,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
                 data: data
             )
             context.writeAndFlush(Self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
+                let context = loopBoundContext.value
                 context.close(promise: nil)
             }
         }

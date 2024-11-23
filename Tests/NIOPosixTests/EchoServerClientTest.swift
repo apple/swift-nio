@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -382,6 +382,7 @@ class EchoServerClientTest: XCTestCase {
 
     private final class EchoAndEchoAgainAfterSomeTimeServer: ChannelInboundHandler {
         typealias InboundIn = ByteBuffer
+        typealias InboundOut = ByteBuffer
         typealias OutboundOut = ByteBuffer
 
         private let timeAmount: TimeAmount
@@ -398,10 +399,13 @@ class EchoServerClientTest: XCTestCase {
         }
 
         func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            let bytes = Self.unwrapInboundIn(data)
             self.numberOfReads += 1
             precondition(self.numberOfReads == 1, "\(self) is only ever allowed to read once")
+            let loopBoundContext = context.loopBound
             _ = context.eventLoop.scheduleTask(in: self.timeAmount) {
-                context.writeAndFlush(data, promise: nil)
+                let context = loopBoundContext.value
+                context.writeAndFlush(Self.wrapInboundOut(bytes), promise: nil)
                 self.group.leave()
             }.futureResult.recover { e in
                 XCTFail("we failed to schedule the task: \(e)")
@@ -753,8 +757,10 @@ class EchoServerClientTest: XCTestCase {
             }
 
             private func writeUntilFailed(_ context: ChannelHandlerContext, _ buffer: ByteBuffer) {
-                context.writeAndFlush(NIOAny(buffer)).whenSuccess {
-                    context.eventLoop.execute {
+                let loopBoundContext = context.loopBound
+                context.writeAndFlush(NIOAny(buffer)).whenSuccess { [eventLoop = context.eventLoop] in
+                    eventLoop.execute {
+                        let context = loopBoundContext.value
                         self.writeUntilFailed(context, buffer)
                     }
                 }
@@ -776,14 +782,19 @@ class EchoServerClientTest: XCTestCase {
                 let buffer = context.channel.allocator.buffer(string: str)
 
                 // write it four times and then close the connect.
+                let loopBoundContext = context.loopBound
                 context.writeAndFlush(NIOAny(buffer)).flatMap {
-                    context.writeAndFlush(NIOAny(buffer))
+                    let context = loopBoundContext.value
+                    return context.writeAndFlush(NIOAny(buffer))
                 }.flatMap {
-                    context.writeAndFlush(NIOAny(buffer))
+                    let context = loopBoundContext.value
+                    return context.writeAndFlush(NIOAny(buffer))
                 }.flatMap {
-                    context.writeAndFlush(NIOAny(buffer))
+                    let context = loopBoundContext.value
+                    return context.writeAndFlush(NIOAny(buffer))
                 }.flatMap {
-                    context.close()
+                    let context = loopBoundContext.value
+                    return context.close()
                 }.whenComplete { (_: Result<Void, Error>) in
                     self.dpGroup.leave()
                 }

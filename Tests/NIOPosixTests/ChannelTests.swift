@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -2953,7 +2953,9 @@ public final class ChannelTests: XCTestCase {
             func channelActive(context: ChannelHandlerContext) {
                 var buffer = context.channel.allocator.buffer(capacity: 1)
                 buffer.writeStaticString("X")
-                context.channel.writeAndFlush(buffer).map { context.channel }.cascade(
+                context.channel.writeAndFlush(buffer).map { [channel = context.channel] in
+                    channel
+                }.cascade(
                     to: self.channelAvailablePromise
                 )
             }
@@ -3003,7 +3005,8 @@ public final class ChannelTests: XCTestCase {
 
             func channelActive(context: ChannelHandlerContext) {
                 XCTAssert(serverChannel.eventLoop === context.eventLoop)
-                self.serverChannel.whenSuccess { serverChannel in
+                let loopBoundContext = context.loopBound
+                self.serverChannel.whenSuccess { [channel = context.channel] serverChannel in
                     // all of the following futures need to complete synchronously for this test to test the correct
                     // thing. Therefore we keep track if we're still on the same stack frame.
                     var inSameStackFrame = true
@@ -3014,9 +3017,10 @@ public final class ChannelTests: XCTestCase {
                     XCTAssertTrue(serverChannel.isActive)
                     // we allow auto-read again to make sure that the socket buffer is drained on write error
                     // (cf. https://github.com/apple/swift-nio/issues/593)
-                    context.channel.setOption(.autoRead, value: true).flatMap {
+                    channel.setOption(.autoRead, value: true).flatMap {
+                        let context = loopBoundContext.value
                         // let's trigger the write error
-                        var buffer = context.channel.allocator.buffer(capacity: 16)
+                        var buffer = channel.allocator.buffer(capacity: 16)
                         buffer.writeStaticString("THIS WILL FAIL ANYWAY")
 
                         // this needs to be in a function as otherwise the Swift compiler believes this is throwing
@@ -3025,7 +3029,7 @@ public final class ChannelTests: XCTestCase {
                             // arrived at the time the write fails. So this is a hack that makes sure they do have arrived.
                             // (https://github.com/apple/swift-nio/issues/657)
                             XCTAssertNoThrow(
-                                try self.veryNasty_blockUntilReadBufferIsNonEmpty(channel: context.channel)
+                                try self.veryNasty_blockUntilReadBufferIsNonEmpty(channel: channel)
                             )
                         }
                         workaroundSR487()
@@ -3489,8 +3493,10 @@ private final class FailRegistrationAndDelayCloseHandler: ChannelOutboundHandler
     }
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
+        let loopBoundContext = context.loopBound
         // for extra nastiness, let's delay close. This makes sure the ChannelPipeline correctly retains the Channel
         _ = context.eventLoop.scheduleTask(in: .milliseconds(10)) {
+            let context = loopBoundContext.value
             context.close(mode: mode, promise: promise)
         }
     }
@@ -3559,7 +3565,9 @@ final class ReentrantWritabilityChangingHandler: ChannelInboundHandler {
         // emitted. The flush for that write should result in the writability flipping back
         // again.
         let b1 = context.channel.allocator.buffer(repeating: 0, count: 50)
+        let loopBoundContext = context.loopBound
         context.write(Self.wrapOutboundOut(b1)).whenSuccess { _ in
+            let context = loopBoundContext.value
             // We should still be writable.
             XCTAssertTrue(context.channel.isWritable)
             XCTAssertEqual(self.isNotWritableCount, 0)

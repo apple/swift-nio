@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -478,7 +478,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testFinishWithRecursivelyScheduledTasks() throws {
         let channel = EmbeddedChannel()
-        var tasks: [Scheduled<Void>] = []
+        let tasks: NIOLoopBoundBox<[Scheduled<Void>]> = NIOLoopBoundBox([], eventLoop: channel.eventLoop)
         var invocations = 0
 
         func recursivelyScheduleAndIncrement() {
@@ -486,7 +486,7 @@ class EmbeddedChannelTest: XCTestCase {
                 invocations += 1
                 recursivelyScheduleAndIncrement()
             }
-            tasks.append(task)
+            tasks.value.append(task)
         }
 
         recursivelyScheduleAndIncrement()
@@ -497,11 +497,11 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(invocations, 0)
 
         // Because the root task didn't run, it should be the onnly one scheduled.
-        XCTAssertEqual(tasks.count, 1)
+        XCTAssertEqual(tasks.value.count, 1)
 
         // Check the task was failed with cancelled error.
         let taskChecked = expectation(description: "task future fulfilled")
-        tasks.first?.futureResult.whenComplete { result in
+        tasks.value.first?.futureResult.whenComplete { result in
             switch result {
             case .success: XCTFail("Expected task to be cancelled, not run.")
             case .failure(let error): XCTAssertEqual(error as? EventLoopError, .cancelled)

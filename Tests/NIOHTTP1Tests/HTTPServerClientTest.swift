@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -109,6 +109,7 @@ class HTTPServerClientTest: XCTestCase {
         }
 
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            let loopBoundContext = context.loopBound
             switch Self.unwrapInboundIn(data) {
             case .head(let req):
                 switch req.uri {
@@ -129,6 +130,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
+                        let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
                     }
@@ -154,6 +156,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
+                        let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
                     }
@@ -184,6 +187,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(Self.wrapOutboundOut(.end(trailers))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
+                        let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
                     }
@@ -208,6 +212,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
+                        let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
                     }
@@ -221,6 +226,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
+                        let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
                     }
@@ -233,6 +239,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
+                        let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
                     }
@@ -251,6 +258,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
+                        let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
                     }
@@ -271,6 +279,7 @@ class HTTPServerClientTest: XCTestCase {
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
                     }.whenComplete { (_: Result<Void, Error>) in
+                        let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
                     }

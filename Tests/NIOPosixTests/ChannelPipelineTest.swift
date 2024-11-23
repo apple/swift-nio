@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -803,7 +803,9 @@ class ChannelPipelineTest: XCTestCase {
         buffer.writeStaticString("Hello, world!")
 
         let removalPromise = channel.eventLoop.makePromise(of: Void.self)
+        let loopBoundContext = context.loopBound
         removalPromise.futureResult.whenSuccess {
+            let context = loopBoundContext.value
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -845,7 +847,9 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        let loopBoundContext = context.loopBound
         channel.pipeline.syncOperations.removeHandler(context: context).whenSuccess {
+            let context = loopBoundContext.value
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -873,7 +877,9 @@ class ChannelPipelineTest: XCTestCase {
         buffer.writeStaticString("Hello, world!")
 
         let removalPromise = channel.eventLoop.makePromise(of: Void.self)
+        let loopBoundContext = context.loopBound
         removalPromise.futureResult.map {
+            let context = loopBoundContext._value
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }.whenFailure {
@@ -912,7 +918,9 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        let loopBoundContext = context.loopBound
         channel.pipeline.removeHandler(name: "TestHandler").whenSuccess {
+            let context = loopBoundContext.value
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -941,7 +949,9 @@ class ChannelPipelineTest: XCTestCase {
         buffer.writeStaticString("Hello, world!")
 
         let removalPromise = channel.eventLoop.makePromise(of: Void.self)
+        let loopBoundContext = context.loopBound
         removalPromise.futureResult.whenSuccess {
+            let context = loopBoundContext.value
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -979,7 +989,9 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
+        let loopBoundContext = context.loopBound
         channel.pipeline.removeHandler(handler).whenSuccess {
+            let context = loopBoundContext.value
             context.writeAndFlush(NIOAny(buffer), promise: nil)
             context.fireErrorCaught(DummyError())
         }
@@ -1403,7 +1415,9 @@ class ChannelPipelineTest: XCTestCase {
                 self.removeHandlerCalls += 1
                 XCTAssertEqual(1, self.removeHandlerCalls)
                 self.removalTriggeredPromise.succeed(())
+                let loopBoundContext = context.loopBound
                 self.continueRemovalFuture.whenSuccess {
+                    let context = loopBoundContext.value
                     context.leavePipeline(removalToken: removalToken)
                 }
             }
