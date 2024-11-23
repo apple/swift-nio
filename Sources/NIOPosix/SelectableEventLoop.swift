@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -93,6 +93,7 @@ internal final class SelectableEventLoop: EventLoop {
         case exitingThread
     }
 
+    @usableFromInline
     internal let _selector: NIOPosix.Selector<NIORegistration>
     private let thread: NIOThread
     @usableFromInline
@@ -477,7 +478,8 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    private func currentSelectorStrategy(nextReadyDeadline: NIODeadline?) -> SelectorStrategy {
+    @inlinable
+    internal func _currentSelectorStrategy(nextReadyDeadline: NIODeadline?) -> SelectorStrategy {
         guard let deadline = nextReadyDeadline else {
             // No tasks to handle so just block. If any tasks were added in the meantime wakeup(...) was called and so this
             // will directly unblock.
@@ -679,6 +681,26 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
+    // Do not rename or remove this function.
+    //
+    // When doing on-/off-CPU analysis, for example with continuous profiling, it's
+    // important to recognise certain functions that are purely there to wait.
+    //
+    // This function is one of those and giving it a consistent name makes it much easier to remove from the profiles
+    // when only interested in on-CPU work.
+    @inline(never)
+    @inlinable
+    internal func _blockingWaitForWork(
+        nextReadyDeadline: NIODeadline?,
+        _ body: (SelectorEvent<NIORegistration>) -> Void
+    ) throws {
+        try self._selector.whenReady(
+            strategy: self._currentSelectorStrategy(nextReadyDeadline: nextReadyDeadline),
+            onLoopBegin: { self._tasksLock.withLock { () -> Void in self._pendingTaskPop = true } },
+            body
+        )
+    }
+
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
     internal func run() throws {
         self.preconditionInEventLoop()
@@ -745,10 +767,7 @@ internal final class SelectableEventLoop: EventLoop {
             // Block until there are events to handle or the selector was woken up
             // for macOS: in case any calls we make to Foundation put objects into an autoreleasepool
             try withAutoReleasePool {
-                try self._selector.whenReady(
-                    strategy: currentSelectorStrategy(nextReadyDeadline: nextReadyDeadline),
-                    onLoopBegin: { self._tasksLock.withLock { () -> Void in self._pendingTaskPop = true } }
-                ) { ev in
+                try self._blockingWaitForWork(nextReadyDeadline: nextReadyDeadline) { ev in
                     switch ev.registration.channel {
                     case .serverSocketChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
