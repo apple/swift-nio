@@ -19,7 +19,7 @@ log() { printf -- "** %s\n" "$*" >&2; }
 error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
-log "Checking for Cxx interoperability comaptibility..."
+log "Checking for Cxx interoperability compatibility..."
 
 source_dir=$(pwd)
 working_dir=$(mktemp -d)
@@ -36,6 +36,19 @@ for product in $library_products; do
   echo "package.targets.first!.dependencies.append(.product(name: \"$product\", package: \"$package_name\"))" >> Package.swift
   echo "import $product" >> "$source_file"
 done
+
+# A platform independent (but brittle) way to add the swift settings block
+sed '/name: "'"${project_name}"'")/a\
+        swiftSettings: [\
+            .interoperabilityMode(.Cxx)\
+        ]),\
+' Package.swift >| Package.swift.new && mv -f Package.swift.new Package.swift
+sed  's/name: "'"${project_name}"'")/name: "'"${project_name}"'"/' Package.swift >| Package.swift.new && mv -f Package.swift.new Package.swift
+
+if ! grep -q interoperabilityMode Package.swift; then
+  cat Package.swift
+  fatal "Package.swift modification failed"
+fi
 
 swift build
 
