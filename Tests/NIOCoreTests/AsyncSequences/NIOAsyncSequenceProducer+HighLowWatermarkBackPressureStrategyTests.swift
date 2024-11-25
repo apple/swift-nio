@@ -57,4 +57,15 @@ final class NIOAsyncSequenceProducerBackPressureStrategiesHighLowWatermarkTests:
     func testDidConsume_whenAtLowWatermark() {
         XCTAssertTrue(self.strategy.didConsume(bufferDepth: 5))
     }
+
+    func testDidYieldWhenNoOutstandingDemand() {
+        // Hit the high watermark
+        XCTAssertFalse(self.strategy.didYield(bufferDepth: 10))
+        // Drop below it, don't read.
+        XCTAssertFalse(self.strategy.didConsume(bufferDepth: 7))
+        // Yield more, still above the low watermark, so don't produce more.
+        XCTAssertFalse(self.strategy.didYield(bufferDepth: 8))
+        // Drop below low watermark to start producing again.
+        XCTAssertTrue(self.strategy.didConsume(bufferDepth: 4))
+    }
 }
