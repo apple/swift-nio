@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -98,7 +98,7 @@ class HTTPServerClientTest: XCTestCase {
 
                 let content = buffer.getData(at: 0, length: buffer.readableBytes)!
                 XCTAssertNoThrow(try content.write(to: URL(fileURLWithPath: filePath)))
-                let fh = try! NIOFileHandle(path: filePath)
+                let fh = try! NIOFileHandle(_deprecatedPath: filePath)
                 let region = FileRegion(
                     fileHandle: fh,
                     readerIndex: 0,

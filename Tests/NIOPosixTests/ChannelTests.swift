@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -776,7 +776,7 @@ public final class ChannelTests: XCTestCase {
             )
             buffer.clear()
             buffer.writeBytes([UInt8](repeating: 0xff, count: 1))
-            let handle = NIOFileHandle(descriptor: -1)
+            let handle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
             defer {
                 // fake file handle, so don't actually close
                 XCTAssertNoThrow(try handle.takeDescriptorOwnership())
@@ -962,8 +962,8 @@ public final class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<2).map { (_: Int) in el.makePromise() }
 
-            let fh1 = NIOFileHandle(descriptor: -1)
-            let fh2 = NIOFileHandle(descriptor: -2)
+            let fh1 = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
+            let fh2 = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -2)
             let fr1 = FileRegion(fileHandle: fh1, readerIndex: 12, endIndex: 14)
             let fr2 = FileRegion(fileHandle: fh2, readerIndex: 0, endIndex: 2)
             defer {
@@ -1027,7 +1027,7 @@ public final class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
 
-            let fh = NIOFileHandle(descriptor: -1)
+            let fh = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 99, endIndex: 99)
             defer {
                 // fake descriptor, so shouldn't be closed.
@@ -1061,8 +1061,8 @@ public final class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<5).map { (_: Int) in el.makePromise() }
 
-            let fh1 = NIOFileHandle(descriptor: -1)
-            let fh2 = NIOFileHandle(descriptor: -1)
+            let fh1 = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
+            let fh2 = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
             let fr1 = FileRegion(fileHandle: fh1, readerIndex: 99, endIndex: 99)
             let fr2 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: 10)
             defer {
@@ -1320,7 +1320,7 @@ public final class ChannelTests: XCTestCase {
         try withPendingStreamWritesManager { pwm in
             let ps: [EventLoopPromise<Void>] = (0..<1).map { (_: Int) in el.makePromise() }
 
-            let fh = NIOFileHandle(descriptor: -1)
+            let fh = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
             let fr = FileRegion(fileHandle: fh, readerIndex: 0, endIndex: 8192)
             defer {
                 // fake descriptor, so shouldn't be closed.

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -320,7 +320,7 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertTrue(loop.inEventLoop)
         do {
-            let handle = NIOFileHandle(descriptor: -1)
+            let handle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
             let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 0)
             defer {
                 // fake descriptor, so shouldn't be closed.
