@@ -30,25 +30,18 @@ package_name=$(swift package dump-package | jq -r '.name')
 
 cd "$working_dir"
 swift package init
+
+{
+  echo "let swiftSettings: [SwiftSetting] = [.interoperabilityMode(.Cxx)]"
+  echo "for target in package.targets { target.swiftSettings = swiftSettings }"
+} >> Package.swift
+
 echo "package.dependencies.append(.package(path: \"$source_dir\"))" >> Package.swift
 
 for product in $library_products; do
   echo "package.targets.first!.dependencies.append(.product(name: \"$product\", package: \"$package_name\"))" >> Package.swift
   echo "import $product" >> "$source_file"
 done
-
-# A platform independent (but brittle) way to add the swift settings block
-sed '/name: "'"${project_name}"'")/a\
-        swiftSettings: [\
-            .interoperabilityMode(.Cxx)\
-        ]),\
-' Package.swift >| Package.swift.new && mv -f Package.swift.new Package.swift
-sed  's/name: "'"${project_name}"'")/name: "'"${project_name}"'"/' Package.swift >| Package.swift.new && mv -f Package.swift.new Package.swift
-
-if ! grep -q interoperabilityMode Package.swift; then
-  cat Package.swift
-  fatal "Package.swift modification failed"
-fi
 
 swift build
 
