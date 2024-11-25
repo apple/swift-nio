@@ -1083,7 +1083,7 @@ extension FileSystem {
         }
     }
 
-    /// Building block of the parallel directory copy implementation. Each invovation of this is
+    /// Building block of the parallel directory copy implementation. Each invocation of this is
     /// allowed to consume two file descriptors. Any further work (if any) should be sent to `yield`
     /// for future processing.
     func copySelfAndEnqueueChildren(
