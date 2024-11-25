@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -439,9 +439,11 @@ public final class HTTPServerPipelineHandler: ChannelDuplexHandler, RemovableCha
                 // we just received the .end that we're missing so we can fall through to closing the connection
                 fallthrough
             case .quiescingLastRequestEndReceived:
+                let loopBoundContext = context.loopBound
                 self.lifecycleState = .quiescingCompleted
                 context.write(data).flatMap {
-                    context.close()
+                    let context = loopBoundContext.value
+                    return context.close()
                 }.cascade(to: promise)
             case .acceptingEvents, .quiescingWaitingForRequestEnd:
                 context.write(data, promise: promise)

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -52,7 +52,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testNIOFileRegionConversion() {
-        let handle = NIOFileHandle(descriptor: -1)
+        let handle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
         let expected = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
             // fake descriptor, so shouldn't be closed.
@@ -74,7 +74,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testBadConversions() {
-        let handle = NIOFileHandle(descriptor: -1)
+        let handle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
         let bb = ByteBufferAllocator().buffer(capacity: 1024)
         let fr = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
@@ -95,7 +95,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testFileRegionFromIOData() {
-        let handle = NIOFileHandle(descriptor: -1)
+        let handle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
         let expected = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
             // fake descriptor, so shouldn't be closed.
@@ -106,7 +106,7 @@ class BaseObjectTest: XCTestCase {
     }
 
     func testIODataEquals() {
-        let handle = NIOFileHandle(descriptor: -1)
+        let handle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
         var bb1 = ByteBufferAllocator().buffer(capacity: 1024)
         let bb2 = ByteBufferAllocator().buffer(capacity: 1024)
         bb1.writeString("hello")

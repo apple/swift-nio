@@ -24,7 +24,7 @@ enum Linux {
     static let cfsCpuMaxPath = "/sys/fs/cgroup/cpu.max"
 
     private static func firstLineOfFile(path: String) throws -> Substring {
-        let fh = try NIOFileHandle(path: path)
+        let fh = try NIOFileHandle(_deprecatedPath: path)
         defer { try! fh.close() }
         // linux doesn't properly report /sys/fs/cgroup/* files lengths so we use a reasonable limit
         var buf = ByteBufferAllocator().buffer(capacity: 1024)
