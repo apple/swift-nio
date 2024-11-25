@@ -47,7 +47,7 @@ public struct CopyStrategy: Hashable, Sendable {
     // This may not result in a faster copy though so things are left simple
     internal static func determinePlatformDefault() -> Wrapped {
         #if os(macOS) || os(Linux) || os(Windows)
-        // 4 concurrent file copies/directory scans. Avoiding storage system contention is of upmost
+        // 4 concurrent file copies/directory scans. Avoiding storage system contention is of utmost
         // importance.
         //
         // Testing was performed on an SSD, while copying objects (a dense directory of small files
