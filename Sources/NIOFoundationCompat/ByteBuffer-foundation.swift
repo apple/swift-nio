@@ -377,15 +377,9 @@ extension ByteBufferAllocator {
 }
 
 // MARK: - Conformances
-#if compiler(>=6.0)
-extension ByteBufferView: @retroactive ContiguousBytes {}
-extension ByteBufferView: @retroactive DataProtocol {}
-extension ByteBufferView: @retroactive MutableDataProtocol {}
-#else
 extension ByteBufferView: ContiguousBytes {}
 extension ByteBufferView: DataProtocol {}
 extension ByteBufferView: MutableDataProtocol {}
-#endif
 
 extension ByteBufferView {
     public typealias Regions = CollectionOfOne<ByteBufferView>
