@@ -232,7 +232,7 @@ class EmbeddedChannelTest: XCTestCase {
 
         let buffer = channel.allocator.buffer(capacity: 0)
         let ioData = IOData.byteBuffer(buffer)
-        let fileHandle = NIOFileHandle(descriptor: -1)
+        let fileHandle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: -1)
         let fileRegion = FileRegion(fileHandle: fileHandle, readerIndex: 0, endIndex: 0)
         defer {
             XCTAssertNoThrow(_ = try fileHandle.takeDescriptorOwnership())
@@ -387,7 +387,7 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel()
         let buffer = ByteBufferAllocator().buffer(capacity: 5)
         let socketAddress = try SocketAddress(unixDomainSocketPath: "path")
-        let handle = NIOFileHandle(descriptor: 1)
+        let handle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: 1)
         let fileRegion = FileRegion(fileHandle: handle, readerIndex: 1, endIndex: 2)
         defer {
             // fake descriptor, so shouldn't be closed.

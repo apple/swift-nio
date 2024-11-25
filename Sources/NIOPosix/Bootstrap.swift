@@ -2418,8 +2418,8 @@ extension NIOPipeBootstrap {
         let channelOptions = self._channelOptions
 
         let channel: PipeChannel
-        let inputFileHandle: NIOFileHandle?
-        let outputFileHandle: NIOFileHandle?
+        let pipeChannelInput: SelectablePipeHandle?
+        let pipeChannelOutput: SelectablePipeHandle?
         do {
             if let input = input {
                 try self.validateFileDescriptorIsNotAFile(input)
@@ -2428,18 +2428,18 @@ extension NIOPipeBootstrap {
                 try self.validateFileDescriptorIsNotAFile(output)
             }
 
-            inputFileHandle = input.flatMap { NIOFileHandle(descriptor: $0) }
-            outputFileHandle = output.flatMap { NIOFileHandle(descriptor: $0) }
+            pipeChannelInput = input.flatMap { SelectablePipeHandle(takingOwnershipOfDescriptor: $0) }
+            pipeChannelOutput = output.flatMap { SelectablePipeHandle(takingOwnershipOfDescriptor: $0) }
             do {
                 channel = try self.hooks.makePipeChannel(
                     eventLoop: eventLoop as! SelectableEventLoop,
-                    inputPipe: inputFileHandle,
-                    outputPipe: outputFileHandle
+                    input: pipeChannelInput,
+                    output: pipeChannelOutput
                 )
             } catch {
                 // Release file handles back to the caller in case of failure.
-                _ = try? inputFileHandle?.takeDescriptorOwnership()
-                _ = try? outputFileHandle?.takeDescriptorOwnership()
+                _ = try? pipeChannelInput?.takeDescriptorOwnership()
+                _ = try? pipeChannelOutput?.takeDescriptorOwnership()
                 throw error
             }
         } catch {
@@ -2458,10 +2458,10 @@ extension NIOPipeBootstrap {
                 channel.registerAlreadyConfigured0(promise: promise)
                 return promise.futureResult.map { result }
             }.flatMap { result -> EventLoopFuture<ChannelInitializerResult> in
-                if inputFileHandle == nil {
+                if pipeChannelInput == nil {
                     return channel.close(mode: .input).map { result }
                 }
-                if outputFileHandle == nil {
+                if pipeChannelOutput == nil {
                     return channel.close(mode: .output).map { result }
                 }
                 return channel.selectableEventLoop.makeSucceededFuture(result)
@@ -2487,17 +2487,17 @@ extension NIOPipeBootstrap: Sendable {}
 protocol NIOPipeBootstrapHooks {
     func makePipeChannel(
         eventLoop: SelectableEventLoop,
-        inputPipe: NIOFileHandle?,
-        outputPipe: NIOFileHandle?
+        input: SelectablePipeHandle?,
+        output: SelectablePipeHandle?
     ) throws -> PipeChannel
 }
 
 private struct DefaultNIOPipeBootstrapHooks: NIOPipeBootstrapHooks {
     func makePipeChannel(
         eventLoop: SelectableEventLoop,
-        inputPipe: NIOFileHandle?,
-        outputPipe: NIOFileHandle?
+        input: SelectablePipeHandle?,
+        output: SelectablePipeHandle?
     ) throws -> PipeChannel {
-        try PipeChannel(eventLoop: eventLoop, inputPipe: inputPipe, outputPipe: outputPipe)
+        try PipeChannel(eventLoop: eventLoop, input: input, output: output)
     }
 }
