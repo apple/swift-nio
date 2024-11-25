@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2019-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2019-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -325,19 +325,22 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         // Once that's done, we call the internal handler, then call the upgrader code, and then finally when the
         // upgrader code is done, we do our final cleanup steps, namely we replay the received data we
         // buffered in the meantime and then remove ourselves from the pipeline.
-        {
+        let pipeline = context.pipeline
+        let loopBoundContext = context.loopBound
+        return {
             self.upgradeState = .upgrading
 
-            self.removeHTTPHandlers(context: context)
+            self.removeHTTPHandlers(pipeline: pipeline)
                 .map {
                     // Let the other handlers be removed before continuing with upgrade.
-                    self.upgradeCompletionHandler(context)
+                    self.upgradeCompletionHandler(loopBoundContext.value)
                     self.upgradeState = .upgradingAddingHandlers
                 }
                 .flatMap {
-                    upgrader.upgrade(context: context, upgradeResponse: response)
+                    upgrader.upgrade(context: loopBoundContext.value, upgradeResponse: response)
                 }
                 .map {
+                    let context = loopBoundContext.value
                     // We unbuffer any buffered data here.
 
                     // If we received any, we fire readComplete.
@@ -356,19 +359,20 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
                     self.upgradeState = .upgradeComplete
                 }
                 .whenComplete { _ in
+                    let context = loopBoundContext.value
                     context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
                 }
         }
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
-    private func removeHTTPHandlers(context: ChannelHandlerContext) -> EventLoopFuture<Void> {
+    private func removeHTTPHandlers(pipeline: ChannelPipeline) -> EventLoopFuture<Void> {
         guard self.httpHandlers.count > 0 else {
-            return context.eventLoop.makeSucceededFuture(())
+            return pipeline.eventLoop.makeSucceededFuture(())
         }
 
-        let removeFutures = self.httpHandlers.map { context.pipeline.removeHandler($0) }
-        return .andAllSucceed(removeFutures, on: context.eventLoop)
+        let removeFutures = self.httpHandlers.map { pipeline.removeHandler($0) }
+        return .andAllSucceed(removeFutures, on: pipeline.eventLoop)
     }
 
     private func gotUpgrader(upgrader: @escaping (() -> Void)) {

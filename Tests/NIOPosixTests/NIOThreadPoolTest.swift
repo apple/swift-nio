@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2020-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2020-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -79,15 +79,17 @@ class NIOThreadPoolTest: XCTestCase {
         // The lock here is arguably redundant with the dispatchgroup, but let's make
         // this test thread-safe even if I screw up.
         let lock = NIOLock()
-        var threadOne = Thread?.none
-        var threadTwo = Thread?.none
+        let threadOne: NIOLockedValueBox<Thread?> = NIOLockedValueBox(Thread?.none)
+        let threadTwo: NIOLockedValueBox<Thread?> = NIOLockedValueBox(Thread?.none)
 
         completionGroup.enter()
         pool.submit { s in
             precondition(s == .active)
             lock.withLock { () -> Void in
-                XCTAssertEqual(threadOne, nil)
-                threadOne = Thread.current
+                threadOne.withLockedValue { threadOne in
+                    XCTAssertEqual(threadOne, nil)
+                    threadOne = Thread.current
+                }
             }
             completionGroup.leave()
         }
@@ -98,8 +100,10 @@ class NIOThreadPoolTest: XCTestCase {
         pool.submit { s in
             precondition(s == .active)
             lock.withLock { () -> Void in
-                XCTAssertEqual(threadTwo, nil)
-                threadTwo = Thread.current
+                threadTwo.withLockedValue { threadTwo in
+                    XCTAssertEqual(threadTwo, nil)
+                    threadTwo = Thread.current
+                }
             }
             completionGroup.leave()
         }
@@ -109,7 +113,7 @@ class NIOThreadPoolTest: XCTestCase {
         lock.withLock { () -> Void in
             XCTAssertNotNil(threadOne)
             XCTAssertNotNil(threadTwo)
-            XCTAssertEqual(threadOne, threadTwo)
+            XCTAssertEqual(threadOne.withLockedValue { $0 }, threadTwo.withLockedValue { $0 })
         }
     }
 

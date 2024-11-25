@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2023-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -125,10 +125,12 @@ public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResu
 
     private func invokeUserClosure(context: ChannelHandlerContext, result: ALPNResult) {
         let switchFuture = self.completionHandler(result, context.channel)
+        let loopBoundSelfAndContext = NIOLoopBound((self, context), eventLoop: context.eventLoop)
 
         switchFuture
             .hop(to: context.eventLoop)
             .whenComplete { result in
+                let (`self`, context) = loopBoundSelfAndContext.value
                 self.userFutureCompleted(context: context, result: result)
             }
     }

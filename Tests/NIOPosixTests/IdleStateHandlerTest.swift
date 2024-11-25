@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -37,7 +37,7 @@ class IdleStateHandlerTest: XCTestCase {
     }
 
     private func testIdle(
-        _ handler: IdleStateHandler,
+        _ handler: @escaping @Sendable @autoclosure () -> IdleStateHandler,
         _ writeToChannel: Bool,
         _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool
     ) throws {
@@ -86,6 +86,7 @@ class IdleStateHandlerTest: XCTestCase {
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
                     channel.eventLoop.makeCompletedFuture {
+                        let handler = handler()
                         try channel.pipeline.syncOperations.addHandler(handler)
                         try channel.pipeline.syncOperations.addHandler(TestWriteHandler(writeToChannel, assertEventFn))
                     }

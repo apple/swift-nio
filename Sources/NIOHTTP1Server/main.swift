@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -207,7 +207,7 @@ private final class HTTPHandler: ChannelInboundHandler {
             ()
         case .end:
             self.state.requestComplete()
-            let loopBoundContext = NIOLoopBound(context, eventLoop: context.eventLoop)
+            let loopBoundContext = context.loopBound
             let loopBoundSelf = NIOLoopBound(self, eventLoop: context.eventLoop)
             context.eventLoop.scheduleTask(in: delay) { () -> Void in
                 let `self` = loopBoundSelf.value
@@ -501,7 +501,7 @@ private final class HTTPHandler: ChannelInboundHandler {
         promise: EventLoopPromise<Void>?
     ) {
         self.state.responseComplete()
-        let loopBoundContext = NIOLoopBound(context, eventLoop: context.eventLoop)
+        let loopBoundContext = context.loopBound
 
         let promise = self.keepAlive ? promise : (promise ?? context.eventLoop.makePromise())
         if !self.keepAlive {

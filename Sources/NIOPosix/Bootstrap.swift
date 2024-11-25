@@ -431,6 +431,7 @@ public final class ServerBootstrap {
 
     final class AcceptHandler: ChannelInboundHandler {
         public typealias InboundIn = SocketChannel
+        public typealias InboundOut = SocketChannel
 
         private let childChannelInit: ((Channel) -> EventLoopFuture<Void>)?
         private let childChannelOptions: ChannelOptions.Storage
@@ -445,7 +446,9 @@ public final class ServerBootstrap {
 
         func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
             if event is ChannelShouldQuiesceEvent {
+                let loopBoundContext = context.loopBound
                 context.channel.close().whenFailure { error in
+                    let context = loopBoundContext.value
                     context.fireErrorCaught(error)
                 }
             }
@@ -467,28 +470,33 @@ public final class ServerBootstrap {
             }
 
             @inline(__always)
-            func fireThroughPipeline(_ future: EventLoopFuture<Void>) {
+            func fireThroughPipeline(_ future: EventLoopFuture<Void>, context: ChannelHandlerContext) {
                 ctxEventLoop.assertInEventLoop()
+                assert(ctxEventLoop === context.eventLoop)
+                let loopBoundContext = context.loopBound
                 future.flatMap { (_) -> EventLoopFuture<Void> in
+                    let context = loopBoundContext.value
                     ctxEventLoop.assertInEventLoop()
                     guard context.channel.isActive else {
-                        return context.eventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
+                        return ctxEventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
                     }
-                    context.fireChannelRead(data)
+                    context.fireChannelRead(Self.wrapInboundOut(accepted))
                     return context.eventLoop.makeSucceededFuture(())
                 }.whenFailure { error in
+                    let context = loopBoundContext.value
                     ctxEventLoop.assertInEventLoop()
                     self.closeAndFire(context: context, accepted: accepted, err: error)
                 }
             }
 
             if childEventLoop === ctxEventLoop {
-                fireThroughPipeline(setupChildChannel())
+                fireThroughPipeline(setupChildChannel(), context: context)
             } else {
                 fireThroughPipeline(
                     childEventLoop.flatSubmit {
                         setupChildChannel()
-                    }.hop(to: ctxEventLoop)
+                    }.hop(to: ctxEventLoop),
+                    context: context
                 )
             }
         }
@@ -498,7 +506,9 @@ public final class ServerBootstrap {
             if context.eventLoop.inEventLoop {
                 context.fireErrorCaught(err)
             } else {
+                let loopBoundContext = context.loopBound
                 context.eventLoop.execute {
+                    let context = loopBoundContext.value
                     context.fireErrorCaught(err)
                 }
             }
@@ -998,7 +1008,8 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         let connectPromise = channel.eventLoop.makePromise(of: Void.self)
         channel.connect(to: address, promise: connectPromise)
         let cancelTask = channel.eventLoop.scheduleTask(in: self.connectTimeout) {
-            connectPromise.fail(ChannelError.connectTimeout(self.connectTimeout))
+            [connectTimeout = self.connectTimeout] in
+            connectPromise.fail(ChannelError.connectTimeout(connectTimeout))
             channel.close(promise: nil)
         }
 
@@ -1147,8 +1158,8 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         @inline(__always)
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
-            return channelOptions.applyAllChannelOptions(to: channel).flatMap {
-                if let bindTarget = self.bindTarget {
+            return channelOptions.applyAllChannelOptions(to: channel).flatMap { [bindTarget = self.bindTarget] in
+                if let bindTarget = bindTarget {
                     return channel.bind(to: bindTarget).flatMap {
                         channelInitializer(channel)
                     }

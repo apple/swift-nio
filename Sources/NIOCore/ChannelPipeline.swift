@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -2130,6 +2130,23 @@ extension ChannelHandlerContext {
         let promise = self.eventLoop.makePromise(of: Void.self, file: file, line: line)
         self.writeAndFlush(data, promise: promise)
         return promise.futureResult
+    }
+
+    /// Returns this `ChannelHandlerContext` as a `NIOLoopBound`, bound to `self.eventLoop`.
+    ///
+    /// This is a shorthand for `NIOLoopBound(self, eventLoop: self.eventLoop)`.
+    ///
+    /// Being able to capture `ChannelHandlerContext`s in `EventLoopFuture` callbacks is important in SwiftNIO programs.
+    /// Of course, this is not always safe because the `EventLoopFuture` callbacks may run on other threads. SwiftNIO
+    /// programmers therefore always had to manually arrange for those callbacks to run on the correct `EventLoop`
+    /// (i.e. `context.eventLoop`) which then made that construction safe.
+    ///
+    /// Newer Swift versions contain a static feature to automatically detect data races which of course can't detect
+    /// the only _dynamically_ ``EventLoop`` a ``EventLoopFuture`` callback is running on. ``NIOLoopBound`` can be used
+    /// to prove to the compiler that this is safe and in case it is not, ``NIOLoopBound`` will trap at runtime. This is
+    /// therefore dynamically enforce the correct behaviour.
+    public var loopBound: NIOLoopBound<ChannelHandlerContext> {
+        NIOLoopBound(self, eventLoop: self.eventLoop)
     }
 }
 
