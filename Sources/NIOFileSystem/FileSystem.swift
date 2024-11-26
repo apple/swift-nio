@@ -32,12 +32,11 @@ import Bionic
 ///
 /// ### Creating a `FileSystem`
 ///
-/// You should prefer using the `shared` instance of the file system. The
-/// `shared` instance uses two threads unless the `SWIFT_FILE_SYSTEM_THREAD_COUNT`
-/// environment variable is set.
+/// You should prefer using the `shared` instance of the file system. The `shared` instance uses two
+/// threads unless the `SWIFT_FILE_SYSTEM_THREAD_COUNT` environment variable is set.
 ///
-/// If you require more granular control you can create a ``FileSystem`` with the required number
-/// of threads by calling ``withFileSystem(numberOfThreads:_:)`` or by using ``init(threadPool:)``.
+/// If you require more granular control you can create a ``FileSystem`` with the required number of
+/// threads by calling ``withFileSystem(numberOfThreads:_:)`` or by using ``init(threadPool:)``.
 ///
 /// ### Errors
 ///
@@ -54,8 +53,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
     /// The file system executes blocking work in a thread pool which defaults to having two
-    /// threads. This can be modified by `blockingPoolThreadCountSuggestion` or by
-    /// setting the `NIO_SINGLETON_BLOCKING_POOL_THREAD_COUNT` environment variable.
+    /// threads. This can be modified by `blockingPoolThreadCountSuggestion` or by setting the
+    /// `NIO_SINGLETON_BLOCKING_POOL_THREAD_COUNT` environment variable.
     public static var shared: FileSystem { globalFileSystem }
 
     private let threadPool: NIOThreadPool
@@ -70,8 +69,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// Creates a new ``FileSystem`` using the provided thread pool.
     ///
     /// - Parameter threadPool: A started thread pool to execute blocking system calls on. The
-    ///     ``FileSystem`` doesn't take ownership of the thread pool and you remain responsible
-    ///     for shutting it down when necessary.
+    ///     ``FileSystem`` doesn't take ownership of the thread pool and you remain responsible for
+    ///     shutting it down when necessary.
     public init(threadPool: NIOThreadPool) {
         self.init(threadPool: threadPool, ownsThreadPool: false)
     }
@@ -217,8 +216,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// Error codes thrown include:
     /// - ``FileSystemError/Code-swift.struct/fileAlreadyExists`` if a file or directory already
     ///   exists .
-    /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if a component in the `path`
-    ///   prefix does not exist and `createIntermediateDirectories` is `false`.
+    /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if a component in the `path` prefix
+    ///   does not exist and `createIntermediateDirectories` is `false`.
     ///
     /// #### Implementation details
     ///
@@ -248,10 +247,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// #### Errors
     ///
     /// Error codes thrown include:
-    /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if the template doesn't end
-    ///   in at least 3 'X's.
-    /// - ``FileSystemError/Code-swift.struct/permissionDenied`` if the user doesn't have
-    ///  permission to create a directory at the path specified in the template.
+    /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if the template doesn't end in at
+    ///   least 3 'X's.
+    /// - ``FileSystemError/Code-swift.struct/permissionDenied`` if the user doesn't have permission
+    ///  to create a directory at the path specified in the template.
     ///
     /// #### Implementation details
     ///
@@ -277,9 +276,9 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// - Parameters:
     ///    - path: The path of the file.
-    ///    - infoAboutSymbolicLink: If the file is a symbolic link and this parameter is `true` then information
-    ///        about the link will be returned, otherwise information about the destination of the
-    ///        symbolic link is returned.
+    ///    - infoAboutSymbolicLink: If the file is a symbolic link and this parameter is `true`,
+    ///        then information about the link will be returned. Otherwise, information about the
+    ///        destination of the symbolic link is returned.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
     public func info(
         forFileAt path: FilePath,
@@ -299,18 +298,18 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// - symbolic link, or
     /// - directory.
     ///
-    /// But `shouldCopyItem` can be used to ignore things outside this supported set.
+    /// `shouldCopyItem` can be used to ignore objects not part of this set.
     ///
     /// #### Errors
     ///
     /// In addition to the already documented errors these may be thrown
-    /// - ``FileSystemError/Code-swift.struct/unsupported`` if an item to be copied is not a
-    ///   regular file, symbolic link or directory.
+    /// - ``FileSystemError/Code-swift.struct/unsupported`` if an item to be copied is not a regular
+    ///   file, symbolic link or directory.
     ///
     /// #### Implementation details
     ///
-    /// This function is platform dependent. On Darwin the `copyfile(2)` system call is
-    /// used and items are cloned where possible. On Linux the `sendfile(2)` system call is used.
+    /// This function is platform dependent. On Darwin the `copyfile(2)` system call is used and
+    /// items are cloned where possible. On Linux the `sendfile(2)` system call is used.
     public func copyItem(
         at sourcePath: FilePath,
         to destinationPath: FilePath,
@@ -334,8 +333,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
             )
         }
 
-        // By doing this before looking at the type we allow callers to decide whether
-        // unanticipated kinds of entries can be safely ignored without needing changes upstream
+        // By doing this before looking at the type, we allow callers to decide whether
+        // unanticipated kinds of entries can be safely ignored without needing changes upstream.
         if await shouldCopyItem(.init(path: sourcePath, type: info.type)!, destinationPath) {
             switch info.type {
             case .regular:
@@ -400,7 +399,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
         switch result {
         case .success:
-            // Great; we removed 1 whole item.
+            // Great; we removed an entire item.
             return 1
 
         case .failure(.noSuchFileOrDirectory):
@@ -413,8 +412,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                     code: .notEmpty,
                     message: """
                         Can't remove directory at path '\(path)', it isn't empty and \
-                        'removeItemRecursively' is false. Remove items from the directory first \
-                        or set 'removeItemRecursively' to true when calling \
+                        'removeItemRecursively' is false. Remove items from the directory first or \
+                        set 'removeItemRecursively' to true when calling \
                         'removeItem(at:recursively:)'.
                         """,
                     cause: nil,
@@ -674,8 +673,8 @@ private let globalFileSystem: FileSystem = {
 extension NIOSingletons {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
-    /// The file system executes blocking work in a thread pool see `blockingPoolThreadCountSuggestion`
-    /// for the default behaviour and ways to control it.
+    /// The file system executes blocking work in a thread pool. See
+    /// `blockingPoolThreadCountSuggestion` for the default behaviour and ways to control it.
     public static var fileSystem: FileSystem { globalFileSystem }
 }
 
@@ -737,7 +736,8 @@ extension FileSystem {
         }
     }
 
-    /// Opens `path` for reading and writing and returns ``ReadWriteFileHandle`` or ``FileSystemError``.
+    /// Opens `path` for reading and writing and returns ``ReadWriteFileHandle`` or
+    /// ``FileSystemError``.
     private func _openFile(
         forReadingAndWritingAt path: FilePath,
         options: OpenOptions.Write
@@ -777,15 +777,16 @@ extension FileSystem {
         withIntermediateDirectories createIntermediateDirectories: Bool,
         permissions: FilePermissions
     ) -> Result<Void, FileSystemError> {
-        // Logic, assuming we are creating intermediate directories: try creating the directory,
-        // if it fails with ENOENT (no such file or directory) then drop the last component and
-        // append it to a buffer. Repeat until the path is empty meaning we cannot create the
-        // directory, or we succeed in which case we can append build up our original path
-        // creating directories one at a time.
+        // We assume that we will be creating intermediate directories:
+        // - Try creating the directory. If it fails with ENOENT (no such file or directory), then
+        //   drop the last component and append it to a buffer.
+        // - Repeat until the path is empty. This means we cannot create the directory or we
+        //   succeed, in which case we can build up our original path and create directories one at
+        //   a time.
         var droppedComponents: [FilePath.Component] = []
         var path = fullPath
 
-        // Normalize the path to remove any '..' which may not be necessary.
+        // Normalize the path to remove any superflous '..'.
         path.lexicallyNormalize()
 
         if path.isEmpty {
@@ -857,28 +858,24 @@ extension FileSystem {
         }
     }
 
-    /// Represents an item in a directory that needs copying, or
-    /// an explicit indication of the end of items.
-    /// The provision of the ``endOfDir`` case significantly simplifies the parallel code
+    /// Represents an item in a directory that needs copying, or an explicit indication of the end
+    /// of items. The provision of the ``endOfDir`` case significantly simplifies the parallel code
     enum DirCopyItem: Hashable, Sendable {
         case endOfDir
         case toCopy(from: DirectoryEntry, to: FilePath)
     }
 
-    /// Creates the directory ``destinationPath`` based on the directory at ``sourcePath``
-    /// including any permissions/attributes.
-    /// It does not copy the contents but does indicate the items directly within ``sourcePath`` which
-    /// should be copied
+    /// Creates the directory ``destinationPath`` based on the directory at ``sourcePath`` including
+    /// any permissions/attributes. It does not copy the contents but indicates the items within
+    /// ``sourcePath`` which should be copied.
     ///
-    /// This is a little cumbersome because it is used by ``copyDirectorySequential`` and
-    /// ``copyDirectoryParallel``.
-    /// It is desirable to use the file descriptor for the directory itself for as little time as possible
-    /// (certainly not across async invocations).
-    /// The down stream paths in the parallel and sequential paths are very different
-    /// - Returns:
-    ///     An array of `DirCopyItem` which have passed the ``shouldCopyItem```filter
-    ///     The target file paths will all be in ``destinationPath``
-    ///     The array will always finish with an ``DirCopyItem.endOfDir``
+    /// This is a little cumbersome, because it is used by ``copyDirectorySequential`` and
+    /// ``copyDirectoryParallel``. It is desirable to use the directories' file descriptor for as
+    /// little time as possible, and certainly not across asynchronous invocations. The downstream
+    /// paths in the parallel and sequential paths are very different
+    /// - Returns: An array of `DirCopyItem` which have passed the ``shouldCopyItem``` filter. The
+    ///     target file paths will all be in ``destinationPath``. The array will always finish with
+    ///     an ``DirCopyItem.endOfDir``.
     private func prepareDirectoryForRecusiveCopy(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
@@ -917,26 +914,24 @@ extension FileSystem {
                     }
                 }
             } catch let error as FileSystemError where error.code == .unsupported {
-                // Not all file systems support extended attributes. Swallow errors which indicate
-                // that is the case.
+                // Not all file systems support extended attributes. Swallow errors indicating this.
                 ()
             }
             #endif
-            // Build a list of items the caller needs to deal with,
-            // they then do any further work after closing the current directory
+            // Build a list of items the caller needs to deal with, then do any further work after
+            // closing the current directory.
             var contentsToCopy = [DirCopyItem]()
 
             for try await batch in dir.listContents().batched() {
                 for entry in batch {
-                    // Any further work is pointless, we are under no obligation to cleanup
-                    // so exit as fast and cleanly as possible.
+                    // Any further work is pointless. We are under no obligation to cleanup. Exit as
+                    // fast and cleanly as possible.
                     try Task.checkCancellation()
                     let entryDestination = destinationPath.appending(entry.name)
 
                     if await shouldCopyItem(entry, entryDestination) {
-                        // Assume there's a good chance of everything in the batch
-                        // being included in the common case.
-                        // Let geometric growth go from this point though.
+                        // Assume there's a good chance of everything in the batch being included in
+                        // the common case. Let geometric growth go from this point though.
                         if contentsToCopy.isEmpty {
                             // Reserve space for the endOfDir entry too.
                             contentsToCopy.reserveCapacity(batch.count + 1)
@@ -967,8 +962,8 @@ extension FileSystem {
         }
     }
 
-    /// This could be achieved through quite complicated special casing of the parallel copy.
-    /// The resulting code is far harder to read and debug though so this is kept as a special case
+    /// This could be achieved through quite complicated special casing of the parallel copy. The
+    /// resulting code is far harder to read and debug, so this is kept as a special case.
     private func copyDirectorySequential(
         from sourcePath: FilePath,
         to destinationPath: FilePath,
@@ -981,9 +976,9 @@ extension FileSystem {
             _ destination: FilePath
         ) async -> Bool
     ) async throws {
-        // Strategy: find all needed items to copy/recurse into while the directory is open;
-        // defer actual copying and recursion until after the source directory has been closed
-        // to avoid consuming too many file descriptors.
+        // Strategy: find all needed items to copy/recurse into while the directory is open; defer
+        // actual copying and recursion until after the source directory has been closed to avoid
+        // consuming too many file descriptors.
         let toCopy = try await self.prepareDirectoryForRecusiveCopy(
             from: sourcePath,
             to: destinationPath,
@@ -997,9 +992,9 @@ extension FileSystem {
                 // Sequential cases doesn't need to worry about this, it uses simple recursion.
                 continue
             case let .toCopy(source, destination):
-                // Note: The entry type could have changed between finding it and acting on it.
-                // This is inherent in file systems, just more likely in an async environment
-                // we just accept those coming through as regular errors.
+                // Note: The entry type could have changed between finding it and acting on it. This
+                // is inherent in file systems, just more likely in an asynchronous environment. We
+                // just accept those coming through as regular errors.
                 switch source.type {
                 case .regular:
                     do {
@@ -1069,12 +1064,14 @@ extension FileSystem {
                 shouldCopyItem: shouldCopyItem
             )
         case let .parallel(maxDescriptors):
-            // Note that maxDescriptors was validated on construction of CopyStrategy.
-            // See notes on CopyStrategy about assumptions on descriptor use.
-            // For now we take the worst case peak for every operation, which is 2 descriptors,
-            // this keeps the downstream limiting code simple
-            // We do not preclude the use of more granular limiting in future (e.g. a directory
-            // scan only requires 1), for now we just drop any excess remainder entirely.
+            // Note that maxDescriptors was validated on construction of CopyStrategy. See notes on
+            // CopyStrategy about assumptions on descriptor use. For now, we take the worst case
+            // peak for every operation, which is two file descriptors. This keeps the downstream
+            // limiting code simple.
+            //
+            // We do not preclude the use of more granular limiting in the future (e.g. a directory
+            // scan requires only a single file descriptor). For now we just drop any excess
+            // remainder entirely.
             let limitValue = maxDescriptors / 2
             return try await self.copyDirectoryParallel(
                 from: sourcePath,
@@ -1086,9 +1083,9 @@ extension FileSystem {
         }
     }
 
-    /// Building block of the parallel directory copy implementation
-    /// Each invovation of this is allowed to consume two file descriptors,
-    /// any further work (if any) should be sent to `yield` for future processing
+    /// Building block of the parallel directory copy implementation. Each invocation of this is
+    /// allowed to consume two file descriptors. Any further work (if any) should be sent to `yield`
+    /// for future processing.
     func copySelfAndEnqueueChildren(
         from: DirectoryEntry,
         to: FilePath,
@@ -1344,7 +1341,7 @@ extension FileSystem {
         // Check that the destination doesn't exist. 'rename' will remove it otherwise!
         switch self._info(forFileAt: destinationPath, infoAboutSymbolicLink: true) {
         case .success(.none):
-            // Doens't exist: continue
+            // Doesn't exist: continue
             ()
 
         case .success(.some):
@@ -1375,8 +1372,7 @@ extension FileSystem {
             return .success(.moved)
 
         case .failure(.improperLink):
-            // The two paths are on different logical devices; copy and then remove the
-            // original.
+            // The two paths are on different logical devices; copy and then remove the original.
             return .success(.differentLogicalDevices)
 
         case let .failure(errno):
@@ -1410,7 +1406,8 @@ extension FileSystem {
 
         let lastComponent = lastComponentPath.string
 
-        // Finding the index of the last non-'X' character in `lastComponent.string` and advancing it by one.
+        // Finding the index of the last non-'X' character in `lastComponent.string` and advancing
+        // it by one.
         let prefix: String
         var index = lastComponent.lastIndex(where: { $0 != "X" })
         if index != nil {
@@ -1484,7 +1481,8 @@ extension FileSystem {
             case let .failure(error):
                 if let systemCallError = error.cause as? FileSystemError.SystemCallError {
                     switch systemCallError.errno {
-                    // If the file at the generated path already exists, we generate a new file path.
+                    // If the file at the generated path already exists, we generate a new file
+                    // path.
                     case .fileExists, .isDirectory:
                         break
                     default:
