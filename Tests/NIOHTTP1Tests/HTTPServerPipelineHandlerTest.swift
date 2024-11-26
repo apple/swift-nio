@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -912,11 +912,13 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                let loopBoundContext = context.loopBound
                 switch Self.unwrapInboundIn(data) {
                 case .head:
                     // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
                     // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
                     context.eventLoop.execute {
+                        let context = loopBoundContext.value
                         context.writeAndFlush(
                             Self.wrapOutboundOut(
                                 .head(
@@ -937,6 +939,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
                     // We dispatch this to the event loop so that it doesn't happen immediately but rather can be
                     // run from the driving test code whenever it wants by running the EmbeddedEventLoop.
                     context.eventLoop.execute {
+                        let context = loopBoundContext.value
                         context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
                     }
                     XCTAssertEqual(.reqEndExpected, self.state)

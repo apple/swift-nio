@@ -21,7 +21,6 @@ More specialized modules provide concrete implementations of many of the abstrac
 
 - ``EventLoopGroup``
 - ``EventLoop``
-- ``NIOEventLoopGroupProvider``
 - ``EventLoopIterator``
 - ``Scheduled``
 - ``RepeatedTask``

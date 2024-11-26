@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2020-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2020-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -39,7 +39,9 @@ internal struct OutputGrepper {
                 }
             }
             .takingOwnershipOfDescriptor(input: dup(processToChannel.fileHandleForReading.fileDescriptor))
-        let processOutputPipe = NIOFileHandle(descriptor: dup(processToChannel.fileHandleForWriting.fileDescriptor))
+        let processOutputPipe = NIOFileHandle(
+            _deprecatedTakingOwnershipOfDescriptor: dup(processToChannel.fileHandleForWriting.fileDescriptor)
+        )
         processToChannel.fileHandleForReading.closeFile()
         processToChannel.fileHandleForWriting.closeFile()
         channelFuture.cascadeFailure(to: outputPromise)

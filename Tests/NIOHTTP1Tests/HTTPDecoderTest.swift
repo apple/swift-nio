@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -251,8 +251,8 @@ class HTTPDecoderTest: XCTestCase {
                 let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = context.pipeline.removeHandler(self).flatMap { _ in
-                        context.pipeline.addHandler(self.collector)
+                    _ = context.pipeline.removeHandler(self).flatMap { [pipeline = context.pipeline] _ in
+                        pipeline.addHandler(self.collector)
                     }
                 default:
                     // ignore
@@ -324,8 +324,8 @@ class HTTPDecoderTest: XCTestCase {
                 let part = Self.unwrapInboundIn(data)
                 switch part {
                 case .end:
-                    _ = context.pipeline.removeHandler(self).flatMap { _ in
-                        context.pipeline.addHandler(ByteCollector())
+                    _ = context.pipeline.removeHandler(self).flatMap { [pipeline = context.pipeline] _ in
+                        pipeline.addHandler(ByteCollector())
                     }
                     break
                 default:

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2019-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2019-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -118,6 +118,7 @@ private final class WebServerHandler: ChannelDuplexHandler {
     }
 
     func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        let loopBoundContext = context.loopBound
         switch Self.unwrapOutboundIn(data) {
         case .head(var head):
             head.headers.replaceOrAdd(name: "connection", value: "close")
@@ -127,6 +128,7 @@ private final class WebServerHandler: ChannelDuplexHandler {
             context.write(data, promise: promise)
         case .end:
             context.write(data).map {
+                let context = loopBoundContext.value
                 context.close(promise: nil)
             }.cascade(to: promise)
         }
