@@ -19,7 +19,7 @@ log() { printf -- "** %s\n" "$*" >&2; }
 error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
-log "Checking for Cxx interoperability comaptibility..."
+log "Checking for Cxx interoperability compatibility..."
 
 source_dir=$(pwd)
 working_dir=$(mktemp -d)
@@ -30,6 +30,12 @@ package_name=$(swift package dump-package | jq -r '.name')
 
 cd "$working_dir"
 swift package init
+
+{
+  echo "let swiftSettings: [SwiftSetting] = [.interoperabilityMode(.Cxx)]"
+  echo "for target in package.targets { target.swiftSettings = (target.swiftSettings ?? []) + swiftSettings }"
+} >> Package.swift
+
 echo "package.dependencies.append(.package(path: \"$source_dir\"))" >> Package.swift
 
 for product in $library_products; do

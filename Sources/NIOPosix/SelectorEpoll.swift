@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -17,6 +17,7 @@ import NIOCore
 #if !SWIFTNIO_USE_IO_URING
 
 #if os(Linux) || os(Android)
+import CNIOLinux
 
 /// Represents the `epoll` filters/events we might use:
 ///
@@ -79,7 +80,8 @@ extension SelectorEventSet {
         return filter
     }
 
-    fileprivate init(epollEvent: Epoll.epoll_event) {
+    @inlinable
+    internal init(epollEvent: Epoll.epoll_event) {
         var selectorEventSet: SelectorEventSet = ._none
         if epollEvent.events & Epoll.EPOLLIN != 0 {
             selectorEventSet.formUnion(.read)
@@ -165,8 +167,8 @@ extension Selector: _SelectorBackendProtocol {
         assert(self.timerFD == -1, "self.timerFD == \(self.timerFD) in deinitAssertions0, forgot close?")
     }
 
-    func register0<S: Selectable>(
-        selectable: S,
+    func register0(
+        selectableFD: CInt,
         fileDescriptor: CInt,
         interested: SelectorEventSet,
         registrationID: SelectorRegistrationID
@@ -178,8 +180,8 @@ extension Selector: _SelectorBackendProtocol {
         try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_ADD, fd: fileDescriptor, event: &ev)
     }
 
-    func reregister0<S: Selectable>(
-        selectable: S,
+    func reregister0(
+        selectableFD: CInt,
         fileDescriptor: CInt,
         oldInterested: SelectorEventSet,
         newInterested: SelectorEventSet,
@@ -192,8 +194,8 @@ extension Selector: _SelectorBackendProtocol {
         _ = try Epoll.epoll_ctl(epfd: self.selectorFD, op: Epoll.EPOLL_CTL_MOD, fd: fileDescriptor, event: &ev)
     }
 
-    func deregister0<S: Selectable>(
-        selectable: S,
+    func deregister0(
+        selectableFD: CInt,
         fileDescriptor: CInt,
         oldInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
@@ -207,6 +209,7 @@ extension Selector: _SelectorBackendProtocol {
     /// - Parameters:
     ///   - strategy: The `SelectorStrategy` to apply
     ///   - body: The function to execute for each `SelectorEvent` that was produced.
+    @inlinable
     func whenReady0(
         strategy: SelectorStrategy,
         onLoopBegin loopStart: () -> Void,

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2020-2022 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2020-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -31,6 +31,7 @@ protocol _SocketShutdownProtocol {
     var cValue: CInt { get }
 }
 
+@usableFromInline
 internal enum Shutdown: _SocketShutdownProtocol {
     case RD
     case WR
@@ -47,6 +48,7 @@ extension NIOBSDSocket {
 
 extension NIOBSDSocket {
     /// Specifies the type of socket.
+    @usableFromInline
     internal struct SocketType: RawRepresentable {
         public typealias RawValue = CInt
         public var rawValue: RawValue

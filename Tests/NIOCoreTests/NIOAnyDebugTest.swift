@@ -27,7 +27,7 @@ class NIOAnyDebugTest: XCTestCase {
             "ByteBuffer: [627974652062756666657220737472696e67](18 bytes)"
         )
 
-        let fileHandle = NIOFileHandle(descriptor: 1)
+        let fileHandle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: 1)
         defer {
             XCTAssertNoThrow(_ = try fileHandle.takeDescriptorOwnership())
         }

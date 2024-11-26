@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -16,6 +16,10 @@ import NIOConcurrencyHelpers
 import NIOCore
 
 /// ``NonBlockingFileIO`` is a helper that allows you to read files without blocking the calling thread.
+///
+/// - warning: The `NonBlockingFileIO` API is deprecated, do not use going forward. It's not marked as `deprecated` yet such
+///            that users don't get the deprecation warnings affecting their APIs everywhere. For file I/O, please use
+///            the `NIOFileSystem` API.
 ///
 /// It is worth noting that `kqueue`, `epoll` or `poll` returning claiming a file is readable does not mean that the
 /// data is already available in the kernel's memory. In other words, a `read` from a file can still block even if
@@ -553,9 +557,33 @@ public struct NonBlockingFileIO: Sendable {
     ///   - path: The path of the file to be opened for reading.
     ///   - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - Returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
+    @available(
+        *,
+        deprecated,
+        message:
+            "Avoid using NIOFileHandle. The type is difficult to hold correctly, use NIOFileSystem as a replacement API."
+    )
     public func openFile(path: String, eventLoop: EventLoop) -> EventLoopFuture<(NIOFileHandle, FileRegion)> {
+        self.openFile(_deprecatedPath: path, eventLoop: eventLoop)
+    }
+
+    /// Open the file at `path` for reading on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened and a `FileRegion`
+    /// comprising of the whole file. The caller must close the returned `NIOFileHandle` when it's no longer needed.
+    ///
+    /// - Note: The reason this returns the `NIOFileHandle` and the `FileRegion` is that both the opening of a file as well as the querying of its size are blocking.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to be opened for reading.
+    ///   - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - Returns: An `EventLoopFuture` containing the `NIOFileHandle` and the `FileRegion` comprising the whole file.
+    public func openFile(
+        _deprecatedPath path: String,
+        eventLoop: EventLoop
+    ) -> EventLoopFuture<(NIOFileHandle, FileRegion)> {
         self.threadPool.runIfActive(eventLoop: eventLoop) {
-            let fh = try NIOFileHandle(path: path)
+            let fh = try NIOFileHandle(_deprecatedPath: path)
             do {
                 let fr = try FileRegion(fileHandle: fh)
                 return (fh, fr)
@@ -577,14 +605,40 @@ public struct NonBlockingFileIO: Sendable {
     ///   - flags: Additional POSIX flags.
     ///   - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
     /// - Returns: An `EventLoopFuture` containing the `NIOFileHandle`.
+    @available(
+        *,
+        deprecated,
+        message:
+            "Avoid using NonBlockingFileIO. The type is difficult to hold correctly, use NIOFileSystem as a replacement API."
+    )
     public func openFile(
         path: String,
         mode: NIOFileHandle.Mode,
         flags: NIOFileHandle.Flags = .default,
         eventLoop: EventLoop
     ) -> EventLoopFuture<NIOFileHandle> {
+        self.openFile(_deprecatedPath: path, mode: mode, flags: flags, eventLoop: eventLoop)
+    }
+
+    /// Open the file at `path` with specified access mode and POSIX flags on a private thread pool which is separate from any `EventLoop` thread.
+    ///
+    /// This function will return (a future) of the `NIOFileHandle` associated with the file opened.
+    /// The caller must close the returned `NIOFileHandle` when it's no longer needed.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to be opened for writing.
+    ///   - mode: File access mode.
+    ///   - flags: Additional POSIX flags.
+    ///   - eventLoop: The `EventLoop` on which the returned `EventLoopFuture` will fire.
+    /// - Returns: An `EventLoopFuture` containing the `NIOFileHandle`.
+    public func openFile(
+        _deprecatedPath path: String,
+        mode: NIOFileHandle.Mode,
+        flags: NIOFileHandle.Flags = .default,
+        eventLoop: EventLoop
+    ) -> EventLoopFuture<NIOFileHandle> {
         self.threadPool.runIfActive(eventLoop: eventLoop) {
-            try NIOFileHandle(path: path, mode: mode, flags: flags)
+            try NIOFileHandle(_deprecatedPath: path, mode: mode, flags: flags)
         }
     }
 
@@ -1009,16 +1063,29 @@ extension NonBlockingFileIO {
     ///   - path: The path of the file to be opened for reading.
     ///   - body: operation to run with file handle and region
     /// - Returns: return value of operation
+    @available(
+        *,
+        deprecated,
+        message:
+            "Avoid using NonBlockingFileIO. The API is difficult to hold correctly, use NIOFileSystem as a replacement API."
+    )
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func withFileRegion<Result>(
         path: String,
         _ body: (_ fileRegion: FileRegion) async throws -> Result
     ) async throws -> Result {
+        try await self.withFileRegion(_deprecatedPath: path, body)
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    public func withFileRegion<Result>(
+        _deprecatedPath path: String,
+        _ body: (_ fileRegion: FileRegion) async throws -> Result
+    ) async throws -> Result {
         let fileRegion = try await self.threadPool.runIfActive {
-            let fh = try NIOFileHandle(path: path)
+            let fh = try NIOFileHandle(_deprecatedPath: path)
             do {
-                let fr = try FileRegion(fileHandle: fh)
-                return UnsafeTransfer(fr)
+                return try FileRegion(fileHandle: fh)
             } catch {
                 _ = try? fh.close()
                 throw error
@@ -1026,12 +1093,12 @@ extension NonBlockingFileIO {
         }
         let result: Result
         do {
-            result = try await body(fileRegion.wrappedValue)
+            result = try await body(fileRegion)
         } catch {
-            try fileRegion.wrappedValue.fileHandle.close()
+            try fileRegion.fileHandle.close()
             throw error
         }
-        try fileRegion.wrappedValue.fileHandle.close()
+        try fileRegion.fileHandle.close()
         return result
     }
 
@@ -1045,6 +1112,12 @@ extension NonBlockingFileIO {
     ///   - flags: Additional POSIX flags.
     ///   - body: operation to run with the file handle
     /// - Returns: return value of operation
+    @available(
+        *,
+        deprecated,
+        message:
+            "Avoid using NonBlockingFileIO. The API is difficult to hold correctly, use NIOFileSystem as a replacement API."
+    )
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func withFileHandle<Result>(
         path: String,
@@ -1052,17 +1125,27 @@ extension NonBlockingFileIO {
         flags: NIOFileHandle.Flags = .default,
         _ body: (NIOFileHandle) async throws -> Result
     ) async throws -> Result {
+        try await self.withFileHandle(_deprecatedPath: path, mode: mode, flags: flags, body)
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    public func withFileHandle<Result>(
+        _deprecatedPath path: String,
+        mode: NIOFileHandle.Mode,
+        flags: NIOFileHandle.Flags = .default,
+        _ body: (NIOFileHandle) async throws -> Result
+    ) async throws -> Result {
         let fileHandle = try await self.threadPool.runIfActive {
-            try UnsafeTransfer(NIOFileHandle(path: path, mode: mode, flags: flags))
+            try NIOFileHandle(_deprecatedPath: path, mode: mode, flags: flags)
         }
         let result: Result
         do {
-            result = try await body(fileHandle.wrappedValue)
+            result = try await body(fileHandle)
         } catch {
-            try fileHandle.wrappedValue.close()
+            try fileHandle.close()
             throw error
         }
-        try fileHandle.wrappedValue.close()
+        try fileHandle.close()
         return result
     }
 

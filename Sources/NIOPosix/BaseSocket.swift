@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -22,6 +22,7 @@ import let WinSDK.EBADF
 import struct WinSDK.socklen_t
 #endif
 
+@usableFromInline
 protocol Registration {
     /// The `SelectorEventSet` in which the `Registration` is interested.
     var interested: SelectorEventSet { get set }

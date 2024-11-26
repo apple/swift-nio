@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2023-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -47,6 +47,8 @@ actor EventLoopBoundActor {
 
 @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
 final class SerialExecutorTests: XCTestCase {
+    var group: MultiThreadedEventLoopGroup!
+
     private func _testBasicExecutorFitsOnEventLoop(loop1: EventLoop, loop2: EventLoop) async throws {
         let testActor = EventLoopBoundActor(loop: loop1)
         await testActor.assertInLoop(loop1)
@@ -54,23 +56,25 @@ final class SerialExecutorTests: XCTestCase {
     }
 
     func testBasicExecutorFitsOnEventLoop_MTELG() async throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
-        defer {
-            try! group.syncShutdownGracefully()
-        }
-        let loops = Array(group.makeIterator())
+        let loops = Array(self.group.makeIterator())
         try await self._testBasicExecutorFitsOnEventLoop(loop1: loops[0], loop2: loops[1])
     }
 
     func testBasicExecutorFitsOnEventLoop_AsyncTestingEventLoop() async throws {
         let loop1 = NIOAsyncTestingEventLoop()
         let loop2 = NIOAsyncTestingEventLoop()
-        defer {
-            try? loop1.syncShutdownGracefully()
-            try? loop2.syncShutdownGracefully()
+        func shutdown() async {
+            await loop1.shutdownGracefully()
+            await loop2.shutdownGracefully()
         }
 
-        try await self._testBasicExecutorFitsOnEventLoop(loop1: loop1, loop2: loop2)
+        do {
+            try await self._testBasicExecutorFitsOnEventLoop(loop1: loop1, loop2: loop2)
+            await shutdown()
+        } catch {
+            await shutdown()
+            throw error
+        }
     }
 
     func testAssumeIsolation() async throws {
@@ -78,8 +82,7 @@ final class SerialExecutorTests: XCTestCase {
         throw XCTSkip("Custom executors are only supported in 5.9")
         #else
 
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        let el = group.next()
+        let el = self.group.next()
 
         let testActor = EventLoopBoundActor(loop: el)
         let result = try await el.submit {
@@ -87,5 +90,14 @@ final class SerialExecutorTests: XCTestCase {
         }.get()
         XCTAssertEqual(result, 0)
         #endif
+    }
+
+    override func setUp() {
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+    }
+
+    override func tearDown() {
+        XCTAssertNoThrow(try self.group.syncShutdownGracefully())
+        self.group = nil
     }
 }

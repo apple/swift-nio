@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -180,14 +180,16 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         // We'll attempt to upgrade. This may take a while, so while we're waiting more data can come in.
         self.upgradeState = .awaitingUpgrader
 
+        let eventLoop = context.eventLoop
+        let loopBoundContext = context.loopBound
         self.handleUpgrade(context: context, request: request, requestedProtocols: requestedProtocols)
-            .hop(to: context.eventLoop)  // the user might return a future from another EventLoop.
+            .hop(to: eventLoop)  // the user might return a future from another EventLoop.
             .whenSuccess { callback in
-                context.eventLoop.assertInEventLoop()
+                eventLoop.assertInEventLoop()
                 if let callback = callback {
                     self.gotUpgrader(upgrader: callback)
                 } else {
-                    self.notUpgrading(context: context, data: requestPart)
+                    self.notUpgrading(context: loopBoundContext.value, data: requestPart)
                 }
             }
     }
@@ -253,6 +255,8 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         }
 
         let responseHeaders = self.buildUpgradeHeaders(protocol: proto)
+        let pipeline = context.pipeline
+        let loopBoundContext = context.loopBound
         return upgrader.buildUpgradeResponse(
             channel: context.channel,
             upgradeRequest: request,
@@ -271,18 +275,20 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                 // internal handler, then call the user code, and then finally when the user code is done we do
                 // our final cleanup steps, namely we replay the received data we buffered in the meantime and
                 // then remove ourselves from the pipeline.
-                self.removeExtraHandlers(context: context).flatMap {
+                self.removeExtraHandlers(pipeline: pipeline).flatMap {
                     self.sendUpgradeResponse(
-                        context: context,
+                        context: loopBoundContext.value,
                         upgradeRequest: request,
                         responseHeaders: finalResponseHeaders
                     )
                 }.flatMap {
-                    context.pipeline.syncOperations.removeHandler(self.httpEncoder)
+                    pipeline.syncOperations.removeHandler(self.httpEncoder)
                 }.flatMap { () -> EventLoopFuture<Void> in
+                    let context = loopBoundContext.value
                     self.upgradeCompletionHandler(context)
                     return upgrader.upgrade(context: context, upgradeRequest: request)
                 }.whenComplete { result in
+                    let context = loopBoundContext.value
                     switch result {
                     case .success:
                         context.fireUserInboundEventTriggered(
@@ -300,6 +306,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
             }
         }.flatMapError { error in
             // No upgrade here. We want to fire the error down the pipeline, and then try another loop iteration.
+            let context = loopBoundContext.value
             context.fireErrorCaught(error)
             return self.handleUpgradeForProtocol(
                 context: context,
@@ -366,14 +373,14 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
-    private func removeExtraHandlers(context: ChannelHandlerContext) -> EventLoopFuture<Void> {
+    private func removeExtraHandlers(pipeline: ChannelPipeline) -> EventLoopFuture<Void> {
         guard self.extraHTTPHandlers.count > 0 else {
-            return context.eventLoop.makeSucceededFuture(())
+            return pipeline.eventLoop.makeSucceededFuture(())
         }
 
         return .andAllSucceed(
-            self.extraHTTPHandlers.map { context.pipeline.removeHandler($0) },
-            on: context.eventLoop
+            self.extraHTTPHandlers.map { pipeline.removeHandler($0) },
+            on: pipeline.eventLoop
         )
     }
 }
