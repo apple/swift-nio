@@ -387,6 +387,7 @@ extension NIOFileHandle {
     ///   - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
     ///   - mode: Access mode. Default mode is `.read`.
     ///   - flags: Additional POSIX flags.
+    @available(*, noasync, message: "This method may block the calling thread")
     public convenience init(
         _deprecatedPath path: String,
         mode: Mode = .read,
@@ -421,6 +422,7 @@ extension NIOFileHandle {
     ///
     /// - Parameters:
     ///   - path: The path of the file to open. The ownership of the file descriptor is transferred to this `NIOFileHandle` and so it will be closed once `close` is called.
+    @available(*, noasync, message: "This method may block the calling thread")
     public convenience init(_deprecatedPath path: String) throws {
         // This function is here because we had a function like this in NIO 2.0, and the one above doesn't quite match. Sadly we can't
         // really deprecate this either, because it'll be preferred to the one above in many cases.
