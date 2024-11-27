@@ -23,7 +23,7 @@ let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPackage", package: "swift-system")
 
-// These platforms require a depdency on `NIOPosix` from `NIOHTTP1` to maintain backward
+// These platforms require a dependency on `NIOPosix` from `NIOHTTP1` to maintain backward
 // compatibility with previous NIO versions.
 let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
 

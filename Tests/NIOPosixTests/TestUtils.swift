@@ -127,7 +127,7 @@ func withTemporaryUnixDomainSocketPathName<T>(
         shortEnoughPath = path
         restoreSavedCWD = false
     } catch SocketAddressError.unixDomainSocketPathTooLong {
-        FileManager.default.changeCurrentDirectoryPath(
+        _ = FileManager.default.changeCurrentDirectoryPath(
             URL(fileURLWithPath: path).deletingLastPathComponent().absoluteString
         )
         shortEnoughPath = URL(fileURLWithPath: path).lastPathComponent
@@ -141,7 +141,7 @@ func withTemporaryUnixDomainSocketPathName<T>(
             try? FileManager.default.removeItem(atPath: path)
         }
         if restoreSavedCWD {
-            FileManager.default.changeCurrentDirectoryPath(saveCurrentDirectory)
+            _ = FileManager.default.changeCurrentDirectoryPath(saveCurrentDirectory)
         }
     }
     return try body(shortEnoughPath)
