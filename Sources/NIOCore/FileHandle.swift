@@ -373,7 +373,6 @@ extension NIOFileHandle {
             use NIOFileSystem as a replacement API.
             """
     )
-    @available(*, noasync, message: "This method may block the calling thread")
     public convenience init(
         path: String,
         mode: Mode = .read,
@@ -415,7 +414,6 @@ extension NIOFileHandle {
             use NIOFileSystem as a replacement API.
             """
     )
-    @available(*, noasync, message: "This method may block the calling thread")
     public convenience init(path: String) throws {
         try self.init(_deprecatedPath: path)
     }
