@@ -1119,7 +1119,7 @@ extension ChannelPipeline {
     ///   - position: The position in the `ChannelPipeline` to add the handlers.
     /// - Returns: A result representing whether the handlers were added or not.
     fileprivate func addHandlersSync(
-        _ handlers: [ChannelHandler],
+        _ handlers: [ChannelHandler & Sendable],
         position: ChannelPipeline.Position
     ) -> Result<Void, Error> {
         switch position {
@@ -1140,7 +1140,7 @@ extension ChannelPipeline {
     private func _addHandlersSync<Handlers: Sequence>(
         _ handlers: Handlers,
         position: ChannelPipeline.Position
-    ) -> Result<Void, Error> where Handlers.Element == ChannelHandler {
+    ) -> Result<Void, Error> where Handlers.Element == ChannelHandler & Sendable {
         self.eventLoop.assertInEventLoop()
 
         for handler in handlers {
