@@ -1119,7 +1119,7 @@ extension ChannelPipeline {
     ///   - position: The position in the `ChannelPipeline` to add the handlers.
     /// - Returns: A result representing whether the handlers were added or not.
     fileprivate func addHandlersSync(
-        _ handlers: [ChannelHandler],
+        _ handlers: [ChannelHandler & Sendable],
         position: ChannelPipeline.Position
     ) -> Result<Void, Error> {
         switch position {
@@ -1127,6 +1127,29 @@ extension ChannelPipeline {
             return self._addHandlersSync(handlers.reversed(), position: position)
         case .last, .before:
             return self._addHandlersSync(handlers, position: position)
+        }
+    }
+
+    /// Synchronously adds the provided `ChannelHandler`s to the pipeline in the order given, taking
+    /// account of the behaviour of `ChannelHandler.add(first:)`.
+    ///
+    /// This duplicate of the above method exists to avoid needing to rebox the array of existentials
+    /// from any (ChannelHandler & Sendable) to any ChannelHandler.
+    ///
+    /// - Important: Must be called on the `EventLoop`.
+    /// - Parameters:
+    ///   - handlers: The array of `ChannelHandler`s to add.
+    ///   - position: The position in the `ChannelPipeline` to add the handlers.
+    /// - Returns: A result representing whether the handlers were added or not.
+    fileprivate func addHandlersSyncNotSendable(
+        _ handlers: [ChannelHandler],
+        position: ChannelPipeline.Position
+    ) -> Result<Void, Error> {
+        switch position {
+        case .first, .after:
+            return self._addHandlersSyncNotSendable(handlers.reversed(), position: position)
+        case .last, .before:
+            return self._addHandlersSyncNotSendable(handlers, position: position)
         }
     }
 
@@ -1138,6 +1161,35 @@ extension ChannelPipeline {
     ///   - position: The position in the `ChannelPipeline` to add the handlers.
     /// - Returns: A result representing whether the handlers were added or not.
     private func _addHandlersSync<Handlers: Sequence>(
+        _ handlers: Handlers,
+        position: ChannelPipeline.Position
+    ) -> Result<Void, Error> where Handlers.Element == ChannelHandler & Sendable {
+        self.eventLoop.assertInEventLoop()
+
+        for handler in handlers {
+            let result = self.addHandlerSync(handler, position: position)
+            switch result {
+            case .success:
+                ()
+            case .failure:
+                return result
+            }
+        }
+
+        return .success(())
+    }
+
+    /// Synchronously adds a sequence of `ChannelHandlers` to the pipeline at the given position.
+    ///
+    /// This duplicate of the above method exists to avoid needing to rebox the array of existentials
+    /// from any (ChannelHandler & Sendable) to any ChannelHandler.
+    ///
+    /// - Important: Must be called on the `EventLoop`.
+    /// - Parameters:
+    ///   - handlers: A sequence of handlers to add.
+    ///   - position: The position in the `ChannelPipeline` to add the handlers.
+    /// - Returns: A result representing whether the handlers were added or not.
+    private func _addHandlersSyncNotSendable<Handlers: Sequence>(
         _ handlers: Handlers,
         position: ChannelPipeline.Position
     ) -> Result<Void, Error> where Handlers.Element == ChannelHandler {
@@ -1201,7 +1253,7 @@ extension ChannelPipeline {
             _ handlers: [ChannelHandler],
             position: ChannelPipeline.Position = .last
         ) throws {
-            try self._pipeline.addHandlersSync(handlers, position: position).get()
+            try self._pipeline.addHandlersSyncNotSendable(handlers, position: position).get()
         }
 
         /// Add one or more handlers to the pipeline.
@@ -1214,7 +1266,7 @@ extension ChannelPipeline {
             _ handlers: ChannelHandler...,
             position: ChannelPipeline.Position = .last
         ) throws {
-            try self._pipeline.addHandlersSync(handlers, position: position).get()
+            try self._pipeline.addHandlersSyncNotSendable(handlers, position: position).get()
         }
 
         /// Remove a `ChannelHandler` from the `ChannelPipeline`.
