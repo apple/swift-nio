@@ -1180,7 +1180,7 @@ extension ChannelPipeline {
     }
 
     /// Synchronously adds a sequence of `ChannelHandlers` to the pipeline at the given position.
-    /// 
+    ///
     /// This duplicate of the above method exists to avoid needing to rebox the array of existentials
     /// from any (ChannelHandler & Sendable) to any ChannelHandler.
     ///
