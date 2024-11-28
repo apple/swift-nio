@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -126,11 +126,11 @@ extension ByteBuffer {
                     count: Int(length)
                 )
             } else {
-                _ = storageRef.retain()
+                let storage = storageRef.takeUnretainedValue()
                 return Data(
                     bytesNoCopy: UnsafeMutableRawPointer(mutating: ptr.baseAddress!.advanced(by: index)),
                     count: Int(length),
-                    deallocator: .custom { _, _ in storageRef.release() }
+                    deallocator: .custom { _, _ in withExtendedLifetime(storage) {} }
                 )
             }
         }
@@ -377,15 +377,9 @@ extension ByteBufferAllocator {
 }
 
 // MARK: - Conformances
-#if compiler(>=6.0)
-extension ByteBufferView: @retroactive ContiguousBytes {}
-extension ByteBufferView: @retroactive DataProtocol {}
-extension ByteBufferView: @retroactive MutableDataProtocol {}
-#else
 extension ByteBufferView: ContiguousBytes {}
 extension ByteBufferView: DataProtocol {}
 extension ByteBufferView: MutableDataProtocol {}
-#endif
 
 extension ByteBufferView {
     public typealias Regions = CollectionOfOne<ByteBufferView>

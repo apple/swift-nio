@@ -33,7 +33,7 @@ swift package init
 
 {
   echo "let swiftSettings: [SwiftSetting] = [.interoperabilityMode(.Cxx)]"
-  echo "for target in package.targets { target.swiftSettings = swiftSettings }"
+  echo "for target in package.targets { target.swiftSettings = (target.swiftSettings ?? []) + swiftSettings }"
 } >> Package.swift
 
 echo "package.dependencies.append(.package(path: \"$source_dir\"))" >> Package.swift
