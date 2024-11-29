@@ -69,8 +69,8 @@ public struct CopyStrategy: Hashable, Sendable {
 }
 
 extension CopyStrategy {
-    // A copy fundamentally can't work without two descriptors unless you copy
-    // everything into memory which is infeasible/inefficient for large copies.
+    // A copy fundamentally can't work without two descriptors unless you copy everything into
+    // memory which is infeasible/inefficient for large copies.
     private static let minDescriptorsAllowed = 2
 
     /// Operate in whatever manner is deemed a reasonable default for the platform. This will limit
@@ -85,19 +85,21 @@ extension CopyStrategy {
     /// only way to guarantee only one callback to the `shouldCopyItem` will happen at a time.
     public static let sequential: Self = Self(.sequential)
 
-    /// Allow multiple IO operations to run concurrently, including file copies/directory creation and scanning
+    /// Allow multiple I/O operations to run concurrently, including file copies/directory creation
+    /// and scanning.
     ///
-    /// - Parameter maxDescriptors: a conservative limit on the number of concurrently open
-    ///     file descriptors involved in the copy. This number must be >= 2 though, if you are using a value that low
-    ///     you should use ``sequential``
+    /// - Parameter maxDescriptors: a conservative limit on the number of concurrently open file
+    ///     descriptors involved in the copy. This number must be >= 2 though, if you are using a
+    ///     value that low you should use ``sequential``
     ///
-    /// - Throws: ``FileSystemError/Code-swift.struct/invalidArgument`` if `maxDescriptors`
-    /// is less than 2.
+    /// - Throws: ``FileSystemError/Code-swift.struct/invalidArgument`` if `maxDescriptors` is less
+    ///     than 2.
     ///
     public static func parallel(maxDescriptors: Int) throws -> Self {
         guard maxDescriptors >= Self.minDescriptorsAllowed else {
-            // 2 is not quite the same as sequential, you could have two concurrent directory listings for example
-            // less than 2 and you can't actually do a _copy_ though so it's non-sensical.
+            // 2 is not quite the same as sequential, you could have two concurrent directory
+            // listings for example less than 2 and you can't actually do a _copy_ though so it's
+            // non-sensical.
             throw FileSystemError(
                 code: .invalidArgument,
                 message: "Can't do a copy operation without at least 2 file descriptors '\(maxDescriptors)' is illegal",

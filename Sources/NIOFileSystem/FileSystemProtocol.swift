@@ -262,6 +262,7 @@ public protocol FileSystemProtocol: Sendable {
     @discardableResult
     func removeItem(
         at path: FilePath,
+        strategy removalStrategy: RemovalStrategy,
         recursively removeItemRecursively: Bool
     ) async throws -> Int
 
@@ -597,9 +598,10 @@ extension FileSystemProtocol {
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
     public func removeItem(
-        at path: FilePath
+        at path: FilePath,
+        strategy removalStrategy: RemovalStrategy
     ) async throws -> Int {
-        try await self.removeItem(at: path, recursively: true)
+        try await self.removeItem(at: path, strategy: removalStrategy, recursively: true)
     }
 
     /// Create a directory at the given path.
@@ -659,7 +661,7 @@ extension FileSystemProtocol {
                 try await execute(handle, directory)
             }
         } tearDown: { _ in
-            try await self.removeItem(at: directory, recursively: true)
+            try await self.removeItem(at: directory, strategy: .platformDefault, recursively: true)
         }
     }
 }
