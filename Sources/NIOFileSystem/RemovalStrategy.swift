@@ -12,7 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: This is pretty much a verbatim copy of CopyStrategy.swift
+/// How to perform removal of directories. Only relevant to directory level
+/// copies when using
+/// ``FileSystemProtocol/removeItem(at:strategy:recursively:)`` or other
+/// overloads that use the default behaviour.
+///
+/// TODO: This is pretty much a verbatim copy of CopyStrategy.swift
 public struct RemovalStrategy: Hashable, Sendable {
     // Avoid exposing to prevent breaking changes
     internal enum Wrapped: Hashable, Sendable {
@@ -25,6 +30,8 @@ public struct RemovalStrategy: Hashable, Sendable {
         self.wrapped = wrapped
     }
 
+    /// Operate in whatever manner is deemed a reasonable default for the platform. This will limit
+    /// the maximum file descriptors usage based on reasonable defaults.
     internal static func determinePlatformDefault() -> Wrapped {
         #if os(macOS) || os(Linux) || os(Windows)
         return .parallel

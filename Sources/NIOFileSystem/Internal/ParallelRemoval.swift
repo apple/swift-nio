@@ -17,6 +17,8 @@ import NIOCore
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystem {
+    /// Iterative implementation of a recursive parallel removal of objects
+    /// found within `path`.
     func removeConcurrently(
         at path: FilePath
     ) async throws -> Int {
@@ -24,7 +26,7 @@ extension FileSystem {
             let deletedFilesCounter: ManagedAtomic<Int> = .init(0)
             // Start recursion into the directories in this tree.
             group.addTask {
-                try await self.walkTreeForRemovalConcurrently(at: path, counter: deletedFilesCounter)
+                try await self.removeFilesInTree(at: path, counter: deletedFilesCounter)
             }
 
             try await group.next()
@@ -39,7 +41,9 @@ extension FileSystem {
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystem {
-    func walkTreeForRemovalConcurrently(
+    /// Recursively walk all objects found in `path`. Call ourselves recursively
+    /// when a directory is found. Delete anything else immediately.
+    private func removeFilesInTree(
         at path: FilePath,
         counter atomicCounter: ManagedAtomic<Int>
     ) async throws {
@@ -51,7 +55,7 @@ extension FileSystem {
                         case .directory:
                             // Recurse into ourself on a separate thread.
                             group.addTask {
-                                try await walkTreeForRemovalConcurrently(
+                                try await self.removeFilesInTree(
                                     at: entry.path,
                                     counter: atomicCounter
                                 )
