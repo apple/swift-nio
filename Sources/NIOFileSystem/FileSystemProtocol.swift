@@ -249,18 +249,17 @@ public protocol FileSystemProtocol: Sendable {
     /// at the given path then this function returns zero.
     ///
     /// If the item at the `path` is a directory and `removeItemRecursively` is `true` then the
-    /// contents of all of its subdirectories will be removed recursively before the directory
-    /// at `path`. Symbolic links are removed (but their targets are not deleted).
+    /// contents of all of its subdirectories will be removed recursively before the directory at
+    /// `path`. Symbolic links are removed (but their targets are not deleted).
     ///
     /// - Parameters:
     ///   - path: The path to delete.
-    ///   - removalStrategy: Whether to delete files sequentially (one-by-one),
-    ///       or perform a concurrent scan of the tree at `path` and delete
-    ///       files when they are found.
+    ///   - removalStrategy: Whether to delete files sequentially (one-by-one), or perform a
+    ///       concurrent scan of the tree at `path` and delete files when they are found.
     ///   - removeItemRecursively: If the item being removed is a directory, remove it by
-    ///       recursively removing its children. Setting this to `true` is synonymous with
-    ///       calling `rm -r`, setting this false is synonymous to calling `rmdir`. Ignored if
-    ///       the item being removed isn't a directory.
+    ///       recursively removing its children. Setting this to `true` is synonymous with calling
+    ///       `rm -r`, setting this false is synonymous to calling `rmdir`. Ignored if the item
+    ///       being removed isn't a directory.
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
     func removeItem(

@@ -387,6 +387,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// - Parameters:
     ///   - path: The path to delete.
+    ///   - removalStrategy: Whether to delete files sequentially (one-by-one), or perform a
+    ///       concurrent scan of the tree at `path` and delete files when they are found.
     ///   - removeItemRecursively: Whether or not to remove items recursively.
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
