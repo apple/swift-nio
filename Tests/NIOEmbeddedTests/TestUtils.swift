@@ -17,6 +17,10 @@ import NIOConcurrencyHelpers
 import NIOCore
 import XCTest
 
+#if canImport(Android)
+import Android
+#endif
+
 // FIXME: Duplicated with NIO
 func assert(
     _ condition: @autoclosure () -> Bool,

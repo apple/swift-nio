@@ -15,6 +15,10 @@
 import NIOCore
 import XCTest
 
+#if canImport(Android)
+import Android
+#endif
+
 func assert(
     _ condition: @autoclosure () -> Bool,
     within time: TimeAmount,

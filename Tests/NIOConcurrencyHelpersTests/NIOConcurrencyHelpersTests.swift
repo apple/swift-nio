@@ -22,8 +22,8 @@ import XCTest
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-#elseif canImport(Bionic)
-import Bionic
+#elseif canImport(Android)
+import Android
 #else
 #error("The Concurrency helpers test module was unable to identify your C library.")
 #endif
