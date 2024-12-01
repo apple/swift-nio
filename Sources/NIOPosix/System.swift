@@ -124,12 +124,20 @@ private let sysWritev = sysWritev_wrapper
 #elseif !os(Windows)
 private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
 #endif
-#if !os(Windows)
+#if canImport(Android)
+private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>, CInt) -> ssize_t = recvmsg
+private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>, CInt) -> ssize_t = sendmsg
+#elseif !os(Windows)
 private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>?, CInt) -> ssize_t = recvmsg
 private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>?, CInt) -> ssize_t = sendmsg
 #endif
 private let sysDup: @convention(c) (CInt) -> CInt = dup
-#if !os(Windows)
+#if canImport(Android)
+private let sysGetpeername:
+    @convention(c) (CInt, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) -> CInt = getpeername
+private let sysGetsockname:
+    @convention(c) (CInt, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) -> CInt = getsockname
+#elseif !os(Windows)
 private let sysGetpeername:
     @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
 private let sysGetsockname:
@@ -141,7 +149,9 @@ private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>) -> CUnsigned
 #else
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 #endif
-#if !os(Windows)
+#if canImport(Android)
+private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>) -> CInt = socketpair
+#elseif !os(Windows)
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 #endif
 
@@ -1000,7 +1010,7 @@ internal enum Posix {
         socketVector: UnsafeMutablePointer<CInt>?
     ) throws {
         _ = try syscall(blocking: false) {
-            sysSocketpair(domain.rawValue, type.rawValue, protocolSubtype.rawValue, socketVector)
+            sysSocketpair(domain.rawValue, type.rawValue, protocolSubtype.rawValue, socketVector!)
         }
     }
     #endif

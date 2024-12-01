@@ -19,6 +19,8 @@ import XCTest
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
+#elseif canImport(Android)
+import Android
 #endif
 
 final class FileTypeTests: XCTestCase {
