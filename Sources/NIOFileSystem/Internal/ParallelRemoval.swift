@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Atomics
 import NIOCore
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -22,20 +21,7 @@ extension FileSystem {
     func removeConcurrently(
         at path: FilePath
     ) async throws -> Int {
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            let deletedFilesCounter: ManagedAtomic<Int> = .init(0)
-            // Start recursion into the directories in this tree.
-            group.addTask {
-                try await self.removeFilesInTree(at: path, counter: deletedFilesCounter)
-            }
-
-            try await group.next()
-            // Remove root directory itself
-            let numberOfDeletedFiles = try await self.removeOneItem(at: path)
-            deletedFilesCounter.wrappingIncrement(by: numberOfDeletedFiles, ordering: .relaxed)
-
-            return deletedFilesCounter.load(ordering: .relaxed)
-        }
+        try await self.discoverItemsInTree(at: path)
     }
 }
 
@@ -43,39 +29,52 @@ extension FileSystem {
 extension FileSystem {
     /// Recursively walk all objects found in `path`. Call ourselves recursively
     /// when a directory is found. Delete anything else immediately.
-    private func removeFilesInTree(
-        at path: FilePath,
-        counter atomicCounter: ManagedAtomic<Int>
-    ) async throws {
-        try await self.withDirectoryHandle(atPath: path) { directory in
-            try await withThrowingTaskGroup(of: Void.self) { group in
-                for try await batch in directory.listContents().batched() {
-                    for entry in batch {
-                        switch entry.type {
-                        case .directory:
-                            // Recurse into ourself on a separate thread.
-                            group.addTask {
-                                try await self.removeFilesInTree(
-                                    at: entry.path,
-                                    counter: atomicCounter
-                                )
+    private func discoverItemsInTree(
+        at path: FilePath
+    ) async throws -> Int {
+        var directoriesToRecurseInto: [DirectoryEntry] = []
+        var itemsToDelete: [DirectoryEntry] = []
 
-                                // Remove the directory once we have deleted all
-                                // dependants.
-                                let numberOfDeletedFiles = try await self.removeOneItem(at: entry.path)
-                                atomicCounter.wrappingIncrement(by: numberOfDeletedFiles, ordering: .relaxed)
-                            }
-                        default:
-                            // Delete anything that is not a directory.
-                            group.addTask {
-                                let numberOfDeletedFiles = try await self.removeOneItem(at: entry.path)
-                                atomicCounter.wrappingIncrement(by: numberOfDeletedFiles, ordering: .relaxed)
-                            }
-                        }
+        // 1. Discover current directory and find all files/directories. Free up
+        // the handle as fast as possible.
+        try await self.withDirectoryHandle(atPath: path) { directory in
+            for try await batch in directory.listContents().batched() {
+                for entry in batch {
+                    switch entry.type {
+                    case .directory:
+                        directoriesToRecurseInto.append(entry)
+                    default:
+                        itemsToDelete.append(entry)
                     }
                 }
-                try await group.waitForAll()
             }
+        }
+
+        return try await withThrowingTaskGroup(of: Int.self) { group in
+            // 2. Delete all files we found in the current directory
+            for item in itemsToDelete {
+                group.addTask {
+                    try await self.removeOneItem(at: item.path)
+                }
+            }
+
+            // 3. Now that the handle is closed, we can recurse into all newly found subdirectories
+            for directory in directoriesToRecurseInto {
+                group.addTask {
+                    try await self.discoverItemsInTree(at: directory.path)
+                }
+            }
+
+            // 4. Sum items deleted so far
+            var numberOfDeletedItems: Int = 0
+            for try await result in group {
+                numberOfDeletedItems += result
+            }
+
+            // 5. Remove top level directory
+            numberOfDeletedItems += try await self.removeOneItem(at: path)
+
+            return numberOfDeletedItems
         }
     }
 }
