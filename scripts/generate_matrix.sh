@@ -56,10 +56,10 @@ matrix='{"swift": []}'
 
 ## Linux
 if [[ "$linux_5_9_enabled" == "true" || "$linux_5_10_enabled" == "true" || "$linux_6_0_enabled" == "true" || \
-      "$linux_nightly_6_0_enabled" == "true" || "$linux_nightly_main_enabled" == "true" ]]; then
-      if [[ -z "$linux_command" ]]; then
-        echo "No linux command defined"; exit 1
-      fi
+  "$linux_nightly_6_0_enabled" == "true" || "$linux_nightly_main_enabled" == "true" ]]; then
+  if [[ -z "$linux_command" ]]; then
+    echo "No linux command defined"; exit 1
+  fi
 fi
 
 
@@ -115,9 +115,9 @@ fi
 
 ## Windows
 if [[ "$windows_6_0_enabled" == "true" || "$windows_nightly_6_0_enabled" == "true" || "$windows_nightly_main_enabled" == "true" ]]; then
-      if [[ -z "$windows_command" ]]; then
-        echo "No windows command defined"; exit 1
-      fi
+  if [[ -z "$windows_command" ]]; then
+    echo "No windows command defined"; exit 1
+  fi
 fi
 
 if [[ "$windows_6_0_enabled" == "true" ]]; then
