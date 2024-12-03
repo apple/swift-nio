@@ -19,59 +19,64 @@ extension FileSystem {
     /// Iterative implementation of a recursive parallel removal of objects
     /// found within `path`.
     func removeConcurrently(
-        at path: FilePath
+        at path: FilePath,
+        _ maxDescriptors: Int
     ) async throws -> Int {
-        try await self.discoverItemsInTree(at: path)
+        let bucket: TokenBucket = .init(tokens: maxDescriptors)
+        return try await self.discoverItemsInTree(at: path, bucket)
     }
-}
 
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension FileSystem {
     /// Recursively walk all objects found in `path`. Call ourselves recursively
-    /// when a directory is found. Delete anything else immediately.
+    /// on each directory that we find, as soon as the file descriptor for
+    /// `path` has been closed; also delete all files that we come across.
     private func discoverItemsInTree(
-        at path: FilePath
+        at path: FilePath,
+        _ bucket: TokenBucket
     ) async throws -> Int {
-        var directoriesToRecurseInto: [DirectoryEntry] = []
-        var itemsToDelete: [DirectoryEntry] = []
-
-        // 1. Discover current directory and find all files/directories. Free up
+        // Discover current directory and find all files/directories. Free up
         // the handle as fast as possible.
-        try await self.withDirectoryHandle(atPath: path) { directory in
-            for try await batch in directory.listContents().batched() {
-                for entry in batch {
-                    switch entry.type {
-                    case .directory:
-                        directoriesToRecurseInto.append(entry)
-                    default:
-                        itemsToDelete.append(entry)
+        let (directoriesToRecurseInto, itemsToDelete) = try await bucket.withToken {
+            try await self.withDirectoryHandle(atPath: path) { directory in
+                var subdirectories: [DirectoryEntry] = []
+                var itemsInDirectory: [DirectoryEntry] = []
+
+                for try await batch in directory.listContents().batched() {
+                    for entry in batch {
+                        switch entry.type {
+                        case .directory:
+                            subdirectories.append(entry)
+                        default:
+                            itemsInDirectory.append(entry)
+                        }
                     }
                 }
+
+                return (subdirectories, itemsInDirectory)
             }
         }
 
         return try await withThrowingTaskGroup(of: Int.self) { group in
-            // 2. Delete all files we found in the current directory
+            // Delete all items we found in the current directory.
             for item in itemsToDelete {
                 group.addTask {
                     try await self.removeOneItem(at: item.path)
                 }
             }
 
-            // 3. Now that the handle is closed, we can recurse into all newly found subdirectories
+            // Recurse into all newly found subdirectories.
             for directory in directoriesToRecurseInto {
                 group.addTask {
-                    try await self.discoverItemsInTree(at: directory.path)
+                    try await self.discoverItemsInTree(at: directory.path, bucket)
                 }
             }
 
-            // 4. Sum items deleted so far
+            // Await task groups to finish and sum all items deleted so far.
             var numberOfDeletedItems: Int = 0
             for try await result in group {
                 numberOfDeletedItems += result
             }
 
-            // 5. Remove top level directory
+            // Remove top level directory.
             numberOfDeletedItems += try await self.removeOneItem(at: path)
 
             return numberOfDeletedItems

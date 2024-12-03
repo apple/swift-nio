@@ -427,8 +427,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
             switch removalStrategy.wrapped {
             case .sequential:
                 return try await self.removeItemSequentially(at: path)
-            case .parallel:
-                return try await self.removeConcurrently(at: path)
+            case let .parallel(maxDescriptors):
+                return try await self.removeConcurrently(at: path, maxDescriptors)
             }
 
         case let .failure(errno):
