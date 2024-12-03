@@ -366,6 +366,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         }
     }
 
+    /// See ``FileSystemProtocol/removeItem(at:strategy:recursively:)``
+    ///
     /// Deletes the file or directory (and its contents) at `path`.
     ///
     /// Only regular files, symbolic links and directories may be removed. If the file at `path` is

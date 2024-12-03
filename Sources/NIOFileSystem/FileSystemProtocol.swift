@@ -255,7 +255,8 @@ public protocol FileSystemProtocol: Sendable {
     /// - Parameters:
     ///   - path: The path to delete.
     ///   - removalStrategy: Whether to delete files sequentially (one-by-one), or perform a
-    ///       concurrent scan of the tree at `path` and delete files when they are found.
+    ///       concurrent scan of the tree at `path` and delete files when they are found. Ignored if
+    ///       the item being removed isn't a directory.
     ///   - removeItemRecursively: If the item being removed is a directory, remove it by
     ///       recursively removing its children. Setting this to `true` is synonymous with calling
     ///       `rm -r`, setting this false is synonymous to calling `rmdir`. Ignored if the item
@@ -606,6 +607,33 @@ extension FileSystemProtocol {
         at path: FilePath
     ) async throws -> Int {
         try await self.removeItem(at: path, strategy: .platformDefault, recursively: true)
+    }
+
+    /// Deletes the file or directory (and its contents) at `path`.
+    ///
+    /// The item to be removed must be a regular file, symbolic link or directory. If no file exists
+    /// at the given path then this function returns zero.
+    ///
+    /// If the item at the `path` is a directory then the contents of all of its subdirectories will
+    /// be removed recursively before the directory at `path`. Symbolic links are removed (but their
+    /// targets are not deleted).
+    ///
+    /// The strategy for deletion will be determined automatically depending on the discovered
+    /// platform.
+    ///
+    /// - Parameters:
+    ///   - path: The path to delete.
+    ///   - removeItemRecursively: If the item being removed is a directory, remove it by
+    ///       recursively removing its children. Setting this to `true` is synonymous with calling
+    ///       `rm -r`, setting this false is synonymous to calling `rmdir`. Ignored if the item
+    ///       being removed isn't a directory.
+    /// - Returns: The number of deleted items which may be zero if `path` did not exist.
+    @discardableResult
+    public func removeItem(
+        at path: FilePath,
+        recursively removeItemRecursively: Bool
+    ) async throws -> Int {
+        try await self.removeItem(at: path, strategy: .platformDefault, recursively: removeItemRecursively)
     }
 
     /// Deletes the file or directory (and its contents) at `path`.
