@@ -63,7 +63,9 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     /// As we need to access this from any thread, we store this as an atomic.
     private let _now = ManagedAtomic<UInt64>(0)
-    internal var now: NIODeadline {
+
+    /// The current "time" for this event loop. This is an amount in nanoseconds.
+    public var now: NIODeadline {
         NIODeadline.uptimeNanoseconds(self._now.load(ordering: .relaxed))
     }
 
