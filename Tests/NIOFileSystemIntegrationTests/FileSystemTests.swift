@@ -1044,12 +1044,12 @@ final class FileSystemTests: XCTestCase {
 
         // Removing a non-empty directory recursively should throw 'notEmpty'
         await XCTAssertThrowsFileSystemErrorAsync {
-            try await self.fs.removeItem(at: path, strategy: .parallel, recursively: false)
+            try await self.fs.removeItem(at: path, strategy: .parallel(maxDescriptors: 2), recursively: false)
         } onError: { error in
             XCTAssertEqual(error.code, .notEmpty)
         }
 
-        let removed = try await self.fs.removeItem(at: path, strategy: .parallel)
+        let removed = try await self.fs.removeItem(at: path, strategy: .parallel(maxDescriptors: 2))
         XCTAssertEqual(created, removed)
 
         let infoAfterRemoval = try await self.fs.info(forFileAt: path)
