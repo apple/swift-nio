@@ -206,7 +206,8 @@ extension ByteBuffer {
         return self.withUnsafeReadableBytes { pointer in
             assert(range.lowerBound >= 0 && (range.upperBound - range.lowerBound) <= pointer.count)
             return String(
-                decoding: UnsafeRawBufferPointer(rebasing: pointer[range]), as: Unicode.UTF8.self
+                decoding: UnsafeRawBufferPointer(rebasing: pointer[range]),
+                as: Unicode.UTF8.self
             )
         }
     }
