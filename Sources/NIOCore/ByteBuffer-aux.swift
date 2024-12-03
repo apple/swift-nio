@@ -39,7 +39,7 @@ extension ByteBuffer {
             // this is not technically correct because we shouldn't just bind
             // the memory to `UInt8` but it's not a real issue either and we
             // need to work around https://bugs.swift.org/browse/SR-9604
-            [UInt8](UnsafeRawBufferPointer(fastRebase: ptr[range]).bindMemory(to: UInt8.self))
+            [UInt8](UnsafeRawBufferPointer(rebasing: ptr[range]).bindMemory(to: UInt8.self))
         }
     }
 
@@ -205,7 +205,9 @@ extension ByteBuffer {
         }
         return self.withUnsafeReadableBytes { pointer in
             assert(range.lowerBound >= 0 && (range.upperBound - range.lowerBound) <= pointer.count)
-            return String(decoding: UnsafeRawBufferPointer(fastRebase: pointer[range]), as: Unicode.UTF8.self)
+            return String(
+                decoding: UnsafeRawBufferPointer(rebasing: pointer[range]), as: Unicode.UTF8.self
+            )
         }
     }
 
@@ -329,7 +331,7 @@ extension ByteBuffer {
         self.withVeryUnsafeMutableBytes { destCompleteStorage in
             assert(destCompleteStorage.count >= index + allBytesCount)
             let dest = destCompleteStorage[index..<index + allBytesCount]
-            dispatchData.copyBytes(to: .init(fastRebase: dest), count: dest.count)
+            dispatchData.copyBytes(to: .init(rebasing: dest), count: dest.count)
         }
         return allBytesCount
     }
@@ -348,7 +350,7 @@ extension ByteBuffer {
             return nil
         }
         return self.withUnsafeReadableBytes { pointer in
-            DispatchData(bytes: UnsafeRawBufferPointer(fastRebase: pointer[range]))
+            DispatchData(bytes: UnsafeRawBufferPointer(rebasing: pointer[range]))
         }
     }
 
@@ -497,7 +499,7 @@ extension ByteBuffer {
         precondition(count >= 0, "Can't write fewer than 0 bytes")
         self.reserveCapacity(index + count)
         self.withVeryUnsafeMutableBytes { pointer in
-            let dest = UnsafeMutableRawBufferPointer(fastRebase: pointer[index..<index + count])
+            let dest = UnsafeMutableRawBufferPointer(rebasing: pointer[index..<index + count])
             _ = dest.initializeMemory(as: UInt8.self, repeating: byte)
         }
         return count
