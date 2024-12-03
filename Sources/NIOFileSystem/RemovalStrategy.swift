@@ -12,17 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// How to perform removal of directories. Only relevant to directory level
-/// copies when using
-/// ``FileSystemProtocol/removeItem(at:strategy:recursively:)`` or other
-/// overloads that use the default behaviour.
-///
-/// TODO: This is pretty much a verbatim copy of CopyStrategy.swift
+/// How to perform removal of directories.
 public struct RemovalStrategy: Hashable, Sendable {
     // Avoid exposing to prevent breaking changes
     internal enum Wrapped: Hashable, Sendable {
         case sequential
-        case parallel
+        case parallel(_ maxDescriptors: Int)
     }
 
     internal let wrapped: Wrapped
@@ -34,9 +29,9 @@ public struct RemovalStrategy: Hashable, Sendable {
     /// the maximum file descriptors usage based on reasonable defaults.
     internal static func determinePlatformDefault() -> Wrapped {
         #if os(macOS) || os(Linux) || os(Windows)
-        return .parallel
+        return .parallel(8)
         #elseif os(iOS) || os(tvOS) || os(watchOS) || os(Android)
-        return .parallel
+        return .parallel(4)
         #else
         return .sequential
         #endif
@@ -44,21 +39,35 @@ public struct RemovalStrategy: Hashable, Sendable {
 }
 
 extension RemovalStrategy {
+    // A deletion requires no file descriptors. We consume a file descriptor
+    // while scanning the contents of a directory.
+    private static let minRequiredDescriptors = 1
+
     /// Operate in whatever manner is deemed a reasonable default for the platform. This will limit
     /// the maximum file descriptors usage based on reasonable defaults.
     ///
     /// Current assumptions (which are subject to change):
-    /// - Only one copy operation would be performed at once
-    /// - The copy operation is not intended to be the primary activity on the device
+    /// - Only one delete operation would be performed at once
+    /// - The delete operation is not intended to be the primary activity on the device
     public static let platformDefault: Self = Self(Self.determinePlatformDefault())
 
-    /// The copy is done asynchronously, but only one operation will occur at a time. This is the
-    /// only way to guarantee only one callback to the `shouldCopyItem` will happen at a time.
+    /// The delete is done asynchronously, but only one operation will occur at a time.
     public static let sequential: Self = Self(.sequential)
 
-    /// Allow multiple I/O operations to run concurrently, including file copies/directory creation
-    /// and scanning.
-    public static let parallel: Self = Self(.parallel)
+    /// Allow multiple I/O operations to run concurrently, including
+    /// subdirectory scanning.
+    public static func parallel(maxDescriptors: Int) throws -> Self {
+        guard maxDescriptors >= Self.minRequiredDescriptors else {
+            throw FileSystemError(
+                code: .invalidArgument,
+                message:
+                    "Can't do a remove operation without at least one file descriptor '\(maxDescriptors)' is illegal",
+                cause: nil,
+                location: .here()
+            )
+        }
+        return .init(.parallel(maxDescriptors))
+    }
 }
 
 extension RemovalStrategy: CustomStringConvertible {
@@ -66,8 +75,8 @@ extension RemovalStrategy: CustomStringConvertible {
         switch self.wrapped {
         case .sequential:
             return "sequential"
-        case .parallel:
-            return "parallel"
+        case let .parallel(maxDescriptors):
+            return "parallel with max \(maxDescriptors) descriptors"
         }
     }
 }
