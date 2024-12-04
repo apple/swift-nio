@@ -397,7 +397,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at path: FilePath,
         recursively removeItemRecursively: Bool
     ) async throws -> Int {
-        return try await self.removeItem(at: path, strategy: .platformDefault, recursively: removeItemRecursively)
+        try await self.removeItem(at: path, strategy: .platformDefault, recursively: removeItemRecursively)
     }
 
     /// See ``FileSystemProtocol/removeItem(at:strategy:recursively:)``
