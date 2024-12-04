@@ -658,6 +658,30 @@ extension FileSystemProtocol {
         try await self.removeItem(at: path, strategy: removalStrategy, recursively: true)
     }
 
+    /// Deletes the file or directory (and its contents) at `path`.
+    ///
+    /// The item to be removed must be a regular file, symbolic link or directory. If no file exists
+    /// at the given path then this function returns zero.
+    ///
+    /// If the item at the `path` is a directory then the contents of all of its subdirectories will
+    /// be removed recursively before the directory at `path`. Symbolic links are removed (but their
+    /// targets are not deleted).
+    ///
+    /// - Parameters:
+    ///   - path: The path to delete.
+    ///   - removalStrategy: Whether to delete files sequentially (one-by-one), or perform a
+    ///       concurrent scan of the tree at `path` and delete files when they are found.
+    ///   - removeItemRecursively: Whether or not to remove items recursively.
+    /// - Returns: The number of deleted items which may be zero if `path` did not exist.
+    @discardableResult
+    public func removeItem(
+        at path: FilePath,
+        strategy removalStrategy: RemovalStrategy,
+        recursively removeItemRecursively: Bool
+    ) async throws -> Int {
+        try await self.removeItem(at: path, strategy: removalStrategy, recursively: removeItemRecursively)
+    }
+
     /// Create a directory at the given path.
     ///
     /// If a directory (or file) already exists at `path` then an error will be thrown. If

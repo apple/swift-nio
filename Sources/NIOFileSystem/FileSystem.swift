@@ -366,6 +366,40 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         }
     }
 
+    /// Deletes the file or directory (and its contents) at `path`.
+    ///
+    /// Only regular files, symbolic links and directories may be removed. If the file at `path` is
+    /// a directory then its contents and all of its subdirectories will be removed recursively.
+    /// Symbolic links are also removed (but their targets are not deleted). If no file exists at
+    /// `path` this function returns zero.
+    ///
+    /// The strategy for deletion will be determined automatically depending on the discovered
+    /// platform.
+    ///
+    /// #### Errors
+    ///
+    /// Errors codes thrown by this function include:
+    /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if the item is not a regular file,
+    ///   symbolic link or directory. This also applies to items within the directory being removed.
+    /// - ``FileSystemError/Code-swift.struct/notFound`` if the item being removed is a directory
+    ///   which isn't empty and `removeItemRecursively` is false.
+    ///
+    /// #### Implementation details
+    ///
+    /// Uses the `remove(3)` system call.
+    ///
+    /// - Parameters:
+    ///   - path: The path to delete.
+    ///   - removeItemRecursively: Whether or not to remove items recursively.
+    /// - Returns: The number of deleted items which may be zero if `path` did not exist.
+    @discardableResult
+    public func removeItem(
+        at path: FilePath,
+        recursively removeItemRecursively: Bool
+    ) async throws -> Int {
+        return try await self.removeItem(at: path, strategy: .platformDefault, recursively: removeItemRecursively)
+    }
+
     /// See ``FileSystemProtocol/removeItem(at:strategy:recursively:)``
     ///
     /// Deletes the file or directory (and its contents) at `path`.
