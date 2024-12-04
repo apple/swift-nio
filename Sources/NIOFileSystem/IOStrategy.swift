@@ -140,7 +140,7 @@ extension CopyStrategy: CustomStringConvertible {
 }
 
 /// How to perform file deletions. Currently only relevant to directory level deletions when using
-/// ``FileSystemProtocol/removeItem(path:strategy:recursively:)`` or other overloads that use the
+/// ``FileSystemProtocol/removeItem(at:strategy:recursively:)`` or other overloads that use the
 /// default behaviour.
 public struct RemovalStrategy: Hashable, Sendable {
     // Avoid exposing to prevent breaking changes
