@@ -49,7 +49,7 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "cxx-interop-matrix=$(./scripts/generate_matrix.sh)" >> "$GITHUB_OUTPUT"
+        run: echo "cxx-interop-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_COMMAND: "curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-cxx-interop-compatibility.sh | bash"
           MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q curl jq"
