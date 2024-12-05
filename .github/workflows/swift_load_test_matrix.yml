@@ -1,0 +1,40 @@
+name: Matrix Load
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        description: "The name of the workflow used for the concurrency group."
+        required: true
+      matrix_path:
+        type: string
+        description: "The path of the test matrix definition."
+        default: ""
+
+jobs:
+  load-matrix:
+    name: Prepare matrices
+    runs-on: ubuntu-latest
+    outputs:
+      swift-matrix: ${{ steps.load-matrix.outputs.swift-matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Mark the workspace as safe
+        # https://github.com/actions/checkout/issues/766
+        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+      - id: load-matrix
+        run: |
+            printf "swift-matrix=%s" "$(jq -c '.' ${{ inputs.matrix_path }})" >> "$GITHUB_OUTPUT"
+
+  execute-matrix:
+    name: Execute matrix
+    needs: load-matrix
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    with:
+      name: ${{ inputs.name }}
+      matrix_string: '${{ needs.load-matrix.outputs.swift-matrix }}'
