@@ -45,7 +45,7 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "integration-test-matrix=$(./scripts/generate_matrix.sh)" >> "$GITHUB_OUTPUT"
+        run: echo "integration-test-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq"
           MATRIX_LINUX_COMMAND: "./scripts/integration_tests.sh"

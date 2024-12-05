@@ -81,7 +81,7 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "unit-test-matrix=$(./scripts/generate_matrix.sh)" >> "$GITHUB_OUTPUT"
+        run: echo "unit-test-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_COMMAND: "swift test"
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
