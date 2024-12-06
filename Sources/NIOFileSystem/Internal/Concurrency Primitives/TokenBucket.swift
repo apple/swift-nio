@@ -23,23 +23,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+import DequeModule
+import NIOConcurrencyHelpers
+
 /// Type modeled after a "token bucket" pattern, which is similar to a semaphore, but is built with
 /// Swift Concurrency primitives.
 ///
 /// This is an adaptation of the TokenBucket found in Swift Package Manager.
 /// Instead of using an ``actor``, we define a class and limit access through
 /// ``NIOLock``.
-
-import DequeModule
-import NIOConcurrencyHelpers
-
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-class TokenBucket {
-    var tokens: Int
-    var waiters: Deque<CheckedContinuation<Void, Never>>
-    let lock: NIOLock
+final class TokenBucket {
+    private var tokens: Int
+    private var waiters: Deque<CheckedContinuation<Void, Never>>
+    private let lock: NIOLock
 
-    public init(tokens: Int) {
+    init(tokens: Int) {
+        precondition(tokens >= 1, "Need at least one token!")
         self.tokens = tokens
         self.waiters = Deque()
         self.lock = NIOLock()
@@ -51,7 +51,7 @@ class TokenBucket {
     /// invocations of `withToken` will suspend until a "free" token is available.
     /// - Parameter body: The closure to invoke when a token is available.
     /// - Returns: Resulting value returned by `body`.
-    public func withToken<ReturnType>(
+    func withToken<ReturnType>(
         _ body: @Sendable () async throws -> ReturnType
     ) async rethrows -> ReturnType {
         await self.getToken()
@@ -59,30 +59,30 @@ class TokenBucket {
         return try await body()
     }
 
-    func getToken() async {
+    private func getToken() async {
         self.lock.lock()
         if self.tokens > 0 {
             self.tokens -= 1
             self.lock.unlock()
             return
         }
-        self.lock.unlock()
 
         await withCheckedContinuation {
-            self.lock.lock()
             self.waiters.append($0)
             self.lock.unlock()
         }
     }
 
-    func returnToken() {
-        self.lock.lock()
-        defer { self.lock.unlock() }
+    private func returnToken() {
+        if let waiter = self.lock.withLock({ () -> CheckedContinuation<Void, Never>? in
+            if let nextWaiter = self.waiters.popFirst() {
+                return nextWaiter
+            }
 
-        if let nextWaiter = self.waiters.popFirst() {
-            nextWaiter.resume()
-        } else {
             self.tokens += 1
+            return nil
+        }) {
+            waiter.resume()
         }
     }
 }
