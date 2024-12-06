@@ -508,6 +508,14 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     }
 
+    private func removeConcurrently(
+        at path: FilePath,
+        _ maxDescriptors: Int
+    ) async throws -> Int {
+        let bucket: TokenBucket = .init(tokens: maxDescriptors)
+        return try await self.discoverAndRemoveItemsInTree(at: path, bucket)
+    }
+
     /// Moves the named file or directory to a new location.
     ///
     /// Only regular files, symbolic links and directories may be moved. If the item to be is a
