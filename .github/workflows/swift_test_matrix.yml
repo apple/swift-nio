@@ -47,7 +47,7 @@ jobs:
             -e setup_command_expression="$setup_command_expression" \
             -e workspace="$workspace" \
             ${{ matrix.swift.image }} \
-            bash -c "swift --version && git config --global --add safe.directory \"$workspace\" && $setup_command_expression ${{ matrix.swift.command }} ${{ matrix.swift.command_arguments }}"
+            bash -c "$setup_command_expression ${{ matrix.swift.command }} ${{ matrix.swift.command_arguments }}"
       - name: Run matrix job (Windows)
         if: ${{ matrix.swift.platform == 'Windows' }}
         run: |
