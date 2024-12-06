@@ -11,6 +11,10 @@ on:
         type: string
         description: "The path of the test matrix definition."
         default: ""
+      matrix_url:
+        type: string
+        description: "The url of the test matrix definition."
+        default: ""
 
 jobs:
   load-matrix:
@@ -28,13 +32,21 @@ jobs:
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
       - id: load-matrix
         run: |
-            printf "swift-matrix=%s" "$(jq -c '.' ${{ inputs.matrix_path }})" >> "$GITHUB_OUTPUT"
+            if [[ -n "${{ inputs.matrix_path }}" ]]; then
+              printf "swift-matrix=%s" "$(jq -ec '.' ${{ inputs.matrix_path }})" >> "$GITHUB_OUTPUT"
+            elif [[ -n "${{ inputs.matrix_url }}" ]]; then
+              printf "swift-matrix=%s" "$(curl -s ${{ inputs.matrix_url }} | jq -ec '.')" >> "$GITHUB_OUTPUT"
+            else
+              echo "Exactly one of matrix_path, matrix_url must be defined."
+              exit 1
+            fi
+
 
   execute-matrix:
     name: Execute matrix
     needs: load-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@static_sdk_workflow  # TODO: change to @main
     with:
       name: ${{ inputs.name }}
       matrix_string: '${{ needs.load-matrix.outputs.swift-matrix }}'
