@@ -13,17 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 /// How many file descriptors to open when performing I/O operations.
-private struct IOStrategy: Hashable, Sendable {
-    internal enum Wrapped: Hashable, Sendable {
-        // platformDefault is reified into one of the concrete options below:
-        case sequential
-        case parallel(_ maxDescriptors: Int)
-    }
-
-    internal let wrapped: Wrapped
-    private init(_ wrapped: Wrapped) {
-        self.wrapped = wrapped
-    }
+enum IOStrategy: Hashable, Sendable {
+    // platformDefault is reified into one of the concrete options below:
+    case sequential
+    case parallel(_ maxDescriptors: Int)
 
     // These selections are relatively arbitrary but the rationale is as follows:
     //
@@ -39,7 +32,7 @@ private struct IOStrategy: Hashable, Sendable {
     // creation of the destination directory we hold the handle while copying attributes. A much
     // more complex internal state machine could allow doing two of these if desired. This may not
     // result in a faster copy though so things are left simple.
-    internal static func determinePlatformDefault() -> Wrapped {
+    internal static func determinePlatformDefault() -> Self {
         #if os(macOS) || os(Linux) || os(Windows)
         // Eight file descriptors allow for four concurrent file copies/directory scans. Avoiding
         // storage system contention is of utmost importance.
@@ -66,23 +59,13 @@ private struct IOStrategy: Hashable, Sendable {
 /// ``FileSystemProtocol/copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)`` or other
 /// overloads that use the default behaviour.
 public struct CopyStrategy: Hashable, Sendable {
-    // Avoid exposing to prevent breaking changes
-    internal enum Wrapped: Hashable, Sendable {
-        // platformDefault is reified into one of the concrete options below:
-
-        case sequential
-        // Constraints on this value are enforced only on creation of `CopyStrategy`. The early
-        // error check is desirable over validating on downstream use.
-        case parallel(_ maxDescriptors: Int)
-    }
-
-    internal let wrapped: Wrapped
-    private init(_ strategy: IOStrategy.Wrapped) {
+    internal let wrapped: IOStrategy
+    private init(_ strategy: IOStrategy) {
         switch strategy {
         case .sequential:
-            self.wrapped = Wrapped.sequential
+            self.wrapped = .sequential
         case let .parallel(maxDescriptors):
-            self.wrapped = Wrapped.parallel(maxDescriptors)
+            self.wrapped = .parallel(maxDescriptors)
         }
     }
 
@@ -143,23 +126,13 @@ extension CopyStrategy: CustomStringConvertible {
 /// ``FileSystemProtocol/removeItem(at:strategy:recursively:)`` or other overloads that use the
 /// default behaviour.
 public struct RemovalStrategy: Hashable, Sendable {
-    // Avoid exposing to prevent breaking changes
-    internal enum Wrapped: Hashable, Sendable {
-        // platformDefault is reified into one of the concrete options below:
-
-        case sequential
-        // Constraints on this value are enforced only on creation of `RemovalStrategy`. The early
-        // error check is desirable over validating on downstream use.
-        case parallel(_ maxDescriptors: Int)
-    }
-
-    internal let wrapped: Wrapped
-    private init(_ strategy: IOStrategy.Wrapped) {
+    internal let wrapped: IOStrategy
+    private init(_ strategy: IOStrategy) {
         switch strategy {
         case .sequential:
-            self.wrapped = Wrapped.sequential
+            self.wrapped = .sequential
         case let .parallel(maxDescriptors):
-            self.wrapped = Wrapped.parallel(maxDescriptors)
+            self.wrapped = .parallel(maxDescriptors)
         }
     }
 
