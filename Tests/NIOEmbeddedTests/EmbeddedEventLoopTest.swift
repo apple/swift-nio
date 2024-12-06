@@ -396,7 +396,7 @@ public final class EmbeddedEventLoopTest: XCTestCase {
                 try eventLoop.syncShutdownGracefully()
                 childTasks.append(
                     scheduleRecursiveTask(
-                        at: eventLoop._now + childTaskStartDelay,
+                        at: eventLoop.now + childTaskStartDelay,
                         andChildTaskAfter: childTaskStartDelay
                     )
                 )
@@ -496,5 +496,36 @@ public final class EmbeddedEventLoopTest: XCTestCase {
 
         eventLoop.advanceTime(by: .seconds(1))
         XCTAssertEqual(counter, 3)
+    }
+
+    func testCurrentTime() {
+        let eventLoop = EmbeddedEventLoop()
+
+        eventLoop.advanceTime(to: .uptimeNanoseconds(42))
+        XCTAssertEqual(eventLoop.now, .uptimeNanoseconds(42))
+
+        eventLoop.advanceTime(by: .nanoseconds(42))
+        XCTAssertEqual(eventLoop.now, .uptimeNanoseconds(84))
+    }
+
+    func testScheduleRepeatedTask() {
+        let eventLoop = EmbeddedEventLoop()
+
+        var counter = 0
+        eventLoop.scheduleRepeatedTask(initialDelay: .seconds(1), delay: .seconds(1)) { repeatedTask in
+            guard counter < 10 else {
+                repeatedTask.cancel()
+                return
+            }
+            counter += 1
+        }
+
+        XCTAssertEqual(counter, 0)
+
+        eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(counter, 1)
+
+        eventLoop.advanceTime(by: .seconds(9))
+        XCTAssertEqual(counter, 10)
     }
 }

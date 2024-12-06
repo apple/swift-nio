@@ -619,4 +619,14 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         await eventLoop.advanceTime(by: .seconds(1))
         XCTAssertEqual(counter.load(ordering: .relaxed), 3)
     }
+
+    func testCurrentTime() async {
+        let eventLoop = NIOAsyncTestingEventLoop()
+
+        await eventLoop.advanceTime(to: .uptimeNanoseconds(42))
+        XCTAssertEqual(eventLoop.now, .uptimeNanoseconds(42))
+
+        await eventLoop.advanceTime(by: .nanoseconds(42))
+        XCTAssertEqual(eventLoop.now, .uptimeNanoseconds(84))
+    }
 }
