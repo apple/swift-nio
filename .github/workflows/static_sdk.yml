@@ -1,0 +1,13 @@
+name: Static SDK
+
+on:
+  workflow_call:
+
+jobs:
+  static-sdk:
+    name: Static SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: ./.github/workflows/swift_load_test_matrix.yml
+    with:
+      name: "Static SDK"
+      matrix_url: "https://raw.githubusercontent.com/apple/swift-nio/static_sdk_workflow/.github/workflows/matrices/swift_static_sdk_matrix.json"  # TODO: change to @main
