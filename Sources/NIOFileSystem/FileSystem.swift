@@ -438,29 +438,37 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         }
     }
 
-    @discardableResult
-    private func removeItemSequentially(
-        at path: FilePath
-    ) async throws -> Int {
-        var (subdirectories, filesRemoved) = try await self.withDirectoryHandle(
+    func _collectItemsInDirectory(at path: FilePath) async throws -> ([FilePath], [FilePath]) {
+        try await self.withDirectoryHandle(
             atPath: path
         ) { directory in
             var subdirectories = [FilePath]()
-            var filesRemoved = 0
+            var nonDirectoryItems = [FilePath]()
 
             for try await batch in directory.listContents().batched() {
                 for entry in batch {
                     switch entry.type {
                     case .directory:
                         subdirectories.append(entry.path)
-
                     default:
-                        filesRemoved += try await self.removeOneItem(at: entry.path)
+                        nonDirectoryItems.append(entry.path)
                     }
                 }
             }
 
-            return (subdirectories, filesRemoved)
+            return (subdirectories, nonDirectoryItems)
+        }
+    }
+
+    @discardableResult
+    private func removeItemSequentially(
+        at path: FilePath
+    ) async throws -> Int {
+        var filesRemoved = 0
+        let (subdirectories, itemsToRemove) = try await self._collectItemsInDirectory(at: path)
+
+        for item in itemsToRemove {
+            filesRemoved += try await self.removeOneItem(at: item)
         }
 
         for subdirectory in subdirectories {
