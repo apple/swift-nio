@@ -33,7 +33,7 @@ import NIOConcurrencyHelpers
 /// Instead of using an ``actor``, we define a class and limit access through
 /// ``NIOLock``.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-final class TokenBucket {
+final class TokenBucket: @unchecked Sendable {
     private var tokens: Int
     private var waiters: Deque<CheckedContinuation<Void, Never>>
     private let lock: NIOLock
