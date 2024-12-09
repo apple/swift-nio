@@ -54,3 +54,8 @@ jobs:
     with:
       name: "Integration tests"
       matrix_string: '${{ needs.construct-integration-test-matrix.outputs.integration-test-matrix }}'
+
+  static-sdk:
+    name: Static SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/static_sdk.yml@static_sdk_workflow  # TODO: change to @main
