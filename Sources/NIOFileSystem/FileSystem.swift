@@ -366,6 +366,8 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         }
     }
 
+    /// See ``FileSystemProtocol/removeItem(at:strategy:recursively:)``
+    ///
     /// Deletes the file or directory (and its contents) at `path`.
     ///
     /// Only regular files, symbolic links and directories may be removed. If the file at `path` is
@@ -387,11 +389,14 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// - Parameters:
     ///   - path: The path to delete.
+    ///   - removalStrategy: Whether to delete files sequentially (one-by-one), or perform a
+    ///       concurrent scan of the tree at `path` and delete files when they are found.
     ///   - removeItemRecursively: Whether or not to remove items recursively.
     /// - Returns: The number of deleted items which may be zero if `path` did not exist.
     @discardableResult
     public func removeItem(
         at path: FilePath,
+        strategy removalStrategy: RemovalStrategy,
         recursively removeItemRecursively: Bool
     ) async throws -> Int {
         // Try to remove the item: we might just get lucky.
@@ -421,39 +426,60 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 )
             }
 
-            var (subdirectories, filesRemoved) = try await self.withDirectoryHandle(
-                atPath: path
-            ) { directory in
-                var subdirectories = [FilePath]()
-                var filesRemoved = 0
-
-                for try await batch in directory.listContents().batched() {
-                    for entry in batch {
-                        switch entry.type {
-                        case .directory:
-                            subdirectories.append(entry.path)
-
-                        default:
-                            filesRemoved += try await self.removeOneItem(at: entry.path)
-                        }
-                    }
-                }
-
-                return (subdirectories, filesRemoved)
+            switch removalStrategy.wrapped {
+            case .sequential:
+                return try await self.removeItemSequentially(at: path)
+            case let .parallel(maxDescriptors):
+                return try await self.removeConcurrently(at: path, maxDescriptors)
             }
-
-            for subdirectory in subdirectories {
-                filesRemoved += try await self.removeItem(at: subdirectory)
-            }
-
-            // The directory should be empty now. Remove ourself.
-            filesRemoved += try await self.removeOneItem(at: path)
-
-            return filesRemoved
 
         case let .failure(errno):
             throw FileSystemError.remove(errno: errno, path: path, location: .here())
         }
+    }
+
+    @discardableResult
+    private func removeItemSequentially(
+        at path: FilePath
+    ) async throws -> Int {
+        var (subdirectories, filesRemoved) = try await self.withDirectoryHandle(
+            atPath: path
+        ) { directory in
+            var subdirectories = [FilePath]()
+            var filesRemoved = 0
+
+            for try await batch in directory.listContents().batched() {
+                for entry in batch {
+                    switch entry.type {
+                    case .directory:
+                        subdirectories.append(entry.path)
+
+                    default:
+                        filesRemoved += try await self.removeOneItem(at: entry.path)
+                    }
+                }
+            }
+
+            return (subdirectories, filesRemoved)
+        }
+
+        for subdirectory in subdirectories {
+            filesRemoved += try await self.removeItemSequentially(at: subdirectory)
+        }
+
+        // The directory should be empty now. Remove ourself.
+        filesRemoved += try await self.removeOneItem(at: path)
+
+        return filesRemoved
+
+    }
+
+    private func removeConcurrently(
+        at path: FilePath,
+        _ maxDescriptors: Int
+    ) async throws -> Int {
+        let bucket: TokenBucket = .init(tokens: maxDescriptors)
+        return try await self.discoverAndRemoveItemsInTree(at: path, bucket)
     }
 
     /// Moves the named file or directory to a new location.
@@ -490,7 +516,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         case .differentLogicalDevices:
             // Fall back to copy and remove.
             try await self.copyItem(at: sourcePath, to: destinationPath)
-            try await self.removeItem(at: sourcePath)
+            try await self.removeItem(at: sourcePath, strategy: .platformDefault)
         }
     }
 
@@ -518,9 +544,9 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         withItemAt existingPath: FilePath
     ) async throws {
         do {
-            try await self.removeItem(at: destinationPath)
+            try await self.removeItem(at: destinationPath, strategy: .platformDefault)
             try await self.moveItem(at: existingPath, to: destinationPath)
-            try await self.removeItem(at: existingPath)
+            try await self.removeItem(at: existingPath, strategy: .platformDefault)
         } catch let error as FileSystemError {
             throw FileSystemError(
                 message: "Can't replace '\(destinationPath)' with '\(existingPath)'.",
