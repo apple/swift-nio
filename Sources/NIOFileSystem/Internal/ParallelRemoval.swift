@@ -26,7 +26,23 @@ extension FileSystem {
         // Discover current directory and find all files/directories. Free up
         // the handle as fast as possible.
         let (directoriesToRecurseInto, itemsToDelete) = try await bucket.withToken {
-            try await self._collectItemsInDirectory(at: path)
+            try await self.withDirectoryHandle(atPath: path) { directory in
+                var subdirectories: [FilePath] = []
+                var itemsInDirectory: [FilePath] = []
+
+                for try await batch in directory.listContents().batched() {
+                    for entry in batch {
+                        switch entry.type {
+                        case .directory:
+                            subdirectories.append(entry.path)
+                        default:
+                            itemsInDirectory.append(entry.path)
+                        }
+                    }
+                }
+
+                return (subdirectories, itemsInDirectory)
+            }
         }
 
         return try await withThrowingTaskGroup(of: Int.self) { group in
