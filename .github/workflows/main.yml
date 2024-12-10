@@ -30,10 +30,27 @@ jobs:
     with:
       benchmark_package_path: "Benchmarks"
 
+  construct-integration-test-matrix:
+    name: Construct integration test matrix
+    runs-on: ubuntu-latest
+    outputs:
+      integration-test-matrix: '${{ steps.generate-matrix.outputs.integration-test-matrix }}'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: generate-matrix
+        run: echo "integration-test-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        env:
+          MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq"
+          MATRIX_LINUX_COMMAND: "./scripts/integration_tests.sh"
+
   integration-tests:
-    name: Integration Tests
+    name: Integration tests
+    needs: construct-integration-test-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Integration tests"
-      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq && ./scripts/integration_tests.sh"
+      matrix_string: '${{ needs.construct-integration-test-matrix.outputs.integration-test-matrix }}'

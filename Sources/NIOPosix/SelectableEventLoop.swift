@@ -298,6 +298,12 @@ internal final class SelectableEventLoop: EventLoop {
         thread.isCurrent
     }
 
+    /// - see: `EventLoop.now`
+    @usableFromInline
+    internal var now: NIODeadline {
+        .now()
+    }
+
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @inlinable
     internal func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {

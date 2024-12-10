@@ -269,6 +269,9 @@ public protocol EventLoop: EventLoopGroup {
     @preconcurrency
     func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T>
 
+    /// The current time of the event loop.
+    var now: NIODeadline { get }
+
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
     ///
     /// - Parameters:
@@ -392,6 +395,11 @@ public protocol EventLoop: EventLoopGroup {
     ///
     /// - NOTE: Event loops only need to implemented this if they provide a custom scheduled callback implementation.
     func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback)
+}
+
+extension EventLoop {
+    /// Default implementation of `now`: Returns `NIODeadline.now()`.
+    public var now: NIODeadline { .now() }
 }
 
 extension EventLoop {
