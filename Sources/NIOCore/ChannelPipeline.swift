@@ -472,10 +472,10 @@ public final class ChannelPipeline: ChannelInvoker {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
 
         if self.eventLoop.inEventLoop {
-            promise.assumeIsolated().completeWith(self.contextSync(handler: handler))
+            promise.assumeIsolatedUnsafeUnchecked().completeWith(self.contextSync(handler: handler))
         } else {
             self.eventLoop.execute {
-                promise.assumeIsolated().completeWith(self.contextSync(handler: handler))
+                promise.assumeIsolatedUnsafeUnchecked().completeWith(self.contextSync(handler: handler))
             }
         }
 
@@ -501,10 +501,10 @@ public final class ChannelPipeline: ChannelInvoker {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
 
         if self.eventLoop.inEventLoop {
-            promise.assumeIsolated().completeWith(self.contextSync(name: name))
+            promise.assumeIsolatedUnsafeUnchecked().completeWith(self.contextSync(name: name))
         } else {
             self.eventLoop.execute {
-                promise.assumeIsolated().completeWith(self.contextSync(name: name))
+                promise.assumeIsolatedUnsafeUnchecked().completeWith(self.contextSync(name: name))
             }
         }
 
@@ -534,10 +534,10 @@ public final class ChannelPipeline: ChannelInvoker {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
 
         if self.eventLoop.inEventLoop {
-            promise.assumeIsolated().completeWith(self._contextSync(handlerType: handlerType))
+            promise.assumeIsolatedUnsafeUnchecked().completeWith(self._contextSync(handlerType: handlerType))
         } else {
             self.eventLoop.execute {
-                promise.assumeIsolated().completeWith(self._contextSync(handlerType: handlerType))
+                promise.assumeIsolatedUnsafeUnchecked().completeWith(self._contextSync(handlerType: handlerType))
             }
         }
 

@@ -188,7 +188,7 @@ extension NIOAsyncChannelHandler: ChannelInboundHandler {
             // We are making sure to be on our event loop so we can safely use self in whenComplete
             channelReadTransformation(unwrapped)
                 .hop(to: context.eventLoop)
-                .assumeIsolated()
+                .assumeIsolatedUnsafeUnchecked()
                 .whenComplete { result in
                     switch result {
                     case .success:
