@@ -13,8 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-
-@_spi(Package)
 import _NIOBase64
 
 class Base64Test: XCTestCase {
