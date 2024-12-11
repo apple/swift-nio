@@ -23,7 +23,6 @@ extension String {
         self.init(encodingAsBase64: bytes)
     }
 
-
     @available(*, deprecated, message: "This API was unintentionally made public.")
     @inlinable
     public func base64Decoded() throws -> [UInt8] {
