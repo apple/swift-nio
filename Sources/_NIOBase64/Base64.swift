@@ -16,15 +16,28 @@
 // https://github.com/fabianfett/swift-base64-kit
 
 extension String {
+    /// Base64 encode a collection of UInt8 to a string, without the use of Foundation.
+    @available(*, deprecated, message: "This API was unintentionally made public.")
+    @inlinable
+    public init<Buffer: Collection>(base64Encoding bytes: Buffer) where Buffer.Element == UInt8 {
+        self.init(encodingAsBase64: bytes)
+    }
+
+
+    @available(*, deprecated, message: "This API was unintentionally made public.")
+    @inlinable
+    public func base64Decoded() throws -> [UInt8] {
+        try self.decodeBase64()
+    }
 
     /// Base64 encode a collection of UInt8 to a string, without the use of Foundation.
     @inlinable
-    public init<Buffer: Collection>(base64Encoding bytes: Buffer) where Buffer.Element == UInt8 {
+    package init<Buffer: Collection>(encodingAsBase64 bytes: Buffer) where Buffer.Element == UInt8 {
         self = Base64.encode(bytes: bytes)
     }
 
     @inlinable
-    public func base64Decoded() throws -> [UInt8] {
+    package func decodeBase64() throws -> [UInt8] {
         try Base64.decode(string: self)
     }
 }

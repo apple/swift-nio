@@ -303,7 +303,7 @@ private func _buildUpgradeResponse(
                 var hasher = SHA1()
                 hasher.update(string: key)
                 hasher.update(string: magicWebSocketGUID)
-                acceptValue = String(base64Encoding: hasher.finish())
+                acceptValue = String(encodingAsBase64: hasher.finish())
             }
 
             extraHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")
