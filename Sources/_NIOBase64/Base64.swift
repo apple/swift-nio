@@ -20,23 +20,23 @@ extension String {
     @available(*, deprecated, message: "This API was unintentionally made public.")
     @inlinable
     public init<Buffer: Collection>(base64Encoding bytes: Buffer) where Buffer.Element == UInt8 {
-        self.init(encodingAsBase64: bytes)
+        self.init(_base64Encoding: bytes)
     }
 
     @available(*, deprecated, message: "This API was unintentionally made public.")
     @inlinable
     public func base64Decoded() throws -> [UInt8] {
-        try self.decodeBase64()
+        try self._base64Decoded()
     }
 
     /// Base64 encode a collection of UInt8 to a string, without the use of Foundation.
     @inlinable
-    package init<Buffer: Collection>(encodingAsBase64 bytes: Buffer) where Buffer.Element == UInt8 {
+    public init<Buffer: Collection>(_base64Encoding bytes: Buffer) where Buffer.Element == UInt8 {
         self = Base64.encode(bytes: bytes)
     }
 
     @inlinable
-    package func decodeBase64() throws -> [UInt8] {
+    public func _base64Decoded() throws -> [UInt8] {
         try Base64.decode(string: self)
     }
 }
