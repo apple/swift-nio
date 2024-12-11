@@ -51,9 +51,6 @@ typealias ThreadInitializer = (NIOThread) -> Void
 /// all run their own `EventLoop`. Those threads will not be shut down until `shutdownGracefully` or
 /// `syncShutdownGracefully` is called.
 ///
-/// - Note: It's good style to call `MultiThreadedEventLoopGroup.shutdownGracefully` or
-///         `MultiThreadedEventLoopGroup.syncShutdownGracefully` when you no longer need this `EventLoopGroup`. In
-///         many cases that is just before your program exits.
 /// - warning: Unit tests often spawn one `MultiThreadedEventLoopGroup` per unit test to force isolation between the
 ///            tests. In those cases it's important to shut the `MultiThreadedEventLoopGroup` down at the end of the
 ///            test. A good place to start a `MultiThreadedEventLoopGroup` is the `setUp` method of your `XCTestCase`
