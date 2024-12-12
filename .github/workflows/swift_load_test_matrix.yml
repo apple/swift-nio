@@ -28,13 +28,14 @@ jobs:
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
       - id: load-matrix
         run: |
-            printf "swift-matrix=%s" "$(jq -c '.' ${{ inputs.matrix_path }})" >> "$GITHUB_OUTPUT"
+            printf "swift-matrix=%s" "$(jq -ec '.' ${{ inputs.matrix_path }})" >> "$GITHUB_OUTPUT"
+
 
   execute-matrix:
     name: Execute matrix
     needs: load-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@static_sdk_workflow  # TODO: change to @main
     with:
       name: ${{ inputs.name }}
       matrix_string: '${{ needs.load-matrix.outputs.swift-matrix }}'
