@@ -733,13 +733,13 @@ extension ByteBuffer: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let base64String = try container.decode(String.self)
-        self = try ByteBuffer(bytes: base64String.base64Decoded())
+        self = try ByteBuffer(bytes: base64String._base64Decoded())
     }
 
     /// Encodes this buffer as a base64 string in a single value container.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        let base64String = String(base64Encoding: self.readableBytesView)
+        let base64String = String(_base64Encoding: self.readableBytesView)
         try container.encode(base64String)
     }
 }
