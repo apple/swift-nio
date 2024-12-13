@@ -2420,6 +2420,8 @@ extension NIOPipeBootstrap {
         let channel: PipeChannel
         let pipeChannelInput: SelectablePipeHandle?
         let pipeChannelOutput: SelectablePipeHandle?
+        let hasNoInputPipe: Bool
+        let hasNoOutputPipe: Bool
         do {
             if let input = input {
                 try self.validateFileDescriptorIsNotAFile(input)
@@ -2430,6 +2432,8 @@ extension NIOPipeBootstrap {
 
             pipeChannelInput = input.flatMap { SelectablePipeHandle(takingOwnershipOfDescriptor: $0) }
             pipeChannelOutput = output.flatMap { SelectablePipeHandle(takingOwnershipOfDescriptor: $0) }
+            hasNoInputPipe = pipeChannelInput == nil
+            hasNoOutputPipe = pipeChannelOutput == nil
             do {
                 channel = try self.hooks.makePipeChannel(
                     eventLoop: eventLoop as! SelectableEventLoop,
@@ -2458,10 +2462,10 @@ extension NIOPipeBootstrap {
                 channel.registerAlreadyConfigured0(promise: promise)
                 return promise.futureResult.map { result }
             }.flatMap { result -> EventLoopFuture<ChannelInitializerResult> in
-                if pipeChannelInput == nil {
+                if hasNoInputPipe {
                     return channel.close(mode: .input).map { result }
                 }
-                if pipeChannelOutput == nil {
+                if hasNoOutputPipe {
                     return channel.close(mode: .output).map { result }
                 }
                 return channel.selectableEventLoop.makeSucceededFuture(result)

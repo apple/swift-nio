@@ -1138,11 +1138,12 @@ class DropAllReadsOnTheFloorHandler: ChannelDuplexHandler {
             // What we're trying to do here is forcing a close without calling `close`. We know that the other side of
             // the connection is fully closed but because we support half-closure, we need to write to 'learn' that the
             // other side has actually fully closed the socket.
+            let promise = self.waitUntilWriteFailedPromise
             func writeUntilError() {
                 context.writeAndFlush(Self.wrapOutboundOut(buffer)).map {
                     writeUntilError()
                 }.whenFailure { (_: Error) in
-                    self.waitUntilWriteFailedPromise.succeed(())
+                    promise.succeed(())
                 }
             }
             writeUntilError()
