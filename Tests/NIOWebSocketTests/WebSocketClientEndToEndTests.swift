@@ -684,8 +684,6 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
     }
 
     override fileprivate func runSuccessfulUpgrade() throws -> (EmbeddedChannel, WebSocketRecorderHandler) {
-        let handler = WebSocketRecorderHandler()
-
         let basicUpgrader = NIOTypedWebSocketClientUpgrader(
             requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
@@ -715,6 +713,10 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         clientChannel.embeddedEventLoop.run()
 
         try upgradeResult.wait()
+
+        // Ok, now grab the handler. We can do this with sync operations, because this is an
+        // EmbeddedChannel.
+        let handler = try clientChannel.pipeline.syncOperations.handler(type: WebSocketRecorderHandler.self)
 
         return (clientChannel, handler)
     }
