@@ -284,7 +284,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             port: 0
         ) { channel in
             channel.eventLoop.makeCompletedFuture {
-                try self.configureProtocolNegotiationHandlers(channel: channel)
+                try Self.configureProtocolNegotiationHandlers(channel: channel)
             }
         }
 
@@ -366,7 +366,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 port: 0
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
-                    try self.configureNestedProtocolNegotiationHandlers(channel: channel)
+                    try Self.configureNestedProtocolNegotiationHandlers(channel: channel)
                 }
             }
 
@@ -508,7 +508,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             port: 0
         ) { channel in
             channel.eventLoop.makeCompletedFuture {
-                try self.configureProtocolNegotiationHandlers(channel: channel)
+                try Self.configureProtocolNegotiationHandlers(channel: channel)
             }
         }
 
@@ -958,7 +958,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     output: pipe2WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try self.configureProtocolNegotiationHandlers(channel: channel)
+                        try Self.configureProtocolNegotiationHandlers(channel: channel)
                     }
                 }
         } catch {
@@ -1251,7 +1251,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(
                         AddressedEnvelopingHandler(remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0))
                     )
-                    return try self.configureProtocolNegotiationHandlers(
+                    return try Self.configureProtocolNegotiationHandlers(
                         channel: channel,
                         proposedALPN: nil,
                         inboundID: 1,
@@ -1275,7 +1275,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(
                         AddressedEnvelopingHandler(remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0))
                     )
-                    return try self.configureProtocolNegotiationHandlers(
+                    return try Self.configureProtocolNegotiationHandlers(
                         channel: channel,
                         proposedALPN: proposedALPN,
                         inboundID: 2,
@@ -1329,7 +1329,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 to: .init(ipAddress: "127.0.0.1", port: port)
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
-                    try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
+                    try Self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
                 }
             }
     }
@@ -1345,7 +1345,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 to: .init(ipAddress: "127.0.0.1", port: port)
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
-                    try self.configureNestedProtocolNegotiationHandlers(
+                    try Self.configureNestedProtocolNegotiationHandlers(
                         channel: channel,
                         proposedOuterALPN: proposedOuterALPN,
                         proposedInnerALPN: proposedInnerALPN
@@ -1382,7 +1382,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
-                    return try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
+                    return try Self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
                 }
             }
     }
@@ -1418,13 +1418,13 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
-                    return try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
+                    return try Self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
                 }
             }
     }
 
     @discardableResult
-    private func configureProtocolNegotiationHandlers(
+    private static func configureProtocolNegotiationHandlers(
         channel: Channel,
         proposedALPN: TLSUserEventHandler.ALPN? = nil,
         inboundID: UInt8? = nil,
@@ -1437,7 +1437,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     @discardableResult
-    private func configureNestedProtocolNegotiationHandlers(
+    private static func configureNestedProtocolNegotiationHandlers(
         channel: Channel,
         proposedOuterALPN: TLSUserEventHandler.ALPN? = nil,
         proposedInnerALPN: TLSUserEventHandler.ALPN? = nil
@@ -1456,7 +1456,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         try channel.pipeline.syncOperations.addHandler(
                             TLSUserEventHandler(proposedALPN: proposedInnerALPN)
                         )
-                        let negotiationFuture = try self.addTypedApplicationProtocolNegotiationHandler(to: channel)
+                        let negotiationFuture = try Self.addTypedApplicationProtocolNegotiationHandler(to: channel)
 
                         return negotiationFuture
                     }
@@ -1465,7 +1465,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         try channel.pipeline.syncOperations.addHandler(
                             TLSUserEventHandler(proposedALPN: proposedInnerALPN)
                         )
-                        let negotiationHandler = try self.addTypedApplicationProtocolNegotiationHandler(to: channel)
+                        let negotiationHandler = try Self.addTypedApplicationProtocolNegotiationHandler(to: channel)
 
                         return negotiationHandler
                     }
@@ -1481,7 +1481,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     @discardableResult
-    private func addTypedApplicationProtocolNegotiationHandler(
+    private static func addTypedApplicationProtocolNegotiationHandler(
         to channel: Channel
     ) throws -> EventLoopFuture<NegotiationResult> {
         let negotiationHandler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> {

@@ -1388,7 +1388,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             XCTAssertNil(upgradeRequest.wrappedValue)
             upgradeHandlerCbFired.wrappedValue = true
 
-            _ = context.channel.pipeline.addHandler(
+            try! context.channel.pipeline.syncOperations.addHandler(
                 CheckWeReadInlineAndExtraData(
                     firstByteDonePromise: firstByteDonePromise,
                     secondByteDonePromise: secondByteDonePromise,
@@ -2145,7 +2145,7 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
             XCTAssertNotNil(upgradeRequest.wrappedValue)
             upgradeHandlerCbFired.wrappedValue = true
 
-            _ = context.channel.pipeline.addHandler(
+            try! context.channel.pipeline.syncOperations.addHandler(
                 CheckWeReadInlineAndExtraData(
                     firstByteDonePromise: firstByteDonePromise,
                     secondByteDonePromise: secondByteDonePromise,

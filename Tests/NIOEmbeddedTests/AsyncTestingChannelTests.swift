@@ -21,7 +21,7 @@ import XCTest
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class AsyncTestingChannelTests: XCTestCase {
     func testSingleHandlerInit() async throws {
-        class Handler: ChannelInboundHandler {
+        final class Handler: ChannelInboundHandler, Sendable {
             typealias InboundIn = Never
         }
 
@@ -43,7 +43,7 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testMultipleHandlerInit() async throws {
-        class Handler: ChannelInboundHandler, RemovableChannelHandler {
+        final class Handler: ChannelInboundHandler, RemovableChannelHandler, Sendable {
             typealias InboundIn = Never
             let identifier: String
 
@@ -334,7 +334,7 @@ class AsyncTestingChannelTests: XCTestCase {
         try await XCTAsyncAssertTrue(await channel.finish().isClean)
 
         // channelInactive should fire only once.
-        XCTAssertEqual(inactiveHandler.inactiveNotifications, 1)
+        XCTAssertEqual(inactiveHandler.inactiveNotifications.load(ordering: .sequentiallyConsistent), 1)
     }
 
     func testEmbeddedLifecycle() async throws {
@@ -355,7 +355,7 @@ class AsyncTestingChannelTests: XCTestCase {
         XCTAssertFalse(channel.isActive)
     }
 
-    private final class ExceptionThrowingInboundHandler: ChannelInboundHandler {
+    private final class ExceptionThrowingInboundHandler: ChannelInboundHandler, Sendable {
         typealias InboundIn = String
 
         public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -363,7 +363,7 @@ class AsyncTestingChannelTests: XCTestCase {
         }
     }
 
-    private final class ExceptionThrowingOutboundHandler: ChannelOutboundHandler {
+    private final class ExceptionThrowingOutboundHandler: ChannelOutboundHandler, Sendable {
         typealias OutboundIn = String
         typealias OutboundOut = Never
 
@@ -372,12 +372,12 @@ class AsyncTestingChannelTests: XCTestCase {
         }
     }
 
-    private final class CloseInChannelInactiveHandler: ChannelInboundHandler {
+    private final class CloseInChannelInactiveHandler: ChannelInboundHandler, Sendable {
         typealias InboundIn = ByteBuffer
-        public var inactiveNotifications = 0
+        public let inactiveNotifications = ManagedAtomic(0)
 
         public func channelInactive(context: ChannelHandlerContext) {
-            inactiveNotifications += 1
+            inactiveNotifications.wrappingIncrement(by: 1, ordering: .sequentiallyConsistent)
             context.close(promise: nil)
         }
     }
