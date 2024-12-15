@@ -170,7 +170,9 @@ class WebSocketClientEndToEndTests: XCTestCase {
         let basicUpgrader = NIOWebSocketClientUpgrader(
             requestKey: requestKey,
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(WebSocketRecorderHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -244,7 +246,9 @@ class WebSocketClientEndToEndTests: XCTestCase {
         let basicUpgrader = NIOWebSocketClientUpgrader(
             requestKey: requestKey,
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(WebSocketRecorderHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -275,7 +279,9 @@ class WebSocketClientEndToEndTests: XCTestCase {
         let basicUpgrader = NIOWebSocketClientUpgrader(
             requestKey: requestKey,
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(WebSocketRecorderHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -307,7 +313,9 @@ class WebSocketClientEndToEndTests: XCTestCase {
         let basicUpgrader = NIOWebSocketClientUpgrader(
             requestKey: requestKey,
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(WebSocketRecorderHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -332,13 +340,12 @@ class WebSocketClientEndToEndTests: XCTestCase {
     }
 
     fileprivate func runSuccessfulUpgrade() throws -> (EmbeddedChannel, WebSocketRecorderHandler) {
-
-        let handler = WebSocketRecorderHandler()
-
         let basicUpgrader = NIOWebSocketClientUpgrader(
             requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(handler)
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -360,6 +367,10 @@ class WebSocketClientEndToEndTests: XCTestCase {
         XCTAssertNoThrow(try clientChannel.readOutbound(as: ByteBuffer.self))
 
         clientChannel.embeddedEventLoop.run()
+
+        // Ok, now grab the handler. We can do this with sync operations, because this is an
+        // EmbeddedChannel.
+        let handler = try clientChannel.pipeline.syncOperations.handler(type: WebSocketRecorderHandler.self)
 
         return (clientChannel, handler)
 
@@ -501,7 +512,9 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         let basicUpgrader = NIOTypedWebSocketClientUpgrader(
             requestKey: requestKey,
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(WebSocketRecorderHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -570,7 +583,9 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         let basicUpgrader = NIOTypedWebSocketClientUpgrader(
             requestKey: requestKey,
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(WebSocketRecorderHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -603,7 +618,9 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         let basicUpgrader = NIOTypedWebSocketClientUpgrader(
             requestKey: requestKey,
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(WebSocketRecorderHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -637,7 +654,9 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         let basicUpgrader = NIOTypedWebSocketClientUpgrader(
             requestKey: requestKey,
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(WebSocketRecorderHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -665,12 +684,12 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
     }
 
     override fileprivate func runSuccessfulUpgrade() throws -> (EmbeddedChannel, WebSocketRecorderHandler) {
-        let handler = WebSocketRecorderHandler()
-
         let basicUpgrader = NIOTypedWebSocketClientUpgrader(
             requestKey: "OfS0wDaT5NoxF2gqm7Zj2YtetzM=",
             upgradePipelineHandler: { (channel: Channel, _: HTTPResponseHead) in
-                channel.pipeline.addHandler(handler)
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(WebSocketRecorderHandler())
+                }
             }
         )
 
@@ -694,6 +713,10 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         clientChannel.embeddedEventLoop.run()
 
         try upgradeResult.wait()
+
+        // Ok, now grab the handler. We can do this with sync operations, because this is an
+        // EmbeddedChannel.
+        let handler = try clientChannel.pipeline.syncOperations.handler(type: WebSocketRecorderHandler.self)
 
         return (clientChannel, handler)
     }

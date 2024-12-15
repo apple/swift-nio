@@ -52,7 +52,7 @@ windows_nightly_main_runner="windows-2019"
 windows_nightly_main_container_image="swiftlang/swift:nightly-main-windowsservercore-1809"
 
 # Create matrix from inputs
-matrix='{"swift": []}'
+matrix='{"config": []}'
 
 ## Linux
 if [[ "$linux_5_9_enabled" == "true" || "$linux_5_10_enabled" == "true" || "$linux_6_0_enabled" == "true" || \
@@ -70,7 +70,7 @@ if [[ "$linux_5_9_enabled" == "true" ]]; then
     --arg command_arguments "$linux_5_9_command_arguments" \
     --arg container_image "$linux_5_9_container_image" \
     --arg runner "$linux_runner" \
-    '.swift[.swift| length] |= . + { "name": "5.9", "image": $container_image, "swift_version": "5.9", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
+    '.config[.config| length] |= . + { "name": "5.9", "image": $container_image, "swift_version": "5.9", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
 fi
 
 if [[ "$linux_5_10_enabled" == "true" ]]; then
@@ -80,7 +80,7 @@ if [[ "$linux_5_10_enabled" == "true" ]]; then
     --arg command_arguments "$linux_5_10_command_arguments" \
     --arg container_image "$linux_5_10_container_image" \
     --arg runner "$linux_runner" \
-    '.swift[.swift| length] |= . + { "name": "5.10", "image": $container_image, "swift_version": "5.10", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
+    '.config[.config| length] |= . + { "name": "5.10", "image": $container_image, "swift_version": "5.10", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
 fi
 
 if [[ "$linux_6_0_enabled" == "true" ]]; then
@@ -90,7 +90,7 @@ if [[ "$linux_6_0_enabled" == "true" ]]; then
     --arg command_arguments "$linux_6_0_command_arguments" \
     --arg container_image "$linux_6_0_container_image" \
     --arg runner "$linux_runner" \
-    '.swift[.swift| length] |= . + { "name": "6.0", "image": $container_image, "swift_version": "6.0", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
+    '.config[.config| length] |= . + { "name": "6.0", "image": $container_image, "swift_version": "6.0", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
 fi
 
 if [[ "$linux_nightly_6_0_enabled" == "true" ]]; then
@@ -100,7 +100,7 @@ if [[ "$linux_nightly_6_0_enabled" == "true" ]]; then
     --arg command_arguments "$linux_nightly_6_0_command_arguments" \
     --arg container_image "$linux_nightly_6_0_container_image" \
     --arg runner "$linux_runner" \
-    '.swift[.swift| length] |= . + { "name": "nightly-6.0", "image": $container_image, "swift_version": "nightly-6.0", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
+    '.config[.config| length] |= . + { "name": "nightly-6.0", "image": $container_image, "swift_version": "nightly-6.0", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
 fi
 
 if [[ "$linux_nightly_main_enabled" == "true" ]]; then
@@ -110,7 +110,7 @@ if [[ "$linux_nightly_main_enabled" == "true" ]]; then
     --arg command_arguments "$linux_nightly_main_command_arguments" \
     --arg container_image "$linux_nightly_main_container_image" \
     --arg runner "$linux_runner" \
-    '.swift[.swift| length] |= . + { "name": "nightly-main", "image": $container_image, "swift_version": "nightly-main", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
+    '.config[.config| length] |= . + { "name": "nightly-main", "image": $container_image, "swift_version": "nightly-main", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
 fi
 
 ## Windows
@@ -127,7 +127,7 @@ if [[ "$windows_6_0_enabled" == "true" ]]; then
     --arg command_arguments "$windows_6_0_command_arguments" \
     --arg container_image "$windows_6_0_container_image" \
     --arg runner "$windows_6_0_runner" \
-    '.swift[.swift| length] |= . + { "name": "6.0", "image": $container_image, "swift_version": "6.0", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner }')
+    '.config[.config| length] |= . + { "name": "6.0", "image": $container_image, "swift_version": "6.0", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner }')
 fi
 
 if [[ "$windows_nightly_6_0_enabled" == "true" ]]; then
@@ -137,7 +137,7 @@ if [[ "$windows_nightly_6_0_enabled" == "true" ]]; then
     --arg command_arguments "$windows_nightly_6_0_command_arguments" \
     --arg container_image "$windows_nightly_6_0_container_image" \
     --arg runner "$windows_nightly_6_0_runner" \
-    '.swift[.swift| length] |= . + { "name": "nightly-6.0", "image": $container_image, "swift_version": "nightly-6.0", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner }')
+    '.config[.config| length] |= . + { "name": "nightly-6.0", "image": $container_image, "swift_version": "nightly-6.0", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner }')
 fi
 
 if [[ "$windows_nightly_main_enabled" == "true" ]]; then
@@ -147,7 +147,7 @@ if [[ "$windows_nightly_main_enabled" == "true" ]]; then
     --arg command_arguments "$windows_nightly_main_command_arguments" \
     --arg container_image "$windows_nightly_main_container_image" \
     --arg runner "$windows_nightly_main_runner" \
-    '.swift[.swift| length] |= . + { "name": "nightly-main", "image": $container_image, "swift_version": "nightly-main", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner }')
+    '.config[.config| length] |= . + { "name": "nightly-main", "image": $container_image, "swift_version": "nightly-main", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner }')
 fi
 
 echo "$matrix" | jq -c
