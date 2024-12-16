@@ -27,6 +27,8 @@ protocol ScheduledCallbackTestRequirements {
 
     // ELG-backed ELs need to be shutdown via the ELG.
     func shutdownEventLoop() async throws
+
+    func waitForLoopTick() async throws
 }
 
 final class MTELGScheduledCallbackTests: _BaseScheduledCallbackTests {
@@ -40,6 +42,10 @@ final class MTELGScheduledCallbackTests: _BaseScheduledCallbackTests {
 
         func shutdownEventLoop() async throws {
             try await self.group.shutdownGracefully()
+        }
+
+        func waitForLoopTick() async throws {
+            try await self.loop.submit { }.get()
         }
     }
 
@@ -59,6 +65,10 @@ final class NIOAsyncTestingEventLoopScheduledCallbackTests: _BaseScheduledCallba
 
         func shutdownEventLoop() async throws {
             await self._loop.shutdownGracefully()
+        }
+
+        func waitForLoopTick() async throws {
+            try await self._loop.executeInContext { }
         }
     }
 
@@ -83,6 +93,7 @@ extension _BaseScheduledCallbackTests {
 
     func advanceTime(by amount: TimeAmount) async throws {
         try await self.requirements.advanceTime(by: amount)
+        try await self.requirements.waitForLoopTick()
     }
 
     func shutdownEventLoop() async throws {
@@ -151,6 +162,7 @@ extension _BaseScheduledCallbackTests {
 
         let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         scheduledCallback.cancel()
+        try await self.requirements.waitForLoopTick()
         handler.assert(callbackCount: 0, cancelCount: 1)
     }
 
@@ -161,6 +173,7 @@ extension _BaseScheduledCallbackTests {
         try await self.advanceTime(by: .milliseconds(1))
         try await handler.waitForCallback(timeout: .seconds(1))
         scheduledCallback.cancel()
+        try await self.requirements.waitForLoopTick()
         handler.assert(callbackCount: 1, cancelCount: 0)
     }
 
@@ -169,7 +182,9 @@ extension _BaseScheduledCallbackTests {
 
         let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         scheduledCallback.cancel()
+        try await self.requirements.waitForLoopTick()
         scheduledCallback.cancel()
+        try await self.requirements.waitForLoopTick()
         handler.assert(callbackCount: 0, cancelCount: 1)
     }
 
@@ -197,6 +212,7 @@ extension _BaseScheduledCallbackTests {
 
         let handle = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         handle.cancel()
+        try await self.requirements.waitForLoopTick()
         handler.assert(callbackCount: 0, cancelCount: 1)
 
         try await self.shutdownEventLoop()
