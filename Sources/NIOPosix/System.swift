@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -124,12 +124,20 @@ private let sysWritev = sysWritev_wrapper
 #elseif !os(Windows)
 private let sysWritev: @convention(c) (Int32, UnsafePointer<iovec>?, CInt) -> CLong = writev
 #endif
-#if !os(Windows)
+#if canImport(Android)
+private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>, CInt) -> ssize_t = recvmsg
+private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>, CInt) -> ssize_t = sendmsg
+#elseif !os(Windows)
 private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>?, CInt) -> ssize_t = recvmsg
 private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>?, CInt) -> ssize_t = sendmsg
 #endif
 private let sysDup: @convention(c) (CInt) -> CInt = dup
-#if !os(Windows)
+#if canImport(Android)
+private let sysGetpeername:
+    @convention(c) (CInt, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) -> CInt = getpeername
+private let sysGetsockname:
+    @convention(c) (CInt, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) -> CInt = getsockname
+#elseif !os(Windows)
 private let sysGetpeername:
     @convention(c) (CInt, UnsafeMutablePointer<sockaddr>?, UnsafeMutablePointer<socklen_t>?) -> CInt = getpeername
 private let sysGetsockname:
@@ -141,7 +149,9 @@ private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>) -> CUnsigned
 #else
 private let sysIfNameToIndex: @convention(c) (UnsafePointer<CChar>?) -> CUnsignedInt = if_nametoindex
 #endif
-#if !os(Windows)
+#if canImport(Android)
+private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>) -> CInt = socketpair
+#elseif !os(Windows)
 private let sysSocketpair: @convention(c) (CInt, CInt, CInt, UnsafeMutablePointer<CInt>?) -> CInt = socketpair
 #endif
 
@@ -172,7 +182,8 @@ private let sysRecvMmsg = CNIODarwin_recvmmsg
 private let sysIoctl: @convention(c) (CInt, CUnsignedLong, UnsafeMutableRawPointer) -> CInt = ioctl
 #endif  // !os(Windows)
 
-private func isUnacceptableErrno(_ code: Int32) -> Bool {
+@inlinable
+func isUnacceptableErrno(_ code: CInt) -> Bool {
     // On iOS, EBADF is a possible result when a file descriptor has been reaped in the background.
     // In particular, it's possible to get EBADF from accept(), where the underlying accept() FD
     // is valid but the accepted one is not. The right solution here is to perform a check for
@@ -195,7 +206,8 @@ private func isUnacceptableErrno(_ code: Int32) -> Bool {
     #endif
 }
 
-private func isUnacceptableErrnoOnClose(_ code: Int32) -> Bool {
+@inlinable
+public func isUnacceptableErrnoOnClose(_ code: CInt) -> Bool {
     // We treat close() differently to all other FDs: we still want to catch EBADF here.
     switch code {
     case EFAULT, EBADF:
@@ -205,7 +217,8 @@ private func isUnacceptableErrnoOnClose(_ code: Int32) -> Bool {
     }
 }
 
-private func isUnacceptableErrnoForbiddingEINVAL(_ code: Int32) -> Bool {
+@inlinable
+internal func isUnacceptableErrnoForbiddingEINVAL(_ code: CInt) -> Bool {
     // We treat read() and pread() differently since we also want to catch EINVAL.
     #if canImport(Darwin) && !os(macOS)
     switch code {
@@ -225,6 +238,7 @@ private func isUnacceptableErrnoForbiddingEINVAL(_ code: Int32) -> Bool {
 }
 
 #if os(Windows)
+@inlinable
 internal func strerror(_ errno: CInt) -> String {
     withUnsafeTemporaryAllocation(of: CChar.self, capacity: 95) {
         let result = strerror_s($0.baseAddress, $0.count, errno)
@@ -234,7 +248,8 @@ internal func strerror(_ errno: CInt) -> String {
 }
 #endif
 
-private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) {
+@inlinable
+internal func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     #if os(Windows)
     precondition(!isUnacceptableErrno(err), "unacceptable errno \(err) \(strerror(err)) in \(function))")
@@ -246,7 +261,8 @@ private func preconditionIsNotUnacceptableErrno(err: CInt, where function: Strin
     #endif
 }
 
-private func preconditionIsNotUnacceptableErrnoOnClose(err: CInt, where function: String) {
+@inlinable
+internal func preconditionIsNotUnacceptableErrnoOnClose(err: CInt, where function: String) {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     #if os(Windows)
     precondition(!isUnacceptableErrnoOnClose(err), "unacceptable errno \(err) \(strerror(err)) in \(function))")
@@ -258,7 +274,8 @@ private func preconditionIsNotUnacceptableErrnoOnClose(err: CInt, where function
     #endif
 }
 
-private func preconditionIsNotUnacceptableErrnoForbiddingEINVAL(err: CInt, where function: String) {
+@inlinable
+internal func preconditionIsNotUnacceptableErrnoForbiddingEINVAL(err: CInt, where function: String) {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     #if os(Windows)
     precondition(
@@ -278,6 +295,7 @@ private func preconditionIsNotUnacceptableErrnoForbiddingEINVAL(err: CInt, where
 // take twice the time, ie. we need this exception.
 @inline(__always)
 @discardableResult
+@inlinable
 internal func syscall<T: FixedWidthInteger>(
     blocking: Bool,
     where function: String = #function,
@@ -310,6 +328,7 @@ internal func syscall<T: FixedWidthInteger>(
 
 #if canImport(Darwin)
 @inline(__always)
+@inlinable
 @discardableResult
 internal func syscall<T>(
     where function: String = #function,
@@ -334,6 +353,7 @@ internal func syscall<T>(
 }
 #elseif os(Linux) || os(Android)
 @inline(__always)
+@inlinable
 @discardableResult
 internal func syscall(
     where function: String = #function,
@@ -360,6 +380,7 @@ internal func syscall(
 
 #if !os(Windows)
 @inline(__always)
+@inlinable
 @discardableResult
 internal func syscallOptional<T>(
     where function: String = #function,
@@ -391,6 +412,7 @@ internal func syscallOptional<T>(
 // however we seem to break the inlining threshold which makes a system call
 // take twice the time, ie. we need this exception.
 @inline(__always)
+@inlinable
 @discardableResult
 internal func syscallForbiddingEINVAL<T: FixedWidthInteger>(
     where function: String = #function,
@@ -421,39 +443,60 @@ internal func syscallForbiddingEINVAL<T: FixedWidthInteger>(
     }
 }
 
+@usableFromInline
 internal enum Posix {
     #if canImport(Darwin)
+    @usableFromInline
     static let UIO_MAXIOV: Int = 1024
+    @usableFromInline
     static let SHUT_RD: CInt = CInt(Darwin.SHUT_RD)
+    @usableFromInline
     static let SHUT_WR: CInt = CInt(Darwin.SHUT_WR)
+    @usableFromInline
     static let SHUT_RDWR: CInt = CInt(Darwin.SHUT_RDWR)
     #elseif os(Linux) || os(FreeBSD) || os(Android)
     #if canImport(Glibc)
+    @usableFromInline
     static let UIO_MAXIOV: Int = Int(Glibc.UIO_MAXIOV)
+    @usableFromInline
     static let SHUT_RD: CInt = CInt(Glibc.SHUT_RD)
+    @usableFromInline
     static let SHUT_WR: CInt = CInt(Glibc.SHUT_WR)
+    @usableFromInline
     static let SHUT_RDWR: CInt = CInt(Glibc.SHUT_RDWR)
     #elseif canImport(Musl)
+    @usableFromInline
     static let UIO_MAXIOV: Int = Int(Musl.UIO_MAXIOV)
+    @usableFromInline
     static let SHUT_RD: CInt = CInt(Musl.SHUT_RD)
+    @usableFromInline
     static let SHUT_WR: CInt = CInt(Musl.SHUT_WR)
+    @usableFromInline
     static let SHUT_RDWR: CInt = CInt(Musl.SHUT_RDWR)
     #elseif canImport(Android)
+    @usableFromInline
     static let UIO_MAXIOV: Int = Int(Android.UIO_MAXIOV)
+    @usableFromInline
     static let SHUT_RD: CInt = CInt(Android.SHUT_RD)
+    @usableFromInline
     static let SHUT_WR: CInt = CInt(Android.SHUT_WR)
+    @usableFromInline
     static let SHUT_RDWR: CInt = CInt(Android.SHUT_RDWR)
     #endif
     #else
+    @usableFromInline
     static var UIO_MAXIOV: Int {
         fatalError("unsupported OS")
     }
+    @usableFromInline
     static var SHUT_RD: Int {
         fatalError("unsupported OS")
     }
+    @usableFromInline
     static var SHUT_WR: Int {
         fatalError("unsupported OS")
     }
+    @usableFromInline
     static var SHUT_RDWR: Int {
         fatalError("unsupported OS")
     }
@@ -503,14 +546,14 @@ internal enum Posix {
 
     #if !os(Windows)
     @inline(never)
-    internal static func shutdown(descriptor: CInt, how: Shutdown) throws {
+    public static func shutdown(descriptor: CInt, how: Shutdown) throws {
         _ = try syscall(blocking: false) {
             sysShutdown(descriptor, how.cValue)
         }
     }
 
     @inline(never)
-    internal static func close(descriptor: CInt) throws {
+    public static func close(descriptor: CInt) throws {
         let res = sysClose(descriptor)
         if res == -1 {
             #if os(Windows)
@@ -534,7 +577,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func bind(descriptor: CInt, ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
+    public static func bind(descriptor: CInt, ptr: UnsafePointer<sockaddr>, bytes: Int) throws {
         _ = try syscall(blocking: false) {
             sysBind(descriptor, ptr, socklen_t(bytes))
         }
@@ -542,6 +585,7 @@ internal enum Posix {
 
     @inline(never)
     @discardableResult
+    @usableFromInline
     // TODO: Allow varargs
     internal static func fcntl(descriptor: CInt, command: CInt, value: CInt) throws -> CInt {
         try syscall(blocking: false) {
@@ -550,7 +594,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func socket(
+    public static func socket(
         domain: NIOBSDSocket.ProtocolFamily,
         type: NIOBSDSocket.SocketType,
         protocolSubtype: NIOBSDSocket.ProtocolSubtype
@@ -561,7 +605,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func setsockopt(
+    public static func setsockopt(
         socket: CInt,
         level: CInt,
         optionName: CInt,
@@ -574,7 +618,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func getsockopt(
+    public static func getsockopt(
         socket: CInt,
         level: CInt,
         optionName: CInt,
@@ -587,14 +631,14 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func listen(descriptor: CInt, backlog: CInt) throws {
+    public static func listen(descriptor: CInt, backlog: CInt) throws {
         _ = try syscall(blocking: false) {
             sysListen(descriptor, backlog)
         }
     }
 
     @inline(never)
-    internal static func accept(
+    public static func accept(
         descriptor: CInt,
         addr: UnsafeMutablePointer<sockaddr>?,
         len: UnsafeMutablePointer<socklen_t>?
@@ -611,7 +655,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func connect(descriptor: CInt, addr: UnsafePointer<sockaddr>, size: socklen_t) throws -> Bool {
+    public static func connect(descriptor: CInt, addr: UnsafePointer<sockaddr>, size: socklen_t) throws -> Bool {
         do {
             _ = try syscall(blocking: false) {
                 sysConnect(descriptor, addr, size)
@@ -626,14 +670,14 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func open(file: UnsafePointer<CChar>, oFlag: CInt, mode: mode_t) throws -> CInt {
+    public static func open(file: UnsafePointer<CChar>, oFlag: CInt, mode: mode_t) throws -> CInt {
         try syscall(blocking: false) {
             sysOpenWithMode(file, oFlag, mode)
         }.result
     }
 
     @inline(never)
-    internal static func open(file: UnsafePointer<CChar>, oFlag: CInt) throws -> CInt {
+    public static func open(file: UnsafePointer<CChar>, oFlag: CInt) throws -> CInt {
         try syscall(blocking: false) {
             sysOpen(file, oFlag)
         }.result
@@ -641,21 +685,21 @@ internal enum Posix {
 
     @inline(never)
     @discardableResult
-    internal static func ftruncate(descriptor: CInt, size: off_t) throws -> CInt {
+    public static func ftruncate(descriptor: CInt, size: off_t) throws -> CInt {
         try syscall(blocking: false) {
             sysFtruncate(descriptor, size)
         }.result
     }
 
     @inline(never)
-    internal static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
+    public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
         try syscall(blocking: true) {
             sysWrite(descriptor, pointer, size)
         }
     }
 
     @inline(never)
-    internal static func pwrite(
+    public static func pwrite(
         descriptor: CInt,
         pointer: UnsafeRawPointer,
         size: Int,
@@ -668,7 +712,7 @@ internal enum Posix {
 
     #if !os(Windows)
     @inline(never)
-    internal static func writev(descriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
+    public static func writev(descriptor: CInt, iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         try syscall(blocking: true) {
             sysWritev(descriptor, iovecs.baseAddress!, CInt(iovecs.count))
         }
@@ -676,7 +720,7 @@ internal enum Posix {
     #endif
 
     @inline(never)
-    internal static func read(
+    public static func read(
         descriptor: CInt,
         pointer: UnsafeMutableRawPointer,
         size: size_t
@@ -687,7 +731,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func pread(
+    public static func pread(
         descriptor: CInt,
         pointer: UnsafeMutableRawPointer,
         size: size_t,
@@ -699,7 +743,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func recvmsg(
+    public static func recvmsg(
         descriptor: CInt,
         msgHdr: UnsafeMutablePointer<msghdr>,
         flags: CInt
@@ -710,7 +754,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func sendmsg(
+    public static func sendmsg(
         descriptor: CInt,
         msgHdr: UnsafePointer<msghdr>,
         flags: CInt
@@ -722,7 +766,7 @@ internal enum Posix {
 
     @discardableResult
     @inline(never)
-    internal static func lseek(descriptor: CInt, offset: off_t, whence: CInt) throws -> off_t {
+    public static func lseek(descriptor: CInt, offset: off_t, whence: CInt) throws -> off_t {
         try syscall(blocking: false) {
             sysLseek(descriptor, offset, whence)
         }.result
@@ -731,7 +775,7 @@ internal enum Posix {
 
     @discardableResult
     @inline(never)
-    internal static func dup(descriptor: CInt) throws -> CInt {
+    public static func dup(descriptor: CInt) throws -> CInt {
         try syscall(blocking: false) {
             sysDup(descriptor)
         }.result
@@ -740,7 +784,7 @@ internal enum Posix {
     #if !os(Windows)
     // It's not really posix but exists on Linux and MacOS / BSD so just put it here for now to keep it simple
     @inline(never)
-    internal static func sendfile(descriptor: CInt, fd: CInt, offset: off_t, count: size_t) throws -> IOResult<Int> {
+    public static func sendfile(descriptor: CInt, fd: CInt, offset: off_t, count: size_t) throws -> IOResult<Int> {
         var written: off_t = 0
         do {
             _ = try syscall(blocking: false) { () -> ssize_t in
@@ -778,7 +822,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func sendmmsg(
+    public static func sendmmsg(
         sockfd: CInt,
         msgvec: UnsafeMutablePointer<MMsgHdr>,
         vlen: CUnsignedInt,
@@ -790,7 +834,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func recvmmsg(
+    public static func recvmmsg(
         sockfd: CInt,
         msgvec: UnsafeMutablePointer<MMsgHdr>,
         vlen: CUnsignedInt,
@@ -803,7 +847,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func getpeername(
+    public static func getpeername(
         socket: CInt,
         address: UnsafeMutablePointer<sockaddr>,
         addressLength: UnsafeMutablePointer<socklen_t>
@@ -814,7 +858,7 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func getsockname(
+    public static func getsockname(
         socket: CInt,
         address: UnsafeMutablePointer<sockaddr>,
         addressLength: UnsafeMutablePointer<socklen_t>
@@ -826,7 +870,7 @@ internal enum Posix {
     #endif
 
     @inline(never)
-    internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
+    public static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
         try syscall(blocking: false) {
             sysIfNameToIndex(name!)
         }.result
@@ -834,28 +878,28 @@ internal enum Posix {
 
     #if !os(Windows)
     @inline(never)
-    internal static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t, timeout: CInt) throws -> CInt {
+    public static func poll(fds: UnsafeMutablePointer<pollfd>, nfds: nfds_t, timeout: CInt) throws -> CInt {
         try syscall(blocking: false) {
             sysPoll(fds, nfds, timeout)
         }.result
     }
 
     @inline(never)
-    internal static func fstat(descriptor: CInt, outStat: UnsafeMutablePointer<stat>) throws {
+    public static func fstat(descriptor: CInt, outStat: UnsafeMutablePointer<stat>) throws {
         _ = try syscall(blocking: false) {
             sysFstat(descriptor, outStat)
         }
     }
 
     @inline(never)
-    internal static func stat(pathname: String, outStat: UnsafeMutablePointer<stat>) throws {
+    public static func stat(pathname: String, outStat: UnsafeMutablePointer<stat>) throws {
         _ = try syscall(blocking: false) {
             sysStat(pathname, outStat)
         }
     }
 
     @inline(never)
-    internal static func lstat(pathname: String, outStat: UnsafeMutablePointer<stat>) throws {
+    public static func lstat(pathname: String, outStat: UnsafeMutablePointer<stat>) throws {
         _ = try syscall(blocking: false) {
             sysLstat(pathname, outStat)
         }
@@ -959,20 +1003,20 @@ internal enum Posix {
     }
 
     @inline(never)
-    internal static func socketpair(
+    public static func socketpair(
         domain: NIOBSDSocket.ProtocolFamily,
         type: NIOBSDSocket.SocketType,
         protocolSubtype: NIOBSDSocket.ProtocolSubtype,
         socketVector: UnsafeMutablePointer<CInt>?
     ) throws {
         _ = try syscall(blocking: false) {
-            sysSocketpair(domain.rawValue, type.rawValue, protocolSubtype.rawValue, socketVector)
+            sysSocketpair(domain.rawValue, type.rawValue, protocolSubtype.rawValue, socketVector!)
         }
     }
     #endif
     #if !os(Windows)
     @inline(never)
-    internal static func ioctl(fd: CInt, request: CUnsignedLong, ptr: UnsafeMutableRawPointer) throws {
+    public static func ioctl(fd: CInt, request: CUnsignedLong, ptr: UnsafeMutableRawPointer) throws {
         _ = try syscall(blocking: false) {
             /// `numericCast` to support musl which accepts `CInt` (cf. `CUnsignedLong`).
             sysIoctl(fd, numericCast(request), ptr)
@@ -997,7 +1041,7 @@ public struct NIOFailedToSetSocketNonBlockingError: Error {}
 
 #if !os(Windows)
 extension Posix {
-    static func setNonBlocking(socket: CInt) throws {
+    public static func setNonBlocking(socket: CInt) throws {
         let flags = try Posix.fcntl(descriptor: socket, command: F_GETFL, value: 0)
         do {
             let ret = try Posix.fcntl(descriptor: socket, command: F_SETFL, value: flags | O_NONBLOCK)
@@ -1014,12 +1058,13 @@ extension Posix {
 #endif
 
 #if canImport(Darwin)
+@usableFromInline
 internal enum KQueue {
 
     // TODO: Figure out how to specify a typealias to the kevent struct without run into trouble with the swift compiler
 
     @inline(never)
-    internal static func kqueue() throws -> CInt {
+    public static func kqueue() throws -> CInt {
         try syscall(blocking: false) {
             Darwin.kqueue()
         }.result
@@ -1027,7 +1072,7 @@ internal enum KQueue {
 
     @inline(never)
     @discardableResult
-    internal static func kevent(
+    public static func kevent(
         kq: CInt,
         changelist: UnsafePointer<kevent>?,
         nchanges: CInt,

@@ -195,7 +195,7 @@ extension ChannelOutboundInvoker {
     public func close(mode: CloseMode = .all, file: StaticString = #fileID, line: UInt = #line) -> EventLoopFuture<Void>
     {
         let promise = makePromise(file: file, line: line)
-        close(mode: mode, promise: promise)
+        self.close(mode: mode, promise: promise)
         return promise.futureResult
     }
 

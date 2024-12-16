@@ -39,7 +39,7 @@ extension ByteBuffer {
             // this is not technically correct because we shouldn't just bind
             // the memory to `UInt8` but it's not a real issue either and we
             // need to work around https://bugs.swift.org/browse/SR-9604
-            [UInt8](UnsafeRawBufferPointer(fastRebase: ptr[range]).bindMemory(to: UInt8.self))
+            [UInt8](UnsafeRawBufferPointer(rebasing: ptr[range]).bindMemory(to: UInt8.self))
         }
     }
 
@@ -205,7 +205,10 @@ extension ByteBuffer {
         }
         return self.withUnsafeReadableBytes { pointer in
             assert(range.lowerBound >= 0 && (range.upperBound - range.lowerBound) <= pointer.count)
-            return String(decoding: UnsafeRawBufferPointer(fastRebase: pointer[range]), as: Unicode.UTF8.self)
+            return String(
+                decoding: UnsafeRawBufferPointer(rebasing: pointer[range]),
+                as: Unicode.UTF8.self
+            )
         }
     }
 
@@ -329,7 +332,7 @@ extension ByteBuffer {
         self.withVeryUnsafeMutableBytes { destCompleteStorage in
             assert(destCompleteStorage.count >= index + allBytesCount)
             let dest = destCompleteStorage[index..<index + allBytesCount]
-            dispatchData.copyBytes(to: .init(fastRebase: dest), count: dest.count)
+            dispatchData.copyBytes(to: .init(rebasing: dest), count: dest.count)
         }
         return allBytesCount
     }
@@ -348,7 +351,7 @@ extension ByteBuffer {
             return nil
         }
         return self.withUnsafeReadableBytes { pointer in
-            DispatchData(bytes: UnsafeRawBufferPointer(fastRebase: pointer[range]))
+            DispatchData(bytes: UnsafeRawBufferPointer(rebasing: pointer[range]))
         }
     }
 
@@ -497,7 +500,7 @@ extension ByteBuffer {
         precondition(count >= 0, "Can't write fewer than 0 bytes")
         self.reserveCapacity(index + count)
         self.withVeryUnsafeMutableBytes { pointer in
-            let dest = UnsafeMutableRawBufferPointer(fastRebase: pointer[index..<index + count])
+            let dest = UnsafeMutableRawBufferPointer(rebasing: pointer[index..<index + count])
             _ = dest.initializeMemory(as: UInt8.self, repeating: byte)
         }
         return count
@@ -730,13 +733,13 @@ extension ByteBuffer: Codable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         let base64String = try container.decode(String.self)
-        self = try ByteBuffer(bytes: base64String.base64Decoded())
+        self = try ByteBuffer(bytes: base64String._base64Decoded())
     }
 
     /// Encodes this buffer as a base64 string in a single value container.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
-        let base64String = String(base64Encoding: self.readableBytesView)
+        let base64String = String(_base64Encoding: self.readableBytesView)
         try container.encode(base64String)
     }
 }
@@ -902,3 +905,66 @@ extension Optional where Wrapped == ByteBuffer {
         }
     }
 }
+
+#if compiler(>=6)
+extension ByteBuffer {
+    /// Get the string at `index` from this `ByteBuffer` decoding using the UTF-8 encoding. Does not move the reader index.
+    /// The selected bytes must be readable or else `nil` will be returned.
+    ///
+    /// This is an alternative to `ByteBuffer.getString(at:length:)` which ensures the returned string is valid UTF8. If the
+    /// string is not valid UTF8 then a `ReadUTF8ValidationError` error is thrown.
+    ///
+    /// - Parameters:
+    ///   - index: The starting index into `ByteBuffer` containing the string of interest.
+    ///   - length: The number of bytes making up the string.
+    /// - Returns: A `String` value containing the UTF-8 decoded selected bytes from this `ByteBuffer` or `nil` if
+    ///            the requested bytes are not readable.
+    @inlinable
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public func getUTF8ValidatedString(at index: Int, length: Int) throws -> String? {
+        guard let slice = self.getSlice(at: index, length: length) else {
+            return nil
+        }
+        guard
+            let string = String(
+                validating: slice.readableBytesView,
+                as: Unicode.UTF8.self
+            )
+        else {
+            throw ReadUTF8ValidationError.invalidUTF8
+        }
+        return string
+    }
+
+    /// Read `length` bytes off this `ByteBuffer`, decoding it as `String` using the UTF-8 encoding. Move the reader index
+    /// forward by `length`.
+    ///
+    /// This is an alternative to `ByteBuffer.readString(length:)` which ensures the returned string is valid UTF8. If the
+    /// string is not valid UTF8 then a `ReadUTF8ValidationError` error is thrown and the reader index is not advanced.
+    ///
+    /// - Parameters:
+    ///   - length: The number of bytes making up the string.
+    /// - Returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
+    @inlinable
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public mutating func readUTF8ValidatedString(length: Int) throws -> String? {
+        guard let result = try self.getUTF8ValidatedString(at: self.readerIndex, length: length) else {
+            return nil
+        }
+        self.moveReaderIndex(forwardBy: length)
+        return result
+    }
+
+    /// Errors thrown when calling `readUTF8ValidatedString` or `getUTF8ValidatedString`.
+    public struct ReadUTF8ValidationError: Error, Equatable {
+        private enum BaseError: Hashable {
+            case invalidUTF8
+        }
+
+        private var baseError: BaseError
+
+        /// The length of the bytes to copy was negative.
+        public static let invalidUTF8: ReadUTF8ValidationError = .init(baseError: .invalidUTF8)
+    }
+}
+#endif  // compiler(>=6)

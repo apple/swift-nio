@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2020 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -163,7 +163,12 @@ public struct EventLoopPromise<Value> {
     internal static func makeUnleakablePromise(eventLoop: EventLoop, line: UInt = #line) -> EventLoopPromise<Value> {
         EventLoopPromise<Value>(
             eventLoop: eventLoop,
-            file: "BUG in SwiftNIO (please report), unleakable promise leaked.",
+            file: """
+                EventLoopGroup shut down with unfulfilled promises remaining. \
+                This suggests that the EventLoopGroup was shut down with unfinished work outstanding which is \
+                illegal. Either switch to using the singleton EventLoopGroups or fix the issue by only shutting down \
+                the EventLoopGroups when all the work associated with them has finished.
+                """,
             line: line
         )
     }
@@ -1048,11 +1053,12 @@ extension EventLoopFuture {
     @preconcurrency
     @inlinable
     public func wait(file: StaticString = #file, line: UInt = #line) throws -> Value where Value: Sendable {
-        try self._wait(file: file, line: line)
+        try self._blockingWaitForFutureCompletion(file: file, line: line)
     }
 
     @inlinable
-    func _wait(file: StaticString, line: UInt) throws -> Value where Value: Sendable {
+    @inline(never)
+    func _blockingWaitForFutureCompletion(file: StaticString, line: UInt) throws -> Value where Value: Sendable {
         self.eventLoop._preconditionSafeToWait(file: file, line: line)
 
         let v: UnsafeMutableTransferBox<Result<Value, Error>?> = .init(nil)

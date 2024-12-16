@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -60,7 +60,7 @@ class FileRegionTest: XCTestCase {
         try withTemporaryFile { _, filePath in
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
             try clientChannel.eventLoop.submit {
-                try NIOFileHandle(path: filePath)
+                try NIOFileHandle(_deprecatedPath: filePath)
             }.flatMap { (handle: NIOFileHandle) in
                 let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: bytes.count)
                 let promise = clientChannel.eventLoop.makePromise(of: Void.self)
@@ -118,7 +118,7 @@ class FileRegionTest: XCTestCase {
             try "".write(toFile: filePath, atomically: false, encoding: .ascii)
 
             try clientChannel.eventLoop.submit {
-                try NIOFileHandle(path: filePath)
+                try NIOFileHandle(_deprecatedPath: filePath)
             }.flatMap { (handle: NIOFileHandle) in
                 let fr = FileRegion(fileHandle: handle, readerIndex: 0, endIndex: 0)
                 var futures: [EventLoopFuture<Void>] = []
@@ -180,8 +180,8 @@ class FileRegionTest: XCTestCase {
             try content.write(toFile: filePath, atomically: false, encoding: .ascii)
 
             let future = clientChannel.eventLoop.submit {
-                let fh1 = try NIOFileHandle(path: filePath)
-                let fh2 = try NIOFileHandle(path: filePath)
+                let fh1 = try NIOFileHandle(_deprecatedPath: filePath)
+                let fh2 = try NIOFileHandle(_deprecatedPath: filePath)
                 return (fh1, fh2)
             }.flatMap { (fh1, fh2) in
                 let fr1 = FileRegion(fileHandle: fh1, readerIndex: 0, endIndex: bytes.count)
@@ -229,7 +229,7 @@ class FileRegionTest: XCTestCase {
 
     func testWholeFileFileRegion() throws {
         try withTemporaryFile(content: "hello") { fd, path in
-            let handle = try NIOFileHandle(path: path)
+            let handle = try NIOFileHandle(_deprecatedPath: path)
             let region = try FileRegion(fileHandle: handle)
             defer {
                 XCTAssertNoThrow(try handle.close())
@@ -242,7 +242,7 @@ class FileRegionTest: XCTestCase {
 
     func testWholeEmptyFileFileRegion() throws {
         try withTemporaryFile(content: "") { _, path in
-            let handle = try NIOFileHandle(path: path)
+            let handle = try NIOFileHandle(_deprecatedPath: path)
             let region = try FileRegion(fileHandle: handle)
             defer {
                 XCTAssertNoThrow(try handle.close())

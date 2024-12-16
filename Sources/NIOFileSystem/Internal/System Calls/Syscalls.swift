@@ -452,21 +452,12 @@ internal func libc_confstr(
 #endif
 
 /// fts(3)
-#if os(Android)
-internal func libc_fts_open(
-    _ path: [UnsafeMutablePointer<CInterop.PlatformChar>],
-    _ options: CInt
-) -> UnsafeMutablePointer<CInterop.FTS> {
-    fts_open(path, options, nil)!
-}
-#else
 internal func libc_fts_open(
     _ path: [UnsafeMutablePointer<CInterop.PlatformChar>?],
     _ options: CInt
 ) -> UnsafeMutablePointer<CInterop.FTS> {
-    fts_open(path, options, nil)
+    fts_open(path, options, nil)!
 }
-#endif
 
 /// fts(3)
 internal func libc_fts_read(

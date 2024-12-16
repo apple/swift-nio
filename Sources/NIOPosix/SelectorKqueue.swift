@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -99,6 +99,7 @@ extension KQueueEventFilterSet {
 }
 
 extension SelectorRegistrationID {
+    @inlinable
     init(kqueueUData: UnsafeMutableRawPointer?) {
         self = .init(rawValue: UInt32(truncatingIfNeeded: UInt(bitPattern: kqueueUData)))
     }
@@ -106,7 +107,8 @@ extension SelectorRegistrationID {
 
 // this is deliberately not thread-safe, only the wakeup() function may be called unprotectedly
 extension Selector: _SelectorBackendProtocol {
-    private static func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
+    @inlinable
+    internal static func toKQueueTimeSpec(strategy: SelectorStrategy) -> timespec? {
         switch strategy {
         case .block:
             return nil
@@ -161,8 +163,8 @@ extension Selector: _SelectorBackendProtocol {
         }
     }
 
-    private func kqueueUpdateEventNotifications<S: Selectable>(
-        selectable: S,
+    private func kqueueUpdateEventNotifications(
+        selectableFD: CInt,
         interested: SelectorEventSet,
         oldInterested: SelectorEventSet?,
         registrationID: SelectorRegistrationID
@@ -173,14 +175,12 @@ extension Selector: _SelectorBackendProtocol {
         assert(interested.contains(.reset))
         assert(oldInterested?.contains(.reset) ?? true)
 
-        try selectable.withUnsafeHandle {
-            try newKQueueFilters.calculateKQueueFilterSetChanges(
-                previousKQueueFilterSet: oldKQueueFilters,
-                fileDescriptor: $0,
-                registrationID: registrationID,
-                kqueueApplyEventChangeSet
-            )
-        }
+        try newKQueueFilters.calculateKQueueFilterSetChanges(
+            previousKQueueFilterSet: oldKQueueFilters,
+            fileDescriptor: selectableFD,
+            registrationID: registrationID,
+            kqueueApplyEventChangeSet
+        )
     }
 
     func initialiseState0() throws {
@@ -203,43 +203,43 @@ extension Selector: _SelectorBackendProtocol {
     func deinitAssertions0() {
     }
 
-    func register0<S: Selectable>(
-        selectable: S,
+    func register0(
+        selectableFD: CInt,
         fileDescriptor: CInt,
         interested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
         try kqueueUpdateEventNotifications(
-            selectable: selectable,
+            selectableFD: selectableFD,
             interested: interested,
             oldInterested: nil,
             registrationID: registrationID
         )
     }
 
-    func reregister0<S: Selectable>(
-        selectable: S,
+    func reregister0(
+        selectableFD: CInt,
         fileDescriptor: CInt,
         oldInterested: SelectorEventSet,
         newInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
         try kqueueUpdateEventNotifications(
-            selectable: selectable,
+            selectableFD: selectableFD,
             interested: newInterested,
             oldInterested: oldInterested,
             registrationID: registrationID
         )
     }
 
-    func deregister0<S: Selectable>(
-        selectable: S,
+    func deregister0(
+        selectableFD: CInt,
         fileDescriptor: CInt,
         oldInterested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
         try kqueueUpdateEventNotifications(
-            selectable: selectable,
+            selectableFD: selectableFD,
             interested: .reset,
             oldInterested: oldInterested,
             registrationID: registrationID
@@ -251,6 +251,7 @@ extension Selector: _SelectorBackendProtocol {
     /// - Parameters:
     ///   - strategy: The `SelectorStrategy` to apply
     ///   - body: The function to execute for each `SelectorEvent` that was produced.
+    @inlinable
     func whenReady0(
         strategy: SelectorStrategy,
         onLoopBegin loopStart: () -> Void,
@@ -268,8 +269,8 @@ extension Selector: _SelectorBackendProtocol {
                     kq: self.selectorFD,
                     changelist: nil,
                     nchanges: 0,
-                    eventlist: events,
-                    nevents: Int32(eventsCapacity),
+                    eventlist: self.events,
+                    nevents: Int32(self.eventsCapacity),
                     timeout: ts
                 )
             )
@@ -287,7 +288,7 @@ extension Selector: _SelectorBackendProtocol {
                     reason: "kevent returned with EV_ERROR set: \(String(describing: ev))"
                 )
             }
-            guard filter != EVFILT_USER, let registration = registrations[Int(ev.ident)] else {
+            guard filter != EVFILT_USER, let registration = self.registrations[Int(ev.ident)] else {
                 continue
             }
             guard eventRegistrationID == registration.registrationID else {
@@ -327,7 +328,7 @@ extension Selector: _SelectorBackendProtocol {
             try body((SelectorEvent(io: selectorEvent, registration: registration)))
         }
 
-        growEventArrayIfNeeded(ready: ready)
+        self.growEventArrayIfNeeded(ready: ready)
     }
 
     /// Close the `Selector`.

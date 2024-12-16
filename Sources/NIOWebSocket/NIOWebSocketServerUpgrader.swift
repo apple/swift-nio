@@ -15,6 +15,7 @@
 import CNIOSHA1
 import NIOCore
 import NIOHTTP1
+import _NIOBase64
 
 let magicWebSocketGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
@@ -303,7 +304,7 @@ private func _buildUpgradeResponse(
                 var hasher = SHA1()
                 hasher.update(string: key)
                 hasher.update(string: magicWebSocketGUID)
-                acceptValue = String(base64Encoding: hasher.finish())
+                acceptValue = String(_base64Encoding: hasher.finish())
             }
 
             extraHeaders.replaceOrAdd(name: "Upgrade", value: "websocket")

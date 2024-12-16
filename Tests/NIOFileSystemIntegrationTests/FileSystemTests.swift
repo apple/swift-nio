@@ -222,7 +222,7 @@ final class FileSystemTests: XCTestCase {
             // Avoid dirtying the current working directory.
             if path.isRelative {
                 self.addTeardownBlock { [fileSystem = self.fs] in
-                    try await fileSystem.removeItem(at: path)
+                    try await fileSystem.removeItem(at: path, strategy: .platformDefault)
                 }
             }
 
@@ -351,7 +351,7 @@ final class FileSystemTests: XCTestCase {
             // Avoid dirtying the current working directory.
             if directoryPath.isRelative {
                 self.addTeardownBlock { [fileSystem = self.fs] in
-                    try await fileSystem.removeItem(at: directoryPath)
+                    try await fileSystem.removeItem(at: directoryPath, strategy: .platformDefault)
                 }
             }
 
@@ -399,7 +399,7 @@ final class FileSystemTests: XCTestCase {
 
             if directoryPath.isRelative {
                 self.addTeardownBlock { [fileSystem = self.fs] in
-                    try await fileSystem.removeItem(at: directoryPath, recursively: true)
+                    try await fileSystem.removeItem(at: directoryPath, strategy: .platformDefault, recursively: true)
                 }
             }
 
@@ -586,8 +586,8 @@ final class FileSystemTests: XCTestCase {
         let sourcePath = try await self.fs.temporaryFilePath()
         let destPath = try await self.fs.temporaryFilePath()
         self.addTeardownBlock {
-            _ = try? await self.fs.removeItem(at: sourcePath)
-            _ = try? await self.fs.removeItem(at: destPath)
+            _ = try? await self.fs.removeItem(at: sourcePath, strategy: .platformDefault)
+            _ = try? await self.fs.removeItem(at: destPath, strategy: .platformDefault)
         }
 
         let sourceInfo = try await self.fs.withFileHandle(
@@ -991,7 +991,7 @@ final class FileSystemTests: XCTestCase {
         let infoAfterCreation = try await self.fs.info(forFileAt: path)
         XCTAssertNotNil(infoAfterCreation)
 
-        let removed = try await self.fs.removeItem(at: path)
+        let removed = try await self.fs.removeItem(at: path, strategy: .platformDefault)
         XCTAssertEqual(removed, 1)
 
         let infoAfterRemoval = try await self.fs.info(forFileAt: path)
@@ -1002,11 +1002,11 @@ final class FileSystemTests: XCTestCase {
         let path = try await self.fs.temporaryFilePath()
         let info = try await self.fs.info(forFileAt: path)
         XCTAssertNil(info)
-        let removed = try await self.fs.removeItem(at: path)
+        let removed = try await self.fs.removeItem(at: path, strategy: .platformDefault)
         XCTAssertEqual(removed, 0)
     }
 
-    func testRemoveDirectory() async throws {
+    func testRemoveDirectorySequentially() async throws {
         let path = try await self.fs.temporaryFilePath()
         let created = try await self.generateDirectoryStructure(
             root: path,
@@ -1019,12 +1019,37 @@ final class FileSystemTests: XCTestCase {
 
         // Removing a non-empty directory recursively should throw 'notEmpty'
         await XCTAssertThrowsFileSystemErrorAsync {
-            try await self.fs.removeItem(at: path, recursively: false)
+            try await self.fs.removeItem(at: path, strategy: .sequential, recursively: false)
         } onError: { error in
             XCTAssertEqual(error.code, .notEmpty)
         }
 
-        let removed = try await self.fs.removeItem(at: path)
+        let removed = try await self.fs.removeItem(at: path, strategy: .sequential)
+        XCTAssertEqual(created, removed)
+
+        let infoAfterRemoval = try await self.fs.info(forFileAt: path)
+        XCTAssertNil(infoAfterRemoval)
+    }
+
+    func testRemoveDirectoryConcurrently() async throws {
+        let path = try await self.fs.temporaryFilePath()
+        let created = try await self.generateDirectoryStructure(
+            root: path,
+            maxDepth: 3,
+            maxFilesPerDirectory: 10
+        )
+
+        let infoAfterCreation = try await self.fs.info(forFileAt: path)
+        XCTAssertNotNil(infoAfterCreation)
+
+        // Removing a non-empty directory recursively should throw 'notEmpty'
+        await XCTAssertThrowsFileSystemErrorAsync {
+            try await self.fs.removeItem(at: path, strategy: .parallel(maxDescriptors: 2), recursively: false)
+        } onError: { error in
+            XCTAssertEqual(error.code, .notEmpty)
+        }
+
+        let removed = try await self.fs.removeItem(at: path, strategy: .parallel(maxDescriptors: 2))
         XCTAssertEqual(created, removed)
 
         let infoAfterRemoval = try await self.fs.info(forFileAt: path)
@@ -1602,7 +1627,7 @@ extension FileSystemTests {
 
             // Clean up after ourselves.
             self.addTeardownBlock { [fileSystem = self.fs] in
-                try await fileSystem.removeItem(at: temporaryDirectoryPath)
+                try await fileSystem.removeItem(at: temporaryDirectoryPath, strategy: .platformDefault)
             }
 
             guard let info = try await self.fs.info(forFileAt: temporaryDirectoryPath) else {
@@ -1640,7 +1665,7 @@ extension FileSystemTests {
         let temporaryDirectoryPath = try await self.fs.createTemporaryDirectory(template: template)
 
         self.addTeardownBlock { [fileSystem = self.fs] in
-            try await fileSystem.removeItem(at: templateRoot, recursively: true)
+            try await fileSystem.removeItem(at: templateRoot, strategy: .platformDefault, recursively: true)
         }
 
         guard

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -14,13 +14,18 @@
 
 /// `IOData` unifies standard SwiftNIO types that are raw bytes of data; currently `ByteBuffer` and `FileRegion`.
 ///
+/// - warning: `IOData` is a legacy API, please avoid using it as much as possible.
+///
 /// Many `ChannelHandler`s receive or emit bytes and in most cases this can be either a `ByteBuffer` or a `FileRegion`
 /// from disk. To still form a well-typed `ChannelPipeline` such handlers should receive and emit value of type `IOData`.
-public enum IOData {
+public enum IOData: Sendable {
     /// A `ByteBuffer`.
     case byteBuffer(ByteBuffer)
 
     /// A `FileRegion`.
+    ///
+    /// - warning: `IOData.fileRegion` is a legacy API, please avoid using it. It cannot work with TLS and `FileRegion`
+    ///            and the underlying `NIOFileHandle` objects are very difficult to hold correctly.
     ///
     /// Sending a `FileRegion` through the `ChannelPipeline` using `write` can be useful because some `Channel`s can
     /// use `sendfile` to send a `FileRegion` more efficiently.
@@ -29,9 +34,6 @@ public enum IOData {
 
 /// `IOData` objects are comparable just like the values they wrap.
 extension IOData: Equatable {}
-
-@available(*, unavailable)
-extension IOData: Sendable {}
 
 /// `IOData` provide a number of readable bytes.
 extension IOData {

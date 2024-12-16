@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -20,6 +20,7 @@ import NIOCore
 import Dispatch
 #endif
 
+@usableFromInline
 struct NIORegistration: Registration {
     enum ChannelType {
         case serverSocketChannel(ServerSocketChannel)
@@ -31,9 +32,11 @@ struct NIORegistration: Registration {
     var channel: ChannelType
 
     /// The `SelectorEventSet` in which this `NIORegistration` is interested in.
+    @usableFromInline
     var interested: SelectorEventSet
 
     /// The registration ID for this `NIORegistration` used by the `Selector`.
+    @usableFromInline
     var registrationID: SelectorRegistrationID
 }
 
@@ -48,9 +51,6 @@ typealias ThreadInitializer = (NIOThread) -> Void
 /// all run their own `EventLoop`. Those threads will not be shut down until `shutdownGracefully` or
 /// `syncShutdownGracefully` is called.
 ///
-/// - Note: It's good style to call `MultiThreadedEventLoopGroup.shutdownGracefully` or
-///         `MultiThreadedEventLoopGroup.syncShutdownGracefully` when you no longer need this `EventLoopGroup`. In
-///         many cases that is just before your program exits.
 /// - warning: Unit tests often spawn one `MultiThreadedEventLoopGroup` per unit test to force isolation between the
 ///            tests. In those cases it's important to shut the `MultiThreadedEventLoopGroup` down at the end of the
 ///            test. A good place to start a `MultiThreadedEventLoopGroup` is the `setUp` method of your `XCTestCase`
@@ -568,6 +568,7 @@ extension ScheduledTask: Comparable {
 }
 
 extension NIODeadline {
+    @inlinable
     func readyIn(_ target: NIODeadline) -> TimeAmount {
         if self < target {
             return .nanoseconds(0)

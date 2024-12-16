@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -60,7 +60,8 @@ private let sysGetifaddrs: @convention(c) (UnsafeMutablePointer<UnsafeMutablePoi
 #endif
 #endif
 
-private func isUnacceptableErrno(_ code: Int32) -> Bool {
+@inlinable
+internal func isUnacceptableErrno(_ code: Int32) -> Bool {
     switch code {
     case EFAULT, EBADF:
         return true
@@ -69,7 +70,8 @@ private func isUnacceptableErrno(_ code: Int32) -> Bool {
     }
 }
 
-private func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) {
+@inlinable
+internal func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) {
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     precondition(
         !isUnacceptableErrno(err),
@@ -126,6 +128,7 @@ enum SystemCalls {
     #endif
 
     @inline(never)
+    @usableFromInline
     internal static func close(descriptor: CInt) throws {
         let res = sysClose(descriptor)
         if res == -1 {
@@ -150,6 +153,7 @@ enum SystemCalls {
     }
 
     @inline(never)
+    @usableFromInline
     internal static func open(
         file: UnsafePointer<CChar>,
         oFlag: CInt,
@@ -170,6 +174,7 @@ enum SystemCalls {
 
     @discardableResult
     @inline(never)
+    @usableFromInline
     internal static func lseek(descriptor: CInt, offset: off_t, whence: CInt) throws -> off_t {
         try syscall(blocking: false) {
             sysLseek(descriptor, offset, whence)
@@ -178,6 +183,7 @@ enum SystemCalls {
 
     #if os(Windows)
     @inline(never)
+    @usableFromInline
     internal static func read(
         descriptor: CInt,
         pointer: UnsafeMutableRawPointer,
@@ -189,6 +195,7 @@ enum SystemCalls {
     }
     #elseif !os(WASI)
     @inline(never)
+    @usableFromInline
     internal static func read(
         descriptor: CInt,
         pointer: UnsafeMutableRawPointer,
@@ -202,6 +209,7 @@ enum SystemCalls {
 
     #if !os(WASI)
     @inline(never)
+    @usableFromInline
     internal static func if_nametoindex(_ name: UnsafePointer<CChar>?) throws -> CUnsignedInt {
         try syscall(blocking: false) {
             sysIfNameToIndex(name!)
@@ -210,6 +218,7 @@ enum SystemCalls {
 
     #if !os(Windows)
     @inline(never)
+    @usableFromInline
     internal static func getifaddrs(_ addrs: UnsafeMutablePointer<UnsafeMutablePointer<ifaddrs>?>) throws {
         _ = try syscall(blocking: false) {
             sysGetifaddrs(addrs)

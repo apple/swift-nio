@@ -94,8 +94,9 @@ extension EmbeddedScheduledTask: Comparable {
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
 ///     unsynchronized fashion.
 public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
+    private var _now: NIODeadline = .uptimeNanoseconds(0)
     /// The current "time" for this event loop. This is an amount in nanoseconds.
-    internal var _now: NIODeadline = .uptimeNanoseconds(0)
+    public var now: NIODeadline { _now }
 
     private enum State { case open, closing, closed }
     private var state: State = .open

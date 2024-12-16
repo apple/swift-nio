@@ -82,7 +82,7 @@ class SelectorTest: XCTestCase {
         // Register both sockets with .write. This will ensure both are ready when calling selector.whenReady.
         try selector.register(
             selectable: socket1,
-            interested: [.reset, .write],
+            interested: [.reset, .error, .write],
             makeRegistration: { ev, regID in
                 TestRegistration(socket: socket1, interested: ev, registrationID: regID)
             }
@@ -90,7 +90,7 @@ class SelectorTest: XCTestCase {
 
         try selector.register(
             selectable: socket2,
-            interested: [.reset, .write],
+            interested: [.reset, .error, .write],
             makeRegistration: { ev, regID in
                 TestRegistration(socket: socket2, interested: ev, registrationID: regID)
             }
@@ -477,7 +477,7 @@ class SelectorTest: XCTestCase {
                             + " This should really only ever happen in very bizarre conditions."
                     )
                 }
-                channel.interestedEvent = [.readEOF, .reset]
+                channel.interestedEvent = [.readEOF, .reset, .error]
                 func workaroundSR9815() {
                     channel.registerAlreadyConfigured0(promise: nil)
                 }

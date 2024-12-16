@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -634,7 +634,7 @@ class NonBlockingFileIOTest: XCTestCase {
     func testFileOpenWorks() throws {
         let content = "123"
         try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
-            try self.fileIO.openFile(path: path, eventLoop: self.eventLoop).flatMapThrowing { vals in
+            try self.fileIO.openFile(_deprecatedPath: path, eventLoop: self.eventLoop).flatMapThrowing { vals in
                 let (fh, fr) = vals
                 try fh.withUnsafeFileDescriptor { fd in
                     XCTAssertGreaterThanOrEqual(fd, 0)
@@ -650,7 +650,7 @@ class NonBlockingFileIOTest: XCTestCase {
     func testFileOpenWorksWithEmptyFile() throws {
         let content = ""
         try withTemporaryFile(content: content) { (fileHandle, path) -> Void in
-            try self.fileIO.openFile(path: path, eventLoop: self.eventLoop).flatMapThrowing { vals in
+            try self.fileIO.openFile(_deprecatedPath: path, eventLoop: self.eventLoop).flatMapThrowing { vals in
                 let (fh, fr) = vals
                 try fh.withUnsafeFileDescriptor { fd in
                     XCTAssertGreaterThanOrEqual(fd, 0)
@@ -666,7 +666,7 @@ class NonBlockingFileIOTest: XCTestCase {
     func testFileOpenFails() throws {
         do {
             try self.fileIO.openFile(
-                path: "/dev/null/this/does/not/exist",
+                _deprecatedPath: "/dev/null/this/does/not/exist",
                 eventLoop: self.eventLoop
             ).map { _ in }.wait()
             XCTFail("should've thrown")
@@ -681,7 +681,7 @@ class NonBlockingFileIOTest: XCTestCase {
         XCTAssertNoThrow(
             try withTemporaryDirectory { dir in
                 try self.fileIO!.openFile(
-                    path: "\(dir)/file",
+                    _deprecatedPath: "\(dir)/file",
                     mode: .write,
                     flags: .allowFileCreation(),
                     eventLoop: self.eventLoop
@@ -694,7 +694,7 @@ class NonBlockingFileIOTest: XCTestCase {
         XCTAssertThrowsError(
             try withTemporaryDirectory { dir in
                 try self.fileIO!.openFile(
-                    path: "\(dir)/file",
+                    _deprecatedPath: "\(dir)/file",
                     mode: .write,
                     flags: .default,
                     eventLoop: self.eventLoop
@@ -709,7 +709,7 @@ class NonBlockingFileIOTest: XCTestCase {
         XCTAssertNoThrow(
             try withTemporaryDirectory { dir in
                 let fileHandle = try self.fileIO!.openFile(
-                    path: "\(dir)/file",
+                    _deprecatedPath: "\(dir)/file",
                     mode: .write,
                     flags: .allowFileCreation(),
                     eventLoop: self.eventLoop
@@ -734,7 +734,7 @@ class NonBlockingFileIOTest: XCTestCase {
         XCTAssertNoThrow(
             try withTemporaryDirectory { dir in
                 let fileHandle = try self.fileIO!.openFile(
-                    path: "\(dir)/file",
+                    _deprecatedPath: "\(dir)/file",
                     mode: [.write, .read],
                     flags: .allowFileCreation(),
                     eventLoop: self.eventLoop
@@ -761,7 +761,7 @@ class NonBlockingFileIOTest: XCTestCase {
                 // open 1 + write
                 try {
                     let fileHandle = try self.fileIO!.openFile(
-                        path: "\(dir)/file",
+                        _deprecatedPath: "\(dir)/file",
                         mode: [.write, .read],
                         flags: .allowFileCreation(),
                         eventLoop: self.eventLoop
@@ -782,7 +782,7 @@ class NonBlockingFileIOTest: XCTestCase {
                 // open 2 + write again + read
                 try {
                     let fileHandle = try self.fileIO!.openFile(
-                        path: "\(dir)/file",
+                        _deprecatedPath: "\(dir)/file",
                         mode: [.write, .read],
                         flags: .default,
                         eventLoop: self.eventLoop
@@ -826,7 +826,7 @@ class NonBlockingFileIOTest: XCTestCase {
                 // open 1 + write
                 try {
                     let fileHandle = try self.fileIO!.openFile(
-                        path: "\(dir)/file",
+                        _deprecatedPath: "\(dir)/file",
                         mode: [.write, .read],
                         flags: .allowFileCreation(),
                         eventLoop: self.eventLoop
@@ -847,7 +847,7 @@ class NonBlockingFileIOTest: XCTestCase {
                 // open 2 (with truncation) + write again + read
                 try {
                     let fileHandle = try self.fileIO!.openFile(
-                        path: "\(dir)/file",
+                        _deprecatedPath: "\(dir)/file",
                         mode: [.write, .read],
                         flags: .posix(flags: O_TRUNC, mode: 0),
                         eventLoop: self.eventLoop
@@ -1076,7 +1076,7 @@ class NonBlockingFileIOTest: XCTestCase {
             let expectation = XCTestExpectation(description: "Opened file")
             let threadPool = NIOThreadPool(numberOfThreads: 1)
             let fileIO = NonBlockingFileIO(threadPool: threadPool)
-            fileIO.openFile(path: path, eventLoop: eventLoopGroup.next()).whenFailure { (error) in
+            fileIO.openFile(_deprecatedPath: path, eventLoop: eventLoopGroup.next()).whenFailure { (error) in
                 XCTAssertTrue(error is NIOThreadPoolError.ThreadPoolInactive)
                 expectation.fulfill()
             }
@@ -1166,7 +1166,7 @@ class NonBlockingFileIOTest: XCTestCase {
             try withTemporaryDirectory { path in
                 let file = "\(path)/file"
                 let handle = try self.fileIO.openFile(
-                    path: file,
+                    _deprecatedPath: file,
                     mode: .write,
                     flags: .allowFileCreation(),
                     eventLoop: self.eventLoop
@@ -1186,7 +1186,7 @@ class NonBlockingFileIOTest: XCTestCase {
             try withTemporaryDirectory { path in
                 let file = "\(path)/file"
                 let handle = try self.fileIO.openFile(
-                    path: file,
+                    _deprecatedPath: file,
                     mode: .write,
                     flags: .allowFileCreation(),
                     eventLoop: self.eventLoop
@@ -1216,7 +1216,7 @@ class NonBlockingFileIOTest: XCTestCase {
             try withTemporaryDirectory { path in
                 let file = "\(path)/file"
                 let handle = try self.fileIO.openFile(
-                    path: file,
+                    _deprecatedPath: file,
                     mode: .write,
                     flags: .allowFileCreation(),
                     eventLoop: self.eventLoop
@@ -1557,7 +1557,7 @@ extension NonBlockingFileIOTest {
     func testAsyncFileOpenWorks() async throws {
         let content = "123"
         try await withTemporaryFile(content: content) { (fileHandle, path) -> Void in
-            try await self.fileIO.withFileRegion(path: path) { fr in
+            try await self.fileIO.withFileRegion(_deprecatedPath: path) { fr in
                 try fr.fileHandle.withUnsafeFileDescriptor { fd in
                     XCTAssertGreaterThanOrEqual(fd, 0)
                 }
@@ -1571,7 +1571,7 @@ extension NonBlockingFileIOTest {
     func testAsyncFileOpenWorksWithEmptyFile() async throws {
         let content = ""
         try await withTemporaryFile(content: content) { (fileHandle, path) -> Void in
-            try await self.fileIO.withFileRegion(path: path) { fr in
+            try await self.fileIO.withFileRegion(_deprecatedPath: path) { fr in
                 try fr.fileHandle.withUnsafeFileDescriptor { fd in
                     XCTAssertGreaterThanOrEqual(fd, 0)
                 }
@@ -1584,7 +1584,7 @@ extension NonBlockingFileIOTest {
 
     func testAsyncFileOpenFails() async throws {
         do {
-            _ = try await self.fileIO.withFileRegion(path: "/dev/null/this/does/not/exist") { _ in }
+            _ = try await self.fileIO.withFileRegion(_deprecatedPath: "/dev/null/this/does/not/exist") { _ in }
             XCTFail("should've thrown")
         } catch let e as IOError where e.errnoCode == ENOTDIR {
             // OK
@@ -1596,7 +1596,7 @@ extension NonBlockingFileIOTest {
     func testAsyncOpeningFilesForWriting() async throws {
         try await withTemporaryDirectory { dir in
             try await self.fileIO!.withFileHandle(
-                path: "\(dir)/file",
+                _deprecatedPath: "\(dir)/file",
                 mode: .write,
                 flags: .allowFileCreation()
             ) { _ in }
@@ -1607,7 +1607,7 @@ extension NonBlockingFileIOTest {
         do {
             try await withTemporaryDirectory { dir in
                 try await self.fileIO!.withFileHandle(
-                    path: "\(dir)/file",
+                    _deprecatedPath: "\(dir)/file",
                     mode: .write,
                     flags: .default
                 ) { _ in }
@@ -1621,7 +1621,7 @@ extension NonBlockingFileIOTest {
     func testAsyncOpeningFilesForWritingDoesNotAllowReading() async throws {
         try await withTemporaryDirectory { dir in
             try await self.fileIO!.withFileHandle(
-                path: "\(dir)/file",
+                _deprecatedPath: "\(dir)/file",
                 mode: .write,
                 flags: .allowFileCreation()
             ) { fileHandle in
@@ -1641,7 +1641,7 @@ extension NonBlockingFileIOTest {
     func testAsyncOpeningFilesForWritingAndReading() async throws {
         try await withTemporaryDirectory { dir in
             try await self.fileIO!.withFileHandle(
-                path: "\(dir)/file",
+                _deprecatedPath: "\(dir)/file",
                 mode: [.write, .read],
                 flags: .allowFileCreation()
             ) { fileHandle in
@@ -1663,7 +1663,7 @@ extension NonBlockingFileIOTest {
             // open 1 + write
             do {
                 try await self.fileIO.withFileHandle(
-                    path: "\(dir)/file",
+                    _deprecatedPath: "\(dir)/file",
                     mode: [.write, .read],
                     flags: .allowFileCreation()
                 ) { fileHandle in
@@ -1682,7 +1682,7 @@ extension NonBlockingFileIOTest {
             // open 2 + write again + read
             do {
                 try await self.fileIO!.withFileHandle(
-                    path: "\(dir)/file",
+                    _deprecatedPath: "\(dir)/file",
                     mode: [.write, .read],
                     flags: .default
                 ) { fileHandle in
@@ -1721,7 +1721,7 @@ extension NonBlockingFileIOTest {
             // open 1 + write
             do {
                 try await self.fileIO!.withFileHandle(
-                    path: "\(dir)/file",
+                    _deprecatedPath: "\(dir)/file",
                     mode: [.write, .read],
                     flags: .allowFileCreation()
                 ) { fileHandle in
@@ -1739,7 +1739,7 @@ extension NonBlockingFileIOTest {
             // open 2 (with truncation) + write again + read
             do {
                 try await self.fileIO!.withFileHandle(
-                    path: "\(dir)/file",
+                    _deprecatedPath: "\(dir)/file",
                     mode: [.write, .read],
                     flags: .posix(flags: O_TRUNC, mode: 0)
                 ) { fileHandle in
@@ -1811,7 +1811,7 @@ extension NonBlockingFileIOTest {
             let threadPool = NIOThreadPool(numberOfThreads: 1)
             let fileIO = NonBlockingFileIO(threadPool: threadPool)
             do {
-                try await fileIO.withFileRegion(path: path) { _ in }
+                try await fileIO.withFileRegion(_deprecatedPath: path) { _ in }
                 XCTFail("testAsyncThrowsErrorOnUnstartedPool: openFile should throw an error")
             } catch {
             }
@@ -1873,7 +1873,7 @@ extension NonBlockingFileIOTest {
         try await withTemporaryDirectory { path in
             let file = "\(path)/file"
             try await self.fileIO.withFileHandle(
-                path: file,
+                _deprecatedPath: file,
                 mode: .write,
                 flags: .allowFileCreation()
             ) { handle in
@@ -1887,7 +1887,7 @@ extension NonBlockingFileIOTest {
         try await withTemporaryDirectory { path in
             let file = "\(path)/file"
             try await self.fileIO.withFileHandle(
-                path: file,
+                _deprecatedPath: file,
                 mode: .write,
                 flags: .allowFileCreation()
             ) { handle in
@@ -1914,7 +1914,7 @@ extension NonBlockingFileIOTest {
         try await withTemporaryDirectory { path in
             let file = "\(path)/file"
             try await self.fileIO.withFileHandle(
-                path: file,
+                _deprecatedPath: file,
                 mode: .write,
                 flags: .allowFileCreation()
             ) { handle in
