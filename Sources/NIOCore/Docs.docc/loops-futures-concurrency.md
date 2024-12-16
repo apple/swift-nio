@@ -138,10 +138,11 @@ guaranteed to fire on the same isolation domain as the ``ChannelHandlerContext``
 of data race is present. However, Swift Concurrency cannot guarantee this at compile time,
 as the specific isolation domain is determined only at runtime.
 
-In these contexts, today users can make their callbacks safe using ``NIOLoopBound`` and
-``NIOLoopBoundBox``. These values can only be constructed on the event loop, and only allow
-access to their values on the same event loop. These constraints are enforced at runtime,
-so at compile time these are unconditionally `Sendable`.
+In these contexts, users that cannot require NIO 2.77.0 can make their callbacks
+safe using ``NIOLoopBound`` and ``NIOLoopBoundBox``. These values can only be
+constructed on the event loop, and only allow access to their values on the same
+event loop. These constraints are enforced at runtime, so at compile time these are
+unconditionally `Sendable`.
 
 > Warning: ``NIOLoopBound`` and ``NIOLoopBoundBox`` replace compile-time isolation checks
     with runtime ones. This makes it possible to introduce crashes in your code. Please
@@ -150,18 +151,43 @@ so at compile time these are unconditionally `Sendable`.
     ``EventLoop``, use ``EventLoopFuture/hop(to:)`` to move it to your isolation domain
     before using these types.
 
-> Note: In a future NIO release we intend to improve the ergonomics of this common problem
-    by offering a related type that can only be created from an ``EventLoopFuture`` on a
-    given ``EventLoop``. This minimises the number of runtime checks, and will make it
-    easier and more pleasant to write this kind of code.
+From NIO 2.77.0, new types were introduced to make this common problem easier. These types are
+``EventLoopFuture/Isolated`` and ``EventLoopPromise/Isolated``. These isolated view types
+can only be constructed from an existing Future or Promise, and they can only be constructed
+on the ``EventLoop`` to which those futures or promises are bound. Because they are not
+`Sendable`, we can be confident that these values never escape the isolation domain in which
+they are created, which must be the same isolation domain where the callbacks execute.
+
+As a result, these types can drop the `@Sendable` requirements on all the future closures, and
+many of the `Sendable` requirements on the return types from future closures. They can also
+drop the `Sendable` requirements from the promise completion functions.
+
+These isolated views can be obtained by calling ``EventLoopFuture/assumeIsolated()`` or
+``EventLoopPromise/assumeIsolated()``.
+
+> Warning: ``EventLoopFuture/assumeIsolated()`` and ``EventLoopPromise/assumeIsolated()``
+    supplement compile-time isolation checks with runtime ones. This makes it possible
+    to introduce crashes in your code. Please ensure that you are 100% confident that the
+    isolation domains align. If you are not sure that the ``EventLoopFuture`` or
+    ``EventLoopPromise`` you wish to attach a callback to is bound to your
+    ``EventLoop``, use ``EventLoopFuture/hop(to:)`` to move it to your isolation domain
+    before using these types.
+
+> Warning: ``EventLoopFuture/assumeIsolated()`` and ``EventLoopPromise/assumeIsolated()``
+    **must not** be called from a Swift concurrency context, either an async method or
+    from within an actor. This is because it uses runtime checking of the event loop
+    to confirm that the value is not being sent to a different concurrency domain.
+    
+    When using an ``EventLoop`` as a custom actor executor, this API can be used to retrieve
+    a value that region based isolation will then allow to be sent to another domain.
 
 ## Interacting with Event Loops on the Event Loop
 
 As with Futures, there are occasionally times where it is necessary to schedule
 ``EventLoop`` operations on the ``EventLoop`` where your code is currently executing.
 
-Much like with ``EventLoopFuture``, you can use ``NIOLoopBound`` and ``NIOLoopBoundBox``
-to make these callbacks safe.
+Much like with ``EventLoopFuture``, if you need to support NIO versions before 2.77.0
+you can use ``NIOLoopBound`` and ``NIOLoopBoundBox`` to make these callbacks safe.
 
 > Warning: ``NIOLoopBound`` and ``NIOLoopBoundBox`` replace compile-time isolation checks
     with runtime ones. This makes it possible to introduce crashes in your code. Please
@@ -170,7 +196,27 @@ to make these callbacks safe.
     ``EventLoop``, use ``EventLoopFuture/hop(to:)`` to move it to your isolation domain
     before using these types.
 
-> Note: In a future NIO release we intend to improve the ergonomics of this common problem
-    by offering a related type that can only be created from an ``EventLoopFuture`` on a
-    given ``EventLoop``. This minimises the number of runtime checks, and will make it
-    easier and more pleasant to write this kind of code.
+From NIO 2.77.0, a new type was introduced to make this common problem easier. This type is
+``NIOIsolatedEventLoop``. This isolated view type can only be constructed from an existing
+``EventLoop``, and it can only be constructed on the ``EventLoop`` that is being wrapped.
+Because this type is not `Sendable`, we can be confident that this value never escapes the
+isolation domain in which it was created, which must be the same isolation domain where the
+callbacks execute.
+
+As a result, this type can drop the `@Sendable` requirements on all the operation closures, and
+many of the `Sendable` requirements on the return types from these closures.
+
+This isolated view can be obtained by calling ``EventLoop/assumeIsolated()``.
+
+> Warning: ``EventLoop/assumeIsolated()`` supplements compile-time isolation checks with
+    runtime ones. This makes it possible to introduce crashes in your code. Please ensure
+    that you are 100% confident that the isolation domains align. If you are not sure that
+    the your code is running on the relevant ``EventLoop``, prefer the non-isolated type.
+
+> Warning: ``EventLoop/assumeIsolated()`` **must not** be called from a Swift concurrency
+    context, either an async method or from within an actor. This is because it uses runtime
+    checking of the event loop to confirm that the value is not being sent to a different
+    concurrency domain.
+    
+    When using an ``EventLoop`` as a custom actor executor, this API can be used to retrieve
+    a value that region based isolation will then allow to be sent to another domain.
