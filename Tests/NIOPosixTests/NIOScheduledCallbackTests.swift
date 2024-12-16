@@ -45,7 +45,7 @@ final class MTELGScheduledCallbackTests: _BaseScheduledCallbackTests {
         }
 
         func waitForLoopTick() async throws {
-            try await self.loop.submit { }.get()
+            try await self.loop.submit {}.get()
         }
     }
 
@@ -68,7 +68,7 @@ final class NIOAsyncTestingEventLoopScheduledCallbackTests: _BaseScheduledCallba
         }
 
         func waitForLoopTick() async throws {
-            try await self._loop.executeInContext { }
+            try await self._loop.executeInContext {}
         }
     }
 
