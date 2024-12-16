@@ -301,15 +301,13 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
             }
         }
 
-        do {
-            self._outbound.finish()
-            try await self.channel.close().get()
-        } catch {
-            if let error = error as? ChannelError, error == .alreadyClosed {
-                return result
-            }
-            throw error
-        }
+        self._outbound.finish()
+        // We ignore errors from close, since all we care about is that the channel has been closed
+        // at this point.
+        self.channel.close(promise: nil)
+        // `closeFuture` is never failed, so we can ignore the error
+        try? await self.channel.closeFuture.get()
+
         return result
     }
 }

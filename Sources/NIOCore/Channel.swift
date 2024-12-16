@@ -107,6 +107,11 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
     var allocator: ByteBufferAllocator { get }
 
     /// The `closeFuture` will fire when the `Channel` has been closed.
+    ///
+    /// - Important: This future will never be failed, as it signals when the channel has been closed, and this action cannot fail.
+    ///              If you are interested in any errors thrown during `close` to diagnose any unclean channel closures, you
+    ///              should instead use the future returned from ``close(mode:file:line:)`` or pass a promise via
+    ///              ``close(mode:promise:)``.
     var closeFuture: EventLoopFuture<Void> { get }
 
     /// The `ChannelPipeline` which handles all I/O events and requests associated with this `Channel`.
