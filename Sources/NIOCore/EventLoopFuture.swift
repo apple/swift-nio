@@ -163,7 +163,12 @@ public struct EventLoopPromise<Value> {
     internal static func makeUnleakablePromise(eventLoop: EventLoop, line: UInt = #line) -> EventLoopPromise<Value> {
         EventLoopPromise<Value>(
             eventLoop: eventLoop,
-            file: "BUG in SwiftNIO (please report), unleakable promise leaked.",
+            file: """
+                EventLoopGroup shut down with unfulfilled promises remaining. \
+                This suggests that the EventLoopGroup was shut down with unfinished work outstanding which is \
+                illegal. Either switch to using the singleton EventLoopGroups or fix the issue by only shutting down \
+                the EventLoopGroups when all the work associated with them has finished.
+                """,
             line: line
         )
     }
