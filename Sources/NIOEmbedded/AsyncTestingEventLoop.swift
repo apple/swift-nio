@@ -14,7 +14,12 @@
 
 #if canImport(Dispatch)
 import Atomics
+
+#if canImport(Darwin)
 import Dispatch
+#else
+@preconcurrency import Dispatch
+#endif
 import NIOConcurrencyHelpers
 import NIOCore
 import _NIODataStructures
