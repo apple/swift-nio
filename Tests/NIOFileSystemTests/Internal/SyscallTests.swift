@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import CNIOLinux
 import SystemPackage
 import XCTest
 @_spi(Testing) import _NIOFileSystem

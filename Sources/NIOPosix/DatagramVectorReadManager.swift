@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+import CNIOLinux
 import NIOCore
 
 /// An object that manages issuing vector reads for datagram channels.
