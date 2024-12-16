@@ -533,4 +533,4 @@ public final class EmbeddedEventLoopTest: XCTestCase {
 }
 
 @available(*, unavailable)
-extension EmbeddedEventLoopTest: Sendable { }
+extension EmbeddedEventLoopTest: Sendable {}

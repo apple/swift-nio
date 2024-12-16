@@ -159,7 +159,10 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
     @preconcurrency
-    public func scheduleTask<T: Sendable>(deadline: NIODeadline, _ task: @escaping @Sendable () throws -> T) -> Scheduled<T> {
+    public func scheduleTask<T: Sendable>(
+        deadline: NIODeadline,
+        _ task: @escaping @Sendable () throws -> T
+    ) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise()
         let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
 

@@ -383,7 +383,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
 // EmbeddedEventLoop is extremely _not_ Sendable. However, the EventLoop protocol
 // requires it to be. We are doing some runtime enforcement of correct use, but
 // ultimately we can't have the compiler validating this usage.
-extension EmbeddedEventLoop: @unchecked Sendable { }
+extension EmbeddedEventLoop: @unchecked Sendable {}
 
 @usableFromInline
 class EmbeddedChannelCore: ChannelCore {
@@ -608,7 +608,7 @@ class EmbeddedChannelCore: ChannelCore {
 
 // ChannelCores are basically never Sendable.
 @available(*, unavailable)
-extension EmbeddedChannelCore: Sendable { }
+extension EmbeddedChannelCore: Sendable {}
 
 /// `EmbeddedChannel` is a `Channel` implementation that does neither any
 /// actual IO nor has a proper eventing mechanism. The prime use-case for
@@ -1116,7 +1116,7 @@ extension EmbeddedChannel {
 // EmbeddedChannel is extremely _not_ Sendable. However, the Channel protocol
 // requires it to be. We are doing some runtime enforcement of correct use, but
 // ultimately we can't have the compiler validating this usage.
-extension EmbeddedChannel: @unchecked Sendable { }
+extension EmbeddedChannel: @unchecked Sendable {}
 
 @available(*, unavailable)
 extension EmbeddedChannel.LeftOverState: @unchecked Sendable {}

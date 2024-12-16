@@ -288,8 +288,10 @@ public final class NIOAsyncTestingChannel: Channel {
     ///   - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register.
     ///   - loop: The ``NIOAsyncTestingEventLoop`` to use.
     @preconcurrency
-    public convenience init(handler: ChannelHandler & Sendable, loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) async
-    {
+    public convenience init(
+        handler: ChannelHandler & Sendable,
+        loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()
+    ) async {
         await self.init(handlers: [handler], loop: loop)
     }
 
@@ -680,4 +682,4 @@ extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable {}
 
 // Synchronous options are never Sendable.
 @available(*, unavailable)
-extension NIOAsyncTestingChannel.SynchronousOptions: Sendable { }
+extension NIOAsyncTestingChannel.SynchronousOptions: Sendable {}

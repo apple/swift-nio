@@ -519,8 +519,12 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         let eventLoop = NIOAsyncTestingEventLoop()
         let tasksRun = ManagedAtomic(0)
 
-        let a = eventLoop.scheduleTask(in: .seconds(1)) { tasksRun.wrappingIncrement(ordering: .sequentiallyConsistent) }
-        let b = eventLoop.scheduleTask(in: .seconds(2)) { tasksRun.wrappingIncrement(ordering: .sequentiallyConsistent) }
+        let a = eventLoop.scheduleTask(in: .seconds(1)) {
+            tasksRun.wrappingIncrement(ordering: .sequentiallyConsistent)
+        }
+        let b = eventLoop.scheduleTask(in: .seconds(2)) {
+            tasksRun.wrappingIncrement(ordering: .sequentiallyConsistent)
+        }
 
         XCTAssertEqual(tasksRun.load(ordering: .sequentiallyConsistent), 0)
 

@@ -117,13 +117,19 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel(
             handlers: [Handler(identifier: "0"), Handler(identifier: "1"), Handler(identifier: "2")]
         )
-        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).map { $0.identifier }.wait(), "0"))
+        XCTAssertNoThrow(
+            XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).map { $0.identifier }.wait(), "0")
+        )
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler0").wait())
 
-        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).map { $0.identifier }.wait(), "1"))
+        XCTAssertNoThrow(
+            XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).map { $0.identifier }.wait(), "1")
+        )
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler1").wait())
 
-        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).map { $0.identifier }.wait(), "2"))
+        XCTAssertNoThrow(
+            XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).map { $0.identifier }.wait(), "2")
+        )
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler2").wait())
     }
 
