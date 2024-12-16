@@ -12,12 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
+import NIOConcurrencyHelpers
 import NIOCore
 import XCTest
 
 @testable import NIOEmbedded
 
-class ChannelLifecycleHandler: ChannelInboundHandler {
+final class ChannelLifecycleHandler: ChannelInboundHandler, Sendable {
     public typealias InboundIn = Any
 
     public enum ChannelState {
@@ -27,17 +29,28 @@ class ChannelLifecycleHandler: ChannelInboundHandler {
         case active
     }
 
-    public var currentState: ChannelState
-    public var stateHistory: [ChannelState]
+    public var currentState: ChannelState {
+        get {
+            self._state.withLockedValue { $0.currentState }
+        }
+    }
+    public var stateHistory: [ChannelState] {
+        get {
+            self._state.withLockedValue { $0.stateHistory }
+        }
+    }
+
+    private let _state: NIOLockedValueBox<(currentState: ChannelState, stateHistory: [ChannelState])>
 
     public init() {
-        currentState = .unregistered
-        stateHistory = [.unregistered]
+        self._state = NIOLockedValueBox((currentState: .unregistered, stateHistory: [.unregistered]))
     }
 
     private func updateState(_ state: ChannelState) {
-        currentState = state
-        stateHistory.append(state)
+        self._state.withLockedValue {
+            $0.currentState = state
+            $0.stateHistory.append(state)
+        }
     }
 
     public func channelRegistered(context: ChannelHandlerContext) {
@@ -77,7 +90,7 @@ class EmbeddedChannelTest: XCTestCase {
         }
 
         let channel = EmbeddedChannel(handler: Handler())
-        XCTAssertNoThrow(try channel.pipeline.handler(type: Handler.self).wait())
+        XCTAssertNoThrow(try channel.pipeline.handler(type: Handler.self).map { _ in }.wait())
     }
 
     func testSingleHandlerInitNil() {
@@ -86,7 +99,7 @@ class EmbeddedChannelTest: XCTestCase {
         }
 
         let channel = EmbeddedChannel(handler: nil)
-        XCTAssertThrowsError(try channel.pipeline.handler(type: Handler.self).wait()) { e in
+        XCTAssertThrowsError(try channel.pipeline.handler(type: Handler.self).map { _ in }.wait()) { e in
             XCTAssertEqual(e as? ChannelPipelineError, .notFound)
         }
     }
@@ -104,13 +117,13 @@ class EmbeddedChannelTest: XCTestCase {
         let channel = EmbeddedChannel(
             handlers: [Handler(identifier: "0"), Handler(identifier: "1"), Handler(identifier: "2")]
         )
-        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).wait().identifier, "0"))
+        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).map { $0.identifier }.wait(), "0"))
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler0").wait())
 
-        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).wait().identifier, "1"))
+        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).map { $0.identifier }.wait(), "1"))
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler1").wait())
 
-        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).wait().identifier, "2"))
+        XCTAssertNoThrow(XCTAssertEqual(try channel.pipeline.handler(type: Handler.self).map { $0.identifier }.wait(), "2"))
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler2").wait())
     }
 
@@ -180,7 +193,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testWriteInboundByteBufferReThrow() {
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(ExceptionThrowingInboundHandler()).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ExceptionThrowingInboundHandler()))
         XCTAssertThrowsError(try channel.writeInbound("msg")) { error in
             XCTAssertEqual(ChannelError.operationUnsupported, error as? ChannelError)
         }
@@ -189,7 +202,7 @@ class EmbeddedChannelTest: XCTestCase {
 
     func testWriteOutboundByteBufferReThrow() {
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(ExceptionThrowingOutboundHandler()).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ExceptionThrowingOutboundHandler()))
         XCTAssertThrowsError(try channel.writeOutbound("msg")) { error in
             XCTAssertEqual(ChannelError.operationUnsupported, error as? ChannelError)
         }
@@ -323,7 +336,7 @@ class EmbeddedChannelTest: XCTestCase {
     func testCloseOnInactiveIsOk() throws {
         let channel = EmbeddedChannel()
         let inactiveHandler = CloseInChannelInactiveHandler()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(inactiveHandler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(inactiveHandler))
         XCTAssertTrue(try channel.finish().isClean)
 
         // channelInactive should fire only once.
@@ -479,11 +492,12 @@ class EmbeddedChannelTest: XCTestCase {
     func testFinishWithRecursivelyScheduledTasks() throws {
         let channel = EmbeddedChannel()
         let tasks: NIOLoopBoundBox<[Scheduled<Void>]> = NIOLoopBoundBox([], eventLoop: channel.eventLoop)
-        var invocations = 0
+        let invocations = ManagedAtomic(0)
 
+        @Sendable
         func recursivelyScheduleAndIncrement() {
             let task = channel.pipeline.eventLoop.scheduleTask(deadline: .distantFuture) {
-                invocations += 1
+                invocations.wrappingIncrement(ordering: .sequentiallyConsistent)
                 recursivelyScheduleAndIncrement()
             }
             tasks.value.append(task)
@@ -494,7 +508,7 @@ class EmbeddedChannelTest: XCTestCase {
         try XCTAssertNoThrow(channel.finish())
 
         // None of the tasks should have been executed, they were scheduled for distant future.
-        XCTAssertEqual(invocations, 0)
+        XCTAssertEqual(invocations.load(ordering: .sequentiallyConsistent), 0)
 
         // Because the root task didn't run, it should be the onnly one scheduled.
         XCTAssertEqual(tasks.value.count, 1)

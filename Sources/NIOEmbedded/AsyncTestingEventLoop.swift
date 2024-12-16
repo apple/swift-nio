@@ -125,7 +125,7 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
         self.scheduledTasks.removeFirst { $0.id == taskID }
     }
 
-    private func insertTask<ReturnType>(
+    private func insertTask<ReturnType: Sendable>(
         taskID: UInt64,
         deadline: NIODeadline,
         promise: EventLoopPromise<ReturnType>,
@@ -152,7 +152,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
-    public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    @preconcurrency
+    public func scheduleTask<T: Sendable>(deadline: NIODeadline, _ task: @escaping @Sendable () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise()
         let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
 
@@ -190,7 +191,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 
     /// - see: `EventLoop.scheduleTask(in:_:)`
     @discardableResult
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    @preconcurrency
+    public func scheduleTask<T: Sendable>(in: TimeAmount, _ task: @escaping @Sendable () throws -> T) -> Scheduled<T> {
         self.scheduleTask(deadline: self.now + `in`, task)
     }
 
@@ -230,7 +232,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 
     /// On an `NIOAsyncTestingEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. Unlike with the other operations, this will
     /// immediately execute, to eliminate a common class of bugs.
-    public func execute(_ task: @escaping () -> Void) {
+    @preconcurrency
+    public func execute(_ task: @escaping @Sendable () -> Void) {
         if self.inEventLoop {
             self.scheduleTask(deadline: self.now, task)
         } else {
@@ -359,7 +362,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     }
 
     /// - see: `EventLoop.shutdownGracefully`
-    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    @preconcurrency
+    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable (Error?) -> Void) {
         self.queue.async {
             self._shutdownGracefully()
             queue.async {

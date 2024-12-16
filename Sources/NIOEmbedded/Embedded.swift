@@ -185,7 +185,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
             insertOrder: self.nextTaskNumber(),
             task: {
                 do {
-                    promise.succeed(try task())
+                    promise.assumeIsolated().succeed(try task())
                 } catch let err {
                     promise.fail(err)
                 }
@@ -365,6 +365,11 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     }()
 }
 
+// EmbeddedEventLoop is extremely _not_ Sendable. However, the EventLoop protocol
+// requires it to be. We are doing some runtime enforcement of correct use, but
+// ultimately we can't have the compiler validating this usage.
+extension EmbeddedEventLoop: @unchecked Sendable { }
+
 @usableFromInline
 class EmbeddedChannelCore: ChannelCore {
     var isOpen: Bool {
@@ -484,8 +489,11 @@ class EmbeddedChannelCore: ChannelCore {
         self.pipeline.syncOperations.fireChannelInactive()
         self.pipeline.syncOperations.fireChannelUnregistered()
 
+        let loopBoundSelf = NIOLoopBound(self, eventLoop: self.eventLoop)
+
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
+            let `self` = loopBoundSelf.value
             self.removeHandlers(pipeline: self.pipeline)
             self.closePromise.succeed(())
         }
@@ -582,6 +590,10 @@ class EmbeddedChannelCore: ChannelCore {
         }
     }
 }
+
+// ChannelCores are basically never Sendable.
+@available(*, unavailable)
+extension EmbeddedChannelCore: Sendable { }
 
 /// `EmbeddedChannel` is a `Channel` implementation that does neither any
 /// actual IO nor has a proper eventing mechanism. The prime use-case for
@@ -867,8 +879,8 @@ public final class EmbeddedChannel: Channel {
     @inlinable
     @discardableResult public func writeInbound<T>(_ data: T) throws -> BufferState {
         self.embeddedEventLoop.checkCorrectThread()
-        self.pipeline.fireChannelRead(data)
-        self.pipeline.fireChannelReadComplete()
+        self.pipeline.syncOperations.fireChannelRead(NIOAny(data))
+        self.pipeline.syncOperations.fireChannelReadComplete()
         try self.throwIfErrorCaught()
         return self.channelcore.inboundBuffer.isEmpty ? .empty : .full(Array(self.channelcore.inboundBuffer))
     }
@@ -1085,6 +1097,17 @@ extension EmbeddedChannel {
         SynchronousOptions(channel: self)
     }
 }
+
+// EmbeddedChannel is extremely _not_ Sendable. However, the Channel protocol
+// requires it to be. We are doing some runtime enforcement of correct use, but
+// ultimately we can't have the compiler validating this usage.
+extension EmbeddedChannel: @unchecked Sendable { }
+
+@available(*, unavailable)
+extension EmbeddedChannel.LeftOverState: @unchecked Sendable {}
+
+@available(*, unavailable)
+extension EmbeddedChannel.BufferState: @unchecked Sendable {}
 
 @available(*, unavailable)
 extension EmbeddedChannel.SynchronousOptions: Sendable {}
