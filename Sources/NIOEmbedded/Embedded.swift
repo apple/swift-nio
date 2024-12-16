@@ -36,6 +36,22 @@ import WASILibc
 #error("Unknown C library.")
 #endif
 
+private func printError(_ string: StaticString) {
+    string.withUTF8Buffer { buf in
+        var buf = buf
+        while buf.count > 0 {
+            // 2 is stderr
+            let rc = write(2, buf.baseAddress, buf.count)
+            if rc < 0 {
+                let err = errno
+                if err == EINTR { continue }
+                fatalError("Unexpected error writing: \(err)")
+            }
+            buf = .init(rebasing: buf.dropFirst(Int(rc)))
+        }
+    }
+}
+
 internal struct EmbeddedScheduledTask {
     let id: UInt64
     let task: () -> Void
@@ -146,14 +162,13 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
                     "EmbeddedEventLoop is not thread-safe. You can only use it from the thread you created it on."
                 )
             } else {
-                fputs(
+                printError(
                     """
                     ERROR: NIO API misuse: EmbeddedEventLoop is not thread-safe. \
                     You can only use it from the thread you created it on. This problem will be upgraded to a forced \
                     crash in future versions of SwiftNIO.
 
-                    """,
-                    stderr
+                    """
                 )
             }
             return
