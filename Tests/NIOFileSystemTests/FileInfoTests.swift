@@ -28,6 +28,8 @@ import Android
 private let S_IFREG = Darwin.S_IFREG
 #elseif canImport(Glibc)
 private let S_IFREG = Glibc.S_IFREG
+#elseif canImport(Musl)
+private let S_IFREG = Musl.S_IFREG
 #endif
 
 final class FileInfoTests: XCTestCase {
