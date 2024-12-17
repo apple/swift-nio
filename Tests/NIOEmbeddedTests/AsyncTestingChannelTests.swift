@@ -36,7 +36,7 @@ class AsyncTestingChannelTests: XCTestCase {
         }
 
         let channel = NIOAsyncTestingChannel()
-        XCTAssertThrowsError(try channel.pipeline.handler(type: Handler.self).wait()) { e in
+        XCTAssertThrowsError(try channel.pipeline.handler(type: Handler.self).map { _ in }.wait()) { e in
             XCTAssertEqual(e as? ChannelPipelineError, .notFound)
         }
 
