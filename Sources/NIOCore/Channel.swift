@@ -108,10 +108,11 @@ public protocol Channel: AnyObject, ChannelOutboundInvoker, _NIOPreconcurrencySe
 
     /// The `closeFuture` will fire when the `Channel` has been closed.
     ///
-    /// - Important: This future will never be failed, as it signals when the channel has been closed, and this action cannot fail.
+    /// - Important: This future should never be failed: it signals when the channel has been closed, and this action should not fail,
+    ///              regardless of whether the close happenned cleanly or not.
     ///              If you are interested in any errors thrown during `close` to diagnose any unclean channel closures, you
-    ///              should instead use the future returned from ``Channel/close(mode:file:line:)`` or pass a promise via
-    ///              ``Channel/close(mode:promise:)``.
+    ///              should instead use the future returned from ``ChannelOutboundInvoker/close(mode:file:line:)-7hlgf``
+    ///              or pass a promise via ``ChannelOutboundInvoker/close(mode:promise:)``.
     var closeFuture: EventLoopFuture<Void> { get }
 
     /// The `ChannelPipeline` which handles all I/O events and requests associated with this `Channel`.
