@@ -351,7 +351,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
             id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed),
             {
                 do {
-                    promise.succeed(try task())
+                    promise.assumeIsolatedUnsafeUnchecked().succeed(try task())
                 } catch let err {
                     promise.fail(err)
                 }
