@@ -424,6 +424,9 @@ struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSeq
 }
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension AsyncSequenceFromIterator: Sendable where AsyncIterator: Sendable { }
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension EventLoop {
     @preconcurrency
     @inlinable
