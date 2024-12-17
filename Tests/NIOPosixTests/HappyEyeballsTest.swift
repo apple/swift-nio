@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import NIOConcurrencyHelpers
 import NIOEmbedded
 import XCTest
 
@@ -240,9 +241,12 @@ private class DummyResolver: Resolver {
 extension DummyResolver.Event: Equatable {
 }
 
+@Sendable
 private func defaultChannelBuilder(loop: EventLoop, family: NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel> {
     let channel = EmbeddedChannel(loop: loop as! EmbeddedEventLoop)
-    XCTAssertNoThrow(try channel.pipeline.addHandler(ConnectRecorder(), name: CONNECT_RECORDER).wait())
+    XCTAssertNoThrow(
+        try channel.pipeline.syncOperations.addHandler(ConnectRecorder(), name: CONNECT_RECORDER)
+    )
     return loop.makeSucceededFuture(channel)
 }
 
@@ -250,7 +254,7 @@ private func buildEyeballer(
     host: String,
     port: Int,
     connectTimeout: TimeAmount = .seconds(10),
-    channelBuilderCallback: @escaping (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel> =
+    channelBuilderCallback: @escaping @Sendable (EventLoop, NIOBSDSocket.ProtocolFamily) -> EventLoopFuture<Channel> =
         defaultChannelBuilder
 ) -> (eyeballer: HappyEyeballsConnector<Void>, resolver: DummyResolver, loop: EmbeddedEventLoop) {
     let loop = EmbeddedEventLoop()
@@ -1110,10 +1114,15 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testDelayedChannelCreation() throws {
-        var ourChannelFutures: [EventLoopPromise<Channel>] = []
+        // This lock isn't really needed as the test is single-threaded, but because
+        // the buildEyeballer function constructs the event loop we can't use a LoopBoundBox.
+        // This is fine anyway.
+        let ourChannelFutures: NIOLockedValueBox<[EventLoopPromise<Channel>]> = NIOLockedValueBox([])
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) { loop, _ in
-            ourChannelFutures.append(loop.makePromise())
-            return ourChannelFutures.last!.futureResult
+            ourChannelFutures.withLockedValue {
+                $0.append(loop.makePromise())
+                return $0.last!.futureResult
+            }
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
@@ -1127,37 +1136,50 @@ public final class HappyEyeballsTest: XCTestCase {
         // Return the IPv6 results and observe the channel creation attempts.
         resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
         for channelCount in 1...10 {
-            XCTAssertEqual(ourChannelFutures.count, channelCount)
+            XCTAssertEqual(
+                ourChannelFutures.withLockedValue { $0.count }, channelCount
+            )
             loop.advanceTime(by: .milliseconds(250))
         }
         XCTAssertFalse(channelFuture.isFulfilled)
 
         // Succeed the first channel future, which will connect because the default
         // channel builder always does.
-        defaultChannelBuilder(loop: loop, family: .inet6).whenSuccess {
-            ourChannelFutures.first!.succeed($0)
-            XCTAssertEqual($0.state(), .connected)
+        defaultChannelBuilder(loop: loop, family: .inet6).whenSuccess { result in
+            ourChannelFutures.withLockedValue { 
+                $0.first!.succeed(result)
+            }
+            XCTAssertEqual(result.state(), .connected)
         }
         XCTAssertTrue(channelFuture.isFulfilled)
 
         // Ok, now succeed the second channel future. This should cause the channel to immediately be closed.
-        defaultChannelBuilder(loop: loop, family: .inet6).whenSuccess {
-            ourChannelFutures[1].succeed($0)
-            XCTAssertEqual($0.state(), .closed)
+        defaultChannelBuilder(loop: loop, family: .inet6).whenSuccess { result in
+            ourChannelFutures.withLockedValue {
+                $0[1].succeed(result)
+            }
+            XCTAssertEqual(result.state(), .closed)
         }
 
-        // Ok, now fail the third channel future. Nothing bad should happen here.
-        ourChannelFutures[2].fail(DummyError())
+        try ourChannelFutures.withLockedValue {
+            // Ok, now fail the third channel future. Nothing bad should happen here.
+            $0[2].fail(DummyError())
 
-        // Verify that the first channel is the one listed as connected.
-        XCTAssertTrue((try ourChannelFutures.first!.futureResult.wait()) === (try channelFuture.wait()))
+            // Verify that the first channel is the one listed as connected.
+            XCTAssertTrue((try $0.first!.futureResult.wait()) === (try channelFuture.wait()))
+        }
     }
 
     func testChannelCreationFails() throws {
-        var errors: [DummyError] = []
+        // This lock isn't really needed as the test is single-threaded, but because
+        // the buildEyeballer function constructs the event loop we can't use a LoopBoundBox.
+        // This is fine anyway.
+        let errors: NIOLockedValueBox<[DummyError]> = NIOLockedValueBox([])
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) { loop, _ in
-            errors.append(DummyError())
-            return loop.makeFailedFuture(errors.last!)
+            errors.withLockedValue { 
+                $0.append(DummyError())
+                return loop.makeFailedFuture($0.last!)
+            }
         }
         let channelFuture = eyeballer.resolveAndConnect()
         let expectedQueries: [DummyResolver.Event] = [
@@ -1171,14 +1193,14 @@ public final class HappyEyeballsTest: XCTestCase {
         // Here the AAAA and A results return. We are going to fail the channel creation
         // instantly, which should cause all 20 to appear.
         resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
-        XCTAssertEqual(errors.count, 10)
+        XCTAssertEqual(errors.withLockedValue { $0.count }, 10)
         XCTAssertFalse(channelFuture.isFulfilled)
         resolver.v4Promise.succeed(MANY_IPv4_RESULTS)
-        XCTAssertEqual(errors.count, 20)
+        XCTAssertEqual(errors.withLockedValue { $0.count }, 20)
 
         XCTAssertTrue(channelFuture.isFulfilled)
         if let error = channelFuture.getError() as? NIOConnectionError {
-            XCTAssertEqual(error.connectionErrors.map { $0.error as! DummyError }, errors)
+            XCTAssertEqual(error.connectionErrors.map { $0.error as! DummyError }, errors.withLockedValue { $0 })
         } else {
             XCTFail("Got unexpected error: \(String(describing: channelFuture.getError()))")
         }
