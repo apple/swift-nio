@@ -105,7 +105,8 @@ let package = Package(
                 "_NIODataStructures",
                 swiftAtomics,
                 swiftCollections,
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOPosix",
@@ -429,7 +430,8 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "NIOCore",
                 "NIOEmbedded",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOPosixTests",
