@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+import CNIOLinux
 import NIOCore
 
 private struct PendingDatagramWrite {

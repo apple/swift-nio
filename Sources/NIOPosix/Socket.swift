@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import CNIOLinux
 import NIOCore
 
 /// The container used for writing multiple buffers via `writev`.
