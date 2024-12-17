@@ -15,6 +15,7 @@
 import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
+import NIOCore
 import NIOEmbedded
 import XCTest
 
