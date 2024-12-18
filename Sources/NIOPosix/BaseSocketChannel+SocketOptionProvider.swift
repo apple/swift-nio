@@ -47,7 +47,10 @@ extension BaseSocketChannel: SocketOptionProvider {
     }
 
     #if !os(Windows)
-    func unsafeGetSocketOption<Value: Sendable>(level: SocketOptionLevel, name: SocketOptionName) -> EventLoopFuture<Value> {
+    func unsafeGetSocketOption<Value: Sendable>(
+        level: SocketOptionLevel,
+        name: SocketOptionName
+    ) -> EventLoopFuture<Value> {
         unsafeGetSocketOption(
             level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)),
             name: NIOBSDSocket.Option(rawValue: CInt(name))
