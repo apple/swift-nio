@@ -15,7 +15,7 @@ import NIOCore
 
 extension BaseSocketChannel: SocketOptionProvider {
     #if !os(Windows)
-    func unsafeSetSocketOption<Value>(
+    func unsafeSetSocketOption<Value: Sendable>(
         level: SocketOptionLevel,
         name: SocketOptionName,
         value: Value
@@ -28,7 +28,7 @@ extension BaseSocketChannel: SocketOptionProvider {
     }
     #endif
 
-    func unsafeSetSocketOption<Value>(
+    func unsafeSetSocketOption<Value: Sendable>(
         level: NIOBSDSocket.OptionLevel,
         name: NIOBSDSocket.Option,
         value: Value
@@ -47,7 +47,10 @@ extension BaseSocketChannel: SocketOptionProvider {
     }
 
     #if !os(Windows)
-    func unsafeGetSocketOption<Value>(level: SocketOptionLevel, name: SocketOptionName) -> EventLoopFuture<Value> {
+    func unsafeGetSocketOption<Value: Sendable>(
+        level: SocketOptionLevel,
+        name: SocketOptionName
+    ) -> EventLoopFuture<Value> {
         unsafeGetSocketOption(
             level: NIOBSDSocket.OptionLevel(rawValue: CInt(level)),
             name: NIOBSDSocket.Option(rawValue: CInt(name))
@@ -55,7 +58,7 @@ extension BaseSocketChannel: SocketOptionProvider {
     }
     #endif
 
-    func unsafeGetSocketOption<Value>(
+    func unsafeGetSocketOption<Value: Sendable>(
         level: NIOBSDSocket.OptionLevel,
         name: NIOBSDSocket.Option
     ) -> EventLoopFuture<Value> {
