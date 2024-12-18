@@ -28,8 +28,8 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
-#elseif canImport(Bionic)
-import Bionic
+#elseif canImport(Android)
+import Android
 #elseif canImport(WASILibc)
 import WASILibc
 #else
@@ -130,7 +130,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
 
     public let description = "EmbeddedEventLoop"
 
-    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
     private let myThread: pthread_t = pthread_self()
 
     func isCorrectThread() -> Bool {
