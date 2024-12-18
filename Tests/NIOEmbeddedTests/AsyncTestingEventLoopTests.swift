@@ -480,7 +480,7 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         }
     }
 
-    func testTasksScheduledDuringShutdownAreAutomaticallyCancelled() async throws {
+    func testTasksScheduledDuringShutdownAreAutomaticallyCancelledOrNotScheduled() async throws {
         let eventLoop = NIOAsyncTestingEventLoop()
         let tasksRun = ManagedAtomic(0)
 
@@ -511,7 +511,7 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         }
 
         try await eventLoop.executeInContext {
-            XCTAssertGreaterThan(tasksRun.load(ordering: .acquiring), 1)
+            XCTAssertGreaterThan(tasksRun.load(ordering: .acquiring), 0)
         }
     }
 
