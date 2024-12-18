@@ -117,7 +117,10 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
     @preconcurrency
-    func unsafeGetSocketOption<Value: Sendable>(level: SocketOptionLevel, name: SocketOptionName) -> EventLoopFuture<Value>
+    func unsafeGetSocketOption<Value: Sendable>(
+        level: SocketOptionLevel,
+        name: SocketOptionName
+    ) -> EventLoopFuture<Value>
     #endif
 
     /// Obtain the value of the socket option for the given level and name.
