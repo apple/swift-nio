@@ -75,7 +75,8 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     ///   - value: The value to set the socket option to.
     /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
-    func unsafeSetSocketOption<Value>(
+    @preconcurrency
+    func unsafeSetSocketOption<Value: Sendable>(
         level: SocketOptionLevel,
         name: SocketOptionName,
         value: Value
@@ -95,7 +96,8 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     ///   - value: The value to set the socket option to.
     /// - Returns: An `EventLoopFuture` that fires when the option has been set,
     ///     or if an error has occurred.
-    func unsafeSetSocketOption<Value>(
+    @preconcurrency
+    func unsafeSetSocketOption<Value: Sendable>(
         level: NIOBSDSocket.OptionLevel,
         name: NIOBSDSocket.Option,
         value: Value
@@ -114,7 +116,11 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     ///   - name: The name of the socket option, e.g. `SO_REUSEADDR`.
     /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
-    func unsafeGetSocketOption<Value>(level: SocketOptionLevel, name: SocketOptionName) -> EventLoopFuture<Value>
+    @preconcurrency
+    func unsafeGetSocketOption<Value: Sendable>(
+        level: SocketOptionLevel,
+        name: SocketOptionName
+    ) -> EventLoopFuture<Value>
     #endif
 
     /// Obtain the value of the socket option for the given level and name.
@@ -129,7 +135,8 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
     ///   - name: The name of the socket option, e.g. `SO_REUSEADDR`.
     /// - Returns: An `EventLoopFuture` containing the value of the socket option, or
     ///     any error that occurred while retrieving the socket option.
-    func unsafeGetSocketOption<Value>(
+    @preconcurrency
+    func unsafeGetSocketOption<Value: Sendable>(
         level: NIOBSDSocket.OptionLevel,
         name: NIOBSDSocket.Option
     ) -> EventLoopFuture<Value>
@@ -137,7 +144,7 @@ public protocol SocketOptionProvider: _NIOPreconcurrencySendable {
 
 #if !os(Windows)
 extension SocketOptionProvider {
-    func unsafeSetSocketOption<Value>(
+    func unsafeSetSocketOption<Value: Sendable>(
         level: NIOBSDSocket.OptionLevel,
         name: NIOBSDSocket.Option,
         value: Value
@@ -149,7 +156,7 @@ extension SocketOptionProvider {
         )
     }
 
-    func unsafeGetSocketOption<Value>(
+    func unsafeGetSocketOption<Value: Sendable>(
         level: NIOBSDSocket.OptionLevel,
         name: NIOBSDSocket.Option
     ) -> EventLoopFuture<Value> {
