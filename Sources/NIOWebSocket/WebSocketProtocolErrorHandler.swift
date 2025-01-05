@@ -21,7 +21,7 @@ import NIOCore
 public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
     public typealias InboundIn = Never
     public typealias OutboundOut = WebSocketFrame
-    
+
     private let isServer: Bool
 
     /// Initialize the `WebSocketProtocolErrorHandler`
@@ -53,7 +53,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
         // forward the error on to let others see it.
         context.fireErrorCaught(error)
     }
-    
+
     private func makeMaskingKey() -> WebSocketMaskingKey? {
         // According to RFC 6455 Section 5, a client *must* mask all frames that it sends to the server.
         // A server *must not* mask any frames that it sends to the client
