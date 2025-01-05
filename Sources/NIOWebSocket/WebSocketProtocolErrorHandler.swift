@@ -21,8 +21,16 @@ import NIOCore
 public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
     public typealias InboundIn = Never
     public typealias OutboundOut = WebSocketFrame
+    
+    private let isServer: Bool
 
-    public init() {}
+    /// Initialize the `WebSocketProtocolErrorHandler`
+    ///
+    /// - Parameters:
+    ///     - isServer: indicate that this `ChannelHandeler` is used by a WebSocket server or client. Default is false.
+    public init(isServer: Bool = false) {
+        self.isServer = isServer
+    }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         let loopBoundContext = context.loopBound
@@ -32,6 +40,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
             let frame = WebSocketFrame(
                 fin: true,
                 opcode: .connectionClose,
+                maskKey: self.makeMaskingKey(),
                 data: data
             )
             context.writeAndFlush(Self.wrapOutboundOut(frame)).whenComplete { (_: Result<Void, Error>) in
@@ -43,6 +52,12 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
         // Regardless of whether this is an error we want to handle or not, we always
         // forward the error on to let others see it.
         context.fireErrorCaught(error)
+    }
+    
+    private func makeMaskingKey() -> WebSocketMaskingKey? {
+        // According to RFC 6455 Section 5, a client *must* mask all frames that it sends to the server.
+        // A server *must not* mask any frames that it sends to the client
+        self.isServer ? nil : .random()
     }
 }
 
