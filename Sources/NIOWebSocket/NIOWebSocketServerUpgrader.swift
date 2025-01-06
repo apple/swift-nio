@@ -328,7 +328,7 @@ private func _upgrade<UpgradeResult>(
         )
 
         if automaticErrorHandling {
-            try channel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler(isServer: true))
+            try channel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler())
         }
     }.flatMap {
         upgradePipelineHandler(channel, upgradeRequest)

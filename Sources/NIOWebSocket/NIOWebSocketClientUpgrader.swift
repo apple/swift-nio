@@ -199,7 +199,9 @@ private func _upgrade<UpgradeResult>(
             ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: maxFrameSize))
         )
         if enableAutomaticErrorHandling {
-            try channel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler(isServer: false))
+            let errorHandler = WebSocketProtocolErrorHandler()
+            errorHandler.isServer = false
+            try channel.pipeline.syncOperations.addHandler(errorHandler)
         }
     }
     .flatMap {
