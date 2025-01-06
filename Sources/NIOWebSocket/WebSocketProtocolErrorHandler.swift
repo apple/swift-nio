@@ -23,7 +23,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
     public typealias OutboundOut = WebSocketFrame
 
     /// Indicate that this `ChannelHandeler` is used by a WebSocket server or client. Default is true.
-    public var isServer: Bool
+    public private(set) var isServer: Bool
 
     public init() {
         self.isServer = true
@@ -55,6 +55,14 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
         // According to RFC 6455 Section 5, a client *must* mask all frames that it sends to the server.
         // A server *must not* mask any frames that it sends to the client
         self.isServer ? nil : .random()
+    }
+
+    /// Configure this `ChannelHandler` to be used by a WebSocket server or client.
+    ///
+    /// - Parameters:
+    ///     - isServer: indicate whether this `ChannelHandler` is used by a WebSocket server or client.
+    public func setIsServer(_ isServer: Bool) {
+        self.isServer = isServer
     }
 }
 

@@ -200,7 +200,7 @@ private func _upgrade<UpgradeResult>(
         )
         if enableAutomaticErrorHandling {
             let errorHandler = WebSocketProtocolErrorHandler()
-            errorHandler.isServer = false
+            errorHandler.setIsServer(false)
             try channel.pipeline.syncOperations.addHandler(errorHandler)
         }
     }

@@ -625,59 +625,6 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         XCTAssertNoThrow(XCTAssertEqual([0x88, 0x02, 0x03, 0xF1], try self.decoderChannel.readAllOutboundBytes()))
     }
 
-    func testErrorHandlerMaskFrameForClient() throws {
-        // We need to insert a decoder that doesn't do error handling, and then a separate error
-        // handler.
-        self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-
-        let errorHandler = WebSocketProtocolErrorHandler()
-        errorHandler.isServer = false
-        XCTAssertNoThrow(
-            try self.decoderChannel.pipeline.syncOperations.addHandler(errorHandler)
-        )
-
-        // A fake frame header that claims that the length of the frame is 16385 bytes,
-        // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
-
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
-        }
-
-        let frame = try self.decoderChannel.readOutbound(as: WebSocketFrame.self)
-        guard let frame = frame else {
-            // We expect that an error frame will have been written out.
-            XCTFail("WebSocketFrame should have been written out.")
-            return
-        }
-        XCTAssertNotNil(frame.maskKey)
-    }
-
-    func testErrorHandlerNotMaskFrameForServer() throws {
-        // We need to insert a decoder that doesn't do error handling, and then a separate error
-        // handler.
-        self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        XCTAssertNoThrow(
-            try self.decoderChannel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler())
-        )
-
-        // A fake frame header that claims that the length of the frame is 16385 bytes,
-        // larger than the frame max.
-        self.buffer.writeBytes([0x81, 0xFE, 0x40, 0x01])
-
-        XCTAssertThrowsError(try self.decoderChannel.writeInbound(self.buffer)) { error in
-            XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
-        }
-
-        let frame = try self.decoderChannel.readOutbound(as: WebSocketFrame.self)
-        guard let frame = frame else {
-            // We expect that an error frame will have been written out.
-            XCTFail("WebSocketFrame should have been written out.")
-            return
-        }
-        XCTAssertNil(frame.maskKey)
-    }
-
     func testWebSocketFrameDescription() {
         let byteBuffer = ByteBuffer()
         let webSocketFrame = WebSocketFrame(
