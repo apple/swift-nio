@@ -24,7 +24,7 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
 
     /// Indicate that this `ChannelHandeler` is used by a WebSocket server or client. Default is true.
     public var isServer: Bool
-    
+
     public init() {
         self.isServer = true
     }

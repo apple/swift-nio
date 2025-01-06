@@ -629,7 +629,7 @@ public final class WebSocketFrameDecoderTest: XCTestCase {
         // We need to insert a decoder that doesn't do error handling, and then a separate error
         // handler.
         self.swapDecoder(for: ByteToMessageHandler(WebSocketFrameDecoder()))
-        
+
         let errorHandler = WebSocketProtocolErrorHandler()
         errorHandler.isServer = false
         XCTAssertNoThrow(
