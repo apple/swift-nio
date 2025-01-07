@@ -28,12 +28,12 @@ public final class WebSocketProtocolErrorHandler: ChannelInboundHandler {
     public init() {
         self.isServer = true
     }
-    
+
     /// Initialize this `ChannelHandler` to be used by a WebSocket server or client.
     ///
     /// - Parameters:
     ///     - isServer: indicate whether this `ChannelHandler` is used by a WebSocket server or client.
-    public init (isServer: Bool) {
+    public init(isServer: Bool) {
         self.isServer = isServer
     }
 
