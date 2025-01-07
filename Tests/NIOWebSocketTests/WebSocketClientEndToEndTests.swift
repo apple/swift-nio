@@ -493,6 +493,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
         XCTAssertEqual(0x80, maskedBit)
 
         XCTAssertNoThrow(!clientChannel.isActive)
+        XCTAssertTrue(try clientChannel.finish(acceptAlreadyClosed: true).isClean)
     }
 }
 
