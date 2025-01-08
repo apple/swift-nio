@@ -956,8 +956,6 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     ///
     /// Using `bind` is not necessary unless you need the local address to be bound to a specific address.
     ///
-    /// - Note: Using `bind` will disable Happy Eyeballs on this `Channel`.
-    ///
     /// - Parameters:
     ///   - address: The `SocketAddress` to bind on.
     public func bind(to address: SocketAddress) -> ClientBootstrap {
@@ -977,6 +975,8 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     }
 
     /// Specify the `host` and `port` to connect to for the TCP `Channel` that will be established.
+    ///
+    /// - Note: Makes use of Happy Eyeballs.
     ///
     /// - Parameters:
     ///   - host: The host to connect to.
