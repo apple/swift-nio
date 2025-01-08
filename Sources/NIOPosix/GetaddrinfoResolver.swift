@@ -51,6 +51,7 @@ import struct WinSDK.SOCKADDR_IN6
 let offloadQueueTSV = ThreadSpecificVariable<DispatchQueue>()
 
 internal class GetaddrinfoResolver: Resolver {
+    private let loop: EventLoop
     private let v4Future: EventLoopPromise<[SocketAddress]>
     private let v6Future: EventLoopPromise<[SocketAddress]>
     private let aiSocktype: NIOBSDSocket.SocketType
@@ -67,6 +68,7 @@ internal class GetaddrinfoResolver: Resolver {
         aiSocktype: NIOBSDSocket.SocketType,
         aiProtocol: NIOBSDSocket.OptionLevel
     ) {
+        self.loop = loop
         self.v4Future = loop.makePromise()
         self.v6Future = loop.makePromise()
         self.aiSocktype = aiSocktype
@@ -90,7 +92,6 @@ internal class GetaddrinfoResolver: Resolver {
     /// Initiate a DNS AAAA query for a given host.
     ///
     /// Due to the nature of `getaddrinfo`, we only actually call the function once, in this function.
-    /// That means this function call actually blocks: sorry!
     ///
     /// - Parameters:
     ///   - host: The hostname to do an AAAA lookup on.
@@ -214,8 +215,12 @@ internal class GetaddrinfoResolver: Resolver {
             info = nextInfo
         }
 
-        v6Future.succeed(v6Results)
-        v4Future.succeed(v4Results)
+        // Ensure that both futures are succeeded in the same tick
+        // to avoid racing and potentially leaking a promise
+        self.loop.execute {
+            self.v6Future.succeed(v6Results)
+            self.v4Future.succeed(v4Results)
+        }
     }
 
     /// Record an error and fail the lookup process.
@@ -223,7 +228,11 @@ internal class GetaddrinfoResolver: Resolver {
     /// - Parameters:
     ///   - error: The error encountered during lookup.
     private func fail(_ error: Error) {
-        self.v6Future.fail(error)
-        self.v4Future.fail(error)
+        // Ensure that both futures are succeeded in the same tick
+        // to avoid racing and potentially leaking a promise
+        self.loop.execute {
+            self.v6Future.fail(error)
+            self.v4Future.fail(error)
+        }
     }
 }
