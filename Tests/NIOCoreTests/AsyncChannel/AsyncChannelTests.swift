@@ -180,6 +180,34 @@ final class AsyncChannelTests: XCTestCase {
         }
     }
 
+    func testAllWritesAreWritten() async throws {
+        let channel = NIOAsyncTestingChannel()
+        let promise = channel.testingEventLoop.makePromise(of: Void.self)
+        let wrapped = try await channel.testingEventLoop.executeInContext {
+            try channel.pipeline.syncOperations.addHandler(DelayingChannelHandler(promise: promise))
+            return try NIOAsyncChannel<Never, String>(wrappingChannelSynchronously: channel)
+        }
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await wrapped.executeThenClose { inbound, outbound in
+                    try await outbound.write("hello")
+                    try await outbound.writeAndFlush("world")
+                }
+            }
+            group.addTask {
+                let firstRead = try await channel.waitForOutboundWrite(as: String.self)
+                let secondRead = try await channel.waitForOutboundWrite(as: String.self)
+
+                XCTAssertEqual(firstRead, "hello")
+                XCTAssertEqual(secondRead, "world")
+            }
+
+            try await Task.sleep(for: .milliseconds(50))
+            promise.succeed()
+            await channel.testingEventLoop.advanceTime(by: .seconds(1))
+        }
+    }
+
     func testErrorsArePropagatedButAfterReads() async throws {
         let channel = NIOAsyncTestingChannel()
         let wrapped = try await channel.testingEventLoop.executeInContext {
@@ -429,12 +457,39 @@ private final class CloseRecorder: ChannelOutboundHandler, @unchecked Sendable {
     }
 }
 
+struct UnsafeContext: @unchecked Sendable {
+    private let _context: ChannelHandlerContext
+    var context: ChannelHandlerContext {
+        self._context.eventLoop.preconditionInEventLoop()
+        return _context
+    }
+    init(_ context: ChannelHandlerContext) {
+        self._context = context
+    }
+}
+
 private final class CloseSuppressor: ChannelOutboundHandler, RemovableChannelHandler, Sendable {
     typealias OutboundIn = Any
 
     func close(context: ChannelHandlerContext, mode: CloseMode, promise: EventLoopPromise<Void>?) {
         // We drop the close here.
         promise?.fail(TestError.bang)
+    }
+}
+
+private final class DelayingChannelHandler: ChannelOutboundHandler, RemovableChannelHandler, Sendable {
+    typealias OutboundIn = Any
+    typealias OutboundOut = Any
+    let waitPromise: EventLoopPromise<Void>
+
+    init(promise: EventLoopPromise<Void>) {
+        self.waitPromise = promise
+    }
+    func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        let unsafeTransfer = UnsafeTransfer((context: context, data: data))
+        self.waitPromise.futureResult.whenComplete { _ in
+            unsafeTransfer.wrappedValue.context.writeAndFlush(unsafeTransfer.wrappedValue.data, promise: promise)
+        }
     }
 }
 
