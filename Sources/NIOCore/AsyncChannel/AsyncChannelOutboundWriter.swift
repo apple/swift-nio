@@ -130,7 +130,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
 
     /// Send a write into the ``ChannelPipeline`` and flush it right away.
     ///
-    /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
+    /// This method suspends until the write has been written and flushed.
     @inlinable
     public func writeAndFlush(_ data: OutboundOut) async throws {
         switch self._backing {
@@ -175,6 +175,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         }
     }
 
+    /// Ensure all writes to the writer have been read
     @inlinable
     public func flush() async throws {
         if case .writer(let writer) = self._backing,
