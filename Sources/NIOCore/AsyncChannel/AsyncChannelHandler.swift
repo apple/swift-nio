@@ -20,7 +20,7 @@ enum OutboundAction<OutboundOut>: Sendable where OutboundOut: Sendable {
     case write(OutboundOut)
     /// Write value and flush pipeline
     case writeAndFlush(OutboundOut, EventLoopPromise<Void>)
-    /// flush pipeline
+    /// flush writes to writer
     case flush(EventLoopPromise<Void>)
 }
 
@@ -451,10 +451,6 @@ extension NIOAsyncChannelHandler {
         // awkward re-entrancy protections NIO usually requires, and can safely just do an iterative
         // write.
         self.eventLoop.preconditionInEventLoop()
-        guard let context = self.context else {
-            // Already removed from the channel by now, we can stop.
-            return
-        }
 
         self._doOutboundWrites(context: context, writes: sequence)
     }
@@ -468,10 +464,6 @@ extension NIOAsyncChannelHandler {
         // awkward re-entrancy protections NIO usually requires, and can safely just do an iterative
         // write.
         self.eventLoop.preconditionInEventLoop()
-        guard let context = self.context else {
-            // Already removed from the channel by now, we can stop.
-            return
-        }
 
         self._doOutboundWrite(context: context, write: element)
     }
@@ -488,29 +480,47 @@ extension NIOAsyncChannelHandler {
     }
 
     @inlinable
-    func _doOutboundWrites(context: ChannelHandlerContext, writes: Deque<OutboundAction<OutboundOut>>) {
+    func _doOutboundWrites(context: ChannelHandlerContext?, writes: Deque<OutboundAction<OutboundOut>>) {
         for write in writes {
             switch write {
             case .write(let value):
+                guard let context = self.context else {
+                    // Already removed from the channel by now, we can stop.
+                    return
+                }
                 context.write(Self.wrapOutboundOut(value), promise: nil)
-            case .flush(let promise):
                 context.flush()
+            case .flush(let promise):
                 promise.succeed()
             case .writeAndFlush(let value, let promise):
+                guard let context = self.context else {
+                    // Already removed from the channel by now, we can stop.
+                    promise.succeed()
+                    return
+                }
                 context.writeAndFlush(Self.wrapOutboundOut(value), promise: promise)
             }
         }
     }
 
     @inlinable
-    func _doOutboundWrite(context: ChannelHandlerContext, write: OutboundAction<OutboundOut>) {
+    func _doOutboundWrite(context: ChannelHandlerContext?, write: OutboundAction<OutboundOut>) {
         switch write {
         case .write(let value):
+            guard let context = self.context else {
+                // Already removed from the channel by now, we can stop.
+                return
+            }
             context.write(Self.wrapOutboundOut(value), promise: nil)
-        case .flush(let promise):
             context.flush()
+        case .flush(let promise):
             promise.succeed()
         case .writeAndFlush(let value, let promise):
+            guard let context = self.context else {
+                // Already removed from the channel by now, we can stop.
+                promise.succeed()
+                return
+            }
             context.writeAndFlush(Self.wrapOutboundOut(value), promise: promise)
         }
     }

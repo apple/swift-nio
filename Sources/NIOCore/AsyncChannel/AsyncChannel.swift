@@ -302,6 +302,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
             }
         }
 
+        // ensure everything written to outbound is written to channel
         try await self._outbound.flush()
         self._outbound.finish()
         // We ignore errors from close, since all we care about is that the channel has been closed
