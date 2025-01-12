@@ -21,7 +21,7 @@
 public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @usableFromInline
     typealias _Writer = NIOAsyncWriter<
-        OutboundOut,
+        OutboundAction<OutboundOut>,
         NIOAsyncChannelHandlerWriterDelegate<OutboundOut>
     >
 
@@ -72,6 +72,9 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @usableFromInline
     internal let _backing: Backing
 
+    @usableFromInline
+    internal let eventLoop: EventLoop?
+
     /// Creates a new ``NIOAsyncChannelOutboundWriter`` backed by a ``NIOAsyncChannelOutboundWriter/TestSink``.
     /// This is mostly useful for testing purposes where one wants to observe the written data.
     @inlinable
@@ -93,7 +96,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     ) throws {
         eventLoop.preconditionInEventLoop()
         let writer = _Writer.makeWriter(
-            elementType: OutboundOut.self,
+            elementType: OutboundAction<OutboundOut>.self,
             isWritable: true,
             finishOnDeinit: closeOnDeinit,
             delegate: .init(handler: handler)
@@ -103,11 +106,13 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         handler.writer = writer.writer
 
         self._backing = .writer(writer.writer)
+        self.eventLoop = eventLoop
     }
 
     @inlinable
     init(continuation: AsyncStream<OutboundOut>.Continuation) {
         self._backing = .asyncStream(continuation)
+        self.eventLoop = nil
     }
 
     /// Send a write into the ``ChannelPipeline`` and flush it right away.
@@ -119,7 +124,26 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         case .asyncStream(let continuation):
             continuation.yield(data)
         case .writer(let writer):
-            try await writer.yield(data)
+            try await writer.yield(.write(data))
+        }
+    }
+
+    /// Send a write into the ``ChannelPipeline`` and flush it right away.
+    ///
+    /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
+    @inlinable
+    public func writeAndFlush(_ data: OutboundOut) async throws {
+        switch self._backing {
+        case .asyncStream(let continuation):
+            continuation.yield(data)
+        case .writer(let writer):
+            if let eventLoop {
+                let promise = eventLoop.makePromise(of: Void.self)
+                try await writer.yield(.writeAndFlush(data, promise))
+                try await promise.futureResult.get()
+            } else {
+                try await writer.yield(.write(data))
+            }
         }
     }
 
@@ -134,7 +158,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
                 continuation.yield(data)
             }
         case .writer(let writer):
-            try await writer.yield(contentsOf: sequence)
+            try await writer.yield(contentsOf: sequence.dropLast().map { .write($0) })
         }
     }
 
@@ -148,6 +172,17 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     where Writes.Element == OutboundOut {
         for try await data in sequence {
             try await self.write(data)
+        }
+    }
+
+    @inlinable
+    public func flush() async throws {
+        if case .writer(let writer) = self._backing,
+            let eventLoop
+        {
+            let promise = eventLoop.makePromise(of: Void.self)
+            try await writer.yield(.flush(promise))
+            try await promise.futureResult.get()
         }
     }
 

@@ -14,6 +14,16 @@
 
 import DequeModule
 
+@usableFromInline
+enum OutboundAction<OutboundOut>: Sendable where OutboundOut: Sendable {
+    /// Write value
+    case write(OutboundOut)
+    /// Write value and flush pipeline
+    case writeAndFlush(OutboundOut, EventLoopPromise<Void>)
+    /// flush pipeline
+    case flush(EventLoopPromise<Void>)
+}
+
 /// A ``ChannelHandler`` that is used to transform the inbound portion of a NIO
 /// ``Channel`` into an asynchronous sequence that supports back-pressure. It's also used
 /// to write the outbound portion of a NIO ``Channel`` from Swift Concurrency with back-pressure
@@ -77,7 +87,7 @@ internal final class NIOAsyncChannelHandler<InboundIn: Sendable, ProducerElement
 
     @usableFromInline
     typealias Writer = NIOAsyncWriter<
-        OutboundOut,
+        OutboundAction<OutboundOut>,
         NIOAsyncChannelHandlerWriterDelegate<OutboundOut>
     >
 
@@ -372,7 +382,10 @@ struct NIOAsyncChannelHandlerProducerDelegate: @unchecked Sendable, NIOAsyncSequ
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @usableFromInline
-struct NIOAsyncChannelHandlerWriterDelegate<Element: Sendable>: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
+struct NIOAsyncChannelHandlerWriterDelegate<OutboundOut: Sendable>: NIOAsyncWriterSinkDelegate, @unchecked Sendable {
+    @usableFromInline
+    typealias Element = OutboundAction<OutboundOut>
+
     @usableFromInline
     let eventLoop: EventLoop
 
@@ -386,7 +399,7 @@ struct NIOAsyncChannelHandlerWriterDelegate<Element: Sendable>: NIOAsyncWriterSi
     let _didTerminate: ((any Error)?) -> Void
 
     @inlinable
-    init<InboundIn, ProducerElement>(handler: NIOAsyncChannelHandler<InboundIn, ProducerElement, Element>) {
+    init<InboundIn, ProducerElement>(handler: NIOAsyncChannelHandler<InboundIn, ProducerElement, OutboundOut>) {
         self.eventLoop = handler.eventLoop
         self._didYieldContentsOf = handler._didYield(sequence:)
         self._didYield = handler._didYield(element:)
@@ -430,7 +443,7 @@ struct NIOAsyncChannelHandlerWriterDelegate<Element: Sendable>: NIOAsyncWriterSi
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension NIOAsyncChannelHandler {
     @inlinable
-    func _didYield(sequence: Deque<OutboundOut>) {
+    func _didYield(sequence: Deque<OutboundAction<OutboundOut>>) {
         // This is always called from an async context, so we must loop-hop.
         // Because we always loop-hop, we're always at the top of a stack frame. As this
         // is the only source of writes for us, and as this channel handler doesn't implement
@@ -447,7 +460,7 @@ extension NIOAsyncChannelHandler {
     }
 
     @inlinable
-    func _didYield(element: OutboundOut) {
+    func _didYield(element: OutboundAction<OutboundOut>) {
         // This is always called from an async context, so we must loop-hop.
         // Because we always loop-hop, we're always at the top of a stack frame. As this
         // is the only source of writes for us, and as this channel handler doesn't implement
@@ -475,18 +488,31 @@ extension NIOAsyncChannelHandler {
     }
 
     @inlinable
-    func _doOutboundWrites(context: ChannelHandlerContext, writes: Deque<OutboundOut>) {
+    func _doOutboundWrites(context: ChannelHandlerContext, writes: Deque<OutboundAction<OutboundOut>>) {
         for write in writes {
-            context.write(Self.wrapOutboundOut(write), promise: nil)
+            switch write {
+            case .write(let value):
+                context.write(Self.wrapOutboundOut(value), promise: nil)
+            case .flush(let promise):
+                context.flush()
+                promise.succeed()
+            case .writeAndFlush(let value, let promise):
+                context.writeAndFlush(Self.wrapOutboundOut(value), promise: promise)
+            }
         }
-
-        context.flush()
     }
 
     @inlinable
-    func _doOutboundWrite(context: ChannelHandlerContext, write: OutboundOut) {
-        context.write(Self.wrapOutboundOut(write), promise: nil)
-        context.flush()
+    func _doOutboundWrite(context: ChannelHandlerContext, write: OutboundAction<OutboundOut>) {
+        switch write {
+        case .write(let value):
+            context.write(Self.wrapOutboundOut(value), promise: nil)
+        case .flush(let promise):
+            context.flush()
+            promise.succeed()
+        case .writeAndFlush(let value, let promise):
+            context.writeAndFlush(Self.wrapOutboundOut(value), promise: promise)
+        }
     }
 }
 
