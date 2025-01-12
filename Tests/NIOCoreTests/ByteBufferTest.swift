@@ -3499,6 +3499,43 @@ extension ByteBufferTest {
 
 }
 
+// MARK: - Int / FixedWidthInteger init
+extension ByteBufferTest {
+    func testCreateInt32From3BytesFails() {
+        let bytes: [UInt8] = [0, 1, 2]
+        let buffer = ByteBuffer(bytes: bytes)
+
+        XCTAssertNil(UInt32(buffer: buffer))
+    }
+
+    func testCreateIntegersFromByteBuffer() {
+        // 8-bit
+        let uint8Buffer = ByteBuffer(bytes: [42])
+        XCTAssertEqual(UInt8(buffer: uint8Buffer), 42)
+        XCTAssertEqual(Int8(buffer: uint8Buffer), 42)
+
+        // 16-bit
+        let uint16Bytes: [UInt8] = Endianness.host == .little ? [0x02, 0x01] : [0x01, 0x02]
+        let uint16Buffer = ByteBuffer(bytes: uint16Bytes)
+        XCTAssertEqual(UInt16(buffer: uint16Buffer), 0x0102)
+        XCTAssertEqual(Int16(buffer: uint16Buffer), 0x0102)
+
+        // 32-bit
+        let uint32Bytes: [UInt8] = Endianness.host == .little ? [0x04, 0x03, 0x02, 0x01] : [0x01, 0x02, 0x03, 0x04]
+        let uint32Buffer = ByteBuffer(bytes: uint32Bytes)
+        XCTAssertEqual(UInt32(buffer: uint32Buffer), 0x01020304)
+        XCTAssertEqual(Int32(buffer: uint32Buffer), 0x01020304)
+
+        // 64-bit
+        let uint64Bytes: [UInt8] = Endianness.host == .little ?
+        [0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01] :
+        [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]
+        let uint64Buffer = ByteBuffer(bytes: uint64Bytes)
+        XCTAssertEqual(UInt64(buffer: uint64Buffer), 0x0102030405060708)
+        XCTAssertEqual(Int64(buffer: uint64Buffer), 0x0102030405060708)
+    }
+}
+
 // MARK: - DispatchData init
 extension ByteBufferTest {
 

@@ -134,6 +134,22 @@ extension FixedWidthInteger {
 
         return 1 << ((Self.bitWidth - 1) - self.leadingZeroBitCount)
     }
+
+    /// Initialize an integer from a ByteBuffer. The buffer must contain enough bytes to represent the integer.
+    /// The bytes will be read using the host system's endianness.
+    ///
+    /// - Parameters:
+    ///   - buffer: The ByteBuffer to read from
+    ///
+    /// - Returns: The integer value read from the buffer, or nil if the value could not be read.
+    @inlinable
+    public init?(buffer: ByteBuffer) {
+        var buffer = buffer
+        guard let value = buffer.readInteger(endianness: .host, as: Self.self) else {
+            return nil
+        }
+        self = value
+    }
 }
 
 extension UInt32 {
