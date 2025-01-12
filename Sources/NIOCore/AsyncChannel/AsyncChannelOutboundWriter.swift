@@ -138,9 +138,9 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
             continuation.yield(data)
         case .writer(let writer):
             if let eventLoop {
-                let promise = eventLoop.makePromise(of: Void.self)
-                try await writer.yield(.writeAndFlush(data, promise))
-                try await promise.futureResult.get()
+                try await self.withPromise(eventLoop: eventLoop) { promise in
+                    try await writer.yield(.writeAndFlush(data, promise))
+                }
             } else {
                 try await writer.yield(.write(data))
             }
@@ -180,9 +180,9 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         if case .writer(let writer) = self._backing,
             let eventLoop
         {
-            let promise = eventLoop.makePromise(of: Void.self)
-            try await writer.yield(.flush(promise))
-            try await promise.futureResult.get()
+            try await self.withPromise(eventLoop: eventLoop) { promise in
+                try await writer.yield(.flush(promise))
+            }
         }
     }
 
@@ -195,6 +195,20 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
             continuation.finish()
         case .writer(let writer):
             writer.finish()
+        }
+    }
+
+    @usableFromInline
+    func withPromise(
+        eventLoop: EventLoop,
+        _ process: (EventLoopPromise<Void>) async throws -> Void
+    ) async throws {
+        let promise = eventLoop.makePromise(of: Void.self)
+        do {
+            try await process(promise)
+            try await promise.futureResult.get()
+        } catch {
+            promise.fail(error)
         }
     }
 }
