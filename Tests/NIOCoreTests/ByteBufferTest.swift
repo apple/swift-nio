@@ -3501,13 +3501,6 @@ extension ByteBufferTest {
 
 // MARK: - Int / FixedWidthInteger init
 extension ByteBufferTest {
-    func testCreateInt32From3BytesFails() {
-        let bytes: [UInt8] = [0, 1, 2]
-        let buffer = ByteBuffer(bytes: bytes)
-
-        XCTAssertNil(UInt32(buffer: buffer))
-    }
-
     func testCreateIntegersFromByteBuffer() {
         // 8-bit
         let uint8Buffer = ByteBuffer(bytes: [42])

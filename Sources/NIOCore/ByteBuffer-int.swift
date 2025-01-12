@@ -137,18 +137,16 @@ extension FixedWidthInteger {
 
     /// Initialize an integer from a ByteBuffer. The buffer must contain enough bytes to represent the integer.
     /// The bytes will be read using the host system's endianness.
+    /// If the buffer doesn't contain enough bytes to represent the integer, the program will crash.
     ///
     /// - Parameters:
     ///   - buffer: The ByteBuffer to read from
     ///
-    /// - Returns: The integer value read from the buffer, or nil if the value could not be read.
+    /// - Returns: The integer value read from the buffer
     @inlinable
-    public init?(buffer: ByteBuffer) {
+    public init(buffer: ByteBuffer) {
         var buffer = buffer
-        guard let value = buffer.readInteger(endianness: .host, as: Self.self) else {
-            return nil
-        }
-        self = value
+        self = buffer.readInteger(endianness: .host, as: Self.self)!
     }
 }
 
