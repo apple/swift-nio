@@ -67,25 +67,25 @@ class TimeAmountTests: XCTestCase {
         XCTAssertEqual(try TimeAmount("2h"), .hours(2))
         XCTAssertEqual(try TimeAmount("2hr"), .hours(2))
         XCTAssertEqual(try TimeAmount("2hrs"), .hours(2))
-        
+
         // Test all supported minute formats
         XCTAssertEqual(try TimeAmount("3m"), .minutes(3))
         XCTAssertEqual(try TimeAmount("3min"), .minutes(3))
-        
+
         // Test all supported second formats
         XCTAssertEqual(try TimeAmount("4s"), .seconds(4))
         XCTAssertEqual(try TimeAmount("4sec"), .seconds(4))
         XCTAssertEqual(try TimeAmount("4secs"), .seconds(4))
-        
+
         // Test all supported millisecond formats
         XCTAssertEqual(try TimeAmount("5ms"), .milliseconds(5))
         XCTAssertEqual(try TimeAmount("5millis"), .milliseconds(5))
-        
+
         // Test all supported microsecond formats
         XCTAssertEqual(try TimeAmount("6us"), .microseconds(6))
         XCTAssertEqual(try TimeAmount("6µs"), .microseconds(6))
         XCTAssertEqual(try TimeAmount("6micros"), .microseconds(6))
-        
+
         // Test all supported nanosecond formats
         XCTAssertEqual(try TimeAmount("7ns"), .nanoseconds(7))
         XCTAssertEqual(try TimeAmount("7nanos"), .nanoseconds(7))
@@ -107,7 +107,7 @@ class TimeAmountTests: XCTestCase {
 
     func testTimeAmountParsingWithDefaultUnit() throws {
         XCTAssertEqual(try TimeAmount("5", defaultUnit: "ms"), .milliseconds(5))
-        XCTAssertEqual(try TimeAmount("42"), .seconds(42)) // default should be seconds
+        XCTAssertEqual(try TimeAmount("42"), .seconds(42))  // default should be seconds
         XCTAssertEqual(try TimeAmount("100", defaultUnit: "us"), .microseconds(100))
     }
 
@@ -116,28 +116,32 @@ class TimeAmountTests: XCTestCase {
         XCTAssertThrowsError(try TimeAmount("")) { error in
             XCTAssertEqual(
                 error as? TimeAmount.ValidationError,
-                TimeAmount.ValidationError.invalidNumber("'' cannot be parsed as number and unit"))
+                TimeAmount.ValidationError.invalidNumber("'' cannot be parsed as number and unit")
+            )
         }
-        
+
         // Invalid number
         XCTAssertThrowsError(try TimeAmount("abc")) { error in
             XCTAssertEqual(
                 error as? TimeAmount.ValidationError,
-                TimeAmount.ValidationError.invalidNumber("'abc' cannot be parsed as number and unit"))
+                TimeAmount.ValidationError.invalidNumber("'abc' cannot be parsed as number and unit")
+            )
         }
-        
+
         // Unknown unit
         XCTAssertThrowsError(try TimeAmount("5x")) { error in
             XCTAssertEqual(
                 error as? TimeAmount.ValidationError,
-                TimeAmount.ValidationError.unsupportedUnit("Unknown unit 'x' in '5x'"))
+                TimeAmount.ValidationError.unsupportedUnit("Unknown unit 'x' in '5x'")
+            )
         }
-        
+
         // Missing number
         XCTAssertThrowsError(try TimeAmount("ms")) { error in
             XCTAssertEqual(
                 error as? TimeAmount.ValidationError,
-                TimeAmount.ValidationError.invalidNumber("'ms' cannot be parsed as number and unit"))
+                TimeAmount.ValidationError.invalidNumber("'ms' cannot be parsed as number and unit")
+            )
         }
     }
 
@@ -147,17 +151,17 @@ class TimeAmountTests: XCTestCase {
         XCTAssertEqual(TimeAmount.milliseconds(100).description, "100 ms")
         XCTAssertEqual(TimeAmount.microseconds(250).description, "250 us")
         XCTAssertEqual(TimeAmount.nanoseconds(42).description, "42 ns")
-        
+
         // Unit selection based on value
         XCTAssertEqual(TimeAmount.nanoseconds(1_000).description, "1 us")
         XCTAssertEqual(TimeAmount.nanoseconds(1_000_000).description, "1 ms")
         XCTAssertEqual(TimeAmount.nanoseconds(1_000_000_000).description, "1 s")
-        
+
         // Values with remainders
         XCTAssertEqual(TimeAmount.nanoseconds(1_500).description, "1500 ns")
         XCTAssertEqual(TimeAmount.nanoseconds(1_500_000).description, "1500 us")
         XCTAssertEqual(TimeAmount.nanoseconds(1_500_000_000).description, "1500 ms")
-        
+
         // Negative values
         XCTAssertEqual(TimeAmount.seconds(-5).description, "-5 s")
         XCTAssertEqual(TimeAmount.milliseconds(-100).description, "-100 ms")

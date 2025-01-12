@@ -565,7 +565,7 @@ extension TimeAmount: CustomStringConvertible {
     }
 
     /// Creates a TimeAmount from a string representation with an optional default unit.
-    /// 
+    ///
     /// Supports formats like:
     /// - "5s" (5 seconds)
     /// - "100ms" (100 milliseconds)
@@ -576,7 +576,7 @@ extension TimeAmount: CustomStringConvertible {
     ///
     /// Supported units:
     /// - h, hr, hrs (hours)
-    /// - m, min (minutes)  
+    /// - m, min (minutes)
     /// - s, sec, secs (seconds)
     /// - ms, millis (milliseconds)
     /// - us, µs, micros (microseconds)
