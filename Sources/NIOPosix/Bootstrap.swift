@@ -773,7 +773,7 @@ extension Channel {
         // `flatMap` on the eventloop that the `register` will succeed on.
         self.eventLoop.assertInEventLoop()
         return self.register().assumeIsolated().flatMap {
-            return body(self)
+            body(self)
         }.nonisolated()
     }
 }
@@ -1006,7 +1006,11 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         return connector.resolveAndConnect()
     }
 
-    private static func connect(freshChannel channel: Channel, address: SocketAddress, connectTimeout: TimeAmount) -> EventLoopFuture<Void> {
+    private static func connect(
+        freshChannel channel: Channel,
+        address: SocketAddress,
+        connectTimeout: TimeAmount
+    ) -> EventLoopFuture<Void> {
         let connectPromise = channel.eventLoop.makePromise(of: Void.self)
         channel.connect(to: address, promise: connectPromise)
         let cancelTask = channel.eventLoop.scheduleTask(in: connectTimeout) {
@@ -1368,7 +1372,10 @@ extension ClientBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func withConnectedSocket<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
+    private func withConnectedSocket<
+        ChannelInitializerResult: Sendable,
+        PostRegistrationTransformationResult: Sendable
+    >(
         eventLoop: EventLoop,
         socket: NIOBSDSocket.Handle,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
@@ -1391,7 +1398,10 @@ extension ClientBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func initializeAndRegisterNewChannel<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
+    private func initializeAndRegisterNewChannel<
+        ChannelInitializerResult: Sendable,
+        PostRegistrationTransformationResult: Sendable
+    >(
         eventLoop: EventLoop,
         protocolFamily: NIOBSDSocket.ProtocolFamily,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
@@ -1417,7 +1427,10 @@ extension ClientBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func initializeAndRegisterChannel<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
+    private func initializeAndRegisterChannel<
+        ChannelInitializerResult: Sendable,
+        PostRegistrationTransformationResult: Sendable
+    >(
         channel: SocketChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (SocketChannel) -> EventLoopFuture<Void>,
@@ -2004,7 +2017,10 @@ extension DatagramBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func makeConfiguredChannel<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
+    private func makeConfiguredChannel<
+        ChannelInitializerResult: Sendable,
+        PostRegistrationTransformationResult: Sendable
+    >(
         makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
@@ -2013,9 +2029,10 @@ extension DatagramBootstrap {
         >
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let eventLoop = self.group.next()
-        let bootstrapChannelInitializer = self.channelInitializer ?? { @Sendable _ in eventLoop.makeSucceededFuture(()) }
+        let bootstrapChannelInitializer =
+            self.channelInitializer ?? { @Sendable _ in eventLoop.makeSucceededFuture(()) }
         let channelInitializer = { @Sendable (channel: Channel) -> EventLoopFuture<ChannelInitializerResult> in
-            return bootstrapChannelInitializer(channel)
+            bootstrapChannelInitializer(channel)
                 .hop(to: channel.eventLoop)
                 .assumeIsolated()
                 .flatMap { channelInitializer(channel) }
