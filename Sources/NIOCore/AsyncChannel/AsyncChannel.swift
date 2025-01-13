@@ -293,7 +293,6 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
             result = try await body(self._inbound, self._outbound)
         } catch let bodyError {
             do {
-                try await self._outbound.flush()
                 self._outbound.finish()
                 try await self.channel.close().get()
                 throw bodyError
