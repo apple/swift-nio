@@ -66,14 +66,11 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     @usableFromInline
     enum Backing: Sendable {
         case asyncStream(AsyncStream<OutboundOut>.Continuation)
-        case writer(_Writer)
+        case writer(_Writer, EventLoop)
     }
 
     @usableFromInline
     internal let _backing: Backing
-
-    @usableFromInline
-    internal let eventLoop: EventLoop?
 
     /// Creates a new ``NIOAsyncChannelOutboundWriter`` backed by a ``NIOAsyncChannelOutboundWriter/TestSink``.
     /// This is mostly useful for testing purposes where one wants to observe the written data.
@@ -105,14 +102,12 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         handler.sink = writer.sink
         handler.writer = writer.writer
 
-        self._backing = .writer(writer.writer)
-        self.eventLoop = eventLoop
+        self._backing = .writer(writer.writer, eventLoop)
     }
 
     @inlinable
     init(continuation: AsyncStream<OutboundOut>.Continuation) {
         self._backing = .asyncStream(continuation)
-        self.eventLoop = nil
     }
 
     /// Send a write into the ``ChannelPipeline`` and flush it right away.
@@ -123,7 +118,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         switch self._backing {
         case .asyncStream(let continuation):
             continuation.yield(data)
-        case .writer(let writer):
+        case .writer(let writer, _):
             try await writer.yield(.write(data))
         }
     }
@@ -136,13 +131,9 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         switch self._backing {
         case .asyncStream(let continuation):
             continuation.yield(data)
-        case .writer(let writer):
-            if let eventLoop {
-                try await self.withPromise(eventLoop: eventLoop) { promise in
-                    try await writer.yield(.writeAndFlush(data, promise))
-                }
-            } else {
-                try await writer.yield(.write(data))
+        case .writer(let writer, let eventLoop):
+            try await self.withPromise(eventLoop: eventLoop) { promise in
+                try await writer.yield(.writeAndFlush(data, promise))
             }
         }
     }
@@ -157,7 +148,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
             for data in sequence {
                 continuation.yield(data)
             }
-        case .writer(let writer):
+        case .writer(let writer, _):
             try await writer.yield(contentsOf: sequence.map { .write($0) })
         }
     }
@@ -173,13 +164,9 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
             for data in sequence {
                 continuation.yield(data)
             }
-        case .writer(let writer):
-            if let eventLoop {
-                try await withPromise(eventLoop: eventLoop) { promise in
-                    try await writer.yield(contentsOf: sequence.map { .writeAndFlush($0, promise) })
-                }
-            } else {
-                try await writer.yield(contentsOf: sequence.map { .write($0) })
+        case .writer(let writer, let eventLoop):
+            try await withPromise(eventLoop: eventLoop) { promise in
+                try await writer.yield(contentsOf: sequence.map { .writeAndFlush($0, promise) })
             }
         }
     }
@@ -200,9 +187,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
     /// Ensure all writes to the writer have been read
     @inlinable
     public func flush() async throws {
-        if case .writer(let writer) = self._backing,
-            let eventLoop
-        {
+        if case .writer(let writer, let eventLoop) = self._backing {
             try await self.withPromise(eventLoop: eventLoop) { promise in
                 try await writer.yield(.flush(promise))
             }
@@ -216,7 +201,7 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
         switch self._backing {
         case .asyncStream(let continuation):
             continuation.finish()
-        case .writer(let writer):
+        case .writer(let writer, _):
             writer.finish()
         }
     }
