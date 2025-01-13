@@ -481,9 +481,10 @@ extension NIOAsyncChannelHandler {
 
     @inlinable
     func _doOutboundWrites(context: ChannelHandlerContext?, writes: Deque<OutboundAction<OutboundOut>>) {
-        for write in writes {
+        // write everything but the last item
+        for write in writes.dropLast() {
             switch write {
-            case .write(let value):
+            case .write(let value), .writeAndFlush(let value, _):
                 guard let context = self.context else {
                     // Already removed from the channel by now, we can stop.
                     return
@@ -492,14 +493,28 @@ extension NIOAsyncChannelHandler {
                 context.flush()
             case .flush(let promise):
                 promise.succeed()
-            case .writeAndFlush(let value, let promise):
-                guard let context = self.context else {
-                    // Already removed from the channel by now, we can stop.
-                    promise.succeed()
-                    return
-                }
-                context.writeAndFlush(Self.wrapOutboundOut(value), promise: promise)
             }
+        }
+        // write last item
+        switch writes.last {
+        case .write(let value):
+            guard let context = self.context else {
+                // Already removed from the channel by now, we can stop.
+                return
+            }
+            context.write(Self.wrapOutboundOut(value), promise: nil)
+            context.flush()
+        case .flush(let promise):
+            promise.succeed()
+        case .writeAndFlush(let value, let promise):
+            guard let context = self.context else {
+                // Already removed from the channel by now, we can stop.
+                promise.succeed()
+                return
+            }
+            context.writeAndFlush(Self.wrapOutboundOut(value), promise: promise)
+        case .none:
+            break
         }
     }
 

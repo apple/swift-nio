@@ -202,9 +202,38 @@ final class AsyncChannelTests: XCTestCase {
                 XCTAssertEqual(secondRead, "world")
             }
 
+            // wait 50 milliseconds to ensure we are inside write and flush then
+            // trigger pipeline flush by succeeding promise in DelayingChannelHandler
             try await Task.sleep(for: .milliseconds(50))
             promise.succeed()
-            await channel.testingEventLoop.advanceTime(by: .seconds(1))
+        }
+    }
+
+    func testAllWritesInSequenceAreWritten() async throws {
+        let channel = NIOAsyncTestingChannel()
+        let promise = channel.testingEventLoop.makePromise(of: Void.self)
+        let wrapped = try await channel.testingEventLoop.executeInContext {
+            try channel.pipeline.syncOperations.addHandler(DelayingChannelHandler(promise: promise))
+            return try NIOAsyncChannel<Never, String>(wrappingChannelSynchronously: channel)
+        }
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask {
+                try await wrapped.executeThenClose { inbound, outbound in
+                    try await outbound.writeAndFlush(contentsOf: ["hello", "world"])
+                }
+            }
+            group.addTask {
+                let firstRead = try await channel.waitForOutboundWrite(as: String.self)
+                let secondRead = try await channel.waitForOutboundWrite(as: String.self)
+
+                XCTAssertEqual(firstRead, "hello")
+                XCTAssertEqual(secondRead, "world")
+            }
+
+            // wait 50 milliseconds to ensure we are inside write and flush then
+            // trigger pipeline flush by succeeding promise in DelayingChannelHandler
+            try await Task.sleep(for: .milliseconds(50))
+            promise.succeed()
         }
     }
 

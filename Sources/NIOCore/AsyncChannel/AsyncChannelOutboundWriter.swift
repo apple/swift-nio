@@ -158,7 +158,29 @@ public struct NIOAsyncChannelOutboundWriter<OutboundOut: Sendable>: Sendable {
                 continuation.yield(data)
             }
         case .writer(let writer):
-            try await writer.yield(contentsOf: sequence.dropLast().map { .write($0) })
+            try await writer.yield(contentsOf: sequence.map { .write($0) })
+        }
+    }
+
+    /// Send a sequence of writes into the ``ChannelPipeline`` and flush them right away.
+    ///
+    /// This method suspends if the underlying channel is not writable and will resume once the it becomes writable again.
+    @inlinable
+    public func writeAndFlush<Writes: Sequence>(contentsOf sequence: Writes) async throws
+    where Writes.Element == OutboundOut {
+        switch self._backing {
+        case .asyncStream(let continuation):
+            for data in sequence {
+                continuation.yield(data)
+            }
+        case .writer(let writer):
+            if let eventLoop {
+                try await withPromise(eventLoop: eventLoop) { promise in
+                    try await writer.yield(contentsOf: sequence.map { .writeAndFlush($0, promise) })
+                }
+            } else {
+                try await writer.yield(contentsOf: sequence.map { .write($0) })
+            }
         }
     }
 
