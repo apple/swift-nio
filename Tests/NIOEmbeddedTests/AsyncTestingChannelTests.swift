@@ -65,6 +65,17 @@ class AsyncTestingChannelTests: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.removeHandler(name: "handler2").wait())
     }
 
+    func testClosureInit() async throws {
+        final class Handler: ChannelInboundHandler, Sendable {
+            typealias InboundIn = Never
+        }
+
+        let channel = try await NIOAsyncTestingChannel {
+            try $0.pipeline.syncOperations.addHandler(Handler())
+        }
+        XCTAssertNoThrow(try channel.pipeline.handler(type: Handler.self).wait())
+    }
+
     func testWaitForInboundWrite() async throws {
         let channel = NIOAsyncTestingChannel()
         let task = Task {
