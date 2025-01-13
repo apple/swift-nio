@@ -477,20 +477,17 @@ public final class ServerBootstrap {
 
             @inline(__always)
             func fireThroughPipeline(_ future: EventLoopFuture<Void>, context: ChannelHandlerContext) {
+                // Strictly these asserts are redundant with future.assumeIsolated(), but as this code
+                // has guarantees that can be quite hard to follow we keep them here.
                 ctxEventLoop.assertInEventLoop()
                 assert(ctxEventLoop === context.eventLoop)
-                let loopBoundValues = NIOLoopBound((context: context, self: self), eventLoop: context.eventLoop)
-                future.flatMap { (_) -> EventLoopFuture<Void> in
-                    let context = loopBoundValues.value.context
-                    ctxEventLoop.assertInEventLoop()
+                future.assumeIsolated().flatMap { (_) -> EventLoopFuture<Void> in
                     guard context.channel.isActive else {
                         return ctxEventLoop.makeFailedFuture(ChannelError._ioOnClosedChannel)
                     }
                     context.fireChannelRead(Self.wrapInboundOut(accepted))
                     return context.eventLoop.makeSucceededFuture(())
                 }.whenFailure { error in
-                    let (context, `self`) = loopBoundValues.value
-                    ctxEventLoop.assertInEventLoop()
                     self.closeAndFire(context: context, accepted: accepted, err: error)
                 }
             }
