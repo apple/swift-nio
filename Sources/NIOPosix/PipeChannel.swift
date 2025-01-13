@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-final class PipeChannel: BaseStreamSocketChannel<PipePair> {
+final class PipeChannel: BaseStreamSocketChannel<PipePair>, @unchecked Sendable {
     private let pipePair: PipePair
 
     internal enum Direction {

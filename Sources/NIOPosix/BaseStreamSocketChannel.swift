@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket> {
+class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>, @unchecked Sendable {
     internal var connectTimeoutScheduled: Optional<Scheduled<Void>>
     private var allowRemoteHalfClosure: Bool = false
     private var inputShutdown: Bool = false
