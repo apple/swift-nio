@@ -116,7 +116,7 @@ internal struct CallbackList {
 }
 
 @available(*, unavailable)
-extension CallbackList: Sendable { }
+extension CallbackList: Sendable {}
 
 /// Internal error for operations that return results that were not replaced
 @usableFromInline
