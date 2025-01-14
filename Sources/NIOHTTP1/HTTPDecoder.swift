@@ -12,13 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOCore
 #if compiler(>=6.1)
 private import CNIOLLHTTP
 #else
 @_implementationOnly import CNIOLLHTTP
 #endif
-
-import NIOCore
 
 extension UnsafeMutablePointer where Pointee == llhttp_t {
     /// Returns the `KeepAliveState` for the current message that is parsed.
