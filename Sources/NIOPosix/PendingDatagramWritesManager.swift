@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+import CNIODarwin
 import CNIOLinux
 import NIOCore
 
