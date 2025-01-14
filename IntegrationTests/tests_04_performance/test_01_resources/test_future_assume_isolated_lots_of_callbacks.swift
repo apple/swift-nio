@@ -15,13 +15,15 @@
 import NIOCore
 import NIOEmbedded
 
+// This test is an equivalent of test_future_lots_of_callbacks.swift. It should
+// have the same allocations as that test, and any difference is a bug.
 func run(identifier: String) {
     measure(identifier: identifier) {
         struct MyError: Error {}
         @inline(never)
         func doThenAndFriends(loop: EventLoop) {
             let p = loop.makePromise(of: Int.self)
-            let f = p.futureResult.flatMap { (r: Int) -> EventLoopFuture<Int> in
+            let f = p.futureResult.assumeIsolated().flatMap { (r: Int) -> EventLoopFuture<Int> in
                 // This call allocates a new Future, and
                 // so does flatMap(), so this is two Futures.
                 loop.makeSucceededFuture(r + 1)
@@ -83,13 +85,14 @@ func run(identifier: String) {
                 }
             }
 
-            p.succeed(0)
+            p.assumeIsolated().succeed(0)
 
             // Wait also allocates a lock.
-            _ = try! f.wait()
+            _ = try! f.nonisolated().wait()
         }
         @inline(never)
         func doAnd(loop: EventLoop) {
+            // This isn't relevant to this test, but we keep it here to keep the numbers lining up.
             let p1 = loop.makePromise(of: Int.self)
             let p2 = loop.makePromise(of: Int.self)
             let p3 = loop.makePromise(of: Int.self)
@@ -108,6 +111,7 @@ func run(identifier: String) {
             p3.succeed(1)
             _ = try! f.wait()
         }
+
         let el = EmbeddedEventLoop()
         for _ in 0..<1000 {
             doThenAndFriends(loop: el)
