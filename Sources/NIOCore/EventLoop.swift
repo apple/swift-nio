@@ -584,24 +584,18 @@ extension TimeAmount: CustomStringConvertible {
     ///
     /// - Parameters:
     ///   - userProvidedString: The string to parse
-    ///   - defaultUnit: Unit to use if no unit is specified in the string
     ///
     /// - Throws: ValidationError if the string cannot be parsed
-    public init(_ userProvidedString: String, defaultUnit: String = "s") throws {
-        // First parse the string into a number and supported units.
-        // Clean out white space from the string.
-        let string = String(userProvidedString.filter { !$0.isWhitespace }).lowercased()
-        // Grab the number from the string prefix.
-        let parsedNumbers = string.prefix(while: { $0.isWholeNumber || $0 == "," || $0 == "." })
-        // Grab the rest of the string and match this to a known unit later.
-        let parsedUnit = string.dropFirst(parsedNumbers.count)
+    public init(_ userProvidedString: String) throws {
+        let lowercased = String(userProvidedString.filter { !$0.isWhitespace }).lowercased()
+        let parsedNumbers = lowercased.prefix(while: { $0.isWholeNumber || $0 == "," || $0 == "." })
+        let parsedUnit = String(lowercased.dropFirst(parsedNumbers.count))
 
         guard let numbers = Int64(parsedNumbers) else {
             throw ValidationError.invalidNumber("'\(userProvidedString)' cannot be parsed as number and unit")
         }
-        let unit = parsedUnit.isEmpty ? defaultUnit : String(parsedUnit)
 
-        switch unit {
+        switch parsedUnit {
         case "h", "hr", "hrs":
             self = .hours(numbers)
         case "m", "min":
@@ -615,7 +609,7 @@ extension TimeAmount: CustomStringConvertible {
         case "ns", "nanos":
             self = .nanoseconds(numbers)
         default:
-            throw ValidationError.unsupportedUnit("Unknown unit '\(unit)' in '\(userProvidedString)'")
+            throw ValidationError.unsupportedUnit("Unknown unit '\(parsedUnit)' in '\(userProvidedString)'")
         }
     }
 

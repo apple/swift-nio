@@ -11,8 +11,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-@testable import NIOCore
+
 import XCTest
+
+@testable import NIOCore
 
 class TimeAmountTests: XCTestCase {
     func testTimeAmountConversion() {
@@ -103,12 +105,6 @@ class TimeAmountTests: XCTestCase {
         XCTAssertEqual(try TimeAmount("100MS"), .milliseconds(100))
         XCTAssertEqual(try TimeAmount("1HR"), .hours(1))
         XCTAssertEqual(try TimeAmount("30MIN"), .minutes(30))
-    }
-
-    func testTimeAmountParsingWithDefaultUnit() throws {
-        XCTAssertEqual(try TimeAmount("5", defaultUnit: "ms"), .milliseconds(5))
-        XCTAssertEqual(try TimeAmount("42"), .seconds(42))  // default should be seconds
-        XCTAssertEqual(try TimeAmount("100", defaultUnit: "us"), .microseconds(100))
     }
 
     func testTimeAmountParsingInvalidInput() throws {
