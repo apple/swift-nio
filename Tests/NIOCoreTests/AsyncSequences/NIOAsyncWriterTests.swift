@@ -623,7 +623,6 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.delegate.didYieldHandler = { _ in
             if self.delegate.didYieldCallCount == 1 {
                 // Delay this yield until the other yield is suspended again.
-                // FIXME: This will never finish if no other thread is handling the other yield.
                 suspendedAgain.lock(whenValue: true)
                 suspendedAgain.unlock()
             }
