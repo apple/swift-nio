@@ -443,6 +443,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "NIOEmbedded",
                 "CNIOLinux",
+                "CNIODarwin",
                 "NIOTLS",
             ]
         ),
