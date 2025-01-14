@@ -556,7 +556,7 @@ public struct TimeAmount: Hashable, Sendable {
 extension TimeAmount: CustomStringConvertible {
 
     /// Errors thrown when parsint a TimeAmount from a string
-    public enum ValidationError: Error, Equatable {
+    internal enum ValidationError: Error, Equatable {
         /// Can't parse the provided unit
         case unsupportedUnit(String)
 
