@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+
 #if compiler(>=6.1)
 private import CNIOLLHTTP
 #else
