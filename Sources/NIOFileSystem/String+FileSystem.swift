@@ -23,7 +23,7 @@ extension String {
     ///   - maximumSizeAllowed: The maximum size of file which can be read, in bytes, as a ``ByteCount``. If the file is larger than this, an error is thrown.
     ///   - fileSystem: The ``FileSystemProtocol`` instance to use to read the file.
     ///
-    /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError.resourceExhausted`` error will be thrown.
+    /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError/Code-swift.struct/resourceExhausted`` error will be thrown.
     public init(
         contentsOf path: FilePath,
         maximumSizeAllowed: ByteCount,
@@ -42,7 +42,7 @@ extension String {
     ///   - path: The path of the file to read.
     ///   - maximumSizeAllowed: The maximum size of file which can be read, in bytes, as a ``ByteCount``. If the file is larger than this, an error is thrown.
     ///
-    /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError.resourceExhausted`` error will be thrown.
+    /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError/Code-swift.struct/resourceExhausted`` error will be thrown.
     public init(
         contentsOf path: FilePath,
         maximumSizeAllowed: ByteCount
