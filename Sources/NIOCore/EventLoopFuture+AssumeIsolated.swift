@@ -606,11 +606,10 @@ extension EventLoopFuture {
     /// Returns a variant of this ``EventLoopFuture`` with less strict
     /// `Sendable` requirements. Can only be called from on the
     /// ``EventLoop`` to which this ``EventLoopFuture`` is bound, will crash
-    /// if that invariant fails to be met.
+    /// if that invariant fails to be met in debug builds.
     ///
     /// This is an unsafe version of ``EventLoopFuture/assumeIsolated()`` which
-    /// omits the runtime check in release builds and doesn't prevent you using it
-    /// from using it in async contexts.
+    /// omits the runtime check in release builds.
     @inlinable
     @available(*, noasync)
     public func assumeIsolatedUnsafeUnchecked() -> Isolated {
