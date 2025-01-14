@@ -761,12 +761,13 @@ extension EventLoop {
     /// - Returns: An `EventLoopFuture` containing the result of `task`'s execution.
     @inlinable
     @preconcurrency
-    public func submit<T: Sendable>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
+    public func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = makePromise(file: #fileID, line: #line)
 
         self.execute {
             do {
-                promise.succeed(try task())
+                // UnsafeUnchecked is allowed here because we know we are on the EL.
+                promise.assumeIsolatedUnsafeUnchecked().succeed(try task())
             } catch let err {
                 promise.fail(err)
             }

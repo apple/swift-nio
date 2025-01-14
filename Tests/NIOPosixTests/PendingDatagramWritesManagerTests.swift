@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import CNIODarwin
 import CNIOLinux
 import NIOEmbedded
 import XCTest
