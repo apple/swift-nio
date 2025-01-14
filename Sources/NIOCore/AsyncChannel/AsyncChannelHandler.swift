@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import DequeModule
+@preconcurrency import DequeModule
 
 /// A ``ChannelHandler`` that is used to transform the inbound portion of a NIO
 /// ``Channel`` into an asynchronous sequence that supports back-pressure. It's also used

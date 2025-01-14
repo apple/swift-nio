@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+import CNIODarwin
 import CNIOLinux
 import NIOCore
 
