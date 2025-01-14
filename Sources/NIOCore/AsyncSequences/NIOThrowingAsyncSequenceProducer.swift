@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-@preconcurrency import DequeModule
+import DequeModule
 import NIOConcurrencyHelpers
 
 /// This is an `AsyncSequence` that supports a unicast `AsyncIterator`.
