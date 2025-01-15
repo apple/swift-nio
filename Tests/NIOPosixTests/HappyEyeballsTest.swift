@@ -590,7 +590,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testMaximalConnectionDelay() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -659,7 +659,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testAllConnectionsFail() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -729,7 +729,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testDelayedAAAAResult() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -816,7 +816,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testTimeoutAfterAQuery() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -865,7 +865,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testAConnectFailsWaitingForAAAA() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -924,7 +924,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testDelayedAResult() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -970,7 +970,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testTimeoutBeforeAResponse() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -1019,7 +1019,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testAllConnectionsFailImmediately() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -1069,7 +1069,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testLaterConnections() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -1207,7 +1207,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testCancellationSyncWithConnectDelay() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -1255,7 +1255,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testCancellationSyncWithResolutionDelay() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         defer {
             channels.finishAll()
         }
@@ -1333,7 +1333,7 @@ public final class HappyEyeballsTest: XCTestCase {
     }
 
     func testResolutionTimeoutAndResolutionInSameTick() throws {
-        var channels: [Channel] = []
+        let channels = ChannelSet()
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) {
             let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
             channelFuture.whenSuccess { channel in
@@ -1377,5 +1377,37 @@ public final class HappyEyeballsTest: XCTestCase {
             .a(host: "example.com", port: 80),
         ]
         XCTAssertEqual(resolver.events, expectedQueries)
+    }
+}
+
+struct ChannelSet: Sendable, Sequence {
+    private let channels: NIOLockedValueBox<[Channel]> = .init([])
+
+    func append(_ channel: Channel) {
+        self.channels.withLockedValue { $0.append(channel) }
+    }
+
+    var first: Channel? {
+        self.channels.withLockedValue { $0.first }
+    }
+
+    var last: Channel? {
+        self.channels.withLockedValue { $0.last }
+    }
+
+    var count: Int {
+        self.channels.withLockedValue { $0.count }
+    }
+
+    subscript(index: Int) -> Channel {
+        self.channels.withLockedValue { $0[index] }
+    }
+    
+    func makeIterator() -> some IteratorProtocol<Channel> {
+        self.channels.withLockedValue { $0.makeIterator() }
+    }
+
+    func finishAll() {
+        self.channels.withLockedValue { $0 }.finishAll()
     }
 }
