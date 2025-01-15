@@ -14,7 +14,13 @@
 
 #if canImport(Dispatch)
 import Atomics
+
+#if canImport(Darwin)
 import Dispatch
+#else
+@preconcurrency import Dispatch
+#endif
+
 import NIOConcurrencyHelpers
 import NIOCore
 import _NIODataStructures
@@ -63,7 +69,9 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     /// As we need to access this from any thread, we store this as an atomic.
     private let _now = ManagedAtomic<UInt64>(0)
-    internal var now: NIODeadline {
+
+    /// The current "time" for this event loop. This is an amount in nanoseconds.
+    public var now: NIODeadline {
         NIODeadline.uptimeNanoseconds(self._now.load(ordering: .relaxed))
     }
 
@@ -137,7 +145,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
             insertOrder: self.nextTaskNumber(),
             task: {
                 do {
-                    promise.succeed(try task())
+                    // UnsafeUnchecked is acceptable because we know we're in the loop here.
+                    promise.assumeIsolatedUnsafeUnchecked().succeed(try task())
                 } catch let err {
                     promise.fail(err)
                 }
@@ -150,7 +159,11 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
-    public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    @preconcurrency
+    public func scheduleTask<T>(
+        deadline: NIODeadline,
+        _ task: @escaping @Sendable () throws -> T
+    ) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise()
         let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
 
@@ -188,7 +201,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 
     /// - see: `EventLoop.scheduleTask(in:_:)`
     @discardableResult
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    @preconcurrency
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping @Sendable () throws -> T) -> Scheduled<T> {
         self.scheduleTask(deadline: self.now + `in`, task)
     }
 
@@ -228,7 +242,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 
     /// On an `NIOAsyncTestingEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. Unlike with the other operations, this will
     /// immediately execute, to eliminate a common class of bugs.
-    public func execute(_ task: @escaping () -> Void) {
+    @preconcurrency
+    public func execute(_ task: @escaping @Sendable () -> Void) {
         if self.inEventLoop {
             self.scheduleTask(deadline: self.now, task)
         } else {
@@ -357,7 +372,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     }
 
     /// - see: `EventLoop.shutdownGracefully`
-    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    @preconcurrency
+    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable (Error?) -> Void) {
         self.queue.async {
             self._shutdownGracefully()
             queue.async {

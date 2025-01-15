@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import CNIOLinux
 import NIOEmbedded
 import XCTest
 
@@ -1307,5 +1308,52 @@ public final class HappyEyeballsTest: XCTestCase {
             .wait()
 
         XCTAssertNoThrow(try client.close().wait())
+    }
+
+    func testResolutionTimeoutAndResolutionInSameTick() throws {
+        var channels: [Channel] = []
+        let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) {
+            let channelFuture = defaultChannelBuilder(loop: $0, family: $1)
+            channelFuture.whenSuccess { channel in
+                try! channel.pipeline.addHandler(ConnectionDelayer(), name: CONNECT_DELAYER, position: .first).wait()
+                channels.append(channel)
+            }
+            return channelFuture
+        }
+        let targetFuture = eyeballer.resolveAndConnect().flatMapThrowing { (channel) -> String? in
+            let target = channel.connectTarget()
+            _ = try (channel as! EmbeddedChannel).finish()
+            return target
+        }
+        loop.run()
+
+        // Then, queue a task to resolve the v6 promise after 50ms.
+        // Why 50ms? This is the same time as the resolution delay.
+        let promise = resolver.v6Promise
+        loop.scheduleTask(in: .milliseconds(50)) {
+            promise.fail(DummyError())
+        }
+
+        // Kick off the IPv4 resolution. This triggers the timer for the resolution delay.
+        resolver.v4Promise.succeed(SINGLE_IPv4_RESULT)
+        loop.run()
+
+        // Advance time 50ms.
+        loop.advanceTime(by: .milliseconds(50))
+
+        // Then complete the connection future.
+        XCTAssertEqual(channels.count, 1)
+        channels.first!.succeedConnection()
+
+        // Should be done.
+        let target = try targetFuture.wait()
+        XCTAssertEqual(target!, "10.0.0.1")
+
+        // We should have had queries for AAAA and A.
+        let expectedQueries: [DummyResolver.Event] = [
+            .aaaa(host: "example.com", port: 80),
+            .a(host: "example.com", port: 80),
+        ]
+        XCTAssertEqual(resolver.events, expectedQueries)
     }
 }

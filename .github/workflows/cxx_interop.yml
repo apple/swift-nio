@@ -26,30 +26,44 @@ on:
 
       windows_6_0_enabled:
         type: boolean
-        description: "Boolean to enable the Windows 6.0 Swift version matrix job. Defaults to true."
+        description: "Boolean to enable the Windows 6.0 Swift version matrix job. Defaults to false. Currently has no effect!"  # TODO: implement Windows Cxx compat checking
         default: false
       windows_nightly_6_0_enabled:
         type: boolean
-        description: "Boolean to enable the Windows nightly 6.0 Swift version matrix job. Defaults to true."
+        description: "Boolean to enable the Windows nightly 6.0 Swift version matrix job. Defaults to false. Currently has no effect!"  # TODO: implement Windows Cxx compat checking
         default: false
       windows_nightly_main_enabled:
         type: boolean
-        description: "Boolean to enable the Windows nightly main Swift version matrix job. Defaults to true."
+        description: "Boolean to enable the Windows nightly main Swift version matrix job. Defaults to false. Currently has no effect!"  # TODO: implement Windows Cxx compat checking
         default: false
 
 jobs:
+  construct-matrix:
+    name: Construct Cxx interop matrix
+    runs-on: ubuntu-latest
+    outputs:
+      cxx-interop-matrix: '${{ steps.generate-matrix.outputs.cxx-interop-matrix }}'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: generate-matrix
+        run: echo "cxx-interop-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        env:
+          MATRIX_LINUX_COMMAND: "curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-cxx-interop-compatibility.sh | bash"
+          MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q curl jq"
+          MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
+          MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
+          MATRIX_LINUX_6_0_ENABLED: ${{ inputs.linux_6_0_enabled }}
+          MATRIX_LINUX_NIGHTLY_6_0_ENABLED: ${{ inputs.linux_nightly_6_0_enabled }}
+          MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
+
   cxx-interop:
     name: Cxx interop
+    needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Cxx interop"
-      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q jq && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-cxx-interop-compatibility.sh | bash"
-      matrix_linux_5_9_enabled: ${{ inputs.linux_5_9_enabled }}
-      matrix_linux_5_10_enabled: ${{ inputs.linux_5_10_enabled }}
-      matrix_linux_6_0_enabled: ${{ inputs.linux_6_0_enabled }}
-      matrix_linux_nightly_6_0_enabled: ${{ inputs.linux_nightly_6_0_enabled }}
-      matrix_linux_nightly_main_enabled: ${{ inputs.linux_nightly_main_enabled }}
-      matrix_windows_6_0_enabled: ${{ inputs.windows_6_0_enabled }}
-      matrix_windows_nightly_6_0_enabled: ${{ inputs.windows_nightly_6_0_enabled }}
-      matrix_windows_nightly_main_enabled: ${{ inputs.windows_nightly_main_enabled }}
+      matrix_string: '${{ needs.construct-matrix.outputs.cxx-interop-matrix }}'

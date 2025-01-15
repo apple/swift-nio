@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+import CNIOLinux
 import NIOCore
 
 #if os(Windows)
@@ -49,7 +50,7 @@ extension ByteBuffer {
 /// A `Channel` for a client socket.
 ///
 /// - Note: All operations on `SocketChannel` are thread-safe.
-final class SocketChannel: BaseStreamSocketChannel<Socket> {
+final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable {
     private var connectTimeout: TimeAmount? = nil
 
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws
@@ -191,7 +192,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
 /// A `Channel` for a server socket.
 ///
 /// - Note: All operations on `ServerSocketChannel` are thread-safe.
-final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
+final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sendable {
 
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
@@ -450,7 +451,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 /// A channel used with datagram sockets.
 ///
 /// Currently, it does not support connected mode which is well worth adding.
-final class DatagramChannel: BaseSocketChannel<Socket> {
+final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     private var reportExplicitCongestionNotifications = false
     private var receivePacketInfo = false
 
@@ -840,10 +841,8 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
         #endif
     }
 
-    override func shouldCloseOnReadError(_ err: Error) -> Bool {
-        guard let err = err as? IOError else { return true }
-
-        switch err.errnoCode {
+    private func shouldCloseOnErrnoCode(_ errnoCode: CInt) -> Bool {
+        switch errnoCode {
         // ECONNREFUSED can happen on linux if the previous sendto(...) failed.
         // See also:
         // -    https://bugzilla.redhat.com/show_bug.cgi?id=1375
@@ -854,6 +853,31 @@ final class DatagramChannel: BaseSocketChannel<Socket> {
             return false
         default:
             return true
+        }
+    }
+
+    override func shouldCloseOnReadError(_ err: Error) -> Bool {
+        guard let err = err as? IOError else { return true }
+        return self.shouldCloseOnErrnoCode(err.errnoCode)
+    }
+
+    override func error() -> ErrorResult {
+        // Assume we can get the error from the socket.
+        do {
+            let errnoCode: CInt = try self.socket.getOption(level: .socket, name: .so_error)
+            if self.shouldCloseOnErrnoCode(errnoCode) {
+                self.reset()
+                return .fatal
+            } else {
+                self.pipeline.syncOperations.fireErrorCaught(
+                    IOError(errnoCode: errnoCode, reason: "so_error")
+                )
+                return .nonFatal
+            }
+        } catch {
+            // Unknown error, fatal.
+            self.reset()
+            return .fatal
         }
     }
 

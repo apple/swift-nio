@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2023-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -199,6 +199,8 @@ private final class AddressedEnvelopingHandler: ChannelDuplexHandler {
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class AsyncChannelBootstrapTests: XCTestCase {
+    var group: MultiThreadedEventLoopGroup!
+
     enum NegotiationResult {
         case string(NIOAsyncChannel<String, String>)
         case byte(NIOAsyncChannel<UInt8, UInt8>)
@@ -214,10 +216,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     // MARK: Server/Client Bootstrap
 
     func testServerClientBootstrap_withAsyncChannel_andHostPort() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
 
         let channel = try await ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -273,10 +272,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testAsyncChannelProtocolNegotiation() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
 
         let channel: NIOAsyncChannel<EventLoopFuture<NegotiationResult>, Never> = try await ServerBootstrap(
             group: eventLoopGroup
@@ -288,7 +284,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             port: 0
         ) { channel in
             channel.eventLoop.makeCompletedFuture {
-                try self.configureProtocolNegotiationHandlers(channel: channel)
+                try Self.configureProtocolNegotiationHandlers(channel: channel)
             }
         }
 
@@ -360,10 +356,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testAsyncChannelNestedProtocolNegotiation() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
 
         let channel: NIOAsyncChannel<EventLoopFuture<EventLoopFuture<NegotiationResult>>, Never> =
             try await ServerBootstrap(group: eventLoopGroup)
@@ -373,7 +366,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 port: 0
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
-                    try self.configureNestedProtocolNegotiationHandlers(channel: channel)
+                    try Self.configureNestedProtocolNegotiationHandlers(channel: channel)
                 }
             }
 
@@ -497,10 +490,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             }
         }
 
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
         let channels = NIOLockedValueBox<[Channel]>([Channel]())
 
         let channel: NIOAsyncChannel<EventLoopFuture<NegotiationResult>, Never> = try await ServerBootstrap(
@@ -518,7 +508,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             port: 0
         ) { channel in
             channel.eventLoop.makeCompletedFuture {
-                try self.configureProtocolNegotiationHandlers(channel: channel)
+                try Self.configureProtocolNegotiationHandlers(channel: channel)
             }
         }
 
@@ -610,10 +600,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testServerClientBootstrap_withAsyncChannel_clientConnectedSocket() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
 
         let channel = try await ServerBootstrap(group: eventLoopGroup)
             .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -675,10 +662,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     // MARK: Datagram Bootstrap
 
     func testDatagramBootstrap_withAsyncChannel_andHostPort() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
 
         let serverChannel = try await self.makeUDPServerChannel(eventLoopGroup: eventLoopGroup)
         let clientChannel = try await self.makeUDPClientChannel(
@@ -700,10 +684,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testDatagramBootstrap_withProtocolNegotiation_andHostPort() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
 
         // We are creating a channel here to get a random port from the system
         let channel = try await DatagramBootstrap(group: eventLoopGroup)
@@ -785,10 +766,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     // MARK: - Pipe Bootstrap
 
     func testPipeBootstrap() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD) = self.makePipeFileDescriptors()
         let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
         let toChannel: NIOAsyncChannel<Never, ByteBuffer>
@@ -861,10 +839,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testPipeBootstrap_whenInputNil() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD) = self.makePipeFileDescriptors()
         let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
         let fromChannel: NIOAsyncChannel<ByteBuffer, Never>
@@ -916,10 +891,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testPipeBootstrap_whenOutputNil() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD) = self.makePipeFileDescriptors()
         let channel: NIOAsyncChannel<ByteBuffer, ByteBuffer>
         let toChannel: NIOAsyncChannel<Never, ByteBuffer>
@@ -973,10 +945,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     func testPipeBootstrap_withProtocolNegotiation() async throws {
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
         let (pipe1ReadFD, pipe1WriteFD, pipe2ReadFD, pipe2WriteFD) = self.makePipeFileDescriptors()
         let negotiationResult: EventLoopFuture<NegotiationResult>
         let toChannel: NIOAsyncChannel<Never, ByteBuffer>
@@ -989,7 +958,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     output: pipe2WriteFD
                 ) { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        try self.configureProtocolNegotiationHandlers(channel: channel)
+                        try Self.configureProtocolNegotiationHandlers(channel: channel)
                     }
                 }
         } catch {
@@ -1067,10 +1036,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
     func testRawSocketBootstrap() async throws {
         try XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI()
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
 
         let serverChannel = try await self.makeRawSocketServerChannel(eventLoopGroup: eventLoopGroup)
         let clientChannel = try await self.makeRawSocketClientChannel(eventLoopGroup: eventLoopGroup)
@@ -1091,10 +1057,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
     func testRawSocketBootstrap_withProtocolNegotiation() async throws {
         try XCTSkipIfUserHasNotEnoughRightsForRawSocketAPI()
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        let eventLoopGroup = self.group!
 
         try await withThrowingTaskGroup(of: EventLoopFuture<NegotiationResult>.self) { group in
             group.addTask {
@@ -1141,11 +1104,8 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     // MARK: VSock
 
     func testVSock() async throws {
-        try XCTSkipUnless(System.supportsVsock, "No vsock transport available")
-        let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 3)
-        defer {
-            try! eventLoopGroup.syncShutdownGracefully()
-        }
+        try XCTSkipUnless(System.supportsVsockLoopback, "No vsock loopback transport available")
+        let eventLoopGroup = self.group!
 
         let port = VsockAddress.Port(1234)
 
@@ -1291,7 +1251,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(
                         AddressedEnvelopingHandler(remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0))
                     )
-                    return try self.configureProtocolNegotiationHandlers(
+                    return try Self.configureProtocolNegotiationHandlers(
                         channel: channel,
                         proposedALPN: nil,
                         inboundID: 1,
@@ -1315,7 +1275,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                     try channel.pipeline.syncOperations.addHandler(
                         AddressedEnvelopingHandler(remoteAddress: SocketAddress(ipAddress: "127.0.0.1", port: 0))
                     )
-                    return try self.configureProtocolNegotiationHandlers(
+                    return try Self.configureProtocolNegotiationHandlers(
                         channel: channel,
                         proposedALPN: proposedALPN,
                         inboundID: 2,
@@ -1369,7 +1329,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 to: .init(ipAddress: "127.0.0.1", port: port)
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
-                    try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
+                    try Self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
                 }
             }
     }
@@ -1385,7 +1345,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                 to: .init(ipAddress: "127.0.0.1", port: port)
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
-                    try self.configureNestedProtocolNegotiationHandlers(
+                    try Self.configureNestedProtocolNegotiationHandlers(
                         channel: channel,
                         proposedOuterALPN: proposedOuterALPN,
                         proposedInnerALPN: proposedInnerALPN
@@ -1422,7 +1382,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
-                    return try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
+                    return try Self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
                 }
             }
     }
@@ -1458,13 +1418,13 @@ final class AsyncChannelBootstrapTests: XCTestCase {
             ) { channel in
                 channel.eventLoop.makeCompletedFuture {
                     try channel.pipeline.syncOperations.addHandler(AddressedEnvelopingHandler())
-                    return try self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
+                    return try Self.configureProtocolNegotiationHandlers(channel: channel, proposedALPN: proposedALPN)
                 }
             }
     }
 
     @discardableResult
-    private func configureProtocolNegotiationHandlers(
+    private static func configureProtocolNegotiationHandlers(
         channel: Channel,
         proposedALPN: TLSUserEventHandler.ALPN? = nil,
         inboundID: UInt8? = nil,
@@ -1477,7 +1437,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     @discardableResult
-    private func configureNestedProtocolNegotiationHandlers(
+    private static func configureNestedProtocolNegotiationHandlers(
         channel: Channel,
         proposedOuterALPN: TLSUserEventHandler.ALPN? = nil,
         proposedInnerALPN: TLSUserEventHandler.ALPN? = nil
@@ -1496,7 +1456,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         try channel.pipeline.syncOperations.addHandler(
                             TLSUserEventHandler(proposedALPN: proposedInnerALPN)
                         )
-                        let negotiationFuture = try self.addTypedApplicationProtocolNegotiationHandler(to: channel)
+                        let negotiationFuture = try Self.addTypedApplicationProtocolNegotiationHandler(to: channel)
 
                         return negotiationFuture
                     }
@@ -1505,7 +1465,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
                         try channel.pipeline.syncOperations.addHandler(
                             TLSUserEventHandler(proposedALPN: proposedInnerALPN)
                         )
-                        let negotiationHandler = try self.addTypedApplicationProtocolNegotiationHandler(to: channel)
+                        let negotiationHandler = try Self.addTypedApplicationProtocolNegotiationHandler(to: channel)
 
                         return negotiationHandler
                     }
@@ -1521,7 +1481,7 @@ final class AsyncChannelBootstrapTests: XCTestCase {
     }
 
     @discardableResult
-    private func addTypedApplicationProtocolNegotiationHandler(
+    private static func addTypedApplicationProtocolNegotiationHandler(
         to channel: Channel
     ) throws -> EventLoopFuture<NegotiationResult> {
         let negotiationHandler = NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult> {
@@ -1559,6 +1519,15 @@ final class AsyncChannelBootstrapTests: XCTestCase {
 
         try channel.pipeline.syncOperations.addHandler(negotiationHandler)
         return negotiationHandler.protocolNegotiationResult
+    }
+
+    override func setUp() {
+        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 3)
+    }
+
+    override func tearDown() {
+        XCTAssertNoThrow(try self.group.syncShutdownGracefully())
+        self.group = nil
     }
 }
 

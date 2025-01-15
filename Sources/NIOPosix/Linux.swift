@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -18,11 +18,13 @@
 #if os(Linux) || os(Android)
 import CNIOLinux
 
+@usableFromInline
 internal enum TimerFd {
     internal static let TFD_CLOEXEC = CNIOLinux.TFD_CLOEXEC
     internal static let TFD_NONBLOCK = CNIOLinux.TFD_NONBLOCK
 
     @inline(never)
+    @usableFromInline
     internal static func timerfd_settime(
         fd: CInt,
         flags: CInt,
@@ -35,6 +37,7 @@ internal enum TimerFd {
     }
 
     @inline(never)
+    @usableFromInline
     internal static func timerfd_create(clockId: CInt, flags: CInt) throws -> CInt {
         try syscall(blocking: false) {
             CNIOLinux.timerfd_create(clockId, flags)
@@ -42,9 +45,13 @@ internal enum TimerFd {
     }
 }
 
+@usableFromInline
 internal enum EventFd {
+    @usableFromInline
     internal static let EFD_CLOEXEC = CNIOLinux.EFD_CLOEXEC
+    @usableFromInline
     internal static let EFD_NONBLOCK = CNIOLinux.EFD_NONBLOCK
+    @usableFromInline
     internal typealias eventfd_t = CNIOLinux.eventfd_t
 
     @inline(never)
@@ -55,6 +62,7 @@ internal enum EventFd {
     }
 
     @inline(never)
+    @usableFromInline
     internal static func eventfd_read(fd: CInt, value: UnsafeMutablePointer<UInt64>) throws -> CInt {
         try syscall(blocking: false) {
             CNIOLinux.eventfd_read(fd, value)
@@ -73,40 +81,65 @@ internal enum EventFd {
     }
 }
 
+@usableFromInline
 internal enum Epoll {
+    @usableFromInline
     internal typealias epoll_event = CNIOLinux.epoll_event
 
+    @usableFromInline
     internal static let EPOLL_CTL_ADD: CInt = numericCast(CNIOLinux.EPOLL_CTL_ADD)
+    @usableFromInline
     internal static let EPOLL_CTL_MOD: CInt = numericCast(CNIOLinux.EPOLL_CTL_MOD)
+    @usableFromInline
     internal static let EPOLL_CTL_DEL: CInt = numericCast(CNIOLinux.EPOLL_CTL_DEL)
 
     #if canImport(Android) || canImport(Musl)
+    @usableFromInline
     internal static let EPOLLIN: CUnsignedInt = numericCast(CNIOLinux.EPOLLIN)
+    @usableFromInline
     internal static let EPOLLOUT: CUnsignedInt = numericCast(CNIOLinux.EPOLLOUT)
+    @usableFromInline
     internal static let EPOLLERR: CUnsignedInt = numericCast(CNIOLinux.EPOLLERR)
+    @usableFromInline
     internal static let EPOLLRDHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLRDHUP)
+    @usableFromInline
     internal static let EPOLLHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLHUP)
     #if canImport(Android)
+    @usableFromInline
     internal static let EPOLLET: CUnsignedInt = 2_147_483_648  // C macro not imported by ClangImporter
     #else
+    @usableFromInline
     internal static let EPOLLET: CUnsignedInt = numericCast(CNIOLinux.EPOLLET)
     #endif
     #elseif os(Android)
+    @usableFromInline
     internal static let EPOLLIN: CUnsignedInt = 1  //numericCast(CNIOLinux.EPOLLIN)
+    @usableFromInline
     internal static let EPOLLOUT: CUnsignedInt = 4  //numericCast(CNIOLinux.EPOLLOUT)
+    @usableFromInline
     internal static let EPOLLERR: CUnsignedInt = 8  // numericCast(CNIOLinux.EPOLLERR)
+    @usableFromInline
     internal static let EPOLLRDHUP: CUnsignedInt = 8192  //numericCast(CNIOLinux.EPOLLRDHUP)
+    @usableFromInline
     internal static let EPOLLHUP: CUnsignedInt = 16  //numericCast(CNIOLinux.EPOLLHUP)
+    @usableFromInline
     internal static let EPOLLET: CUnsignedInt = 2_147_483_648  //numericCast(CNIOLinux.EPOLLET)
     #else
+    @usableFromInline
     internal static let EPOLLIN: CUnsignedInt = numericCast(CNIOLinux.EPOLLIN.rawValue)
+    @usableFromInline
     internal static let EPOLLOUT: CUnsignedInt = numericCast(CNIOLinux.EPOLLOUT.rawValue)
+    @usableFromInline
     internal static let EPOLLERR: CUnsignedInt = numericCast(CNIOLinux.EPOLLERR.rawValue)
+    @usableFromInline
     internal static let EPOLLRDHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLRDHUP.rawValue)
+    @usableFromInline
     internal static let EPOLLHUP: CUnsignedInt = numericCast(CNIOLinux.EPOLLHUP.rawValue)
+    @usableFromInline
     internal static let EPOLLET: CUnsignedInt = numericCast(CNIOLinux.EPOLLET.rawValue)
     #endif
 
+    @usableFromInline
     internal static let ENOENT: CUnsignedInt = numericCast(CNIOLinux.ENOENT)
 
     @inline(never)
@@ -130,6 +163,7 @@ internal enum Epoll {
     }
 
     @inline(never)
+    @usableFromInline
     internal static func epoll_wait(
         epfd: CInt,
         events: UnsafeMutablePointer<epoll_event>,

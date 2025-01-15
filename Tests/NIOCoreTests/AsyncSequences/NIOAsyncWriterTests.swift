@@ -606,6 +606,50 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 1)
     }
 
+    func testSuspendingBufferedYield_whenWriterFinished() async throws {
+        self.sink.setWritability(to: false)
+
+        let bothSuspended = expectation(description: "suspended on both yields")
+        let suspendedAgain = ConditionLock(value: false)
+        self.delegate.didSuspendHandler = {
+            if self.delegate.didSuspendCallCount == 2 {
+                bothSuspended.fulfill()
+            } else if self.delegate.didSuspendCallCount > 2 {
+                suspendedAgain.lock()
+                suspendedAgain.unlock(withValue: true)
+            }
+        }
+
+        self.delegate.didYieldHandler = { _ in
+            if self.delegate.didYieldCallCount == 1 {
+                // Delay this yield until the other yield is suspended again.
+                suspendedAgain.lock(whenValue: true)
+                suspendedAgain.unlock()
+            }
+        }
+
+        let task1 = Task { [writer] in
+            try await writer!.yield("message1")
+        }
+        let task2 = Task { [writer] in
+            try await writer!.yield("message2")
+        }
+
+        await fulfillment(of: [bothSuspended], timeout: 1)
+        self.writer.finish()
+
+        self.assert(suspendCallCount: 2, yieldCallCount: 0, terminateCallCount: 0)
+
+        // We have to become writable again to unbuffer the yields
+        // The first call to didYield will pause, so that the other yield will be suspended again.
+        self.sink.setWritability(to: true)
+
+        await XCTAssertNoThrow(try await task1.value)
+        await XCTAssertNoThrow(try await task2.value)
+
+        self.assert(suspendCallCount: 3, yieldCallCount: 2, terminateCallCount: 1)
+    }
+
     func testWriterFinish_whenFinished() {
         // This tests just checks that finishing again is a no-op
         self.writer.finish()

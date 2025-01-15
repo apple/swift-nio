@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-final class PipeChannel: BaseStreamSocketChannel<PipePair> {
+final class PipeChannel: BaseStreamSocketChannel<PipePair>, @unchecked Sendable {
     private let pipePair: PipePair
 
     internal enum Direction {
@@ -23,10 +23,10 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
 
     init(
         eventLoop: SelectableEventLoop,
-        inputPipe: NIOFileHandle?,
-        outputPipe: NIOFileHandle?
+        input: SelectablePipeHandle?,
+        output: SelectablePipeHandle?
     ) throws {
-        self.pipePair = try PipePair(inputFD: inputPipe, outputFD: outputPipe)
+        self.pipePair = try PipePair(input: input, output: output)
         try super.init(
             socket: self.pipePair,
             parent: nil,
@@ -65,62 +65,62 @@ final class PipeChannel: BaseStreamSocketChannel<PipePair> {
     }
 
     override func register(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        if let inputFD = self.pipePair.inputFD {
+        if let inputSPH = self.pipePair.input {
             try selector.register(
-                selectable: inputFD,
-                interested: interested.intersection([.read, .reset]),
+                selectable: inputSPH,
+                interested: interested.intersection([.read, .reset, .error]),
                 makeRegistration: self.registrationForInput
             )
         }
 
-        if let outputFD = self.pipePair.outputFD {
+        if let outputSPH = self.pipePair.output {
             try selector.register(
-                selectable: outputFD,
-                interested: interested.intersection([.write, .reset]),
+                selectable: outputSPH,
+                interested: interested.intersection([.write, .reset, .error]),
                 makeRegistration: self.registrationForOutput
             )
         }
     }
 
     override func deregister(selector: Selector<NIORegistration>, mode: CloseMode) throws {
-        if let inputFD = self.pipePair.inputFD, (mode == .all || mode == .input) && inputFD.isOpen {
-            try selector.deregister(selectable: inputFD)
+        if let inputSPH = self.pipePair.input, (mode == .all || mode == .input) && inputSPH.isOpen {
+            try selector.deregister(selectable: inputSPH)
         }
-        if let outputFD = self.pipePair.outputFD, (mode == .all || mode == .output) && outputFD.isOpen {
-            try selector.deregister(selectable: outputFD)
+        if let outputSPH = self.pipePair.output, (mode == .all || mode == .output) && outputSPH.isOpen {
+            try selector.deregister(selectable: outputSPH)
         }
     }
 
     override func reregister(selector: Selector<NIORegistration>, interested: SelectorEventSet) throws {
-        if let inputFD = self.pipePair.inputFD, inputFD.isOpen {
+        if let inputSPH = self.pipePair.input, inputSPH.isOpen {
             try selector.reregister(
-                selectable: inputFD,
-                interested: interested.intersection([.read, .reset])
+                selectable: inputSPH,
+                interested: interested.intersection([.read, .reset, .error])
             )
         }
-        if let outputFD = self.pipePair.outputFD, outputFD.isOpen {
+        if let outputSPH = self.pipePair.output, outputSPH.isOpen {
             try selector.reregister(
-                selectable: outputFD,
-                interested: interested.intersection([.write, .reset])
+                selectable: outputSPH,
+                interested: interested.intersection([.write, .reset, .error])
             )
         }
     }
 
     override func readEOF() {
         super.readEOF()
-        guard let inputFD = self.pipePair.inputFD, inputFD.isOpen else {
+        guard let inputSPH = self.pipePair.input, inputSPH.isOpen else {
             return
         }
         try! self.selectableEventLoop.deregister(channel: self, mode: .input)
-        try! inputFD.close()
+        try! inputSPH.close()
     }
 
     override func writeEOF() {
-        guard let outputFD = self.pipePair.outputFD, outputFD.isOpen else {
+        guard let outputSPH = self.pipePair.output, outputSPH.isOpen else {
             return
         }
         try! self.selectableEventLoop.deregister(channel: self, mode: .output)
-        try! outputFD.close()
+        try! outputSPH.close()
     }
 
     override func shutdownSocket(mode: CloseMode) throws {

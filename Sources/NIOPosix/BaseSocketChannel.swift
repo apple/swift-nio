@@ -223,7 +223,7 @@ private struct SocketChannelLifecycleManager {
 /// For this reason, `BaseSocketChannel` exists to provide a common core implementation of
 /// the `SelectableChannel` protocol. It uses a number of private functions to provide hooks
 /// for subclasses to implement the specific logic to handle their writes and reads.
-class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, ChannelCore {
+class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, ChannelCore, @unchecked Sendable {
     typealias SelectableType = SocketType.SelectableType
 
     struct AddressCache {
@@ -1091,7 +1091,8 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 let result: Int32 = try self.socket.getOption(level: .socket, name: .so_error)
                 if result != 0 {
                     // we have a socket error, let's forward
-                    // this path will be executed on Linux (EPOLLERR) & Darwin (ev.fflags != 0)
+                    // this path will be executed on Linux (EPOLLERR) & Darwin (ev.fflags != 0) for
+                    // stream sockets, and most (but not all) errors on datagram sockets
                     error = IOError(errnoCode: result, reason: "connection reset (error set)")
                 } else {
                     // we don't have a socket error, this must be connection reset without an error then
@@ -1207,6 +1208,14 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     /// - Returns: `true` if the `Channel` should be closed, `false` otherwise.
     func shouldCloseOnReadError(_ err: Error) -> Bool {
         true
+    }
+
+    /// Handles an error reported by the selector.
+    ///
+    /// Default behaviour is to treat this as if it were a reset.
+    func error() -> ErrorResult {
+        self.reset()
+        return .fatal
     }
 
     internal final func updateCachedAddressesFromSocket(updateLocal: Bool = true, updateRemote: Bool = true) {
@@ -1331,7 +1340,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
         // The initial set of interested events must not contain `.readEOF` because when connect doesn't return
         // synchronously, kevent might send us a `readEOF` because the `writable` event that marks the connect as completed.
         // See SocketChannelTest.testServerClosesTheConnectionImmediately for a regression test.
-        try self.safeRegister(interested: [.reset])
+        try self.safeRegister(interested: [.reset, .error])
         self.lifecycleManager.finishRegistration()(nil, self.pipeline)
     }
 
@@ -1410,7 +1419,7 @@ extension BaseSocketChannel {
 }
 
 /// Execute the given function and synchronously complete the given `EventLoopPromise` (if not `nil`).
-func executeAndComplete<Value>(_ promise: EventLoopPromise<Value>?, _ body: () throws -> Value) {
+func executeAndComplete<Value: Sendable>(_ promise: EventLoopPromise<Value>?, _ body: () throws -> Value) {
     do {
         let result = try body()
         promise?.succeed(result)

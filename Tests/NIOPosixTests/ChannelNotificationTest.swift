@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -138,8 +138,8 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNil(self.connectPromise)
             XCTAssertNil(self.closePromise)
 
-            promise!.futureResult.whenSuccess {
-                XCTAssertFalse(context.channel.isActive)
+            promise!.futureResult.whenSuccess { [channel = context.channel] in
+                XCTAssertFalse(channel.isActive)
             }
 
             self.registerPromise = promise
@@ -157,8 +157,8 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNil(self.connectPromise)
             XCTAssertNil(self.closePromise)
 
-            promise!.futureResult.whenSuccess {
-                XCTAssertTrue(context.channel.isActive)
+            promise!.futureResult.whenSuccess { [channel = context.channel] in
+                XCTAssertTrue(channel.isActive)
             }
 
             self.connectPromise = promise
@@ -170,8 +170,8 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNotNil(self.connectPromise)
             XCTAssertNil(self.closePromise)
 
-            promise!.futureResult.whenSuccess {
-                XCTAssertFalse(context.channel.isActive)
+            promise!.futureResult.whenSuccess { [channel = context.channel] in
+                XCTAssertFalse(channel.isActive)
             }
 
             self.closePromise = promise
@@ -248,8 +248,8 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNil(self.registerPromise)
 
             let p = promise ?? context.eventLoop.makePromise()
-            p.futureResult.whenSuccess {
-                XCTAssertFalse(context.channel.isActive)
+            p.futureResult.whenSuccess { [channel = context.channel] in
+                XCTAssertFalse(channel.isActive)
             }
 
             self.registerPromise = p
@@ -354,8 +354,8 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNil(self.closePromise)
 
             let p = promise ?? context.eventLoop.makePromise()
-            p.futureResult.whenSuccess {
-                XCTAssertFalse(context.channel.isActive)
+            p.futureResult.whenSuccess { [channel = context.channel] in
+                XCTAssertFalse(channel.isActive)
             }
 
             self.registerPromise = p
@@ -373,8 +373,8 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNil(self.bindPromise)
             XCTAssertNil(self.closePromise)
 
-            promise?.futureResult.whenSuccess {
-                XCTAssertTrue(context.channel.isActive)
+            promise?.futureResult.whenSuccess { [channel = context.channel] in
+                XCTAssertTrue(channel.isActive)
             }
 
             self.bindPromise = promise
@@ -387,8 +387,8 @@ class ChannelNotificationTest: XCTestCase {
             XCTAssertNil(self.closePromise)
 
             let p = promise ?? context.eventLoop.makePromise()
-            p.futureResult.whenSuccess {
-                XCTAssertFalse(context.channel.isActive)
+            p.futureResult.whenSuccess { [channel = context.channel] in
+                XCTAssertFalse(channel.isActive)
             }
 
             self.closePromise = p

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -451,26 +451,25 @@ class BootstrapTest: XCTestCase {
 
         let eventLoop = self.group.next()
 
-        eventLoop.execute {
-            do {
+        XCTAssertNoThrow(
+            try eventLoop.submit {
                 let pipe = Pipe()
-                let readHandle = NIOFileHandle(descriptor: pipe.fileHandleForReading.fileDescriptor)
-                let writeHandle = NIOFileHandle(descriptor: pipe.fileHandleForWriting.fileDescriptor)
-                _ = NIOPipeBootstrap(group: self.group)
+                defer {
+                    XCTAssertNoThrow(try pipe.fileHandleForReading.close())
+                    XCTAssertNoThrow(try pipe.fileHandleForWriting.close())
+                }
+                return NIOPipeBootstrap(group: self.group)
                     .takingOwnershipOfDescriptors(
-                        input: try readHandle.takeDescriptorOwnership(),
-                        output: try writeHandle.takeDescriptorOwnership()
+                        input: dup(pipe.fileHandleForReading.fileDescriptor),
+                        output: dup(pipe.fileHandleForWriting.fileDescriptor)
                     )
                     .flatMap({ channel in
                         channel.close()
                     }).always({ _ in
                         testGrp.leave()
                     })
-            } catch {
-                XCTFail("Failed to bootstrap pipechannel in eventloop: \(error)")
-                testGrp.leave()
-            }
-        }
+            }.wait()
+        )
         testGrp.wait()
     }
 
@@ -735,7 +734,7 @@ class BootstrapTest: XCTestCase {
             // Some platforms don't define "localhost" for IPv6, so check that
             // and use "ip6-localhost" instead.
             if !isIPv4 {
-                let hostResolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: .tcp)
+                let hostResolver = GetaddrinfoResolver(loop: self.group.next(), aiSocktype: .stream, aiProtocol: .tcp)
                 let hostv6 = try! hostResolver.initiateAAAAQuery(host: "localhost", port: 8088).wait()
                 if hostv6.isEmpty {
                     localhost = "ip6-localhost"
@@ -753,7 +752,7 @@ class BootstrapTest: XCTestCase {
                 XCTFail("can't connect channel 1")
                 return
             }
-            XCTAssertEqual(localIP, maybeChannel1?.localAddress?.ipAddress)
+            XCTAssertEqual(localIP, myChannel1Address.ipAddress)
             // Try 3: Bind the client to the same address/port as in try 2 but to server 2.
             XCTAssertNoThrow(
                 try ClientBootstrap(group: self.group)
@@ -777,9 +776,9 @@ class BootstrapTest: XCTestCase {
         struct NIOPipeBootstrapHooksChannelFail: NIOPipeBootstrapHooks {
             func makePipeChannel(
                 eventLoop: NIOPosix.SelectableEventLoop,
-                inputPipe: NIOCore.NIOFileHandle?,
-                outputPipe: NIOCore.NIOFileHandle?
-            ) throws -> NIOPosix.PipeChannel {
+                input: SelectablePipeHandle?,
+                output: SelectablePipeHandle?
+            ) throws -> PipeChannel {
                 throw IOError(errnoCode: EBADF, reason: "testing")
             }
         }
@@ -790,7 +789,7 @@ class BootstrapTest: XCTestCase {
         }
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {
-            try! elg.syncShutdownGracefully()
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
         }
 
         let bootstrap = NIOPipeBootstrap(validatingGroup: elg, hooks: NIOPipeBootstrapHooksChannelFail())

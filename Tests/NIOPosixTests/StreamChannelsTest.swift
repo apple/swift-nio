@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2019-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2019-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+import CNIOLinux
 import NIOCore
 import NIOTestUtils
 import XCTest
@@ -486,9 +487,11 @@ class StreamChannelTest: XCTestCase {
                     // raise the high water mark so we don't get another call straight away.
                     var buffer = context.channel.allocator.buffer(capacity: 5)
                     buffer.writeString("hello")
+                    let loopBoundContext = context.loopBound
                     context.channel.setOption(.writeBufferWaterMark, value: .init(low: 1024, high: 1024))
                         .flatMap {
-                            context.writeAndFlush(Self.wrapOutboundOut(buffer))
+                            let context = loopBoundContext.value
+                            return context.writeAndFlush(Self.wrapOutboundOut(buffer))
                         }.whenFailure { error in
                             XCTFail("unexpected error: \(error)")
                         }
@@ -638,7 +641,9 @@ class StreamChannelTest: XCTestCase {
                     XCTFail("unexpected error \(error)")
                 }
 
+                let loopBoundContext = context.loopBound
                 context.eventLoop.execute {
+                    let context = loopBoundContext.value
                     self.kickOff(context: context)
                 }
             }
@@ -648,26 +653,34 @@ class StreamChannelTest: XCTestCase {
             }
 
             func kickOff(context: ChannelHandlerContext) {
-                var buffer = context.channel.allocator.buffer(capacity: self.chunkSize)
-                buffer.writeBytes(Array(repeating: UInt8(ascii: "0"), count: chunkSize))
+                let buffer = NIOLoopBoundBox(
+                    context.channel.allocator.buffer(capacity: self.chunkSize),
+                    eventLoop: context.eventLoop
+                )
+                buffer.value.writeBytes(Array(repeating: UInt8(ascii: "0"), count: chunkSize))
 
+                let loopBoundContext = context.loopBound
+                let loopBoundSelf = NIOLoopBound(self, eventLoop: context.eventLoop)
                 func writeOneMore() {
-                    self.bytesWritten += buffer.readableBytes
-                    context.writeAndFlush(Self.wrapOutboundOut(buffer)).whenFailure { error in
+                    let context = loopBoundContext.value
+                    self.bytesWritten += buffer.value.readableBytes
+                    context.writeAndFlush(Self.wrapOutboundOut(buffer.value)).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }
                     context.eventLoop.scheduleTask(in: .microseconds(100)) {
+                        let context = loopBoundContext.value
                         switch self.state {
                         case .writingUntilFull:
                             // We're just enqueuing another chunk.
                             writeOneMore()
                         case .writeSentinel:
+                            let `self` = loopBoundSelf.value
                             // We've seen the notification that the channel is unwritable, let's write one more byte.
-                            buffer.clear()
-                            buffer.writeString("1")
+                            buffer.value.clear()
+                            buffer.value.writeString("1")
                             self.state = .done
                             self.bytesWritten += 1
-                            context.writeAndFlush(Self.wrapOutboundOut(buffer)).whenFailure { error in
+                            context.writeAndFlush(Self.wrapOutboundOut(buffer.value)).whenFailure { error in
                                 XCTFail("unexpected error \(error)")
                             }
                             self.wroteEnoughToBeStuckPromise.succeed(self.bytesWritten)
@@ -692,7 +705,9 @@ class StreamChannelTest: XCTestCase {
                     ()  // ignored, we're done
                 }
                 context.fireChannelWritabilityChanged()
+                let loopBoundContext = context.loopBound
                 self.wroteEnoughToBeStuckPromise.futureResult.whenSuccess { _ in
+                    let context = loopBoundContext.value
                     context.pipeline.removeHandler(self).whenFailure { error in
                         XCTFail("unexpected error \(error)")
                     }

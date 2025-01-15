@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2020-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2020-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -15,6 +15,7 @@
 import Atomics
 import Dispatch
 import NIOConcurrencyHelpers
+import NIOCore
 import NIOEmbedded
 import XCTest
 
@@ -78,16 +79,15 @@ class NIOThreadPoolTest: XCTestCase {
 
         // The lock here is arguably redundant with the dispatchgroup, but let's make
         // this test thread-safe even if I screw up.
-        let lock = NIOLock()
-        var threadOne = Thread?.none
-        var threadTwo = Thread?.none
+        let threadOne: NIOLockedValueBox<NIOThread?> = NIOLockedValueBox(NIOThread?.none)
+        let threadTwo: NIOLockedValueBox<NIOThread?> = NIOLockedValueBox(NIOThread?.none)
 
         completionGroup.enter()
         pool.submit { s in
             precondition(s == .active)
-            lock.withLock { () -> Void in
+            threadOne.withLockedValue { threadOne in
                 XCTAssertEqual(threadOne, nil)
-                threadOne = Thread.current
+                threadOne = NIOThread.current
             }
             completionGroup.leave()
         }
@@ -97,20 +97,18 @@ class NIOThreadPoolTest: XCTestCase {
         completionGroup.enter()
         pool.submit { s in
             precondition(s == .active)
-            lock.withLock { () -> Void in
+            threadTwo.withLockedValue { threadTwo in
                 XCTAssertEqual(threadTwo, nil)
-                threadTwo = Thread.current
+                threadTwo = NIOThread.current
             }
             completionGroup.leave()
         }
 
         completionGroup.wait()
 
-        lock.withLock { () -> Void in
-            XCTAssertNotNil(threadOne)
-            XCTAssertNotNil(threadTwo)
-            XCTAssertEqual(threadOne, threadTwo)
-        }
+        XCTAssertNotNil(threadOne.withLockedValue { $0 })
+        XCTAssertNotNil(threadTwo.withLockedValue { $0 })
+        XCTAssertEqual(threadOne.withLockedValue { $0 }, threadTwo.withLockedValue { $0 })
     }
 
     func testAsyncThreadPool() async throws {

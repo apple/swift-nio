@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -30,19 +30,10 @@ extension System {
         }
     }
 
-    static var supportsVsock: Bool {
-        #if canImport(Darwin) || os(Linux) || os(Android)
-        guard let socket = try? Socket(protocolFamily: .vsock, type: .stream) else { return false }
-        XCTAssertNoThrow(try socket.close())
-        #if !canImport(Darwin)
-        do {
-            let fd = try Posix.open(file: "/dev/vsock", oFlag: O_RDONLY | O_CLOEXEC)
-            try Posix.close(descriptor: fd)
-        } catch {
-            return false
-        }
-        #endif
-        return true
+    static var supportsVsockLoopback: Bool {
+        #if os(Linux) || os(Android)
+        guard let modules = try? String(contentsOf: URL(fileURLWithPath: "/proc/modules")) else { return false }
+        return modules.split(separator: "\n").compactMap({ $0.split(separator: " ").first }).contains("vsock_loopback")
         #else
         return false
         #endif
@@ -54,8 +45,8 @@ func withPipe(_ body: (NIOCore.NIOFileHandle, NIOCore.NIOFileHandle) throws -> [
     fds.withUnsafeMutableBufferPointer { ptr in
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
     }
-    let readFH = NIOFileHandle(descriptor: fds[0])
-    let writeFH = NIOFileHandle(descriptor: fds[1])
+    let readFH = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fds[0])
+    let writeFH = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fds[1])
     var toClose: [NIOFileHandle] = [readFH, writeFH]
     var error: Error? = nil
     do {
@@ -79,8 +70,8 @@ func withPipe(
     fds.withUnsafeMutableBufferPointer { ptr in
         XCTAssertEqual(0, pipe(ptr.baseAddress!))
     }
-    let readFH = NIOFileHandle(descriptor: fds[0])
-    let writeFH = NIOFileHandle(descriptor: fds[1])
+    let readFH = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fds[0])
+    let writeFH = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fds[1])
     var toClose: [NIOFileHandle] = [readFH, writeFH]
     var error: Error? = nil
     do {
@@ -136,7 +127,7 @@ func withTemporaryUnixDomainSocketPathName<T>(
         shortEnoughPath = path
         restoreSavedCWD = false
     } catch SocketAddressError.unixDomainSocketPathTooLong {
-        FileManager.default.changeCurrentDirectoryPath(
+        _ = FileManager.default.changeCurrentDirectoryPath(
             URL(fileURLWithPath: path).deletingLastPathComponent().absoluteString
         )
         shortEnoughPath = URL(fileURLWithPath: path).lastPathComponent
@@ -150,7 +141,7 @@ func withTemporaryUnixDomainSocketPathName<T>(
             try? FileManager.default.removeItem(atPath: path)
         }
         if restoreSavedCWD {
-            FileManager.default.changeCurrentDirectoryPath(saveCurrentDirectory)
+            _ = FileManager.default.changeCurrentDirectoryPath(saveCurrentDirectory)
         }
     }
     return try body(shortEnoughPath)
@@ -158,7 +149,7 @@ func withTemporaryUnixDomainSocketPathName<T>(
 
 func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle, String) throws -> T) rethrows -> T {
     let (fd, path) = openTemporaryFile()
-    let fileHandle = NIOFileHandle(descriptor: fd)
+    let fileHandle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fd)
     defer {
         XCTAssertNoThrow(try fileHandle.close())
         XCTAssertEqual(0, unlink(path))
@@ -190,7 +181,7 @@ func withTemporaryFile<T>(
     _ body: @escaping @Sendable (NIOCore.NIOFileHandle, String) async throws -> T
 ) async rethrows -> T {
     let (fd, path) = openTemporaryFile()
-    let fileHandle = NIOFileHandle(descriptor: fd)
+    let fileHandle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fd)
     defer {
         XCTAssertNoThrow(try fileHandle.close())
         XCTAssertEqual(0, unlink(path))

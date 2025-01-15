@@ -1,0 +1,67 @@
+name: Matrix
+
+on:
+  workflow_call:
+    inputs:
+      name:
+        type: string
+        description: "The name of the workflow used for the concurrency group."
+        required: true
+      matrix_string:
+        type: string
+        description: "The test matrix definition."
+        required: true
+
+# We will cancel previously triggered workflow runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.name }}
+  cancel-in-progress: true
+
+jobs:
+  execute-matrix:
+    name: ${{ matrix.config.platform }} (${{ matrix.config.name }})
+    runs-on: ${{ matrix.config.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(inputs.matrix_string) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Pull Docker image
+        run: docker pull ${{ matrix.config.image }}
+      - name: Run matrix job
+        if: ${{ matrix.config.platform != 'Windows' }}
+        run: |
+          if [[ -n "${{ matrix.config.setup_command }}" ]]; then
+            setup_command_expression="${{ matrix.config.setup_command }} &&"
+          else
+            setup_command_expression=""
+          fi
+          workspace="/$(basename ${{ github.workspace }})"
+          docker run -v ${{ github.workspace }}:"$workspace" \
+            -w "$workspace" \
+            -e SWIFT_VERSION="${{ matrix.config.swift_version }}" \
+            -e setup_command_expression="$setup_command_expression" \
+            -e workspace="$workspace" \
+            ${{ matrix.config.image }} \
+            bash -c "swift --version && git config --global --add safe.directory \"$workspace\" && $setup_command_expression ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"
+      - name: Run matrix job (Windows)
+        if: ${{ matrix.config.platform == 'Windows' }}
+        run: |
+          if (-not [string]::IsNullOrEmpty("${{ matrix.config.setup_command }}")) {
+              $setup_command_expression = "${{ matrix.config.setup_command }} &"
+          } else {
+              $setup_command_expression = ""
+          }
+          $workspace = "C:\" + (Split-Path ${{ github.workspace }} -Leaf)
+          docker run -v ${{ github.workspace }}:$($workspace) `
+            -w $($workspace) `
+            -e SWIFT_VERSION="${{ matrix.config.swift_version }}" `
+            -e setup_command_expression=%setup_command_expression% `
+            ${{ matrix.config.image }} `
+            cmd /s /c  "swift --version & powershell Invoke-Expression ""$($setup_command_expression) ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"""
+    env:
+      SWIFT_VERSION: ${{ matrix.config.swift_version }}

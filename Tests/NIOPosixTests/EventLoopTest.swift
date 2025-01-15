@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -542,7 +542,9 @@ public final class EventLoopTest: XCTestCase {
                 }
                 XCTAssertTrue(context.channel.isActive)
                 self.closePromise = context.eventLoop.makePromise()
+                let loopBoundContext = context.loopBound
                 self.closePromise!.futureResult.whenSuccess {
+                    let context = loopBoundContext.value
                     context.close(mode: mode, promise: promise)
                 }
                 promiseRegisterCallback(self.closePromise!)
@@ -1960,6 +1962,10 @@ private class EventLoopWithPreSucceededFuture: EventLoop {
         preconditionFailure("not implemented")
     }
 
+    var now: NIODeadline {
+        preconditionFailure("not implemented")
+    }
+
     @discardableResult
     func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         preconditionFailure("not implemented")
@@ -2008,6 +2014,10 @@ private class EventLoopWithoutPreSucceededFuture: EventLoop {
     }
 
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        preconditionFailure("not implemented")
+    }
+
+    var now: NIODeadline {
         preconditionFailure("not implemented")
     }
 

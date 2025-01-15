@@ -199,24 +199,28 @@ public final class NIOAsyncTestingChannel: Channel {
     /// `nil` because ``NIOAsyncTestingChannel``s don't have parents.
     public let parent: Channel? = nil
 
-    // This is only written once, from a single thread, and never written again, so it's _technically_ thread-safe. Most methods cannot safely
+    // These two variables are only written once, from a single thread, and never written again, so they're _technically_ thread-safe. Most methods cannot safely
     // be used from multiple threads, but `isActive`, `isOpen`, `eventLoop`, and `closeFuture` can all safely be used from any thread. Just.
+    #if compiler(>=5.10)
+    @usableFromInline
+    nonisolated(unsafe) var channelcore: EmbeddedChannelCore!
+    nonisolated(unsafe) private var _pipeline: ChannelPipeline!
+    #else
     @usableFromInline
     var channelcore: EmbeddedChannelCore!
+    private var _pipeline: ChannelPipeline!
+    #endif
+
+    private struct State {
+        var isWritable: Bool
+        var localAddress: SocketAddress?
+        var remoteAddress: SocketAddress?
+    }
 
     /// Guards any of the getters/setters that can be accessed from any thread.
-    private let stateLock: NIOLock = NIOLock()
-
-    // Guarded by `stateLock`
-    private var _isWritable: Bool = true
-
-    // Guarded by `stateLock`
-    private var _localAddress: SocketAddress? = nil
-
-    // Guarded by `stateLock`
-    private var _remoteAddress: SocketAddress? = nil
-
-    private var _pipeline: ChannelPipeline!
+    private let stateLock = NIOLockedValueBox(
+        State(isWritable: true, localAddress: nil, remoteAddress: nil)
+    )
 
     /// - see: `Channel._channelCore`
     public var _channelCore: ChannelCore {
@@ -231,11 +235,11 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.isWritable`
     public var isWritable: Bool {
         get {
-            self.stateLock.withLock { self._isWritable }
+            self.stateLock.withLockedValue { $0.isWritable }
         }
         set {
-            self.stateLock.withLock { () -> Void in
-                self._isWritable = newValue
+            self.stateLock.withLockedValue {
+                $0.isWritable = newValue
             }
         }
     }
@@ -243,11 +247,11 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.localAddress`
     public var localAddress: SocketAddress? {
         get {
-            self.stateLock.withLock { self._localAddress }
+            self.stateLock.withLockedValue { $0.localAddress }
         }
         set {
-            self.stateLock.withLock { () -> Void in
-                self._localAddress = newValue
+            self.stateLock.withLockedValue {
+                $0.localAddress = newValue
             }
         }
     }
@@ -255,11 +259,11 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.remoteAddress`
     public var remoteAddress: SocketAddress? {
         get {
-            self.stateLock.withLock { self._remoteAddress }
+            self.stateLock.withLockedValue { $0.remoteAddress }
         }
         set {
-            self.stateLock.withLock { () -> Void in
-                self._remoteAddress = newValue
+            self.stateLock.withLockedValue {
+                $0.remoteAddress = newValue
             }
         }
     }
@@ -283,8 +287,11 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - Parameters:
     ///   - handler: The `ChannelHandler` to add to the `ChannelPipeline` before register.
     ///   - loop: The ``NIOAsyncTestingEventLoop`` to use.
-    public convenience init(handler: ChannelHandler, loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()) async
-    {
+    @preconcurrency
+    public convenience init(
+        handler: ChannelHandler & Sendable,
+        loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()
+    ) async {
         await self.init(handlers: [handler], loop: loop)
     }
 
@@ -295,16 +302,32 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - Parameters:
     ///   - handlers: The `ChannelHandler`s to add to the `ChannelPipeline` before register.
     ///   - loop: The ``NIOAsyncTestingEventLoop`` to use.
+    @preconcurrency
     public convenience init(
-        handlers: [ChannelHandler],
+        handlers: [ChannelHandler & Sendable],
         loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()
     ) async {
+        try! await self.init(loop: loop) { channel in
+            try channel.pipeline.syncOperations.addHandlers(handlers)
+        }
+    }
+
+    /// Create a new instance.
+    ///
+    /// During creation it will automatically also register itself on the ``NIOAsyncTestingEventLoop``.
+    ///
+    /// - Parameters:
+    ///   - loop: The ``NIOAsyncTestingEventLoop`` to use.
+    ///   - channelInitializer: The initialization closure which will be run on the `EventLoop` before registration. This could be used to add handlers using `syncOperations`.
+    public convenience init(
+        loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop(),
+        channelInitializer: @escaping @Sendable (NIOAsyncTestingChannel) throws -> Void
+    ) async throws {
         self.init(loop: loop)
-
-        try! await self._pipeline.addHandlers(handlers)
-
-        // This will never throw...
-        try! await self.register()
+        try await loop.submit {
+            try channelInitializer(self)
+        }.get()
+        try await self.register()
     }
 
     /// Asynchronously closes the ``NIOAsyncTestingChannel``.
@@ -671,3 +694,7 @@ extension NIOAsyncTestingChannel.LeftOverState: @unchecked Sendable {}
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension NIOAsyncTestingChannel.BufferState: @unchecked Sendable {}
 #endif
+
+// Synchronous options are never Sendable.
+@available(*, unavailable)
+extension NIOAsyncTestingChannel.SynchronousOptions: Sendable {}

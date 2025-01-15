@@ -15,6 +15,7 @@
 // This file contains a syscall abstraction layer (SAL) which hooks the Selector and the Socket in a way that we can
 // play the kernel whilst NIO thinks it's running on a real OS.
 
+import CNIOLinux
 import NIOConcurrencyHelpers
 import NIOCore
 import XCTest
@@ -753,19 +754,19 @@ extension SALTest {
                     XCTAssertEqual(localAddress, channel.localAddress)
                     XCTAssertEqual(remoteAddress, channel.remoteAddress)
                     XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
+                    XCTAssertEqual([.reset, .error], eventSet)
                     return true
                 } else {
                     return false
                 }
             }
             try self.assertReregister { selectable, eventSet in
-                XCTAssertEqual([.reset, .readEOF], eventSet)
+                XCTAssertEqual([.reset, .error, .readEOF], eventSet)
                 return true
             }
             // because autoRead is on by default
             try self.assertReregister { selectable, eventSet in
-                XCTAssertEqual([.reset, .readEOF, .read], eventSet)
+                XCTAssertEqual([.reset, .error, .readEOF, .read], eventSet)
                 return true
             }
         } _: {
@@ -795,19 +796,19 @@ extension SALTest {
                     XCTAssertEqual(localAddress, channel.localAddress)
                     XCTAssertEqual(nil, channel.remoteAddress)
                     XCTAssertEqual(eventSet, registrationEventSet)
-                    XCTAssertEqual(.reset, eventSet)
+                    XCTAssertEqual([.reset, .error], eventSet)
                     return true
                 } else {
                     return false
                 }
             }
             try self.assertReregister { selectable, eventSet in
-                XCTAssertEqual([.reset, .readEOF], eventSet)
+                XCTAssertEqual([.reset, .error, .readEOF], eventSet)
                 return true
             }
             // because autoRead is on by default
             try self.assertReregister { selectable, eventSet in
-                XCTAssertEqual([.reset, .readEOF, .read], eventSet)
+                XCTAssertEqual([.reset, .error, .readEOF, .read], eventSet)
                 return true
             }
         } _: {

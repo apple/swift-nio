@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+import CNIOLinux
 import NIOCore
 
 private struct PendingStreamWrite {
@@ -434,9 +435,10 @@ final class PendingStreamWritesManager: PendingWritesManager {
         case .fileRegion(let file):
             let readerIndex = file.readerIndex
             let endIndex = file.endIndex
-            return try file.fileHandle.withUnsafeFileDescriptor { fd in
-                self.didWrite(itemCount: 1, result: try operation(fd, readerIndex, endIndex))
+            let writeResult = try file.fileHandle.withUnsafeFileDescriptor { fd in
+                try operation(fd, readerIndex, endIndex)
             }
+            return self.didWrite(itemCount: 1, result: writeResult)
         case .byteBuffer:
             preconditionFailure("called \(#function) but first item to write was a ByteBuffer")
         }

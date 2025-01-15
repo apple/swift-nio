@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2019-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2019-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -200,8 +200,8 @@ private final class UpgradeDelayClientUpgrader: TypedAndUntypedHTTPClientProtoco
     fileprivate func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void>
     {
         self.upgradePromise = context.eventLoop.makePromise()
-        return self.upgradePromise!.futureResult.flatMap {
-            context.pipeline.addHandler(self.upgradedHandler)
+        return self.upgradePromise!.futureResult.flatMap { [pipeline = context.pipeline] in
+            pipeline.addHandler(self.upgradedHandler)
         }
     }
 
@@ -318,7 +318,7 @@ private func assertPipelineContainsUpgradeHandler(channel: Channel) {
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 class HTTPClientUpgradeTestCase: XCTestCase {
     func setUpClientChannel(
-        clientHTTPHandler: RemovableChannelHandler,
+        clientHTTPHandler: RemovableChannelHandler & Sendable,
         clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
         _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
     ) throws -> EmbeddedChannel {
@@ -1063,7 +1063,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
     override func setUpClientChannel(
-        clientHTTPHandler: RemovableChannelHandler,
+        clientHTTPHandler: RemovableChannelHandler & Sendable,
         clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
         _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
     ) throws -> EmbeddedChannel {
@@ -1104,10 +1104,12 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
             handlerType: NIOTypedHTTPClientUpgradeHandler<Bool>.self
         )
 
+        let loopBoundContext = context.loopBound
         try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
             .wait()
         upgradeResult.whenSuccess { result in
             if result {
+                let context = loopBoundContext.value
                 upgradeCompletionHandler(context)
             }
         }

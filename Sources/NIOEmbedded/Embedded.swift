@@ -28,13 +28,29 @@ import Darwin
 import Glibc
 #elseif canImport(Musl)
 import Musl
-#elseif canImport(Bionic)
-import Bionic
+#elseif canImport(Android)
+import Android
 #elseif canImport(WASILibc)
 import WASILibc
 #else
 #error("Unknown C library.")
 #endif
+
+private func printError(_ string: StaticString) {
+    string.withUTF8Buffer { buf in
+        var buf = buf
+        while buf.count > 0 {
+            // 2 is stderr
+            let rc = write(2, buf.baseAddress, buf.count)
+            if rc < 0 {
+                let err = errno
+                if err == EINTR { continue }
+                fatalError("Unexpected error writing: \(err)")
+            }
+            buf = .init(rebasing: buf.dropFirst(Int(rc)))
+        }
+    }
+}
 
 internal struct EmbeddedScheduledTask {
     let id: UInt64
@@ -94,8 +110,9 @@ extension EmbeddedScheduledTask: Comparable {
 ///     responsible for ensuring they never call into the `EmbeddedEventLoop` in an
 ///     unsynchronized fashion.
 public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
+    private var _now: NIODeadline = .uptimeNanoseconds(0)
     /// The current "time" for this event loop. This is an amount in nanoseconds.
-    internal var _now: NIODeadline = .uptimeNanoseconds(0)
+    public var now: NIODeadline { _now }
 
     private enum State { case open, closing, closed }
     private var state: State = .open
@@ -113,7 +130,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
 
     public let description = "EmbeddedEventLoop"
 
-    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Bionic)
+    #if canImport(Darwin) || canImport(Glibc) || canImport(Musl) || canImport(Android)
     private let myThread: pthread_t = pthread_self()
 
     func isCorrectThread() -> Bool {
@@ -145,14 +162,13 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
                     "EmbeddedEventLoop is not thread-safe. You can only use it from the thread you created it on."
                 )
             } else {
-                fputs(
+                printError(
                     """
                     ERROR: NIO API misuse: EmbeddedEventLoop is not thread-safe. \
                     You can only use it from the thread you created it on. This problem will be upgraded to a forced \
                     crash in future versions of SwiftNIO.
 
-                    """,
-                    stderr
+                    """
                 )
             }
             return
@@ -184,7 +200,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
             insertOrder: self.nextTaskNumber(),
             task: {
                 do {
-                    promise.succeed(try task())
+                    promise.assumeIsolated().succeed(try task())
                 } catch let err {
                     promise.fail(err)
                 }
@@ -303,6 +319,16 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     }
     #endif
 
+    public func preconditionInEventLoop(file: StaticString, line: UInt) {
+        self.checkCorrectThread()
+        // Currently, inEventLoop is always true so this always passes.
+    }
+
+    public func preconditionNotInEventLoop(file: StaticString, line: UInt) {
+        // As inEventLoop always returns true, this must always preconditon.
+        preconditionFailure("Always in EmbeddedEventLoop", file: file, line: line)
+    }
+
     public func _preconditionSafeToWait(file: StaticString, line: UInt) {
         self.checkCorrectThread()
         // EmbeddedEventLoop always allows a wait, as waiting will essentially always block
@@ -353,6 +379,11 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
         return false
     }()
 }
+
+// EmbeddedEventLoop is extremely _not_ Sendable. However, the EventLoop protocol
+// requires it to be. We are doing some runtime enforcement of correct use, but
+// ultimately we can't have the compiler validating this usage.
+extension EmbeddedEventLoop: @unchecked Sendable {}
 
 @usableFromInline
 class EmbeddedChannelCore: ChannelCore {
@@ -473,8 +504,11 @@ class EmbeddedChannelCore: ChannelCore {
         self.pipeline.syncOperations.fireChannelInactive()
         self.pipeline.syncOperations.fireChannelUnregistered()
 
+        let loopBoundSelf = NIOLoopBound(self, eventLoop: self.eventLoop)
+
         eventLoop.execute {
             // ensure this is executed in a delayed fashion as the users code may still traverse the pipeline
+            let `self` = loopBoundSelf.value
             self.removeHandlers(pipeline: self.pipeline)
             self.closePromise.succeed(())
         }
@@ -571,6 +605,10 @@ class EmbeddedChannelCore: ChannelCore {
         }
     }
 }
+
+// ChannelCores are basically never Sendable.
+@available(*, unavailable)
+extension EmbeddedChannelCore: Sendable {}
 
 /// `EmbeddedChannel` is a `Channel` implementation that does neither any
 /// actual IO nor has a proper eventing mechanism. The prime use-case for
@@ -856,8 +894,8 @@ public final class EmbeddedChannel: Channel {
     @inlinable
     @discardableResult public func writeInbound<T>(_ data: T) throws -> BufferState {
         self.embeddedEventLoop.checkCorrectThread()
-        self.pipeline.fireChannelRead(data)
-        self.pipeline.fireChannelReadComplete()
+        self.pipeline.syncOperations.fireChannelRead(NIOAny(data))
+        self.pipeline.syncOperations.fireChannelReadComplete()
         try self.throwIfErrorCaught()
         return self.channelcore.inboundBuffer.isEmpty ? .empty : .full(Array(self.channelcore.inboundBuffer))
     }
@@ -1074,6 +1112,17 @@ extension EmbeddedChannel {
         SynchronousOptions(channel: self)
     }
 }
+
+// EmbeddedChannel is extremely _not_ Sendable. However, the Channel protocol
+// requires it to be. We are doing some runtime enforcement of correct use, but
+// ultimately we can't have the compiler validating this usage.
+extension EmbeddedChannel: @unchecked Sendable {}
+
+@available(*, unavailable)
+extension EmbeddedChannel.LeftOverState: @unchecked Sendable {}
+
+@available(*, unavailable)
+extension EmbeddedChannel.BufferState: @unchecked Sendable {}
 
 @available(*, unavailable)
 extension EmbeddedChannel.SynchronousOptions: Sendable {}

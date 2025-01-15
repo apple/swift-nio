@@ -19,7 +19,7 @@ import XCTest
 
 @testable import NIOEmbedded
 
-private class EmbeddedTestError: Error {}
+private final class EmbeddedTestError: Error {}
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 final class NIOAsyncTestingEventLoopTests: XCTestCase {
@@ -336,10 +336,12 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         // advanceTime(by:) is the same as on MultiThreadedEventLoopGroup: specifically, that tasks run via
         // schedule that expire "now" all run at the same time, and that any work they schedule is run
         // after all such tasks expire.
+        struct TestState {
+            var firstScheduled: Scheduled<Void>?
+            var secondScheduled: Scheduled<Void>?
+        }
         let loop = NIOAsyncTestingEventLoop()
-        let lock = NIOLock()
-        var firstScheduled: Scheduled<Void>? = nil
-        var secondScheduled: Scheduled<Void>? = nil
+        let lock = NIOLockedValueBox(TestState())
         let orderingCounter = ManagedAtomic(0)
 
         // Here's the setup. First, we'll set up two scheduled tasks to fire in 5 nanoseconds. Each of these
@@ -356,13 +358,13 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         //
         // To validate the ordering, we'll use a counter.
 
-        lock.withLock { () -> Void in
-            firstScheduled = loop.scheduleTask(in: .nanoseconds(5)) {
-                let second = lock.withLock { () -> Scheduled<Void>? in
-                    XCTAssertNotNil(firstScheduled)
-                    firstScheduled = nil
-                    XCTAssertNotNil(secondScheduled)
-                    return secondScheduled
+        lock.withLockedValue {
+            $0.firstScheduled = loop.scheduleTask(in: .nanoseconds(5)) {
+                let second = lock.withLockedValue {
+                    XCTAssertNotNil($0.firstScheduled)
+                    $0.firstScheduled = nil
+                    XCTAssertNotNil($0.secondScheduled)
+                    return $0.secondScheduled
                 }
 
                 if let partner = second {
@@ -379,11 +381,11 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
                 }
             }
 
-            secondScheduled = loop.scheduleTask(in: .nanoseconds(5)) {
-                lock.withLock { () -> Void in
-                    secondScheduled = nil
-                    XCTAssertNil(firstScheduled)
-                    XCTAssertNil(secondScheduled)
+            $0.secondScheduled = loop.scheduleTask(in: .nanoseconds(5)) {
+                lock.withLockedValue {
+                    $0.secondScheduled = nil
+                    XCTAssertNil($0.firstScheduled)
+                    XCTAssertNil($0.secondScheduled)
                 }
 
                 XCTAssertCompareAndSwapSucceeds(storage: orderingCounter, expected: 2, desired: 3)
@@ -478,10 +480,11 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         }
     }
 
-    func testTasksScheduledDuringShutdownAreAutomaticallyCancelled() async throws {
+    func testTasksScheduledDuringShutdownAreAutomaticallyCancelledOrNotScheduled() async throws {
         let eventLoop = NIOAsyncTestingEventLoop()
         let tasksRun = ManagedAtomic(0)
 
+        @Sendable
         func scheduleRecursiveTask(
             at taskStartTime: NIODeadline,
             andChildTaskAfter childTaskStartDelay: TimeAmount
@@ -508,35 +511,39 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
         }
 
         try await eventLoop.executeInContext {
-            XCTAssertGreaterThan(tasksRun.load(ordering: .acquiring), 1)
+            XCTAssertGreaterThan(tasksRun.load(ordering: .acquiring), 0)
         }
     }
 
     func testShutdownCancelsRemainingScheduledTasks() async {
         let eventLoop = NIOAsyncTestingEventLoop()
-        var tasksRun = 0
+        let tasksRun = ManagedAtomic(0)
 
-        let a = eventLoop.scheduleTask(in: .seconds(1)) { tasksRun += 1 }
-        let b = eventLoop.scheduleTask(in: .seconds(2)) { tasksRun += 1 }
+        let a = eventLoop.scheduleTask(in: .seconds(1)) {
+            tasksRun.wrappingIncrement(ordering: .sequentiallyConsistent)
+        }
+        let b = eventLoop.scheduleTask(in: .seconds(2)) {
+            tasksRun.wrappingIncrement(ordering: .sequentiallyConsistent)
+        }
 
-        XCTAssertEqual(tasksRun, 0)
+        XCTAssertEqual(tasksRun.load(ordering: .sequentiallyConsistent), 0)
 
         await eventLoop.advanceTime(by: .seconds(1))
-        XCTAssertEqual(tasksRun, 1)
+        XCTAssertEqual(tasksRun.load(ordering: .sequentiallyConsistent), 1)
 
         XCTAssertNoThrow(try eventLoop.syncShutdownGracefully())
-        XCTAssertEqual(tasksRun, 1)
+        XCTAssertEqual(tasksRun.load(ordering: .sequentiallyConsistent), 1)
 
         await eventLoop.advanceTime(by: .seconds(1))
-        XCTAssertEqual(tasksRun, 1)
+        XCTAssertEqual(tasksRun.load(ordering: .sequentiallyConsistent), 1)
 
         await eventLoop.advanceTime(to: .distantFuture)
-        XCTAssertEqual(tasksRun, 1)
+        XCTAssertEqual(tasksRun.load(ordering: .sequentiallyConsistent), 1)
 
         XCTAssertNoThrow(try a.futureResult.wait())
         await XCTAssertThrowsError(try await b.futureResult.get()) { error in
             XCTAssertEqual(error as? EventLoopError, .cancelled)
-            XCTAssertEqual(tasksRun, 1)
+            XCTAssertEqual(tasksRun.load(ordering: .sequentiallyConsistent), 1)
         }
     }
 
@@ -618,5 +625,15 @@ final class NIOAsyncTestingEventLoopTests: XCTestCase {
 
         await eventLoop.advanceTime(by: .seconds(1))
         XCTAssertEqual(counter.load(ordering: .relaxed), 3)
+    }
+
+    func testCurrentTime() async {
+        let eventLoop = NIOAsyncTestingEventLoop()
+
+        await eventLoop.advanceTime(to: .uptimeNanoseconds(42))
+        XCTAssertEqual(eventLoop.now, .uptimeNanoseconds(42))
+
+        await eventLoop.advanceTime(by: .nanoseconds(42))
+        XCTAssertEqual(eventLoop.now, .uptimeNanoseconds(84))
     }
 }

@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -60,7 +60,7 @@ public protocol NIOEventLoopMetricsDelegate: Sendable {
 /// The whole processing of I/O and tasks is done by a `NIOThread` that is tied to the `SelectableEventLoop`. This `NIOThread`
 /// is guaranteed to never change!
 @usableFromInline
-internal final class SelectableEventLoop: EventLoop {
+internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 
     static let strictModeEnabled: Bool = {
         switch getenv("SWIFTNIO_STRICT").map({ String.init(cString: $0).lowercased() }) {
@@ -93,6 +93,7 @@ internal final class SelectableEventLoop: EventLoop {
         case exitingThread
     }
 
+    @usableFromInline
     internal let _selector: NIOPosix.Selector<NIORegistration>
     private let thread: NIOThread
     @usableFromInline
@@ -297,6 +298,12 @@ internal final class SelectableEventLoop: EventLoop {
         thread.isCurrent
     }
 
+    /// - see: `EventLoop.now`
+    @usableFromInline
+    internal var now: NIODeadline {
+        .now()
+    }
+
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @inlinable
     internal func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
@@ -443,6 +450,18 @@ internal final class SelectableEventLoop: EventLoop {
         if ev.contains(.reset) {
             channel.reset()
         } else {
+            if ev.contains(.error) {
+                switch channel.error() {
+                case .fatal:
+                    return
+                case .nonFatal:
+                    break
+                }
+
+                guard channel.isOpen else {
+                    return
+                }
+            }
             if ev.contains(.writeEOF) {
                 channel.writeEOF()
 
@@ -465,7 +484,8 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
-    private func currentSelectorStrategy(nextReadyDeadline: NIODeadline?) -> SelectorStrategy {
+    @inlinable
+    internal func _currentSelectorStrategy(nextReadyDeadline: NIODeadline?) -> SelectorStrategy {
         guard let deadline = nextReadyDeadline else {
             // No tasks to handle so just block. If any tasks were added in the meantime wakeup(...) was called and so this
             // will directly unblock.
@@ -667,6 +687,26 @@ internal final class SelectableEventLoop: EventLoop {
         }
     }
 
+    // Do not rename or remove this function.
+    //
+    // When doing on-/off-CPU analysis, for example with continuous profiling, it's
+    // important to recognise certain functions that are purely there to wait.
+    //
+    // This function is one of those and giving it a consistent name makes it much easier to remove from the profiles
+    // when only interested in on-CPU work.
+    @inline(never)
+    @inlinable
+    internal func _blockingWaitForWork(
+        nextReadyDeadline: NIODeadline?,
+        _ body: (SelectorEvent<NIORegistration>) -> Void
+    ) throws {
+        try self._selector.whenReady(
+            strategy: self._currentSelectorStrategy(nextReadyDeadline: nextReadyDeadline),
+            onLoopBegin: { self._tasksLock.withLock { () -> Void in self._pendingTaskPop = true } },
+            body
+        )
+    }
+
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
     internal func run() throws {
         self.preconditionInEventLoop()
@@ -733,10 +773,7 @@ internal final class SelectableEventLoop: EventLoop {
             // Block until there are events to handle or the selector was woken up
             // for macOS: in case any calls we make to Foundation put objects into an autoreleasepool
             try withAutoReleasePool {
-                try self._selector.whenReady(
-                    strategy: currentSelectorStrategy(nextReadyDeadline: nextReadyDeadline),
-                    onLoopBegin: { self._tasksLock.withLock { () -> Void in self._pendingTaskPop = true } }
-                ) { ev in
+                try self._blockingWaitForWork(nextReadyDeadline: nextReadyDeadline) { ev in
                     switch ev.registration.channel {
                     case .serverSocketChannel(let chan):
                         self.handleEvent(ev.io, channel: chan)
@@ -746,10 +783,10 @@ internal final class SelectableEventLoop: EventLoop {
                         self.handleEvent(ev.io, channel: chan)
                     case .pipeChannel(let chan, let direction):
                         var ev = ev
-                        if ev.io.contains(.reset) {
-                            // .reset needs special treatment here because we're dealing with two separate pipes instead
+                        if ev.io.contains(.reset) || ev.io.contains(.error) {
+                            // .reset and .error needs special treatment here because we're dealing with two separate pipes instead
                             // of one socket. So we turn .reset input .readEOF/.writeEOF.
-                            ev.io.subtract([.reset])
+                            ev.io.subtract([.reset, .error])
                             ev.io.formUnion([direction == .input ? .readEOF : .writeEOF])
                         }
                         self.handleEvent(ev.io, channel: chan)

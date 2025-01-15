@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2017-2018 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2017-2024 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -472,10 +472,10 @@ public final class ChannelPipeline: ChannelInvoker {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
 
         if self.eventLoop.inEventLoop {
-            promise.assumeIsolated().completeWith(self.contextSync(handler: handler))
+            promise.assumeIsolatedUnsafeUnchecked().completeWith(self.contextSync(handler: handler))
         } else {
             self.eventLoop.execute {
-                promise.assumeIsolated().completeWith(self.contextSync(handler: handler))
+                promise.assumeIsolatedUnsafeUnchecked().completeWith(self.contextSync(handler: handler))
             }
         }
 
@@ -501,10 +501,10 @@ public final class ChannelPipeline: ChannelInvoker {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
 
         if self.eventLoop.inEventLoop {
-            promise.assumeIsolated().completeWith(self.contextSync(name: name))
+            promise.assumeIsolatedUnsafeUnchecked().completeWith(self.contextSync(name: name))
         } else {
             self.eventLoop.execute {
-                promise.assumeIsolated().completeWith(self.contextSync(name: name))
+                promise.assumeIsolatedUnsafeUnchecked().completeWith(self.contextSync(name: name))
             }
         }
 
@@ -534,10 +534,10 @@ public final class ChannelPipeline: ChannelInvoker {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
 
         if self.eventLoop.inEventLoop {
-            promise.assumeIsolated().completeWith(self._contextSync(handlerType: handlerType))
+            promise.assumeIsolatedUnsafeUnchecked().completeWith(self._contextSync(handlerType: handlerType))
         } else {
             self.eventLoop.execute {
-                promise.assumeIsolated().completeWith(self._contextSync(handlerType: handlerType))
+                promise.assumeIsolatedUnsafeUnchecked().completeWith(self._contextSync(handlerType: handlerType))
             }
         }
 
@@ -1119,7 +1119,7 @@ extension ChannelPipeline {
     ///   - position: The position in the `ChannelPipeline` to add the handlers.
     /// - Returns: A result representing whether the handlers were added or not.
     fileprivate func addHandlersSync(
-        _ handlers: [ChannelHandler],
+        _ handlers: [ChannelHandler & Sendable],
         position: ChannelPipeline.Position
     ) -> Result<Void, Error> {
         switch position {
@@ -1127,6 +1127,29 @@ extension ChannelPipeline {
             return self._addHandlersSync(handlers.reversed(), position: position)
         case .last, .before:
             return self._addHandlersSync(handlers, position: position)
+        }
+    }
+
+    /// Synchronously adds the provided `ChannelHandler`s to the pipeline in the order given, taking
+    /// account of the behaviour of `ChannelHandler.add(first:)`.
+    ///
+    /// This duplicate of the above method exists to avoid needing to rebox the array of existentials
+    /// from any (ChannelHandler & Sendable) to any ChannelHandler.
+    ///
+    /// - Important: Must be called on the `EventLoop`.
+    /// - Parameters:
+    ///   - handlers: The array of `ChannelHandler`s to add.
+    ///   - position: The position in the `ChannelPipeline` to add the handlers.
+    /// - Returns: A result representing whether the handlers were added or not.
+    fileprivate func addHandlersSyncNotSendable(
+        _ handlers: [ChannelHandler],
+        position: ChannelPipeline.Position
+    ) -> Result<Void, Error> {
+        switch position {
+        case .first, .after:
+            return self._addHandlersSyncNotSendable(handlers.reversed(), position: position)
+        case .last, .before:
+            return self._addHandlersSyncNotSendable(handlers, position: position)
         }
     }
 
@@ -1138,6 +1161,35 @@ extension ChannelPipeline {
     ///   - position: The position in the `ChannelPipeline` to add the handlers.
     /// - Returns: A result representing whether the handlers were added or not.
     private func _addHandlersSync<Handlers: Sequence>(
+        _ handlers: Handlers,
+        position: ChannelPipeline.Position
+    ) -> Result<Void, Error> where Handlers.Element == ChannelHandler & Sendable {
+        self.eventLoop.assertInEventLoop()
+
+        for handler in handlers {
+            let result = self.addHandlerSync(handler, position: position)
+            switch result {
+            case .success:
+                ()
+            case .failure:
+                return result
+            }
+        }
+
+        return .success(())
+    }
+
+    /// Synchronously adds a sequence of `ChannelHandlers` to the pipeline at the given position.
+    ///
+    /// This duplicate of the above method exists to avoid needing to rebox the array of existentials
+    /// from any (ChannelHandler & Sendable) to any ChannelHandler.
+    ///
+    /// - Important: Must be called on the `EventLoop`.
+    /// - Parameters:
+    ///   - handlers: A sequence of handlers to add.
+    ///   - position: The position in the `ChannelPipeline` to add the handlers.
+    /// - Returns: A result representing whether the handlers were added or not.
+    private func _addHandlersSyncNotSendable<Handlers: Sequence>(
         _ handlers: Handlers,
         position: ChannelPipeline.Position
     ) -> Result<Void, Error> where Handlers.Element == ChannelHandler {
@@ -1201,7 +1253,7 @@ extension ChannelPipeline {
             _ handlers: [ChannelHandler],
             position: ChannelPipeline.Position = .last
         ) throws {
-            try self._pipeline.addHandlersSync(handlers, position: position).get()
+            try self._pipeline.addHandlersSyncNotSendable(handlers, position: position).get()
         }
 
         /// Add one or more handlers to the pipeline.
@@ -1214,7 +1266,7 @@ extension ChannelPipeline {
             _ handlers: ChannelHandler...,
             position: ChannelPipeline.Position = .last
         ) throws {
-            try self._pipeline.addHandlersSync(handlers, position: position).get()
+            try self._pipeline.addHandlersSyncNotSendable(handlers, position: position).get()
         }
 
         /// Remove a `ChannelHandler` from the `ChannelPipeline`.
@@ -2130,6 +2182,23 @@ extension ChannelHandlerContext {
         let promise = self.eventLoop.makePromise(of: Void.self, file: file, line: line)
         self.writeAndFlush(data, promise: promise)
         return promise.futureResult
+    }
+
+    /// Returns this `ChannelHandlerContext` as a `NIOLoopBound`, bound to `self.eventLoop`.
+    ///
+    /// This is a shorthand for `NIOLoopBound(self, eventLoop: self.eventLoop)`.
+    ///
+    /// Being able to capture `ChannelHandlerContext`s in `EventLoopFuture` callbacks is important in SwiftNIO programs.
+    /// Of course, this is not always safe because the `EventLoopFuture` callbacks may run on other threads. SwiftNIO
+    /// programmers therefore always had to manually arrange for those callbacks to run on the correct `EventLoop`
+    /// (i.e. `context.eventLoop`) which then made that construction safe.
+    ///
+    /// Newer Swift versions contain a static feature to automatically detect data races which of course can't detect
+    /// the only _dynamically_ ``EventLoop`` a ``EventLoopFuture`` callback is running on. ``NIOLoopBound`` can be used
+    /// to prove to the compiler that this is safe and in case it is not, ``NIOLoopBound`` will trap at runtime. This is
+    /// therefore dynamically enforce the correct behaviour.
+    public var loopBound: NIOLoopBound<ChannelHandlerContext> {
+        NIOLoopBound(self, eventLoop: self.eventLoop)
     }
 }
 

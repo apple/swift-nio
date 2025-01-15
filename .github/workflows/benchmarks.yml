@@ -45,18 +45,32 @@ on:
         default: false
 
 jobs:
+  construct-matrix:
+    name: Construct Benchmarks matrix
+    runs-on: ubuntu-latest
+    outputs:
+      benchmarks-matrix: '${{ steps.generate-matrix.outputs.benchmarks-matrix }}'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: generate-matrix
+        run: echo "benchmarks-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        env:
+          MATRIX_LINUX_COMMAND: "swift package --package-path ${{ inputs.benchmark_package_path }} ${{ inputs.swift_package_arguments }} benchmark baseline check --check-absolute-path ${{ inputs.benchmark_package_path }}/Thresholds/${SWIFT_VERSION}/"
+          MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev"
+          MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
+          MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
+          MATRIX_LINUX_6_0_ENABLED: ${{ inputs.linux_6_0_enabled }}
+          MATRIX_LINUX_NIGHTLY_6_0_ENABLED: ${{ inputs.linux_nightly_6_0_enabled }}
+          MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
+
   benchmarks:
     name: Benchmarks
+    needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Benchmarks"
-      matrix_linux_command: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev && swift package --package-path ${{ inputs.benchmark_package_path }} ${{ inputs.swift_package_arguments }} benchmark baseline check --check-absolute-path ${{ inputs.benchmark_package_path }}/Thresholds/${SWIFT_VERSION}/"
-      matrix_linux_5_9_enabled: ${{ inputs.linux_5_9_enabled }}
-      matrix_linux_5_10_enabled: ${{ inputs.linux_5_10_enabled }}
-      matrix_linux_6_0_enabled: ${{ inputs.linux_6_0_enabled }}
-      matrix_linux_nightly_6_0_enabled: ${{ inputs.linux_nightly_6_0_enabled }}
-      matrix_linux_nightly_main_enabled: ${{ inputs.linux_nightly_main_enabled }}
-      matrix_windows_6_0_enabled: ${{ inputs.windows_6_0_enabled }}
-      matrix_windows_nightly_6_0_enabled: ${{ inputs.windows_nightly_6_0_enabled }}
-      matrix_windows_nightly_main_enabled: ${{ inputs.windows_nightly_main_enabled }}
+      matrix_string: '${{ needs.construct-matrix.outputs.benchmarks-matrix }}'

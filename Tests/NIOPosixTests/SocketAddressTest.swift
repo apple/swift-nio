@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import CNIOLinux
 import XCTest
 
 @testable import NIOCore
