@@ -510,12 +510,14 @@ private final class HappyEyeballsConnectorRunner<ChannelBuilderResult: Sendable>
         // on our event loop. That hop then makes it safe for us to assumeIsolatedUnsafeUnchecked.
         self.connector.loop.assertInEventLoop()
         let aaaaLookup = self.connector.resolver.initiateAAAAQuery(
-            host: self.connector.host, port: self.connector.port
+            host: self.connector.host,
+            port: self.connector.port
         ).hop(to: self.connector.loop).assumeIsolatedUnsafeUnchecked()
         self.whenAAAALookupComplete(future: aaaaLookup)
 
         let aLookup = self.connector.resolver.initiateAQuery(
-            host: self.connector.host, port: self.connector.port
+            host: self.connector.host,
+            port: self.connector.port
         ).hop(to: self.connector.loop).assumeIsolatedUnsafeUnchecked()
         self.whenALookupComplete(future: aLookup)
     }
@@ -529,7 +531,8 @@ private final class HappyEyeballsConnectorRunner<ChannelBuilderResult: Sendable>
     /// This method sets off a scheduled task for the resolution delay.
     private func beginResolutionDelay() {
         resolutionTask = self.connector.loop.assumeIsolated().scheduleTask(
-            in: self.connector.resolutionDelay, resolutionDelayComplete
+            in: self.connector.resolutionDelay,
+            resolutionDelayComplete
         )
     }
 
@@ -547,7 +550,7 @@ private final class HappyEyeballsConnectorRunner<ChannelBuilderResult: Sendable>
 
         connectionTask = self.connector.loop.assumeIsolated().scheduleTask(
             in: self.connector.connectionDelay
-        ) { 
+        ) {
             self.processInput(.connectDelayElapsed)
         }
         connectToTarget(target)

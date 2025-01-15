@@ -1137,7 +1137,8 @@ public final class HappyEyeballsTest: XCTestCase {
         resolver.v6Promise.succeed(MANY_IPv6_RESULTS)
         for channelCount in 1...10 {
             XCTAssertEqual(
-                ourChannelFutures.withLockedValue { $0.count }, channelCount
+                ourChannelFutures.withLockedValue { $0.count },
+                channelCount
             )
             loop.advanceTime(by: .milliseconds(250))
         }
@@ -1146,7 +1147,7 @@ public final class HappyEyeballsTest: XCTestCase {
         // Succeed the first channel future, which will connect because the default
         // channel builder always does.
         defaultChannelBuilder(loop: loop, family: .inet6).whenSuccess { result in
-            ourChannelFutures.withLockedValue { 
+            ourChannelFutures.withLockedValue {
                 $0.first!.succeed(result)
             }
             XCTAssertEqual(result.state(), .connected)
@@ -1176,7 +1177,7 @@ public final class HappyEyeballsTest: XCTestCase {
         // This is fine anyway.
         let errors: NIOLockedValueBox<[DummyError]> = NIOLockedValueBox([])
         let (eyeballer, resolver, loop) = buildEyeballer(host: "example.com", port: 80) { loop, _ in
-            errors.withLockedValue { 
+            errors.withLockedValue {
                 $0.append(DummyError())
                 return loop.makeFailedFuture($0.last!)
             }
@@ -1402,7 +1403,7 @@ struct ChannelSet: Sendable, Sequence {
     subscript(index: Int) -> Channel {
         self.channels.withLockedValue { $0[index] }
     }
-    
+
     func makeIterator() -> some IteratorProtocol<Channel> {
         self.channels.withLockedValue { $0.makeIterator() }
     }

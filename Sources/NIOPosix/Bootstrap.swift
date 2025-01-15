@@ -1196,7 +1196,11 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     ) -> EventLoopFuture<Channel> {
         let channel: SocketChannel
         do {
-            channel = try Self.makeSocketChannel(eventLoop: eventLoop, protocolFamily: protocolFamily, enableMPTCP: enableMPTCP)
+            channel = try Self.makeSocketChannel(
+                eventLoop: eventLoop,
+                protocolFamily: protocolFamily,
+                enableMPTCP: enableMPTCP
+            )
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
@@ -1500,7 +1504,10 @@ extension ClientBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private static func initializeAndRegisterNewChannel<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
+    private static func initializeAndRegisterNewChannel<
+        ChannelInitializerResult: Sendable,
+        PostRegistrationTransformationResult: Sendable
+    >(
         eventLoop: EventLoop,
         protocolFamily: NIOBSDSocket.ProtocolFamily,
         enableMPTPCP: Bool,
@@ -1560,7 +1567,10 @@ extension ClientBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private static func initializeAndRegisterChannel<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
+    private static func initializeAndRegisterChannel<
+        ChannelInitializerResult: Sendable,
+        PostRegistrationTransformationResult: Sendable
+    >(
         channel: SocketChannel,
         bootstrapChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
         channelOptions: ChannelOptions.Storage,
