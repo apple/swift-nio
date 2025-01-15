@@ -131,7 +131,7 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
         self.scheduledTasks.removeFirst { $0.id == taskID }
     }
 
-    private func insertTask<ReturnType: Sendable>(
+    private func insertTask<ReturnType>(
         taskID: UInt64,
         deadline: NIODeadline,
         promise: EventLoopPromise<ReturnType>,
@@ -145,7 +145,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
             insertOrder: self.nextTaskNumber(),
             task: {
                 do {
-                    promise.succeed(try task())
+                    // UnsafeUnchecked is acceptable because we know we're in the loop here.
+                    promise.assumeIsolatedUnsafeUnchecked().succeed(try task())
                 } catch let err {
                     promise.fail(err)
                 }
@@ -159,7 +160,7 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
     @preconcurrency
-    public func scheduleTask<T: Sendable>(
+    public func scheduleTask<T>(
         deadline: NIODeadline,
         _ task: @escaping @Sendable () throws -> T
     ) -> Scheduled<T> {
@@ -201,7 +202,7 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     /// - see: `EventLoop.scheduleTask(in:_:)`
     @discardableResult
     @preconcurrency
-    public func scheduleTask<T: Sendable>(in: TimeAmount, _ task: @escaping @Sendable () throws -> T) -> Scheduled<T> {
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping @Sendable () throws -> T) -> Scheduled<T> {
         self.scheduleTask(deadline: self.now + `in`, task)
     }
 

@@ -93,9 +93,6 @@ public struct FileRegion: Sendable {
     }
 }
 
-@available(*, unavailable)
-extension FileRegion: Sendable {}
-
 extension FileRegion {
     /// Create a new `FileRegion` forming a complete file.
     ///

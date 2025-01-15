@@ -213,10 +213,25 @@ extension EventLoopFuture {
         public func flatMap<NewValue: Sendable>(
             _ callback: @escaping (Value) -> EventLoopFuture<NewValue>
         ) -> EventLoopFuture<NewValue>.Isolated {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.flatMap {
-                unsafeTransfer.wrappedValue($0)
-            }.assumeIsolatedUnsafeUnchecked()
+            let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self._wrapped.eventLoop)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                switch base._value! {
+                case .success(let t):
+                    let futureU = callback(t)
+                    if futureU.eventLoop.inEventLoop {
+                        return futureU._addCallback {
+                            next._setValue(value: futureU._value!)
+                        }
+                    } else {
+                        futureU.cascade(to: next)
+                        return CallbackList()
+                    }
+                case .failure(let error):
+                    return next._setValue(value: .failure(error))
+                }
+            }
+            return next.futureResult.assumeIsolatedUnsafeUnchecked()
         }
 
         /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
@@ -238,10 +253,22 @@ extension EventLoopFuture {
         public func flatMapThrowing<NewValue>(
             _ callback: @escaping (Value) throws -> NewValue
         ) -> EventLoopFuture<NewValue>.Isolated {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.flatMapThrowing {
-                try unsafeTransfer.wrappedValue($0)
-            }.assumeIsolatedUnsafeUnchecked()
+            let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self._wrapped.eventLoop)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                switch base._value! {
+                case .success(let t):
+                    do {
+                        let r = try callback(t)
+                        return next._setValue(value: .success(r))
+                    } catch {
+                        return next._setValue(value: .failure(error))
+                    }
+                case .failure(let e):
+                    return next._setValue(value: .failure(e))
+                }
+            }
+            return next.futureResult.assumeIsolatedUnsafeUnchecked()
         }
 
         /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
@@ -263,10 +290,22 @@ extension EventLoopFuture {
         public func flatMapErrorThrowing(
             _ callback: @escaping (Error) throws -> Value
         ) -> EventLoopFuture<Value>.Isolated {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.flatMapErrorThrowing {
-                try unsafeTransfer.wrappedValue($0)
-            }.assumeIsolatedUnsafeUnchecked()
+            let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self._wrapped.eventLoop)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                switch base._value! {
+                case .success(let t):
+                    return next._setValue(value: .success(t))
+                case .failure(let e):
+                    do {
+                        let r = try callback(e)
+                        return next._setValue(value: .success(r))
+                    } catch {
+                        return next._setValue(value: .failure(error))
+                    }
+                }
+            }
+            return next.futureResult.assumeIsolatedUnsafeUnchecked()
         }
 
         /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
@@ -300,10 +339,17 @@ extension EventLoopFuture {
         public func map<NewValue>(
             _ callback: @escaping (Value) -> (NewValue)
         ) -> EventLoopFuture<NewValue>.Isolated {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.map {
-                unsafeTransfer.wrappedValue($0)
-            }.assumeIsolatedUnsafeUnchecked()
+            if NewValue.self == Value.self && NewValue.self == Void.self {
+                self.whenSuccess(callback as! (Value) -> Void)
+                return self as! EventLoopFuture<NewValue>.Isolated
+            } else {
+                let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self._wrapped.eventLoop)
+                let base = self._wrapped
+                base._whenCompleteIsolated {
+                    next._setValue(value: base._value!.map(callback))
+                }
+                return next.futureResult.assumeIsolatedUnsafeUnchecked()
+            }
         }
 
         /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
@@ -325,10 +371,25 @@ extension EventLoopFuture {
         public func flatMapError(
             _ callback: @escaping (Error) -> EventLoopFuture<Value>
         ) -> EventLoopFuture<Value>.Isolated where Value: Sendable {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.flatMapError {
-                unsafeTransfer.wrappedValue($0)
-            }.assumeIsolatedUnsafeUnchecked()
+            let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self._wrapped.eventLoop)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                switch base._value! {
+                case .success(let t):
+                    return next._setValue(value: .success(t))
+                case .failure(let e):
+                    let t = callback(e)
+                    if t.eventLoop.inEventLoop {
+                        return t._addCallback {
+                            next._setValue(value: t._value!)
+                        }
+                    } else {
+                        t.cascade(to: next)
+                        return CallbackList()
+                    }
+                }
+            }
+            return next.futureResult.assumeIsolatedUnsafeUnchecked()
         }
 
         /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
@@ -349,10 +410,22 @@ extension EventLoopFuture {
         public func flatMapResult<NewValue, SomeError: Error>(
             _ body: @escaping (Value) -> Result<NewValue, SomeError>
         ) -> EventLoopFuture<NewValue>.Isolated {
-            let unsafeTransfer = UnsafeTransfer(body)
-            return self._wrapped.flatMapResult {
-                unsafeTransfer.wrappedValue($0)
-            }.assumeIsolatedUnsafeUnchecked()
+            let next = EventLoopPromise<NewValue>.makeUnleakablePromise(eventLoop: self._wrapped.eventLoop)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                switch base._value! {
+                case .success(let value):
+                    switch body(value) {
+                    case .success(let newValue):
+                        return next._setValue(value: .success(newValue))
+                    case .failure(let error):
+                        return next._setValue(value: .failure(error))
+                    }
+                case .failure(let e):
+                    return next._setValue(value: .failure(e))
+                }
+            }
+            return next.futureResult.assumeIsolatedUnsafeUnchecked()
         }
 
         /// When the current `EventLoopFuture<Value>` is in an error state, run the provided callback, which
@@ -372,10 +445,17 @@ extension EventLoopFuture {
         public func recover(
             _ callback: @escaping (Error) -> Value
         ) -> EventLoopFuture<Value>.Isolated {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.recover {
-                unsafeTransfer.wrappedValue($0)
-            }.assumeIsolatedUnsafeUnchecked()
+            let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self._wrapped.eventLoop)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                switch base._value! {
+                case .success(let t):
+                    return next._setValue(value: .success(t))
+                case .failure(let e):
+                    return next._setValue(value: .success(callback(e)))
+                }
+            }
+            return next.futureResult.assumeIsolatedUnsafeUnchecked()
         }
 
         /// Adds an observer callback to this `EventLoopFuture` that is called when the
@@ -391,9 +471,12 @@ extension EventLoopFuture {
         @inlinable
         @available(*, noasync)
         public func whenSuccess(_ callback: @escaping (Value) -> Void) {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.whenSuccess {
-                unsafeTransfer.wrappedValue($0)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                if case .success(let t) = base._value! {
+                    callback(t)
+                }
+                return CallbackList()
             }
         }
 
@@ -410,9 +493,12 @@ extension EventLoopFuture {
         @inlinable
         @available(*, noasync)
         public func whenFailure(_ callback: @escaping (Error) -> Void) {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.whenFailure {
-                unsafeTransfer.wrappedValue($0)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                if case .failure(let e) = base._value! {
+                    callback(e)
+                }
+                return CallbackList()
             }
         }
 
@@ -426,9 +512,10 @@ extension EventLoopFuture {
         public func whenComplete(
             _ callback: @escaping (Result<Value, Error>) -> Void
         ) {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.whenComplete {
-                unsafeTransfer.wrappedValue($0)
+            let base = self._wrapped
+            base._whenCompleteIsolated {
+                callback(base._value!)
+                return CallbackList()
             }
         }
 
@@ -443,10 +530,8 @@ extension EventLoopFuture {
         public func always(
             _ callback: @escaping (Result<Value, Error>) -> Void
         ) -> EventLoopFuture<Value>.Isolated {
-            let unsafeTransfer = UnsafeTransfer(callback)
-            return self._wrapped.always {
-                unsafeTransfer.wrappedValue($0)
-            }.assumeIsolatedUnsafeUnchecked()
+            self.whenComplete { result in callback(result) }
+            return self
         }
 
         /// Unwrap an `EventLoopFuture` where its type parameter is an `Optional`.
@@ -521,11 +606,10 @@ extension EventLoopFuture {
     /// Returns a variant of this ``EventLoopFuture`` with less strict
     /// `Sendable` requirements. Can only be called from on the
     /// ``EventLoop`` to which this ``EventLoopFuture`` is bound, will crash
-    /// if that invariant fails to be met.
+    /// if that invariant fails to be met in debug builds.
     ///
     /// This is an unsafe version of ``EventLoopFuture/assumeIsolated()`` which
-    /// omits the runtime check in release builds and doesn't prevent you using it
-    /// from using it in async contexts.
+    /// omits the runtime check in release builds.
     @inlinable
     @available(*, noasync)
     public func assumeIsolatedUnsafeUnchecked() -> Isolated {
