@@ -307,12 +307,27 @@ public final class NIOAsyncTestingChannel: Channel {
         handlers: [ChannelHandler & Sendable],
         loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop()
     ) async {
+        try! await self.init(loop: loop) { channel in
+            try channel.pipeline.syncOperations.addHandlers(handlers)
+        }
+    }
+
+    /// Create a new instance.
+    ///
+    /// During creation it will automatically also register itself on the ``NIOAsyncTestingEventLoop``.
+    ///
+    /// - Parameters:
+    ///   - loop: The ``NIOAsyncTestingEventLoop`` to use.
+    ///   - channelInitializer: The initialization closure which will be run on the `EventLoop` before registration. This could be used to add handlers using `syncOperations`.
+    public convenience init(
+        loop: NIOAsyncTestingEventLoop = NIOAsyncTestingEventLoop(),
+        channelInitializer: @escaping @Sendable (NIOAsyncTestingChannel) throws -> Void
+    ) async throws {
         self.init(loop: loop)
-
-        try! await self._pipeline.addHandlers(handlers)
-
-        // This will never throw...
-        try! await self.register()
+        try await loop.submit {
+            try channelInitializer(self)
+        }.get()
+        try await self.register()
     }
 
     /// Asynchronously closes the ``NIOAsyncTestingChannel``.

@@ -60,7 +60,7 @@ public protocol NIOEventLoopMetricsDelegate: Sendable {
 /// The whole processing of I/O and tasks is done by a `NIOThread` that is tied to the `SelectableEventLoop`. This `NIOThread`
 /// is guaranteed to never change!
 @usableFromInline
-internal final class SelectableEventLoop: EventLoop {
+internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 
     static let strictModeEnabled: Bool = {
         switch getenv("SWIFTNIO_STRICT").map({ String.init(cString: $0).lowercased() }) {

@@ -50,7 +50,7 @@ extension ByteBuffer {
 /// A `Channel` for a client socket.
 ///
 /// - Note: All operations on `SocketChannel` are thread-safe.
-final class SocketChannel: BaseStreamSocketChannel<Socket> {
+final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable {
     private var connectTimeout: TimeAmount? = nil
 
     init(eventLoop: SelectableEventLoop, protocolFamily: NIOBSDSocket.ProtocolFamily, enableMPTCP: Bool = false) throws
@@ -192,7 +192,7 @@ final class SocketChannel: BaseStreamSocketChannel<Socket> {
 /// A `Channel` for a server socket.
 ///
 /// - Note: All operations on `ServerSocketChannel` are thread-safe.
-final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
+final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sendable {
 
     private var backlog: Int32 = 128
     private let group: EventLoopGroup
@@ -451,7 +451,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket> {
 /// A channel used with datagram sockets.
 ///
 /// Currently, it does not support connected mode which is well worth adding.
-final class DatagramChannel: BaseSocketChannel<Socket> {
+final class DatagramChannel: BaseSocketChannel<Socket>, @unchecked Sendable {
     private var reportExplicitCongestionNotifications = false
     private var receivePacketInfo = false
 
