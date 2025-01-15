@@ -3502,30 +3502,23 @@ extension ByteBufferTest {
 // MARK: - Int / FixedWidthInteger init
 extension ByteBufferTest {
     func testCreateIntegersFromByteBuffer() {
-        // 8-bit
-        let uint8Buffer = ByteBuffer(bytes: [42])
-        XCTAssertEqual(UInt8(buffer: uint8Buffer), 42)
-        XCTAssertEqual(Int8(buffer: uint8Buffer), 42)
+        let uint32BufferLE = ByteBuffer(bytes: [0x04, 0x03, 0x02, 0x01])
+        let uint32BufferBE = ByteBuffer(bytes: [0x01, 0x02, 0x03, 0x04])
+        let tooSmallInt32Buffer = ByteBuffer(bytes: [0x01, 0x02, 0x03])
 
-        // 16-bit
-        let uint16Bytes: [UInt8] = Endianness.host == .little ? [0x02, 0x01] : [0x01, 0x02]
-        let uint16Buffer = ByteBuffer(bytes: uint16Bytes)
-        XCTAssertEqual(UInt16(buffer: uint16Buffer), 0x0102)
-        XCTAssertEqual(Int16(buffer: uint16Buffer), 0x0102)
+        XCTAssertEqual(Int32(buffer: uint32BufferLE, endianness: .little), 0x0102_0304)
+        XCTAssertEqual(Int32(buffer: uint32BufferBE, endianness: .big), 0x0102_0304)
+        XCTAssertNil(Int32(buffer: tooSmallInt32Buffer))
 
-        // 32-bit
-        let uint32Bytes: [UInt8] = Endianness.host == .little ? [0x04, 0x03, 0x02, 0x01] : [0x01, 0x02, 0x03, 0x04]
-        let uint32Buffer = ByteBuffer(bytes: uint32Bytes)
-        XCTAssertEqual(UInt32(buffer: uint32Buffer), 0x01020304)
-        XCTAssertEqual(Int32(buffer: uint32Buffer), 0x01020304)
+        let uint64BufferLE = ByteBuffer(bytes: [0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01])
+        let uint64BufferBE = ByteBuffer(bytes: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
+        let tooSmallInt64Buffer = ByteBuffer(bytes: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
+        let tooBigInt64Buffer = ByteBuffer(bytes: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09])
 
-        // 64-bit
-        let uint64Bytes: [UInt8] = Endianness.host == .little ?
-        [0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01] :
-        [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]
-        let uint64Buffer = ByteBuffer(bytes: uint64Bytes)
-        XCTAssertEqual(UInt64(buffer: uint64Buffer), 0x0102030405060708)
-        XCTAssertEqual(Int64(buffer: uint64Buffer), 0x0102030405060708)
+        XCTAssertEqual(Int64(buffer: uint64BufferLE, endianness: .little), 0x0102_0304_0506_0708)
+        XCTAssertEqual(Int64(buffer: uint64BufferBE, endianness: .big), 0x0102_0304_0506_0708)
+        XCTAssertNil(Int64(buffer: tooSmallInt64Buffer))
+        XCTAssertNil(Int64(buffer: tooBigInt64Buffer))
     }
 }
 

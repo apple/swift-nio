@@ -116,6 +116,7 @@ extension ByteBuffer {
 }
 
 extension FixedWidthInteger {
+
     /// Returns the next power of two.
     @inlinable
     func nextPowerOf2() -> Self {
@@ -135,18 +136,21 @@ extension FixedWidthInteger {
         return 1 << ((Self.bitWidth - 1) - self.leadingZeroBitCount)
     }
 
-    /// Initialize an integer from a ByteBuffer. The buffer must contain enough bytes to represent the integer.
+    /// Initialize an integer from a byte buffer of exactly the right size.
     /// The bytes will be read using the host system's endianness.
-    /// If the buffer doesn't contain enough bytes to represent the integer, the program will crash.
     ///
     /// - Parameters:
     ///   - buffer: The ByteBuffer to read from
+    ///   - endianness: The endianness to use when reading the integer, defaults to the host system's endianness.
     ///
-    /// - Returns: The integer value read from the buffer
+    /// - Returns: The integer value read from the buffer, or nil if the buffer size did not match the integer type.
     @inlinable
-    public init(buffer: ByteBuffer) {
+    public init?(buffer: ByteBuffer, endianness: Endianness = .host) {
         var buffer = buffer
-        self = buffer.readInteger(endianness: .host, as: Self.self)!
+        guard let value = buffer.readInteger(endianness: endianness, as: Self.self), buffer.readableBytes == 0 else {
+            return nil
+        }
+        self = value
     }
 }
 
