@@ -142,8 +142,6 @@ extension FixedWidthInteger {
     /// - Parameters:
     ///   - buffer: The ByteBuffer to read from
     ///   - endianness: The endianness to use when reading the integer, defaults to the host system's endianness.
-    ///
-    /// - Returns: The integer value read from the buffer, or nil if the buffer size did not match the integer type.
     @inlinable
     public init?(buffer: ByteBuffer, endianness: Endianness = .host) {
         var buffer = buffer
