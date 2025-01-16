@@ -83,10 +83,11 @@ extension ChannelPipeline {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
+        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
             let result = Result<Void, Error> {
                 try self.syncOperations.addHTTPClientHandlers(
-                    position: position,
+                    position: syncPosition,
                     leftOverBytesStrategy: leftOverBytesStrategy,
                     withClientUpgrade: upgrade
                 )
@@ -95,7 +96,7 @@ extension ChannelPipeline {
         } else {
             future = self.eventLoop.submit {
                 try self.syncOperations.addHTTPClientHandlers(
-                    position: position,
+                    position: syncPosition,
                     leftOverBytesStrategy: leftOverBytesStrategy,
                     withClientUpgrade: upgrade
                 )
@@ -126,10 +127,11 @@ extension ChannelPipeline {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
+        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
             let result = Result<Void, Error> {
                 try self.syncOperations.addHTTPClientHandlers(
-                    position: position,
+                    position: syncPosition,
                     leftOverBytesStrategy: leftOverBytesStrategy,
                     enableOutboundHeaderValidation: enableOutboundHeaderValidation,
                     withClientUpgrade: upgrade
@@ -139,7 +141,7 @@ extension ChannelPipeline {
         } else {
             future = self.eventLoop.submit {
                 try self.syncOperations.addHTTPClientHandlers(
-                    position: position,
+                    position: syncPosition,
                     leftOverBytesStrategy: leftOverBytesStrategy,
                     enableOutboundHeaderValidation: enableOutboundHeaderValidation,
                     withClientUpgrade: upgrade
@@ -173,10 +175,11 @@ extension ChannelPipeline {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
+        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
             let result = Result<Void, Error> {
                 try self.syncOperations.addHTTPClientHandlers(
-                    position: position,
+                    position: syncPosition,
                     leftOverBytesStrategy: leftOverBytesStrategy,
                     enableOutboundHeaderValidation: enableOutboundHeaderValidation,
                     encoderConfiguration: encoderConfiguration,
@@ -187,7 +190,7 @@ extension ChannelPipeline {
         } else {
             future = self.eventLoop.submit {
                 try self.syncOperations.addHTTPClientHandlers(
-                    position: position,
+                    position: syncPosition,
                     leftOverBytesStrategy: leftOverBytesStrategy,
                     enableOutboundHeaderValidation: enableOutboundHeaderValidation,
                     encoderConfiguration: encoderConfiguration,
@@ -342,10 +345,11 @@ extension ChannelPipeline {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
+        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
             let result = Result<Void, Error> {
                 try self.syncOperations.configureHTTPServerPipeline(
-                    position: position,
+                    position: syncPosition,
                     withPipeliningAssistance: pipelining,
                     withServerUpgrade: upgrade,
                     withErrorHandling: errorHandling,
@@ -357,7 +361,7 @@ extension ChannelPipeline {
         } else {
             future = self.eventLoop.submit {
                 try self.syncOperations.configureHTTPServerPipeline(
-                    position: position,
+                    position: syncPosition,
                     withPipeliningAssistance: pipelining,
                     withServerUpgrade: upgrade,
                     withErrorHandling: errorHandling,
@@ -386,7 +390,7 @@ extension ChannelPipeline.SynchronousOperations {
     /// - Throws: If the pipeline could not be configured.
     @preconcurrency
     public func addHTTPClientHandlers(
-        position: ChannelPipeline.Position = .last,
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
         withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration? = nil
     ) throws {
@@ -411,7 +415,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///         for more details.
     /// - Throws: If the pipeline could not be configured.
     public func addHTTPClientHandlers(
-        position: ChannelPipeline.Position = .last,
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
         enableOutboundHeaderValidation: Bool = true,
         withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration? = nil
@@ -439,7 +443,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///         for more details.
     /// - Throws: If the pipeline could not be configured.
     public func addHTTPClientHandlers(
-        position: ChannelPipeline.Position = .last,
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
         enableOutboundHeaderValidation: Bool = true,
         encoderConfiguration: HTTPRequestEncoder.Configuration = .init(),
@@ -455,7 +459,7 @@ extension ChannelPipeline.SynchronousOperations {
     }
 
     private func _addHTTPClientHandlers(
-        position: ChannelPipeline.Position = .last,
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
         enableOutboundHeaderValidation: Bool = true,
         encoderConfiguration: HTTPRequestEncoder.Configuration = .init(),
@@ -481,7 +485,7 @@ extension ChannelPipeline.SynchronousOperations {
     }
 
     private func _addHTTPClientHandlers(
-        position: ChannelPipeline.Position,
+        position: ChannelPipeline.SynchronousOperations.Position,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy,
         encoderConfiguration: HTTPRequestEncoder.Configuration
     ) throws {
@@ -496,7 +500,7 @@ extension ChannelPipeline.SynchronousOperations {
     }
 
     private func _addHTTPClientHandlersFallback(
-        position: ChannelPipeline.Position,
+        position: ChannelPipeline.SynchronousOperations.Position,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy,
         enableOutboundHeaderValidation: Bool,
         encoderConfiguration: HTTPRequestEncoder.Configuration,
@@ -550,7 +554,7 @@ extension ChannelPipeline.SynchronousOperations {
     /// - Throws: If the pipeline could not be configured.
     @preconcurrency
     public func configureHTTPServerPipeline(
-        position: ChannelPipeline.Position = .last,
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
         withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true
@@ -594,7 +598,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///         spec compliance. Defaults to `true`.
     /// - Throws: If the pipeline could not be configured.
     public func configureHTTPServerPipeline(
-        position: ChannelPipeline.Position = .last,
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
         withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true,
@@ -641,7 +645,7 @@ extension ChannelPipeline.SynchronousOperations {
     ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
     /// - Throws: If the pipeline could not be configured.
     public func configureHTTPServerPipeline(
-        position: ChannelPipeline.Position = .last,
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
         withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true,
@@ -659,7 +663,7 @@ extension ChannelPipeline.SynchronousOperations {
     }
 
     private func _configureHTTPServerPipeline(
-        position: ChannelPipeline.Position = .last,
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
         withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true,

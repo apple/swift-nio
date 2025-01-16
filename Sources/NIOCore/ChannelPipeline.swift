@@ -175,11 +175,12 @@ public final class ChannelPipeline: ChannelInvoker {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
+        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
-            future = self.eventLoop.makeCompletedFuture(self.addHandlerSync(handler, name: name, position: position))
+            future = self.eventLoop.makeCompletedFuture(self.addHandlerSync(handler, name: name, position: syncPosition))
         } else {
             future = self.eventLoop.submit {
-                try self.addHandlerSync(handler, name: name, position: position).get()
+                try self.addHandlerSync(handler, name: name, position: syncPosition).get()
             }
         }
 
@@ -198,7 +199,7 @@ public final class ChannelPipeline: ChannelInvoker {
     fileprivate func addHandlerSync(
         _ handler: ChannelHandler,
         name: String? = nil,
-        position: ChannelPipeline.Position = .last
+        position: ChannelPipeline.SynchronousOperations.Position = .last
     ) -> Result<Void, Error> {
         self.eventLoop.assertInEventLoop()
 
@@ -1122,11 +1123,12 @@ extension ChannelPipeline {
         _ handlers: [ChannelHandler & Sendable],
         position: ChannelPipeline.Position
     ) -> Result<Void, Error> {
-        switch position {
+        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
+        switch syncPosition {
         case .first, .after:
-            return self._addHandlersSync(handlers.reversed(), position: position)
+            return self._addHandlersSync(handlers.reversed(), position: syncPosition)
         case .last, .before:
-            return self._addHandlersSync(handlers, position: position)
+            return self._addHandlersSync(handlers, position: syncPosition)
         }
     }
 
@@ -1143,7 +1145,7 @@ extension ChannelPipeline {
     /// - Returns: A result representing whether the handlers were added or not.
     fileprivate func addHandlersSyncNotSendable(
         _ handlers: [ChannelHandler],
-        position: ChannelPipeline.Position
+        position: ChannelPipeline.SynchronousOperations.Position
     ) -> Result<Void, Error> {
         switch position {
         case .first, .after:
@@ -1162,7 +1164,7 @@ extension ChannelPipeline {
     /// - Returns: A result representing whether the handlers were added or not.
     private func _addHandlersSync<Handlers: Sequence>(
         _ handlers: Handlers,
-        position: ChannelPipeline.Position
+        position: ChannelPipeline.SynchronousOperations.Position
     ) -> Result<Void, Error> where Handlers.Element == ChannelHandler & Sendable {
         self.eventLoop.assertInEventLoop()
 
@@ -1191,7 +1193,7 @@ extension ChannelPipeline {
     /// - Returns: A result representing whether the handlers were added or not.
     private func _addHandlersSyncNotSendable<Handlers: Sequence>(
         _ handlers: Handlers,
-        position: ChannelPipeline.Position
+        position: ChannelPipeline.SynchronousOperations.Position
     ) -> Result<Void, Error> where Handlers.Element == ChannelHandler {
         self.eventLoop.assertInEventLoop()
 
@@ -1238,7 +1240,7 @@ extension ChannelPipeline {
         public func addHandler(
             _ handler: ChannelHandler,
             name: String? = nil,
-            position: ChannelPipeline.Position = .last
+            position: ChannelPipeline.SynchronousOperations.Position = .last
         ) throws {
             try self._pipeline.addHandlerSync(handler, name: name, position: position).get()
         }
@@ -1251,7 +1253,7 @@ extension ChannelPipeline {
         ///   - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
         public func addHandlers(
             _ handlers: [ChannelHandler],
-            position: ChannelPipeline.Position = .last
+            position: ChannelPipeline.SynchronousOperations.Position = .last
         ) throws {
             try self._pipeline.addHandlersSyncNotSendable(handlers, position: position).get()
         }
@@ -1264,7 +1266,7 @@ extension ChannelPipeline {
         ///   - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
         public func addHandlers(
             _ handlers: ChannelHandler...,
-            position: ChannelPipeline.Position = .last
+            position: ChannelPipeline.SynchronousOperations.Position = .last
         ) throws {
             try self._pipeline.addHandlersSyncNotSendable(handlers, position: position).get()
         }
@@ -1571,6 +1573,38 @@ extension ChannelPipeline {
 
         /// After the given `ChannelHandler`.
         case after(ChannelHandler & Sendable)
+    }
+}
+
+extension ChannelPipeline.SynchronousOperations {
+    /// A `Position` within the `ChannelPipeline`'s `SynchronousOperations` used to insert non-sendable handlers
+    /// into the `ChannelPipeline` at a certain position.
+    @preconcurrency
+    public enum Position {
+        /// The first `ChannelHandler` -- the front of the `ChannelPipeline`.
+        case first
+
+        /// The last `ChannelHandler` -- the back of the `ChannelPipeline`.
+        case last
+
+        /// Before the given `ChannelHandler`.
+        case before(ChannelHandler)
+
+        /// After the given `ChannelHandler`.
+        case after(ChannelHandler)
+
+        package init(_ position: ChannelPipeline.Position) {
+            switch position {
+            case .first:
+                self = .first
+            case .last:
+                self = .last
+            case .before(let handler):
+                self = .before(handler)
+            case .after(let handler):
+                self = .after(handler)
+            }
+        }
     }
 }
 
