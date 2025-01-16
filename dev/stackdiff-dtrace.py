@@ -17,7 +17,7 @@ import collections
 import re
 import sys
 
-num_regex = "^ +([0-9]+)$"
+num_regex = b"^ +([0-9]+)$"
 
 
 def put_in_dict(path):
@@ -54,10 +54,10 @@ def put_in_dict(path):
     #               libswiftCore.dylib`swift_allocObject+0x27
     # (truncated)
     dictionary = collections.defaultdict(list)
-    with open(path, "r") as f:
+    with open(path, "rb") as f:
         current_stack = []
         for line in f:
-            if not line.startswith(" "):
+            if not line.startswith(b" "):
                 # All lines we're intereted in are indented so ignore this one.
                 pass
             elif re.match(num_regex, line):
@@ -69,10 +69,10 @@ def put_in_dict(path):
                 # everything before the '+'. We only take at most the first 8
                 # lines for the key so that we group 'similar' stacks in our
                 # output.
-                key = "\n".join(line.split("+")[0] for line in current_stack[:8])
+                key = b"\n".join(line.split(b"+")[0] for line in current_stack[:8])
 
                 # Record this stack and reset our state to build a new one.
-                dictionary[key].append((int(line), "\n".join(current_stack)))
+                dictionary[key].append((int(line), b"\n".join(current_stack)))
                 current_stack = []
             else:
                 # This line doesn't contain just a number. This might be an
@@ -106,7 +106,7 @@ def extract_useful_keys(d):
 
 def print_dictionary_member(d, key):
     print(total_count_for_key(d, key))
-    print(key)
+    print(key.decode('utf8'))
     print()
     print_dictionary_member_detail(d, key)
     print()
@@ -116,7 +116,7 @@ def print_dictionary_member_detail(d, key):
     value = d[key]
     for (count, stack) in value:
         print("    %d" % count)
-        print("        " + stack.replace("\n", "\n        "))
+        print((b"        " + stack.replace(b"\n", b"\n        ")).decode('utf8'))
 
 
 def usage():

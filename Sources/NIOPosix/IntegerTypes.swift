@@ -16,7 +16,7 @@
 
 /// A 24-bit unsigned integer value type.
 @usableFromInline
-struct _UInt24 {
+struct _UInt24: Sendable {
     @usableFromInline var _backing: (UInt16, UInt8)
 
     @inlinable
@@ -65,7 +65,7 @@ extension _UInt24: CustomStringConvertible {
 // MARK: _UInt56
 
 /// A 56-bit unsigned integer value type.
-struct _UInt56 {
+struct _UInt56: Sendable {
     @usableFromInline var _backing: (UInt32, UInt16, UInt8)
 
     @inlinable init(_ value: UInt64) {

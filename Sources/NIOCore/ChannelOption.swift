@@ -64,7 +64,7 @@ public typealias ConnectTimeoutOption = ChannelOptions.Types.ConnectTimeoutOptio
 public typealias AllowRemoteHalfClosureOption = ChannelOptions.Types.AllowRemoteHalfClosureOption
 
 extension ChannelOptions {
-    public enum Types {
+    public enum Types: Sendable {
 
         /// `SocketOption` allows users to specify configuration settings that are directly applied to the underlying socket file descriptor.
         ///
