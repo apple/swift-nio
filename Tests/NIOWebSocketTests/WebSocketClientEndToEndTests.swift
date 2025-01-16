@@ -466,6 +466,35 @@ class WebSocketClientEndToEndTests: XCTestCase {
         // Close the pipeline.
         XCTAssertNoThrow(try clientChannel.close().wait())
     }
+
+    func testErrorHandlerMaskFrameForClient() throws {
+
+        let (clientChannel, _) = try self.runSuccessfulUpgrade()
+        let maskBitMask: UInt8 = 0x80
+
+        var data = clientChannel.allocator.buffer(capacity: 4)
+        // A fake frame header that claims that the length of the frame is 16385 bytes,
+        // larger than the frame max.
+        data.writeBytes([0x81, 0xFE, 0x40, 0x01])
+
+        XCTAssertThrowsError(try clientChannel.writeInbound(data)) { error in
+            XCTAssertEqual(.invalidFrameLength, error as? NIOWebSocketError)
+        }
+
+        clientChannel.embeddedEventLoop.run()
+        var buffer = try clientChannel.readAllOutboundBuffers()
+
+        guard let (_, secondByte) = buffer.readMultipleIntegers(as: (UInt8, UInt8).self) else {
+            XCTFail("Insufficient bytes from WebSocket frame")
+            return
+        }
+
+        let maskedBit = (secondByte & maskBitMask)
+        XCTAssertEqual(0x80, maskedBit)
+
+        XCTAssertNoThrow(!clientChannel.isActive)
+        XCTAssertTrue(try clientChannel.finish(acceptAlreadyClosed: true).isClean)
+    }
 }
 
 #if !canImport(Darwin) || swift(>=5.10)
