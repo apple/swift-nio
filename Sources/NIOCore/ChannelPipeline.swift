@@ -1245,6 +1245,24 @@ extension ChannelPipeline {
             try self._pipeline.addHandlerSync(handler, name: name, position: position).get()
         }
 
+        /// Add a handler to the pipeline.
+        ///
+        /// - Important: This *must* be called on the event loop.
+        /// - Parameters:
+        ///   - handler: The handler to add.
+        ///   - name: The name to use for the `ChannelHandler` when it's added. If no name is specified the one will be generated.
+        ///   - position: The position in the `ChannelPipeline` to add `handler`. Defaults to `.last`.
+        @available(*, deprecated, message: "Use ChannelPipeline.SynchronousOperations.Position instead")
+        @_disfavoredOverload
+        public func addHandler(
+            _ handler: ChannelHandler,
+            name: String? = nil,
+            position: ChannelPipeline.Position = .last
+        ) throws {
+            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
+            try self._pipeline.addHandlerSync(handler, name: name, position: syncPosition).get()
+        }
+
         /// Add an array of handlers to the pipeline.
         ///
         /// - Important: This *must* be called on the event loop.
@@ -1258,6 +1276,22 @@ extension ChannelPipeline {
             try self._pipeline.addHandlersSyncNotSendable(handlers, position: position).get()
         }
 
+        /// Add an array of handlers to the pipeline.
+        ///
+        /// - Important: This *must* be called on the event loop.
+        /// - Parameters:
+        ///   - handlers: The handlers to add.
+        ///   - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
+        @available(*, deprecated, message: "Use ChannelPipeline.SynchronousOperations.Position instead")
+        @_disfavoredOverload
+        public func addHandlers(
+            _ handlers: [ChannelHandler],
+            position: ChannelPipeline.Position = .last
+        ) throws {
+            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
+            try self._pipeline.addHandlersSyncNotSendable(handlers, position: syncPosition).get()
+        }
+
         /// Add one or more handlers to the pipeline.
         ///
         /// - Important: This *must* be called on the event loop.
@@ -1269,6 +1303,22 @@ extension ChannelPipeline {
             position: ChannelPipeline.SynchronousOperations.Position = .last
         ) throws {
             try self._pipeline.addHandlersSyncNotSendable(handlers, position: position).get()
+        }
+
+        /// Add one or more handlers to the pipeline.
+        ///
+        /// - Important: This *must* be called on the event loop.
+        /// - Parameters:
+        ///   - handlers: The handlers to add.
+        ///   - position: The position in the `ChannelPipeline` to add `handlers`. Defaults to `.last`.
+        @available(*, deprecated, message: "Use ChannelPipeline.SynchronousOperations.Position instead")
+        @_disfavoredOverload
+        public func addHandlers(
+            _ handlers: ChannelHandler...,
+            position: ChannelPipeline.Position = .last
+        ) throws {
+            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
+            try self._pipeline.addHandlersSyncNotSendable(handlers, position: syncPosition).get()
         }
 
         /// Remove a `ChannelHandler` from the `ChannelPipeline`.
