@@ -551,6 +551,88 @@ public struct TimeAmount: Hashable, Sendable {
     }
 }
 
+/// Contains the logic for parsing time amounts from strings,
+/// and printing pretty strings to represent time amounts.
+extension TimeAmount: CustomStringConvertible {
+
+    /// Errors thrown when parsint a TimeAmount from a string
+    internal enum ValidationError: Error, Equatable {
+        /// Can't parse the provided unit
+        case unsupportedUnit(String)
+
+        /// Can't parse the number into a Double
+        case invalidNumber(String)
+    }
+
+    /// Creates a TimeAmount from a string representation with an optional default unit.
+    ///
+    /// Supports formats like:
+    /// - "5s" (5 seconds)
+    /// - "100ms" (100 milliseconds)
+    /// - "42" (42 of default unit)
+    /// - "1 hr" (1 hour)
+    ///
+    /// This function only supports one pair of the number and units, i.e. "5s" or "100ms" but not "5s 100ms".
+    ///
+    /// Supported units:
+    /// - h, hr, hrs (hours)
+    /// - m, min (minutes)
+    /// - s, sec, secs (seconds)
+    /// - ms, millis (milliseconds)
+    /// - us, µs, micros (microseconds)
+    /// - ns, nanos (nanoseconds)
+    ///
+    /// - Parameters:
+    ///   - userProvidedString: The string to parse
+    ///
+    /// - Throws: ValidationError if the string cannot be parsed
+    public init(_ userProvidedString: String) throws {
+        let lowercased = String(userProvidedString.filter { !$0.isWhitespace }).lowercased()
+        let parsedNumbers = lowercased.prefix(while: { $0.isWholeNumber || $0 == "," || $0 == "." })
+        let parsedUnit = String(lowercased.dropFirst(parsedNumbers.count))
+
+        guard let numbers = Int64(parsedNumbers) else {
+            throw ValidationError.invalidNumber("'\(userProvidedString)' cannot be parsed as number and unit")
+        }
+
+        switch parsedUnit {
+        case "h", "hr", "hrs":
+            self = .hours(numbers)
+        case "m", "min":
+            self = .minutes(numbers)
+        case "s", "sec", "secs":
+            self = .seconds(numbers)
+        case "ms", "millis":
+            self = .milliseconds(numbers)
+        case "us", "µs", "micros":
+            self = .microseconds(numbers)
+        case "ns", "nanos":
+            self = .nanoseconds(numbers)
+        default:
+            throw ValidationError.unsupportedUnit("Unknown unit '\(parsedUnit)' in '\(userProvidedString)'")
+        }
+    }
+
+    /// Returns a human-readable string representation of the time amount
+    /// using the most appropriate unit
+    public var description: String {
+        let fullNS = self.nanoseconds
+        let (fullUS, remUS) = fullNS.quotientAndRemainder(dividingBy: 1_000)
+        let (fullMS, remMS) = fullNS.quotientAndRemainder(dividingBy: 1_000_000)
+        let (fullS, remS) = fullNS.quotientAndRemainder(dividingBy: 1_000_000_000)
+
+        if remS == 0 {
+            return "\(fullS) s"
+        } else if remMS == 0 {
+            return "\(fullMS) ms"
+        } else if remUS == 0 {
+            return "\(fullUS) us"
+        } else {
+            return "\(fullNS) ns"
+        }
+    }
+}
+
 extension TimeAmount: Comparable {
     @inlinable
     public static func < (lhs: TimeAmount, rhs: TimeAmount) -> Bool {
