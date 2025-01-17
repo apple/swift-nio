@@ -70,4 +70,31 @@ final class ConvenienceTests: XCTestCase {
         let bytes = try await ByteBuffer(contentsOf: path, maximumSizeAllowed: .bytes(1024))
         XCTAssertEqual(bytes, ByteBuffer(bytes: Array(0..<64)))
     }
+
+    // MARK: - String + FileSystem
+
+    func testStringFromFullFile() async throws {
+        let path = try await Self.fs.temporaryFilePath()
+        try await "some text".write(toFileAt: path)
+
+        let string = try await String(contentsOf: path, maximumSizeAllowed: .bytes(1024))
+        XCTAssertEqual(string, "some text")
+    }
+
+    func testStringFromPartOfAFile() async throws {
+        let path = try await Self.fs.temporaryFilePath()
+        try await "some text".write(toFileAt: path)
+
+        await XCTAssertThrowsFileSystemErrorAsync {
+            try await String(contentsOf: path, maximumSizeAllowed: .bytes(4))
+        }
+    }
+
+    // MARK: - Array + FileSystem
+    func testArrayFromFullFile() async throws {
+        let path = try await Self.fs.temporaryFilePath()
+        try await Array("some text".utf8).write(toFileAt: path)
+        let array = try await Array(contentsOf: path, maximumSizeAllowed: .bytes(1024))
+        XCTAssertEqual(array, Array("some text".utf8))
+    }
 }
