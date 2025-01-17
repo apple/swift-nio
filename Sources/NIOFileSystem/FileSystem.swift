@@ -636,32 +636,36 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// #### Implementation details
     ///
-    /// On Darwin this function uses `confstr(3)` and gets the value of `_CS_DARWIN_USER_TEMP_DIR`;
-    /// the users temporary directory. Typically items are removed after three days if they are not
-    /// accessed.
-    ///
-    /// On Linux this returns "/tmp".
+    /// On all platforms, this function first attempts to read the `TMPDIR` environment variable.
+    /// If that fails:
+    /// - On Darwin this function uses `confstr(3)` and gets the value of `_CS_DARWIN_USER_TEMP_DIR`;   
+    ///   the users temporary directory. Typically items are removed after three days if they are not
+    ///   accessed.
+    /// - On Android this returns "/data/local/tmp".
+    /// - On other platforms this returns "/tmp".
     ///
     /// - Returns: The path to a temporary directory.
     public var temporaryDirectory: FilePath {
         get async throws {
-            #if canImport(Darwin)
-            return try await self.threadPool.runIfActive {
-                try Libc.constr(_CS_DARWIN_USER_TEMP_DIR).map { path in
-                    FilePath(path)
-                }.mapError { errno in
-                    FileSystemError.confstr(
-                        name: "_CS_DARWIN_USER_TEMP_DIR",
-                        errno: errno,
-                        location: .here()
-                    )
-                }.get()
+            if let tmpdir = getenv("TMPDIR") {
+                return FilePath(String(cString: tmpdir))
             }
-            #elseif os(Android)
-            return "/data/local/tmp"
-            #else
-            return "/tmp"
-            #endif
+
+#if canImport(Darwin)
+            return try await self.threadPool.runIfActive {
+                let result = Libc.constr(_CS_DARWIN_USER_TEMP_DIR)
+                switch result {
+                case .success(let path):
+                    return FilePath(path)
+                case .failure(_):
+                    return FilePath("/tmp")
+                }
+            }
+#elseif os(Android)
+            return FilePath("/data/local/tmp")
+#else
+            return FilePath("/tmp")
+#endif
         }
     }
 }
