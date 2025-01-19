@@ -50,7 +50,7 @@ import struct WinSDK.SOCKADDR_IN6
 // A thread-specific variable where we store the offload queue if we're on an `SelectableEventLoop`.
 let offloadQueueTSV = ThreadSpecificVariable<DispatchQueue>()
 
-internal class GetaddrinfoResolver: Resolver {
+internal final class GetaddrinfoResolver: Resolver, Sendable {
     private let loop: EventLoop
     private let v4Future: EventLoopPromise<[SocketAddress]>
     private let v6Future: EventLoopPromise<[SocketAddress]>

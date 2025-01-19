@@ -823,7 +823,7 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     @usableFromInline
     internal var _channelOptions: ChannelOptions.Storage
     private var connectTimeout: TimeAmount = TimeAmount.seconds(10)
-    private var resolver: Optional<Resolver>
+    private var resolver: Optional<Resolver & Sendable>
     private var bindTarget: Optional<SocketAddress>
     private var enableMPTCP: Bool
 
@@ -924,7 +924,8 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
     ///
     /// - Parameters:
     ///   - resolver: The resolver that will be used during the connection attempt.
-    public func resolver(_ resolver: Resolver?) -> Self {
+    @preconcurrency
+    public func resolver(_ resolver: (Resolver & Sendable)?) -> Self {
         self.resolver = resolver
         return self
     }
@@ -968,10 +969,22 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         eventLoop: EventLoop,
         protocolFamily: NIOBSDSocket.ProtocolFamily
     ) throws -> SocketChannel {
+        try Self.makeSocketChannel(
+            eventLoop: eventLoop,
+            protocolFamily: protocolFamily,
+            enableMPTCP: self.enableMPTCP
+        )
+    }
+
+    static func makeSocketChannel(
+        eventLoop: EventLoop,
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        enableMPTCP: Bool
+    ) throws -> SocketChannel {
         try SocketChannel(
             eventLoop: eventLoop as! SelectableEventLoop,
             protocolFamily: protocolFamily,
-            enableMPTCP: self.enableMPTCP
+            enableMPTCP: enableMPTCP
         )
     }
 
@@ -992,6 +1005,11 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
                 aiSocktype: .stream,
                 aiProtocol: .tcp
             )
+        let enableMPTCP = self.enableMPTCP
+        let channelInitializer = self.channelInitializer
+        let channelOptions = self._channelOptions
+        let bindTarget = self.bindTarget
+
         let connector = HappyEyeballsConnector(
             resolver: resolver,
             loop: loop,
@@ -999,7 +1017,14 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
             port: port,
             connectTimeout: self.connectTimeout
         ) { eventLoop, protocolFamily in
-            self.initializeAndRegisterNewChannel(eventLoop: eventLoop, protocolFamily: protocolFamily) {
+            Self.initializeAndRegisterNewChannel(
+                eventLoop: eventLoop,
+                protocolFamily: protocolFamily,
+                enableMPTCP: enableMPTCP,
+                channelInitializer: channelInitializer,
+                channelOptions: channelOptions,
+                bindTarget: bindTarget
+            ) {
                 $0.eventLoop.makeSucceededFuture(())
             }
         }
@@ -1149,23 +1174,66 @@ public final class ClientBootstrap: NIOClientTCPBootstrapProtocol {
         protocolFamily: NIOBSDSocket.ProtocolFamily,
         _ body: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
     ) -> EventLoopFuture<Channel> {
+        Self.initializeAndRegisterNewChannel(
+            eventLoop: eventLoop,
+            protocolFamily: protocolFamily,
+            enableMPTCP: self.enableMPTCP,
+            channelInitializer: self.channelInitializer,
+            channelOptions: self._channelOptions,
+            bindTarget: self.bindTarget,
+            body
+        )
+    }
+
+    private static func initializeAndRegisterNewChannel(
+        eventLoop: EventLoop,
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        enableMPTCP: Bool,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        channelOptions: ChannelOptions.Storage,
+        bindTarget: SocketAddress?,
+        _ body: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
+    ) -> EventLoopFuture<Channel> {
         let channel: SocketChannel
         do {
-            channel = try self.makeSocketChannel(eventLoop: eventLoop, protocolFamily: protocolFamily)
+            channel = try Self.makeSocketChannel(
+                eventLoop: eventLoop,
+                protocolFamily: protocolFamily,
+                enableMPTCP: enableMPTCP
+            )
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
-        return self.initializeAndRegisterChannel(channel, body)
+        return Self.initializeAndRegisterChannel(
+            channel,
+            channelInitializer: channelInitializer,
+            channelOptions: channelOptions,
+            bindTarget: bindTarget,
+            body
+        )
     }
 
     private func initializeAndRegisterChannel(
         _ channel: SocketChannel,
         _ body: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
     ) -> EventLoopFuture<Channel> {
-        let channelInitializer = self.channelInitializer
-        let channelOptions = self._channelOptions
+        Self.initializeAndRegisterChannel(
+            channel,
+            channelInitializer: self.channelInitializer,
+            channelOptions: self._channelOptions,
+            bindTarget: self.bindTarget,
+            body
+        )
+    }
+
+    private static func initializeAndRegisterChannel(
+        _ channel: SocketChannel,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        channelOptions: ChannelOptions.Storage,
+        bindTarget: SocketAddress?,
+        _ body: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
+    ) -> EventLoopFuture<Channel> {
         let eventLoop = channel.eventLoop
-        let bindTarget = self.bindTarget
 
         @inline(__always)
         @Sendable
@@ -1352,6 +1420,11 @@ extension ClientBootstrap {
                 aiProtocol: .tcp
             )
 
+        let enableMPTCP = self.enableMPTCP
+        let bootstrapChannelInitializer = self.channelInitializer
+        let channelOptions = self._channelOptions
+        let bindTarget = self.bindTarget
+
         let connector = HappyEyeballsConnector<PostRegistrationTransformationResult>(
             resolver: resolver,
             loop: eventLoop,
@@ -1359,9 +1432,13 @@ extension ClientBootstrap {
             port: port,
             connectTimeout: self.connectTimeout
         ) { eventLoop, protocolFamily in
-            self.initializeAndRegisterNewChannel(
+            Self.initializeAndRegisterNewChannel(
                 eventLoop: eventLoop,
                 protocolFamily: protocolFamily,
+                enableMPTPCP: enableMPTCP,
+                bootstrapChannelInitializer: bootstrapChannelInitializer,
+                channelOptions: channelOptions,
+                bindTarget: bindTarget,
                 channelInitializer: channelInitializer,
                 postRegisterTransformation: postRegisterTransformation
             ) {
@@ -1427,6 +1504,46 @@ extension ClientBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private static func initializeAndRegisterNewChannel<
+        ChannelInitializerResult: Sendable,
+        PostRegistrationTransformationResult: Sendable
+    >(
+        eventLoop: EventLoop,
+        protocolFamily: NIOBSDSocket.ProtocolFamily,
+        enableMPTPCP: Bool,
+        bootstrapChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        channelOptions: ChannelOptions.Storage,
+        bindTarget: SocketAddress?,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+            PostRegistrationTransformationResult
+        >,
+        _ body: @escaping @Sendable (Channel) -> EventLoopFuture<Void>
+    ) -> EventLoopFuture<(Channel, PostRegistrationTransformationResult)> {
+        let channel: SocketChannel
+        do {
+            channel = try Self.makeSocketChannel(
+                eventLoop: eventLoop,
+                protocolFamily: protocolFamily,
+                enableMPTCP: enableMPTPCP
+            )
+        } catch {
+            return eventLoop.makeFailedFuture(error)
+        }
+        return Self.initializeAndRegisterChannel(
+            channel: channel,
+            bootstrapChannelInitializer: bootstrapChannelInitializer,
+            channelOptions: channelOptions,
+            bindTarget: bindTarget,
+            channelInitializer: channelInitializer,
+            registration: { channel in
+                channel.registerAndDoSynchronously(body)
+            },
+            postRegisterTransformation: postRegisterTransformation
+        ).map { (channel, $0) }
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     private func initializeAndRegisterChannel<
         ChannelInitializerResult: Sendable,
         PostRegistrationTransformationResult: Sendable
@@ -1438,16 +1555,39 @@ extension ClientBootstrap {
             PostRegistrationTransformationResult
         >
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
-        let bootstrapChannelInitializer = self.channelInitializer
+        Self.initializeAndRegisterChannel(
+            channel: channel,
+            bootstrapChannelInitializer: self.channelInitializer,
+            channelOptions: self._channelOptions,
+            bindTarget: self.bindTarget,
+            channelInitializer: channelInitializer,
+            registration: registration,
+            postRegisterTransformation: postRegisterTransformation
+        )
+    }
+
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    private static func initializeAndRegisterChannel<
+        ChannelInitializerResult: Sendable,
+        PostRegistrationTransformationResult: Sendable
+    >(
+        channel: SocketChannel,
+        bootstrapChannelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
+        channelOptions: ChannelOptions.Storage,
+        bindTarget: SocketAddress?,
+        channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
+        registration: @escaping @Sendable (SocketChannel) -> EventLoopFuture<Void>,
+        postRegisterTransformation: @escaping @Sendable (ChannelInitializerResult, EventLoop) -> EventLoopFuture<
+            PostRegistrationTransformationResult
+        >
+    ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let channelInitializer = { @Sendable channel in
             bootstrapChannelInitializer(channel).hop(to: channel.eventLoop)
                 .assumeIsolated()
                 .flatMap { channelInitializer(channel) }
                 .nonisolated()
         }
-        let channelOptions = self._channelOptions
         let eventLoop = channel.eventLoop
-        let bindTarget = self.bindTarget
 
         @inline(__always)
         @Sendable
