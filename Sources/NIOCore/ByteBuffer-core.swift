@@ -299,6 +299,19 @@ public struct ByteBuffer {
             _ByteBufferSlice(0..<self.capacity)
         }
 
+        /// Returns the size that this storage would allocate for a given buffer capacity.
+        ///
+        /// On Darwin, use `malloc_good_size` to get optimal size (capacity rounded up, but hopefully not allocating extra memory pages).
+        /// On other platforms, use the next power of 2 clamped to `UInt32.max`.
+        @inlinable
+        static func mallocSize(capacity: _Capacity) -> _Capacity {
+            #if canImport(Darwin)
+            return _Capacity(malloc_good_size(Int(capacity)))
+            #else
+            return capacity.nextPowerOf2ClampedToMax()
+            #endif
+        }
+
         @inlinable
         static func _allocateAndPrepareRawMemory(bytes: _Capacity, allocator: Allocator) -> UnsafeMutableRawPointer {
             let ptr = allocator.malloc(size_t(bytes))!
@@ -314,7 +327,7 @@ public struct ByteBuffer {
 
         @inlinable
         func allocateStorage(capacity: _Capacity) -> _Storage {
-            let newCapacity = capacity == 0 ? 0 : capacity.nextPowerOf2ClampedToMax()
+            let newCapacity = capacity == 0 ? 0 : _Storage.mallocSize(capacity: capacity)
             return _Storage(
                 bytesNoCopy: _Storage._allocateAndPrepareRawMemory(bytes: newCapacity, allocator: self.allocator),
                 capacity: newCapacity,
@@ -332,7 +345,7 @@ public struct ByteBuffer {
 
         @inlinable
         func reallocStorage(capacity minimumNeededCapacity: _Capacity) {
-            let newCapacity = minimumNeededCapacity.nextPowerOf2ClampedToMax()
+            let newCapacity = minimumNeededCapacity == 0 ? 0 : _Storage.mallocSize(capacity: minimumNeededCapacity)
             let ptr = self.allocator.realloc(self.bytes, size_t(newCapacity))!
             // bind the memory so we can assume it elsewhere to be bound to UInt8
             ptr.bindMemory(to: UInt8.self, capacity: Int(newCapacity))
@@ -346,7 +359,7 @@ public struct ByteBuffer {
 
         @inlinable
         static func reallocated(minimumCapacity: _Capacity, allocator: Allocator) -> _Storage {
-            let newCapacity = minimumCapacity == 0 ? 0 : minimumCapacity.nextPowerOf2ClampedToMax()
+            let newCapacity = minimumCapacity == 0 ? 0 : _Storage.mallocSize(capacity: minimumCapacity)
             // TODO: Use realloc if possible
             return _Storage(
                 bytesNoCopy: _Storage._allocateAndPrepareRawMemory(bytes: newCapacity, allocator: allocator),
