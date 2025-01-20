@@ -487,6 +487,7 @@ extension EventLoop {
     }
 
     /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
     public func _executeIsolatedUnsafeUnchecked(_ task: @escaping () -> Void) {
         self.assertInEventLoop()
         let unsafeTransfer = UnsafeTransfer(task)
@@ -496,6 +497,7 @@ extension EventLoop {
     }
 
     /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
     public func _submitIsolatedUnsafeUnchecked<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
         self.assertInEventLoop()
         let unsafeTransfer = UnsafeTransfer(task)
@@ -505,6 +507,7 @@ extension EventLoop {
     }
 
     /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
     @discardableResult
     public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
         deadline: NIODeadline,
@@ -518,6 +521,7 @@ extension EventLoop {
     }
 
     /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
     @discardableResult
     public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
         in delay: TimeAmount,
