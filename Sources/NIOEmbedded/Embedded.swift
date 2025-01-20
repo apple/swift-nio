@@ -381,6 +381,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
         in delay: TimeAmount,
         _ task: @escaping () throws -> T
     ) -> Scheduled<T> {
+        // Because of the way EmbeddedEL works, we can delegate this directly to schedule.
         self.scheduleTask(in: delay, task)
     }
 
