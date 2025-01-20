@@ -276,6 +276,17 @@ measureAndPrint(desc: "http_headers_canonical_form_trimming_whitespace_from_long
     return count
 }
 
+measureAndPrint(desc: "http_headers_description_100k") {
+    let headers = HTTPHeaders(Array(repeating: ("String", "String"), count: 100))
+
+    for _ in 0..<100_000 {
+        let str = headers.description
+        precondition(str.utf8.count > 100)
+    }
+
+    return 0
+}
+
 measureAndPrint(desc: "bytebuffer_write_12MB_short_string_literals") {
     let bufferSize = 12 * 1024 * 1024
     var buffer = ByteBufferAllocator().buffer(capacity: bufferSize)

@@ -400,4 +400,26 @@ class HTTPHeadersTest: XCTestCase {
         headers.reserveCapacity(4)
         XCTAssertEqual(headers.capacity, 4)
     }
+
+    func testHTTPHeadersDescription() {
+        let originalHeaders = [
+            ("User-Agent", "1"),
+            ("host", "2"),
+            ("X-SOMETHING", "3"),
+            ("SET-COOKIE", "foo=bar"),
+            ("Set-Cookie", "buz=cux"),
+        ]
+
+        let headers = HTTPHeaders(originalHeaders)
+
+        let expectedOutput = """
+            User-Agent: 1; \
+            host: 2; \
+            X-SOMETHING: 3; \
+            SET-COOKIE: foo=bar; \
+            Set-Cookie: buz=cux
+            """
+
+        XCTAssertEqual(expectedOutput, headers.description)
+    }
 }
