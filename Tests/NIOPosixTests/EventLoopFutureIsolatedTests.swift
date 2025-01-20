@@ -30,7 +30,7 @@ extension SuperNotSendable: Sendable {}
 // We use this to confirm that the fallback path for the isolated views works, by not implementing
 // their fast-paths. Instead, we forward to the underlying implementation. We use `AsyncTestingEventLoop`
 // to provide the backing implementation.
-fileprivate final class FallbackEventLoop: RunnableEventLoop {
+private final class FallbackEventLoop: RunnableEventLoop {
     private let base: NIOAsyncTestingEventLoop
 
     init() {
@@ -50,12 +50,16 @@ fileprivate final class FallbackEventLoop: RunnableEventLoop {
     }
 
     func scheduleTask<T>(
-        deadline: NIOCore.NIODeadline, _ task: @escaping @Sendable () throws -> T
+        deadline: NIOCore.NIODeadline,
+        _ task: @escaping @Sendable () throws -> T
     ) -> NIOCore.Scheduled<T> {
         self.base.scheduleTask(deadline: deadline, task)
     }
 
-    func scheduleTask<T>(in delay: NIOCore.TimeAmount, _ task: @escaping @Sendable () throws -> T) -> NIOCore.Scheduled<T> {
+    func scheduleTask<T>(
+        in delay: NIOCore.TimeAmount,
+        _ task: @escaping @Sendable () throws -> T
+    ) -> NIOCore.Scheduled<T> {
         self.base.scheduleTask(in: delay, task)
     }
 
