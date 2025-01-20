@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
 import NIOCore
 import NIOEmbedded
 import NIOPosix
@@ -23,6 +24,57 @@ final class SuperNotSendable {
 
 @available(*, unavailable)
 extension SuperNotSendable: Sendable {}
+
+// A very stupid event loop that implements as little of the protocol as possible.
+//
+// We use this to confirm that the fallback path for the isolated views works, by not implementing
+// their fast-paths. Instead, we forward to the underlying implementation. We use `AsyncTestingEventLoop`
+// to provide the backing implementation.
+private final class FallbackEventLoop: RunnableEventLoop {
+    private let base: NIOAsyncTestingEventLoop
+
+    init() {
+        self.base = .init()
+    }
+
+    var now: NIODeadline {
+        self.base.now
+    }
+
+    var inEventLoop: Bool {
+        self.base.inEventLoop
+    }
+
+    func execute(_ task: @escaping @Sendable () -> Void) {
+        self.base.execute(task)
+    }
+
+    func scheduleTask<T>(
+        deadline: NIOCore.NIODeadline,
+        _ task: @escaping @Sendable () throws -> T
+    ) -> NIOCore.Scheduled<T> {
+        self.base.scheduleTask(deadline: deadline, task)
+    }
+
+    func scheduleTask<T>(
+        in delay: NIOCore.TimeAmount,
+        _ task: @escaping @Sendable () throws -> T
+    ) -> NIOCore.Scheduled<T> {
+        self.base.scheduleTask(in: delay, task)
+    }
+
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable ((any Error)?) -> Void) {
+        self.base.shutdownGracefully(queue: queue, callback)
+    }
+
+    func runForTests() {
+        self.base.runForTests()
+    }
+
+    func advanceTimeForTests(by amount: TimeAmount) {
+        self.base.advanceTimeForTests(by: amount)
+    }
+}
 
 private protocol RunnableEventLoop: EventLoop {
     func runForTests()
@@ -496,6 +548,52 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
 
     func testEventLoopIsolatedUnchecked_AsyncTestingEL() throws {
         let loop = NIOAsyncTestingEventLoop()
+        try self._eventLoopIsolatedUnchecked(loop: loop)
+    }
+
+    // MARK: Fallback
+    func testCompletingPromiseWithNonSendableValue_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._completingPromiseWithNonSendableValue(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResult_() throws {
+        let loop = FallbackEventLoop()
+        try self._completingPromiseWithNonSendableResult(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableValueUnchecked_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._completingPromiseWithNonSendableValueUnchecked(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResultUnchecked_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._completingPromiseWithNonSendableResultUnchecked(loop: loop)
+    }
+
+    func testBackAndForthUnwrapping_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._backAndForthUnwrapping(loop: loop)
+    }
+
+    func testBackAndForthUnwrappingUnchecked_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._backAndForthUnwrappingUnchecked(loop: loop)
+    }
+
+    func testFutureChaining_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._futureChaining(loop: loop)
+    }
+
+    func testEventLoopIsolated_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._eventLoopIsolated(loop: loop)
+    }
+
+    func testEventLoopIsolatedUnchecked_Fallback() throws {
+        let loop = FallbackEventLoop()
         try self._eventLoopIsolatedUnchecked(loop: loop)
     }
 }
