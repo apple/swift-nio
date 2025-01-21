@@ -345,7 +345,7 @@ public struct ByteBuffer {
 
         @inlinable
         func reallocStorage(capacity minimumNeededCapacity: _Capacity) {
-            let newCapacity = minimumNeededCapacity == 0 ? 0 : _Storage.mallocSize(capacity: minimumNeededCapacity)
+            let newCapacity = _Storage.mallocSize(capacity: minimumNeededCapacity)
             let ptr = self.allocator.realloc(self.bytes, size_t(newCapacity))!
             // bind the memory so we can assume it elsewhere to be bound to UInt8
             ptr.bindMemory(to: UInt8.self, capacity: Int(newCapacity))
