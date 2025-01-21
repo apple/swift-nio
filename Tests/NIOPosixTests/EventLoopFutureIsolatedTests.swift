@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
 import NIOCore
+import NIOEmbedded
 import NIOPosix
 import XCTest
 
@@ -23,100 +25,189 @@ final class SuperNotSendable {
 @available(*, unavailable)
 extension SuperNotSendable: Sendable {}
 
-final class EventLoopFutureIsolatedTest: XCTestCase {
-    func testCompletingPromiseWithNonSendableValue() throws {
-        let group = MultiThreadedEventLoopGroup.singleton
-        let loop = group.next()
+// A very stupid event loop that implements as little of the protocol as possible.
+//
+// We use this to confirm that the fallback path for the isolated views works, by not implementing
+// their fast-paths. Instead, we forward to the underlying implementation. We use `AsyncTestingEventLoop`
+// to provide the backing implementation.
+private final class FallbackEventLoop: RunnableEventLoop {
+    private let base: NIOAsyncTestingEventLoop
 
-        try loop.flatSubmit {
+    init() {
+        self.base = .init()
+    }
+
+    var now: NIODeadline {
+        self.base.now
+    }
+
+    var inEventLoop: Bool {
+        self.base.inEventLoop
+    }
+
+    func execute(_ task: @escaping @Sendable () -> Void) {
+        self.base.execute(task)
+    }
+
+    func scheduleTask<T>(
+        deadline: NIOCore.NIODeadline,
+        _ task: @escaping @Sendable () throws -> T
+    ) -> NIOCore.Scheduled<T> {
+        self.base.scheduleTask(deadline: deadline, task)
+    }
+
+    func scheduleTask<T>(
+        in delay: NIOCore.TimeAmount,
+        _ task: @escaping @Sendable () throws -> T
+    ) -> NIOCore.Scheduled<T> {
+        self.base.scheduleTask(in: delay, task)
+    }
+
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable ((any Error)?) -> Void) {
+        self.base.shutdownGracefully(queue: queue, callback)
+    }
+
+    func runForTests() {
+        self.base.runForTests()
+    }
+
+    func advanceTimeForTests(by amount: TimeAmount) {
+        self.base.advanceTimeForTests(by: amount)
+    }
+}
+
+private protocol RunnableEventLoop: EventLoop {
+    func runForTests()
+    func advanceTimeForTests(by: TimeAmount)
+}
+
+extension EmbeddedEventLoop: RunnableEventLoop {
+    fileprivate func runForTests() {
+        self.run()
+    }
+
+    fileprivate func advanceTimeForTests(by amount: TimeAmount) {
+        self.advanceTime(by: amount)
+    }
+}
+
+extension NIOAsyncTestingEventLoop: RunnableEventLoop {
+    fileprivate func runForTests() {
+        // This is horrible, but it's the only general-purpose implementation.
+        let promise = self.makePromise(of: Void.self)
+        promise.completeWithTask {
+            await self.run()
+        }
+        try! promise.futureResult.wait()
+    }
+
+    fileprivate func advanceTimeForTests(by amount: TimeAmount) {
+        // This is horrible, but it's the only general-purpose implementation.
+        let promise = self.makePromise(of: Void.self)
+        promise.completeWithTask {
+            await self.advanceTime(by: amount)
+        }
+        try! promise.futureResult.wait()
+    }
+}
+
+final class EventLoopFutureIsolatedTest: XCTestCase {
+    func _completingPromiseWithNonSendableValue(loop: any EventLoop) throws {
+        let f = loop.flatSubmit {
             let promise = loop.makePromise(of: SuperNotSendable.self)
             let value = SuperNotSendable()
             promise.assumeIsolated().succeed(value)
             return promise.futureResult.assumeIsolated().map { val in
                 XCTAssertIdentical(val, value)
             }.nonisolated()
-        }.wait()
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.runForTests()
+        }
+        try f.wait()
     }
 
-    func testCompletingPromiseWithNonSendableResult() throws {
-        let group = MultiThreadedEventLoopGroup.singleton
-        let loop = group.next()
-
-        try loop.flatSubmit {
+    func _completingPromiseWithNonSendableResult(loop: any EventLoop) throws {
+        let f = loop.flatSubmit {
             let promise = loop.makePromise(of: SuperNotSendable.self)
             let value = SuperNotSendable()
             promise.assumeIsolated().completeWith(.success(value))
             return promise.futureResult.assumeIsolated().map { val in
                 XCTAssertIdentical(val, value)
             }.nonisolated()
-        }.wait()
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.runForTests()
+        }
+        try f.wait()
     }
 
-    func testCompletingPromiseWithNonSendableValueUnchecked() throws {
-        let group = MultiThreadedEventLoopGroup.singleton
-        let loop = group.next()
-
-        try loop.flatSubmit {
+    func _completingPromiseWithNonSendableValueUnchecked(loop: any EventLoop) throws {
+        let f = loop.flatSubmit {
             let promise = loop.makePromise(of: SuperNotSendable.self)
             let value = SuperNotSendable()
             promise.assumeIsolatedUnsafeUnchecked().succeed(value)
             return promise.futureResult.assumeIsolatedUnsafeUnchecked().map { val in
                 XCTAssertIdentical(val, value)
             }.nonisolated()
-        }.wait()
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.runForTests()
+        }
+        try f.wait()
     }
 
-    func testCompletingPromiseWithNonSendableResultUnchecked() throws {
-        let group = MultiThreadedEventLoopGroup.singleton
-        let loop = group.next()
-
-        try loop.flatSubmit {
+    func _completingPromiseWithNonSendableResultUnchecked(loop: any EventLoop) throws {
+        let f = loop.flatSubmit {
             let promise = loop.makePromise(of: SuperNotSendable.self)
             let value = SuperNotSendable()
             promise.assumeIsolatedUnsafeUnchecked().completeWith(.success(value))
             return promise.futureResult.assumeIsolatedUnsafeUnchecked().map { val in
                 XCTAssertIdentical(val, value)
             }.nonisolated()
-        }.wait()
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.runForTests()
+        }
+        try f.wait()
     }
 
-    func testBackAndForthUnwrapping() throws {
-        let group = MultiThreadedEventLoopGroup.singleton
-        let loop = group.next()
-
-        try loop.submit {
+    func _backAndForthUnwrapping(loop: any EventLoop) throws {
+        let f = loop.submit {
             let promise = loop.makePromise(of: SuperNotSendable.self)
             let future = promise.futureResult
 
             XCTAssertEqual(promise.assumeIsolated().nonisolated(), promise)
             XCTAssertEqual(future.assumeIsolated().nonisolated(), future)
             promise.assumeIsolated().succeed(SuperNotSendable())
-        }.wait()
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.runForTests()
+        }
+        try f.wait()
     }
 
-    func testBackAndForthUnwrappingUnchecked() throws {
-        let group = MultiThreadedEventLoopGroup.singleton
-        let loop = group.next()
-
-        try loop.submit {
+    func _backAndForthUnwrappingUnchecked(loop: any EventLoop) throws {
+        let f = loop.submit {
             let promise = loop.makePromise(of: SuperNotSendable.self)
             let future = promise.futureResult
 
             XCTAssertEqual(promise.assumeIsolatedUnsafeUnchecked().nonisolated(), promise)
             XCTAssertEqual(future.assumeIsolatedUnsafeUnchecked().nonisolated(), future)
             promise.assumeIsolated().succeed(SuperNotSendable())
-        }.wait()
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.runForTests()
+        }
+        try f.wait()
     }
 
-    func testFutureChaining() throws {
+    func _futureChaining(loop: any EventLoop) throws {
         enum TestError: Error {
             case error
         }
 
-        let group = MultiThreadedEventLoopGroup.singleton
-        let loop = group.next()
-
-        try loop.flatSubmit {
+        let f = loop.flatSubmit {
             let promise = loop.makePromise(of: SuperNotSendable.self)
             let future = promise.futureResult.assumeIsolated()
             let originalValue = SuperNotSendable()
@@ -217,14 +308,15 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
 
             promise.assumeIsolated().succeed(originalValue)
             return newFuture.map { _ in }.nonisolated()
-        }.wait()
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.runForTests()
+        }
+        try f.wait()
     }
 
-    func testEventLoopIsolated() throws {
-        let group = MultiThreadedEventLoopGroup.singleton
-        let loop = group.next()
-
-        let result: Int = try loop.flatSubmit {
+    func _eventLoopIsolated(loop: any EventLoop) throws {
+        let f = loop.flatSubmit {
             let value = SuperNotSendable()
 
             // Again, all of these need to close over value. In addition,
@@ -240,7 +332,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                 return val
             }.map { $0.x }
 
-            let secondFuture = isolated.scheduleTask(deadline: .now() + .milliseconds(50)) {
+            let secondFuture = isolated.scheduleTask(deadline: loop.now + .milliseconds(50)) {
                 let val = SuperNotSendable()
                 val.x = value.x + 1
                 return val
@@ -252,7 +344,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                 return val
             }.futureResult.map { $0.x }
 
-            let fourthFuture = isolated.flatScheduleTask(deadline: .now() + .milliseconds(50)) {
+            let fourthFuture = isolated.flatScheduleTask(deadline: loop.now + .milliseconds(50)) {
                 let promise = loop.makePromise(of: Int.self)
                 promise.succeed(value.x + 1)
                 return promise.futureResult
@@ -263,16 +355,17 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                 [firstFuture, secondFuture, thirdFuture, fourthFuture],
                 on: loop
             ) { $0 += $1 }
-        }.wait()
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.advanceTimeForTests(by: .milliseconds(51))
+        }
+        let result = try f.wait()
 
         XCTAssertEqual(result, 6 * 4)
     }
 
-    func testEventLoopIsolatedUnchecked() throws {
-        let group = MultiThreadedEventLoopGroup.singleton
-        let loop = group.next()
-
-        let result: Int = try loop.flatSubmit {
+    func _eventLoopIsolatedUnchecked(loop: any EventLoop) throws {
+        let f = loop.flatSubmit {
             let value = SuperNotSendable()
 
             // Again, all of these need to close over value. In addition,
@@ -288,7 +381,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                 return val
             }.map { $0.x }
 
-            let secondFuture = isolated.scheduleTask(deadline: .now() + .milliseconds(50)) {
+            let secondFuture = isolated.scheduleTask(deadline: loop.now + .milliseconds(50)) {
                 let val = SuperNotSendable()
                 val.x = value.x + 1
                 return val
@@ -300,7 +393,7 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                 return val
             }.futureResult.map { $0.x }
 
-            let fourthFuture = isolated.flatScheduleTask(deadline: .now() + .milliseconds(50)) {
+            let fourthFuture = isolated.flatScheduleTask(deadline: loop.now + .milliseconds(50)) {
                 let promise = loop.makePromise(of: Int.self)
                 promise.succeed(value.x + 1)
                 return promise.futureResult
@@ -311,8 +404,196 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                 [firstFuture, secondFuture, thirdFuture, fourthFuture],
                 on: loop
             ) { $0 += $1 }
-        }.wait()
+        }
+        if let runnable = loop as? RunnableEventLoop {
+            runnable.advanceTimeForTests(by: .milliseconds(50))
+        }
+        let result = try f.wait()
 
         XCTAssertEqual(result, 6 * 4)
+    }
+
+    // MARK: SelectableEL
+    func testCompletingPromiseWithNonSendableValue_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._completingPromiseWithNonSendableValue(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResult_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._completingPromiseWithNonSendableResult(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableValueUnchecked_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._completingPromiseWithNonSendableValueUnchecked(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResultUnchecked_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._completingPromiseWithNonSendableResultUnchecked(loop: loop)
+    }
+
+    func testBackAndForthUnwrapping_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._backAndForthUnwrapping(loop: loop)
+    }
+
+    func testBackAndForthUnwrappingUnchecked_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._backAndForthUnwrappingUnchecked(loop: loop)
+    }
+
+    func testFutureChaining_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._futureChaining(loop: loop)
+    }
+
+    func testEventLoopIsolated_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._eventLoopIsolated(loop: loop)
+    }
+
+    func testEventLoopIsolatedUnchecked_SelectableEL() throws {
+        let loop = MultiThreadedEventLoopGroup.singleton.next()
+        try self._eventLoopIsolatedUnchecked(loop: loop)
+    }
+
+    // MARK: EmbeddedEL
+    func testCompletingPromiseWithNonSendableValue_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._completingPromiseWithNonSendableValue(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResult_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._completingPromiseWithNonSendableResult(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableValueUnchecked_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._completingPromiseWithNonSendableValueUnchecked(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResultUnchecked_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._completingPromiseWithNonSendableResultUnchecked(loop: loop)
+    }
+
+    func testBackAndForthUnwrapping_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._backAndForthUnwrapping(loop: loop)
+    }
+
+    func testBackAndForthUnwrappingUnchecked_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._backAndForthUnwrappingUnchecked(loop: loop)
+    }
+
+    func testFutureChaining_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._futureChaining(loop: loop)
+    }
+
+    func testEventLoopIsolated_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._eventLoopIsolated(loop: loop)
+    }
+
+    func testEventLoopIsolatedUnchecked_EmbeddedEL() throws {
+        let loop = EmbeddedEventLoop()
+        try self._eventLoopIsolatedUnchecked(loop: loop)
+    }
+
+    // MARK: AsyncTestingEL
+    func testCompletingPromiseWithNonSendableValue_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._completingPromiseWithNonSendableValue(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResult_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._completingPromiseWithNonSendableResult(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableValueUnchecked_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._completingPromiseWithNonSendableValueUnchecked(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResultUnchecked_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._completingPromiseWithNonSendableResultUnchecked(loop: loop)
+    }
+
+    func testBackAndForthUnwrapping_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._backAndForthUnwrapping(loop: loop)
+    }
+
+    func testBackAndForthUnwrappingUnchecked_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._backAndForthUnwrappingUnchecked(loop: loop)
+    }
+
+    func testFutureChaining_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._futureChaining(loop: loop)
+    }
+
+    func testEventLoopIsolated_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._eventLoopIsolated(loop: loop)
+    }
+
+    func testEventLoopIsolatedUnchecked_AsyncTestingEL() throws {
+        let loop = NIOAsyncTestingEventLoop()
+        try self._eventLoopIsolatedUnchecked(loop: loop)
+    }
+
+    // MARK: Fallback
+    func testCompletingPromiseWithNonSendableValue_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._completingPromiseWithNonSendableValue(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResult_() throws {
+        let loop = FallbackEventLoop()
+        try self._completingPromiseWithNonSendableResult(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableValueUnchecked_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._completingPromiseWithNonSendableValueUnchecked(loop: loop)
+    }
+
+    func testCompletingPromiseWithNonSendableResultUnchecked_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._completingPromiseWithNonSendableResultUnchecked(loop: loop)
+    }
+
+    func testBackAndForthUnwrapping_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._backAndForthUnwrapping(loop: loop)
+    }
+
+    func testBackAndForthUnwrappingUnchecked_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._backAndForthUnwrappingUnchecked(loop: loop)
+    }
+
+    func testFutureChaining_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._futureChaining(loop: loop)
+    }
+
+    func testEventLoopIsolated_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._eventLoopIsolated(loop: loop)
+    }
+
+    func testEventLoopIsolatedUnchecked_Fallback() throws {
+        let loop = FallbackEventLoop()
+        try self._eventLoopIsolatedUnchecked(loop: loop)
     }
 }

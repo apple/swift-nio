@@ -62,11 +62,8 @@ extension HTTPHeaders {
 ///
 /// This upgrader assumes that the `HTTPServerUpgradeHandler` will appropriately mutate the pipeline to
 /// remove the HTTP `ChannelHandler`s.
-public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, @unchecked Sendable {
-    // This type *is* Sendable but we can't express that properly until Swift 5.7. In the meantime
-    // the conformance is `@unchecked`.
+public final class NIOWebSocketServerUpgrader: HTTPServerProtocolUpgrader, Sendable {
 
-    // FIXME: remove @unchecked when 5.7 is the minimum supported version.
     private typealias ShouldUpgrade = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<HTTPHeaders?>
     private typealias UpgradePipelineHandler = @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<Void>
     /// RFC 6455 specs this as the required entry in the Upgrade header.
