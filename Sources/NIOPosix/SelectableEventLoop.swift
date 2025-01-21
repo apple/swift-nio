@@ -322,7 +322,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     /// - see: `EventLoop.scheduleTask(in:_:)`
     @inlinable
     internal func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        scheduleTask(deadline: .now() + `in`, task)
+        self.scheduleTask(deadline: .now() + `in`, task)
     }
 
     @inlinable
