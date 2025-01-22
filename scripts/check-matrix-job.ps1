@@ -52,7 +52,7 @@ $command = $env:COMMAND
 $command_5_9 = $env:COMMAND_OVERRIDE_5_9
 $command_5_10 = $env:COMMAND_OVERRIDE_5_10
 $command_6_0 = $env:COMMAND_OVERRIDE_6_0
-$command_nightly_6_0 = $env:COMMAND_OVERRIDE_NIGHTLY_6_0
+$command_nightly_6_1 = $env:COMMAND_OVERRIDE_NIGHTLY_6_1
 $command_nightly_main = $env:COMMAND_OVERRIDE_NIGHTLY_MAIN
 
 if ($swift_version -eq "5.9" -and $command_5_9) {
@@ -64,9 +64,9 @@ if ($swift_version -eq "5.9" -and $command_5_9) {
 } elseif ($swift_version -eq "6.0" -and $command_6_0) {
     Log "Running 6.0 command override"
     Invoke-Expression $command_6_0
-} elseif ($swift_version -eq "nightly-6.0" -and $command_nightly_6_0) {
-    Log "Running nightly 6.0 command override"
-    Invoke-Expression $command_nightly_6_0
+} elseif ($swift_version -eq "nightly-6.1" -and $command_nightly_6_1) {
+    Log "Running nightly 6.1 command override"
+    Invoke-Expression $command_nightly_6_1
 } elseif ($swift_version -eq "nightly-main" -and $command_nightly_main) {
     Log "Running nightly main command override"
     Invoke-Expression $command_nightly_main
