@@ -420,11 +420,17 @@ extension NIOThreadPool {
     ///   - body: The closure which performs some blocking work to be done on the thread pool.
     /// - Returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
     @preconcurrency
-    public func runIfActive<T: Sendable>(eventLoop: EventLoop, _ body: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
+    public func runIfActive<T: Sendable>(
+        eventLoop: EventLoop,
+        _ body: @escaping @Sendable () throws -> T
+    ) -> EventLoopFuture<T> {
         self._runIfActive(eventLoop: eventLoop, body)
     }
 
-    private func _runIfActive<T: Sendable>(eventLoop: EventLoop, _ body: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
+    private func _runIfActive<T: Sendable>(
+        eventLoop: EventLoop,
+        _ body: @escaping @Sendable () throws -> T
+    ) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
             guard case shouldRun = NIOThreadPool.WorkItemState.active else {
