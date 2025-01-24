@@ -86,15 +86,17 @@ let S_IFBLK = UInt32(SwiftGlibc.S_IFBLK)
 private let sysClose = close
 private let sysShutdown = shutdown
 private let sysBind = bind
-private let sysFcntl: (CInt, CInt, CInt) -> CInt = fcntl
+private let sysFcntl: @Sendable @convention(c) (CInt, CInt, CInt) -> CInt = { fcntl($0, $1, $2) }
 private let sysSocket = socket
 private let sysSetsockopt = setsockopt
 private let sysGetsockopt = getsockopt
 private let sysListen = listen
 private let sysAccept = accept
 private let sysConnect = connect
-private let sysOpen: (UnsafePointer<CChar>, CInt) -> CInt = open
-private let sysOpenWithMode: (UnsafePointer<CChar>, CInt, mode_t) -> CInt = open
+private let sysOpen: @Sendable @convention(c) (UnsafePointer<CChar>, CInt) -> CInt = { open($0, $1) }
+private let sysOpenWithMode: @Sendable @convention(c) (UnsafePointer<CChar>, CInt, mode_t) -> CInt = {
+    open($0, $1, $2)
+}
 private let sysFtruncate = ftruncate
 private let sysWrite = write
 private let sysPwrite = pwrite
@@ -444,7 +446,7 @@ internal func syscallForbiddingEINVAL<T: FixedWidthInteger>(
 }
 
 @usableFromInline
-internal enum Posix {
+internal enum Posix: Sendable {
     #if canImport(Darwin)
     @usableFromInline
     static let UIO_MAXIOV: Int = 1024
@@ -1059,7 +1061,7 @@ extension Posix {
 
 #if canImport(Darwin)
 @usableFromInline
-internal enum KQueue {
+internal enum KQueue: Sendable {
 
     // TODO: Figure out how to specify a typealias to the kevent struct without run into trouble with the swift compiler
 
