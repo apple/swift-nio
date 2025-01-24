@@ -23,7 +23,7 @@ class Socket: BaseSocket, SocketProtocol {
     typealias SocketType = Socket
 
     /// The maximum number of bytes to write per `writev` call.
-    static var writevLimitBytes = Int(Int32.max)
+    static let writevLimitBytes = Int(Int32.max)
 
     /// The maximum number of `IOVector`s to write per `writev` call.
     static let writevLimitIOVectors: Int = Posix.UIO_MAXIOV
