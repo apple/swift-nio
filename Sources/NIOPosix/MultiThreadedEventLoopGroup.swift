@@ -41,7 +41,7 @@ struct NIORegistration: Registration {
 }
 
 @available(*, unavailable)
-extension NIORegistration: Sendable { }
+extension NIORegistration: Sendable {}
 
 private let nextEventLoopGroupID = ManagedAtomic(0)
 
@@ -573,10 +573,10 @@ extension ScheduledTask: Comparable {
 }
 
 @available(*, unavailable)
-extension ScheduledTask: Sendable { }
+extension ScheduledTask: Sendable {}
 
 @available(*, unavailable)
-extension ScheduledTask.Kind: Sendable { }
+extension ScheduledTask.Kind: Sendable {}
 
 extension NIODeadline {
     @inlinable

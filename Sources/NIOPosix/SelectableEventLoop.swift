@@ -1016,7 +1016,7 @@ enum UnderlyingTask {
 }
 
 @available(*, unavailable)
-extension UnderlyingTask: Sendable { }
+extension UnderlyingTask: Sendable {}
 
 @usableFromInline
 internal enum LoopTask {
@@ -1025,7 +1025,7 @@ internal enum LoopTask {
 }
 
 @available(*, unavailable)
-extension LoopTask: Sendable { }
+extension LoopTask: Sendable {}
 
 @inlinable
 internal func assertExpression(_ body: () -> Bool) {
