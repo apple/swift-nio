@@ -20,20 +20,20 @@ import NIOCore
 import _NIODataStructures
 
 private func printError(_ string: StaticString) {
-     string.withUTF8Buffer { buf in
-         var buf = buf
-         while buf.count > 0 {
-             // 2 is stderr
-             let rc = write(2, buf.baseAddress, buf.count)
-             if rc < 0 {
-                 let err = errno
-                 if err == EINTR { continue }
-                 fatalError("Unexpected error writing: \(err)")
-             }
-             buf = .init(rebasing: buf.dropFirst(Int(rc)))
-         }
-     }
- }
+    string.withUTF8Buffer { buf in
+        var buf = buf
+        while buf.count > 0 {
+            // 2 is stderr
+            let rc = write(2, buf.baseAddress, buf.count)
+            if rc < 0 {
+                let err = errno
+                if err == EINTR { continue }
+                fatalError("Unexpected error writing: \(err)")
+            }
+            buf = .init(rebasing: buf.dropFirst(Int(rc)))
+        }
+    }
+}
 
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
