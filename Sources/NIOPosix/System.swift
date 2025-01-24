@@ -94,7 +94,9 @@ private let sysListen = listen
 private let sysAccept = accept
 private let sysConnect = connect
 private let sysOpen: @Sendable @convention(c) (UnsafePointer<CChar>, CInt) -> CInt = { open($0, $1) }
-private let sysOpenWithMode: @Sendable @convention(c) (UnsafePointer<CChar>, CInt, mode_t) -> CInt = { open($0, $1, $2) }
+private let sysOpenWithMode: @Sendable @convention(c) (UnsafePointer<CChar>, CInt, mode_t) -> CInt = {
+    open($0, $1, $2)
+}
 private let sysFtruncate = ftruncate
 private let sysWrite = write
 private let sysPwrite = pwrite
