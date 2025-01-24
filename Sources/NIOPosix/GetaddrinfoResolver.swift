@@ -217,7 +217,7 @@ internal final class GetaddrinfoResolver: Resolver, Sendable {
 
         // Ensure that both futures are succeeded in the same tick
         // to avoid racing and potentially leaking a promise
-        self.loop.execute {
+        self.loop.execute { [v4Results, v6Results] in
             self.v6Future.succeed(v6Results)
             self.v4Future.succeed(v4Results)
         }
