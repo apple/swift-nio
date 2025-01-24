@@ -869,7 +869,10 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         self._succeededVoidFuture = nil
     }
 
-    internal func initiateClose(queue: DispatchQueue, completionHandler: @escaping (Result<Void, Error>) -> Void) {
+    internal func initiateClose(
+        queue: DispatchQueue,
+        completionHandler: @escaping @Sendable (Result<Void, Error>) -> Void
+    ) {
         func doClose() {
             self.assertInEventLoop()
             self._parentGroup = nil  // break the cycle
@@ -948,7 +951,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     }
 
     @usableFromInline
-    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable (Error?) -> Void) {
         if self.canBeShutdownIndividually {
             self.initiateClose(queue: queue) { result in
                 self.syncFinaliseClose(joinThread: false)  // This thread was taken over by somebody else
@@ -1012,11 +1015,17 @@ enum UnderlyingTask {
     case callback(any NIOScheduledCallbackHandler)
 }
 
+@available(*, unavailable)
+extension UnderlyingTask: Sendable {}
+
 @usableFromInline
 internal enum LoopTask {
     case scheduled(ScheduledTask)
     case immediate(UnderlyingTask)
 }
+
+@available(*, unavailable)
+extension LoopTask: Sendable {}
 
 @inlinable
 internal func assertExpression(_ body: () -> Bool) {
