@@ -76,7 +76,7 @@ final class NIOLoopBoundTests: XCTestCase {
     }
 
     #if compiler(>=6.0)
-    class NonSendableThingy {
+    fileprivate class NonSendableThingy {
         var value: Int = 0
         init(value: Int) {
             self.value = value
