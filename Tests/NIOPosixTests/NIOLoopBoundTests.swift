@@ -90,7 +90,6 @@ final class NIOLoopBoundTests: XCTestCase {
         }
 
         let loop = group.any()
-
         let nonSendableThingy = NonSendableThingy(value: 15)
 
         let sendableBox = NIOLoopBoundBox.makeBoxSendingValue(
