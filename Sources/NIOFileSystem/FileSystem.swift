@@ -636,7 +636,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     ///
     /// #### Implementation details
     ///
-    /// On all platforms, this function first attempts to read the `TMPDIR` environment variable.
+    /// On all platforms, this function first attempts to read the `TMPDIR` environment variable and returns that path, omitting trailing slashes.
     /// If that fails:
     /// - On Darwin this function uses `confstr(3)` and gets the value of `_CS_DARWIN_USER_TEMP_DIR`;
     ///   the users temporary directory. Typically items are removed after three days if they are not
