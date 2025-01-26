@@ -16,8 +16,16 @@ import XCTest
 
 @testable import NIOCore
 
-#if canImport(Darwin)
-import Darwin
+/// Returns the malloc size that we expect to be allocated for a given requested capacity size.
+/// On Darwin, we want to use `malloc_good_size` to get the optimal size, but on all other platforms
+/// we use the next power of 2, clamped.
+private func expectedMallocSize(_ size: Int) -> Int {
+    #if canImport(Darwin)
+    return Darwin.malloc_good_size(size)
+    #else
+    return UInt32(size).nextPowerOf2ClampedToMax()
+    #endif
+}
 
 // Tests that ByteBuffer allocates memory in an optimal way depending on the host platform.
 
@@ -26,7 +34,7 @@ final class ByteBufferStorageMallocTest: XCTestCase {
     func testInitialAllocationUsesGoodSize() {
         let allocator = ByteBufferAllocator()
         let requestedCapacity = 1000
-        let expectedCapacity = malloc_good_size(requestedCapacity)
+        let expectedCapacity = expectedMallocSize(requestedCapacity)
 
         let buffer = allocator.buffer(capacity: requestedCapacity)
         XCTAssertEqual(Int(buffer._storage.capacity), expectedCapacity)
@@ -39,7 +47,7 @@ final class ByteBufferStorageMallocTest: XCTestCase {
 
         // Write more bytes than the current capacity to trigger reallocation
         let newSize = initialCapacity + 100
-        let expectedCapacity = malloc_good_size(Int(newSize))
+        let expectedCapacity = expectedMallocSize(Int(newSize))
 
         // This will trigger reallocation
         buffer.writeBytes(Array(repeating: UInt8(0), count: Int(newSize)))
@@ -54,4 +62,3 @@ final class ByteBufferStorageMallocTest: XCTestCase {
     }
 
 }
-#endif
