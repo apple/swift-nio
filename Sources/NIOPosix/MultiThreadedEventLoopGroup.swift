@@ -40,6 +40,9 @@ struct NIORegistration: Registration {
     var registrationID: SelectorRegistrationID
 }
 
+@available(*, unavailable)
+extension NIORegistration: Sendable {}
+
 private let nextEventLoopGroupID = ManagedAtomic(0)
 
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
@@ -391,7 +394,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             return
         }
 
-        var result: Result<Void, Error> = .success(())
+        let result: NIOLockedValueBox<Result<Void, Error>> = NIOLockedValueBox(.success(()))
 
         for loop in self.eventLoops {
             g.enter()
@@ -400,7 +403,9 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                 case .success:
                     ()
                 case .failure(let error):
-                    result = .failure(error)
+                    result.withLockedValue {
+                        $0 = .failure(error)
+                    }
                 }
                 g.leave()
             }
@@ -418,14 +423,14 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
                             "MultiThreadedEventLoopGroup in illegal state when closing: \(self.runState)"
                         )
                     case .closing(let callbacks):
-                        let overallError: Error? = {
-                            switch result {
+                        let overallError: Error? = result.withLockedValue {
+                            switch $0 {
                             case .success:
                                 return nil
                             case .failure(let error):
                                 return error
                             }
-                        }()
+                        }
                         self.runState = .closed(overallError)
                         return (overallError, callbacks)
                     }
@@ -490,9 +495,9 @@ extension MultiThreadedEventLoopGroup: CustomStringConvertible {
 }
 
 @usableFromInline
-struct ErasedUnownedJob {
+struct ErasedUnownedJob: Sendable {
     @usableFromInline
-    let erasedJob: Any
+    let erasedJob: any Sendable
 
     @available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *)
     init(job: UnownedJob) {
@@ -566,6 +571,12 @@ extension ScheduledTask: Comparable {
         lhs.id == rhs.id
     }
 }
+
+@available(*, unavailable)
+extension ScheduledTask: Sendable {}
+
+@available(*, unavailable)
+extension ScheduledTask.Kind: Sendable {}
 
 extension NIODeadline {
     @inlinable

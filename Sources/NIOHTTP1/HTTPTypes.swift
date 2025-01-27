@@ -313,7 +313,10 @@ public struct HTTPHeaders: CustomStringConvertible, ExpressibleByDictionaryLiter
     internal var keepAliveState: KeepAliveState = .unknown
 
     public var description: String {
-        self.headers.description
+        self.headers.lazy.map {
+            "\($0.0): \($0.1)"
+        }
+        .joined(separator: "; ")
     }
 
     internal var names: [String] {

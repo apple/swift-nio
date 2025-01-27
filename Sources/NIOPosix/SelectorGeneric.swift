@@ -20,7 +20,7 @@ import CNIOLinux
 #endif
 
 @usableFromInline
-internal enum SelectorLifecycleState {
+internal enum SelectorLifecycleState: Sendable {
     case open
     case closing
     case closed
@@ -60,7 +60,7 @@ extension timespec {
 /// If then suddenly the socket becomes both readable and writable, the eventing mechanism will tell you about that
 /// fact using `[.read, .write]`.
 @usableFromInline
-struct SelectorEventSet: OptionSet, Equatable {
+struct SelectorEventSet: OptionSet, Equatable, Sendable {
 
     @usableFromInline
     typealias RawValue = UInt8
@@ -404,6 +404,9 @@ extension Selector: CustomStringConvertible {
     }
 }
 
+@available(*, unavailable)
+extension Selector: Sendable {}
+
 /// An event that is triggered once the `Selector` was able to select something.
 @usableFromInline
 struct SelectorEvent<R> {
@@ -421,6 +424,9 @@ struct SelectorEvent<R> {
         self.registration = registration
     }
 }
+
+@available(*, unavailable)
+extension SelectorEvent: Sendable {}
 
 extension Selector where R == NIORegistration {
     /// Gently close the `Selector` after all registered `Channel`s are closed.
@@ -473,7 +479,7 @@ extension Selector where R == NIORegistration {
 
 /// The strategy used for the `Selector`.
 @usableFromInline
-enum SelectorStrategy {
+enum SelectorStrategy: Sendable {
     /// Block until there is some IO ready to be processed or the `Selector` is explicitly woken up.
     case block
 
@@ -489,7 +495,7 @@ enum SelectorStrategy {
 /// to mark events to allow for filtering of received return values to not be delivered to a
 /// new `Registration` instance that receives the same file descriptor. Ok if it wraps.
 /// Needed for i.e. testWeDoNotDeliverEventsForPreviouslyClosedChannels to succeed.
-@usableFromInline struct SelectorRegistrationID: Hashable {
+@usableFromInline struct SelectorRegistrationID: Hashable, Sendable {
     @usableFromInline var _rawValue: UInt32
 
     @inlinable var rawValue: UInt32 {

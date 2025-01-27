@@ -355,6 +355,36 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
         return
     }
 
+    public func _executeIsolatedUnsafeUnchecked(_ task: @escaping () -> Void) {
+        // Because of the way EmbeddedEL works, we can just delegate this directly
+        // to execute.
+        self.execute(task)
+    }
+
+    public func _submitIsolatedUnsafeUnchecked<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        // Because of the way EmbeddedEL works, we can delegate this directly to schedule. Note that I didn't
+        // say submit: we don't have an override of submit here.
+        self.scheduleTask(deadline: self._now, task).futureResult
+    }
+
+    @discardableResult
+    public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        deadline: NIODeadline,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        // Because of the way EmbeddedEL works, we can delegate this directly to schedule.
+        self.scheduleTask(deadline: deadline, task)
+    }
+
+    @discardableResult
+    public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        in delay: TimeAmount,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        // Because of the way EmbeddedEL works, we can delegate this directly to schedule.
+        self.scheduleTask(in: delay, task)
+    }
+
     deinit {
         self.checkCorrectThread()
         precondition(scheduledTasks.isEmpty, "Embedded event loop freed with unexecuted scheduled tasks!")

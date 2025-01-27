@@ -17,6 +17,10 @@ on:
         default: true
       linux_nightly_6_0_enabled:
         type: boolean
+        description: "⚠️  Deprecated, we no longer run against 6.0 nightly."
+        default: false
+      linux_nightly_6_1_enabled:
+        type: boolean
         description: "Boolean to enable the Linux nightly 6.0 Swift version matrix job. Defaults to true."
         default: true
       linux_nightly_main_enabled:
@@ -30,7 +34,7 @@ on:
         default: false
       windows_nightly_6_0_enabled:
         type: boolean
-        description: "Boolean to enable the Windows nightly 6.0 Swift version matrix job. Defaults to false. Currently has no effect!"  # TODO: implement Windows Cxx compat checking
+        description: "⚠️  Deprecated, we no longer run against 6.0 nightly."  # TODO: implement Windows Cxx compat checking
         default: false
       windows_nightly_main_enabled:
         type: boolean
@@ -56,7 +60,7 @@ jobs:
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
           MATRIX_LINUX_6_0_ENABLED: ${{ inputs.linux_6_0_enabled }}
-          MATRIX_LINUX_NIGHTLY_6_0_ENABLED: ${{ inputs.linux_nightly_6_0_enabled }}
+          MATRIX_LINUX_NIGHTLY_6_1_ENABLED: ${{ inputs.linux_nightly_6_1_enabled }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
 
   cxx-interop:
