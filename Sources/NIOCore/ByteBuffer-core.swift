@@ -31,11 +31,10 @@ import WASILibc
 @usableFromInline let sysMalloc: @convention(c) (size_t) -> UnsafeMutableRawPointer? = malloc
 @usableFromInline let sysRealloc: @convention(c) (UnsafeMutableRawPointer?, size_t) -> UnsafeMutableRawPointer? =
     realloc
-
-/// Xcode 13 GM shipped with a bug in the SDK that caused `free`'s first argument to be annotated as
-/// non-nullable. To that end, we define a thunk through to `free` that matches that constraint, as we
-/// never pass a `nil` pointer to it.
-@usableFromInline let sysFree: @convention(c) (UnsafeMutableRawPointer) -> Void = { free($0) }
+@inlinable
+func sysFree(_ ptr: UnsafeMutableRawPointer) {
+    free(ptr)
+}
 
 extension _ByteBufferSlice: Equatable {}
 
