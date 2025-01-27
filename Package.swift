@@ -120,7 +120,8 @@ let package = Package(
                 swiftAtomics,
             ],
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
-            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : []
+            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIO",
