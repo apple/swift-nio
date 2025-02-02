@@ -1681,6 +1681,14 @@ extension FileSystemTests {
         XCTAssertGreaterThan(info.size, 0)
     }
 
+    func testTemporaryDirectoryRespectsEnvironment() async throws {
+        if let envTmpDir = getenv("TMPDIR") {
+            let envTmpDirString = String(cString: envTmpDir)
+            let fsTempDirectory = try await fs.temporaryDirectory
+            XCTAssertEqual(fsTempDirectory, FilePath(envTmpDirString))
+        }
+    }
+
     func testReadChunksRange() async throws {
         try await self.fs.withFileHandle(forReadingAt: FilePath(#filePath)) { handle in
             let info = try await handle.info()

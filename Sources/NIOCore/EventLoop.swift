@@ -395,6 +395,69 @@ public protocol EventLoop: EventLoopGroup {
     ///
     /// - NOTE: Event loops only need to implemented this if they provide a custom scheduled callback implementation.
     func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback)
+
+    /// Submit a given task to be executed by the ``EventLoop``, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/execute`` will perform better.
+    func _executeIsolatedUnsafeUnchecked(_ task: @escaping () -> Void)
+
+    /// Submit a given task to be executed by the ``EventLoop```, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// Once the execution is complete the returned ``EventLoopFuture`` is notified.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/submit`` will perform better.
+    ///
+    /// - Parameters:
+    ///   - task: The closure that will be submitted to the ``EventLoop`` for execution.
+    /// - Returns: ``EventLoopFuture`` that is notified once the task was executed.
+    func _submitIsolatedUnsafeUnchecked<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
+
+    /// Schedule a `task` that is executed by this ``EventLoop`` at the given time, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/scheduleTask(deadline:_:)`` will perform better.
+    ///
+    /// - Parameters:
+    ///   - deadline: The instant in time before which the task will not execute.
+    ///   - task: The synchronous task to run. As with everything that runs on the ``EventLoop```, it must not block.
+    /// - Returns: A ``Scheduled``` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - Note: You can only cancel a task before it has started executing.
+    @discardableResult
+    func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        deadline: NIODeadline,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T>
+
+    /// Schedule a `task` that is executed by this ``EventLoop`` after the given amount of time, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/scheduleTask(in:_:)`` will perform better.
+    ///
+    /// - Parameters:
+    ///   - in: The amount of time before which the task will not execute.
+    ///   - task: The synchronous task to run. As with everything that runs on the ``EventLoop``, it must not block.
+    /// - Returns: A ``Scheduled`` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - Note: You can only cancel a task before it has started executing.
+    /// - Note: The `in` value is clamped to a maximum when running on a Darwin-kernel.
+    @discardableResult
+    func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        in: TimeAmount,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T>
 }
 
 extension EventLoop {
@@ -421,6 +484,54 @@ extension EventLoop {
     public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
     {
         nil
+    }
+
+    /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
+    public func _executeIsolatedUnsafeUnchecked(_ task: @escaping () -> Void) {
+        self.assertInEventLoop()
+        let unsafeTransfer = UnsafeTransfer(task)
+        self.execute {
+            unsafeTransfer.wrappedValue()
+        }
+    }
+
+    /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
+    public func _submitIsolatedUnsafeUnchecked<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        self.assertInEventLoop()
+        let unsafeTransfer = UnsafeTransfer(task)
+        return self.submit {
+            try unsafeTransfer.wrappedValue()
+        }
+    }
+
+    /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
+    @discardableResult
+    public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        deadline: NIODeadline,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        self.assertInEventLoop()
+        let unsafeTransfer = UnsafeTransfer(task)
+        return self.scheduleTask(deadline: deadline) {
+            try unsafeTransfer.wrappedValue()
+        }
+    }
+
+    /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
+    @discardableResult
+    public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        in delay: TimeAmount,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        self.assertInEventLoop()
+        let unsafeTransfer = UnsafeTransfer(task)
+        return self.scheduleTask(in: delay) {
+            try unsafeTransfer.wrappedValue()
+        }
     }
 }
 
@@ -898,7 +1009,15 @@ extension EventLoop {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
 
-        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        scheduled.futureResult.whenComplete { result in
+            switch result {
+            case .success(let futureResult):
+                promise.completeWith(futureResult)
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
+
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 
@@ -940,7 +1059,15 @@ extension EventLoop {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(in: delay, task)
 
-        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        scheduled.futureResult.whenComplete { result in
+            switch result {
+            case .success(let futureResult):
+                promise.completeWith(futureResult)
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
+
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 

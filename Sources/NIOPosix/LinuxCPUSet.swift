@@ -52,7 +52,7 @@ extension NIOThread {
             CNIOLinux_CPU_ZERO(&cpuset)
 
             let res = self.withUnsafeThreadHandle { p in
-                CNIOLinux_pthread_getaffinity_np(p, MemoryLayout.size(ofValue: cpuset), &cpuset)
+                CNIOLinux_pthread_getaffinity_np(p.handle, MemoryLayout.size(ofValue: cpuset), &cpuset)
             }
 
             precondition(res == 0, "pthread_getaffinity_np failed: \(res)")
@@ -75,7 +75,7 @@ extension NIOThread {
                 CNIOLinux_CPU_SET(CInt(cpuID), &cpuset)
             }
             let res = self.withUnsafeThreadHandle { p in
-                CNIOLinux_pthread_setaffinity_np(p, MemoryLayout.size(ofValue: cpuset), &cpuset)
+                CNIOLinux_pthread_setaffinity_np(p.handle, MemoryLayout.size(ofValue: cpuset), &cpuset)
             }
             precondition(res == 0, "pthread_setaffinity_np failed: \(res)")
         }

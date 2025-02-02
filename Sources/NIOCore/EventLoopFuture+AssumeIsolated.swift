@@ -34,10 +34,7 @@ public struct NIOIsolatedEventLoop {
     @available(*, noasync)
     @inlinable
     public func execute(_ task: @escaping () -> Void) {
-        let unsafeTransfer = UnsafeTransfer(task)
-        self._wrapped.execute {
-            unsafeTransfer.wrappedValue()
-        }
+        self._wrapped._executeIsolatedUnsafeUnchecked(task)
     }
 
     /// Submit a given task to be executed by the `EventLoop`. Once the execution is complete the returned `EventLoopFuture` is notified.
@@ -48,10 +45,7 @@ public struct NIOIsolatedEventLoop {
     @available(*, noasync)
     @inlinable
     public func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
-        let unsafeTransfer = UnsafeTransfer(task)
-        return self._wrapped.submit {
-            try unsafeTransfer.wrappedValue()
-        }
+        self._wrapped._submitIsolatedUnsafeUnchecked(task)
     }
 
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
@@ -70,10 +64,7 @@ public struct NIOIsolatedEventLoop {
         deadline: NIODeadline,
         _ task: @escaping () throws -> T
     ) -> Scheduled<T> {
-        let unsafeTransfer = UnsafeTransfer(task)
-        return self._wrapped.scheduleTask(deadline: deadline) {
-            try unsafeTransfer.wrappedValue()
-        }
+        self._wrapped._scheduleTaskIsolatedUnsafeUnchecked(deadline: deadline, task)
     }
 
     /// Schedule a `task` that is executed by this `EventLoop` after the given amount of time.
@@ -93,10 +84,7 @@ public struct NIOIsolatedEventLoop {
         in delay: TimeAmount,
         _ task: @escaping () throws -> T
     ) -> Scheduled<T> {
-        let unsafeTransfer = UnsafeTransfer(task)
-        return self._wrapped.scheduleTask(in: delay) {
-            try unsafeTransfer.wrappedValue()
-        }
+        self._wrapped._scheduleTaskIsolatedUnsafeUnchecked(in: delay, task)
     }
 
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
@@ -122,10 +110,19 @@ public struct NIOIsolatedEventLoop {
         line: UInt = #line,
         _ task: @escaping () throws -> EventLoopFuture<T>
     ) -> Scheduled<T> {
-        let unsafeTransfer = UnsafeTransfer(task)
-        return self._wrapped.flatScheduleTask(deadline: deadline, file: file, line: line) {
-            try unsafeTransfer.wrappedValue()
+        let promise: EventLoopPromise<T> = self._wrapped.makePromise(file: file, line: line)
+        let scheduled = self.scheduleTask(deadline: deadline, task)
+
+        scheduled.futureResult.whenComplete { result in
+            switch result {
+            case .success(let futureResult):
+                promise.completeWith(futureResult)
+            case .failure(let error):
+                promise.fail(error)
+            }
         }
+
+        return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 
     /// Returns the wrapped event loop.

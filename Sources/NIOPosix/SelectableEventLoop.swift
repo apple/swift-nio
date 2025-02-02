@@ -19,6 +19,22 @@ import NIOConcurrencyHelpers
 import NIOCore
 import _NIODataStructures
 
+private func printError(_ string: StaticString) {
+    string.withUTF8Buffer { buf in
+        var buf = buf
+        while buf.count > 0 {
+            // 2 is stderr
+            let rc = write(2, buf.baseAddress, buf.count)
+            if rc < 0 {
+                let err = errno
+                if err == EINTR { continue }
+                fatalError("Unexpected error writing: \(err)")
+            }
+            buf = .init(rebasing: buf.dropFirst(Int(rc)))
+        }
+    }
+}
+
 /// Execute the given closure and ensure we release all auto pools if needed.
 @inlinable
 internal func withAutoReleasePool<T>(_ execute: () throws -> T) rethrows -> T {
@@ -308,11 +324,34 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     @inlinable
     internal func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         let promise: EventLoopPromise<T> = self.makePromise()
+        let (task, scheduled) = self._prepareToSchedule(deadline: deadline, promise: promise, task: task)
+
+        do {
+            try self._schedule0(.scheduled(task))
+        } catch {
+            promise.fail(error)
+        }
+
+        return scheduled
+    }
+
+    /// - see: `EventLoop.scheduleTask(in:_:)`
+    @inlinable
+    internal func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+        self.scheduleTask(deadline: .now() + `in`, task)
+    }
+
+    @inlinable
+    func _prepareToSchedule<T>(
+        deadline: NIODeadline,
+        promise: EventLoopPromise<T>,
+        task: @escaping () throws -> T
+    ) -> (ScheduledTask, Scheduled<T>) {
         let task = ScheduledTask(
             id: self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed),
             {
                 do {
-                    promise.succeed(try task())
+                    promise.assumeIsolatedUnsafeUnchecked().succeed(try task())
                 } catch let err {
                     promise.fail(err)
                 }
@@ -337,9 +376,42 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
                 // one wakeup.
             }
         )
+        return (task, scheduled)
+    }
+
+    @inlinable
+    func _executeIsolatedUnsafeUnchecked(_ task: @escaping () -> Void) {
+        // nothing we can do if we fail enqueuing here.
+        try? self._scheduleIsolated0(.immediate(.function(task)))
+    }
+
+    @inlinable
+    func _submitIsolatedUnsafeUnchecked<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        let promise = self.makePromise(of: T.self)
+
+        self._executeIsolatedUnsafeUnchecked {
+            do {
+                // UnsafeUnchecked is allowed here because we know we are on the EL.
+                promise.assumeIsolatedUnsafeUnchecked().succeed(try task())
+            } catch let err {
+                promise.fail(err)
+            }
+        }
+
+        return promise.futureResult
+    }
+
+    @inlinable
+    @discardableResult
+    func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        deadline: NIODeadline,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        let promise: EventLoopPromise<T> = self.makePromise()
+        let (task, scheduled) = self._prepareToSchedule(deadline: deadline, promise: promise, task: task)
 
         do {
-            try self._schedule0(.scheduled(task))
+            try self._scheduleIsolated0(.scheduled(task))
         } catch {
             promise.fail(error)
         }
@@ -347,10 +419,13 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         return scheduled
     }
 
-    /// - see: `EventLoop.scheduleTask(in:_:)`
     @inlinable
-    internal func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        scheduleTask(deadline: .now() + `in`, task)
+    @discardableResult
+    func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        in delay: TimeAmount,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        self._scheduleTaskIsolatedUnsafeUnchecked(deadline: .now() + delay, task)
     }
 
     // - see: `EventLoop.execute`
@@ -372,31 +447,18 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     @usableFromInline
     internal func _schedule0(_ task: LoopTask) throws {
         if self.inEventLoop {
-            precondition(
-                self._validInternalStateToScheduleTasks,
-                "BUG IN NIO (please report): EventLoop is shutdown, yet we're on the EventLoop."
-            )
-
-            self._tasksLock.withLock { () -> Void in
-                switch task {
-                case .scheduled(let task):
-                    self._scheduledTasks.push(task)
-                case .immediate(let task):
-                    self._immediateTasks.append(task)
-                }
-            }
+            try self._scheduleIsolated0(task)
         } else {
             let shouldWakeSelector: Bool = self.externalStateLock.withLock {
                 guard self.validExternalStateToScheduleTasks else {
                     if Self.strictModeEnabled {
                         fatalError("Cannot schedule tasks on an EventLoop that has already shut down.")
                     }
-                    fputs(
+                    printError(
                         """
                         ERROR: Cannot schedule tasks on an EventLoop that has already shut down. \
                         This will be upgraded to a forced crash in future SwiftNIO versions.\n
-                        """,
-                        stderr
+                        """
                     )
                     return false
                 }
@@ -430,6 +492,25 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
             // but as long as we're using the big dumb lock we can make this optimization safely.
             if shouldWakeSelector {
                 try self._wakeupSelector()
+            }
+        }
+    }
+
+    /// Add the `ScheduledTask` to be executed.
+    @usableFromInline
+    internal func _scheduleIsolated0(_ task: LoopTask) throws {
+        self.assertInEventLoop()
+        precondition(
+            self._validInternalStateToScheduleTasks,
+            "BUG IN NIO (please report): EventLoop is shutdown, yet we're on the EventLoop."
+        )
+
+        self._tasksLock.withLock { () -> Void in
+            switch task {
+            case .scheduled(let task):
+                self._scheduledTasks.push(task)
+            case .immediate(let task):
+                self._immediateTasks.append(task)
             }
         }
     }
@@ -803,7 +884,10 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         self._succeededVoidFuture = nil
     }
 
-    internal func initiateClose(queue: DispatchQueue, completionHandler: @escaping (Result<Void, Error>) -> Void) {
+    internal func initiateClose(
+        queue: DispatchQueue,
+        completionHandler: @escaping @Sendable (Result<Void, Error>) -> Void
+    ) {
         func doClose() {
             self.assertInEventLoop()
             self._parentGroup = nil  // break the cycle
@@ -882,7 +966,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     }
 
     @usableFromInline
-    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable (Error?) -> Void) {
         if self.canBeShutdownIndividually {
             self.initiateClose(queue: queue) { result in
                 self.syncFinaliseClose(joinThread: false)  // This thread was taken over by somebody else
@@ -946,11 +1030,17 @@ enum UnderlyingTask {
     case callback(any NIOScheduledCallbackHandler)
 }
 
+@available(*, unavailable)
+extension UnderlyingTask: Sendable {}
+
 @usableFromInline
 internal enum LoopTask {
     case scheduled(ScheduledTask)
     case immediate(UnderlyingTask)
 }
+
+@available(*, unavailable)
+extension LoopTask: Sendable {}
 
 @inlinable
 internal func assertExpression(_ body: () -> Bool) {

@@ -205,6 +205,7 @@ public struct NonBlockingFileIO: Sendable {
 
         let promise = eventLoop.makePromise(of: Void.self)
 
+        @Sendable
         func _read(remainingReads: Int, bytesReadSoFar: Int64) {
             if remainingReads > 1 || (remainingReads == 1 && lastReadSize > 0) {
                 let readSize = remainingReads > 1 ? chunkSize : lastReadSize
@@ -843,7 +844,7 @@ public struct NonBlockingFileIO: Sendable {
 
 #if !os(Windows)
 /// A `NIODirectoryEntry` represents a single directory entry.
-public struct NIODirectoryEntry: Hashable {
+public struct NIODirectoryEntry: Hashable, Sendable {
     // File number of entry
     public var ino: UInt64
     // File type
