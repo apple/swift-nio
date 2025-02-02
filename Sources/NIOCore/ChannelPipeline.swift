@@ -175,11 +175,12 @@ public final class ChannelPipeline: ChannelInvoker {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
-        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
+            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
             future = self.eventLoop.makeCompletedFuture(self.addHandlerSync(handler, name: name, position: syncPosition))
         } else {
             future = self.eventLoop.submit {
+                let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
                 try self.addHandlerSync(handler, name: name, position: syncPosition).get()
             }
         }
@@ -1629,7 +1630,6 @@ extension ChannelPipeline {
 extension ChannelPipeline.SynchronousOperations {
     /// A `Position` within the `ChannelPipeline`'s `SynchronousOperations` used to insert non-sendable handlers
     /// into the `ChannelPipeline` at a certain position.
-    @preconcurrency
     public enum Position {
         /// The first `ChannelHandler` -- the front of the `ChannelPipeline`.
         case first
@@ -1643,7 +1643,7 @@ extension ChannelPipeline.SynchronousOperations {
         /// After the given `ChannelHandler`.
         case after(ChannelHandler)
 
-        package init(_ position: ChannelPipeline.Position) {
+        public init(_ position: ChannelPipeline.Position) {
             switch position {
             case .first:
                 self = .first
@@ -1657,6 +1657,10 @@ extension ChannelPipeline.SynchronousOperations {
         }
     }
 }
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+@available(*, unavailable)
+extension ChannelPipeline.SynchronousOperations.Position: Sendable {}
 
 /// Special `ChannelHandler` that forwards all events to the `Channel.Unsafe` implementation.
 final class HeadChannelHandler: _ChannelOutboundHandler, Sendable {

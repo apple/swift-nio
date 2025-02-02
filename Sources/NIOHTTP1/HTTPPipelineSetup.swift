@@ -83,8 +83,8 @@ extension ChannelPipeline {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
-        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
+            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
             let result = Result<Void, Error> {
                 try self.syncOperations.addHTTPClientHandlers(
                     position: syncPosition,
@@ -95,6 +95,7 @@ extension ChannelPipeline {
             future = self.eventLoop.makeCompletedFuture(result)
         } else {
             future = self.eventLoop.submit {
+                let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
                 try self.syncOperations.addHTTPClientHandlers(
                     position: syncPosition,
                     leftOverBytesStrategy: leftOverBytesStrategy,
@@ -127,8 +128,8 @@ extension ChannelPipeline {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
-        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
+            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
             let result = Result<Void, Error> {
                 try self.syncOperations.addHTTPClientHandlers(
                     position: syncPosition,
@@ -140,6 +141,7 @@ extension ChannelPipeline {
             future = self.eventLoop.makeCompletedFuture(result)
         } else {
             future = self.eventLoop.submit {
+                let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
                 try self.syncOperations.addHTTPClientHandlers(
                     position: syncPosition,
                     leftOverBytesStrategy: leftOverBytesStrategy,
@@ -175,8 +177,8 @@ extension ChannelPipeline {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
-        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
+            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
             let result = Result<Void, Error> {
                 try self.syncOperations.addHTTPClientHandlers(
                     position: syncPosition,
@@ -189,6 +191,7 @@ extension ChannelPipeline {
             future = self.eventLoop.makeCompletedFuture(result)
         } else {
             future = self.eventLoop.submit {
+                let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
                 try self.syncOperations.addHTTPClientHandlers(
                     position: syncPosition,
                     leftOverBytesStrategy: leftOverBytesStrategy,
@@ -345,8 +348,8 @@ extension ChannelPipeline {
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
-        let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
         if self.eventLoop.inEventLoop {
+            let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
             let result = Result<Void, Error> {
                 try self.syncOperations.configureHTTPServerPipeline(
                     position: syncPosition,
@@ -360,6 +363,7 @@ extension ChannelPipeline {
             future = self.eventLoop.makeCompletedFuture(result)
         } else {
             future = self.eventLoop.submit {
+                let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
                 try self.syncOperations.configureHTTPServerPipeline(
                     position: syncPosition,
                     withPipeliningAssistance: pipelining,
