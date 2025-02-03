@@ -221,7 +221,8 @@ let package = Package(
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 swiftCollections,
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOTestUtils",
