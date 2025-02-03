@@ -334,7 +334,8 @@ let package = Package(
                 "NIOCore",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOChatClient",
@@ -343,7 +344,8 @@ let package = Package(
                 "NIOCore",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOWebSocketServer",
@@ -370,7 +372,8 @@ let package = Package(
             dependencies: [
                 "NIOPosix",
                 "NIOCore",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOUDPEchoServer",
@@ -518,7 +521,8 @@ let package = Package(
             dependencies: [
                 "NIOCore",
                 "NIOFoundationCompat",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOTests",
@@ -527,7 +531,8 @@ let package = Package(
         ),
         .testTarget(
             name: "NIOSingletonsTests",
-            dependencies: ["NIOCore", "NIOPosix"]
+            dependencies: ["NIOCore", "NIOPosix"],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOFileSystemTests",
