@@ -47,8 +47,9 @@ var bootstrap = DatagramBootstrap(group: group)
 
     // Set the handlers that are applied to the bound channel
     .channelInitializer { channel in
-        // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
-        channel.pipeline.addHandler(EchoHandler())
+        channel.eventLoop.makeCompletedFuture {
+            try channel.pipeline.syncOperations.addHandler(EchoHandler())
+        }
     }
 
 defer {
