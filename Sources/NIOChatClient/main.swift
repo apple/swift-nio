@@ -47,7 +47,9 @@ let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
     .channelOption(.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.addHandler(ChatHandler())
+        channel.eventLoop.makeCompletedFuture {
+            try channel.pipeline.syncOperations.addHandler(ChatHandler())
+        }
     }
 defer {
     try! group.syncShutdownGracefully()
