@@ -115,7 +115,7 @@ default:
     connectTarget = .ip(host: defaultHost, sendPort: defaultServerPort, listeningPort: defaultListeningPort)
 }
 
-let remoteAddress = { () -> SocketAddress in
+let remoteAddress = { @Sendable () -> SocketAddress in
     switch connectTarget {
     case .ip(let host, let sendPort, _):
         return try SocketAddress.makeAddressResolvingHost(host, port: sendPort)
@@ -129,7 +129,9 @@ let bootstrap = DatagramBootstrap(group: group)
     // Enable SO_REUSEADDR.
     .channelOption(.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.addHandler(EchoHandler(remoteAddressInitializer: remoteAddress))
+        channel.eventLoop.makeCompletedFuture {
+            try channel.pipeline.syncOperations.addHandler(EchoHandler(remoteAddressInitializer: remoteAddress))
+        }
     }
 defer {
     try! group.syncShutdownGracefully()
