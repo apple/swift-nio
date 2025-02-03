@@ -129,21 +129,24 @@ let package = Package(
                 "NIOCore",
                 "NIOEmbedded",
                 "NIOPosix",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "_NIOConcurrency",
             dependencies: [
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOFoundationCompat",
             dependencies: [
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "CNIOAtomics",
@@ -289,7 +292,8 @@ let package = Package(
                 "NIOCore",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOEchoClient",
@@ -298,7 +302,8 @@ let package = Package(
                 "NIOCore",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOHTTP1Server",
@@ -371,7 +376,8 @@ let package = Package(
                 "NIOPosix",
                 "NIOCore",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOUDPEchoClient",
@@ -379,7 +385,8 @@ let package = Package(
                 "NIOPosix",
                 "NIOCore",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOAsyncAwaitDemo",
