@@ -246,7 +246,7 @@ let package = Package(
             path: "Sources/NIOFileSystem",
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
             resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
-            swiftSettings: [
+            swiftSettings: strictConcurrencySettings + [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
         ),
