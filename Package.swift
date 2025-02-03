@@ -275,7 +275,8 @@ let package = Package(
                 "NIOPosix",
                 "NIOCore",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOTCPEchoClient",
@@ -283,7 +284,8 @@ let package = Package(
                 "NIOPosix",
                 "NIOCore",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOEchoServer",
@@ -332,7 +334,8 @@ let package = Package(
                 "NIOCore",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOChatClient",
@@ -341,7 +344,8 @@ let package = Package(
                 "NIOCore",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOWebSocketServer",
@@ -368,7 +372,8 @@ let package = Package(
             dependencies: [
                 "NIOPosix",
                 "NIOCore",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOUDPEchoServer",
