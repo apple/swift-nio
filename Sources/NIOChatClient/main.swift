@@ -18,19 +18,9 @@ private final class ChatHandler: ChannelInboundHandler {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
 
-    private func printByte(_ byte: UInt8) {
-        #if os(Android)
-        print(Character(UnicodeScalar(byte)), terminator: "")
-        #else
-        fputc(Int32(byte), stdout)
-        #endif
-    }
-
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        var buffer = Self.unwrapInboundIn(data)
-        while let byte: UInt8 = buffer.readInteger() {
-            printByte(byte)
-        }
+        let buffer = Self.unwrapInboundIn(data)
+        print(String(buffer: buffer))
     }
 
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
