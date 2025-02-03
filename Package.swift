@@ -136,7 +136,8 @@ let package = Package(
             dependencies: [
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOFoundationCompat",
