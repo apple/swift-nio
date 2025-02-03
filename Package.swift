@@ -521,7 +521,8 @@ let package = Package(
             dependencies: [
                 "NIOCore",
                 "NIOFoundationCompat",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOTests",
@@ -529,7 +530,8 @@ let package = Package(
         ),
         .testTarget(
             name: "NIOSingletonsTests",
-            dependencies: ["NIOCore", "NIOPosix"]
+            dependencies: ["NIOCore", "NIOPosix"],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOFileSystemTests",
