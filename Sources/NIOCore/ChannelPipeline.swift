@@ -177,7 +177,9 @@ public final class ChannelPipeline: ChannelInvoker {
 
         if self.eventLoop.inEventLoop {
             let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
-            future = self.eventLoop.makeCompletedFuture(self.addHandlerSync(handler, name: name, position: syncPosition))
+            future = self.eventLoop.makeCompletedFuture(
+                self.addHandlerSync(handler, name: name, position: syncPosition)
+            )
         } else {
             future = self.eventLoop.submit {
                 let syncPosition = ChannelPipeline.SynchronousOperations.Position(position)
