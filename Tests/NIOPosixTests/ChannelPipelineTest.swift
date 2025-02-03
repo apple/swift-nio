@@ -2701,13 +2701,13 @@ class ChannelPipelineTest: XCTestCase {
         }
 
         let firstHandler = IndexWritingHandler(1)
-        XCTAssertNoThrow(try channel.pipeline.addHandler(firstHandler).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(2)).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(firstHandler))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(IndexWritingHandler(2)))
         XCTAssertNoThrow(
-            try channel.pipeline.addHandler(
+            try channel.pipeline.syncOperations.addHandler(
                 IndexWritingHandler(3),
                 position: .after(firstHandler)
-            ).wait()
+            )
         )
 
         channel.assertReadIndexOrder([1, 3, 2])
@@ -2721,13 +2721,13 @@ class ChannelPipelineTest: XCTestCase {
         }
 
         let secondHandler = IndexWritingHandler(2)
-        XCTAssertNoThrow(try channel.pipeline.addHandler(IndexWritingHandler(1)).wait())
-        XCTAssertNoThrow(try channel.pipeline.addHandler(secondHandler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(IndexWritingHandler(1)))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(secondHandler))
         XCTAssertNoThrow(
-            try channel.pipeline.addHandler(
+            try channel.pipeline.syncOperations.addHandler(
                 IndexWritingHandler(3),
                 position: .before(secondHandler)
-            ).wait()
+            )
         )
 
         channel.assertReadIndexOrder([1, 3, 2])
