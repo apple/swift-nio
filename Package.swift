@@ -526,7 +526,8 @@ let package = Package(
         ),
         .testTarget(
             name: "NIOTests",
-            dependencies: ["NIO"]
+            dependencies: ["NIO"],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOSingletonsTests",
