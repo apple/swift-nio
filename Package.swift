@@ -27,7 +27,7 @@ let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPa
 // compatibility with previous NIO versions.
 let historicalNIOPosixDependencyRequired: [Platform] = [.macOS, .iOS, .tvOS, .watchOS, .linux, .android]
 
-let strictConcurrencyDevelopment = true
+let strictConcurrencyDevelopment = false
 
 let strictConcurrencySettings: [SwiftSetting] = {
     var initialSettings: [SwiftSetting] = []
