@@ -256,7 +256,8 @@ let package = Package(
             dependencies: [
                 "_NIOFileSystem"
             ],
-            path: "Sources/_NIOFileSystemExported"
+            path: "Sources/_NIOFileSystemExported",
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "_NIOFileSystemFoundationCompat",
@@ -264,7 +265,8 @@ let package = Package(
                 "_NIOFileSystem",
                 "NIOFoundationCompat",
             ],
-            path: "Sources/NIOFileSystemFoundationCompat"
+            path: "Sources/NIOFileSystemFoundationCompat",
+            swiftSettings: strictConcurrencySettings
         ),
 
         // MARK: - Examples
@@ -543,7 +545,7 @@ let package = Package(
                 swiftCollections,
                 swiftSystem,
             ],
-            swiftSettings: [
+            swiftSettings: strictConcurrencySettings + [
                 .define("ENABLE_MOCKING", .when(configuration: .debug))
             ]
         ),
@@ -560,14 +562,16 @@ let package = Package(
                 // for the integration tests. Exclude the whole tree from
                 // the build.
                 "Test Data"
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOFileSystemFoundationCompatTests",
             dependencies: [
                 "_NIOFileSystem",
                 "_NIOFileSystemFoundationCompat",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
     ]
 )
