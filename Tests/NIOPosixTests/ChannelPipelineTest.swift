@@ -2693,6 +2693,132 @@ class ChannelPipelineTest: XCTestCase {
 
         XCTAssertTrue(try channel.finish().isClean)
     }
+
+    func testAddAfterForSynchronousPosition() {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        let firstHandler = IndexWritingHandler(1)
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(firstHandler))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(IndexWritingHandler(2)))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(
+                IndexWritingHandler(3),
+                position: .after(firstHandler)
+            )
+        )
+
+        channel.assertReadIndexOrder([1, 3, 2])
+        channel.assertWriteIndexOrder([2, 3, 1])
+    }
+
+    func testAddBeforeForSynchronousPosition() {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        let secondHandler = IndexWritingHandler(2)
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(IndexWritingHandler(1)))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(secondHandler))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(
+                IndexWritingHandler(3),
+                position: .before(secondHandler)
+            )
+        )
+
+        channel.assertReadIndexOrder([1, 3, 2])
+        channel.assertWriteIndexOrder([2, 3, 1])
+    }
+
+    func testAddAfterLastForSynchronousPosition() {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        let secondHandler = IndexWritingHandler(2)
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(IndexWritingHandler(1)))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(secondHandler))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(
+                IndexWritingHandler(3),
+                position: .after(secondHandler)
+            )
+        )
+
+        channel.assertReadIndexOrder([1, 2, 3])
+        channel.assertWriteIndexOrder([3, 2, 1])
+    }
+
+    func testAddBeforeFirstForSynchronousPosition() {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertNoThrow(try channel.finish())
+        }
+
+        let firstHandler = IndexWritingHandler(1)
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(firstHandler))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(IndexWritingHandler(2)))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(
+                IndexWritingHandler(3),
+                position: .before(firstHandler)
+            )
+        )
+
+        channel.assertReadIndexOrder([3, 1, 2])
+        channel.assertWriteIndexOrder([2, 1, 3])
+    }
+
+    func testAddAfterWhileClosedForSynchronousPosition() {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertThrowsError(try channel.finish()) { error in
+                XCTAssertEqual(.alreadyClosed, error as? ChannelError)
+            }
+        }
+
+        let handler = IndexWritingHandler(1)
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
+        XCTAssertNoThrow(try channel.close().wait())
+        channel.embeddedEventLoop.run()
+
+        XCTAssertThrowsError(
+            try channel.pipeline.syncOperations.addHandler(
+                IndexWritingHandler(2),
+                position: .after(handler)
+            )
+        ) { error in
+            XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
+        }
+    }
+
+    func testAddBeforeWhileClosedForSynchronousPosition() {
+        let channel = EmbeddedChannel()
+        defer {
+            XCTAssertThrowsError(try channel.finish()) { error in
+                XCTAssertEqual(.alreadyClosed, error as? ChannelError)
+            }
+        }
+
+        let handler = IndexWritingHandler(1)
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
+        XCTAssertNoThrow(try channel.close().wait())
+        channel.embeddedEventLoop.run()
+
+        XCTAssertThrowsError(
+            try channel.pipeline.syncOperations.addHandler(
+                IndexWritingHandler(2),
+                position: .before(handler)
+            )
+        ) { error in
+            XCTAssertEqual(.ioOnClosedChannel, error as? ChannelError)
+        }
+    }
 }
 
 // this should be within `testAddMultipleHandlers` but https://bugs.swift.org/browse/SR-9956
