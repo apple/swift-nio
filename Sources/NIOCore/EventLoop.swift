@@ -1009,7 +1009,15 @@ extension EventLoop {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
 
-        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        scheduled.futureResult.whenComplete { result in
+            switch result {
+            case .success(let futureResult):
+                promise.completeWith(futureResult)
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
+
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 
@@ -1051,7 +1059,15 @@ extension EventLoop {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(in: delay, task)
 
-        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        scheduled.futureResult.whenComplete { result in
+            switch result {
+            case .success(let futureResult):
+                promise.completeWith(futureResult)
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
+
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 

@@ -24,7 +24,11 @@ on:
         default: true
       linux_nightly_6_0_enabled:
         type: boolean
-        description: "Boolean to enable the Linux nightly 6.0 Swift version matrix job. Defaults to true."
+        description: "⚠️  Deprecated, we no longer run against 6.0 nightly."
+        default: false
+      linux_nightly_6_1_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux nightly 6.1 Swift version matrix job. Defaults to true."
         default: true
       linux_nightly_main_enabled:
         type: boolean
@@ -33,15 +37,15 @@ on:
 
       windows_6_0_enabled:
         type: boolean
-        description: "Boolean to enable the Windows 6.0 Swift version matrix job. Defaults to true."
+        description: "Boolean to enable the Windows 6.0 Swift version matrix job. Currently has no effect!"  # TODO: implement Windows benchmarking
         default: false
       windows_nightly_6_0_enabled:
         type: boolean
-        description: "Boolean to enable the Windows nightly 6.0 Swift version matrix job. Defaults to true."
+        description: "⚠️  Deprecated, we no longer run against 6.0 nightly."  # TODO: implement Windows benchmarking
         default: false
       windows_nightly_main_enabled:
         type: boolean
-        description: "Boolean to enable the Windows nightly main Swift version matrix job. Defaults to true."
+        description: "Boolean to enable the Windows nightly main Swift version matrix job. Currently has no effect!"  # TODO: implement Windows benchmarking
         default: false
 
 jobs:
@@ -63,7 +67,7 @@ jobs:
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
           MATRIX_LINUX_6_0_ENABLED: ${{ inputs.linux_6_0_enabled }}
-          MATRIX_LINUX_NIGHTLY_6_0_ENABLED: ${{ inputs.linux_nightly_6_0_enabled }}
+          MATRIX_LINUX_NIGHTLY_6_1_ENABLED: ${{ inputs.linux_nightly_6_1_enabled }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
 
   benchmarks:

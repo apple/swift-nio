@@ -585,9 +585,9 @@ final class FileSystemTests: XCTestCase {
     func testCopyLargeFile() async throws {
         let sourcePath = try await self.fs.temporaryFilePath()
         let destPath = try await self.fs.temporaryFilePath()
-        self.addTeardownBlock {
-            _ = try? await self.fs.removeItem(at: sourcePath, strategy: .platformDefault)
-            _ = try? await self.fs.removeItem(at: destPath, strategy: .platformDefault)
+        self.addTeardownBlock { [fs] in
+            _ = try? await fs.removeItem(at: sourcePath, strategy: .platformDefault)
+            _ = try? await fs.removeItem(at: destPath, strategy: .platformDefault)
         }
 
         let sourceInfo = try await self.fs.withFileHandle(
@@ -854,7 +854,7 @@ final class FileSystemTests: XCTestCase {
         _ copyStrategy: CopyStrategy,
         _ description: String,
         _ path: FilePath,
-        triggerCancel: @escaping (DirectoryEntry) -> Bool,
+        triggerCancel: @escaping @Sendable (DirectoryEntry) -> Bool,
         line: UInt = #line
     ) async throws {
 
@@ -863,8 +863,8 @@ final class FileSystemTests: XCTestCase {
         let requestedCancel = NIOLockedValueBox<Bool>(false)
         let cancelRequested = expectation(description: "cancel requested")
 
-        let task = Task {
-            try await self.fs.copyItem(at: path, to: copyPath, strategy: copyStrategy) { _, error in
+        let task = Task { [fs] in
+            try await fs.copyItem(at: path, to: copyPath, strategy: copyStrategy) { _, error in
                 throw error
             } shouldCopyItem: { source, destination in
                 // Abuse shouldCopy to trigger the cancellation after getting some way in.
@@ -1679,6 +1679,14 @@ extension FileSystemTests {
         }
         XCTAssertEqual(info.type, .directory)
         XCTAssertGreaterThan(info.size, 0)
+    }
+
+    func testTemporaryDirectoryRespectsEnvironment() async throws {
+        if let envTmpDir = getenv("TMPDIR") {
+            let envTmpDirString = String(cString: envTmpDir)
+            let fsTempDirectory = try await fs.temporaryDirectory
+            XCTAssertEqual(fsTempDirectory, FilePath(envTmpDirString))
+        }
     }
 
     func testReadChunksRange() async throws {

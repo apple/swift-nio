@@ -21,7 +21,7 @@ import SystemPackage
 
 /// An `AsyncSequence` of entries in a directory.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct DirectoryEntries: AsyncSequence {
+public struct DirectoryEntries: AsyncSequence, Sendable {
     public typealias AsyncIterator = DirectoryIterator
     public typealias Element = DirectoryEntry
 
@@ -35,7 +35,8 @@ public struct DirectoryEntries: AsyncSequence {
 
     /// Creates a ``DirectoryEntries`` sequence by wrapping an `AsyncSequence` of _batches_ of
     /// directory entries.
-    public init<S: AsyncSequence>(wrapping sequence: S) where S.Element == Batched.Element {
+    @preconcurrency
+    public init<S: AsyncSequence & Sendable>(wrapping sequence: S) where S.Element == Batched.Element {
         self.batchedSequence = Batched(wrapping: sequence)
     }
 
@@ -85,7 +86,7 @@ extension DirectoryEntries {
     /// The ``Batched`` sequence uses `Array<DirectoryEntry>` as its element type rather
     /// than `DirectoryEntry`. This can enable better performance by reducing the number of
     /// executor hops at the cost of ease-of-use.
-    public struct Batched: AsyncSequence {
+    public struct Batched: AsyncSequence, Sendable {
         public typealias AsyncIterator = BatchedIterator
         public typealias Element = [DirectoryEntry]
 
@@ -93,7 +94,8 @@ extension DirectoryEntries {
 
         /// Creates a ``DirectoryEntries/Batched`` sequence by wrapping an `AsyncSequence`
         /// of directory entry batches.
-        public init<S: AsyncSequence>(wrapping sequence: S) where S.Element == Element {
+        @preconcurrency
+        public init<S: AsyncSequence & Sendable>(wrapping sequence: S) where S.Element == Element {
             self.stream = BufferedOrAnyStream<[DirectoryEntry], DirectoryEntryProducer>(wrapping: sequence)
         }
 

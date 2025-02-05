@@ -169,10 +169,10 @@ public final class NIORawSocketBootstrap {
 
     private func withNewChannel(
         makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
-        _ bringup: @escaping (EventLoop, DatagramChannel) -> EventLoopFuture<Void>
+        _ bringup: @escaping @Sendable (EventLoop, DatagramChannel) -> EventLoopFuture<Void>
     ) -> EventLoopFuture<Channel> {
         let eventLoop = self.group.next()
-        let channelInitializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
+        let channelInitializer = self.channelInitializer ?? { @Sendable _ in eventLoop.makeSucceededFuture(()) }
         let channelOptions = self._channelOptions
 
         let channel: DatagramChannel
@@ -182,6 +182,7 @@ public final class NIORawSocketBootstrap {
             return eventLoop.makeFailedFuture(error)
         }
 
+        @Sendable
         func setupChannel() -> EventLoopFuture<Channel> {
             eventLoop.assertInEventLoop()
             return channelOptions.applyAllChannelOptions(to: channel).flatMap {
@@ -255,7 +256,7 @@ extension NIORawSocketBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func connect0<ChannelInitializerResult, PostRegistrationTransformationResult>(
+    private func connect0<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
         host: String,
         ipProtocol: NIOIPProtocol,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
@@ -287,7 +288,7 @@ extension NIORawSocketBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func bind0<ChannelInitializerResult, PostRegistrationTransformationResult>(
+    private func bind0<ChannelInitializerResult: Sendable, PostRegistrationTransformationResult: Sendable>(
         host: String,
         ipProtocol: NIOIPProtocol,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
@@ -320,7 +321,10 @@ extension NIORawSocketBootstrap {
     }
 
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-    private func makeConfiguredChannel<ChannelInitializerResult, PostRegistrationTransformationResult>(
+    private func makeConfiguredChannel<
+        ChannelInitializerResult: Sendable,
+        PostRegistrationTransformationResult: Sendable
+    >(
         makeChannel: (_ eventLoop: SelectableEventLoop) throws -> DatagramChannel,
         channelInitializer: @escaping @Sendable (Channel) -> EventLoopFuture<ChannelInitializerResult>,
         registration: @escaping @Sendable (Channel) -> EventLoopFuture<Void>,
@@ -329,9 +333,9 @@ extension NIORawSocketBootstrap {
         >
     ) -> EventLoopFuture<PostRegistrationTransformationResult> {
         let eventLoop = self.group.next()
-        let channelInitializer = { (channel: Channel) -> EventLoopFuture<ChannelInitializerResult> in
-            let initializer = self.channelInitializer ?? { _ in eventLoop.makeSucceededFuture(()) }
-            return initializer(channel).flatMap { channelInitializer(channel) }
+        let bootstrapInitializer = self.channelInitializer ?? { @Sendable _ in eventLoop.makeSucceededFuture(()) }
+        let channelInitializer = { @Sendable (channel: Channel) -> EventLoopFuture<ChannelInitializerResult> in
+            bootstrapInitializer(channel).flatMap { channelInitializer(channel) }
         }
         let channelOptions = self._channelOptions
 
@@ -342,6 +346,7 @@ extension NIORawSocketBootstrap {
             return eventLoop.makeFailedFuture(error)
         }
 
+        @Sendable
         func setupChannel() -> EventLoopFuture<PostRegistrationTransformationResult> {
             eventLoop.assertInEventLoop()
             return channelOptions.applyAllChannelOptions(to: channel).flatMap {

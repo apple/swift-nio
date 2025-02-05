@@ -22,7 +22,7 @@ import Dispatch
 #endif
 
 /// Errors that may be thrown when executing work on a `NIOThreadPool`
-public enum NIOThreadPoolError {
+public enum NIOThreadPoolError: Sendable {
 
     /// The `NIOThreadPool` was not active.
     public struct ThreadPoolInactive: Error {
@@ -73,7 +73,7 @@ public final class NIOThreadPool {
     }
 
     @usableFromInline
-    internal enum State {
+    internal enum State: Sendable {
         /// The `NIOThreadPool` is already stopped.
         case stopped
         /// The `NIOThreadPool` is shutting down, the array has one boolean entry for each thread indicating if it has shut down already.
@@ -87,7 +87,7 @@ public final class NIOThreadPool {
 
     /// Whether threads in the pool have work.
     @usableFromInline
-    internal enum _WorkState: Hashable {
+    internal enum _WorkState: Hashable, Sendable {
         case hasWork
         case hasNoWork
     }
@@ -138,7 +138,7 @@ public final class NIOThreadPool {
         self._shutdownGracefully(queue: queue, callback)
     }
 
-    private func _shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    private func _shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable (Error?) -> Void) {
         guard self.canBeStopped else {
             queue.async {
                 callback(NIOThreadPoolError.UnsupportedOperation())
@@ -420,11 +420,17 @@ extension NIOThreadPool {
     ///   - body: The closure which performs some blocking work to be done on the thread pool.
     /// - Returns: The `EventLoopFuture` of `promise` fulfilled with the result (or error) of the passed closure.
     @preconcurrency
-    public func runIfActive<T>(eventLoop: EventLoop, _ body: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
+    public func runIfActive<T: Sendable>(
+        eventLoop: EventLoop,
+        _ body: @escaping @Sendable () throws -> T
+    ) -> EventLoopFuture<T> {
         self._runIfActive(eventLoop: eventLoop, body)
     }
 
-    private func _runIfActive<T>(eventLoop: EventLoop, _ body: @escaping () throws -> T) -> EventLoopFuture<T> {
+    private func _runIfActive<T: Sendable>(
+        eventLoop: EventLoop,
+        _ body: @escaping @Sendable () throws -> T
+    ) -> EventLoopFuture<T> {
         let promise = eventLoop.makePromise(of: T.self)
         self.submit { shouldRun in
             guard case shouldRun = NIOThreadPool.WorkItemState.active else {
@@ -498,20 +504,21 @@ extension NIOThreadPool {
     }
 
     private func _syncShutdownGracefully() throws {
-        let errorStorageLock = NIOLock()
-        var errorStorage: Swift.Error? = nil
-        let continuation = DispatchWorkItem {}
+        let errorStorageLock = NIOLockedValueBox<Swift.Error?>(nil)
+        let continuation = ConditionLock(value: 0)
         self.shutdownGracefully { error in
             if let error = error {
-                errorStorageLock.withLock {
-                    errorStorage = error
+                errorStorageLock.withLockedValue {
+                    $0 = error
                 }
             }
-            continuation.perform()
+            continuation.lock(whenValue: 0)
+            continuation.unlock(withValue: 1)
         }
-        continuation.wait()
-        try errorStorageLock.withLock {
-            if let error = errorStorage {
+        continuation.lock(whenValue: 1)
+        continuation.unlock()
+        try errorStorageLock.withLockedValue {
+            if let error = $0 {
                 throw error
             }
         }
