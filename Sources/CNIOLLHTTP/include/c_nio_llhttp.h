@@ -675,7 +675,7 @@ llhttp_errno_t c_nio_llhttp_execute(llhttp_t* parser, const char* data, size_t l
  * Requests without `Content-Length` and other messages might require treating
  * all incoming bytes as the part of the body, up to the last byte of the
  * connection. This method will invoke `on_message_complete()` callback if the
- * request was terminated safely. Otherwise a error code would be returned.
+ * request was terminated safely. Otherwise an error code would be returned.
  */
 LLHTTP_EXPORT
 llhttp_errno_t c_nio_llhttp_finish(llhttp_t* parser);
