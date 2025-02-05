@@ -12,10 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-
 /// A receive buffer allocator which cycles through a pool of buffers.
-internal struct PooledRecvBufferAllocator {
+public struct PooledRecvBufferAllocator {
     // The pool will either use a single buffer (i.e. `buffer`) OR store multiple buffers
     // in `buffers`. If `buffers` is non-empty then `buffer` MUST be `nil`. If `buffer`
     // is non-nil then `buffers` MUST be empty.
@@ -28,14 +26,19 @@ internal struct PooledRecvBufferAllocator {
     private var lastUsedIndex: Int
 
     /// Maximum number of buffers to store in the pool.
-    internal private(set) var capacity: Int
+    public private(set) var capacity: Int
     /// The receive allocator providing hints for the next buffer size to use.
-    internal var recvAllocator: RecvByteBufferAllocator
+    public var recvAllocator: RecvByteBufferAllocator
 
     /// The return value from the last call to `recvAllocator.record(actualReadBytes:)`.
     private var mayGrow: Bool
 
-    init(capacity: Int, recvAllocator: RecvByteBufferAllocator) {
+    /// Builds a new instance of `PooledRecvBufferAllocator`
+    ///
+    /// - Parameters:
+    ///   - capacity: Maximum number of buffers to store in the pool.
+    ///   - recvAllocator: The receive allocator providing hints for the next buffer size to use.
+    public init(capacity: Int, recvAllocator: RecvByteBufferAllocator) {
         precondition(capacity > 0)
         self.capacity = capacity
         self.buffer = nil
@@ -46,7 +49,7 @@ internal struct PooledRecvBufferAllocator {
     }
 
     /// Returns the number of buffers in the pool.
-    var count: Int {
+    public var count: Int {
         if self.buffer == nil {
             // Empty or switched to `buffers` for storage.
             return self.buffers.count
@@ -58,7 +61,7 @@ internal struct PooledRecvBufferAllocator {
     }
 
     /// Update the capacity of the underlying buffer pool.
-    mutating func updateCapacity(to newCapacity: Int) {
+    public mutating func updateCapacity(to newCapacity: Int) {
         precondition(newCapacity > 0)
 
         if newCapacity > self.capacity {
@@ -82,13 +85,13 @@ internal struct PooledRecvBufferAllocator {
     /// Record the number of bytes which were read.
     ///
     /// Returns whether the next buffer will be larger than the last.
-    mutating func record(actualReadBytes: Int) {
+    public mutating func record(actualReadBytes: Int) {
         self.mayGrow = self.recvAllocator.record(actualReadBytes: actualReadBytes)
     }
 
     /// Provides a buffer with enough writable capacity as determined by the underlying
     /// receive allocator to the given closure.
-    mutating func buffer<Result>(
+    public mutating func buffer<Result>(
         allocator: ByteBufferAllocator,
         _ body: (inout ByteBuffer) throws -> Result
     ) rethrows -> (ByteBuffer, Result) {
