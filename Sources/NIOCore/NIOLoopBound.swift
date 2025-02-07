@@ -17,7 +17,7 @@
 ///
 /// ``NIOLoopBound`` is useful to transport a value of a non-`Sendable` type that needs to go from one place in
 /// your code to another where you (but not the compiler) know is on one and the same ``EventLoop``. Usually this
-/// involves `@Sendable` closures. This type is safe because it verifies (using ``EventLoop/preconditionInEventLoop(file:line:)-2fxvb``)
+/// involves `@Sendable` or `sending` closures. This type is safe because it verifies (using ``EventLoop/preconditionInEventLoop(file:line:)-2fxvb``)
 /// that this is actually true.
 ///
 /// A ``NIOLoopBound`` can only be constructed, read from or written to when you are provably
@@ -59,7 +59,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
 ///
 /// ``NIOLoopBoundBox`` is useful to transport a value of a non-`Sendable` type that needs to go from one place in
 /// your code to another where you (but not the compiler) know is on one and the same ``EventLoop``. Usually this
-/// involves `@Sendable` closures. This type is safe because it verifies (using ``EventLoop/preconditionInEventLoop(file:line:)-7ukrq``)
+/// involves `@Sendable` or `sending` closures. This type is safe because it verifies (using ``EventLoop/preconditionInEventLoop(file:line:)-7ukrq``)
 /// that this is actually true.
 ///
 /// A ``NIOLoopBoundBox`` can only be read from or written to when you are provably
@@ -142,3 +142,26 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
         }
     }
 }
+
+#if compiler(>=6.0)  // `sending` is >= 6.0
+extension NIOLoopBoundBox {
+    /// Initialise a ``NIOLoopBoundBox`` by `sending` (i.e. transferring) a value, validly callable off `eventLoop`.
+    ///
+    /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because we are `sending` the value across the isolation domain.
+    /// Because we're `sending` `value`, we just need to protect it against mutations (because nothing else can have access to it anymore).
+    public static func makeBoxSendingValue(
+        _ value: sending Value,
+        as: Value.Type = Value.self,
+        eventLoop: EventLoop
+    ) -> NIOLoopBoundBox<Value> {
+        // Here, we -- possibly surprisingly -- do not precondition being on the EventLoop. This is okay for a few
+        // reasons:
+        // - This function only works by `sending` the value, so we don't need to worry about somebody
+        //   still holding a reference to this — Swift 6 will ensure the value is not modified erroneously.
+        // - Because of Swift's Definitive Initialisation (DI), we know that we did write `self._value` before `init`
+        //   returns.
+        // - The only way to ever write (or read indeed) `self._value` is by proving to be inside the `EventLoop`.
+        .init(_value: value, uncheckedEventLoop: eventLoop)
+    }
+}
+#endif
