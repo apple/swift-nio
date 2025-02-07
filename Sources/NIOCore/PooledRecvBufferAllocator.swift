@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 /// A receive buffer allocator which cycles through a pool of buffers.
+///
+/// This type is useful when allocating new buffers for every IO read is expensive or undesirable.
 public struct PooledRecvBufferAllocator {
     // The pool will either use a single buffer (i.e. `buffer`) OR store multiple buffers
     // in `buffers`. If `buffers` is non-empty then `buffer` MUST be `nil`. If `buffer`
@@ -61,6 +63,9 @@ public struct PooledRecvBufferAllocator {
     }
 
     /// Update the capacity of the underlying buffer pool.
+    ///
+    /// - Parameters:
+    ///   - newCapacity: The new capacity for the underlying buffer pool.
     public mutating func updateCapacity(to newCapacity: Int) {
         precondition(newCapacity > 0)
 
@@ -84,13 +89,20 @@ public struct PooledRecvBufferAllocator {
 
     /// Record the number of bytes which were read.
     ///
-    /// Returns whether the next buffer will be larger than the last.
+    /// - Parameters:
+    ///   - actualReadBytes: Number of bytes being recorded
+    /// - Returns: whether the next buffer will be larger than the last.
     public mutating func record(actualReadBytes: Int) {
         self.mayGrow = self.recvAllocator.record(actualReadBytes: actualReadBytes)
     }
 
     /// Provides a buffer with enough writable capacity as determined by the underlying
     /// receive allocator to the given closure.
+    ///
+    /// - Parameters:
+    ///    - allocator: `ByteBufferAllocator` used to construct a new buffer if needed
+    ///    - body: Closure where the caller can use the new or existing buffer
+    /// - Returns: A tuple containing the `ByteBuffer` used and the `Result` yielded by the closure provided.
     public mutating func buffer<Result>(
         allocator: ByteBufferAllocator,
         _ body: (inout ByteBuffer) throws -> Result
