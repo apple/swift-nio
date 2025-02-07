@@ -77,6 +77,22 @@ public protocol NIOAsyncSequenceProducerDelegate: Sendable {
     ///
     /// - Note: This is guaranteed to be called _exactly_ once.
     func didTerminate()
+    
+    /// This method is called once the ``NIOAsyncSequenceProducer`` is terminated.
+    ///
+    /// Termination happens if:
+    /// - The ``NIOAsyncSequenceProducer/AsyncIterator`` is deinited.
+    /// - The ``NIOAsyncSequenceProducer`` deinited and no iterator is alive.
+    /// - The consuming `Task` is cancelled (e.g. `for await let element in`).
+    /// - The source finished and all remaining buffered elements have been consumed.
+    ///
+    /// - Note: This is guaranteed to be called _exactly_ once.
+    func didTerminate(remainingBuffer: some Collection<Any>)
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension NIOAsyncSequenceProducerDelegate {
+    public func didTerminate(remainingBuffer: some Collection<Any>) { self.didTerminate() }
 }
 
 /// This is an `AsyncSequence` that supports a unicast `AsyncIterator`.
