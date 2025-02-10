@@ -31,18 +31,18 @@ BEGIN {
     printf("=====\n");
 }
 
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:aligned_alloc,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:calloc,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:posix_memalign,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:realloc,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:reallocf,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:valloc,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_calloc,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_malloc,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_memalign,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_realloc,
-uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_valloc {
+uprobe:*:aligned_alloc,
+uprobe:*:calloc,
+uprobe:*:malloc,
+uprobe:*:posix_memalign,
+uprobe:*:realloc,
+uprobe:*:reallocf,
+uprobe:*:valloc,
+uprobe:*:malloc_zone_calloc,
+uprobe:*:malloc_zone_malloc,
+uprobe:*:malloc_zone_memalign,
+uprobe:*:malloc_zone_realloc,
+uprobe:*:malloc_zone_valloc {
     @malloc_calls[ustack()] = count();
 }
 
