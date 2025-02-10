@@ -1,0 +1,51 @@
+#!/usr/bin/env bpftrace
+/*===----------------------------------------------------------------------===*
+ *
+ *  This source file is part of the SwiftNIO open source project
+ *
+ *  Copyright (c) 2017-2025 Apple Inc. and the SwiftNIO project authors
+ *  Licensed under Apache License v2.0
+ *
+ *  See LICENSE.txt for license information
+ *  See CONTRIBUTORS.txt for the list of SwiftNIO project authors
+ *
+ *  SPDX-License-Identifier: Apache-2.0
+ *
+ *===----------------------------------------------------------------------===*/
+
+/*
+ * Example invocation:
+ *   sudo dev/malloc-aggregation.bt -c .build/release/NIOHTTP1Server
+ *
+ * This will frequently lack symbols, so consider using the pid-based version:
+ *   sudo dev/malloc-aggregation.bt -p 19898
+ */
+
+BEGIN {
+    printf("\n\n");
+    printf("=====\n");
+    printf("This will collect stack shots of allocations and print it when ");
+    printf("you exit bpftrace.\n");
+    printf("So go ahead, run your tests and then press Ctrl+C in this window ");
+    printf("to see the aggregated result\n");
+    printf("=====\n");
+}
+
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:aligned_alloc,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:calloc,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:posix_memalign,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:realloc,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:reallocf,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:valloc,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_calloc,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_malloc,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_memalign,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_realloc,
+uprobe:/usr/lib/aarch64-linux-gnu/libc.so.6:malloc_zone_valloc {
+    @malloc_calls[ustack()] = count();
+}
+
+END {
+    print(@malloc_calls);
+}
