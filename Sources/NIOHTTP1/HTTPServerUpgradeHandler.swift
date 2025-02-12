@@ -28,7 +28,8 @@ public enum HTTPServerUpgradeEvents: Sendable {
 
 /// An object that implements `HTTPServerProtocolUpgrader` knows how to handle HTTP upgrade to
 /// a protocol on a server-side channel.
-public protocol HTTPServerProtocolUpgrader {
+@preconcurrency
+public protocol HTTPServerProtocolUpgrader: Sendable {
     /// The protocol this upgrader knows how to support.
     var supportedProtocol: String { get }
 
@@ -187,7 +188,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
             .whenSuccess { callback in
                 eventLoop.assertInEventLoop()
                 if let callback = callback {
-                    self.gotUpgrader(upgrader: callback)
+                    self.gotUpgrader(upgrader: callback.value)
                 } else {
                     self.notUpgrading(context: loopBoundContext.value, data: requestPart)
                 }
@@ -196,12 +197,15 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
 
     /// The core of the upgrade handling logic.
     ///
-    /// - Returns: An `EventLoopFuture` that will contain a callback to invoke if upgrade is requested, or nil if upgrade has failed. Never returns a failed future.
+    /// - Returns: An `EventLoopFuture` that will contain a `NIOLoopBound` callback to invoke if upgrade is requested,
+    /// or nil if upgrade has failed. Never returns a failed future.
+    /// The `NIOLoopBound` is safe because it's only called after the hop in firstRequestHeadReceived
     private func handleUpgrade(
         context: ChannelHandlerContext,
         request: HTTPRequestHead,
         requestedProtocols: [String]
-    ) -> EventLoopFuture<(() -> Void)?> {
+    ) -> EventLoopFuture<NIOLoopBound<(() -> Void)>?> {
+
         let connectionHeader = Set(request.headers[canonicalForm: "connection"].map { $0.lowercased() })
         let allHeaderNames = Set(request.headers.map { $0.name.lowercased() })
 
@@ -219,13 +223,17 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
     /// Attempt to upgrade a single protocol.
     ///
     /// Will recurse through `protocolIterator` if upgrade fails.
+    ///
+    /// - Returns: An `EventLoopFuture` that will contain a `NIOLoopBound` callback to invoke if upgrade is requested,
+    /// or nil if upgrade has failed. Never returns a failed future.
+    /// The `NIOLoopBound` is safe because it's only called after the hop in firstRequestHeadReceived
     private func handleUpgradeForProtocol(
         context: ChannelHandlerContext,
         protocolIterator: Array<String>.Iterator,
         request: HTTPRequestHead,
         allHeaderNames: Set<String>,
         connectionHeader: Set<String>
-    ) -> EventLoopFuture<(() -> Void)?> {
+    ) -> EventLoopFuture<NIOLoopBound<(() -> Void)>?> {
         // We want a local copy of the protocol iterator. We'll pass it to the next invocation of the function.
         var protocolIterator = protocolIterator
         guard let proto = protocolIterator.next() else {
@@ -256,13 +264,20 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
 
         let responseHeaders = self.buildUpgradeHeaders(protocol: proto)
         let pipeline = context.pipeline
-        let loopBoundContext = context.loopBound
+
+        // NIOLoopBound is safe because we hop back onto the correct event loop after running the upgrader method
+        let loopBoundContextAndProtocolIterator = NIOLoopBound(
+            (context, protocolIterator),
+            eventLoop: context.eventLoop
+        )
         return upgrader.buildUpgradeResponse(
             channel: context.channel,
             upgradeRequest: request,
             initialResponseHeaders: responseHeaders
-        ).map { finalResponseHeaders in
-            {
+        ).hop(to: context.eventLoop)
+            .map { finalResponseHeaders in
+            let (context, _) = loopBoundContextAndProtocolIterator.value
+            let upgradeClosure = {
                 // Ok, we're upgrading.
                 self.upgradeState = .upgrading
 
@@ -276,19 +291,20 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                 // our final cleanup steps, namely we replay the received data we buffered in the meantime and
                 // then remove ourselves from the pipeline.
                 self.removeExtraHandlers(pipeline: pipeline).flatMap {
-                    self.sendUpgradeResponse(
-                        context: loopBoundContext.value,
+                    let (context, _) = loopBoundContextAndProtocolIterator.value
+                    return self.sendUpgradeResponse(
+                        context: context,
                         upgradeRequest: request,
                         responseHeaders: finalResponseHeaders
                     )
                 }.flatMap {
                     pipeline.syncOperations.removeHandler(self.httpEncoder)
                 }.flatMap { () -> EventLoopFuture<Void> in
-                    let context = loopBoundContext.value
+                    let (context, _) = loopBoundContextAndProtocolIterator.value
                     self.upgradeCompletionHandler(context)
                     return upgrader.upgrade(context: context, upgradeRequest: request)
                 }.whenComplete { result in
-                    let context = loopBoundContext.value
+                    let (context, _) = loopBoundContextAndProtocolIterator.value
                     switch result {
                     case .success:
                         context.fireUserInboundEventTriggered(
@@ -304,9 +320,10 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                     }
                 }
             }
+            return NIOLoopBound(upgradeClosure, eventLoop: context.eventLoop)
         }.flatMapError { error in
             // No upgrade here. We want to fire the error down the pipeline, and then try another loop iteration.
-            let context = loopBoundContext.value
+            let (context, protocolIterator) = loopBoundContextAndProtocolIterator.value
             context.fireErrorCaught(error)
             return self.handleUpgradeForProtocol(
                 context: context,
@@ -379,7 +396,7 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
         }
 
         return .andAllSucceed(
-            self.extraHTTPHandlers.map { pipeline.removeHandler($0) },
+            self.extraHTTPHandlers.map { pipeline.syncOperations.removeHandler($0) },
             on: pipeline.eventLoop
         )
     }
