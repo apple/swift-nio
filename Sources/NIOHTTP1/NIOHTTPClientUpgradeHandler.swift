@@ -59,7 +59,8 @@ extension NIOHTTPClientUpgradeError: CustomStringConvertible {
 /// An object that implements `NIOHTTPClientProtocolUpgrader` knows how to handle HTTP upgrade to
 /// a protocol on a client-side channel.
 /// It has the option of denying this upgrade based upon the server response.
-public protocol NIOHTTPClientProtocolUpgrader {
+@preconcurrency
+public protocol NIOHTTPClientProtocolUpgrader: Sendable {
 
     /// The protocol this upgrader knows how to support.
     var supportedProtocol: String { get }
@@ -371,7 +372,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
             return pipeline.eventLoop.makeSucceededFuture(())
         }
 
-        let removeFutures = self.httpHandlers.map { pipeline.removeHandler($0) }
+        let removeFutures = self.httpHandlers.map { pipeline.syncOperations.removeHandler($0) }
         return .andAllSucceed(removeFutures, on: pipeline.eventLoop)
     }
 
