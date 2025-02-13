@@ -437,6 +437,16 @@ public final class EventLoopFuture<Value> {
         self._callbacks = .init()
     }
 
+    /// A EventLoopFuture<Value> that has already succeeded with an isolated (not-necessarily-sendable) value
+    @inlinable
+    internal init(eventLoop: EventLoop, isolatedValue value: Value) {
+        eventLoop.assertInEventLoop()
+
+        self.eventLoop = eventLoop
+        self._value = .success(value)
+        self._callbacks = .init()
+    }
+
     /// A EventLoopFuture<Value> that has already failed
     @inlinable
     internal init(eventLoop: EventLoop, error: Error) {
