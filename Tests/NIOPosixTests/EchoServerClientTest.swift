@@ -224,7 +224,7 @@ class EchoServerClientTest: XCTestCase {
 
         try withTemporaryUnixDomainSocketPathName { udsPath in
             // Bootstrap should not overwrite an existing file unless it is a socket
-            FileManager.default.createFile(atPath: udsPath, contents: nil, attributes: nil)
+            _ = FileManager.default.createFile(atPath: udsPath, contents: nil, attributes: nil)
             let bootstrap = ServerBootstrap(group: group)
 
             XCTAssertThrowsError(

@@ -12,13 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
 import NIOConcurrencyHelpers
 import NIOCore
 import XCTest
 
 @testable import NIOEmbedded
 
-private class EmbeddedTestError: Error {}
+private final class EmbeddedTestError: Error {}
 
 public final class EmbeddedEventLoopTest: XCTestCase {
     func testExecuteDoesNotImmediatelyRunTasks() throws {
@@ -195,37 +196,38 @@ public final class EmbeddedEventLoopTest: XCTestCase {
     }
 
     func testScheduledTasksFuturesFire() throws {
-        var fired = false
+        let fired = ManagedAtomic(false)
         let loop = EmbeddedEventLoop()
         let task = loop.scheduleTask(in: .nanoseconds(5)) { true }
-        task.futureResult.whenSuccess { fired = $0 }
+        task.futureResult.whenSuccess { fired.store($0, ordering: .sequentiallyConsistent) }
 
         loop.advanceTime(by: .nanoseconds(4))
-        XCTAssertFalse(fired)
+        XCTAssertFalse(fired.load(ordering: .sequentiallyConsistent))
         loop.advanceTime(by: .nanoseconds(1))
-        XCTAssertTrue(fired)
+        XCTAssertTrue(fired.load(ordering: .sequentiallyConsistent))
     }
 
     func testScheduledTasksFuturesError() throws {
-        var err: EmbeddedTestError? = nil
-        var fired = false
+        let err: NIOLockedValueBox<EmbeddedTestError?> = NIOLockedValueBox(nil)
+        let fired = ManagedAtomic(false)
         let loop = EmbeddedEventLoop()
         let task = loop.scheduleTask(in: .nanoseconds(5)) {
-            err = EmbeddedTestError()
-            throw err!
+            let localErr = EmbeddedTestError()
+            err.withLockedValue { $0 = localErr }
+            throw localErr
         }
         task.futureResult.map {
             XCTFail("Scheduled future completed")
         }.recover { caughtErr in
-            XCTAssertTrue(err === caughtErr as? EmbeddedTestError)
+            XCTAssertTrue(err.withLockedValue { $0 === caughtErr as? EmbeddedTestError })
         }.whenComplete { (_: Result<Void, Error>) in
-            fired = true
+            fired.store(true, ordering: .sequentiallyConsistent)
         }
 
         loop.advanceTime(by: .nanoseconds(4))
-        XCTAssertFalse(fired)
+        XCTAssertFalse(fired.load(ordering: .sequentiallyConsistent))
         loop.advanceTime(by: .nanoseconds(1))
-        XCTAssertTrue(fired)
+        XCTAssertTrue(fired.load(ordering: .sequentiallyConsistent))
     }
 
     func testTaskOrdering() {
@@ -396,7 +398,7 @@ public final class EmbeddedEventLoopTest: XCTestCase {
                 try eventLoop.syncShutdownGracefully()
                 childTasks.append(
                     scheduleRecursiveTask(
-                        at: eventLoop._now + childTaskStartDelay,
+                        at: eventLoop.now + childTaskStartDelay,
                         andChildTaskAfter: childTaskStartDelay
                     )
                 )
@@ -497,4 +499,38 @@ public final class EmbeddedEventLoopTest: XCTestCase {
         eventLoop.advanceTime(by: .seconds(1))
         XCTAssertEqual(counter, 3)
     }
+
+    func testCurrentTime() {
+        let eventLoop = EmbeddedEventLoop()
+
+        eventLoop.advanceTime(to: .uptimeNanoseconds(42))
+        XCTAssertEqual(eventLoop.now, .uptimeNanoseconds(42))
+
+        eventLoop.advanceTime(by: .nanoseconds(42))
+        XCTAssertEqual(eventLoop.now, .uptimeNanoseconds(84))
+    }
+
+    func testScheduleRepeatedTask() {
+        let eventLoop = EmbeddedEventLoop()
+
+        let counter = ManagedAtomic(0)
+        eventLoop.scheduleRepeatedTask(initialDelay: .seconds(1), delay: .seconds(1)) { repeatedTask in
+            guard counter.load(ordering: .sequentiallyConsistent) < 10 else {
+                repeatedTask.cancel()
+                return
+            }
+            counter.wrappingIncrement(ordering: .sequentiallyConsistent)
+        }
+
+        XCTAssertEqual(counter.load(ordering: .sequentiallyConsistent), 0)
+
+        eventLoop.advanceTime(by: .seconds(1))
+        XCTAssertEqual(counter.load(ordering: .sequentiallyConsistent), 1)
+
+        eventLoop.advanceTime(by: .seconds(9))
+        XCTAssertEqual(counter.load(ordering: .sequentiallyConsistent), 10)
+    }
 }
+
+@available(*, unavailable)
+extension EmbeddedEventLoopTest: Sendable {}

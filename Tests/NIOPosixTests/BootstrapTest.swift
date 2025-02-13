@@ -734,7 +734,7 @@ class BootstrapTest: XCTestCase {
             // Some platforms don't define "localhost" for IPv6, so check that
             // and use "ip6-localhost" instead.
             if !isIPv4 {
-                let hostResolver = GetaddrinfoResolver(loop: group.next(), aiSocktype: .stream, aiProtocol: .tcp)
+                let hostResolver = GetaddrinfoResolver(loop: self.group.next(), aiSocktype: .stream, aiProtocol: .tcp)
                 let hostv6 = try! hostResolver.initiateAAAAQuery(host: "localhost", port: 8088).wait()
                 if hostv6.isEmpty {
                     localhost = "ip6-localhost"
@@ -752,7 +752,7 @@ class BootstrapTest: XCTestCase {
                 XCTFail("can't connect channel 1")
                 return
             }
-            XCTAssertEqual(localIP, maybeChannel1?.localAddress?.ipAddress)
+            XCTAssertEqual(localIP, myChannel1Address.ipAddress)
             // Try 3: Bind the client to the same address/port as in try 2 but to server 2.
             XCTAssertNoThrow(
                 try ClientBootstrap(group: self.group)

@@ -14,7 +14,13 @@
 
 #if canImport(Dispatch)
 import Atomics
+
+#if canImport(Darwin)
 import Dispatch
+#else
+@preconcurrency import Dispatch
+#endif
+
 import NIOConcurrencyHelpers
 import NIOCore
 import _NIODataStructures
@@ -63,7 +69,9 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     /// The current "time" for this event loop. This is an amount in nanoseconds.
     /// As we need to access this from any thread, we store this as an atomic.
     private let _now = ManagedAtomic<UInt64>(0)
-    internal var now: NIODeadline {
+
+    /// The current "time" for this event loop. This is an amount in nanoseconds.
+    public var now: NIODeadline {
         NIODeadline.uptimeNanoseconds(self._now.load(ordering: .relaxed))
     }
 
@@ -126,7 +134,7 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     private func insertTask<ReturnType>(
         taskID: UInt64,
         deadline: NIODeadline,
-        promise: EventLoopPromise<ReturnType>,
+        promise: EventLoopPromise<ReturnType>?,
         task: @escaping () throws -> ReturnType
     ) {
         dispatchPrecondition(condition: .onQueue(self.queue))
@@ -137,12 +145,13 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
             insertOrder: self.nextTaskNumber(),
             task: {
                 do {
-                    promise.succeed(try task())
+                    // UnsafeUnchecked is acceptable because we know we're in the loop here.
+                    promise?.assumeIsolatedUnsafeUnchecked().succeed(try task())
                 } catch let err {
-                    promise.fail(err)
+                    promise?.fail(err)
                 }
             },
-            promise.fail
+            { promise?.fail($0) }
         )
 
         self.scheduledTasks.push(task)
@@ -150,45 +159,36 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 
     /// - see: `EventLoop.scheduleTask(deadline:_:)`
     @discardableResult
-    public func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
-        let promise: EventLoopPromise<T> = self.makePromise()
-        let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
+    @preconcurrency
+    public func scheduleTask<T>(
+        deadline: NIODeadline,
+        _ task: @escaping @Sendable () throws -> T
+    ) -> Scheduled<T> {
+        let scheduled: Scheduled<T>
+        switch self._prepareToSchedule(returnType: T.self) {
+        case .doSchedule(let taskID, let promise, let returned):
+            scheduled = returned
 
-        switch self.state.load(ordering: .acquiring) {
-        case .open:
-            break
-        case .closing, .closed:
-            // If the event loop is shut down, or shutting down, immediately cancel the task.
-            promise.fail(EventLoopError.cancelled)
-            return Scheduled(promise: promise, cancellationTask: {})
-        }
-
-        let scheduled = Scheduled(
-            promise: promise,
-            cancellationTask: {
-                if self.inEventLoop {
-                    self.removeTask(taskID: taskID)
-                } else {
-                    self.queue.async {
-                        self.removeTask(taskID: taskID)
-                    }
+            // Ok, actually do it.
+            if self.inEventLoop {
+                self.insertTask(taskID: taskID, deadline: deadline, promise: promise, task: task)
+            } else {
+                self.queue.async {
+                    self.insertTask(taskID: taskID, deadline: deadline, promise: promise, task: task)
                 }
             }
-        )
 
-        if self.inEventLoop {
-            self.insertTask(taskID: taskID, deadline: deadline, promise: promise, task: task)
-        } else {
-            self.queue.async {
-                self.insertTask(taskID: taskID, deadline: deadline, promise: promise, task: task)
-            }
+        case .returnImmediately(let returned):
+            scheduled = returned
         }
+
         return scheduled
     }
 
     /// - see: `EventLoop.scheduleTask(in:_:)`
     @discardableResult
-    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping () throws -> T) -> Scheduled<T> {
+    @preconcurrency
+    public func scheduleTask<T>(in: TimeAmount, _ task: @escaping @Sendable () throws -> T) -> Scheduled<T> {
         self.scheduleTask(deadline: self.now + `in`, task)
     }
 
@@ -228,7 +228,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
 
     /// On an `NIOAsyncTestingEventLoop`, `execute` will simply use `scheduleTask` with a deadline of _now_. Unlike with the other operations, this will
     /// immediately execute, to eliminate a common class of bugs.
-    public func execute(_ task: @escaping () -> Void) {
+    @preconcurrency
+    public func execute(_ task: @escaping @Sendable () -> Void) {
         if self.inEventLoop {
             self.scheduleTask(deadline: self.now, task)
         } else {
@@ -357,7 +358,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
     }
 
     /// - see: `EventLoop.shutdownGracefully`
-    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    @preconcurrency
+    public func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable (Error?) -> Void) {
         self.queue.async {
             self._shutdownGracefully()
             queue.async {
@@ -395,12 +397,107 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
         dispatchPrecondition(condition: .notOnQueue(self.queue))
     }
 
+    public func _executeIsolatedUnsafeUnchecked(_ task: @escaping () -> Void) {
+        // Call directly to insertTask. That function has a thread-safety check, and
+        // the rest of this method is using thread-safe operations so we don't
+        // need any extra debug-mode checking here.
+        let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
+        self.insertTask(
+            taskID: taskID,
+            deadline: self.now,
+            promise: nil,
+            task: task
+        )
+    }
+
+    public func _submitIsolatedUnsafeUnchecked<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        // Call directly to insertTask. That function has a thread-safety check, and
+        // the rest of this method is using thread-safe operations so we don't
+        // need any extra debug-mode checking here.
+        let promise = self.makePromise(of: T.self)
+        let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
+        self.insertTask(
+            taskID: taskID,
+            deadline: self.now,
+            promise: promise,
+            task: task
+        )
+        return promise.futureResult
+    }
+
+    @discardableResult
+    public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        deadline: NIODeadline,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        // Call directly to insertTask. That function has a thread-safety check, and
+        // the rest of this method is using thread-safe operations so we don't
+        // need any extra debug-mode checking here.
+        let scheduled: Scheduled<T>
+        switch self._prepareToSchedule(returnType: T.self) {
+        case .doSchedule(let taskID, let promise, let returned):
+            scheduled = returned
+            self.insertTask(taskID: taskID, deadline: deadline, promise: promise, task: task)
+        case .returnImmediately(let returned):
+            scheduled = returned
+        }
+
+        return scheduled
+    }
+
+    @discardableResult
+    public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        in delay: TimeAmount,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        self._scheduleTaskIsolatedUnsafeUnchecked(deadline: self.now + delay, task)
+    }
+
     public func preconditionInEventLoop(file: StaticString, line: UInt) {
         dispatchPrecondition(condition: .onQueue(self.queue))
     }
 
     public func preconditionNotInEventLoop(file: StaticString, line: UInt) {
         dispatchPrecondition(condition: .notOnQueue(self.queue))
+    }
+
+    enum ScheduleCreationResult<TaskReturnType> {
+        case doSchedule(taskID: UInt64, promise: EventLoopPromise<TaskReturnType>, scheduled: Scheduled<TaskReturnType>)
+        case returnImmediately(Scheduled<TaskReturnType>)
+    }
+    private func _prepareToSchedule<ReturnType>(
+        returnType: ReturnType.Type = ReturnType.self
+    ) -> ScheduleCreationResult<ReturnType> {
+        let promise = self.makePromise(of: ReturnType.self)
+
+        switch self.state.load(ordering: .acquiring) {
+        case .open:
+            break
+        case .closing, .closed:
+            // If the event loop is shut down, or shutting down, immediately cancel the task.
+            promise.fail(EventLoopError.cancelled)
+            return .returnImmediately(Scheduled(promise: promise, cancellationTask: {}))
+        }
+
+        let taskID = self.scheduledTaskCounter.loadThenWrappingIncrement(ordering: .relaxed)
+
+        let scheduled = Scheduled(
+            promise: promise,
+            cancellationTask: {
+                if self.inEventLoop {
+                    self.removeTask(taskID: taskID)
+                } else {
+                    self.queue.async {
+                        self.removeTask(taskID: taskID)
+                    }
+                }
+            }
+        )
+        return .doSchedule(
+            taskID: taskID,
+            promise: promise,
+            scheduled: scheduled
+        )
     }
 
     deinit {

@@ -749,7 +749,7 @@ extension ByteToMessageHandler: RemovableChannelHandler {
     public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
         precondition(self.removalState == .notBeingRemoved)
         self.removalState = .removalStarted
-        context.eventLoop.assumeIsolated().execute {
+        context.eventLoop.assumeIsolatedUnsafeUnchecked().execute {
             self.processLeftovers(context: context)
             assert(!self.state.isLeftoversNeedProcessing, "illegal state: \(self.state)")
             switch self.removalState {

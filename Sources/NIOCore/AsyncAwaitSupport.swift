@@ -15,6 +15,8 @@
 extension EventLoopFuture {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
     ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     /// This function can be used to bridge an `EventLoopFuture` into the `async` world. Ie. if you're in an `async`
     /// function and want to get the result of this future.
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
@@ -37,6 +39,9 @@ extension EventLoopFuture {
 #if canImport(Dispatch)
 extension EventLoopGroup {
     /// Shuts down the event loop gracefully.
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @inlinable
     public func shutdownGracefully() async throws {
@@ -82,6 +87,8 @@ extension EventLoopPromise {
 extension Channel {
     /// Shortcut for calling `write` and `flush`.
     ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     /// - Parameters:
     ///   - data: the data to write
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
@@ -113,6 +120,9 @@ extension Channel {
 
 extension ChannelOutboundInvoker {
     /// Register on an `EventLoop` and so have all its IO handled.
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     /// - Parameters:
     ///   - file: The file this function was called in, for debugging purposes.
     ///   - line: The line this function was called on, for debugging purposes.
@@ -122,6 +132,9 @@ extension ChannelOutboundInvoker {
     }
 
     /// Bind to a `SocketAddress`.
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     /// - Parameters:
     ///   - address: the `SocketAddress` to which we should bind the `Channel`.
     ///   - file: The file this function was called in, for debugging purposes.
@@ -132,6 +145,9 @@ extension ChannelOutboundInvoker {
     }
 
     /// Connect to a `SocketAddress`.
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     /// - Parameters:
     ///   - address: the `SocketAddress` to which we should connect the `Channel`.
     ///   - file: The file this function was called in, for debugging purposes.
@@ -142,6 +158,8 @@ extension ChannelOutboundInvoker {
     }
 
     /// Shortcut for calling `write` and `flush`.
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
     ///
     /// - Parameters:
     ///   - data: the data to write
@@ -159,6 +177,8 @@ extension ChannelOutboundInvoker {
 
     /// Close the `Channel` and so the connection if one exists.
     ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     /// - Parameters:
     ///   - mode: the `CloseMode` that is used
     ///   - file: The file this function was called in, for debugging purposes.
@@ -169,6 +189,8 @@ extension ChannelOutboundInvoker {
     }
 
     /// Trigger a custom user outbound event which will flow through the `ChannelPipeline`.
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
     ///
     /// - Parameters:
     ///   - event: the event itself.
@@ -196,17 +218,26 @@ extension ChannelPipeline {
         try await self.addHandler(handler, name: name, position: position).get()
     }
 
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @preconcurrency
     public func removeHandler(_ handler: RemovableChannelHandler & Sendable) async throws {
         try await self.removeHandler(handler).get()
     }
 
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     public func removeHandler(name: String) async throws {
         try await self.removeHandler(name: name).get()
     }
 
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
     @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
     @available(
         *,
@@ -224,6 +255,7 @@ extension ChannelPipeline {
         message:
             "ChannelHandlerContext is not Sendable and it is therefore not safe to be used outside of its EventLoop"
     )
+
     @preconcurrency
     public func context(handler: ChannelHandler & Sendable) async throws -> ChannelHandlerContext {
         try await self.context(handler: handler).map { UnsafeTransfer($0) }.get().wrappedValue
@@ -422,6 +454,9 @@ struct AsyncSequenceFromIterator<AsyncIterator: AsyncIteratorProtocol>: AsyncSeq
         self.iterator
     }
 }
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension AsyncSequenceFromIterator: Sendable where AsyncIterator: Sendable {}
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension EventLoop {

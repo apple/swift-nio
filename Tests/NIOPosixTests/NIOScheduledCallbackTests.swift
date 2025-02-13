@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
 import NIOCore
 import NIOEmbedded
 import NIOPosix
@@ -27,8 +28,7 @@ protocol ScheduledCallbackTestRequirements {
     // ELG-backed ELs need to be shutdown via the ELG.
     func shutdownEventLoop() async throws
 
-    // This is here for NIOAsyncTestingEventLoop only.
-    func maybeInContext<R: Sendable>(_ body: @escaping @Sendable () throws -> R) async throws -> R
+    func waitForLoopTick() async throws
 }
 
 final class MTELGScheduledCallbackTests: _BaseScheduledCallbackTests {
@@ -44,8 +44,8 @@ final class MTELGScheduledCallbackTests: _BaseScheduledCallbackTests {
             try await self.group.shutdownGracefully()
         }
 
-        func maybeInContext<R: Sendable>(_ body: @escaping @Sendable () throws -> R) async throws -> R {
-            try body()
+        func waitForLoopTick() async throws {
+            try await self.loop.submit {}.get()
         }
     }
 
@@ -67,8 +67,8 @@ final class NIOAsyncTestingEventLoopScheduledCallbackTests: _BaseScheduledCallba
             await self._loop.shutdownGracefully()
         }
 
-        func maybeInContext<R: Sendable>(_ body: @escaping @Sendable () throws -> R) async throws -> R {
-            try await self._loop.executeInContext(body)
+        func waitForLoopTick() async throws {
+            try await self._loop.executeInContext {}
         }
     }
 
@@ -93,14 +93,11 @@ extension _BaseScheduledCallbackTests {
 
     func advanceTime(by amount: TimeAmount) async throws {
         try await self.requirements.advanceTime(by: amount)
+        try await self.requirements.waitForLoopTick()
     }
 
     func shutdownEventLoop() async throws {
         try await self.requirements.shutdownEventLoop()
-    }
-
-    func maybeInContext<R: Sendable>(_ body: @escaping @Sendable () throws -> R) async throws -> R {
-        try await self.requirements.maybeInContext(body)
     }
 }
 
@@ -111,10 +108,10 @@ extension _BaseScheduledCallbackTests {
         let handler = MockScheduledCallbackHandler()
 
         _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
-        try await self.maybeInContext { handler.assert(callbackCount: 0, cancelCount: 0) }
+        handler.assert(callbackCount: 0, cancelCount: 0)
 
         try await self.advanceTime(by: .microseconds(1))
-        try await self.maybeInContext { handler.assert(callbackCount: 0, cancelCount: 0) }
+        handler.assert(callbackCount: 0, cancelCount: 0)
     }
 
     func testSheduledCallbackExecutedAtDeadline() async throws {
@@ -123,7 +120,7 @@ extension _BaseScheduledCallbackTests {
         _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         try await self.advanceTime(by: .milliseconds(1))
         try await handler.waitForCallback(timeout: .seconds(1))
-        try await self.maybeInContext { handler.assert(callbackCount: 1, cancelCount: 0) }
+        handler.assert(callbackCount: 1, cancelCount: 0)
     }
 
     func testMultipleSheduledCallbacksUsingSameHandler() async throws {
@@ -135,7 +132,7 @@ extension _BaseScheduledCallbackTests {
         try await self.advanceTime(by: .milliseconds(1))
         try await handler.waitForCallback(timeout: .seconds(1))
         try await handler.waitForCallback(timeout: .seconds(1))
-        try await self.maybeInContext { handler.assert(callbackCount: 2, cancelCount: 0) }
+        handler.assert(callbackCount: 2, cancelCount: 0)
 
         _ = try self.loop.scheduleCallback(in: .milliseconds(2), handler: handler)
         _ = try self.loop.scheduleCallback(in: .milliseconds(3), handler: handler)
@@ -143,7 +140,7 @@ extension _BaseScheduledCallbackTests {
         try await self.advanceTime(by: .milliseconds(3))
         try await handler.waitForCallback(timeout: .seconds(1))
         try await handler.waitForCallback(timeout: .seconds(1))
-        try await self.maybeInContext { handler.assert(callbackCount: 4, cancelCount: 0) }
+        handler.assert(callbackCount: 4, cancelCount: 0)
     }
 
     func testMultipleSheduledCallbacksUsingDifferentHandlers() async throws {
@@ -156,8 +153,8 @@ extension _BaseScheduledCallbackTests {
         try await self.advanceTime(by: .milliseconds(1))
         try await handlerA.waitForCallback(timeout: .seconds(1))
         try await handlerB.waitForCallback(timeout: .seconds(1))
-        try await self.maybeInContext { handlerA.assert(callbackCount: 1, cancelCount: 0) }
-        try await self.maybeInContext { handlerB.assert(callbackCount: 1, cancelCount: 0) }
+        handlerA.assert(callbackCount: 1, cancelCount: 0)
+        handlerB.assert(callbackCount: 1, cancelCount: 0)
     }
 
     func testCancelExecutesCancellationCallback() async throws {
@@ -165,7 +162,8 @@ extension _BaseScheduledCallbackTests {
 
         let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         scheduledCallback.cancel()
-        try await self.maybeInContext { handler.assert(callbackCount: 0, cancelCount: 1) }
+        try await self.requirements.waitForLoopTick()
+        handler.assert(callbackCount: 0, cancelCount: 1)
     }
 
     func testCancelAfterDeadlineDoesNotExecutesCancellationCallback() async throws {
@@ -175,7 +173,8 @@ extension _BaseScheduledCallbackTests {
         try await self.advanceTime(by: .milliseconds(1))
         try await handler.waitForCallback(timeout: .seconds(1))
         scheduledCallback.cancel()
-        try await self.maybeInContext { handler.assert(callbackCount: 1, cancelCount: 0) }
+        try await self.requirements.waitForLoopTick()
+        handler.assert(callbackCount: 1, cancelCount: 0)
     }
 
     func testCancelAfterCancelDoesNotCallCancellationCallbackAgain() async throws {
@@ -183,8 +182,10 @@ extension _BaseScheduledCallbackTests {
 
         let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         scheduledCallback.cancel()
+        try await self.requirements.waitForLoopTick()
         scheduledCallback.cancel()
-        try await self.maybeInContext { handler.assert(callbackCount: 0, cancelCount: 1) }
+        try await self.requirements.waitForLoopTick()
+        handler.assert(callbackCount: 0, cancelCount: 1)
     }
 
     func testCancelAfterShutdownDoesNotCallCancellationCallbackAgain() async throws {
@@ -192,10 +193,10 @@ extension _BaseScheduledCallbackTests {
 
         let scheduledCallback = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         try await self.shutdownEventLoop()
-        try await self.maybeInContext { handler.assert(callbackCount: 0, cancelCount: 1) }
+        handler.assert(callbackCount: 0, cancelCount: 1)
 
         scheduledCallback.cancel()
-        try await self.maybeInContext { handler.assert(callbackCount: 0, cancelCount: 1) }
+        handler.assert(callbackCount: 0, cancelCount: 1)
     }
 
     func testShutdownCancelsOutstandingScheduledCallbacks() async throws {
@@ -203,7 +204,7 @@ extension _BaseScheduledCallbackTests {
 
         _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         try await self.shutdownEventLoop()
-        try await self.maybeInContext { handler.assert(callbackCount: 0, cancelCount: 1) }
+        handler.assert(callbackCount: 0, cancelCount: 1)
     }
 
     func testShutdownDoesNotCancelCancelledCallbacksAgain() async throws {
@@ -211,10 +212,11 @@ extension _BaseScheduledCallbackTests {
 
         let handle = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         handle.cancel()
-        try await self.maybeInContext { handler.assert(callbackCount: 0, cancelCount: 1) }
+        try await self.requirements.waitForLoopTick()
+        handler.assert(callbackCount: 0, cancelCount: 1)
 
         try await self.shutdownEventLoop()
-        try await self.maybeInContext { handler.assert(callbackCount: 0, cancelCount: 1) }
+        handler.assert(callbackCount: 0, cancelCount: 1)
     }
 
     func testShutdownDoesNotCancelPastCallbacks() async throws {
@@ -223,16 +225,16 @@ extension _BaseScheduledCallbackTests {
         _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
         try await self.advanceTime(by: .milliseconds(1))
         try await handler.waitForCallback(timeout: .seconds(1))
-        try await self.maybeInContext { handler.assert(callbackCount: 1, cancelCount: 0) }
+        handler.assert(callbackCount: 1, cancelCount: 0)
 
         try await self.shutdownEventLoop()
-        try await self.maybeInContext { handler.assert(callbackCount: 1, cancelCount: 0) }
+        handler.assert(callbackCount: 1, cancelCount: 0)
     }
 }
 
-private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler {
-    var callbackCount = 0
-    var cancelCount = 0
+private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler, Sendable {
+    let callbackCount = ManagedAtomic(0)
+    let cancelCount = ManagedAtomic(0)
 
     let callbackStream: AsyncStream<Void>
     private let callbackStreamContinuation: AsyncStream<Void>.Continuation
@@ -246,17 +248,29 @@ private final class MockScheduledCallbackHandler: NIOScheduledCallbackHandler {
     }
 
     func handleScheduledCallback(eventLoop: some EventLoop) {
-        self.callbackCount += 1
+        self.callbackCount.wrappingIncrement(by: 1, ordering: .sequentiallyConsistent)
         self.callbackStreamContinuation.yield()
     }
 
     func didCancelScheduledCallback(eventLoop: some EventLoop) {
-        self.cancelCount += 1
+        self.cancelCount.wrappingIncrement(by: 1, ordering: .sequentiallyConsistent)
     }
 
     func assert(callbackCount: Int, cancelCount: Int, file: StaticString = #file, line: UInt = #line) {
-        XCTAssertEqual(self.callbackCount, callbackCount, "Unexpected callback count", file: file, line: line)
-        XCTAssertEqual(self.cancelCount, cancelCount, "Unexpected cancel count", file: file, line: line)
+        XCTAssertEqual(
+            self.callbackCount.load(ordering: .sequentiallyConsistent),
+            callbackCount,
+            "Unexpected callback count",
+            file: file,
+            line: line
+        )
+        XCTAssertEqual(
+            self.cancelCount.load(ordering: .sequentiallyConsistent),
+            cancelCount,
+            "Unexpected cancel count",
+            file: file,
+            line: line
+        )
     }
 
     func waitForCallback(timeout: TimeAmount, file: StaticString = #file, line: UInt = #line) async throws {

@@ -39,7 +39,8 @@ import NIOCore
 /// specify a type that must be returned from the supplied closure. The result will then be used to succeed the ``NIOTypedApplicationProtocolNegotiationHandler/protocolNegotiationResult``
 /// promise. This allows us to construct pipelines that include protocol negotiation handlers and be able to bridge them into `NIOAsyncChannel`
 /// based bootstraps.
-public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult>: ChannelInboundHandler,
+@preconcurrency
+public final class NIOTypedApplicationProtocolNegotiationHandler<NegotiationResult: Sendable>: ChannelInboundHandler,
     RemovableChannelHandler
 {
     public typealias InboundIn = Any

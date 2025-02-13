@@ -5,10 +5,10 @@ changelog:
         - ⚠️ semver/major
     - title: SemVer Minor
       labels:
-        - semver/minor
+        - 🆕 semver/minor
     - title: SemVer Patch
       labels:
-        - semver/patch
+        - 🔨 semver/patch
     - title: Other Changes
       labels:
         - semver/none

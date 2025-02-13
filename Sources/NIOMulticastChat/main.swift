@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+import CNIOLinux
 import NIOCore
 import NIOPosix
 
@@ -71,8 +72,8 @@ let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
 var datagramBootstrap = DatagramBootstrap(group: group)
     .channelOption(.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.addHandler(ChatMessageEncoder()).flatMap {
-            channel.pipeline.addHandler(ChatMessageDecoder())
+        channel.eventLoop.makeCompletedFuture {
+            try channel.pipeline.syncOperations.addHandlers(ChatMessageEncoder(), ChatMessageDecoder())
         }
     }
 

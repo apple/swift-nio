@@ -1962,6 +1962,10 @@ private class EventLoopWithPreSucceededFuture: EventLoop {
         preconditionFailure("not implemented")
     }
 
+    var now: NIODeadline {
+        preconditionFailure("not implemented")
+    }
+
     @discardableResult
     func scheduleTask<T>(deadline: NIODeadline, _ task: @escaping () throws -> T) -> Scheduled<T> {
         preconditionFailure("not implemented")
@@ -2010,6 +2014,10 @@ private class EventLoopWithoutPreSucceededFuture: EventLoop {
     }
 
     func submit<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        preconditionFailure("not implemented")
+    }
+
+    var now: NIODeadline {
         preconditionFailure("not implemented")
     }
 

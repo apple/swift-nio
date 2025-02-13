@@ -3499,6 +3499,29 @@ extension ByteBufferTest {
 
 }
 
+// MARK: - Int / FixedWidthInteger init
+extension ByteBufferTest {
+    func testCreateIntegersFromByteBuffer() {
+        let uint32BufferLE = ByteBuffer(bytes: [0x04, 0x03, 0x02, 0x01])
+        let uint32BufferBE = ByteBuffer(bytes: [0x01, 0x02, 0x03, 0x04])
+        let tooSmallInt32Buffer = ByteBuffer(bytes: [0x01, 0x02, 0x03])
+
+        XCTAssertEqual(Int32(buffer: uint32BufferLE, endianness: .little), 0x0102_0304)
+        XCTAssertEqual(Int32(buffer: uint32BufferBE, endianness: .big), 0x0102_0304)
+        XCTAssertNil(Int32(buffer: tooSmallInt32Buffer))
+
+        let uint64BufferLE = ByteBuffer(bytes: [0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01])
+        let uint64BufferBE = ByteBuffer(bytes: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
+        let tooSmallInt64Buffer = ByteBuffer(bytes: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
+        let tooBigInt64Buffer = ByteBuffer(bytes: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09])
+
+        XCTAssertEqual(Int64(buffer: uint64BufferLE, endianness: .little), 0x0102_0304_0506_0708)
+        XCTAssertEqual(Int64(buffer: uint64BufferBE, endianness: .big), 0x0102_0304_0506_0708)
+        XCTAssertNil(Int64(buffer: tooSmallInt64Buffer))
+        XCTAssertNil(Int64(buffer: tooBigInt64Buffer))
+    }
+}
+
 // MARK: - DispatchData init
 extension ByteBufferTest {
 

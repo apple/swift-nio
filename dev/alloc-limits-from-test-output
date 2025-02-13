@@ -49,6 +49,12 @@ case "$mode_flag" in
         ;;
 esac
 
+# stdin is coming from a terminal, i.e. nothing is being piped in.
+if [[ -t 0 ]]; then
+    usage
+    exit 1
+fi
+
 function allow_slack() {
     raw="$1"
     if [[ ! "$raw" =~ ^[0-9]+$ ]]; then

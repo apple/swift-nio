@@ -269,6 +269,9 @@ public protocol EventLoop: EventLoopGroup {
     @preconcurrency
     func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T>
 
+    /// The current time of the event loop.
+    var now: NIODeadline { get }
+
     /// Schedule a `task` that is executed by this `EventLoop` at the given time.
     ///
     /// - Parameters:
@@ -392,6 +395,74 @@ public protocol EventLoop: EventLoopGroup {
     ///
     /// - NOTE: Event loops only need to implemented this if they provide a custom scheduled callback implementation.
     func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback)
+
+    /// Submit a given task to be executed by the ``EventLoop``, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/execute`` will perform better.
+    func _executeIsolatedUnsafeUnchecked(_ task: @escaping () -> Void)
+
+    /// Submit a given task to be executed by the ``EventLoop```, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// Once the execution is complete the returned ``EventLoopFuture`` is notified.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/submit`` will perform better.
+    ///
+    /// - Parameters:
+    ///   - task: The closure that will be submitted to the ``EventLoop`` for execution.
+    /// - Returns: ``EventLoopFuture`` that is notified once the task was executed.
+    func _submitIsolatedUnsafeUnchecked<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T>
+
+    /// Schedule a `task` that is executed by this ``EventLoop`` at the given time, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/scheduleTask(deadline:_:)`` will perform better.
+    ///
+    /// - Parameters:
+    ///   - deadline: The instant in time before which the task will not execute.
+    ///   - task: The synchronous task to run. As with everything that runs on the ``EventLoop```, it must not block.
+    /// - Returns: A ``Scheduled``` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - Note: You can only cancel a task before it has started executing.
+    @discardableResult
+    func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        deadline: NIODeadline,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T>
+
+    /// Schedule a `task` that is executed by this ``EventLoop`` after the given amount of time, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/scheduleTask(in:_:)`` will perform better.
+    ///
+    /// - Parameters:
+    ///   - in: The amount of time before which the task will not execute.
+    ///   - task: The synchronous task to run. As with everything that runs on the ``EventLoop``, it must not block.
+    /// - Returns: A ``Scheduled`` object which may be used to cancel the task if it has not yet run, or to wait
+    ///            on the completion of the task.
+    ///
+    /// - Note: You can only cancel a task before it has started executing.
+    /// - Note: The `in` value is clamped to a maximum when running on a Darwin-kernel.
+    @discardableResult
+    func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        in: TimeAmount,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T>
+}
+
+extension EventLoop {
+    /// Default implementation of `now`: Returns `NIODeadline.now()`.
+    public var now: NIODeadline { .now() }
 }
 
 extension EventLoop {
@@ -413,6 +484,54 @@ extension EventLoop {
     public func _promiseCompleted(futureIdentifier: _NIOEventLoopFutureIdentifier) -> (file: StaticString, line: UInt)?
     {
         nil
+    }
+
+    /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
+    public func _executeIsolatedUnsafeUnchecked(_ task: @escaping () -> Void) {
+        self.assertInEventLoop()
+        let unsafeTransfer = UnsafeTransfer(task)
+        self.execute {
+            unsafeTransfer.wrappedValue()
+        }
+    }
+
+    /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
+    public func _submitIsolatedUnsafeUnchecked<T>(_ task: @escaping () throws -> T) -> EventLoopFuture<T> {
+        self.assertInEventLoop()
+        let unsafeTransfer = UnsafeTransfer(task)
+        return self.submit {
+            try unsafeTransfer.wrappedValue()
+        }
+    }
+
+    /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
+    @discardableResult
+    public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        deadline: NIODeadline,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        self.assertInEventLoop()
+        let unsafeTransfer = UnsafeTransfer(task)
+        return self.scheduleTask(deadline: deadline) {
+            try unsafeTransfer.wrappedValue()
+        }
+    }
+
+    /// Default implementation: wraps the task in an UnsafeTransfer.
+    @inlinable
+    @discardableResult
+    public func _scheduleTaskIsolatedUnsafeUnchecked<T>(
+        in delay: TimeAmount,
+        _ task: @escaping () throws -> T
+    ) -> Scheduled<T> {
+        self.assertInEventLoop()
+        let unsafeTransfer = UnsafeTransfer(task)
+        return self.scheduleTask(in: delay) {
+            try unsafeTransfer.wrappedValue()
+        }
     }
 }
 
@@ -539,6 +658,88 @@ public struct TimeAmount: Hashable, Sendable {
             return amount >= 0 ? .max : .min
         } else {
             return nanosecondsMultiplication.partialValue
+        }
+    }
+}
+
+/// Contains the logic for parsing time amounts from strings,
+/// and printing pretty strings to represent time amounts.
+extension TimeAmount: CustomStringConvertible {
+
+    /// Errors thrown when parsint a TimeAmount from a string
+    internal enum ValidationError: Error, Equatable {
+        /// Can't parse the provided unit
+        case unsupportedUnit(String)
+
+        /// Can't parse the number into a Double
+        case invalidNumber(String)
+    }
+
+    /// Creates a TimeAmount from a string representation with an optional default unit.
+    ///
+    /// Supports formats like:
+    /// - "5s" (5 seconds)
+    /// - "100ms" (100 milliseconds)
+    /// - "42" (42 of default unit)
+    /// - "1 hr" (1 hour)
+    ///
+    /// This function only supports one pair of the number and units, i.e. "5s" or "100ms" but not "5s 100ms".
+    ///
+    /// Supported units:
+    /// - h, hr, hrs (hours)
+    /// - m, min (minutes)
+    /// - s, sec, secs (seconds)
+    /// - ms, millis (milliseconds)
+    /// - us, µs, micros (microseconds)
+    /// - ns, nanos (nanoseconds)
+    ///
+    /// - Parameters:
+    ///   - userProvidedString: The string to parse
+    ///
+    /// - Throws: ValidationError if the string cannot be parsed
+    public init(_ userProvidedString: String) throws {
+        let lowercased = String(userProvidedString.filter { !$0.isWhitespace }).lowercased()
+        let parsedNumbers = lowercased.prefix(while: { $0.isWholeNumber || $0 == "," || $0 == "." })
+        let parsedUnit = String(lowercased.dropFirst(parsedNumbers.count))
+
+        guard let numbers = Int64(parsedNumbers) else {
+            throw ValidationError.invalidNumber("'\(userProvidedString)' cannot be parsed as number and unit")
+        }
+
+        switch parsedUnit {
+        case "h", "hr", "hrs":
+            self = .hours(numbers)
+        case "m", "min":
+            self = .minutes(numbers)
+        case "s", "sec", "secs":
+            self = .seconds(numbers)
+        case "ms", "millis":
+            self = .milliseconds(numbers)
+        case "us", "µs", "micros":
+            self = .microseconds(numbers)
+        case "ns", "nanos":
+            self = .nanoseconds(numbers)
+        default:
+            throw ValidationError.unsupportedUnit("Unknown unit '\(parsedUnit)' in '\(userProvidedString)'")
+        }
+    }
+
+    /// Returns a human-readable string representation of the time amount
+    /// using the most appropriate unit
+    public var description: String {
+        let fullNS = self.nanoseconds
+        let (fullUS, remUS) = fullNS.quotientAndRemainder(dividingBy: 1_000)
+        let (fullMS, remMS) = fullNS.quotientAndRemainder(dividingBy: 1_000_000)
+        let (fullS, remS) = fullNS.quotientAndRemainder(dividingBy: 1_000_000_000)
+
+        if remS == 0 {
+            return "\(fullS) s"
+        } else if remMS == 0 {
+            return "\(fullMS) ms"
+        } else if remUS == 0 {
+            return "\(fullUS) us"
+        } else {
+            return "\(fullNS) ns"
         }
     }
 }
@@ -753,12 +954,13 @@ extension EventLoop {
     /// - Returns: An `EventLoopFuture` containing the result of `task`'s execution.
     @inlinable
     @preconcurrency
-    public func submit<T: Sendable>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
+    public func submit<T>(_ task: @escaping @Sendable () throws -> T) -> EventLoopFuture<T> {
         let promise: EventLoopPromise<T> = makePromise(file: #fileID, line: #line)
 
         self.execute {
             do {
-                promise.succeed(try task())
+                // UnsafeUnchecked is allowed here because we know we are on the EL.
+                promise.assumeIsolatedUnsafeUnchecked().succeed(try task())
             } catch let err {
                 promise.fail(err)
             }
@@ -807,7 +1009,15 @@ extension EventLoop {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(deadline: deadline, task)
 
-        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        scheduled.futureResult.whenComplete { result in
+            switch result {
+            case .success(let futureResult):
+                promise.completeWith(futureResult)
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
+
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 
@@ -849,7 +1059,15 @@ extension EventLoop {
         let promise: EventLoopPromise<T> = self.makePromise(file: file, line: line)
         let scheduled = self.scheduleTask(in: delay, task)
 
-        scheduled.futureResult.flatMap { $0 }.cascade(to: promise)
+        scheduled.futureResult.whenComplete { result in
+            switch result {
+            case .success(let futureResult):
+                promise.completeWith(futureResult)
+            case .failure(let error):
+                promise.fail(error)
+            }
+        }
+
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 
@@ -1246,16 +1464,33 @@ extension EventLoopGroup {
 }
 #endif
 
-/// This type is intended to be used by libraries which use NIO, and offer their users either the option
+/// Deprecated.
+///
+/// This type was intended to be used by libraries which use NIO, and offer their users either the option
 /// to `.share` an existing event loop group or create (and manage) a new one (`.createNew`) and let it be
 /// managed by given library and its lifecycle.
+///
+/// Please use a `group: any EventLoopGroup` parameter instead. If you want to default to a global
+/// singleton group instead, consider group: any EventLoopGroup = MultiThreadedEventLoopGroup.singleton` or
+/// similar.
+///
+/// - See also: https://github.com/apple/swift-nio/issues/2142
 public enum NIOEventLoopGroupProvider {
     /// Use an `EventLoopGroup` provided by the user.
     /// The owner of this group is responsible for its lifecycle.
     case shared(EventLoopGroup)
-    /// Create a new `EventLoopGroup` when necessary.
+
+    /// Deprecated. Create a new `EventLoopGroup` when necessary.
     /// The library which accepts this provider takes ownership of the created event loop group,
     /// and must ensure its proper shutdown when the library is being shut down.
+    @available(
+        *,
+        deprecated,
+        message: """
+            Please use `.shared(existingGroup)` or use the singleton via \
+            `.shared(MultiThreadedEventLoopGroup.singleton)` or similar
+            """
+    )
     case createNew
 }
 

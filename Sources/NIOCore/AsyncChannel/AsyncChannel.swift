@@ -301,15 +301,25 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
             }
         }
 
+        self._outbound.finish()
+        // We ignore errors from close, since all we care about is that the channel has been closed
+        // at this point.
+        self.channel.close(promise: nil)
+        // `closeFuture` should never be failed, so we could ignore the error. However, do an
+        // assertionFailure to guide bad Channel implementations that are incorrectly failing this
+        // future to stop failing it.
         do {
-            self._outbound.finish()
-            try await self.channel.close().get()
+            try await self.channel.closeFuture.get()
         } catch {
-            if let error = error as? ChannelError, error == .alreadyClosed {
-                return result
-            }
-            throw error
+            assertionFailure(
+                """
+                The channel's closeFuture should never be failed, but it was failed with error: \(error).
+                This is an error in the channel's implementation.
+                Refer to `Channel/closeFuture`'s documentation for more information.
+                """
+            )
         }
+
         return result
     }
 }

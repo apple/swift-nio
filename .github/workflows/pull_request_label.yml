@@ -6,7 +6,7 @@ on:
 
 jobs:
     semver-label-check:
-        name: Semantic Version label check
+        name: Semantic version label check
         runs-on: ubuntu-latest
         timeout-minutes: 1
         steps:

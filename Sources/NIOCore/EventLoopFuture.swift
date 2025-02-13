@@ -26,9 +26,9 @@ import Dispatch
 /// In particular, note that _run() here continues to obtain and execute lists of callbacks until it completes.
 /// This eliminates recursion when processing `flatMap()` chains.
 @usableFromInline
-internal struct CallbackList: Sendable {
+internal struct CallbackList {
     @usableFromInline
-    internal typealias Element = @Sendable () -> CallbackList
+    internal typealias Element = () -> CallbackList
     @usableFromInline
     internal var firstCallback: Optional<Element>
     @usableFromInline
@@ -115,6 +115,9 @@ internal struct CallbackList: Sendable {
     }
 }
 
+@available(*, unavailable)
+extension CallbackList: Sendable {}
+
 /// Internal error for operations that return results that were not replaced
 @usableFromInline
 internal struct OperationPlaceholderError: Error {
@@ -163,7 +166,12 @@ public struct EventLoopPromise<Value> {
     internal static func makeUnleakablePromise(eventLoop: EventLoop, line: UInt = #line) -> EventLoopPromise<Value> {
         EventLoopPromise<Value>(
             eventLoop: eventLoop,
-            file: "BUG in SwiftNIO (please report), unleakable promise leaked.",
+            file: """
+                EventLoopGroup shut down with unfulfilled promises remaining. \
+                This suggests that the EventLoopGroup was shut down with unfinished work outstanding which is \
+                illegal. Either switch to using the singleton EventLoopGroups or fix the issue by only shutting down \
+                the EventLoopGroups when all the work associated with them has finished.
+                """,
             line: line
         )
     }
@@ -774,7 +782,7 @@ extension EventLoopFuture {
 
     /// Add a callback.  If there's already a value, invoke it and return the resulting list of new callback functions.
     @inlinable
-    internal func _addCallback(_ callback: @escaping @Sendable () -> CallbackList) -> CallbackList {
+    internal func _addCallback(_ callback: @escaping () -> CallbackList) -> CallbackList {
         self.eventLoop.assertInEventLoop()
         if self._value == nil {
             self._callbacks.append(callback)
@@ -795,12 +803,19 @@ extension EventLoopFuture {
     @inlinable
     internal func _internalWhenComplete(_ callback: @escaping @Sendable () -> CallbackList) {
         if self.eventLoop.inEventLoop {
-            self._addCallback(callback)._run()
+            self._whenCompleteIsolated(callback)
         } else {
             self.eventLoop.execute {
-                self._addCallback(callback)._run()
+                self._whenCompleteIsolated(callback)
             }
         }
+    }
+
+    /// Add a callback.  If there's already a value, run as much of the chain as we can.
+    @inlinable
+    internal func _whenCompleteIsolated(_ callback: @escaping () -> CallbackList) {
+        self.eventLoop.assertInEventLoop()
+        self._addCallback(callback)._run()
     }
 
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
