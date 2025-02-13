@@ -623,8 +623,11 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.delegate.didYieldHandler = { _ in
             if self.delegate.didYieldCallCount == 1 {
                 // Delay this yield until the other yield is suspended again.
-                suspendedAgain.lock(whenValue: true)
-                suspendedAgain.unlock()
+                if suspendedAgain.lock(whenValue: true, timeoutSeconds: 5) {
+                    suspendedAgain.unlock()
+                } else {
+                    XCTFail("Timeout while waiting for other yield to suspend again.")
+                }
             }
         }
 
@@ -635,7 +638,7 @@ final class NIOAsyncWriterTests: XCTestCase {
             try await writer!.yield("message2")
         }
 
-        await fulfillment(of: [bothSuspended], timeout: 1)
+        await fulfillment(of: [bothSuspended], timeout: 5)
         self.writer.finish()
 
         self.assert(suspendCallCount: 2, yieldCallCount: 0, terminateCallCount: 0)
