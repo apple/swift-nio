@@ -59,8 +59,7 @@ extension NIOHTTPClientUpgradeError: CustomStringConvertible {
 /// An object that implements `NIOHTTPClientProtocolUpgrader` knows how to handle HTTP upgrade to
 /// a protocol on a client-side channel.
 /// It has the option of denying this upgrade based upon the server response.
-@preconcurrency
-public protocol NIOHTTPClientProtocolUpgrader: Sendable {
+public protocol NIOHTTPClientProtocolUpgrader {
 
     /// The protocol this upgrader knows how to support.
     var supportedProtocol: String { get }
@@ -327,21 +326,21 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         // upgrader code is done, we do our final cleanup steps, namely we replay the received data we
         // buffered in the meantime and then remove ourselves from the pipeline.
         let pipeline = context.pipeline
-        let loopBoundContext = context.loopBound
         return {
             self.upgradeState = .upgrading
 
+            // assumeIsolated is safe here because this is only called from channelRead
             self.removeHTTPHandlers(pipeline: pipeline)
+                .assumeIsolated()
                 .map {
                     // Let the other handlers be removed before continuing with upgrade.
-                    self.upgradeCompletionHandler(loopBoundContext.value)
+                    self.upgradeCompletionHandler(context)
                     self.upgradeState = .upgradingAddingHandlers
                 }
                 .flatMap {
-                    upgrader.upgrade(context: loopBoundContext.value, upgradeResponse: response)
+                    upgrader.upgrade(context: context, upgradeResponse: response)
                 }
                 .map {
-                    let context = loopBoundContext.value
                     // We unbuffer any buffered data here.
 
                     // If we received any, we fire readComplete.
@@ -360,7 +359,6 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
                     self.upgradeState = .upgradeComplete
                 }
                 .whenComplete { _ in
-                    let context = loopBoundContext.value
                     context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
                 }
         }

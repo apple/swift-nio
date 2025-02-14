@@ -176,7 +176,6 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     }
 
     private func channelRead(context: ChannelHandlerContext, requestPart: HTTPServerRequestPart) {
-        let loopBoundSelfAndContext = NIOLoopBound((self, context), eventLoop: context.eventLoop)
         switch self.stateMachine.channelReadRequestPart(requestPart) {
         case .failUpgradePromise(let error):
             self.upgradeResultPromise.fail(error)
@@ -184,8 +183,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         case .runNotUpgradingInitializer:
             self.notUpgradingCompletionHandler(context.channel)
                 .hop(to: context.eventLoop)
+                .assumeIsolated()
                 .whenComplete { result in
-                    let (`self`, context) = loopBoundSelfAndContext.value
                     self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: nil)
                 }
 
@@ -198,7 +197,6 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
                 allHeaderNames: allHeaderNames,
                 connectionHeader: connectionHeader
             ).whenComplete { result in
-                let (`self`, context) = loopBoundSelfAndContext.value
                 self.findingUpgradeCompleted(context: context, requestHead: head, result)
             }
 
@@ -273,12 +271,12 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         connectionHeader: Set<String>
     ) -> EventLoopFuture<
         (upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders, proto: String)?
-    > {
+    >.Isolated {
         // We want a local copy of the protocol iterator. We'll pass it to the next invocation of the function.
         var protocolIterator = protocolIterator
         guard let proto = protocolIterator.next() else {
             // We're done! No suitable protocol for upgrade.
-            return context.eventLoop.makeSucceededFuture(nil)
+            return context.eventLoop.makeSucceededIsolatedFuture(nil)
         }
 
         guard let upgrader = self.upgraders[proto.lowercased()] else {
@@ -302,10 +300,6 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
             )
         }
 
-        let loopBoundSelfContextAndProtocolIterator = NIOLoopBound(
-            (self, context, protocolIterator),
-            eventLoop: context.eventLoop
-        )
         let responseHeaders = self.buildUpgradeHeaders(protocol: proto)
         return upgrader.buildUpgradeResponse(
             channel: context.channel,
@@ -313,10 +307,10 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
             initialResponseHeaders: responseHeaders
         )
         .hop(to: context.eventLoop)
+        .assumeIsolated()
         .map { (upgrader, $0, proto) }
         .flatMapError { error in
             // No upgrade here. We want to fire the error down the pipeline, and then try another loop iteration.
-            let (`self`, context, protocolIterator) = loopBoundSelfContextAndProtocolIterator.value
             context.fireErrorCaught(error)
             return self.handleUpgradeForProtocol(
                 context: context,
@@ -324,7 +318,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
                 request: request,
                 allHeaderNames: allHeaderNames,
                 connectionHeader: connectionHeader
-            )
+            ).nonisolated()
         }
     }
 
@@ -338,8 +332,6 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
             )?, Error
         >
     ) {
-        // NIOLoopBound is safe because this method is only called from channelRead
-        let loopBoundSelfAndContext = NIOLoopBound((self, context), eventLoop: context.eventLoop)
         switch self.stateMachine.findingUpgraderCompleted(requestHead: requestHead, result) {
         case .startUpgrading(let upgrader, let responseHeaders, let proto):
             self.startUpgrading(
@@ -353,8 +345,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         case .runNotUpgradingInitializer:
             self.notUpgradingCompletionHandler(context.channel)
                 .hop(to: context.eventLoop)
+                .assumeIsolated()
                 .whenComplete { result in
-                    let (`self`, context) = loopBoundSelfAndContext.value
                     self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: nil)
                 }
 
@@ -392,19 +384,17 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         let channel = context.channel
         let pipeline = context.pipeline
 
-        // NIOLoopBound is safe because this method is only called from channelRead, and hop after invokingq upgrader.upgrade
-        let loopBoundSelfAndContext = NIOLoopBound((self, context), eventLoop: context.eventLoop)
-        self.removeExtraHandlers(pipeline: pipeline).flatMap {
-            let (`self`, context) = loopBoundSelfAndContext.value
+        self.removeExtraHandlers(pipeline: pipeline)
+            .assumeIsolated()
+            .flatMap {
             return self.sendUpgradeResponse(context: context, responseHeaders: responseHeaders)
         }.flatMap {
-            let (`self`, _) = loopBoundSelfAndContext.value
             return pipeline.syncOperations.removeHandler(self.httpEncoder)
         }.flatMap { () -> EventLoopFuture<UpgradeResult> in
             upgrader.upgrade(channel: channel, upgradeRequest: requestHead)
-        }.hop(to: context.eventLoop)
+        }.nonisolated().hop(to: context.eventLoop)
+            .assumeIsolated()
             .whenComplete { result in
-                let (`self`, context) = loopBoundSelfAndContext.value
                 self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: (requestHead, proto))
             }
     }

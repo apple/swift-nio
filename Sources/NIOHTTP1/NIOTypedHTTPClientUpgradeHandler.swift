@@ -193,7 +193,6 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
     }
 
     private func channelRead(context: ChannelHandlerContext, responsePart: HTTPClientResponsePart) {
-        let loopBoundSelfAndContext = NIOLoopBound((self, context), eventLoop: context.eventLoop)
         switch self.stateMachine.channelReadResponsePart(responsePart) {
         case .fireErrorCaughtAndRemoveHandler(let error):
             self.upgradeResultPromise.fail(error)
@@ -203,8 +202,8 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
         case .runNotUpgradingInitializer:
             self.notUpgradingCompletionHandler(context.channel)
                 .hop(to: context.eventLoop)
+                .assumeIsolated()
                 .whenComplete { result in
-                    let (`self`, context) = loopBoundSelfAndContext.value
                     self.upgradingHandlerCompleted(context: context, result)
                 }
 
@@ -228,13 +227,12 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
         // Before we start the upgrade we have to remove the HTTPEncoder and HTTPDecoder handlers from the
         // pipeline, to prevent them parsing any more data. We'll buffer the incoming data until that completes.
         let channel = context.channel
-        let loopBoundSelfAndContext = NIOLoopBound((self, context), eventLoop: context.eventLoop)
         self.removeHTTPHandlers(pipeline: context.pipeline)
             .flatMap {
                 upgrader.upgrade(channel: channel, upgradeResponse: responseHead)
             }.hop(to: context.eventLoop)
+            .assumeIsolated()
             .whenComplete { result in
-                let (`self`, context) = loopBoundSelfAndContext.value
                 self.upgradingHandlerCompleted(context: context, result)
             }
     }
