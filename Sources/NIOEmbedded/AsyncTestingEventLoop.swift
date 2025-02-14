@@ -146,7 +146,8 @@ public final class NIOAsyncTestingEventLoop: EventLoop, @unchecked Sendable {
             task: {
                 do {
                     // UnsafeUnchecked is acceptable because we know we're in the loop here.
-                    promise?.assumeIsolatedUnsafeUnchecked().succeed(try task())
+                    let result = try task()
+                    promise?.assumeIsolatedUnsafeUnchecked().succeed(result)
                 } catch let err {
                     promise?.fail(err)
                 }
