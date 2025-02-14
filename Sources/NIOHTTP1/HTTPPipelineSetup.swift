@@ -22,6 +22,10 @@ public typealias NIOHTTPClientUpgradeConfiguration = (
     upgraders: [NIOHTTPClientProtocolUpgrader], completionHandler: @Sendable (ChannelHandlerContext) -> Void
 )
 
+public typealias NIOHTTPClientUpgradeSendableConfiguration = (
+    upgraders: [NIOHTTPClientProtocolUpgrader & Sendable], completionHandler: @Sendable (ChannelHandlerContext) -> Void
+)
+
 /// Configuration required to configure a HTTP server pipeline for upgrade.
 ///
 /// See the documentation for `HTTPServerUpgradeHandler` for details on these
@@ -31,6 +35,10 @@ public typealias HTTPUpgradeConfiguration = NIOHTTPServerUpgradeConfiguration
 
 public typealias NIOHTTPServerUpgradeConfiguration = (
     upgraders: [HTTPServerProtocolUpgrader], completionHandler: @Sendable (ChannelHandlerContext) -> Void
+)
+
+public typealias NIOHTTPServerUpgradeSendableConfiguration = (
+    upgraders: [HTTPServerProtocolUpgrader & Sendable], completionHandler: @Sendable (ChannelHandlerContext) -> Void
 )
 
 extension ChannelPipeline {
@@ -67,7 +75,7 @@ extension ChannelPipeline {
     public func addHTTPClientHandlers(
         position: Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
-        withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration?
+        withClientUpgrade upgrade: NIOHTTPClientUpgradeSendableConfiguration?
     ) -> EventLoopFuture<Void> {
         self._addHTTPClientHandlers(
             position: position,
@@ -79,7 +87,7 @@ extension ChannelPipeline {
     private func _addHTTPClientHandlers(
         position: Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
-        withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration?
+        withClientUpgrade upgrade: NIOHTTPClientUpgradeSendableConfiguration?
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
@@ -120,11 +128,12 @@ extension ChannelPipeline {
     ///         the upgrade completion handler. See the documentation on ``NIOHTTPClientUpgradeHandler``
     ///         for more details.
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    @preconcurrency
     public func addHTTPClientHandlers(
         position: Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
         enableOutboundHeaderValidation: Bool = true,
-        withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration? = nil
+        withClientUpgrade upgrade: NIOHTTPClientUpgradeSendableConfiguration? = nil
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
@@ -168,12 +177,13 @@ extension ChannelPipeline {
     ///         the upgrade completion handler. See the documentation on ``NIOHTTPClientUpgradeHandler``
     ///         for more details.
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    @preconcurrency
     public func addHTTPClientHandlers(
         position: Position = .last,
         leftOverBytesStrategy: RemoveAfterUpgradeStrategy = .dropBytes,
         enableOutboundHeaderValidation: Bool = true,
         encoderConfiguration: HTTPRequestEncoder.Configuration = .init(),
-        withClientUpgrade upgrade: NIOHTTPClientUpgradeConfiguration? = nil
+        withClientUpgrade upgrade: NIOHTTPClientUpgradeSendableConfiguration? = nil
     ) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
@@ -234,7 +244,7 @@ extension ChannelPipeline {
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
-        withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
+        withServerUpgrade upgrade: NIOHTTPServerUpgradeSendableConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true
     ) -> EventLoopFuture<Void> {
         self._configureHTTPServerPipeline(
@@ -274,10 +284,11 @@ extension ChannelPipeline {
     ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
     ///         spec compliance. Defaults to `true`.
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    @preconcurrency
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
-        withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
+        withServerUpgrade upgrade: NIOHTTPServerUpgradeSendableConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true,
         withOutboundHeaderValidation headerValidation: Bool = true
     ) -> EventLoopFuture<Void> {
@@ -320,10 +331,11 @@ extension ChannelPipeline {
     ///         spec compliance. Defaults to `true`.
     ///   - encoderConfiguration: The configuration for the ``HTTPResponseEncoder``.
     /// - Returns: An `EventLoopFuture` that will fire when the pipeline is configured.
+    @preconcurrency
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
-        withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
+        withServerUpgrade upgrade: NIOHTTPServerUpgradeSendableConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true,
         withOutboundHeaderValidation headerValidation: Bool = true,
         withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init()
@@ -341,7 +353,7 @@ extension ChannelPipeline {
     private func _configureHTTPServerPipeline(
         position: ChannelPipeline.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
-        withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
+        withServerUpgrade upgrade: NIOHTTPServerUpgradeSendableConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true,
         withOutboundHeaderValidation headerValidation: Bool = true,
         withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init()

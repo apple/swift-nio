@@ -325,7 +325,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
         let channel = EmbeddedChannel()
 
-        let config: NIOHTTPClientUpgradeConfiguration = (
+        let config: NIOHTTPClientUpgradeSendableConfiguration = (
             upgraders: clientUpgraders,
             completionHandler: { context in
                 channel.pipeline.removeHandler(clientHTTPHandler, promise: nil)
