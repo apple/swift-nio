@@ -62,6 +62,6 @@ jobs:
             -e SWIFT_VERSION="${{ matrix.config.swift_version }}" `
             -e setup_command_expression=%setup_command_expression% `
             ${{ matrix.config.image }} `
-            cmd /s /c  "swift --version & powershell Invoke-Expression ""$($setup_command_expression) ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"""
+            cmd /s /c  "swift --version & $($setup_command_expression) ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"
     env:
       SWIFT_VERSION: ${{ matrix.config.swift_version }}
