@@ -1110,6 +1110,30 @@ class EventLoopFutureTest: XCTestCase {
         XCTAssertEqual(try promise.futureResult.wait(), "yay")
     }
 
+    func testFutureFulfilledIfHasNonSendableResult() throws {
+        let eventLoop = EmbeddedEventLoop()
+        let f = EventLoopFuture(eventLoop: eventLoop, isolatedValue: NonSendableObject(value: 5))
+        XCTAssertTrue(f.isFulfilled)
+    }
+
+    func testSucceededIsolatedFutureIsCompleted() throws {
+        let group = EmbeddedEventLoop()
+        let loop = group.next()
+
+        let value = NonSendableObject(value: 4)
+
+        let future = loop.makeSucceededIsolatedFuture(value)
+
+        future.whenComplete { result in
+            switch result {
+            case .success(let nonSendableStruct):
+                XCTAssertEqual(nonSendableStruct, value)
+            case .failure(let error):
+                XCTFail("\(error)")
+            }
+        }
+    }
+
     func testPromiseCompletedWithFailedFuture() throws {
         let group = EmbeddedEventLoop()
         let loop = group.next()
@@ -1652,3 +1676,16 @@ class EventLoopFutureTest: XCTestCase {
         XCTAssertNotEqual(promise3, promise2)
     }
 }
+
+class NonSendableObject: Equatable {
+    var value: Int
+    init(value: Int) {
+        self.value = value
+    }
+
+    static func == (lhs: NonSendableObject, rhs: NonSendableObject) -> Bool {
+        lhs.value == rhs.value
+    }
+}
+@available(*, unavailable)
+extension NonSendableObject: Sendable {}
