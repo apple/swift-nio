@@ -1107,7 +1107,7 @@ extension EventLoop {
         }
     }
 
-    /// Creates and returns a new isolated `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop` as execution `NIOThread`.
+    /// Creates and returns a new isolated `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop.
     ///
     /// - Parameters:
     ///   - value: the value that is used by the `EventLoopFuture.Isolated`.
