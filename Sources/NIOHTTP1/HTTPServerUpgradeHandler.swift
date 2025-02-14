@@ -282,31 +282,31 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
                     self.removeExtraHandlers(pipeline: pipeline)
                         .assumeIsolated()
                         .flatMap {
-                        return self.sendUpgradeResponse(
-                            context: context,
-                            upgradeRequest: request,
-                            responseHeaders: finalResponseHeaders
-                        )
-                    }.flatMap {
-                        pipeline.syncOperations.removeHandler(self.httpEncoder)
-                    }.flatMap { () -> EventLoopFuture<Void> in
-                        self.upgradeCompletionHandler(context)
-                        return upgrader.upgrade(context: context, upgradeRequest: request)
-                    }.whenComplete { result in
-                        switch result {
-                        case .success:
-                            context.fireUserInboundEventTriggered(
-                                HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request)
+                            self.sendUpgradeResponse(
+                                context: context,
+                                upgradeRequest: request,
+                                responseHeaders: finalResponseHeaders
                             )
-                            self.upgradeState = .upgradeComplete
-                            // When we remove ourselves we'll be delivering any buffered data.
-                            context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
+                        }.flatMap {
+                            pipeline.syncOperations.removeHandler(self.httpEncoder)
+                        }.flatMap { () -> EventLoopFuture<Void> in
+                            self.upgradeCompletionHandler(context)
+                            return upgrader.upgrade(context: context, upgradeRequest: request)
+                        }.whenComplete { result in
+                            switch result {
+                            case .success:
+                                context.fireUserInboundEventTriggered(
+                                    HTTPServerUpgradeEvents.upgradeComplete(toProtocol: proto, upgradeRequest: request)
+                                )
+                                self.upgradeState = .upgradeComplete
+                                // When we remove ourselves we'll be delivering any buffered data.
+                                context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
 
-                        case .failure(let error):
-                            // Remain in the '.upgrading' state.
-                            context.fireErrorCaught(error)
+                            case .failure(let error):
+                                // Remain in the '.upgrading' state.
+                                context.fireErrorCaught(error)
+                            }
                         }
-                    }
                 }
             }.flatMapError { error in
                 // No upgrade here. We want to fire the error down the pipeline, and then try another loop iteration.

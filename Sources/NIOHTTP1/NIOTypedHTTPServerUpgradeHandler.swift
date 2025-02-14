@@ -269,9 +269,14 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         request: HTTPRequestHead,
         allHeaderNames: Set<String>,
         connectionHeader: Set<String>
-    ) -> EventLoopFuture<
-        (upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders, proto: String)?
-    >.Isolated {
+    )
+        -> EventLoopFuture<
+            (
+                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders,
+                proto: String
+            )?
+        >.Isolated
+    {
         // We want a local copy of the protocol iterator. We'll pass it to the next invocation of the function.
         var protocolIterator = protocolIterator
         guard let proto = protocolIterator.next() else {
@@ -387,12 +392,12 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         self.removeExtraHandlers(pipeline: pipeline)
             .assumeIsolated()
             .flatMap {
-            return self.sendUpgradeResponse(context: context, responseHeaders: responseHeaders)
-        }.flatMap {
-            return pipeline.syncOperations.removeHandler(self.httpEncoder)
-        }.flatMap { () -> EventLoopFuture<UpgradeResult> in
-            upgrader.upgrade(channel: channel, upgradeRequest: requestHead)
-        }.nonisolated().hop(to: context.eventLoop)
+                self.sendUpgradeResponse(context: context, responseHeaders: responseHeaders)
+            }.flatMap {
+                pipeline.syncOperations.removeHandler(self.httpEncoder)
+            }.flatMap { () -> EventLoopFuture<UpgradeResult> in
+                upgrader.upgrade(channel: channel, upgradeRequest: requestHead)
+            }.nonisolated().hop(to: context.eventLoop)
             .assumeIsolated()
             .whenComplete { result in
                 self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: (requestHead, proto))
