@@ -751,4 +751,3 @@ extension EventLoopPromise {
 
 @available(*, unavailable)
 extension EventLoopPromise.Isolated: Sendable {}
-

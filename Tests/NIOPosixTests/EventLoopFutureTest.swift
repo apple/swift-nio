@@ -1125,7 +1125,7 @@ class EventLoopFutureTest: XCTestCase {
         let future = loop.makeSucceededIsolatedFuture(value)
 
         future.whenComplete { result in
-            switch result{
+            switch result {
             case .success(let nonSendableStruct):
                 XCTAssertEqual(nonSendableStruct, value)
             case .failure(let error):
