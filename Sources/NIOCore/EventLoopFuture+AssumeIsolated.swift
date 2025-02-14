@@ -389,6 +389,43 @@ extension EventLoopFuture {
             return next.futureResult.assumeIsolatedUnsafeUnchecked()
         }
 
+        /// When the current `EventLoopFuture<Value>.Isolated` is in an error state, run the provided callback, which
+        /// may recover from the error by returning an `EventLoopFuture<NewValue>.Isolated`. The callback is intended to potentially
+        /// recover from the error by returning a new `EventLoopFuture.Isolated` that will eventually contain the recovered
+        /// result.
+        ///
+        /// If the callback cannot recover it should return a failed `EventLoopFuture.Isolated`.
+        ///
+        /// - Note: The `Value` need not be `Sendable` since the isolation domains of this future and the future returned from the callback
+        /// must be the same
+        ///
+        /// - Parameters:
+        ///   - callback: Function that will receive the error value of this `EventLoopFuture.Isolated` and return
+        ///         a new value lifted into a new `EventLoopFuture.Isolated`.
+        /// - Returns: A future that will receive the recovered value.
+        @inlinable
+        @available(*, noasync)
+        public func flatMapError(
+            _ callback: @escaping (Error) -> EventLoopFuture<Value>.Isolated
+        ) -> EventLoopFuture<Value>.Isolated {
+            let next = EventLoopPromise<Value>.makeUnleakablePromise(eventLoop: self._wrapped.eventLoop)
+            let base = self._wrapped
+
+            base._whenCompleteIsolated {
+                switch base._value! {
+                case .success(let t):
+                    return next._setValue(value: .success(t))
+                case .failure(let e):
+                    let t = callback(e)
+                    t._wrapped.eventLoop.assertInEventLoop()
+                    return t._wrapped._addCallback {
+                        next._setValue(value: t._wrapped._value!)
+                    }
+                }
+            }
+            return next.futureResult.assumeIsolatedUnsafeUnchecked()
+        }
+
         /// When the current `EventLoopFuture<Value>` is fulfilled, run the provided callback, which
         /// performs a synchronous computation and returns either a new value (of type `NewValue`) or
         /// an error depending on the `Result` returned by the closure.
@@ -641,6 +678,13 @@ extension EventLoopPromise {
         @inlinable
         init(_wrapped: EventLoopPromise<Value>) {
             self._wrapped = _wrapped
+        }
+
+        /// Returns the `EventLoopFuture.Isolated` which will be notified once the execution of the scheduled task completes.
+        @inlinable
+        @available(*, noasync)
+        public var futureResult: EventLoopFuture<Value>.Isolated {
+            self._wrapped.futureResult.assumeIsolated()
         }
 
         /// Deliver a successful result to the associated `EventLoopFuture<Value>` object.
