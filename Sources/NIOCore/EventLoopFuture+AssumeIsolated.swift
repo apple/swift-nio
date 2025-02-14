@@ -682,6 +682,7 @@ extension EventLoopPromise {
 
         /// Returns the `EventLoopFuture.Isolated` which will be notified once the execution of the scheduled task completes.
         @inlinable
+        @available(*, noasync)
         public var futureResult: EventLoopFuture<Value>.Isolated {
             self._wrapped.futureResult.assumeIsolated()
         }
