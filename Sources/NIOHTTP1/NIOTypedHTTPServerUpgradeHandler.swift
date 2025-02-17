@@ -334,7 +334,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
             (
                 upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders,
                 proto: String
-            )?, Error
+            )?,
+            Error
         >
     ) {
         switch self.stateMachine.findingUpgraderCompleted(requestHead: requestHead, result) {

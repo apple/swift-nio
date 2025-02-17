@@ -329,9 +329,7 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         return {
             self.upgradeState = .upgrading
 
-            // assumeIsolated is safe here because this is only called from channelRead
             self.removeHTTPHandlers(pipeline: pipeline)
-                .assumeIsolated()
                 .map {
                     // Let the other handlers be removed before continuing with upgrade.
                     self.upgradeCompletionHandler(context)
@@ -365,13 +363,13 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
-    private func removeHTTPHandlers(pipeline: ChannelPipeline) -> EventLoopFuture<Void> {
+    private func removeHTTPHandlers(pipeline: ChannelPipeline) -> EventLoopFuture<Void>.Isolated {
         guard self.httpHandlers.count > 0 else {
-            return pipeline.eventLoop.makeSucceededFuture(())
+            return pipeline.eventLoop.makeSucceededIsolatedFuture(())
         }
 
         let removeFutures = self.httpHandlers.map { pipeline.syncOperations.removeHandler($0) }
-        return .andAllSucceed(removeFutures, on: pipeline.eventLoop)
+        return EventLoopFuture.andAllSucceed(removeFutures, on: pipeline.eventLoop).assumeIsolated()
     }
 
     private func gotUpgrader(upgrader: @escaping (() -> Void)) {
