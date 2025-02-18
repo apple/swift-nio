@@ -1107,6 +1107,22 @@ extension EventLoop {
         }
     }
 
+    /// Creates and returns a new isolated `EventLoopFuture` that is already marked as success. Notifications will be done using this `EventLoop.
+    ///
+    /// - Parameters:
+    ///   - value: the value that is used by the `EventLoopFuture.Isolated`.
+    /// - Returns: a succeeded `EventLoopFuture.Isolated`.
+    @inlinable
+    @available(*, noasync)
+    public func makeSucceededIsolatedFuture<Success>(_ value: Success) -> EventLoopFuture<Success>.Isolated {
+        if Success.self == Void.self {
+            // The as! will always succeed because we previously checked that Success.self == Void.self.
+            return self.makeSucceededVoidFuture().assumeIsolated() as! EventLoopFuture<Success>.Isolated
+        } else {
+            return EventLoopFuture.Isolated(_wrapped: EventLoopFuture(eventLoop: self, isolatedValue: value))
+        }
+    }
+
     /// Creates and returns a new `EventLoopFuture` that is marked as succeeded or failed with the value held by `result`.
     ///
     /// - Parameters:
