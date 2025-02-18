@@ -272,7 +272,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     )
         -> EventLoopFuture<
             (
-                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders,
+                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>,
+                responseHeaders: HTTPHeaders,
                 proto: String
             )?
         >.Isolated
@@ -332,7 +333,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         requestHead: HTTPRequestHead,
         _ result: Result<
             (
-                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders,
+                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>,
+                responseHeaders: HTTPHeaders,
                 proto: String
             )?,
             Error
