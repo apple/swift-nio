@@ -196,7 +196,8 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
                 swiftCollections,
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOWebSocket",

@@ -18,7 +18,7 @@ import NIOCore
 
 /// Configuration for an upgradable HTTP pipeline.
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-public struct NIOUpgradableHTTPServerPipelineConfiguration<UpgradeResult: Sendable> {
+public struct NIOUpgradableHTTPServerPipelineConfiguration<UpgradeResult: Sendable>: Sendable {
     /// Whether to provide assistance handling HTTP clients that pipeline
     /// their requests. Defaults to `true`. If `false`, users will need to handle clients that pipeline themselves.
     public var enablePipelining = true
@@ -146,7 +146,7 @@ extension ChannelPipeline.SynchronousOperations {
 
 /// Configuration for an upgradable HTTP pipeline.
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-public struct NIOUpgradableHTTPClientPipelineConfiguration<UpgradeResult: Sendable> {
+public struct NIOUpgradableHTTPClientPipelineConfiguration<UpgradeResult: Sendable>: Sendable {
     /// The strategy to use when dealing with leftover bytes after removing the ``HTTPDecoder`` from the pipeline.
     public var leftOverBytesStrategy = RemoveAfterUpgradeStrategy.dropBytes
 

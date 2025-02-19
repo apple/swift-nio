@@ -16,7 +16,8 @@ import NIOCore
 
 /// An object that implements `NIOTypedHTTPServerProtocolUpgrader` knows how to handle HTTP upgrade to
 /// a protocol on a server-side channel.
-public protocol NIOTypedHTTPServerProtocolUpgrader<UpgradeResult> {
+@preconcurrency
+public protocol NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>: Sendable {
     associatedtype UpgradeResult: Sendable
 
     /// The protocol this upgrader knows how to support.
@@ -47,7 +48,7 @@ public protocol NIOTypedHTTPServerProtocolUpgrader<UpgradeResult> {
 
 /// The upgrade configuration for the ``NIOTypedHTTPServerUpgradeHandler``.
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-public struct NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult: Sendable> {
+public struct NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult: Sendable>: Sendable {
     /// The array of potential upgraders.
     public var upgraders: [any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>]
 
@@ -174,7 +175,6 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     }
 
     private func channelRead(context: ChannelHandlerContext, requestPart: HTTPServerRequestPart) {
-        let loopBoundContext = context.loopBound
         switch self.stateMachine.channelReadRequestPart(requestPart) {
         case .failUpgradePromise(let error):
             self.upgradeResultPromise.fail(error)
@@ -182,8 +182,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         case .runNotUpgradingInitializer:
             self.notUpgradingCompletionHandler(context.channel)
                 .hop(to: context.eventLoop)
+                .assumeIsolated()
                 .whenComplete { result in
-                    let context = loopBoundContext.value
                     self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: nil)
                 }
 
@@ -196,8 +196,6 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
                 allHeaderNames: allHeaderNames,
                 connectionHeader: connectionHeader
             ).whenComplete { result in
-                let context = loopBoundContext.value
-                context.eventLoop.assertInEventLoop()
                 self.findingUpgradeCompleted(context: context, requestHead: head, result)
             }
 
@@ -220,11 +218,12 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         _ result: Result<UpgradeResult, Error>,
         requestHeadAndProtocol: (HTTPRequestHead, String)?
     ) {
+        context.eventLoop.assertInEventLoop()
         switch self.stateMachine.upgradingHandlerCompleted(result) {
         case .fireErrorCaughtAndRemoveHandler(let error):
             self.upgradeResultPromise.fail(error)
             context.fireErrorCaught(error)
-            context.pipeline.removeHandler(self, promise: nil)
+            context.pipeline.syncOperations.removeHandler(self, promise: nil)
 
         case .fireErrorCaughtAndStartUnbuffering(let error):
             self.upgradeResultPromise.fail(error)
@@ -253,7 +252,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
                 )
             }
             self.upgradeResultPromise.succeed(value)
-            context.pipeline.removeHandler(self, promise: nil)
+            context.pipeline.syncOperations.removeHandler(self, promise: nil)
 
         case .none:
             break
@@ -269,14 +268,20 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         request: HTTPRequestHead,
         allHeaderNames: Set<String>,
         connectionHeader: Set<String>
-    ) -> EventLoopFuture<
-        (upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders, proto: String)?
-    > {
+    )
+        -> EventLoopFuture<
+            (
+                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>,
+                responseHeaders: HTTPHeaders,
+                proto: String
+            )?
+        >.Isolated
+    {
         // We want a local copy of the protocol iterator. We'll pass it to the next invocation of the function.
         var protocolIterator = protocolIterator
         guard let proto = protocolIterator.next() else {
             // We're done! No suitable protocol for upgrade.
-            return context.eventLoop.makeSucceededFuture(nil)
+            return context.eventLoop.makeSucceededIsolatedFuture(nil)
         }
 
         guard let upgrader = self.upgraders[proto.lowercased()] else {
@@ -300,7 +305,6 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
             )
         }
 
-        let loopBoundContext = context.loopBound
         let responseHeaders = self.buildUpgradeHeaders(protocol: proto)
         return upgrader.buildUpgradeResponse(
             channel: context.channel,
@@ -308,10 +312,10 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
             initialResponseHeaders: responseHeaders
         )
         .hop(to: context.eventLoop)
+        .assumeIsolated()
         .map { (upgrader, $0, proto) }
         .flatMapError { error in
             // No upgrade here. We want to fire the error down the pipeline, and then try another loop iteration.
-            let context = loopBoundContext.value
             context.fireErrorCaught(error)
             return self.handleUpgradeForProtocol(
                 context: context,
@@ -319,7 +323,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
                 request: request,
                 allHeaderNames: allHeaderNames,
                 connectionHeader: connectionHeader
-            )
+            ).nonisolated()
         }
     }
 
@@ -328,9 +332,11 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         requestHead: HTTPRequestHead,
         _ result: Result<
             (
-                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders,
+                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>,
+                responseHeaders: HTTPHeaders,
                 proto: String
-            )?, Error
+            )?,
+            Error
         >
     ) {
         switch self.stateMachine.findingUpgraderCompleted(requestHead: requestHead, result) {
@@ -344,11 +350,10 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
             )
 
         case .runNotUpgradingInitializer:
-            let loopBoundContext = context.loopBound
             self.notUpgradingCompletionHandler(context.channel)
                 .hop(to: context.eventLoop)
+                .assumeIsolated()
                 .whenComplete { result in
-                    let context = loopBoundContext.value
                     self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: nil)
                 }
 
@@ -360,7 +365,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         case .fireErrorCaughtAndRemoveHandler(let error):
             self.upgradeResultPromise.fail(error)
             context.fireErrorCaught(error)
-            context.pipeline.removeHandler(self, promise: nil)
+            context.pipeline.syncOperations.removeHandler(self, promise: nil)
 
         case .none:
             break
@@ -385,17 +390,17 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         // then remove ourselves from the pipeline.
         let channel = context.channel
         let pipeline = context.pipeline
-        let loopBoundContext = context.loopBound
-        self.removeExtraHandlers(pipeline: pipeline).flatMap {
-            let context = loopBoundContext.value
-            return self.sendUpgradeResponse(context: context, responseHeaders: responseHeaders)
-        }.flatMap {
-            pipeline.syncOperations.removeHandler(self.httpEncoder)
-        }.flatMap { () -> EventLoopFuture<UpgradeResult> in
-            upgrader.upgrade(channel: channel, upgradeRequest: requestHead)
-        }.hop(to: context.eventLoop)
+
+        self.removeExtraHandlers(pipeline: pipeline)
+            .assumeIsolated()
+            .flatMap {
+                self.sendUpgradeResponse(context: context, responseHeaders: responseHeaders)
+            }.flatMap {
+                pipeline.syncOperations.removeHandler(self.httpEncoder)
+            }.flatMap { () -> EventLoopFuture<UpgradeResult> in
+                upgrader.upgrade(channel: channel, upgradeRequest: requestHead)
+            }
             .whenComplete { result in
-                let context = loopBoundContext.value
                 self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: (requestHead, proto))
             }
     }
@@ -422,7 +427,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         }
 
         return .andAllSucceed(
-            self.extraHTTPHandlers.map { pipeline.removeHandler($0) },
+            self.extraHTTPHandlers.map { pipeline.syncOperations.removeHandler($0) },
             on: pipeline.eventLoop
         )
     }
@@ -438,7 +443,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
 
             case .fireChannelReadCompleteAndRemoveHandler:
                 context.fireChannelReadComplete()
-                context.pipeline.removeHandler(self, promise: nil)
+                context.pipeline.syncOperations.removeHandler(self, promise: nil)
                 return
 
             case .fireInputClosedEvent:
@@ -447,4 +452,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         }
     }
 }
+
+@available(*, unavailable)
+extension NIOTypedHTTPServerUpgradeHandler: Sendable {}
+
 #endif
