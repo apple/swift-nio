@@ -48,7 +48,6 @@ public protocol NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>: Sendable {
 
 /// The upgrade configuration for the ``NIOTypedHTTPServerUpgradeHandler``.
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-@preconcurrency
 public struct NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult: Sendable>: Sendable {
     /// The array of potential upgraders.
     public var upgraders: [any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>]
@@ -400,8 +399,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
                 pipeline.syncOperations.removeHandler(self.httpEncoder)
             }.flatMap { () -> EventLoopFuture<UpgradeResult> in
                 upgrader.upgrade(channel: channel, upgradeRequest: requestHead)
-            }.nonisolated().hop(to: context.eventLoop)
-            .assumeIsolated()
+            }
             .whenComplete { result in
                 self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: (requestHead, proto))
             }

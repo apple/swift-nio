@@ -194,7 +194,6 @@ public final class HTTPServerUpgradeHandler: ChannelInboundHandler, RemovableCha
     ///
     /// - Returns: An isolated `EventLoopFuture` that will contain a callback to invoke if upgrade is requested,
     /// or nil if upgrade has failed. Never returns a failed future.
-    /// The `NIOLoopBound` is safe because it's only called after the hop in firstRequestHeadReceived
     private func handleUpgrade(
         context: ChannelHandlerContext,
         request: HTTPRequestHead,

@@ -43,7 +43,6 @@ public protocol NIOTypedHTTPClientProtocolUpgrader<UpgradeResult>: Sendable {
 
 /// The upgrade configuration for the ``NIOTypedHTTPClientUpgradeHandler``.
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-@preconcurrency
 public struct NIOTypedHTTPClientUpgradeConfiguration<UpgradeResult: Sendable>: Sendable {
     /// The initial request head that is sent out once the channel becomes active.
     public var upgradeRequestHead: HTTPRequestHead
