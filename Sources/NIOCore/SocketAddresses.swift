@@ -59,7 +59,7 @@ import WASILibc
 #endif
 
 /// Special `Error` that may be thrown if we fail to create a `SocketAddress`.
-public enum SocketAddressError: Error {
+public enum SocketAddressError: Error, Equatable, Hashable {
     /// The host is unknown (could not be resolved).
     case unknown(host: String, port: Int)
     /// The requested `SocketAddress` is not supported.
