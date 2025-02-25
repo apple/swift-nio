@@ -278,16 +278,28 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
             outboundWriter: outboundWriter
         )
     }
+    
+    /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
+    ///
+    /// - Important: After this method returned the underlying ``Channel`` will be closed.
+    ///
+    /// - Parameter: body: A closure that gets scoped access to the inbound and outbound.
+    public func executeThenClose<Result>(
+        _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>, _ outbound: NIOAsyncChannelOutboundWriter<Outbound>)
+            async throws -> Result
+    ) async throws -> Result {
+        try await executeThenClose(isolatedTo: nil, body);
+    }
 
     /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
     ///
     /// - Parameter:
-    ///     - isolatedTo: actor where this function should be isolated to
+    ///     - actor: actor where this function should be isolated to
     ///     - body: A closure that gets scoped access to the inbound and outbound.
     public func executeThenClose<Result>(
-        isolatedTo actor: isolated(any Actor)? = #isolation,
+        isolatedTo actor: isolated (any Actor)?,
         _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>, _ outbound: NIOAsyncChannelOutboundWriter<Outbound>)
             async throws -> Result
     ) async throws -> Result {
