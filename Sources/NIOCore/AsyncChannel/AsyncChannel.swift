@@ -278,7 +278,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
             outboundWriter: outboundWriter
         )
     }
-    
+
     /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
@@ -288,7 +288,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
         _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>, _ outbound: NIOAsyncChannelOutboundWriter<Outbound>)
             async throws -> Result
     ) async throws -> Result {
-        try await executeThenClose(isolatedTo: nil, body);
+        try await executeThenClose(isolatedTo: nil, body)
     }
 
     /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
