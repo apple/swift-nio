@@ -282,9 +282,8 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
-    ///
-    /// - Parameter:
-    ///     - body: A closure that gets scoped access to the inbound and outbound.
+
+    /// - Parameter body: A closure that gets scoped access to the inbound and outbound.
     @_disfavoredOverload
     public func executeThenClose<Result>(
         _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>, _ outbound: NIOAsyncChannelOutboundWriter<Outbound>)
@@ -329,7 +328,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
     ///
-    /// - Parameter:
+    /// - Parameters:
     ///     - actor: actor where this function should be isolated to
     ///     - body: A closure that gets scoped access to the inbound and outbound.
     public func executeThenClose<Result>(
@@ -396,7 +395,7 @@ extension NIOAsyncChannel {
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
     ///
-    /// - Parameter
+    /// - Parameters:
     ///     - actor: actor where this function should be isolated to
     ///     - body: A closure that gets scoped access to the inbound.
     public func executeThenClose<Result>(
