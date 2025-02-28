@@ -282,7 +282,7 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
-
+    ///
     /// - Parameter body: A closure that gets scoped access to the inbound and outbound.
     @_disfavoredOverload
     public func executeThenClose<Result>(
