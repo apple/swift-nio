@@ -43,6 +43,7 @@ jobs:
           workspace="/$(basename ${{ github.workspace }})"
           docker run -v ${{ github.workspace }}:"$workspace" \
             -w "$workspace" \
+            -e CI="$CI" \
             -e GITHUB_ACTIONS="$GITHUB_ACTIONS" \
             -e SWIFT_VERSION="${{ matrix.config.swift_version }}" \
             -e setup_command_expression="$setup_command_expression" \
@@ -60,6 +61,7 @@ jobs:
           $workspace = "C:\" + (Split-Path ${{ github.workspace }} -Leaf)
           docker run -v ${{ github.workspace }}:$($workspace) `
             -w $($workspace) `
+            -e CI=%CI% `
             -e GITHUB_ACTIONS=%GITHUB_ACTIONS% `
             -e SWIFT_VERSION="${{ matrix.config.swift_version }}" `
             -e setup_command_expression=%setup_command_expression% `
