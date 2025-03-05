@@ -186,7 +186,7 @@ private func _shouldAllowUpgrade(upgradeResponse: HTTPResponseHead, requestKey: 
 
 /// Called when the upgrade response has been flushed and it is safe to mutate the channel
 /// pipeline. Adds channel handlers for websocket frame encoding, decoding and errors.
-private func _upgrade<UpgradeResult>(
+private func _upgrade<UpgradeResult: Sendable>(
     channel: Channel,
     upgradeResponse: HTTPResponseHead,
     maxFrameSize: Int,
