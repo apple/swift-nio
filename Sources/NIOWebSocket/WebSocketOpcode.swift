@@ -57,24 +57,12 @@ extension WebSocketOpcode: Equatable {}
 extension WebSocketOpcode: Hashable {}
 
 extension WebSocketOpcode: CaseIterable {
-    public static let allCases: [WebSocketOpcode] = [
-        .init(rawValue: 0x0),
-        .init(rawValue: 0x1),
-        .init(rawValue: 0x2),
-        .init(rawValue: 0x3),
-        .init(rawValue: 0x4),
-        .init(rawValue: 0x5),
-        .init(rawValue: 0x6),
-        .init(rawValue: 0x7),
-        .init(rawValue: 0x8),
-        .init(rawValue: 0x9),
-        .init(rawValue: 0xA),
-        .init(rawValue: 0xB),
-        .init(rawValue: 0xC),
-        .init(rawValue: 0xD),
-        .init(rawValue: 0xE),
-        .init(rawValue: 0xF),
-    ]
+    public static var allCases: [WebSocketOpcode] {
+        get { (0..<0x10).map { WebSocketOpcode(rawValue: $0) } }
+
+        @available(*, deprecated)
+        set {}
+    }
 }
 
 extension WebSocketOpcode: CustomStringConvertible {
