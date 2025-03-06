@@ -233,7 +233,8 @@ let package = Package(
                 "NIOEmbedded",
                 "NIOHTTP1",
                 swiftAtomics,
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "_NIOFileSystem",
