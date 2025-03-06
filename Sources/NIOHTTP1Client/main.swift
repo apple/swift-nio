@@ -81,11 +81,12 @@ let bootstrap = ClientBootstrap(group: group)
     // Enable SO_REUSEADDR.
     .channelOption(.socketOption(.so_reuseaddr), value: 1)
     .channelInitializer { channel in
-        channel.pipeline.addHTTPClientHandlers(
-            position: .first,
-            leftOverBytesStrategy: .fireError
-        ).flatMap {
-            channel.pipeline.addHandler(HTTPEchoHandler())
+        channel.eventLoop.makeCompletedFuture {
+            try channel.pipeline.syncOperations.addHTTPClientHandlers(
+                position: .first,
+                leftOverBytesStrategy: .fireError
+            )
+            try channel.pipeline.syncOperations.addHandler(HTTPEchoHandler())
         }
     }
 defer {
