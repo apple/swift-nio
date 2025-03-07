@@ -83,7 +83,13 @@ class UniversalBootstrapSupportTest: XCTestCase {
 
                 let client = try NIOClientTCPBootstrap(ClientBootstrap(group: group), tls: DummyTLSProvider())
                     .channelInitializer { channel in
-                        channel.pipeline.addHandlers(counter1, DropChannelReadsHandler(), counter2)
+                        channel.eventLoop.makeCompletedFuture {
+                            try channel.pipeline.syncOperations.addHandlers(
+                                counter1,
+                                DropChannelReadsHandler(),
+                                counter2
+                            )
+                        }
                     }
                     .channelOption(.autoRead, value: false)
                     .connectTimeout(.hours(1))

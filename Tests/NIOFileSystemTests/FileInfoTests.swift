@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import CNIOLinux
 import XCTest
 import _NIOFileSystem
 
@@ -21,6 +22,14 @@ import Darwin
 import Glibc
 #elseif canImport(Android)
 import Android
+#endif
+
+#if canImport(Darwin)
+private let S_IFREG = Darwin.S_IFREG
+#elseif canImport(Glibc)
+private let S_IFREG = Glibc.S_IFREG
+#elseif canImport(Musl)
+private let S_IFREG = Musl.S_IFREG
 #endif
 
 final class FileInfoTests: XCTestCase {

@@ -149,7 +149,7 @@ extension NIOWebSocketClientUpgrader {
             UInt64.random(in: UInt64.min...UInt64.max, using: &generator),
             UInt64.random(in: UInt64.min...UInt64.max, using: &generator)
         )
-        return String(base64Encoding: buffer.readableBytesView)
+        return String(_base64Encoding: buffer.readableBytesView)
     }
     /// Generates a random WebSocket Request Key by generating 16 bytes randomly using the `SystemRandomNumberGenerator` and encoding them as a base64 string as defined in RFC6455 https://tools.ietf.org/html/rfc6455#section-4.1.
     /// - Returns: base64 encoded request key
@@ -179,14 +179,14 @@ private func _shouldAllowUpgrade(upgradeResponse: HTTPResponseHead, requestKey: 
     var hasher = SHA1()
     hasher.update(string: requestKey)
     hasher.update(string: magicWebSocketGUID)
-    let expectedAcceptValue = String(base64Encoding: hasher.finish())
+    let expectedAcceptValue = String(_base64Encoding: hasher.finish())
 
     return expectedAcceptValue == acceptValueHeader[0]
 }
 
 /// Called when the upgrade response has been flushed and it is safe to mutate the channel
 /// pipeline. Adds channel handlers for websocket frame encoding, decoding and errors.
-private func _upgrade<UpgradeResult>(
+private func _upgrade<UpgradeResult: Sendable>(
     channel: Channel,
     upgradeResponse: HTTPResponseHead,
     maxFrameSize: Int,
@@ -199,7 +199,7 @@ private func _upgrade<UpgradeResult>(
             ByteToMessageHandler(WebSocketFrameDecoder(maxFrameSize: maxFrameSize))
         )
         if enableAutomaticErrorHandling {
-            try channel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler())
+            try channel.pipeline.syncOperations.addHandler(WebSocketProtocolErrorHandler(isServer: false))
         }
     }
     .flatMap {

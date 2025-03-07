@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if !canImport(Darwin) || os(macOS)
+import NIOCore
 import NIOPosix
 import Foundation
 

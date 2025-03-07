@@ -12,8 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-@_implementationOnly import CNIOLLHTTP
 import NIOCore
+
+#if compiler(>=6.1)
+private import CNIOLLHTTP
+#else
+@_implementationOnly import CNIOLLHTTP
+#endif
 
 extension UnsafeMutablePointer where Pointee == llhttp_t {
     /// Returns the `KeepAliveState` for the current message that is parsed.
@@ -631,7 +636,7 @@ public final class HTTPDecoder<In, Out>: ByteToMessageDecoder, HTTPDecoderDelega
         self.url = String(decoding: bytes, as: Unicode.UTF8.self)
     }
 
-    func didFinishHead(
+    fileprivate func didFinishHead(
         versionMajor: Int,
         versionMinor: Int,
         isUpgrade: Bool,
@@ -815,7 +820,7 @@ extension HTTPParserError {
     /// - Parameter fromCHTTPParserErrno: The error from the underlying library.
     /// - Returns: The corresponding `HTTPParserError`, or `nil` if there is no
     ///     corresponding error.
-    static func httpError(fromCHTTPParserErrno: llhttp_errno_t) -> HTTPParserError? {
+    fileprivate static func httpError(fromCHTTPParserErrno: llhttp_errno_t) -> HTTPParserError? {
         switch fromCHTTPParserErrno {
         case HPE_INTERNAL:
             return .invalidInternalState
@@ -874,7 +879,7 @@ extension HTTPMethod {
     ///
     /// - Parameter httpParserMethod: The method returned by `http_parser`.
     /// - Returns: The corresponding `HTTPMethod`.
-    static func from(httpParserMethod: llhttp_method) -> HTTPMethod {
+    fileprivate static func from(httpParserMethod: llhttp_method) -> HTTPMethod {
         switch httpParserMethod {
         case HTTP_DELETE:
             return .DELETE

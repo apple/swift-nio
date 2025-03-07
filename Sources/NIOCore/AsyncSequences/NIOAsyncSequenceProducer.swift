@@ -105,7 +105,7 @@ public struct NIOAsyncSequenceProducer<
     /// to yield new elements to the sequence.
     /// 2. The ``sequence`` which is the actual `AsyncSequence` and
     /// should be passed to the consumer.
-    public struct NewSequence {
+    public struct NewSequence: Sendable {
         /// The source of the ``NIOAsyncSequenceProducer`` used to yield and finish.
         public let source: Source
         /// The actual sequence which should be passed to the consumer.
@@ -268,7 +268,7 @@ extension NIOAsyncSequenceProducer {
         }
 
         /// The result of a call to ``NIOAsyncSequenceProducer/Source/yield(_:)``.
-        public enum YieldResult: Hashable {
+        public enum YieldResult: Hashable, Sendable {
             /// Indicates that the caller should produce more elements for now. The delegate's ``NIOAsyncSequenceProducerDelegate/produceMore()``
             /// will **NOT** get called, since the demand was already signalled through this ``NIOAsyncSequenceProducer/Source/YieldResult``.
             case produceMore

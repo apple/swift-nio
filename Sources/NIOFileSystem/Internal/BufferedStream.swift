@@ -118,7 +118,7 @@ import NIOConcurrencyHelpers
 ///     }
 ///
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal struct BufferedStream<Element> {
+internal struct BufferedStream<Element: Sendable> {
     final class _Backing: Sendable {
         let storage: _BackPressuredStorage
 
@@ -199,7 +199,7 @@ extension BufferedStream: AsyncSequence {
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension BufferedStream: Sendable where Element: Sendable {}
+extension BufferedStream: Sendable {}
 
 internal struct _ManagedCriticalState<State>: @unchecked Sendable {
     let lock: NIOLockedValueBox<State>
@@ -303,7 +303,7 @@ extension BufferedStream {
         /// - Parameter sequence: The elements to write to the asynchronous stream.
         /// - Returns: The result that indicates if more elements should be produced at this time.
         internal func write<S>(contentsOf sequence: S) throws -> WriteResult
-        where Element == S.Element, S: Sequence {
+        where Element == S.Element, S: Sequence, Element: Sendable {
             try self._backing.storage.write(contentsOf: sequence)
         }
 
@@ -363,7 +363,7 @@ extension BufferedStream {
         internal func write<S>(
             contentsOf sequence: S,
             onProduceMore: @escaping @Sendable (Result<Void, Error>) -> Void
-        ) where Element == S.Element, S: Sequence {
+        ) where Element == S.Element, S: Sequence, Element: Sendable {
             do {
                 let writeResult = try self.write(contentsOf: sequence)
 
@@ -407,7 +407,7 @@ extension BufferedStream {
         /// - Parameters:
         ///   - sequence: The elements to write to the asynchronous stream.
         internal func write<S>(contentsOf sequence: S) async throws
-        where Element == S.Element, S: Sequence {
+        where Element == S.Element, S: Sequence, Element: Sendable {
             let writeResult = try { try self.write(contentsOf: sequence) }()
 
             switch writeResult {
@@ -458,7 +458,7 @@ extension BufferedStream {
         /// - Parameters:
         ///   - sequence: The elements to write to the asynchronous stream.
         internal func write<S>(contentsOf sequence: S) async throws
-        where Element == S.Element, S: AsyncSequence {
+        where Element == S.Element, S: AsyncSequence, Element: Sendable {
             for try await element in sequence {
                 try await self.write(contentsOf: CollectionOfOne(element))
             }

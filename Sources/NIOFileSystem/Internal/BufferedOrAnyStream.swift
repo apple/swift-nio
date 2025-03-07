@@ -16,7 +16,7 @@ import NIOCore
 
 /// Wraps a ``NIOThrowingAsyncSequenceProducer<Element>`` or ``AnyAsyncSequence<Element>``.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDelegate> {
+internal enum BufferedOrAnyStream<Element: Sendable, Delegate: NIOAsyncSequenceProducerDelegate>: Sendable {
     typealias AsyncSequenceProducer = NIOThrowingAsyncSequenceProducer<
         Element, Error, NIOAsyncSequenceProducerBackPressureStrategies.HighLowWatermark, Delegate
     >
@@ -28,7 +28,7 @@ internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDel
         self = .nioThrowingAsyncSequenceProducer(stream)
     }
 
-    internal init<S: AsyncSequence>(wrapping stream: S) where S.Element == Element {
+    internal init<S: AsyncSequence & Sendable>(wrapping stream: S) where S.Element == Element {
         self = .anyAsyncSequence(AnyAsyncSequence(wrapping: stream))
     }
 
@@ -69,10 +69,10 @@ internal enum BufferedOrAnyStream<Element, Delegate: NIOAsyncSequenceProducerDel
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-internal struct AnyAsyncSequence<Element>: AsyncSequence {
-    private let _makeAsyncIterator: () -> AsyncIterator
+internal struct AnyAsyncSequence<Element>: AsyncSequence, Sendable {
+    private let _makeAsyncIterator: @Sendable () -> AsyncIterator
 
-    internal init<S: AsyncSequence>(wrapping sequence: S) where S.Element == Element {
+    internal init<S: AsyncSequence & Sendable>(wrapping sequence: S) where S.Element == Element {
         self._makeAsyncIterator = {
             AsyncIterator(wrapping: sequence.makeAsyncIterator())
         }

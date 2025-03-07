@@ -74,8 +74,27 @@ private func sysPthread_create(
 
 typealias ThreadOpsSystem = ThreadOpsPosix
 
+struct PthreadWrapper: @unchecked Sendable {
+    var handle: pthread_t
+}
+
+extension Optional where Wrapped == PthreadWrapper {
+    mutating func withHandlePointer<
+        ReturnValue
+    >(
+        _ body: (UnsafeMutablePointer<pthread_t?>) throws -> ReturnValue
+    ) rethrows -> ReturnValue {
+        var handle = self?.handle
+        defer {
+            self = handle.map { PthreadWrapper(handle: $0) }
+        }
+
+        return try body(&handle)
+    }
+}
+
 enum ThreadOpsPosix: ThreadOps {
-    typealias ThreadHandle = pthread_t
+    typealias ThreadHandle = PthreadWrapper
     typealias ThreadSpecificKey = pthread_key_t
     #if canImport(Darwin)
     typealias ThreadSpecificKeyDestructor = @convention(c) (UnsafeMutableRawPointer) -> Void
@@ -89,7 +108,7 @@ enum ThreadOpsPosix: ThreadOps {
         // anyway.
         var chars: [CChar] = Array(repeating: 0, count: 64)
         return chars.withUnsafeMutableBufferPointer { ptr in
-            guard sys_pthread_getname_np(thread, ptr.baseAddress!, ptr.count) == 0 else {
+            guard sys_pthread_getname_np(thread.handle, ptr.baseAddress!, ptr.count) == 0 else {
                 return nil
             }
 
@@ -105,60 +124,61 @@ enum ThreadOpsPosix: ThreadOps {
         detachThread: Bool
     ) {
         let argv0 = Unmanaged.passRetained(args).toOpaque()
-        let res = sysPthread_create(
-            handle: &handle,
-            destructor: {
-                // Cast to UnsafeMutableRawPointer? and force unwrap to make the
-                // same code work on macOS and Linux.
-                let boxed = Unmanaged<NIOThread.ThreadBox>
-                    .fromOpaque(($0 as UnsafeMutableRawPointer?)!)
-                    .takeRetainedValue()
-                let (body, name) = (boxed.value.body, boxed.value.name)
-                let hThread: ThreadOpsSystem.ThreadHandle = pthread_self()
+        let res = handle.withHandlePointer { handlePtr in
+            sysPthread_create(
+                handle: handlePtr,
+                destructor: {
+                    // Cast to UnsafeMutableRawPointer? and force unwrap to make the
+                    // same code work on macOS and Linux.
+                    let boxed = Unmanaged<NIOThread.ThreadBox>
+                        .fromOpaque(($0 as UnsafeMutableRawPointer?)!)
+                        .takeRetainedValue()
+                    let (body, name) = (boxed.value.body, boxed.value.name)
+                    let hThread: ThreadOpsSystem.ThreadHandle = PthreadWrapper(handle: pthread_self())
 
-                if let name = name {
-                    let maximumThreadNameLength: Int
-                    #if os(Linux) || os(Android)
-                    maximumThreadNameLength = 15
-                    #else
-                    maximumThreadNameLength = .max
-                    #endif
-                    name.prefix(maximumThreadNameLength).withCString { namePtr in
-                        // this is non-critical so we ignore the result here, we've seen
-                        // EPERM in containers.
-                        _ = sys_pthread_setname_np(hThread, namePtr)
+                    if let name = name {
+                        let maximumThreadNameLength: Int
+                        #if os(Linux) || os(Android)
+                        maximumThreadNameLength = 15
+                        #else
+                        maximumThreadNameLength = .max
+                        #endif
+                        name.prefix(maximumThreadNameLength).withCString { namePtr in
+                            // this is non-critical so we ignore the result here, we've seen
+                            // EPERM in containers.
+                            _ = sys_pthread_setname_np(hThread.handle, namePtr)
+                        }
                     }
-                }
 
-                body(NIOThread(handle: hThread, desiredName: name))
+                    body(NIOThread(handle: hThread, desiredName: name))
 
-                #if os(Android)
-                return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!
-                #else
-                return nil
-                #endif
-            },
-            args: argv0
-        )
+                    #if os(Android)
+                    return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!
+                    #else
+                    return nil
+                    #endif
+                },
+                args: argv0
+            )
+        }
         precondition(res == 0, "Unable to create thread: \(res)")
 
         if detachThread {
-            let detachError = pthread_detach(handle!)
+            let detachError = pthread_detach(handle!.handle)
             precondition(detachError == 0, "pthread_detach failed with error \(detachError)")
         }
-
     }
 
     static func isCurrentThread(_ thread: ThreadOpsSystem.ThreadHandle) -> Bool {
-        pthread_equal(thread, pthread_self()) != 0
+        pthread_equal(thread.handle, pthread_self()) != 0
     }
 
     static var currentThread: ThreadOpsSystem.ThreadHandle {
-        pthread_self()
+        PthreadWrapper(handle: pthread_self())
     }
 
     static func joinThread(_ thread: ThreadOpsSystem.ThreadHandle) {
-        let err = pthread_join(thread, nil)
+        let err = pthread_join(thread.handle, nil)
         assert(err == 0, "pthread_join failed with \(err)")
     }
 
@@ -184,7 +204,7 @@ enum ThreadOpsPosix: ThreadOps {
     }
 
     static func compareThreads(_ lhs: ThreadOpsSystem.ThreadHandle, _ rhs: ThreadOpsSystem.ThreadHandle) -> Bool {
-        pthread_equal(lhs, rhs) != 0
+        pthread_equal(lhs.handle, rhs.handle) != 0
     }
 }
 

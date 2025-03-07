@@ -318,14 +318,14 @@ private func assertPipelineContainsUpgradeHandler(channel: Channel) {
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 class HTTPClientUpgradeTestCase: XCTestCase {
     func setUpClientChannel(
-        clientHTTPHandler: RemovableChannelHandler,
+        clientHTTPHandler: RemovableChannelHandler & Sendable,
         clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
         _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
     ) throws -> EmbeddedChannel {
 
         let channel = EmbeddedChannel()
 
-        let config: NIOHTTPClientUpgradeConfiguration = (
+        let config: NIOHTTPClientUpgradeSendableConfiguration = (
             upgraders: clientUpgraders,
             completionHandler: { context in
                 channel.pipeline.removeHandler(clientHTTPHandler, promise: nil)
@@ -1063,7 +1063,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
     override func setUpClientChannel(
-        clientHTTPHandler: RemovableChannelHandler,
+        clientHTTPHandler: RemovableChannelHandler & Sendable,
         clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
         _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
     ) throws -> EmbeddedChannel {

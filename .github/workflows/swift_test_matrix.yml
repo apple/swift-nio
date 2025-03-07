@@ -19,8 +19,8 @@ concurrency:
 
 jobs:
   execute-matrix:
-    name: ${{ matrix.swift.platform }} (${{ matrix.swift.name }})
-    runs-on: ${{ matrix.swift.runner }}
+    name: ${{ matrix.config.platform }} (${{ matrix.config.name }})
+    runs-on: ${{ matrix.config.runner }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(inputs.matrix_string) }}
@@ -31,37 +31,41 @@ jobs:
           persist-credentials: false
           submodules: true
       - name: Pull Docker image
-        run: docker pull ${{ matrix.swift.image }}
+        run: docker pull ${{ matrix.config.image }}
       - name: Run matrix job
-        if: ${{ matrix.swift.platform != 'Windows' }}
+        if: ${{ matrix.config.platform != 'Windows' }}
         run: |
-          if [[ -n "${{ matrix.swift.setup_command }}" ]]; then
-            setup_command_expression="${{ matrix.swift.setup_command }} &&"
+          if [[ -n "${{ matrix.config.setup_command }}" ]]; then
+            setup_command_expression="${{ matrix.config.setup_command }} &&"
           else
             setup_command_expression=""
           fi
           workspace="/$(basename ${{ github.workspace }})"
           docker run -v ${{ github.workspace }}:"$workspace" \
             -w "$workspace" \
-            -e SWIFT_VERSION="${{ matrix.swift.swift_version }}" \
+            -e CI="$CI" \
+            -e GITHUB_ACTIONS="$GITHUB_ACTIONS" \
+            -e SWIFT_VERSION="${{ matrix.config.swift_version }}" \
             -e setup_command_expression="$setup_command_expression" \
             -e workspace="$workspace" \
             ${{ matrix.swift.image }} \
-            bash -c "$setup_command_expression ${{ matrix.swift.command }} ${{ matrix.swift.command_arguments }}"
+            bash -c "$setup_command_expression ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"
       - name: Run matrix job (Windows)
-        if: ${{ matrix.swift.platform == 'Windows' }}
+        if: ${{ matrix.config.platform == 'Windows' }}
         run: |
-          if (-not [string]::IsNullOrEmpty("${{ matrix.swift.setup_command }}")) {
-              $setup_command_expression = "${{ matrix.swift.setup_command }} &"
+          if (-not [string]::IsNullOrEmpty("${{ matrix.config.setup_command }}")) {
+              $setup_command_expression = "${{ matrix.config.setup_command }} &"
           } else {
               $setup_command_expression = ""
           }
           $workspace = "C:\" + (Split-Path ${{ github.workspace }} -Leaf)
           docker run -v ${{ github.workspace }}:$($workspace) `
             -w $($workspace) `
-            -e SWIFT_VERSION="${{ matrix.swift.swift_version }}" `
+            -e CI=%CI% `
+            -e GITHUB_ACTIONS=%GITHUB_ACTIONS% `
+            -e SWIFT_VERSION="${{ matrix.config.swift_version }}" `
             -e setup_command_expression=%setup_command_expression% `
-            ${{ matrix.swift.image }} `
-            cmd /s /c  "swift --version & powershell Invoke-Expression ""$($setup_command_expression) ${{ matrix.swift.command }} ${{ matrix.swift.command_arguments }}"""
+            ${{ matrix.config.image }} `
+            cmd /s /c  "swift --version & $($setup_command_expression) ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"
     env:
-      SWIFT_VERSION: ${{ matrix.swift.swift_version }}
+      SWIFT_VERSION: ${{ matrix.config.swift_version }}

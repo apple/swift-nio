@@ -1,5 +1,5 @@
 .DS_Store
-/.build
+.build
 /.index-build
 /Packages
 /*.xcodeproj

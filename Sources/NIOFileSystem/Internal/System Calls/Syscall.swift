@@ -400,14 +400,7 @@ public enum Libc {
         return valueOrErrno {
             pathBytes.withUnsafeMutableBufferPointer { pointer in
                 // The array must be terminated with a nil.
-                #if os(Android)
-                libc_fts_open(
-                    [pointer.baseAddress!, unsafeBitCast(0, to: UnsafeMutablePointer<CInterop.PlatformChar>.self)],
-                    options.rawValue
-                )
-                #else
                 libc_fts_open([pointer.baseAddress, nil], options.rawValue)
-                #endif
             }
         }
     }

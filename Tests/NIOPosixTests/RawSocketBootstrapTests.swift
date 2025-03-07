@@ -47,8 +47,13 @@ final class RawSocketBootstrapTests: XCTestCase {
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try elg.syncShutdownGracefully()) }
         let channel = try NIORawSocketBootstrap(group: elg)
-            .channelInitializer {
-                $0.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(
+                        DatagramReadRecorder<ByteBuffer>(),
+                        name: "ByteReadRecorder"
+                    )
+                }
             }
             .bind(host: "127.0.0.1", ipProtocol: .reservedForTesting).wait()
         defer { XCTAssertNoThrow(try channel.close().wait()) }
@@ -93,15 +98,25 @@ final class RawSocketBootstrapTests: XCTestCase {
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { XCTAssertNoThrow(try elg.syncShutdownGracefully()) }
         let readChannel = try NIORawSocketBootstrap(group: elg)
-            .channelInitializer {
-                $0.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(
+                        DatagramReadRecorder<ByteBuffer>(),
+                        name: "ByteReadRecorder"
+                    )
+                }
             }
             .bind(host: "127.0.0.1", ipProtocol: .reservedForTesting).wait()
         defer { XCTAssertNoThrow(try readChannel.close().wait()) }
 
         let writeChannel = try NIORawSocketBootstrap(group: elg)
-            .channelInitializer {
-                $0.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(
+                        DatagramReadRecorder<ByteBuffer>(),
+                        name: "ByteReadRecorder"
+                    )
+                }
             }
             .bind(host: "127.0.0.1", ipProtocol: .reservedForTesting).wait()
         defer { XCTAssertNoThrow(try writeChannel.close().wait()) }
@@ -147,8 +162,13 @@ final class RawSocketBootstrapTests: XCTestCase {
         defer { XCTAssertNoThrow(try elg.syncShutdownGracefully()) }
         let channel = try NIORawSocketBootstrap(group: elg)
             .channelOption(.ipOption(.ip_hdrincl), value: 1)
-            .channelInitializer {
-                $0.pipeline.addHandler(DatagramReadRecorder<ByteBuffer>(), name: "ByteReadRecorder")
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(
+                        DatagramReadRecorder<ByteBuffer>(),
+                        name: "ByteReadRecorder"
+                    )
+                }
             }
             .bind(host: "127.0.0.1", ipProtocol: .reservedForTesting).wait()
         defer { XCTAssertNoThrow(try channel.close().wait()) }

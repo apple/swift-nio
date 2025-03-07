@@ -313,9 +313,11 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
         requestHead: HTTPRequestHead,
         _ result: Result<
             (
-                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>, responseHeaders: HTTPHeaders,
+                upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>,
+                responseHeaders: HTTPHeaders,
                 proto: String
-            )?, Error
+            )?,
+            Error
         >
     ) -> FindingUpgraderCompletedAction? {
         switch self.state {
