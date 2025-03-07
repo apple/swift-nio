@@ -207,7 +207,8 @@ let package = Package(
                 "NIOHTTP1",
                 "CNIOSHA1",
                 "_NIOBase64",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "CNIOLLHTTP",
