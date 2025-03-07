@@ -12,7 +12,7 @@ jobs:
       name: "Static SDK"
       matrix_string: >-
         {
-          "swift":[
+          "config":[
             {
               "name":"latest-release Jammy",
               "swift_version":"6.0.2",
