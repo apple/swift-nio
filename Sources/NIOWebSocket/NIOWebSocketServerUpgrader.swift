@@ -312,7 +312,7 @@ private func _buildUpgradeResponse(
         }
 }
 
-private func _upgrade<UpgradeResult>(
+private func _upgrade<UpgradeResult: Sendable>(
     channel: Channel,
     upgradeRequest: HTTPRequestHead,
     maxFrameSize: Int,
