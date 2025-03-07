@@ -15,7 +15,7 @@ jobs:
           "config":[
             {
               "name":"latest-release Jammy",
-              "swift_version":"6.0.2",
+              "swift_version":"latest-release",
               "platform":"Linux",
               "runner":"ubuntu-latest",
               "image":"ubuntu:jammy",
