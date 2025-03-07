@@ -48,7 +48,7 @@ jobs:
             -e SWIFT_VERSION="${{ matrix.config.swift_version }}" \
             -e setup_command_expression="$setup_command_expression" \
             -e workspace="$workspace" \
-            ${{ matrix.swift.image }} \
+            ${{ matrix.config.image }} \
             bash -c "$setup_command_expression ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"
       - name: Run matrix job (Windows)
         if: ${{ matrix.config.platform == 'Windows' }}
