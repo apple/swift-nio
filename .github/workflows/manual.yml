@@ -1,0 +1,26 @@
+name: Manual
+on:
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  update-benchmarks:
+    # if: ${{ github.event.issue.pull_request && contains(['COLLABORATOR', 'MEMBER', 'OWNER'], github.event.issue.author_association) && startsWith(github.event.issue.comment.body, "/update_benchmarks"}}
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make Changes
+        run: |
+          echo "a testing change" >> testing.txt
+
+      - name: Commit Changes
+        run: |
+          git config --global user.name 'benchmark-update-bot'
+          git config --global user.email '<>'
+          git add testing.txt
+          git commit -m "Test change"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
