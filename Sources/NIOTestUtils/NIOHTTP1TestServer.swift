@@ -272,7 +272,8 @@ public final class NIOHTTP1TestServer {
             try channel.pipeline.syncOperations.addHandler(TransformerHandler())
             _ = try channel.syncOptions!.setOption(.autoRead, value: true)
         } catch {
-            fatalError("Channel initialization failed with: \(error)")
+            print("Channel initialization failed with: \(error)")
+            channel.close(promise: nil)
         }
     }
 
