@@ -1,0 +1,25 @@
+name: Manual
+on:
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  update-benchmarks:
+    if: ${{ github.event.issue.pull_request && contains(['COLLABORATOR', 'MEMBER', 'OWNER'], github.event.issue.author_association) && github.event.issue.comment.body=="Update benchmarks"}}
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Comment
+        run: |
+          # Use GitHub API to create a comment on the PR
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          COMMENT="Test commenting back to the PR"
+          GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+          COMMENT_URL="https://api.github.com/repos/${{ github.repository }}/issues/${PR_NUMBER}/comments"
+
+          curl -s -H "Authorization: token ${GITHUB_TOKEN}" -X POST $COMMENT_URL -d "{\"body\":\"$COMMENT\"}"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
