@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+import CNIOLinux
 import NIOEmbedded
 import NIOPosix
 import NIOTestUtils
