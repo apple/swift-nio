@@ -93,7 +93,7 @@ final class NIOLoopBoundTests: XCTestCase {
         }
 
         let instance = NonSendableIntBox(value: 15)
-        let sendableBox = NIOLoopBoundBox.makeBoxTakingValue(instance, as: NonSendableIntBox.self, eventLoop: loop)
+        let sendableBox = NIOLoopBoundBox.makeBoxSendingValue(instance, as: NonSendableIntBox.self, eventLoop: loop)
         for _ in 0..<(100 - 15) {
             loop.execute {
                 sendableBox.value.value += 1

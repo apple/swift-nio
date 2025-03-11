@@ -133,7 +133,7 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because `value` is moved into the box and can no longer be accessed outside the box.
     /// So we don't need to protect `value` itself, we just need to protect the ``NIOLoopBoundBox`` against mutations which we do because the ``value``
     /// accessors are checking that we're on `eventLoop`.
-    public static func makeBoxTakingValue(
+    public static func makeBoxSendingValue(
         _ value: sending Value,
         as: Value.Type = Value.self,
         eventLoop: EventLoop
