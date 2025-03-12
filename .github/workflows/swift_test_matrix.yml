@@ -35,8 +35,8 @@ jobs:
       - name: Run matrix job
         if: ${{ matrix.config.platform != 'Windows' }}
         run: |
-          if [[ -n "${{ matrix.config.setup_command }}" ]]; then
-            setup_command_expression="${{ matrix.config.setup_command }} &&"
+          if [[ -n '${{ matrix.config.setup_command }}' ]]; then
+            setup_command_expression='${{ matrix.config.setup_command }} &&'
           else
             setup_command_expression=""
           fi
