@@ -1,0 +1,164 @@
+name: macOS tests
+
+on:
+  workflow_call:
+    inputs:
+      xcode_15_4_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode version 15.4 jobs. Defaults to true."
+        default: true
+      xcode_15_4_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Xcode version 15.4 job."
+        default: ""
+      xcode_16_0_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode version 16.0 jobs. Defaults to true."
+        default: true
+      xcode_16_0_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the macOS 5.10 Swift version matrix job."
+        default: ""
+      xcode_16_1_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode version 16.1 jobs. Defaults to true."
+        default: true
+      xcode_16_1_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Xcode version 16.1 job."
+        default: ""
+      xcode_16_2_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode version 16.1 jobs. Defaults to true."
+        default: true
+      xcode_16_2_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Xcode version 16.2 job."
+        default: ""
+
+      build_scheme:
+        type: string
+        description: "The build scheme used in the Xcode builds."
+      macos_xcode_build_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode build targetting macOS. Defaults to true."
+        default: true
+      ios_xcode_build_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode build targetting iOS. Defaults to true."
+        default: true
+      watchos_xcode_build_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode build targetting watchOS. Defaults to true."
+        default: true
+      tvos_xcode_build_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode build targetting tvOS. Defaults to true."
+        default: true
+      visionos_xcode_build_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode build targetting visionOS. Defaults to true."
+        default: true
+
+jobs:
+  construct-matrix:
+    name: Construct Darwin matrix
+    runs-on: ubuntu-latest
+    outputs:
+      darwin-matrix: '${{ steps.generate-matrix.outputs.darwin-matrix }}'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - id: generate-matrix
+        run: |
+          cat >> "$GITHUB_OUTPUT" << EOM
+          darwin-matrix=$(
+            xcode_15_4_enabled="${MATRIX_MACOS_15_4_ENABLED:=true}"
+            xcode_15_4_test_arguments_override="${MATRIX_MACOS_15_4_TEST_ARGUMENTS_OVERRIDE:=""}"
+            xcode_16_0_enabled="${MATRIX_MACOS_16_0_ENABLED:=true}"
+            xcode_16_0_test_arguments_override="${MATRIX_MACOS_16_0_TEST_ARGUMENTS_OVERRIDE:=""}"
+            xcode_16_1_enabled="${MATRIX_MACOS_16_1_ENABLED:=true}"
+            xcode_16_1_test_arguments_override="${MATRIX_MACOS_16_1_TEST_ARGUMENTS_OVERRIDE:=""}"
+            xcode_16_2_enabled="${MATRIX_MACOS_16_2_ENABLED:=true}"
+            xcode_16_2_test_arguments_override="${MATRIX_MACOS_16_2_TEST_ARGUMENTS_OVERRIDE:=""}"
+
+            # Create matrix from inputs
+            matrix='{"config": []}'
+
+            if [[ "$xcode_15_4_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+                '.config[.config| length] |= . + { "name": "Xcode 15.4", "xcode_version": "15.4", "test_arguments_override": "${xcode_15_4_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+            fi
+
+            if [[ "$xcode_16_0_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+                '.config[.config| length] |= . + { "name": "Xcode 16.0", "xcode_version": "16.0", "test_arguments_override": "${xcode_16_0_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+            fi
+
+            if [[ "$xcode_16_1_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+                '.config[.config| length] |= . + { "name": "Xcode 16.1", "xcode_version": "16.1", "test_arguments_override": "${xcode_16_1_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+            fi
+
+            if [[ "$xcode_16_2_enabled" == "true" ]]; then
+              matrix=$(echo "$matrix" | jq -c \
+                '.config[.config| length] |= . + { "name": "Xcode 16.2", "xcode_version": "16.2", "test_arguments_override": "${xcode_16_2_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+            fi
+
+            echo "$matrix" | jq -c
+          )"
+          EOM
+        env:
+          MATRIX_MACOS_15_4_ENABLED: ${{ inputs.xcode_15_4_enabled }}
+          MATRIX_MACOS_15_4_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_15_4_test_arguments_override }}
+          MATRIX_MACOS_16_0_ENABLED: ${{ inputs.xcode_16_0_enabled }}
+          MATRIX_MACOS_16_0_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_0_test_arguments_override }}
+          MATRIX_MACOS_16_1_ENABLED: ${{ inputs.xcode_16_1_enabled }}
+          MATRIX_MACOS_16_1_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_1_test_arguments_override }}
+          MATRIX_MACOS_16_2_ENABLED: ${{ inputs.xcode_16_2_enabled }}
+          MATRIX_MACOS_16_2_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_2_test_arguments_override }}
+
+  darwin-job:
+    name: ${{ matrix.config.name }}
+    needs: construct-matrix
+    runs-on: [self-hosted, macos, "${{ matrix.config.os }}", "${{ matrix.config.arch }}"]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.construct-matrix.outputs.darwin-matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Swift test
+        run: |
+          if [ -n "${{ matrix.config.test_arguments_override }}" ]; then
+            swift test "${{ matrix.config.test_arguments_override }}"
+          else
+            swift test
+          fi
+      - name: macOS build
+        if: '!cancelled() && inputs.macos_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=macos build
+      - name: macOS Catalyst build
+        if: '!cancelled() && inputs.macos_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=Mac Catalyst" build
+      - name: iOS build
+        if: '!cancelled() && inputs.ios_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=ios build
+      - name: watchOS build
+        if: '!cancelled() && inputs.watchos_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=watchos build
+      - name: tvOS build
+        if: '!cancelled() && inputs.tvos_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=tvos build
+        # - name: visionOS build  # arm only  # TODO: temporarily disabled due to issue
+        #   if: '!cancelled() && inputs.visionos_xcode_build_enabled'
+        #   run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=visionos build
+    env:
+      XCODE_VERSION: ${{ matrix.config.xcode_version }}
+      DEVELOPER_DIR: "/Applications/Xcode_${{ matrix.config.xcode_version }}.app"
+      BUILD_SCHEME: ${{ inputs.build_scheme }}
