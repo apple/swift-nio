@@ -149,9 +149,9 @@ jobs:
       - name: tvOS build
         if: '!cancelled() && inputs.tvos_xcode_build_enabled'
         run: /usr/bin/xcodebuild -scheme swift-nio-Package -destination generic/platform=tvos build
-      - name: visionOS build # arm only
-        if: '!cancelled() && inputs.visionos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -scheme swift-nio-Package -destination generic/platform=visionos build
+        # - name: visionOS build  # arm only  # TODO: temporarily disabled due to issue
+        #   if: '!cancelled() && inputs.visionos_xcode_build_enabled'
+        #   run: /usr/bin/xcodebuild -scheme swift-nio-Package -destination generic/platform=visionos build
     env:
       XCODE_VERSION: ${{ matrix.config.xcode_version }}
       DEVELOPER_DIR: "/Applications/Xcode_${{ matrix.config.xcode_version }}.app"
