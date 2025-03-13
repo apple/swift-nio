@@ -102,15 +102,15 @@ function update_cmakelists_assembly() {
     log "Updated $src_root/CMakeLists.txt"
 }
 
-echo "$config" | jq -c '.targets[]' | while read target; do
+echo "$config" | jq -c '.targets[]' | while read -r target; do
     name="$(echo "$target" | jq -r .name)"
     type="$(echo "$target" | jq -r .type)"
-    exceptions="$(echo "$target" | jq -r .exceptions | jq -r @sh)"
+    exceptions=("$(echo "$target" | jq -r .exceptions | jq -r @sh)")
     log "Updating cmake list for ${name}"
     
     case "$type" in
         source)
-            update_cmakelists_source "$name" $exceptions
+            update_cmakelists_source "$name" "${exceptions[@]}"
             ;;
         assembly)
             update_cmakelists_assembly "$name"

@@ -46,7 +46,7 @@ apt-get install -y -q ninja-build
 log "Building makefiles for target"
 build_directory="${TARGET_DIRECTORY}/build"
 mkdir -p "${build_directory}"
-cd "${build_directory}"
+cd "${build_directory}" || fatal "Could not 'cd' to ${build_directory}"
 cmake build -G Ninja -S ..
 
 log "Building target"
