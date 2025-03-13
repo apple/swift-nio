@@ -125,5 +125,11 @@ log "Static SDK URL: $static_sdk_url"
 static_sdk_path="/tmp/$(basename "$static_sdk_url")"
 curl -sL "$static_sdk_url" -o "$static_sdk_path"
 
+log "Looking for swift"
+which swift
+
+log "Checking swift"
+swift --version
+
 log "Installing Static SDK"
 swift sdk install "$static_sdk_path"
