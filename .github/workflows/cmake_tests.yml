@@ -37,8 +37,10 @@ jobs:
         run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
       - name: Check CMakeLists files
         run: |
-          which curl || (apt -q update && apt -yq install curl)
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/update-cmake-lists.sh | CONFIG_JSON="${{ inputs.update_cmake_lists_config }}" FAIL_ON_CHANGES=true bash
+          which curl jq || apt -q update
+          which curl || apt -yq install curl
+          which jq || apt -yq install jq
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/update-cmake-lists.sh | CONFIG_JSON='${{ inputs.update_cmake_lists_config }}' FAIL_ON_CHANGES=true bash
       - name: CMake build
         run: |
           which curl cmake ninja || apt -q update
