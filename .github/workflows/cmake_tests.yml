@@ -15,11 +15,17 @@ on:
         type: string
         description: "The version of CMake to install."
         default: ""
+      image:
+        type: string
+        description: "The docker image to run the checks in."
+        default: "swift:6.0-jammy"
 
 jobs:
   cmake-checks:
     name: CMake checks
     runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.image }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
