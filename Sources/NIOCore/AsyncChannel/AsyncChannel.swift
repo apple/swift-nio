@@ -334,8 +334,8 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     public func executeThenClose<Result>(
         isolation actor: isolated (any Actor)? = #isolation,
         _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>, _ outbound: NIOAsyncChannelOutboundWriter<Outbound>)
-            async throws -> Result
-    ) async throws -> Result where Result: Sendable {
+            async throws -> sending Result
+    ) async throws -> Result {
         let result: Result
         do {
             result = try await body(self._inbound, self._outbound)
@@ -429,8 +429,8 @@ extension NIOAsyncChannel {
     ///     - body: A closure that gets scoped access to the inbound.
     public func executeThenClose<Result>(
         isolation actor: isolated (any Actor)? = #isolation,
-        _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>) async throws -> Result
-    ) async throws -> Result where Outbound == Never, Result: Sendable {
+        _ body: (_ inbound: NIOAsyncChannelInboundStream<Inbound>) async throws -> sending Result
+    ) async throws -> Result where Outbound == Never {
         try await self.executeThenClose { inbound, _ in
             try await body(inbound)
         }
