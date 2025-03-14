@@ -30,20 +30,18 @@ if [ -z "$target_dir" ]; then
 fi
 
 log "Installing tools for this script"
-apt-get update -y -q && apt-get install -y -q curl rsync
+which curl || apt update -y -q && apt install -y -q curl
 
 log "Obtaining CMake (${CMAKE_VERSION})"
 curl -sL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz" -o /tmp/cmake.tar.gz
 
 log "Installing CMake"
-mkdir -p /tmp/cmake
-tar xfvz /tmp/cmake.tar.gz --strip-components 1 -C /tmp/cmake
-rsync -q -a /tmp/cmake/* /usr/
+tar xfvz /tmp/cmake.tar.gz --strip-components 1 -C /usr/
 
 log "Installing Ninja"
-apt-get install -y -q ninja-build
+apt install -y -q ninja-build
 
-log "Building makefiles for target"
+log "Building Ninja build files for target"
 build_directory="${TARGET_DIRECTORY}/build"
 mkdir -p "${build_directory}"
 cd "${build_directory}" || fatal "Could not 'cd' to ${build_directory}"
