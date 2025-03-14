@@ -35,20 +35,21 @@ jobs:
       - name: Run matrix job
         if: ${{ matrix.config.platform != 'Windows' }}
         run: |
-          if [[ -n "${{ matrix.config.setup_command }}" ]]; then
-            setup_command_expression="${{ matrix.config.setup_command }} &&"
+          if [[ -n '${{ matrix.config.setup_command }}' ]]; then
+            setup_command_expression='${{ matrix.config.setup_command }} &&'
           else
             setup_command_expression=""
           fi
           workspace="/$(basename ${{ github.workspace }})"
           docker run -v ${{ github.workspace }}:"$workspace" \
             -w "$workspace" \
+            -e CI="$CI" \
             -e GITHUB_ACTIONS="$GITHUB_ACTIONS" \
             -e SWIFT_VERSION="${{ matrix.config.swift_version }}" \
             -e setup_command_expression="$setup_command_expression" \
             -e workspace="$workspace" \
             ${{ matrix.config.image }} \
-            bash -c "swift --version && git config --global --add safe.directory \"$workspace\" && $setup_command_expression ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"
+            bash -c "$setup_command_expression ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"
       - name: Run matrix job (Windows)
         if: ${{ matrix.config.platform == 'Windows' }}
         run: |
@@ -60,6 +61,7 @@ jobs:
           $workspace = "C:\" + (Split-Path ${{ github.workspace }} -Leaf)
           docker run -v ${{ github.workspace }}:$($workspace) `
             -w $($workspace) `
+            -e CI=%CI% `
             -e GITHUB_ACTIONS=%GITHUB_ACTIONS% `
             -e SWIFT_VERSION="${{ matrix.config.swift_version }}" `
             -e setup_command_expression=%setup_command_expression% `

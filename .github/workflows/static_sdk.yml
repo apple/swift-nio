@@ -1,0 +1,37 @@
+name: Static SDK
+
+on:
+  workflow_call:
+
+jobs:
+  static-sdk:
+    name: Static SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    with:
+      name: "Static SDK"
+      matrix_string: >-
+        {
+          "config":[
+            {
+              "name":"latest-release Jammy",
+              "swift_version":"latest-release",
+              "platform":"Linux",
+              "runner":"ubuntu-latest",
+              "image":"ubuntu:jammy",
+              "setup_command":"apt-get update -y -q && apt-get install -y -q curl && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_VERSION=latest INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
+              "command":"swift build",
+              "command_arguments":"--swift-sdk x86_64-swift-linux-musl"
+            },
+            {
+              "name":"main Jammy",
+              "swift_version":"main",
+              "platform":"Linux",
+              "runner":"ubuntu-latest",
+              "image":"ubuntu:jammy",
+              "setup_command":"apt-get update -y -q && apt-get install -y -q curl && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_BRANCH=main INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
+              "command":"swift build",
+              "command_arguments":"--swift-sdk x86_64-swift-linux-musl"
+            }
+          ]
+        }

@@ -100,7 +100,7 @@ if [[ "$linux_nightly_next_enabled" == "true" ]]; then
     --arg command_arguments "$linux_nightly_next_command_arguments" \
     --arg container_image "$linux_nightly_next_container_image" \
     --arg runner "$linux_runner" \
-    '.config[.config| length] |= . + { "name": "nightly-next", "image": $container_image, "swift_version": "nightly-6.1", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
+    '.config[.config| length] |= . + { "name": "nightly-next", "image": $container_image, "swift_version": "nightly-next", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
 fi
 
 if [[ "$linux_nightly_main_enabled" == "true" ]]; then
@@ -137,7 +137,7 @@ if [[ "$windows_nightly_next_enabled" == "true" ]]; then
     --arg command_arguments "$windows_nightly_next_command_arguments" \
     --arg container_image "$windows_nightly_next_container_image" \
     --arg runner "$windows_nightly_next_runner" \
-    '.config[.config| length] |= . + { "name": "nightly-next", "image": $container_image, "swift_version": "nightly-6.1", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner }')
+    '.config[.config| length] |= . + { "name": "nightly-next", "image": $container_image, "swift_version": "nightly-next", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner }')
 fi
 
 if [[ "$windows_nightly_main_enabled" == "true" ]]; then

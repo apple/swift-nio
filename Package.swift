@@ -207,7 +207,8 @@ let package = Package(
                 "NIOHTTP1",
                 "CNIOSHA1",
                 "_NIOBase64",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "CNIOLLHTTP",
@@ -233,7 +234,8 @@ let package = Package(
                 "NIOEmbedded",
                 "NIOHTTP1",
                 swiftAtomics,
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "_NIOFileSystem",
@@ -319,7 +321,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOHTTP1Client",
@@ -329,7 +332,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOChatServer",
@@ -594,11 +598,16 @@ if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
 
 // ---    STANDARD CROSS-REPO SETTINGS DO NOT EDIT   --- //
 for target in package.targets {
-    if target.type != .plugin {
+    switch target.type {
+    case .regular, .test, .executable:
         var settings = target.swiftSettings ?? []
         // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0444-member-import-visibility.md
         settings.append(.enableUpcomingFeature("MemberImportVisibility"))
         target.swiftSettings = settings
+    case .macro, .plugin, .system, .binary:
+        ()  // not applicable
+    @unknown default:
+        ()  // we don't know what to do here, do nothing
     }
 }
 // --- END: STANDARD CROSS-REPO SETTINGS DO NOT EDIT --- //

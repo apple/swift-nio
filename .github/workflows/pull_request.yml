@@ -76,3 +76,15 @@ jobs:
         run: swift test --filter "(?i)vsock" | tee test.out
       - name: Check for skipped tests
         run: test -r test.out && ! grep -i skipped test.out
+
+  macos-tests:
+    name: macOS tests
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/macos_tests.yml@main
+    with:
+      build_scheme: swift-nio-Package
+
+  static-sdk:
+    name: Static SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/static_sdk.yml@main

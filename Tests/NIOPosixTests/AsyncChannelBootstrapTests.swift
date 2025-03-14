@@ -25,7 +25,8 @@ private final class IPHeaderRemoverHandler: ChannelInboundHandler {
 
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         var data = Self.unwrapInboundIn(data)
-        assert(data.data.readIPv4Header() != nil)
+        let header = data.data.readIPv4Header()
+        assert(header != nil)
         context.fireChannelRead(Self.wrapInboundOut(data))
     }
 }
