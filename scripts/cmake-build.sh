@@ -25,11 +25,11 @@ if [ -z "$target_dir" ]; then
   fatal "Target directory must be specified."
 fi
 
-CURL_BIN=${CURL_BIN:-$(which curl)} || fatal "CURL_BIN unset and no curl on PATH"
-TAR_BIN=${TAR_BIN:-$(which tar)} || fatal "TAR_BIN unset and no tar on PATH"
-CMAKE_BIN=${CMAKE_BIN:-$(which cmake)} || fatal "CMAKE_BIN unset and no cmake on PATH"
-NINJA_BIN=${NINJA_BIN:-$(which ninja)} || fatal "NINJA_BIN unset and no ninja on PATH"
-ASSEMBLY_COMPILER_BIN=${ASSEMBLY_COMPILER_BIN:-$(which clang)} || fatal "ASSEMBLY_COMPILER_BIN unset and no clang on PATH"
+CURL_BIN="${CURL_BIN:-$(which curl)}" || fatal "CURL_BIN unset and no curl on PATH"
+TAR_BIN="${TAR_BIN:-$(which tar)}" || fatal "TAR_BIN unset and no tar on PATH"
+CMAKE_BIN="${CMAKE_BIN:-$(which cmake)}" || fatal "CMAKE_BIN unset and no cmake on PATH"
+NINJA_BIN="${NINJA_BIN:-$(which ninja)}" || fatal "NINJA_BIN unset and no ninja on PATH"
+ASSEMBLY_COMPILER_BIN="${ASSEMBLY_COMPILER_BIN:-$(which clang)}" || fatal "ASSEMBLY_COMPILER_BIN unset and no clang on PATH"
 
 log "Building Ninja build files for target"
 build_dir="${target_dir}/build"
