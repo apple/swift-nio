@@ -1,5 +1,9 @@
 [![sswg:graduated|104x20](https://img.shields.io/badge/sswg-graduated-green.svg)](https://github.com/swift-server/sswg/blob/main/process/incubation.md#graduated-level)
 
+
+DO NOT MERGE TESTING STATIC SDK CI
+
+
 # SwiftNIO
 
 SwiftNIO is a cross-platform asynchronous event-driven network application framework
