@@ -250,6 +250,46 @@ class StreamChannelTest: XCTestCase {
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
     }
 
+    func testHalfCloseOwnOutputWithPopulatedBuffer() throws {
+        func runTest(chan1: Channel, chan2: Channel) throws {
+            let readPromise = chan2.eventLoop.makePromise(of: Void.self)
+
+            XCTAssertNoThrow(try chan1.setOption(.allowRemoteHalfClosure, value: true).wait())
+
+            self.buffer.writeString("X")
+            XCTAssertNoThrow(
+                try chan2.pipeline.addHandler(FulfillOnFirstEventHandler(channelReadPromise: readPromise)).wait()
+            )
+
+            // let's write a byte from chan1 to chan2 which we leave in the buffer.
+            let writeFuture = chan1.write(self.buffer)
+
+            // close chan1's output, this shouldn't take effect until the buffer is empty
+            let closeFuture = chan1.close(mode: .output)
+
+            // flush chan1's output
+            chan1.flush()
+
+            // Attempt to write a byte from chan1 to chan2 which should be refused after the close
+            XCTAssertThrowsError(try chan1.write(self.buffer).wait()) { error in
+                XCTAssertEqual(ChannelError.outputClosed, error as? ChannelError, "\(chan1)")
+            }
+
+            // wait for the write to complete
+            XCTAssertNoThrow(try writeFuture.wait(), "chan1 write failed")
+
+            // and wait for it to arrive
+            XCTAssertNoThrow(try readPromise.futureResult.wait())
+
+            // wait for the close to complete
+            XCTAssertNoThrow(try closeFuture.wait(), "chan1 close failed")
+
+            XCTAssertNoThrow(try chan1.syncCloseAcceptingAlreadyClosed())
+            XCTAssertNoThrow(try chan2.syncCloseAcceptingAlreadyClosed())
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
+    }
+
     func testHalfCloseOwnInput() {
         func runTest(chan1: Channel, chan2: Channel) throws {
 

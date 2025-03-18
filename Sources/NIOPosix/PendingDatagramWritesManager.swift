@@ -268,7 +268,8 @@ private struct PendingDatagramWritesState {
         // When we've hit an error we treat it like fully writing the first datagram. We aren't going to try to
         // send it again.
         let promiseFiller = self.wroteFirst(error: error)
-        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult =
+            self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely(closePromise: nil)
 
         return (promiseFiller, result)
     }
@@ -305,7 +306,8 @@ private struct PendingDatagramWritesState {
         }
 
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult =
+            self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely(closePromise: nil)
         return (promiseFiller, result)
     }
 
@@ -322,7 +324,8 @@ private struct PendingDatagramWritesState {
         )
         let writeFiller = self.wroteFirst()
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
+        let result: OneWriteOperationResult =
+            self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely(closePromise: nil)
         return (writeFiller, result)
     }
 
@@ -565,7 +568,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                 preconditionFailure("PendingDatagramWritesManager was handed a file write")
             case .nothingToBeWritten:
                 assertionFailure("called \(#function) with nothing available to be written")
-                return OneWriteOperationResult.writtenCompletely
+                return OneWriteOperationResult.writtenCompletely(closePromise: nil)
             }
         }
     }
