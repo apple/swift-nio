@@ -140,24 +140,43 @@ jobs:
           else
             swift test
           fi
+        # see `xcodebuild -list` for schemes, `simctl list` for destinations
       - name: macOS build
         if: '!cancelled() && inputs.macos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=macos build
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos" build
+      - name: macOS test
+        if: '!cancelled() && inputs.macos_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=My Mac" test
       - name: macOS Catalyst build
         if: '!cancelled() && inputs.macos_xcode_build_enabled'
         run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=Mac Catalyst" build
+      - name: macOS Catalyst test
+        if: '!cancelled() && inputs.macos_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=Mac Catalyst" test
       - name: iOS build
         if: '!cancelled() && inputs.ios_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=ios build
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=ios" build
+      - name: iOS test
+        if: '!cancelled() && inputs.ios_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=iPhone 16 Pro" test
       - name: watchOS build
         if: '!cancelled() && inputs.watchos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=watchos build
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=watchos" build
+      - name: watchOS test
+        if: '!cancelled() && inputs.watchos_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Watch Series 10 (46mm)" test
       - name: tvOS build
         if: '!cancelled() && inputs.tvos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=tvos build
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=tvos" build
+      - name: tvOS test
+        if: '!cancelled() && inputs.tvos_xcode_build_enabled'
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple TV 4K (3rd generation)" test
         # - name: visionOS build  # arm only  # TODO: temporarily disabled due to issue
         #   if: '!cancelled() && inputs.visionos_xcode_build_enabled'
         #   run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination generic/platform=visionos build
+        # - name: visionOS test  # arm only  # TODO: temporarily disabled due to issue
+        #   if: '!cancelled() && inputs.visionos_xcode_build_enabled'
+        #   run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Vision Pro" test
     env:
       XCODE_VERSION: ${{ matrix.config.xcode_version }}
       DEVELOPER_DIR: "/Applications/Xcode_${{ matrix.config.xcode_version }}.app"
