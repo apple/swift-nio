@@ -439,6 +439,41 @@ final class AsyncChannelTests: XCTestCase {
         try await actor.test()
     }
 
+    func testExecuteThenCloseFromActorReferencingSelf() async throws {
+        final actor TestActor {
+            let hello = "hello"
+            let world = "world"
+
+            func test() async throws {
+                let channel = NIOAsyncTestingChannel()
+                let wrapped = try await channel.testingEventLoop.executeInContext {
+                    try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
+                }
+
+                try await wrapped.executeThenClose { inbound, outbound in
+                    var iterator = inbound.makeAsyncIterator()
+                    try await channel.writeInbound(self.hello)
+                    let firstRead = try await iterator.next()
+                    XCTAssertEqual(firstRead, "hello")
+
+                    try await outbound.write(self.world)
+                    let write = try await channel.waitForOutboundWrite(as: String.self)
+                    XCTAssertEqual(write, "world")
+
+                    try await channel.testingEventLoop.executeInContext {
+                        channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+                    }
+
+                    let secondRead = try await iterator.next()
+                    XCTAssertNil(secondRead)
+                }
+            }
+        }
+
+        let actor = TestActor()
+        try await actor.test()
+    }
+
     func testExecuteThenCloseInboundChannelFromActor() async throws {
         final actor TestActor {
             func test() async throws {
