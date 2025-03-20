@@ -14,6 +14,7 @@
 
 import DequeModule
 import NIOConcurrencyHelpers
+import NIOTestUtils
 import XCTest
 
 @testable import NIOCore
@@ -607,47 +608,54 @@ final class NIOAsyncWriterTests: XCTestCase {
     }
 
     func testSuspendingBufferedYield_whenWriterFinished() async throws {
-        self.sink.setWritability(to: false)
+        #if compiler(>=6)
+        try await withNIOThreadPoolTaskExecutor(numberOfThreads: 2) { taskExecutor in
+            self.sink.setWritability(to: false)
 
-        let bothSuspended = expectation(description: "suspended on both yields")
-        let suspendedAgain = ConditionLock(value: false)
-        self.delegate.didSuspendHandler = {
-            if self.delegate.didSuspendCallCount == 2 {
-                bothSuspended.fulfill()
-            } else if self.delegate.didSuspendCallCount > 2 {
-                suspendedAgain.lock()
-                suspendedAgain.unlock(withValue: true)
+            let bothSuspended = expectation(description: "suspended on both yields")
+            let suspendedAgain = ConditionLock(value: false)
+            self.delegate.didSuspendHandler = {
+                if self.delegate.didSuspendCallCount == 2 {
+                    bothSuspended.fulfill()
+                } else if self.delegate.didSuspendCallCount > 2 {
+                    suspendedAgain.lock()
+                    suspendedAgain.unlock(withValue: true)
+                }
             }
-        }
 
-        self.delegate.didYieldHandler = { _ in
-            if self.delegate.didYieldCallCount == 1 {
-                // Delay this yield until the other yield is suspended again.
-                suspendedAgain.lock(whenValue: true)
-                suspendedAgain.unlock()
+            self.delegate.didYieldHandler = { _ in
+                if self.delegate.didYieldCallCount == 1 {
+                    // Delay this yield until the other yield is suspended again.
+                    if suspendedAgain.lock(whenValue: true, timeoutSeconds: 5) {
+                        suspendedAgain.unlock()
+                    } else {
+                        XCTFail("Timeout while waiting for other yield to suspend again.")
+                    }
+                }
             }
+
+            let task1 = Task(executorPreference: taskExecutor) { [writer] in
+                try await writer!.yield("message1")
+            }
+            let task2 = Task(executorPreference: taskExecutor) { [writer] in
+                try await writer!.yield("message2")
+            }
+
+            await fulfillment(of: [bothSuspended], timeout: 5)
+            self.writer.finish()
+
+            self.assert(suspendCallCount: 2, yieldCallCount: 0, terminateCallCount: 0)
+
+            // We have to become writable again to unbuffer the yields
+            // The first call to didYield will pause, so that the other yield will be suspended again.
+            self.sink.setWritability(to: true)
+
+            await XCTAssertNoThrow(try await task1.value)
+            await XCTAssertNoThrow(try await task2.value)
+
+            self.assert(suspendCallCount: 3, yieldCallCount: 2, terminateCallCount: 1)
         }
-
-        let task1 = Task { [writer] in
-            try await writer!.yield("message1")
-        }
-        let task2 = Task { [writer] in
-            try await writer!.yield("message2")
-        }
-
-        await fulfillment(of: [bothSuspended], timeout: 1)
-        self.writer.finish()
-
-        self.assert(suspendCallCount: 2, yieldCallCount: 0, terminateCallCount: 0)
-
-        // We have to become writable again to unbuffer the yields
-        // The first call to didYield will pause, so that the other yield will be suspended again.
-        self.sink.setWritability(to: true)
-
-        await XCTAssertNoThrow(try await task1.value)
-        await XCTAssertNoThrow(try await task2.value)
-
-        self.assert(suspendCallCount: 3, yieldCallCount: 2, terminateCallCount: 1)
+        #endif  // compiler(>=6)
     }
 
     func testWriterFinish_whenFinished() {
