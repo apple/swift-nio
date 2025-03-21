@@ -405,6 +405,149 @@ final class AsyncChannelTests: XCTestCase {
             XCTAssertNil(secondRead)
         }
     }
+
+    #if compiler(>=6.0)
+    func testExecuteThenCloseFromActor() async throws {
+        final actor TestActor {
+            func test() async throws {
+                let channel = NIOAsyncTestingChannel()
+                let wrapped = try await channel.testingEventLoop.executeInContext {
+                    try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
+                }
+
+                try await wrapped.executeThenClose { inbound, outbound in
+                    var iterator = inbound.makeAsyncIterator()
+                    try await channel.writeInbound("hello")
+                    let firstRead = try await iterator.next()
+                    XCTAssertEqual(firstRead, "hello")
+
+                    try await outbound.write("world")
+                    let write = try await channel.waitForOutboundWrite(as: String.self)
+                    XCTAssertEqual(write, "world")
+
+                    try await channel.testingEventLoop.executeInContext {
+                        channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+                    }
+
+                    let secondRead = try await iterator.next()
+                    XCTAssertNil(secondRead)
+                }
+            }
+        }
+
+        let actor = TestActor()
+        try await actor.test()
+    }
+
+    func testExecuteThenCloseFromActorReferencingSelf() async throws {
+        final actor TestActor {
+            let hello = "hello"
+            let world = "world"
+
+            func test() async throws {
+                let channel = NIOAsyncTestingChannel()
+                let wrapped = try await channel.testingEventLoop.executeInContext {
+                    try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
+                }
+
+                try await wrapped.executeThenClose { inbound, outbound in
+                    var iterator = inbound.makeAsyncIterator()
+                    try await channel.writeInbound(self.hello)
+                    let firstRead = try await iterator.next()
+                    XCTAssertEqual(firstRead, "hello")
+
+                    try await outbound.write(self.world)
+                    let write = try await channel.waitForOutboundWrite(as: String.self)
+                    XCTAssertEqual(write, "world")
+
+                    try await channel.testingEventLoop.executeInContext {
+                        channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+                    }
+
+                    let secondRead = try await iterator.next()
+                    XCTAssertNil(secondRead)
+                }
+            }
+        }
+
+        let actor = TestActor()
+        try await actor.test()
+    }
+
+    func testExecuteThenCloseInboundChannelFromActor() async throws {
+        final actor TestActor {
+            func test() async throws {
+                let channel = NIOAsyncTestingChannel()
+                let wrapped = try await channel.testingEventLoop.executeInContext {
+                    try NIOAsyncChannel<String, Never>(wrappingChannelSynchronously: channel)
+                }
+
+                try await wrapped.executeThenClose { inbound in
+                    var iterator = inbound.makeAsyncIterator()
+                    try await channel.writeInbound("hello")
+                    let firstRead = try await iterator.next()
+                    XCTAssertEqual(firstRead, "hello")
+
+                    try await channel.testingEventLoop.executeInContext {
+                        channel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+                    }
+
+                    let secondRead = try await iterator.next()
+                    XCTAssertNil(secondRead)
+                }
+            }
+        }
+
+        let actor = TestActor()
+        try await actor.test()
+    }
+
+    func testExecuteThenCloseNonSendableResultCross() async throws {
+        final class NonSendable {
+            var someMutableState: Int = 5
+        }
+
+        final actor TestActor {
+            func test() async throws -> sending NonSendable {
+                let channel = NIOAsyncTestingChannel()
+                let wrapped = try await channel.testingEventLoop.executeInContext {
+                    try NIOAsyncChannel<String, String>(wrappingChannelSynchronously: channel)
+                }
+
+                return try await wrapped.executeThenClose { _, _ in
+                    NonSendable()
+                }
+            }
+        }
+
+        let actor = TestActor()
+        let r = try await actor.test()
+        XCTAssertEqual(r.someMutableState, 5)
+    }
+
+    func testExecuteThenCloseInboundNonSendableResultCross() async throws {
+        final class NonSendable {
+            var someMutableState: Int = 5
+        }
+
+        final actor TestActor {
+            func test() async throws -> sending NonSendable {
+                let channel = NIOAsyncTestingChannel()
+                let wrapped = try await channel.testingEventLoop.executeInContext {
+                    try NIOAsyncChannel<String, Never>(wrappingChannelSynchronously: channel)
+                }
+
+                return try await wrapped.executeThenClose { _ in
+                    NonSendable()
+                }
+            }
+        }
+
+        let actor = TestActor()
+        let r = try await actor.test()
+        XCTAssertEqual(r.someMutableState, 5)
+    }
+    #endif
 }
 
 // This is unchecked Sendable since we only call this in the testing eventloop
