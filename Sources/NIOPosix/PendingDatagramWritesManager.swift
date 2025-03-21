@@ -268,8 +268,7 @@ private struct PendingDatagramWritesState {
         // When we've hit an error we treat it like fully writing the first datagram. We aren't going to try to
         // send it again.
         let promiseFiller = self.wroteFirst(error: error)
-        let result: OneWriteOperationResult =
-            self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely(closePromise: nil)
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
 
         return (promiseFiller, result)
     }
@@ -306,8 +305,7 @@ private struct PendingDatagramWritesState {
         }
 
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult =
-            self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely(closePromise: nil)
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
         return (promiseFiller, result)
     }
 
@@ -324,8 +322,7 @@ private struct PendingDatagramWritesState {
         )
         let writeFiller = self.wroteFirst()
         // If we no longer have a mark, we wrote everything.
-        let result: OneWriteOperationResult =
-            self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely(closePromise: nil)
+        let result: OneWriteOperationResult = self.pendingWrites.hasMark ? .writtenPartially : .writtenCompletely
         return (writeFiller, result)
     }
 
@@ -422,6 +419,8 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     internal var publishedWritability = true
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true
+
+    internal var outboundCloseState: CloseState = .open
 
     /// Initialize with a pre-allocated array of message headers and storage references. We pass in these pre-allocated
     /// objects to save allocations. They can be safely be re-used for all `Channel`s on a given `EventLoop` as an
@@ -568,7 +567,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                 preconditionFailure("PendingDatagramWritesManager was handed a file write")
             case .nothingToBeWritten:
                 assertionFailure("called \(#function) with nothing available to be written")
-                return OneWriteOperationResult.writtenCompletely(closePromise: nil)
+                return OneWriteOperationResult.writtenCompletely
             }
         }
     }
@@ -696,11 +695,32 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         }
     }
 
+    /// Signal that the `Channel` is closed.
+    ///
+    /// - Parameters:
+    ///   - promise: Optionally an `EventLoopPromise` that will be succeeded once all outstanding writes have been dealt with
+    func close(_ promise: EventLoopPromise<Void>?) -> CloseState {
+        assert(self.isOpen)
+
+        if self.isEmpty {
+            switch self.outboundCloseState {
+            case .open:
+                self.outboundCloseState = .readyForClose(promise)
+            case .pending, .readyForClose, .closed:
+                preconditionFailure("close called on channel in unexpected state: \(self.outboundCloseState)")
+            }
+        } else {
+            self.outboundCloseState = .pending(promise)
+        }
+        return self.outboundCloseState
+    }
+
     /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
     func failAll(error: Error, close: Bool) {
         if close {
             assert(self.isOpen)
             self.isOpen = false
+            self.outboundCloseState = .closed
         }
 
         self.state.failAll(error: error)
