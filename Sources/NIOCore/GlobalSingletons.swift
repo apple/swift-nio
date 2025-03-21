@@ -20,13 +20,13 @@ import Darwin
 import ucrt
 import WinSDK
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #else
 #error("Unsupported C library")
 #endif

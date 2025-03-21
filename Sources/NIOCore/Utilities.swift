@@ -14,11 +14,11 @@
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #endif
 #elseif os(Windows)
 import let WinSDK.RelationProcessorCore
@@ -39,7 +39,7 @@ import typealias WinSDK.DWORD
 #elseif canImport(Darwin)
 import Darwin
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #else
 #error("The Core utilities module was unable to identify your C library.")
 #endif

@@ -13,17 +13,17 @@
 //===----------------------------------------------------------------------===//
 #if os(Linux) || os(FreeBSD) || os(Android)
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #endif
 import CNIOLinux
 #elseif canImport(Darwin)
 import Darwin
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #elseif os(Windows)
 import let WinSDK.AF_INET
 import let WinSDK.AF_INET6
