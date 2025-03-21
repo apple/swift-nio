@@ -601,9 +601,10 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 case .open, .pending:
                     ()
                 case .readyForClose(let eventLoopPromise):
-                    self.close0(error: ChannelError.outputClosed, mode: .output, promise: eventLoopPromise)  // TODO: it doesn't seem right that I have to pass an error in here)
+                    // TODO: it doesn't seem right that I have to pass an error in here)
+                    self.close0(error: ChannelError.outputClosed, mode: .output, promise: eventLoopPromise)
                 case .closed:
-                    () // we can be flushed before becoming active
+                    ()  // we can be flushed before becoming active
                 }
             }
 
