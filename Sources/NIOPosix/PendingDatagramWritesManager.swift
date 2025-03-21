@@ -545,7 +545,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         ) throws -> IOResult<Int>,
         vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>
     ) throws -> OverallWriteResult {
-        try self.triggerWriteOperations { writeMechanism in
+        var result = try self.triggerWriteOperations { writeMechanism in
             switch writeMechanism {
             case .scalarBufferWrite:
                 return try triggerScalarBufferWrite(scalarWriteOperation: { try scalarWriteOperation($0, $1, $2, $3) })
@@ -570,6 +570,28 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                 return OneWriteOperationResult.writtenCompletely
             }
         }
+
+        // If we have no more writes check if we have a pending close
+        if self.isEmpty {
+            switch result.writeResult {
+            case .writtenCompletely:
+                switch self.outboundCloseState {
+                case .open:
+                    ()
+                case .pending(let eventLoopPromise):
+                    self.outboundCloseState = .readyForClose(eventLoopPromise)
+                case .readyForClose:
+                    assertionFailure("Transitioned from readyForClose to readyForClose, shouldn't we have closed?")
+                case .closed:
+                    preconditionFailure("Finished writing and somehow already in closed state")
+                }
+
+            case .couldNotWriteEverything:
+                ()
+            }
+            result.writeResult = .writtenCompletely(self.outboundCloseState)
+        }
+        return result
     }
 
     /// To be called after a write operation (usually selected and run by `triggerAppropriateWriteOperation`) has

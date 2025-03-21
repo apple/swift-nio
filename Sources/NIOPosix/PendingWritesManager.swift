@@ -46,7 +46,8 @@ private func doPendingWriteVectorOperation(
         var toWrite: Int = 0
 
         loop: for i in 0..<count {
-            switch pending[i].data {
+            let p = pending[i]
+            switch p.data {
             case .byteBuffer(let buffer):
                 // Must not write more than Int32.max in one go.
                 guard (numberOfUsedStorageSlots == 0) || (Socket.writevLimitBytes - toWrite >= buffer.readableBytes)
@@ -64,7 +65,6 @@ private func doPendingWriteVectorOperation(
                     )
                 }
                 numberOfUsedStorageSlots += 1
-
             case .fileRegion:
                 assert(numberOfUsedStorageSlots != 0, "first item in doPendingWriteVectorOperation was a FileRegion")
                 // We found a FileRegion so stop collecting
@@ -129,12 +129,12 @@ internal struct OverallWriteResult {
 ///  - `didWrite` when a number of bytes have been written.
 ///  - `failAll` if for some reason all outstanding writes need to be discarded and the corresponding `EventLoopPromise` needs to be failed.
 private struct PendingStreamWritesState {
-    private var pending = MarkedCircularBuffer<PendingStreamWrite>(initialCapacity: 16)
+    private var pendingWrites = MarkedCircularBuffer<PendingStreamWrite>(initialCapacity: 16)
     public private(set) var bytes: Int64 = 0
 
     public var flushedChunks: Int {
-        self.pending.markedElementIndex.map { markedElementIndex in
-            return self.pending.distance(from: self.pending.startIndex, to: markedElementIndex) + 1
+        self.pendingWrites.markedElementIndex.map {
+            self.pendingWrites.distance(from: self.pendingWrites.startIndex, to: $0) + 1
         } ?? 0
     }
 
@@ -149,9 +149,9 @@ private struct PendingStreamWritesState {
     /// - Returns: The `EventLoopPromise` of the write or `nil` if none was provided. The promise needs to be fulfilled by the caller.
     ///
     private mutating func fullyWrittenFirst() -> EventLoopPromise<Void>? {
-        let firstWrite = self.pending.removeFirst()
-        self.subtractOutstanding(bytes: firstWrite.data.readableBytes)
-        return firstWrite.promise
+        let first = self.pendingWrites.removeFirst()
+        self.subtractOutstanding(bytes: first.data.readableBytes)
+        return first.promise
     }
 
     /// Indicates that the first outstanding object has been partially written.
@@ -159,7 +159,7 @@ private struct PendingStreamWritesState {
     /// - Parameters:
     ///   - bytes: How many bytes of the item were written.
     private mutating func partiallyWrittenFirst(bytes: Int) {
-        self.pending[self.pending.startIndex].data.moveReaderIndex(forwardBy: bytes)
+        self.pendingWrites[self.pendingWrites.startIndex].data.moveReaderIndex(forwardBy: bytes)
         self.subtractOutstanding(bytes: bytes)
     }
 
@@ -168,9 +168,9 @@ private struct PendingStreamWritesState {
 
     /// Check if there are no outstanding writes.
     public var isEmpty: Bool {
-        if self.pending.isEmpty {
+        if self.pendingWrites.isEmpty {
             assert(self.bytes == 0)
-            assert(!self.pending.hasMark)
+            assert(!self.pendingWrites.hasMark)
             return true
         } else {
             assert(self.bytes >= 0)
@@ -180,7 +180,7 @@ private struct PendingStreamWritesState {
 
     /// Add a new write and optionally the corresponding promise to the list of outstanding writes.
     public mutating func append(_ chunk: PendingStreamWrite) {
-        self.pending.append(chunk)
+        self.pendingWrites.append(chunk)
         switch chunk.data {
         case .byteBuffer(let buffer):
             self.bytes += numericCast(buffer.readableBytes)
@@ -191,14 +191,14 @@ private struct PendingStreamWritesState {
 
     /// Get the outstanding write at `index`.
     public subscript(index: Int) -> PendingStreamWrite {
-        self.pending[self.pending.index(self.pending.startIndex, offsetBy: index)]
+        self.pendingWrites[self.pendingWrites.index(self.pendingWrites.startIndex, offsetBy: index)]
     }
 
     /// Mark the flush checkpoint.
     ///
     /// All writes before this checkpoint will eventually be written to the socket.
     public mutating func markFlushCheckpoint() {
-        self.pending.mark()
+        self.pendingWrites.mark()
     }
 
     /// Indicate that a write has happened, this may be a write of multiple outstanding writes (using for example `writev`).
@@ -222,7 +222,7 @@ private struct PendingStreamWritesState {
             assert(written >= 0, "allegedly written a negative amount of bytes: \(written)")
             var unaccountedWrites = written
             for _ in 0..<itemCount {
-                let headItemReadableBytes = self.pending.first!.data.readableBytes
+                let headItemReadableBytes = self.pendingWrites.first!.data.readableBytes
                 if unaccountedWrites >= headItemReadableBytes {
                     unaccountedWrites -= headItemReadableBytes
                     // we wrote at least the whole head item, so drop it and succeed the promise
@@ -245,14 +245,13 @@ private struct PendingStreamWritesState {
                 unaccountedWrites == 0,
                 "after doing all the accounting for the byte written, \(unaccountedWrites) bytes of unaccounted writes remain."
             )
-
             return (promise0, .writtenCompletely)
         }
     }
 
     /// Is there a pending flush?
     public var isFlushPending: Bool {
-        self.pending.hasMark
+        self.pendingWrites.hasMark
     }
 
     /// Remove all pending writes and return a `EventLoopPromise` which will cascade notifications to all.
@@ -263,7 +262,7 @@ private struct PendingStreamWritesState {
     public mutating func removeAll() -> EventLoopPromise<Void>? {
         var promise0: EventLoopPromise<Void>?
 
-        while !self.pending.isEmpty {
+        while !self.pendingWrites.isEmpty {
             if let p = self.fullyWrittenFirst() {
                 if let promise = promise0 {
                     promise.futureResult.cascade(to: p)
@@ -281,17 +280,17 @@ private struct PendingStreamWritesState {
         case 0:
             return .nothingToBeWritten
         case 1:
-            switch self.pending.first!.data {
+            switch self.pendingWrites.first!.data {
             case .byteBuffer:
                 return .scalarBufferWrite
             case .fileRegion:
                 return .scalarFileWrite
             }
         default:
-            let startIndex = self.pending.startIndex
+            let startIndex = self.pendingWrites.startIndex
             switch (
-                self.pending[startIndex].data,
-                self.pending[self.pending.index(after: startIndex)].data
+                self.pendingWrites[startIndex].data,
+                self.pendingWrites[self.pendingWrites.index(after: startIndex)].data
             ) {
             case (.byteBuffer, .byteBuffer):
                 return .vectorBufferWrite
@@ -319,6 +318,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     internal var publishedWritability = true
 
     internal var writeSpinCount: UInt = 16
+
     private(set) var isOpen = true
 
     internal var outboundCloseState: CloseState = .open
@@ -566,7 +566,7 @@ extension PendingWritesManager {
         writeSpinLoop: for _ in 0...self.writeSpinCount {
             var oneResult: OneWriteOperationResult
             repeat {
-                guard self.isOpen, self.isFlushPending else {
+                guard self.isOpen && self.isFlushPending else {
                     result.writeResult = .writtenCompletely(self.outboundCloseState)
                     break writeSpinLoop
                 }
