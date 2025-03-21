@@ -17,13 +17,13 @@ import SystemPackage
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 import CNIOLinux
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 import CNIOLinux
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 import CNIOLinux
 #endif
 
