@@ -419,8 +419,13 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     internal var publishedWritability = true
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true
-
-    internal var outboundCloseState: CloseState = .open
+    var outboundCloseState: CloseState {
+        if self.isOpen {
+            .open
+        } else {
+            .closed
+        }
+    }
 
     /// Initialize with a pre-allocated array of message headers and storage references. We pass in these pre-allocated
     /// objects to save allocations. They can be safely be re-used for all `Channel`s on a given `EventLoop` as an
@@ -545,7 +550,7 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         ) throws -> IOResult<Int>,
         vectorWriteOperation: (UnsafeMutableBufferPointer<MMsgHdr>) throws -> IOResult<Int>
     ) throws -> OverallWriteResult {
-        var result = try self.triggerWriteOperations { writeMechanism in
+        try self.triggerWriteOperations { writeMechanism in
             switch writeMechanism {
             case .scalarBufferWrite:
                 return try triggerScalarBufferWrite(scalarWriteOperation: { try scalarWriteOperation($0, $1, $2, $3) })
@@ -570,28 +575,6 @@ final class PendingDatagramWritesManager: PendingWritesManager {
                 return OneWriteOperationResult.writtenCompletely
             }
         }
-
-        // If we have no more writes check if we have a pending close
-        if self.isEmpty {
-            switch result.writeResult {
-            case .writtenCompletely:
-                switch self.outboundCloseState {
-                case .open:
-                    ()
-                case .pending(let eventLoopPromise):
-                    self.outboundCloseState = .readyForClose(eventLoopPromise)
-                case .readyForClose:
-                    assertionFailure("Transitioned from readyForClose to readyForClose, shouldn't we have closed?")
-                case .closed:
-                    preconditionFailure("Finished writing and somehow already in closed state")
-                }
-
-            case .couldNotWriteEverything:
-                ()
-            }
-            result.writeResult = .writtenCompletely(self.outboundCloseState)
-        }
-        return result
     }
 
     /// To be called after a write operation (usually selected and run by `triggerAppropriateWriteOperation`) has
@@ -717,32 +700,11 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         }
     }
 
-    /// Signal that the `Channel` is closed.
-    ///
-    /// - Parameters:
-    ///   - promise: Optionally an `EventLoopPromise` that will be succeeded once all outstanding writes have been dealt with
-    func close(_ promise: EventLoopPromise<Void>?) -> CloseState {
-        assert(self.isOpen)
-
-        if self.isEmpty {
-            switch self.outboundCloseState {
-            case .open:
-                self.outboundCloseState = .readyForClose(promise)
-            case .pending, .readyForClose, .closed:
-                preconditionFailure("close called on channel in unexpected state: \(self.outboundCloseState)")
-            }
-        } else {
-            self.outboundCloseState = .pending(promise)
-        }
-        return self.outboundCloseState
-    }
-
     /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
     func failAll(error: Error, close: Bool) {
         if close {
             assert(self.isOpen)
             self.isOpen = false
-            self.outboundCloseState = .closed
         }
 
         self.state.failAll(error: error)
