@@ -97,12 +97,23 @@ internal enum OneWriteOperationResult {
 /// The result of trying to write all the outstanding flushed data. That naturally includes all `ByteBuffer`s and
 /// `FileRegions` and the individual writes have potentially been retried (see `WriteSpinOption`).
 internal struct OverallWriteResult {
-    enum WriteOutcome {
+    enum WriteOutcome: Equatable {
         /// Wrote all the data that was flushed. When receiving this result, we can unsubscribe from 'writable' notification.
-        case writtenCompletely
+        case writtenCompletely(CloseState)
 
         /// Could not write everything. Before attempting further writes the eventing system should send a 'writable' notification.
         case couldNotWriteEverything
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            switch (lhs, rhs) {
+            case (.writtenCompletely, .writtenCompletely):
+                return true
+            case (.couldNotWriteEverything, .couldNotWriteEverything):
+                return true
+            default:
+                return false
+            }
+        }
     }
 
     internal var writeResult: WriteOutcome
@@ -152,7 +163,7 @@ private struct PendingStreamWritesState {
         self.subtractOutstanding(bytes: bytes)
     }
 
-    /// Initialise a new, empty `PendingWritesState`.
+    /// Initialize a new, empty `PendingWritesState`.
     public init() {}
 
     /// Check if there are no outstanding writes.
@@ -310,6 +321,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     private(set) var isOpen = true
 
+    internal var outboundCloseState: CloseState = .open
+
     /// Mark the flush checkpoint.
     func markFlushCheckpoint() {
         self.state.markFlushCheckpoint()
@@ -337,7 +350,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
     /// - result: If the `Channel` is still writable after adding the write of `data`.
     func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
         assert(self.isOpen)
-        self.state.append(.init(data: data, promise: promise))
+        self.state.append(PendingStreamWrite(data: data, promise: promise))
 
         if self.state.bytes > waterMark.high
             && channelWritabilityFlag.compareExchange(expected: true, desired: false, ordering: .relaxed).exchanged
@@ -367,7 +380,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         vectorBufferWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
         scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>
     ) throws -> OverallWriteResult {
-        try self.triggerWriteOperations { writeMechanism in
+        var result = try self.triggerWriteOperations { writeMechanism in
             switch writeMechanism {
             case .scalarBufferWrite:
                 return try triggerScalarBufferWrite({ try scalarBufferWriteOperation($0) })
@@ -380,6 +393,28 @@ final class PendingStreamWritesManager: PendingWritesManager {
                 return .writtenCompletely
             }
         }
+
+        // If we have no more writes check if we have a pending close
+        if self.isEmpty {
+            switch result.writeResult {
+            case .writtenCompletely:
+                switch self.outboundCloseState {
+                case .open:
+                    ()
+                case .pending(let eventLoopPromise):
+                    self.outboundCloseState = .readyForClose(eventLoopPromise)
+                case .readyForClose:
+                    assertionFailure("Transitioned from readyForClose to readyForClose, shouldn't we have closed?")
+                case .closed:
+                    ()
+                }
+
+            case .couldNotWriteEverything:
+                ()
+            }
+            result.writeResult = .writtenCompletely(self.outboundCloseState)
+        }
+        return result
     }
 
     /// To be called after a write operation (usually selected and run by `triggerAppropriateWriteOperation`) has
@@ -463,11 +498,34 @@ final class PendingStreamWritesManager: PendingWritesManager {
         return self.didWrite(itemCount: result.itemCount, result: result.writeResult)
     }
 
-    /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
+    /// Signal that the `Channel` is closed.
+    ///
+    /// - Parameters:
+    ///   - promise: Optionally an `EventLoopPromise` that will be succeeded once all outstanding writes have been dealt with
+    func close(_ promise: EventLoopPromise<Void>?) -> CloseState {
+        assert(self.isOpen)
+
+        if self.isEmpty {
+            switch self.outboundCloseState {
+            case .open:
+                self.outboundCloseState = .readyForClose(promise)
+            case .readyForClose:
+                ()
+            case .pending, .closed:
+                preconditionFailure("close called on channel in unexpected state: \(self.outboundCloseState)")
+            }
+        } else {
+            self.outboundCloseState = .pending(promise)
+        }
+        return self.outboundCloseState
+    }
+
+    /// Fail all the outstanding writes.
     func failAll(error: Error, close: Bool) {
         if close {
             assert(self.isOpen)
             self.isOpen = false
+            self.outboundCloseState = .closed
         }
 
         self.state.removeAll()?.fail(error)
@@ -487,6 +545,13 @@ final class PendingStreamWritesManager: PendingWritesManager {
     }
 }
 
+internal enum CloseState {
+    case open
+    case pending(EventLoopPromise<Void>?)
+    case readyForClose(EventLoopPromise<Void>?)
+    case closed
+}
+
 internal enum WriteMechanism {
     case scalarBufferWrite
     case vectorBufferWrite
@@ -496,6 +561,8 @@ internal enum WriteMechanism {
 
 internal protocol PendingWritesManager: AnyObject {
     var isOpen: Bool { get }
+    var isEmpty: Bool { get }
+    var outboundCloseState: CloseState { get }
     var isFlushPending: Bool { get }
     var writeSpinCount: UInt { get }
     var currentBestWriteMechanism: WriteMechanism { get }
@@ -522,7 +589,7 @@ extension PendingWritesManager {
             var oneResult: OneWriteOperationResult
             repeat {
                 guard self.isOpen && self.isFlushPending else {
-                    result.writeResult = .writtenCompletely
+                    result.writeResult = .writtenCompletely(self.outboundCloseState)
                     break writeSpinLoop
                 }
 

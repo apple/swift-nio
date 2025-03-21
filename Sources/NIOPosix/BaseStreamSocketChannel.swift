@@ -194,11 +194,27 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     self.close0(error: error, mode: .all, promise: promise)
                     return
                 }
-                try self.shutdownSocket(mode: mode)
-                // Fail all pending writes and so ensure all pending promises are notified
-                self.pendingWrites.failAll(error: error, close: false)
                 self.unregisterForWritable()
-                promise?.succeed(())
+
+                let outboundCloseState = self.pendingWrites.close(promise)
+                switch outboundCloseState {
+                case .open:
+                    preconditionFailure("Close resulted in an open state, this should never happen")
+                case .pending:
+                    ()  // nothing to do
+                case .readyForClose(let closePromise):
+                    assert(promise == closePromise)
+                    // Shutdown the socket only when the pending writes are dealt with
+                    do {
+                        try self.shutdownSocket(mode: mode)
+                        closePromise?.succeed(())
+                    } catch let err {
+                        closePromise?.fail(err)
+                    }
+                    self.pendingWrites.outboundCloseState = .closed
+                case .closed:
+                    ()  // nothing to do
+                }
 
                 self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
             case .input:
