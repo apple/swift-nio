@@ -196,17 +196,25 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 }
                 self.unregisterForWritable()
 
-                // Shutdown the socket only when the pending writes are dealt with
-                let closePromise = self.eventLoop.makePromise(of: Void.self)
-                closePromise.futureResult.whenComplete { _ in
+                let outboundCloseState = self.pendingWrites.close(promise)
+                switch outboundCloseState {
+                case .open:
+                    preconditionFailure("Close resulted in an open state, this should never happen")
+                case .pending:
+                    () // nothing to do
+                case .readyForClose(let closePromise):
+                    assert(promise == closePromise)
+                    // Shutdown the socket only when the pending writes are dealt with
                     do {
                         try self.shutdownSocket(mode: mode)
-                        promise?.succeed(())
+                        closePromise?.succeed(())
                     } catch let err {
-                        promise?.fail(err)
+                        closePromise?.fail(err)
                     }
+                    self.pendingWrites.outboundCloseState = .closed
+                case .closed:
+                    () // nothing to do
                 }
-                self.pendingWrites.close(closePromise)
 
                 self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
             case .input:
