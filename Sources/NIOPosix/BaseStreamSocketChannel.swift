@@ -201,7 +201,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 case .open:
                     preconditionFailure("Close resulted in an open state, this should never happen")
                 case .pending:
-                    () // nothing to do
+                    ()  // nothing to do
                 case .readyForClose(let closePromise):
                     assert(promise == closePromise)
                     // Shutdown the socket only when the pending writes are dealt with
@@ -213,7 +213,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     }
                     self.pendingWrites.outboundCloseState = .closed
                 case .closed:
-                    () // nothing to do
+                    ()  // nothing to do
                 }
 
                 self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)

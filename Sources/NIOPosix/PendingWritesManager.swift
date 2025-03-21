@@ -509,7 +509,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
             switch self.outboundCloseState {
             case .open:
                 self.outboundCloseState = .readyForClose(promise)
-            case  .readyForClose:
+            case .readyForClose:
                 ()
             case .pending, .closed:
                 preconditionFailure("close called on channel in unexpected state: \(self.outboundCloseState)")
@@ -547,8 +547,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
 internal enum CloseState {
     case open
-    case pending(Optional<EventLoopPromise<Void>>)
-    case readyForClose(Optional<EventLoopPromise<Void>>)
+    case pending(EventLoopPromise<Void>?)
+    case readyForClose(EventLoopPromise<Void>?)
     case closed
 }
 
