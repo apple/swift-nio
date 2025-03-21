@@ -603,7 +603,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 case .readyForClose(let eventLoopPromise):
                     self.close0(error: ChannelError.outputClosed, mode: .output, promise: eventLoopPromise)  // TODO: it doesn't seem right that I have to pass an error in here)
                 case .closed:
-                    assertionFailure("Write result has the channel already closed, but we did not close it.")
+                    () // we can be flushed before becoming active
                 }
             }
 

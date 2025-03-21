@@ -380,7 +380,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         vectorBufferWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
         scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>
     ) throws -> OverallWriteResult {
-        try self.triggerWriteOperations { writeMechanism in
+        var result = try self.triggerWriteOperations { writeMechanism in
             switch writeMechanism {
             case .scalarBufferWrite:
                 return try triggerScalarBufferWrite({ try scalarBufferWriteOperation($0) })
@@ -393,6 +393,28 @@ final class PendingStreamWritesManager: PendingWritesManager {
                 return .writtenCompletely
             }
         }
+
+        // If we have no more writes check if we have a pending close
+        if self.isEmpty {
+            switch result.writeResult {
+            case .writtenCompletely:
+                switch self.outboundCloseState {
+                case .open:
+                    ()
+                case .pending(let eventLoopPromise):
+                    self.outboundCloseState = .readyForClose(eventLoopPromise)
+                case .readyForClose:
+                    assertionFailure("Transitioned from readyForClose to readyForClose, shouldn't we have closed?")
+                case .closed:
+                    ()
+                }
+
+            case .couldNotWriteEverything:
+                ()
+            }
+            result.writeResult = .writtenCompletely(self.outboundCloseState)
+        }
+        return result
     }
 
     /// To be called after a write operation (usually selected and run by `triggerAppropriateWriteOperation`) has
@@ -540,7 +562,7 @@ internal enum WriteMechanism {
 internal protocol PendingWritesManager: AnyObject {
     var isOpen: Bool { get }
     var isEmpty: Bool { get }
-    var outboundCloseState: CloseState { get set}
+    var outboundCloseState: CloseState { get }
     var isFlushPending: Bool { get }
     var writeSpinCount: UInt { get }
     var currentBestWriteMechanism: WriteMechanism { get }
@@ -593,27 +615,6 @@ extension PendingWritesManager {
             // whether we should emit a writability change.
             result.writabilityChange = self.isWritable
             self.publishedWritability = result.writabilityChange
-        }
-
-        // If we have no more writes check if we have a pending close
-        if self.isEmpty {
-            switch result.writeResult {
-            case .writtenCompletely:
-                switch self.outboundCloseState {
-                case .open:
-                    ()
-                case .pending(let eventLoopPromise):
-                    self.outboundCloseState = .readyForClose(eventLoopPromise)
-                case .readyForClose:
-                    assertionFailure("Transitioned from readyForClose to readyForClose, shouldn't we have closed?")
-                case .closed:
-                    preconditionFailure("Finished writing and somehow already in closed state")
-                }
-
-            case .couldNotWriteEverything:
-                ()
-            }
-            result.writeResult = .writtenCompletely(self.outboundCloseState)
         }
         return result
     }
