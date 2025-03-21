@@ -45,15 +45,15 @@ private typealias sa_family_t = WinSDK.ADDRESS_FAMILY
 import Darwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #endif
 import CNIOLinux
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #else
 #error("The Socket Addresses module was unable to identify your C library.")
 #endif
