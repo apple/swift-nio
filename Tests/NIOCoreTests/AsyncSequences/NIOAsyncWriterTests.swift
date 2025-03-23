@@ -607,7 +607,7 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 1)
     }
 
-    func testSuspendingBufferedYield_whenWriterFinished() async throws {
+    func testWriterFinish_AndSuspendBufferedYield() async throws {
         #if compiler(>=6)
         try await withNIOThreadPoolTaskExecutor(numberOfThreads: 2) { taskExecutor in
             try await withThrowingTaskGroup(of: Void.self) { group in
