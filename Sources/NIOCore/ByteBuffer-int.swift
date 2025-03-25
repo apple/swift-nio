@@ -126,11 +126,8 @@ extension ByteBuffer {
     public func peekInteger<T: FixedWidthInteger>(
         endianness: Endianness = .big,
         as: T.Type = T.self
-    ) -> T? {
-        guard let result = self.getInteger(at: self.readerIndex, endianness: endianness, as: T.self) else {
-            return nil
-        }
-        return result
+    ) -> T?  {
+        self.getInteger(at: self.readerIndex, endianness: endianness, as: `as`)
     }
 }
 
