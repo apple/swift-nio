@@ -127,7 +127,10 @@ extension ByteBuffer {
         endianness: Endianness = .big,
         as: T.Type = T.self
     ) -> T? {
-        return self.getInteger(at: self.readerIndex, endianness: endianness, as: `as`)
+        guard let result = self.getInteger(at: self.readerIndex, endianness: endianness, as: T.self) else {
+            return nil
+        }
+        return result
     }
 }
 

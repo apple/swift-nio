@@ -3876,7 +3876,7 @@ extension ByteBufferTest {
         let second: UInt8 = 0x34
         _ = buffer.writeInteger(first)
         _ = buffer.writeInteger(second)
-        
+
         // First peek to check the first integer.
         guard let peeked1: UInt8 = buffer.peekInteger(as: UInt8.self) else {
             XCTFail("peekInteger failed to return a value on first call")
@@ -3884,7 +3884,7 @@ extension ByteBufferTest {
         }
         XCTAssertEqual(peeked1, first)
         XCTAssertEqual(buffer.readerIndex, 0)
-        
+
         // Second peek should return the same value, confirming readerIndex is unchanged.
         guard let peeked2: UInt8 = buffer.peekInteger(as: UInt8.self) else {
             XCTFail("peekInteger failed to return a value on second call")
