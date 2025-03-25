@@ -114,9 +114,9 @@ extension ByteBuffer {
         }
     }
 
-    /// Peeks at the integer at the current reader index without advancing it.
+    /// Returns the integer at the current reader index without advancing it.
     ///
-    /// This method is equivalent to calling `getInteger(at: readerIndex, ...)
+    /// This method is equivalent to calling `getInteger(at: readerIndex, ...)`
     ///
     /// - Parameters:
     ///   - endianness: The endianness of the integer (defaults to big endian).
