@@ -19,7 +19,7 @@ import Dispatch
 #endif
 
 #if canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 import CNIOWASI
 #endif
 

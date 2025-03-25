@@ -19,13 +19,13 @@ import ucrt
 #elseif canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 import CNIOWASI
 #else
 #error("The File Handle module was unable to identify your C library.")

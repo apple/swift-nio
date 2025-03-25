@@ -14,15 +14,15 @@
 #if canImport(Darwin)
 import Darwin.C
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #elseif os(Windows)
 import ucrt
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #else
 #error("The Heap module was unable to identify your C library.")
 #endif

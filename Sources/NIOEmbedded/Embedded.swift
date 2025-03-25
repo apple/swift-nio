@@ -25,13 +25,13 @@ import Dispatch
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #else
 #error("Unknown C library.")
 #endif

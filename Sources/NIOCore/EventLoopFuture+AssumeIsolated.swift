@@ -125,6 +125,62 @@ public struct NIOIsolatedEventLoop {
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 
+    /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications
+    /// will be done using this `EventLoop` as execution `NIOThread`.
+    ///
+    /// - Parameters:
+    ///   - value: the value that is used by the `EventLoopFuture`.
+    /// - Returns: a succeeded `EventLoopFuture`.
+    @inlinable
+    @available(*, noasync)
+    public func makeSucceededFuture<Success>(_ value: Success) -> EventLoopFuture<Success> {
+        let promise = self._wrapped.makePromise(of: Success.self)
+        promise.assumeIsolatedUnsafeUnchecked().succeed(value)
+        return promise.futureResult
+    }
+
+    /// Creates and returns a new `EventLoopFuture` that is already marked as failed. Notifications
+    /// will be done using this `EventLoop`.
+    ///
+    /// - Parameters:
+    ///   - error: the `Error` that is used by the `EventLoopFuture`.
+    /// - Returns: a failed `EventLoopFuture`.
+    @inlinable
+    @available(*, noasync)
+    public func makeFailedFuture<Success>(_ error: Error) -> EventLoopFuture<Success> {
+        let promise = self._wrapped.makePromise(of: Success.self)
+        promise.fail(error)
+        return promise.futureResult
+    }
+
+    /// Creates and returns a new `EventLoopFuture` that is marked as succeeded or failed with the
+    /// value held by `result`.
+    ///
+    /// - Parameters:
+    ///   - result: The value that is used by the `EventLoopFuture`
+    /// - Returns: A completed `EventLoopFuture`.
+    @inlinable
+    @available(*, noasync)
+    public func makeCompletedFuture<Success>(_ result: Result<Success, Error>) -> EventLoopFuture<Success> {
+        let promise = self._wrapped.makePromise(of: Success.self)
+        promise.assumeIsolatedUnsafeUnchecked().completeWith(result)
+        return promise.futureResult
+    }
+
+    /// Creates and returns a new `EventLoopFuture` that is marked as succeeded or failed with the
+    /// value returned by `body`.
+    ///
+    /// - Parameters:
+    ///   - body: The function that is used to complete the `EventLoopFuture`
+    /// - Returns: A completed `EventLoopFuture`.
+    @inlinable
+    @available(*, noasync)
+    public func makeCompletedFuture<Success>(
+        withResultOf body: () throws -> Success
+    ) -> EventLoopFuture<Success> {
+        self.makeCompletedFuture(Result(catching: body))
+    }
+
     /// Returns the wrapped event loop.
     @inlinable
     public func nonisolated() -> any EventLoop {
