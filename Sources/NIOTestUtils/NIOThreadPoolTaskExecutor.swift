@@ -75,12 +75,14 @@ public final class NIOThreadPoolTaskExecutor: TaskExecutor {
     ///
     /// - Parameters:
     ///   - numberOfThreads: The number of threads to use for the thread pool.
-    public init(numberOfThreads: Int) {
+    @usableFromInline
+    init(numberOfThreads: Int) {
         self.nioThreadPool = NIOThreadPool(numberOfThreads: numberOfThreads)
     }
 
     /// Start the `NIOThreadPoolTaskExecutor`.
-    public func start() {
+    @usableFromInline
+    func start() {
         nioThreadPool.start()
     }
 
@@ -89,7 +91,8 @@ public final class NIOThreadPoolTaskExecutor: TaskExecutor {
     /// Make sure that all tasks running on the executor are finished before shutting down.
     ///
     /// - warning: If any task is still running on the executor, this results in a fatalError.
-    public func shutdownGracefully() async {
+    @usableFromInline
+    func shutdownGracefully() async {
         do {
             try await nioThreadPool.shutdownGracefully()
         } catch {
