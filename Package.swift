@@ -441,6 +441,7 @@ let package = Package(
                 "NIOCore",
                 "NIOEmbedded",
                 "NIOFoundationCompat",
+                "NIOTestUtils",
                 swiftAtomics,
             ],
             swiftSettings: strictConcurrencySettings
@@ -520,6 +521,7 @@ let package = Package(
             dependencies: [
                 "NIOTestUtils",
                 "NIOCore",
+                "NIOConcurrencyHelpers",
                 "NIOEmbedded",
                 "NIOPosix",
             ]
