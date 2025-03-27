@@ -67,7 +67,7 @@ extension UInt64 {
         }
     }
 }
-#elseif arch(arm) || arch(i386) || arch(arm64_32)
+#elseif arch(arm) || arch(i386) || arch(arm64_32) || arch(wasm32)
 // 32 bit architectures
 // Note: for testing purposes you can also use these defines for 64 bit platforms, they'll just consume twice as
 // much space, nothing else will go bad.
