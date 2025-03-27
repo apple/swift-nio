@@ -323,7 +323,9 @@ class NonBlockingFileIOTest: XCTestCase {
             { (filehandle, path) -> Void in
                 let content = try self.fileIO.read(
                     fileHandle: filehandle,
-                    byteCount: Int(Int32.max) + 10,
+                    // There's a runtime check above, use overflow addition to stop the compilation
+                    // from failing on 32-bit platforms.
+                    byteCount: Int(Int32.max) &+ 10,
                     allocator: .init(),
                     eventLoop: self.eventLoop
                 ).wait()
@@ -1404,7 +1406,9 @@ extension NonBlockingFileIOTest {
             { (filehandle, path) -> Void in
                 let content = try await self.fileIO.read(
                     fileHandle: filehandle,
-                    byteCount: Int(Int32.max) + 10,
+                    // There's a runtime check above, use overflow addition to stop the compilation
+                    // from failing on 32-bit platforms.
+                    byteCount: Int(Int32.max) &+ 10,
                     allocator: .init()
                 )
                 XCTAssertEqual(String(buffer: content), "some-dummy-content")
