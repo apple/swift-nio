@@ -3831,4 +3831,66 @@ extension ByteBufferTest {
 
         XCTAssertEqual(buffer.description, buffer.debugDescription)
     }
+
+    // Test that peekInteger correctly reads a UInt8.
+    func testPeekIntegerUInt8() {
+        var buffer: ByteBuffer = ByteBuffer()
+        let value: UInt8 = 0xAB
+        _ = buffer.writeInteger(value)
+
+        // Use peekInteger to get the value at readerIndex.
+        guard let peeked: UInt8 = buffer.peekInteger(as: UInt8.self) else {
+            XCTFail("peekInteger failed to return a value")
+            return
+        }
+        XCTAssertEqual(peeked, value)
+        XCTAssertEqual(buffer.readerIndex, 0)
+    }
+
+    // Test that peekInteger correctly reads a UInt16.
+    func testPeekIntegerUInt16() {
+        var buffer: ByteBuffer = ByteBuffer()
+        let value: UInt16 = 0xABCD
+        _ = buffer.writeInteger(value)
+
+        guard let peeked: UInt16 = buffer.peekInteger(as: UInt16.self) else {
+            XCTFail("peekInteger failed to return a value")
+            return
+        }
+        XCTAssertEqual(peeked, value)
+        XCTAssertEqual(buffer.readerIndex, 0)
+    }
+
+    // Test that peekInteger returns nil when there are not enough bytes for a UInt32.
+    func testPeekIntegerNotEnoughBytes() {
+        let buffer: ByteBuffer = ByteBuffer()
+        // Do not write any bytes, so there are not enough bytes for a UInt32.
+        let peeked: UInt32? = buffer.peekInteger(as: UInt32.self)
+        XCTAssertNil(peeked, "Expected nil when there are not enough bytes")
+    }
+
+    // Test that after writing multiple values, peekInteger always returns the first integer.
+    func testPeekIntegerAfterMultipleWrites() {
+        var buffer: ByteBuffer = ByteBuffer()
+        let first: UInt8 = 0x12
+        let second: UInt8 = 0x34
+        _ = buffer.writeInteger(first)
+        _ = buffer.writeInteger(second)
+
+        // First peek to check the first integer.
+        guard let peeked1: UInt8 = buffer.peekInteger(as: UInt8.self) else {
+            XCTFail("peekInteger failed to return a value on first call")
+            return
+        }
+        XCTAssertEqual(peeked1, first)
+        XCTAssertEqual(buffer.readerIndex, 0)
+
+        // Second peek should return the same value, confirming readerIndex is unchanged.
+        guard let peeked2: UInt8 = buffer.peekInteger(as: UInt8.self) else {
+            XCTFail("peekInteger failed to return a value on second call")
+            return
+        }
+        XCTAssertEqual(peeked2, first)
+        XCTAssertEqual(buffer.readerIndex, 0)
+    }
 }
