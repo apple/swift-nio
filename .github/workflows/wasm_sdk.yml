@@ -8,11 +8,24 @@ on:
 
 jobs:
   wasm-sdk:
-    name: WebAssembly Swift SDK
-    uses: swiftlang/github-workflows/.github/workflows/swift_package_test.yml@main
+    name: WebAssembly SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
-      enable_wasm_sdk_build: true
-      enable_linux_checks: false
-      enable_windows_checks: false
-      swift_flags: --target NIOCore
-      swift_nightly_flags: --target NIOCore
+      name: "WebAssembly SDK"
+      matrix_string: >-
+        {
+          "config":[
+            {
+              "name":"main Jammy",
+              "swift_version":"main",
+              "platform":"Linux",
+              "runner":"ubuntu-latest",
+              "image":"ubuntu:jammy",
+              "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_sdk.sh | INSTALL_SWIFT_BRANCH=main INSTALL_SWIFT_ARCH=x86_64 INSTALL_SWIFT_SDK=wasm-sdk bash && hash -r",
+              "command":"curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/swift-build-with-wasm-sdk.sh | bash -s --",
+              "command_arguments":"--target NIOCore",
+              "env":'{}'
+            }
+          ]
+        }
