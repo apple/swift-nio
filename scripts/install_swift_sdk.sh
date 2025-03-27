@@ -20,10 +20,11 @@ error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
 # Parameter environment variables
-branch="${INSTALL_SWIFT_STATIC_SDK_BRANCH:=""}"
-version="${INSTALL_SWIFT_STATIC_SDK_VERSION:=""}"
-arch="${INSTALL_SWIFT_STATIC_SDK_ARCH:="aarch64"}"
-os_image="${INSTALL_SWIFT_STATIC_SDK_OS_IMAGE:="ubuntu22.04"}"
+branch="${INSTALL_SWIFT_BRANCH:=""}"
+version="${INSTALL_SWIFT_VERSION:=""}"
+arch="${INSTALL_SWIFT_ARCH:="aarch64"}"
+os_image="${INSTALL_SWIFT_OS_IMAGE:="ubuntu22.04"}"
+sdk="${INSTALL_SWIFT_SDK:="static-sdk"}"
 
 if [[ ! ( -n "$branch" && -z "$version" ) && ! ( -z "$branch" && -n "$version") ]]; then
   fatal "Exactly one of build or version must be defined."
@@ -43,6 +44,20 @@ case "$arch" in
     fatal "Unexpected architecture: $arch" ;;
 esac
 
+case "$sdk" in
+  "static-sdk")
+    sdk_dir="static-sdk"
+    sdk_suffix="_static-linux-0.0.1"
+    ;;
+  "wasm-sdk")
+    sdk_dir="wasm-sdk"
+    sdk_suffix="_wasm"
+    ;;
+  *)
+    fatal "Unexpected SDK: $sdk"
+    ;;
+esac
+
 os_image_sanitized="${os_image//./}"
 
 if [[ -n "$branch" ]]; then
@@ -54,24 +69,24 @@ if [[ -n "$branch" ]]; then
 
   for snapshot in $snapshots; do
     snapshot_url="https://download.swift.org/development/${os_image_sanitized}${arch_suffix}/${snapshot}/${snapshot}-${os_image}${arch_suffix}.tar.gz"
-    static_sdk_url="https://download.swift.org/development/static-sdk/${snapshot}/${snapshot}_static-linux-0.0.1.artifactbundle.tar.gz"
-    
+    sdk_url="https://download.swift.org/development/${sdk_dir}/${snapshot}/${snapshot}${sdk_suffix}.artifactbundle.tar.gz"
+
     # check that the files exist
     "$CURL_BIN" -sILXGET --fail "$snapshot_url" > /dev/null; snapshot_return_code=$?
-    "$CURL_BIN" -sILXGET --fail "$static_sdk_url" > /dev/null; static_sdk_return_code=$?
-    
-    if [[ ("$snapshot_return_code" -eq 0) && ("$static_sdk_return_code" -eq 0) ]]; then
+    "$CURL_BIN" -sILXGET --fail "$sdk_url" > /dev/null; sdk_return_code=$?
+
+    if [[ ("$snapshot_return_code" -eq 0) && ("$sdk_return_code" -eq 0) ]]; then
       log "Discovered branch snapshot: $snapshot"
       break
     else
-      log "Snapshot unavailable: $snapshot (Snapshot return code: $snapshot_return_code, Static SDK return code: $static_sdk_return_code)"
+      log "Snapshot unavailable: $snapshot (Snapshot return code: $snapshot_return_code, Swift SDK return code: $sdk_return_code)"
       snapshot=""
     fi
   done
   if [[ -z "$snapshot" ]]; then
     fatal "Failed to discover usable Swift snapshot"
   fi
-  
+
 elif [[ -n "$version" ]]; then
   if [[ "$version" == "latest" ]]; then
     log "Discovering latest version"
@@ -83,7 +98,7 @@ elif [[ -n "$version" ]]; then
   fi
 
   snapshot_url="https://download.swift.org/swift-${version}-release/${os_image_sanitized}${arch_suffix}/swift-${version}-RELEASE/swift-${version}-RELEASE-${os_image}${arch_suffix}.tar.gz"
-  static_sdk_url="https://download.swift.org/swift-${version}-release/static-sdk/swift-${version}-RELEASE/swift-${version}-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz"
+  sdk_url="https://download.swift.org/swift-${version}-release/${sdk_dir}/swift-${version}-RELEASE/swift-${version}-RELEASE${sdk_suffix}.artifactbundle.tar.gz"
 fi
 
 log "Obtaining Swift toolchain"
@@ -95,10 +110,10 @@ log "Installing Swift toolchain"
 mkdir -p /tmp/snapshot
 "$TAR_BIN" xfz "$snapshot_path" --strip-components 1 -C /
 
-log "Obtaining Static SDK"
-log "Static SDK URL: $static_sdk_url"
-static_sdk_path="/tmp/$(basename "$static_sdk_url")"
-"$CURL_BIN" -sfL "$static_sdk_url" -o "$static_sdk_path" || fatal "Failed to download Static SDK"
+log "Obtaining Swift SDK"
+log "Swift SDK URL: $sdk_url"
+sdk_path="/tmp/$(basename "$sdk_url")"
+"$CURL_BIN" -sfL "$sdk_url" -o "$sdk_path" || fatal "Failed to download Swift SDK"
 
 log "Looking for swift"
 which swift || fatal "Failed to locate installed Swift"
@@ -106,5 +121,5 @@ which swift || fatal "Failed to locate installed Swift"
 log "Checking swift"
 swift --version
 
-log "Installing Static SDK"
-swift sdk install "$static_sdk_path"
+log "Installing Swift SDK"
+swift sdk install "$sdk_path"
