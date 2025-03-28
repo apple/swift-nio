@@ -421,7 +421,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOFoundationCompat",
                 "NIOWebSocket",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOCrashTester",
@@ -432,7 +433,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOWebSocket",
                 "NIOFoundationCompat",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOCoreTests",
