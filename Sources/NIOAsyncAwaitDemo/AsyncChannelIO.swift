@@ -16,7 +16,7 @@ import NIOCore
 import NIOHTTP1
 
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-struct AsyncChannelIO<Request, Response> {
+struct AsyncChannelIO<Request: Sendable, Response: Sendable> {
     let channel: Channel
 
     init(_ channel: Channel) {
