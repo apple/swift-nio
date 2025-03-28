@@ -595,8 +595,17 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             switch writeResult.writeResult {
             case .couldNotWriteEverything:
                 newWriteRegistrationState = .register
-            case .writtenCompletely:
+            case .writtenCompletely(let closeState):
                 newWriteRegistrationState = .unregister
+                switch closeState {
+                case .open, .pending:
+                    ()
+                case .readyForClose(let eventLoopPromise):
+                    // TODO: it doesn't seem right that I have to pass an error in here)
+                    self.close0(error: ChannelError.outputClosed, mode: .output, promise: eventLoopPromise)
+                case .closed:
+                    ()  // we can be flushed before becoming active
+                }
             }
 
             if !self.isOpen || !self.hasFlushedPendingWrites() {
