@@ -401,6 +401,17 @@ extension ByteBuffer {
         self._moveReaderIndex(forwardBy: length)
         return result
     }
+
+    /// Return a DispatchData object containing the bytes at the current reader index.
+    ///
+    /// This is equivalent to calling `getDispatchData(at: readerIndex, length: ...)` and does not advance the reader index.
+    ///
+    /// - Parameter length: The number of bytes to be retrieved.
+    /// - Returns: A DispatchData object, or `nil` if the requested bytes are not readable.
+    @inlinable
+    public func peekDispatchData(length: Int) -> DispatchData? {
+        self.getDispatchData(at: self.readerIndex, length: length)
+    }
     #endif
 
     // MARK: Other APIs

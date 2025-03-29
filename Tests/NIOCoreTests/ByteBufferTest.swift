@@ -4095,4 +4095,51 @@ extension ByteBufferTest {
         XCTAssertEqual(buffer.readerIndex, 0, "peekUTF8ValidatedString() should not advance the reader index.")
     }
     #endif
+
+    // MARK: - peekDispatchData Tests (available when Dispatch is imported)
+
+    #if canImport(Dispatch)
+    func testPeekDispatchData_Normal() {
+        var buffer = ByteBuffer()
+        let testBytes: [UInt8] = [65, 66, 67, 68]
+        let written = buffer.writeBytes(testBytes)
+        XCTAssertEqual(written, testBytes.count, "All bytes should be written to the buffer.")
+
+        guard let peekedData = buffer.peekDispatchData(length: testBytes.count) else {
+            XCTFail("peekDispatchData() should return DispatchData on normal call.")
+            return
+        }
+        var result = [UInt8](repeating: 0, count: testBytes.count)
+        peekedData.copyBytes(to: &result, count: testBytes.count)
+        XCTAssertEqual(result, testBytes, "peekDispatchData() should return the correct data.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekDispatchData() should not change the reader index.")
+    }
+
+    func testPeekDispatchData_Empty() {
+        let buffer = ByteBuffer()
+        let peekedData = buffer.peekDispatchData(length: 5)
+        XCTAssertNil(peekedData, "peekDispatchData() should return nil when the buffer is empty.")
+    }
+
+    func testPeekDispatchData_Repeated() {
+        var buffer = ByteBuffer()
+        let testBytes: [UInt8] = [100, 101, 102]
+        _ = buffer.writeBytes(testBytes)
+
+        guard let firstPeek = buffer.peekDispatchData(length: testBytes.count) else {
+            XCTFail("First call to peekDispatchData() failed.")
+            return
+        }
+        guard let secondPeek = buffer.peekDispatchData(length: testBytes.count) else {
+            XCTFail("Second call to peekDispatchData() failed.")
+            return
+        }
+        var firstResult = [UInt8](repeating: 0, count: testBytes.count)
+        var secondResult = [UInt8](repeating: 0, count: testBytes.count)
+        firstPeek.copyBytes(to: &firstResult, count: testBytes.count)
+        secondPeek.copyBytes(to: &secondResult, count: testBytes.count)
+        XCTAssertEqual(firstResult, secondResult, "Repeated peekDispatchData() calls should return the same data.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekDispatchData() should not advance the reader index.")
+    }
+    #endif
 }
