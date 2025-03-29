@@ -3893,4 +3893,65 @@ extension ByteBufferTest {
         XCTAssertEqual(peeked2, first)
         XCTAssertEqual(buffer.readerIndex, 0)
     }
+
+    func testPeekBytesFull() {
+        var buffer: ByteBuffer = ByteBuffer()
+        let bytes: [UInt8] = [10, 20, 30, 40, 50]
+
+        let written = buffer.writeBytes(bytes)
+        XCTAssertEqual(written, bytes.count)
+
+        guard let peeked = buffer.peekBytes(length: bytes.count) else {
+            XCTFail("peekBytes should return the bytes that were written")
+            return
+        }
+
+        // Verify the peeked bytes match what was written.
+        XCTAssertEqual(peeked, bytes)
+        XCTAssertEqual(buffer.readerIndex, 0)
+    }
+
+    func testPeekBytesPartial() {
+        var buffer: ByteBuffer = ByteBuffer()
+        let bytes: [UInt8] = [1, 2, 3, 4, 5, 6]
+
+        _ = buffer.writeBytes(bytes)
+
+        // Peek only the first 4 bytes.
+        guard let peeked = buffer.peekBytes(length: 4) else {
+            XCTFail("peekBytes should return the first 4 bytes")
+            return
+        }
+
+        XCTAssertEqual(peeked, [1, 2, 3, 4])
+        XCTAssertEqual(buffer.readerIndex, 0)
+    }
+
+    func testPeekBytesWhenBufferEmpty() {
+        let buffer: ByteBuffer = ByteBuffer()
+
+        // With an empty buffer, peeking any number of bytes should return nil.
+        let peeked = buffer.peekBytes(length: 5)
+        XCTAssertNil(peeked, "peekBytes should return nil when there are no bytes available")
+    }
+
+    func testPeekBytesDoesNotAdvanceReaderIndex() {
+        var buffer: ByteBuffer = ByteBuffer()
+        let bytes: [UInt8] = [100, 101, 102]
+
+        _ = buffer.writeBytes(bytes)
+
+        guard let firstPeek = buffer.peekBytes(length: bytes.count) else {
+            XCTFail("peekBytes failed on first call")
+            return
+        }
+        XCTAssertEqual(firstPeek, bytes)
+
+        guard let secondPeek = buffer.peekBytes(length: bytes.count) else {
+            XCTFail("peekBytes failed on second call")
+            return
+        }
+        XCTAssertEqual(secondPeek, bytes)
+        XCTAssertEqual(buffer.readerIndex, 0)
+    }
 }

@@ -58,6 +58,18 @@ extension ByteBuffer {
         return result
     }
 
+    /// Returns the Bytes at the current reader index without advancing it.
+    ///
+    /// This method is equivalent to calling `getBytes(at: readerIndex, ...)`
+    ///
+    /// - Parameters:
+    ///   - length: The number of bytes of interest.
+    /// - Returns: A `[UInt8]` value containing the bytes of interest or `nil` if the bytes `ByteBuffer` are not readable.
+    @inlinable
+    public func peekBytes(length: Int) -> [UInt8]? {
+        self.getBytes(at: self.readerIndex, length: length)
+    }
+
     // MARK: StaticString APIs
 
     /// Write the static `string` into this `ByteBuffer` using UTF-8 encoding, moving the writer index forward appropriately.
