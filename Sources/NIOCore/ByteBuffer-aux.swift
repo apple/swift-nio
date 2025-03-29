@@ -315,6 +315,27 @@ extension ByteBuffer {
         }
     }
 
+    /// Return a String decoded from the bytes at the current reader index using UTF-8 encoding.
+    ///
+    /// This is equivalent to calling `getString(at: readerIndex, length: ...)` and does not advance the reader index.
+    ///
+    /// - Parameter length: The number of bytes making up the string.
+    /// - Returns: A String containing the decoded bytes, or `nil` if the requested bytes are not readable.
+    @inlinable
+    public func peekString(length: Int) -> String? {
+        self.getString(at: self.readerIndex, length: length)
+    }
+
+    /// Return a null-terminated String starting at the current reader index.
+    ///
+    /// This is equivalent to calling `getNullTerminatedString(at: readerIndex)` and does not advance the reader index.
+    ///
+    /// - Returns: A String decoded from the null-terminated bytes, or `nil` if a complete null-terminated string is not available.
+    @inlinable
+    public func peekNullTerminatedString() -> String? {
+        self.getNullTerminatedString(at: self.readerIndex)
+    }
+
     #if canImport(Dispatch)
     // MARK: DispatchData APIs
     /// Write `dispatchData` into this `ByteBuffer`, moving the writer index forward appropriately.

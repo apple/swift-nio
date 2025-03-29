@@ -3954,4 +3954,107 @@ extension ByteBufferTest {
         XCTAssertEqual(secondPeek, bytes)
         XCTAssertEqual(buffer.readerIndex, 0)
     }
+
+    // MARK: - peekString Tests
+
+    func testPeekString_Normal() {
+        var buffer = ByteBuffer()
+        let testString = "Hello, SwiftNIO!"
+        let written = buffer.writeString(testString)
+        XCTAssertEqual(written, testString.utf8.count, "Expected correct byte count written for string.")
+
+        guard let peeked = buffer.peekString(length: written) else {
+            XCTFail("peekString() failed to return a value on normal call.")
+            return
+        }
+        XCTAssertEqual(peeked, testString, "peekString() should return the full string.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekString() should not advance the reader index.")
+    }
+
+    func testPeekString_Empty() {
+        var buffer = ByteBuffer()
+        // Write an empty string.
+        let written = buffer.writeString("")
+        XCTAssertEqual(written, 0, "Writing an empty string should result in zero bytes written.")
+
+        let peeked = buffer.peekString(length: 0)
+        XCTAssertEqual(peeked, "", "peekString() should return an empty string when no bytes are written.")
+        XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged for empty peek.")
+    }
+
+    func testPeekString_Repeated() {
+        var buffer = ByteBuffer()
+        let testString = "Repeated Peek"
+        let written = buffer.writeString(testString)
+        guard let firstPeek = buffer.peekString(length: written) else {
+            XCTFail("peekString() failed on first call.")
+            return
+        }
+        guard let secondPeek = buffer.peekString(length: written) else {
+            XCTFail("peekString() failed on second call.")
+            return
+        }
+        XCTAssertEqual(firstPeek, secondPeek, "Repeated peekString() calls should return the same string.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekString() should not change the reader index.")
+    }
+
+    func testPeekString_Partial() {
+        var buffer = ByteBuffer()
+        let testString = "PartialString"
+        let written = buffer.writeString(testString)
+        // Peek only the first half of the bytes.
+        let partialLength = written / 2
+        guard let peeked = buffer.peekString(length: partialLength) else {
+            XCTFail("peekString() failed for partial length.")
+            return
+        }
+        // Since getString does not guarantee returning a complete valid string if length is arbitrary,
+        // we simply ensure that the returned substring is a prefix of the original.
+        XCTAssertTrue(testString.hasPrefix(peeked), "The peeked string should be a prefix of the original string.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekString() should not advance the reader index.")
+    }
+
+    // MARK: - peekNullTerminatedString Tests
+
+    func testPeekNullTerminatedString_Normal() {
+        var buffer = ByteBuffer()
+        let testString = "NullTerminated"
+        let _ = buffer.writeNullTerminatedString(testString)
+        // peekNullTerminatedString should return the string without the null terminator.
+        guard let peeked = buffer.peekNullTerminatedString() else {
+            XCTFail("peekNullTerminatedString() failed on normal call.")
+            return
+        }
+        XCTAssertEqual(peeked, testString, "peekNullTerminatedString() should return the correct string.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekNullTerminatedString() should not modify the reader index.")
+    }
+
+    func testPeekNullTerminatedString_Repeated() {
+        var buffer = ByteBuffer()
+        let testString = "RepeatNull"
+        let _ = buffer.writeNullTerminatedString(testString)
+        guard let firstPeek = buffer.peekNullTerminatedString() else {
+            XCTFail("First peekNullTerminatedString() call failed.")
+            return
+        }
+        guard let secondPeek = buffer.peekNullTerminatedString() else {
+            XCTFail("Second peekNullTerminatedString() call failed.")
+            return
+        }
+        XCTAssertEqual(
+            firstPeek,
+            secondPeek,
+            "Repeated calls to peekNullTerminatedString() should yield the same result."
+        )
+        XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged on peekNullTerminatedString().")
+    }
+
+    func testPeekNullTerminatedString_Incomplete() {
+        var buffer = ByteBuffer()
+        // Write a string without a null terminator using writeString.
+        let testString = "Incomplete"
+        _ = buffer.writeString(testString)
+        let peeked = buffer.peekNullTerminatedString()
+        XCTAssertNil(peeked, "peekNullTerminatedString() should return nil if the null terminator is missing.")
+    }
 }
