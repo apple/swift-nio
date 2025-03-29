@@ -999,5 +999,18 @@ extension ByteBuffer {
         /// The length of the bytes to copy was negative.
         public static let invalidUTF8: ReadUTF8ValidationError = .init(baseError: .invalidUTF8)
     }
+
+    /// Return a UTF-8 validated String decoded from the bytes at the current reader index.
+    ///
+    /// This is equivalent to calling `getUTF8ValidatedString(at: readerIndex, length: ...)` and does not advance the reader index.
+    ///
+    /// - Parameter length: The number of bytes making up the string.
+    /// - Returns: A validated String, or `nil` if the requested bytes are not readable.
+    /// - Throws: `ReadUTF8ValidationError.invalidUTF8` if the bytes are not valid UTF8.
+    @inlinable
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public func peekUTF8ValidatedString(length: Int) throws -> String? {
+        try self.getUTF8ValidatedString(at: self.readerIndex, length: length)
+    }
 }
 #endif  // compiler(>=6)

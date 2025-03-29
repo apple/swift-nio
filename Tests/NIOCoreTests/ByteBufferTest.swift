@@ -4057,4 +4057,42 @@ extension ByteBufferTest {
         let peeked = buffer.peekNullTerminatedString()
         XCTAssertNil(peeked, "peekNullTerminatedString() should return nil if the null terminator is missing.")
     }
+
+    // MARK: - peekUTF8ValidatedString Tests (available in Swift 6+)
+
+    #if compiler(>=6)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPeekUTF8ValidatedString_Normal() throws {
+        var buffer = ByteBuffer()
+        let testString = "UTF8 Validated"
+        let written = buffer.writeString(testString)
+        let peeked = try buffer.peekUTF8ValidatedString(length: written)
+        XCTAssertEqual(peeked, testString, "peekUTF8ValidatedString() should return the correct validated string.")
+        XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged.")
+    }
+
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPeekUTF8ValidatedString_Empty() throws {
+        var buffer = ByteBuffer()
+        _ = buffer.writeString("")
+        let peeked = try buffer.peekUTF8ValidatedString(length: 0)
+        XCTAssertEqual(peeked, "", "peekUTF8ValidatedString() should return an empty string when no bytes are written.")
+        XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged for empty peek.")
+    }
+
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    func testPeekUTF8ValidatedString_Repeated() throws {
+        var buffer = ByteBuffer()
+        let testString = "Repeat UTF8"
+        let written = buffer.writeString(testString)
+        let firstPeek = try buffer.peekUTF8ValidatedString(length: written)
+        let secondPeek = try buffer.peekUTF8ValidatedString(length: written)
+        XCTAssertEqual(
+            firstPeek,
+            secondPeek,
+            "Repeated peekUTF8ValidatedString() calls should yield identical results."
+        )
+        XCTAssertEqual(buffer.readerIndex, 0, "peekUTF8ValidatedString() should not advance the reader index.")
+    }
+    #endif
 }
