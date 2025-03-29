@@ -4141,10 +4141,10 @@ extension ByteBufferTest {
         var secondResult = [UInt8](repeating: 0, count: testBytes.count)
         firstResult.withUnsafeMutableBytes { dest in
             firstPeek.copyBytes(to: dest, count: testBytes.count)
-}
+        }
         secondResult.withUnsafeMutableBytes { dest in
             secondPeek.copyBytes(to: dest, count: testBytes.count)
-}
+        }
         XCTAssertEqual(firstResult, secondResult, "Repeated peekDispatchData() calls should return the same data.")
         XCTAssertEqual(buffer.readerIndex, 0, "peekDispatchData() should not advance the reader index.")
     }
