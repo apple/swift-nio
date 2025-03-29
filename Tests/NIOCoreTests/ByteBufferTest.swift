@@ -4110,7 +4110,10 @@ extension ByteBufferTest {
             return
         }
         var result = [UInt8](repeating: 0, count: testBytes.count)
-        peekedData.copyBytes(to: &result, count: testBytes.count)
+        // peekedData.copyBytes(to: &result, count: testBytes.count)
+        result.withUnsafeMutableBytes { dest in
+            peekedData.copyBytes(to: dest, count: testBytes.count)
+        }
         XCTAssertEqual(result, testBytes, "peekDispatchData() should return the correct data.")
         XCTAssertEqual(buffer.readerIndex, 0, "peekDispatchData() should not change the reader index.")
     }
@@ -4136,8 +4139,12 @@ extension ByteBufferTest {
         }
         var firstResult = [UInt8](repeating: 0, count: testBytes.count)
         var secondResult = [UInt8](repeating: 0, count: testBytes.count)
-        firstPeek.copyBytes(to: &firstResult, count: testBytes.count)
-        secondPeek.copyBytes(to: &secondResult, count: testBytes.count)
+        firstResult.withUnsafeMutableBytes { dest in
+            firstPeek.copyBytes(to: dest, count: testBytes.count)
+}
+        secondResult.withUnsafeMutableBytes { dest in
+            secondPeek.copyBytes(to: dest, count: testBytes.count)
+}
         XCTAssertEqual(firstResult, secondResult, "Repeated peekDispatchData() calls should return the same data.")
         XCTAssertEqual(buffer.readerIndex, 0, "peekDispatchData() should not advance the reader index.")
     }
