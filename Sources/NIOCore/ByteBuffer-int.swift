@@ -113,6 +113,22 @@ extension ByteBuffer {
             self.setBytes(ptr, at: index)
         }
     }
+
+    /// Returns the integer at the current reader index without advancing it.
+    ///
+    /// This method is equivalent to calling `getInteger(at: readerIndex, ...)`
+    ///
+    /// - Parameters:
+    ///   - endianness: The endianness of the integer (defaults to big endian).
+    ///   - as: The desired `FixedWidthInteger` type (optional parameter).
+    /// - Returns: An integer value deserialized from this `ByteBuffer` or `nil` if the bytes are not readable.
+    @inlinable
+    public func peekInteger<T: FixedWidthInteger>(
+        endianness: Endianness = .big,
+        as: T.Type = T.self
+    ) -> T? {
+        self.getInteger(at: self.readerIndex, endianness: endianness, as: `as`)
+    }
 }
 
 extension FixedWidthInteger {

@@ -27,13 +27,13 @@ private func sys_sched_yield() {
 }
 #else
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #else
 #error("The concurrency atomics module was unable to identify your C library.")
 #endif

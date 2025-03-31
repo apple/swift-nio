@@ -15,17 +15,17 @@
 import Darwin
 #elseif os(Linux) || os(Android)
 #if canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #endif
 import CNIOLinux
 #elseif os(Windows)
 import WinSDK
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #else
 #error("The Socket Option provider module was unable to identify your C library.")
 #endif

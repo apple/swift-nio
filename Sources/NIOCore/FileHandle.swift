@@ -19,13 +19,13 @@ import ucrt
 #elseif canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Android)
-import Android
+@preconcurrency import Android
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 import CNIOWASI
 #else
 #error("The File Handle module was unable to identify your C library.")
@@ -67,7 +67,7 @@ extension UInt64 {
         }
     }
 }
-#elseif arch(arm) || arch(i386) || arch(arm64_32)
+#elseif arch(arm) || arch(i386) || arch(arm64_32) || arch(wasm32)
 // 32 bit architectures
 // Note: for testing purposes you can also use these defines for 64 bit platforms, they'll just consume twice as
 // much space, nothing else will go bad.

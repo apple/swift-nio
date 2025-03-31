@@ -23,11 +23,11 @@ import CNIODarwin
 internal typealias MMsgHdr = CNIODarwin_mmsghdr
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 #if canImport(Glibc)
-@_exported import Glibc
+@_exported @preconcurrency import Glibc
 #elseif canImport(Musl)
-@_exported import Musl
+@_exported @preconcurrency import Musl
 #elseif canImport(Android)
-@_exported import Android
+@_exported @preconcurrency import Android
 #endif
 import CNIOLinux
 internal typealias MMsgHdr = CNIOLinux_mmsghdr
