@@ -39,6 +39,10 @@ on:
       build_scheme:
         type: string
         description: "The build scheme used in the Xcode builds."
+      swift_test_enabled:
+        type: boolean
+        description: "Boolean to enable test execution with `swift test`. Defaults to true."
+        default: true
       macos_xcode_build_enabled:
         type: boolean
         description: "Boolean to enable the Xcode build targeting macOS. Defaults to true."
@@ -153,7 +157,11 @@ jobs:
         with:
           persist-credentials: false
           submodules: true
+      - name: Swift build
+        run: |
+          swift build --build-tests
       - name: Swift test
+        if: 'inputs.swift_test_enabled'
         run: |
           if [ -n "${{ matrix.config.test_arguments_override }}" ]; then
             swift test "${{ matrix.config.test_arguments_override }}"
