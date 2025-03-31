@@ -196,27 +196,26 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 }
                 self.unregisterForWritable()
 
-                let outboundCloseState = self.pendingWrites.close(promise)
-                switch outboundCloseState {
-                case .open:
-                    preconditionFailure("Close resulted in an open state, this should never happen")
+                let writesCloseResult = self.pendingWrites.close(promise)
+                switch writesCloseResult {
                 case .pending:
-                    ()  // nothing to do
-                case .readyForClose(let closePromise):
-                    assert(promise == closePromise)
+                    ()  // promise is stored in `pendingWrites` state for completing on later call to `closeComplete`
+                case .readyForClose:
                     // Shutdown the socket only when the pending writes are dealt with
                     do {
                         try self.shutdownSocket(mode: mode)
-                        closePromise?.succeed(())
+                        self.pendingWrites.closeComplete()
                     } catch let err {
-                        closePromise?.fail(err)
+                        self.pendingWrites.closeComplete(err)
                     }
-                    self.pendingWrites.outboundCloseState = .closed
+                    self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
                 case .closed:
-                    ()  // nothing to do
+                    promise?.succeed(())
+                case .open:
+                    promise?.fail(ChannelError.inappropriateOperationForState)
+                    assertionFailure("Close resulted in an open state, this should never happen")
                 }
 
-                self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
             case .input:
                 if self.inputShutdown {
                     promise?.fail(ChannelError._inputClosed)
@@ -240,6 +239,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 promise?.succeed(())
 
                 self.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+
             case .all:
                 if let timeout = self.connectTimeoutScheduled {
                     self.connectTimeoutScheduled = nil

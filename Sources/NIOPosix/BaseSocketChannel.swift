@@ -600,9 +600,9 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
                 switch closeState {
                 case .open, .pending:
                     ()
-                case .readyForClose(let eventLoopPromise):
+                case .readyForClose(let closePromise):
                     // TODO: it doesn't seem right that I have to pass an error in here)
-                    self.close0(error: ChannelError.outputClosed, mode: .output, promise: eventLoopPromise)
+                    self.close0(error: ChannelError.outputClosed, mode: .output, promise: closePromise)
                 case .closed:
                     ()  // we can be flushed before becoming active
                 }

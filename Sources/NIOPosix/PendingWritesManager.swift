@@ -321,7 +321,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     private(set) var isOpen = true
 
-    internal var outboundCloseState: CloseState = .open
+    private(set) var outboundCloseState: CloseState = .open
 
     /// Mark the flush checkpoint.
     func markFlushCheckpoint() {
@@ -401,8 +401,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
                 switch self.outboundCloseState {
                 case .open:
                     ()
-                case .pending(let eventLoopPromise):
-                    self.outboundCloseState = .readyForClose(eventLoopPromise)
+                case .pending(let closePromise):
+                    self.outboundCloseState = .readyForClose(closePromise)
                 case .readyForClose:
                     assertionFailure("Transitioned from readyForClose to readyForClose, shouldn't we have closed?")
                 case .closed:
@@ -410,7 +410,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
                 }
 
             case .couldNotWriteEverything:
-                ()
+                assertionFailure("Write result is .couldNotWriteEverything but we have no more writes to perform.")
             }
             result.writeResult = .writtenCompletely(self.outboundCloseState)
         }
@@ -498,39 +498,78 @@ final class PendingStreamWritesManager: PendingWritesManager {
         return self.didWrite(itemCount: result.itemCount, result: result.writeResult)
     }
 
-    /// Signal that the `Channel` is closed.
+    /// Fail all the outstanding writes.
+    func failAll(error: Error, close: Bool) {
+        if close {
+            assert(self.isOpen)
+            self.isOpen = false
+            self.state.removeAll()?.fail(error)
+            assert(self.state.isEmpty)
+            switch self.outboundCloseState {
+            case .open, .closed:
+                self.outboundCloseState = .closed
+            case .pending(let closePromise), .readyForClose(let closePromise):
+                closePromise?.fail(error)
+                self.outboundCloseState = .closed
+            }
+        }
+    }
+
+    /// Signal the intention to close. Takes a promise which MUST be completed via a call to `closeComplete`
     ///
     /// - Parameters:
     ///   - promise: Optionally an `EventLoopPromise` that will be succeeded once all outstanding writes have been dealt with
-    func close(_ promise: EventLoopPromise<Void>?) -> CloseState {
+    func close(_ promise: EventLoopPromise<Void>?) -> CloseResult {
         assert(self.isOpen)
 
         if self.isEmpty {
             switch self.outboundCloseState {
             case .open:
                 self.outboundCloseState = .readyForClose(promise)
-            case .readyForClose:
-                ()
-            case .pending, .closed:
-                preconditionFailure("close called on channel in unexpected state: \(self.outboundCloseState)")
+            case .readyForClose(var closePromise), .pending(var closePromise):
+                closePromise.setOrCascade(to: promise)
+                self.outboundCloseState = .readyForClose(closePromise)
+            case .closed:
+                promise?.succeed(())
             }
+
         } else {
-            self.outboundCloseState = .pending(promise)
+            switch self.outboundCloseState {
+            case .open:
+                self.outboundCloseState = .pending(promise)
+            case .pending(var closePromise):
+                closePromise.setOrCascade(to: promise)
+                self.outboundCloseState = .pending(closePromise)
+            case .readyForClose:
+                preconditionFailure("We are in .readyForClose state but we still have pending writes. This should never happen.")
+            case .closed:
+                preconditionFailure("We are in .closed state but we still have pending writes. This should never happen.")
+            }
+
         }
-        return self.outboundCloseState
+
+        return .init(self.outboundCloseState)
     }
 
-    /// Fail all the outstanding writes.
-    func failAll(error: Error, close: Bool) {
-        if close {
-            assert(self.isOpen)
-            self.isOpen = false
+    /// Signal that the `Channel` is closed.
+    func closeComplete(_ error: Error? = nil) {
+        assert(self.isOpen)
+        assert(self.isEmpty)
+
+        switch self.outboundCloseState {
+        case .readyForClose(let closePromise):
+            if let error {
+                closePromise?.fail(error)
+            } else {
+                closePromise?.succeed(())
+            }
+
             self.outboundCloseState = .closed
+        case .closed:
+            ()  // nothing to do
+        case .open, .pending:
+            preconditionFailure("close complete called on channel in unexpected state: \(self.outboundCloseState)")
         }
-
-        self.state.removeAll()?.fail(error)
-
-        assert(self.state.isEmpty)
     }
 
     /// Initialize with a pre-allocated array of IO vectors and storage references. We pass in these pre-allocated
@@ -550,6 +589,26 @@ internal enum CloseState {
     case pending(EventLoopPromise<Void>?)
     case readyForClose(EventLoopPromise<Void>?)
     case closed
+}
+
+internal enum CloseResult {
+    case open
+    case pending
+    case readyForClose
+    case closed
+
+    init(_ state: CloseState) {
+        switch state {
+        case .open:
+            self = .open
+        case .pending:
+            self = .pending
+        case .readyForClose:
+            self = .readyForClose
+        case .closed:
+            self = .closed
+        }
+    }
 }
 
 internal enum WriteMechanism {
