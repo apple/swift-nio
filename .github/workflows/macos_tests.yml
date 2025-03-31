@@ -15,6 +15,10 @@ on:
         type: boolean
         description: "Boolean to enable the Xcode version 16.0 jobs. Defaults to true."
         default: true
+      xcode_16_0_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the macOS 5.10 Swift version matrix job."
+        default: ""
       xcode_16_0_test_arguments_override:
         type: string
         description: "The arguments passed to swift test in the macOS 5.10 Swift version matrix job."
@@ -23,6 +27,10 @@ on:
         type: boolean
         description: "Boolean to enable the Xcode version 16.1 jobs. Defaults to true."
         default: true
+      xcode_16_1_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the Xcode version 16.1 job."
+        default: ""
       xcode_16_1_test_arguments_override:
         type: string
         description: "The arguments passed to swift test in the Xcode version 16.1 job."
@@ -31,6 +39,10 @@ on:
         type: boolean
         description: "Boolean to enable the Xcode version 16.1 jobs. Defaults to true."
         default: true
+      xcode_16_2_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the Xcode version 16.2 job."
+        default: ""
       xcode_16_2_test_arguments_override:
         type: string
         description: "The arguments passed to swift test in the Xcode version 16.2 job."
@@ -39,6 +51,10 @@ on:
       build_scheme:
         type: string
         description: "The build scheme used in the Xcode builds."
+      swift_test_enabled:
+        type: boolean
+        description: "Boolean to enable test execution with `swift test`. Defaults to true."
+        default: true
       macos_xcode_build_enabled:
         type: boolean
         description: "Boolean to enable the Xcode build targeting macOS. Defaults to true."
@@ -96,12 +112,16 @@ jobs:
           cat >> "$GITHUB_OUTPUT" << EOM
           darwin-matrix=$(
             xcode_15_4_enabled="${MATRIX_MACOS_15_4_ENABLED:=true}"
+            xcode_15_4_build_arguments_override="${MATRIX_MACOS_15_4_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_15_4_test_arguments_override="${MATRIX_MACOS_15_4_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_0_enabled="${MATRIX_MACOS_16_0_ENABLED:=true}"
+            xcode_16_0_build_arguments_override="${MATRIX_MACOS_16_0_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_0_test_arguments_override="${MATRIX_MACOS_16_0_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_1_enabled="${MATRIX_MACOS_16_1_ENABLED:=true}"
+            xcode_16_1_build_arguments_override="${MATRIX_MACOS_16_1_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_1_test_arguments_override="${MATRIX_MACOS_16_1_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_2_enabled="${MATRIX_MACOS_16_2_ENABLED:=true}"
+            xcode_16_2_build_arguments_override="${MATRIX_MACOS_16_2_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_2_test_arguments_override="${MATRIX_MACOS_16_2_TEST_ARGUMENTS_OVERRIDE:=""}"
 
             # Create matrix from inputs
@@ -109,22 +129,22 @@ jobs:
 
             if [[ "$xcode_15_4_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
-                '.config[.config| length] |= . + { "name": "Xcode 15.4", "xcode_version": "15.4", "test_arguments_override": "${xcode_15_4_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+                '.config[.config| length] |= . + { "name": "Xcode 15.4", "xcode_version": "15.4", "build_arguments_override": "${xcode_15_4_build_arguments_override}", "test_arguments_override": "${xcode_15_4_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
             fi
 
             if [[ "$xcode_16_0_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
-                '.config[.config| length] |= . + { "name": "Xcode 16.0", "xcode_version": "16.0", "test_arguments_override": "${xcode_16_0_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+                '.config[.config| length] |= . + { "name": "Xcode 16.0", "xcode_version": "16.0", "build_arguments_override": "${xcode_16_0_build_arguments_override}", "test_arguments_override": "${xcode_16_0_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
             fi
 
             if [[ "$xcode_16_1_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
-                '.config[.config| length] |= . + { "name": "Xcode 16.1", "xcode_version": "16.1", "test_arguments_override": "${xcode_16_1_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+                '.config[.config| length] |= . + { "name": "Xcode 16.1", "xcode_version": "16.1", "build_arguments_override": "${xcode_16_1_build_arguments_override}", "test_arguments_override": "${xcode_16_1_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
             fi
 
             if [[ "$xcode_16_2_enabled" == "true" ]]; then
               matrix=$(echo "$matrix" | jq -c \
-                '.config[.config| length] |= . + { "name": "Xcode 16.2", "xcode_version": "16.2", "test_arguments_override": "${xcode_16_2_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+                '.config[.config| length] |= . + { "name": "Xcode 16.2", "xcode_version": "16.2", "build_arguments_override": "${xcode_16_2_build_arguments_override}", "test_arguments_override": "${xcode_16_2_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
             fi
 
             echo "$matrix" | jq -c
@@ -132,12 +152,16 @@ jobs:
           EOM
         env:
           MATRIX_MACOS_15_4_ENABLED: ${{ inputs.xcode_15_4_enabled }}
+          MATRIX_MACOS_15_4_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_15_4_build_arguments_override }}
           MATRIX_MACOS_15_4_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_15_4_test_arguments_override }}
           MATRIX_MACOS_16_0_ENABLED: ${{ inputs.xcode_16_0_enabled }}
+          MATRIX_MACOS_16_0_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_0_build_arguments_override }}
           MATRIX_MACOS_16_0_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_0_test_arguments_override }}
           MATRIX_MACOS_16_1_ENABLED: ${{ inputs.xcode_16_1_enabled }}
+          MATRIX_MACOS_16_1_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_1_build_arguments_override }}
           MATRIX_MACOS_16_1_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_1_test_arguments_override }}
           MATRIX_MACOS_16_2_ENABLED: ${{ inputs.xcode_16_2_enabled }}
+          MATRIX_MACOS_16_2_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_2_build_arguments_override }}
           MATRIX_MACOS_16_2_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_2_test_arguments_override }}
 
   darwin-job:
@@ -153,7 +177,15 @@ jobs:
         with:
           persist-credentials: false
           submodules: true
+      - name: Swift build
+        run: |
+          if [ -n "${{ matrix.config.build_arguments_override }}" ]; then
+            swift build "${{ matrix.config.build_arguments_override }}"
+          else
+            swift build --build-tests
+          fi
       - name: Swift test
+        if: 'inputs.swift_test_enabled'
         run: |
           if [ -n "${{ matrix.config.test_arguments_override }}" ]; then
             swift test "${{ matrix.config.test_arguments_override }}"
