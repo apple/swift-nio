@@ -541,9 +541,13 @@ final class PendingStreamWritesManager: PendingWritesManager {
                 closePromise.setOrCascade(to: promise)
                 self.outboundCloseState = .pending(closePromise)
             case .readyForClose:
-                preconditionFailure("We are in .readyForClose state but we still have pending writes. This should never happen.")
+                preconditionFailure(
+                    "We are in .readyForClose state but we still have pending writes. This should never happen."
+                )
             case .closed:
-                preconditionFailure("We are in .closed state but we still have pending writes. This should never happen.")
+                preconditionFailure(
+                    "We are in .closed state but we still have pending writes. This should never happen."
+                )
             }
 
         }
