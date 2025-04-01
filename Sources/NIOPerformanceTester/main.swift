@@ -14,6 +14,12 @@
 
 // swift-format-ignore: AmbiguousTrailingClosureOverload
 
+#if canImport(Glibc)
+@preconcurrency import Glibc
+#elseif canImport(Musl)
+@preconcurrency import Musl
+#endif
+
 import Dispatch
 import NIOCore
 import NIOEmbedded
