@@ -65,6 +65,7 @@ jobs:
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/macos_tests.yml@main
     with:
+      runner_pool: nightly
       build_scheme: swift-nio-Package
       macos_xcode_test_enabled: false  # Disabled because of an issue
       ios_xcode_test_enabled: true

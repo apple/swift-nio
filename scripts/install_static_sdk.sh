@@ -78,7 +78,7 @@ if [[ -n "$branch" ]]; then
 elif [[ -n "$version" ]]; then
   if [[ "$version" == "latest" ]]; then
     log "Discovering latest version"
-    version=$(curl -s https://www.swift.org/api/v1/install/releases.json | jq -r '.[-1].tag' | sed -E 's/swift-([0-9]+\.[0-9]+\.[0-9]+)-RELEASE/\1/')
+    version=$(curl -s https://www.swift.org/api/v1/install/releases.json | jq -r '.[-1].tag' | sed -E 's/swift-([0-9]+\.[0-9]+\.?[0-9]*)-RELEASE/\1/')
     if [[ -z "$version" ]]; then
       fatal "Failed to discover latest Swift version"
     fi
