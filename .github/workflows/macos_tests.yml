@@ -96,6 +96,11 @@ on:
         description: "Boolean to enable the Xcode test targeting visionOS. Defaults to false."
         default: false
 
+      runner_pool:
+        type: string
+        description: "The runner pool which will be requested."
+        default: "nightly"
+
 jobs:
   construct-matrix:
     name: Construct Darwin matrix
@@ -111,6 +116,7 @@ jobs:
         run: |
           cat >> "$GITHUB_OUTPUT" << EOM
           darwin-matrix=$(
+            runner_pool="${MATRIX_RUNNER_POOL:="nightly"}"
             xcode_15_4_enabled="${MATRIX_MACOS_15_4_ENABLED:=true}"
             xcode_15_4_build_arguments_override="${MATRIX_MACOS_15_4_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_15_4_test_arguments_override="${MATRIX_MACOS_15_4_TEST_ARGUMENTS_OVERRIDE:=""}"
@@ -128,29 +134,42 @@ jobs:
             matrix='{"config": []}'
 
             if [[ "$xcode_15_4_enabled" == "true" ]]; then
-              matrix=$(echo "$matrix" | jq -c \
-                '.config[.config| length] |= . + { "name": "Xcode 15.4", "xcode_version": "15.4", "build_arguments_override": "${xcode_15_4_build_arguments_override}", "test_arguments_override": "${xcode_15_4_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+                matrix=$(echo "$matrix" | jq -c \
+                --arg build_arguments_override "$xcode_15_4_build_arguments_override"  \
+                --arg test_arguments_override "$xcode_15_4_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                '.config[.config| length] |= . + { "name": "Xcode 15.4", "xcode_version": "15.4", "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
             fi
 
             if [[ "$xcode_16_0_enabled" == "true" ]]; then
-              matrix=$(echo "$matrix" | jq -c \
-                '.config[.config| length] |= . + { "name": "Xcode 16.0", "xcode_version": "16.0", "build_arguments_override": "${xcode_16_0_build_arguments_override}", "test_arguments_override": "${xcode_16_0_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+                matrix=$(echo "$matrix" | jq -c \
+                --arg build_arguments_override "$xcode_16_0_build_arguments_override"  \
+                --arg test_arguments_override "$xcode_16_0_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                '.config[.config| length] |= . + { "name": "Xcode 16.0", "xcode_version": "16.0", "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
             fi
 
             if [[ "$xcode_16_1_enabled" == "true" ]]; then
-              matrix=$(echo "$matrix" | jq -c \
-                '.config[.config| length] |= . + { "name": "Xcode 16.1", "xcode_version": "16.1", "build_arguments_override": "${xcode_16_1_build_arguments_override}", "test_arguments_override": "${xcode_16_1_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+                matrix=$(echo "$matrix" | jq -c \
+                --arg build_arguments_override "$xcode_16_1_build_arguments_override"  \
+                --arg test_arguments_override "$xcode_16_1_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                '.config[.config| length] |= . + { "name": "Xcode 16.1", "xcode_version": "16.1", "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
             fi
 
             if [[ "$xcode_16_2_enabled" == "true" ]]; then
-              matrix=$(echo "$matrix" | jq -c \
-                '.config[.config| length] |= . + { "name": "Xcode 16.2", "xcode_version": "16.2", "build_arguments_override": "${xcode_16_2_build_arguments_override}", "test_arguments_override": "${xcode_16_2_test_arguments_override}", "os": "sequoia", "arch": "ARM64"}')
+                matrix=$(echo "$matrix" | jq -c \
+                --arg build_arguments_override "$xcode_16_2_build_arguments_override"  \
+                --arg test_arguments_override "$xcode_16_2_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                '.config[.config| length] |= . + { "name": "Xcode 16.2", "xcode_version": "16.2", "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
             fi
 
             echo "$matrix" | jq -c
           )"
           EOM
         env:
+          MATRIX_RUNNER_POOL: ${{ inputs.runner_pool }}
           MATRIX_MACOS_15_4_ENABLED: ${{ inputs.xcode_15_4_enabled }}
           MATRIX_MACOS_15_4_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_15_4_build_arguments_override }}
           MATRIX_MACOS_15_4_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_15_4_test_arguments_override }}
@@ -167,7 +186,7 @@ jobs:
   darwin-job:
     name: ${{ matrix.config.name }}
     needs: construct-matrix
-    runs-on: [self-hosted, macos, "${{ matrix.config.os }}", "${{ matrix.config.arch }}"]
+    runs-on: [self-hosted, macos, "${{ matrix.config.os }}", "${{ matrix.config.arch }}", "${{ matrix.config.pool }}"]
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.construct-matrix.outputs.darwin-matrix) }}
