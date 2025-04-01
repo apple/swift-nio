@@ -58,7 +58,7 @@ extension UDPBenchmark: Benchmark {
             // zero is the same as not applying the option.
             .channelOption(.datagramVectorReadMessageCount, value: self.vectorReads)
             .channelInitializer { [data, numberOfRequests, vectorWrites] channel in
-                return channel.eventLoop.makeCompletedFuture {
+                channel.eventLoop.makeCompletedFuture {
                     let handler = EchoHandlerClient(
                         eventLoop: channel.eventLoop,
                         config: .init(
@@ -74,7 +74,8 @@ extension UDPBenchmark: Benchmark {
             .bind(to: address)
             .wait()
 
-        self.clientHandler = try self.client.pipeline.handler(type: EchoHandlerClient.self).map { $0.sendableView }.wait()
+        self.clientHandler = try self.client.pipeline.handler(type: EchoHandlerClient.self).map { $0.sendableView }
+            .wait()
     }
 
     func tearDown() {
@@ -235,7 +236,7 @@ extension UDPBenchmark {
         }
 
         var sendableView: SendableView {
-            return SendableView(handler: self, eventLoop: self.eventLoop)
+            SendableView(handler: self, eventLoop: self.eventLoop)
         }
 
         struct SendableView: Sendable {
