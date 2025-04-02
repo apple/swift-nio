@@ -99,21 +99,10 @@ internal enum OneWriteOperationResult {
 internal struct OverallWriteResult {
     enum WriteOutcome: Equatable {
         /// Wrote all the data that was flushed. When receiving this result, we can unsubscribe from 'writable' notification.
-        case writtenCompletely(CloseState)
+        case writtenCompletely(CloseResult)
 
         /// Could not write everything. Before attempting further writes the eventing system should send a 'writable' notification.
         case couldNotWriteEverything
-
-        static func == (lhs: Self, rhs: Self) -> Bool {
-            switch (lhs, rhs) {
-            case (.writtenCompletely, .writtenCompletely):
-                return true
-            case (.couldNotWriteEverything, .couldNotWriteEverything):
-                return true
-            default:
-                return false
-            }
-        }
     }
 
     internal var writeResult: WriteOutcome
@@ -412,7 +401,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
             case .couldNotWriteEverything:
                 assertionFailure("Write result is .couldNotWriteEverything but we have no more writes to perform.")
             }
-            result.writeResult = .writtenCompletely(self.outboundCloseState)
+            result.writeResult = .writtenCompletely(.init(self.outboundCloseState))
         }
         return result
     }
@@ -503,16 +492,18 @@ final class PendingStreamWritesManager: PendingWritesManager {
         if close {
             assert(self.isOpen)
             self.isOpen = false
-            self.state.removeAll()?.fail(error)
-            assert(self.state.isEmpty)
             switch self.outboundCloseState {
             case .open, .closed:
                 self.outboundCloseState = .closed
             case .pending(let closePromise), .readyForClose(let closePromise):
-                closePromise?.fail(error)
                 self.outboundCloseState = .closed
+                closePromise?.fail(error)
             }
         }
+
+        self.state.removeAll()?.fail(error)
+
+        assert(self.state.isEmpty)
     }
 
     /// Signal the intention to close. Takes a promise which MUST be completed via a call to `closeComplete`
@@ -562,13 +553,12 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
         switch self.outboundCloseState {
         case .readyForClose(let closePromise):
+            self.outboundCloseState = .closed
             if let error {
                 closePromise?.fail(error)
             } else {
                 closePromise?.succeed(())
             }
-
-            self.outboundCloseState = .closed
         case .closed:
             ()  // nothing to do
         case .open, .pending:
@@ -652,7 +642,7 @@ extension PendingWritesManager {
             var oneResult: OneWriteOperationResult
             repeat {
                 guard self.isOpen && self.isFlushPending else {
-                    result.writeResult = .writtenCompletely(self.outboundCloseState)
+                    result.writeResult = .writtenCompletely(.init(self.outboundCloseState))
                     break writeSpinLoop
                 }
 
