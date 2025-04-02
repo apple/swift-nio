@@ -21,7 +21,7 @@ private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,
-        .cpuTotal
+        .cpuTotal,
         .contextSwitches
     ]
 
@@ -53,7 +53,6 @@ let benchmarks = {
 
     // This benchmark is only available above 5.9 since our EL conformance
     // to serial executor is also gated behind 5.9.
-    #if compiler(>=5.9)
     Benchmark(
         "TCPEchoAsyncChannel using globalHook 1M times",
         configuration: .init(
@@ -77,7 +76,6 @@ let benchmarks = {
             eventLoop: eventLoop
         )
     }
-    #endif
 
     Benchmark(
         "MTELG.scheduleTask(in:_:)",
