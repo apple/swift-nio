@@ -363,7 +363,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOWebSocket",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOWebSocketClient",
@@ -373,7 +374,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOWebSocket",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOMulticastChat",
@@ -407,7 +409,8 @@ let package = Package(
                 "NIOPosix",
                 "NIOCore",
                 "NIOHTTP1",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
 
         // MARK: - Tests
