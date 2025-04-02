@@ -77,6 +77,28 @@ let benchmarks = {
         )
     }
 
+    #if compiler(>=6.0)
+    if #available(macOS 15.0, *) {
+        Benchmark(
+            "TCPEchoAsyncChannel using task executor preference 1M times",
+            configuration: .init(
+                metrics: defaultMetrics,
+                scalingFactor: .one
+                // We are expecting a bit of allocation variance due to an allocation
+                // in the Concurrency runtime which happens when resuming a continuation.
+                //                thresholds: [.mallocCountTotal: .init(absolute: [.p90: 2000])]
+            )
+        ) { benchmark in
+            try await withTaskExecutorPreference(eventLoop.taskExecutor) {
+                try await runTCPEchoAsyncChannel(
+                    numberOfWrites: 1_000_000,
+                    eventLoop: eventLoop
+                )
+            }
+        }
+    }
+    #endif
+
     Benchmark(
         "MTELG.scheduleTask(in:_:)",
         configuration: Benchmark.Configuration(
@@ -110,26 +132,4 @@ let benchmarks = {
             let handle = try! eventLoop.scheduleCallback(in: .hours(1), handler: timer)
         }
     }
-
-    #if compiler(>=6.0)
-    if #available(macOS 15.0, *) {
-        Benchmark(
-            "TCPEchoAsyncChannel using task executor preference 1M times",
-            configuration: .init(
-                metrics: defaultMetrics,
-                scalingFactor: .one
-                // We are expecting a bit of allocation variance due to an allocation
-                // in the Concurrency runtime which happens when resuming a continuation.
-//                thresholds: [.mallocCountTotal: .init(absolute: [.p90: 2000])]
-            )
-        ) { benchmark in
-            try await withTaskExecutorPreference(eventLoop.taskExecutor) {
-                try await runTCPEchoAsyncChannel(
-                    numberOfWrites: 1_000_000,
-                    eventLoop: eventLoop
-                )
-            }
-        }
-    }
-    #endif
 }
