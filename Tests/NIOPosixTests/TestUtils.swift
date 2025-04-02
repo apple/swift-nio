@@ -440,7 +440,7 @@ func assertFailure<Value>(_ result: Result<Value, Error>, file: StaticString = #
 /// Fulfills the promise when the respective event is first received.
 ///
 /// - Note: Once this is used more widely and shows value, we might want to put it into `NIOTestUtils`.
-final class FulfillOnFirstEventHandler: ChannelDuplexHandler {
+final class FulfillOnFirstEventHandler: ChannelDuplexHandler, Sendable {
     typealias InboundIn = Any
     typealias OutboundIn = Any
 
@@ -837,25 +837,24 @@ extension EventLoopFuture {
             // Easy, we're on the EventLoop. Let's just use our knowledge that we run completed future callbacks
             // immediately.
             var fulfilled = false
-            self.whenComplete { _ in
+            self.assumeIsolated().whenComplete { _ in
                 fulfilled = true
             }
             return fulfilled
         } else {
-            let lock = NIOLock()
+            let fulfilledBox = NIOLockedValueBox()
             let group = DispatchGroup()
-            var fulfilled = false  // protected by lock
 
             group.enter()
             self.eventLoop.execute {
                 let isFulfilled = self.isFulfilled  // This will now enter the above branch.
-                lock.withLock {
-                    fulfilled = isFulfilled
+                fulfilledBox.withLockedValue {
+                    $0 = isFulfilled
                 }
                 group.leave()
             }
             group.wait()  // this is very nasty but this is for tests only, so...
-            return lock.withLock { fulfilled }
+            return fulfilledBox.withLockedValue { $0 }
         }
     }
 }
