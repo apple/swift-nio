@@ -14,6 +14,9 @@
 
 // swift-format-ignore: AmbiguousTrailingClosureOverload
 
+// swift-format-ignore: OrderedImports
+// Required due to https://github.com/swiftlang/swift/issues/76842
+
 #if canImport(Glibc)
 @preconcurrency import Glibc
 #elseif canImport(Musl)
