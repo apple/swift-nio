@@ -17,7 +17,7 @@
 import NIOCore
 import NIOHTTP1
 
-public final class MakeFullRequestHandler: ChannelOutboundHandler {
+public final class MakeFullRequestHandler: ChannelOutboundHandler, Sendable {
     public typealias OutboundOut = HTTPClientRequestPart
     public typealias OutboundIn = HTTPRequestHead
 
@@ -40,7 +40,7 @@ public final class MakeFullRequestHandler: ChannelOutboundHandler {
 ///
 /// `RequestResponseHandler` requires that the `Response`s arrive on `Channel` in the same order as the `Request`s
 /// were submitted.
-public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandler {
+public final class RequestResponseHandler<Request: Sendable, Response: Sendable>: ChannelDuplexHandler {
     public typealias InboundIn = Response
     public typealias InboundOut = Never
     public typealias OutboundIn = (Request, EventLoopPromise<Response>)
@@ -129,3 +129,6 @@ public final class RequestResponseHandler<Request, Response>: ChannelDuplexHandl
         }
     }
 }
+
+@available(*, unavailable)
+extension RequestResponseHandler: Sendable {}
