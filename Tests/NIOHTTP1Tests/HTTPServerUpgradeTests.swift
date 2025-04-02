@@ -142,11 +142,11 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
     private var receiveds: [InboundIn] = []
     private let allDoneBlock: ([InboundIn]) -> Void
 
-    public init(completion: @escaping ([InboundIn]) -> Void) {
+    init(completion: @escaping ([InboundIn]) -> Void) {
         self.allDoneBlock = completion
     }
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let buffer = Self.unwrapInboundIn(data)
         self.receiveds.append(buffer)
         if let finalBytes = buffer.getBytes(at: buffer.writerIndex - 4, length: 4),
@@ -160,7 +160,7 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
 private class ExplodingHandler: ChannelInboundHandler {
     typealias InboundIn = Any
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         XCTFail("Received unexpected read")
     }
 }
@@ -212,12 +212,12 @@ private final class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader
         case KABOOM
     }
 
-    public init(forProtocol `protocol`: String, requiringHeaders: [String] = []) {
+    init(forProtocol `protocol`: String, requiringHeaders: [String] = []) {
         self.supportedProtocol = `protocol`
         self.requiredUpgradeHeaders = requiringHeaders
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -226,7 +226,7 @@ private final class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader
         return channel.eventLoop.makeFailedFuture(Explosion.KABOOM)
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
         return context.eventLoop.makeSucceededFuture(())
     }
@@ -241,15 +241,15 @@ private final class UpgraderSaysNo: TypedAndUntypedHTTPServerProtocolUpgrader, S
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String] = []
 
-    public enum No: Error {
+    enum No: Error {
         case no
     }
 
-    public init(forProtocol `protocol`: String) {
+    init(forProtocol `protocol`: String) {
         self.supportedProtocol = `protocol`
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -257,7 +257,7 @@ private final class UpgraderSaysNo: TypedAndUntypedHTTPServerProtocolUpgrader, S
         channel.eventLoop.makeFailedFuture(No.no)
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
         return context.eventLoop.makeSucceededFuture(())
     }
@@ -274,7 +274,7 @@ private final class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrade
     private let onUpgradeComplete: @Sendable (HTTPRequestHead) -> Void
     private let buildUpgradeResponseFuture: @Sendable (Channel, HTTPHeaders) -> EventLoopFuture<HTTPHeaders>
 
-    public init(
+    init(
         forProtocol `protocol`: String,
         requiringHeaders headers: [String],
         buildUpgradeResponseFuture: @escaping @Sendable (Channel, HTTPHeaders) -> EventLoopFuture<HTTPHeaders>,
@@ -286,7 +286,7 @@ private final class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrade
         self.buildUpgradeResponseFuture = buildUpgradeResponseFuture
     }
 
-    public convenience init(
+    convenience init(
         forProtocol `protocol`: String,
         requiringHeaders headers: [String],
         onUpgradeComplete: @escaping @Sendable (HTTPRequestHead) -> Void
@@ -299,7 +299,7 @@ private final class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrade
         )
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -309,7 +309,7 @@ private final class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrade
         return self.buildUpgradeResponseFuture(channel, headers)
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         self.onUpgradeComplete(upgradeRequest)
         return context.eventLoop.makeSucceededFuture(())
     }
@@ -369,7 +369,7 @@ private final class UpgradeDelayer: TypedAndUntypedHTTPServerProtocolUpgrader, S
         self.upgradeRequestedPromise = upgradeRequestedPromise
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -379,12 +379,12 @@ private final class UpgradeDelayer: TypedAndUntypedHTTPServerProtocolUpgrader, S
         return channel.eventLoop.makeSucceededFuture(headers)
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         upgradeRequestedPromise.succeed()
         return self.upgradePromise.futureResult.map { _ in }
     }
 
-    public func unblockUpgrade() {
+    func unblockUpgrade() {
         self.upgradePromise.succeed(true)
     }
 
@@ -400,7 +400,7 @@ private final class UpgradeResponseDelayer: HTTPServerProtocolUpgrader, Sendable
 
     private let buildUpgradeResponseHandler: @Sendable () -> EventLoopFuture<Void>
 
-    public init(
+    init(
         forProtocol `protocol`: String,
         buildUpgradeResponseHandler: @escaping @Sendable () -> EventLoopFuture<Void>
     ) {
@@ -408,7 +408,7 @@ private final class UpgradeResponseDelayer: HTTPServerProtocolUpgrader, Sendable
         self.buildUpgradeResponseHandler = buildUpgradeResponseHandler
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -420,13 +420,13 @@ private final class UpgradeResponseDelayer: HTTPServerProtocolUpgrader, Sendable
         }
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         context.eventLoop.makeSucceededFuture(())
     }
 }
 
 private final class UserEventSaver<EventType: Sendable>: ChannelInboundHandler, Sendable {
-    public typealias InboundIn = Any
+    typealias InboundIn = Any
 
     private let _events = NIOLockedValueBox<[EventType]>([])
 
@@ -434,7 +434,7 @@ private final class UserEventSaver<EventType: Sendable>: ChannelInboundHandler, 
         self._events.withLockedValue { $0 }
     }
 
-    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         self._events.withLockedValue { $0.append(event as! EventType) }
         context.fireUserInboundEventTriggered(event)
     }
@@ -457,17 +457,17 @@ private final class ErrorSaver: ChannelInboundHandler, Sendable {
 }
 
 private final class DataRecorder<T: Sendable>: ChannelInboundHandler, Sendable {
-    public typealias InboundIn = T
+    typealias InboundIn = T
 
     private let data = NIOLockedValueBox<[T]>([])
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let datum = Self.unwrapInboundIn(data)
         self.data.withLockedValue { $0.append(datum) }
     }
 
     // Must be called from inside the event loop on pain of death!
-    public func receivedData() -> [T] {
+    func receivedData() -> [T] {
         self.data.withLockedValue { $0 }
     }
 }
