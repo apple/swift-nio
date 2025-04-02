@@ -739,7 +739,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
                 returns: [.success(.processed(1))],
                 promiseStates: [[true, true, true]]
             )
-            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.closed), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
             XCTAssertThrowsError(try ps[1].futureResult.wait())

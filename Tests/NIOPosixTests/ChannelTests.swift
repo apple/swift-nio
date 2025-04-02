@@ -1273,7 +1273,7 @@ final class ChannelTests: XCTestCase {
             )
 
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.closed), result.writeResult)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
             XCTAssertThrowsError(try ps[1].futureResult.wait())
             XCTAssertThrowsError(try ps[2].futureResult.wait())
