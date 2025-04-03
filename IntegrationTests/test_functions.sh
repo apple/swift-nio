@@ -19,7 +19,7 @@ function fail() {
 
 function assert_equal() {
     if [[ "$1" != "$2" ]]; then
-        fail "expected '$1', got '$2' ${3-}"
+        fail "expected '$1', got '$2'${3+: }${3-}"
     fi
 }
 
@@ -33,31 +33,38 @@ function assert_equal_files() {
         echo "--- SNIP ($2, size=$(wc "$2"), SHA=$(shasum "$2")) ---"
         cat "$2"
         echo "--- SNAP ($2) ---"
-        fail "file '$1' not equal to '$2'"
+        fail "file '$1' not equal to '$2'${3+: }${3-}"
     fi
 }
 
 function assert_less_than() {
     if [[ ! "$1" -lt "$2" ]]; then
-        fail "assertion '$1' < '$2' failed"
+        fail "assertion '$1' < '$2' failed${3+: }${3-}"
     fi
 }
 
 function assert_less_than_or_equal() {
     if [[ ! "$1" -le "$2" ]]; then
-        fail "assertion '$1' <= '$2' failed"
+        fail "assertion '$1' <= '$2' failed${3+: }${3-}"
     fi
 }
 
 function assert_greater_than() {
     if [[ ! "$1" -gt "$2" ]]; then
-        fail "assertion '$1' > '$2' failed"
+        fail "assertion '$1' > '$2' failed${3+: }${3-}"
     fi
 }
 
 function assert_greater_than_or_equal() {
     if [[ ! "$1" -ge "$2" ]]; then
-        fail "assertion '$1' >= '$2' failed"
+        fail "assertion '$1' >= '$2' failed${3+: }${3-}"
+    fi
+}
+
+function assert_is_number() {
+    re='^[0-9]+$'
+    if ! [[ $1 =~ $re ]]; then
+       fail "$1 is not a number${2+: }${2-}"
     fi
 }
 
