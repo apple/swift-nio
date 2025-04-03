@@ -22,7 +22,7 @@ let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [
         .mallocCountTotal,
         .cpuTotal,
-        .contextSwitches
+        .contextSwitches,
     ]
 
     Benchmark(
@@ -84,9 +84,6 @@ let benchmarks = {
             configuration: .init(
                 metrics: defaultMetrics,
                 scalingFactor: .one
-                // We are expecting a bit of allocation variance due to an allocation
-                // in the Concurrency runtime which happens when resuming a continuation.
-                //                thresholds: [.mallocCountTotal: .init(absolute: [.p90: 2000])]
             )
         ) { benchmark in
             try await withTaskExecutorPreference(eventLoop.taskExecutor) {
