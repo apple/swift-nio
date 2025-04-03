@@ -3765,6 +3765,162 @@ extension ByteBufferTest {
         XCTAssertEqual(0, self.buf.readableBytes)
     }
 
+    func testPeekAndWriteMultipleIntegers() {
+        // This test mirrors 'testReadAndWriteMultipleIntegers' but uses peekMultipleIntegers
+        for endianness in [Endianness.little, .big] {
+            let v1: UInt8 = .random(in: .min ... .max)
+            let v2: UInt16 = .random(in: .min ... .max)
+            let v3: UInt32 = .random(in: .min ... .max)
+            let v4: UInt64 = .random(in: .min ... .max)
+            let v5: UInt64 = .random(in: .min ... .max)
+            let v6: UInt32 = .random(in: .min ... .max)
+            let v7: UInt16 = .random(in: .min ... .max)
+            let v8: UInt8 = .random(in: .min ... .max)
+            let v9: UInt16 = .random(in: .min ... .max)
+            let v10: UInt32 = .random(in: .min ... .max)
+
+            let startWriterIndex = self.buf.writerIndex
+            let written = self.buf.writeMultipleIntegers(
+                v1,
+                v2,
+                v3,
+                v4,
+                v5,
+                v6,
+                v7,
+                v8,
+                v9,
+                v10,
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self
+            )
+            XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+            XCTAssertEqual(written, self.buf.readableBytes)
+
+            // Check peek does not advance readerIndex
+            let startReadable = self.buf.readableBytes
+            let peeked = self.buf.peekMultipleIntegers(
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self
+            )
+            XCTAssertNotNil(peeked, "peekMultipleIntegers should succeed.")
+            XCTAssertEqual(startReadable, self.buf.readableBytes, "Peeking should not consume any bytes.")
+
+            XCTAssertEqual(peeked?.0, v1, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.1, v2, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.2, v3, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.3, v4, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.4, v5, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.5, v6, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.6, v7, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.7, v8, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.8, v9, "endianness: \(endianness)")
+            XCTAssertEqual(peeked?.9, v10, "endianness: \(endianness)")
+
+            let result = self.buf.readMultipleIntegers(
+                endianness: endianness,
+                as: (UInt8, UInt16, UInt32, UInt64, UInt64, UInt32, UInt16, UInt8, UInt16, UInt32).self
+            )
+            XCTAssertNotNil(result, "Expected to successfully read after peeking.")
+            XCTAssertEqual(result?.0, v1, "endianness: \(endianness)")
+            XCTAssertEqual(result?.1, v2, "endianness: \(endianness)")
+            XCTAssertEqual(result?.2, v3, "endianness: \(endianness)")
+            XCTAssertEqual(result?.3, v4, "endianness: \(endianness)")
+            XCTAssertEqual(result?.4, v5, "endianness: \(endianness)")
+            XCTAssertEqual(result?.5, v6, "endianness: \(endianness)")
+            XCTAssertEqual(result?.6, v7, "endianness: \(endianness)")
+            XCTAssertEqual(result?.7, v8, "endianness: \(endianness)")
+            XCTAssertEqual(result?.8, v9, "endianness: \(endianness)")
+            XCTAssertEqual(result?.9, v10, "endianness: \(endianness)")
+            XCTAssertEqual(0, self.buf.readableBytes)
+        }
+    }
+
+    func testAllByteBufferMultiByteVersionsPeek() {
+        // This test mirrors 'testAllByteBufferMultiByteVersions' but using peekMultipleIntegers
+        let i = UInt8(86)
+        self.buf.writeMultipleIntegers(i, i)
+        self.buf.writeMultipleIntegers(i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i, i)
+        self.buf.writeMultipleIntegers(i, i, i, i, i, i, i, i, i, i, i, i, i, i, i)
+
+        XCTAssertEqual(Array(repeating: UInt8(86), count: 119), Array(self.buf.readableBytesView))
+
+        let peek2 = self.buf.peekMultipleIntegers(as: (UInt8, UInt8).self)
+        XCTAssertNotNil(peek2, "Expected to peek 2 UInt8s.")
+        XCTAssertEqual(
+            Array(self.buf.readableBytesView),
+            Array(repeating: i, count: 119),
+            "No bytes should be consumed by peek."
+        )
+        let offset2 = MemoryLayout<UInt8>.size * 2
+        let peek3 = self.buf.getSlice(at: self.buf.readerIndex + offset2, length: 3)?.peekMultipleIntegers(
+            as: (UInt8, UInt8, UInt8).self
+        )
+        XCTAssertNotNil(peek3, "Expected to peek 3 UInt8s from the next region.")
+        var values2 = self.buf.readMultipleIntegers(as: (UInt8, UInt8).self)!
+        var values3 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8).self)!
+        var values4 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8).self)!
+        var values5 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values6 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values7 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values8 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self)!
+        var values9 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values10 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values11 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values12 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values13 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values14 = self.buf.readMultipleIntegers(
+            as: (UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8).self
+        )!
+        var values15 = self.buf.readMultipleIntegers(
+            as: (
+                UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8, UInt8
+            ).self
+        )!
+
+        let iArray2 = withUnsafeBytes(of: &values2, { Array($0) })
+        XCTAssertEqual([i, i], iArray2)
+        XCTAssertEqual([i, i, i], withUnsafeBytes(of: &values3, { Array($0) }))
+        XCTAssertEqual([i, i, i, i], withUnsafeBytes(of: &values4, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i], withUnsafeBytes(of: &values5, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i], withUnsafeBytes(of: &values6, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i], withUnsafeBytes(of: &values7, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values8, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values9, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values10, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values11, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values12, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values13, { Array($0) }))
+        XCTAssertEqual([i, i, i, i, i, i, i, i, i, i, i, i, i, i], withUnsafeBytes(of: &values14, { Array($0) }))
+        XCTAssertEqual(
+            [i, i, i, i, i, i, i, i, i, i, i, i, i, i, i],
+            withUnsafeBytes(of: &values15, { Array($0) })
+        )
+
+        XCTAssertEqual(0, self.buf.readableBytes, "Buffer should be fully consumed after all reads.")
+    }
+
     func testByteBufferEncode() throws {
         let encoder = JSONEncoder()
         let hello = "Hello, world!"
