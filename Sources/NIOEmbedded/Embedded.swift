@@ -412,7 +412,9 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     #if compiler(>=6.0)
     @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     public var taskExecutor: any TaskExecutor {
-        fatalError("EmbeddedEventLoop is not thread safe and cannot be used as a TaskExecutor. Use NIOAsyncTestingEventLoop instead.")
+        fatalError(
+            "EmbeddedEventLoop is not thread safe and cannot be used as a TaskExecutor. Use NIOAsyncTestingEventLoop instead."
+        )
     }
     #endif
 }

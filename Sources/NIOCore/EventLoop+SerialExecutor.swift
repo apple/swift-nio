@@ -97,7 +97,7 @@ extension NIODefaultEventLoopExecutor: SerialExecutor {
 /// Implementers of `EventLoop` should consider conforming to this protocol as
 /// well on Swift 6.0 and later.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-public protocol NIOTaskEventLoopExecutor: NIOSerialEventLoopExecutor & TaskExecutor { }
+public protocol NIOTaskEventLoopExecutor: NIOSerialEventLoopExecutor & TaskExecutor {}
 
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension NIOTaskEventLoopExecutor {
