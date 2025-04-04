@@ -79,7 +79,7 @@ function gen() {
     echo "    }"
     echo
 
-    #PEEK
+    # PEEK
     echo "    @inlinable"
     echo "    @_alwaysEmitIntoClient"
     echo -n "    public func peekMultipleIntegers<T1: FixedWidthInteger"

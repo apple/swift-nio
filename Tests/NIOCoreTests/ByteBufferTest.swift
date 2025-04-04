@@ -3858,6 +3858,8 @@ extension ByteBufferTest {
 
         let peek2 = self.buf.peekMultipleIntegers(as: (UInt8, UInt8).self)
         XCTAssertNotNil(peek2, "Expected to peek 2 UInt8s.")
+        XCTAssertEqual(peek2?.0, i, "First value mismatch in peek2")
+        XCTAssertEqual(peek2?.1, i, "Second value mismatch in peek2")
         XCTAssertEqual(
             Array(self.buf.readableBytesView),
             Array(repeating: i, count: 119),
@@ -3868,6 +3870,9 @@ extension ByteBufferTest {
             as: (UInt8, UInt8, UInt8).self
         )
         XCTAssertNotNil(peek3, "Expected to peek 3 UInt8s from the next region.")
+        XCTAssertEqual(peek3?.0, i, "First value mismatch in peek3")
+        XCTAssertEqual(peek3?.1, i, "Second value mismatch in peek3")
+        XCTAssertEqual(peek3?.2, i, "Third value mismatch in peek3")
         var values2 = self.buf.readMultipleIntegers(as: (UInt8, UInt8).self)!
         var values3 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8).self)!
         var values4 = self.buf.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8).self)!
