@@ -4149,4 +4149,101 @@ extension ByteBufferTest {
         XCTAssertEqual(buffer.readerIndex, 0, "peekDispatchData() should not advance the reader index.")
     }
     #endif
+
+    // MARK: - peekSlice Tests
+
+    func testPeekSlice_Normal() {
+        var buffer = ByteBuffer()
+        let bytes: [UInt8] = [0x01, 0x02, 0x03, 0x04]
+        buffer.writeBytes(bytes)
+
+        // Peek a slice of length 2.
+        guard let slice = buffer.peekSlice(length: 2) else {
+            XCTFail("Expected a valid slice.")
+            return
+        }
+        XCTAssertEqual(slice.readableBytes, 2, "Slice should contain 2 readable bytes.")
+        XCTAssertEqual(slice.getBytes(at: 0, length: 2), [0x01, 0x02])
+        XCTAssertEqual(buffer.readerIndex, 0, "peekSlice() should not advance the reader index.")
+    }
+
+    func testPeekSlice_OutOfRange() {
+        var buffer = ByteBuffer()
+        buffer.writeRepeatingByte(0xFF, count: 3)
+        // Request more bytes than available.
+        let slice = buffer.peekSlice(length: 10)
+        XCTAssertNil(slice, "Should return nil when requesting out-of-range slice.")
+    }
+
+    func testPeekSlice_Repeated() {
+        var buffer = ByteBuffer()
+        let bytes: [UInt8] = [0xAA, 0xBB, 0xCC, 0xDD]
+        buffer.writeBytes(bytes)
+
+        let firstPeek = buffer.peekSlice(length: 4)
+        let secondPeek = buffer.peekSlice(length: 4)
+        XCTAssertEqual(firstPeek?.readableBytes, 4)
+        XCTAssertEqual(secondPeek?.readableBytes, 4)
+        XCTAssertEqual(buffer.readerIndex, 0, "Repeated peekSlice() calls should not change reader index.")
+    }
+
+    // MARK: - peekData Tests
+
+    func testPeekData_Normal() {
+        var buffer = ByteBuffer()
+        let bytes: [UInt8] = [0x10, 0x20, 0x30]
+        buffer.writeBytes(bytes)
+        // Force a `.copy` strategy.
+        guard let data = buffer.peekData(length: bytes.count, byteTransferStrategy: .copy) else {
+            XCTFail("Expected non-nil Data.")
+            return
+        }
+        XCTAssertEqual(Array(data), bytes, "peekData() should return the correct bytes.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekData() should not change the reader index.")
+    }
+
+    func testPeekData_OutOfRange() {
+        var buffer = ByteBuffer()
+        buffer.writeBytes([0x01, 0x02])
+        // Request more bytes than written.
+        let data = buffer.peekData(length: 10, byteTransferStrategy: .copy)
+        XCTAssertNil(data, "Should return nil if requested length is not readable.")
+    }
+
+    func testPeekData_Repeated() {
+        var buffer = ByteBuffer()
+        let bytes: [UInt8] = [0xFF, 0x01, 0x02]
+        buffer.writeBytes(bytes)
+
+        // Repeated calls.
+        let firstPeek = buffer.peekData(length: bytes.count, byteTransferStrategy: .noCopy)
+        let secondPeek = buffer.peekData(length: bytes.count, byteTransferStrategy: .automatic)
+        XCTAssertEqual(firstPeek, secondPeek, "Repeated peeks should return the same Data.")
+        XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged.")
+    }
+
+    // MARK: - peekUUIDBytes Tests
+
+    func testPeekUUIDBytes_Normal() {
+        var buffer = ByteBuffer()
+        // Write 16 bytes that form a UUID.
+        let uuidBytes: [UInt8] = Array(repeating: 0xAB, count: 16)
+        buffer.writeBytes(uuidBytes)
+
+        guard let uuid = buffer.peekUUIDBytes() else {
+            XCTFail("Expected valid UUID bytes.")
+            return
+        }
+        // Convert the returned UUID to its 16-byte representation
+        let extracted = withUnsafeBytes(of: uuid.uuid) { Array($0) }
+        XCTAssertEqual(extracted, uuidBytes, "peekUUIDBytes() should read back the correct 16 bytes.")
+        XCTAssertEqual(buffer.readerIndex, 0, "peekUUIDBytes() should not advance the reader index.")
+    }
+
+    func testPeekUUIDBytes_NotEnoughBytes() {
+        var buffer = ByteBuffer()
+        buffer.writeBytes([0xAA, 0xBB])
+        let result = buffer.peekUUIDBytes()
+        XCTAssertNil(result, "peekUUIDBytes() should return nil when fewer than 16 bytes are readable.")
+    }
 }

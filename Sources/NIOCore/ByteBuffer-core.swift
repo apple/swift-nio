@@ -857,6 +857,21 @@ public struct ByteBuffer {
         return new
     }
 
+    /// Returns a slice of size `length` bytes, starting at the current `readerIndex`. The `ByteBuffer` this is invoked on
+    /// and the `ByteBuffer` returned will share the same underlying storage. However, the byte at `readerIndex` in this
+    /// `ByteBuffer` will correspond to index `0` in the returned `ByteBuffer`.
+    /// The `readerIndex` of the returned `ByteBuffer` will be `0`, the `writerIndex` will be `length`.
+    ///
+    /// This method is equivalent to calling `getSlice(at: readerIndex, length: length)`.
+    ///
+    /// - Parameter length: The length of the requested slice.
+    /// - Returns: A `ByteBuffer` containing the selected bytes as readable bytes or `nil` if the selected bytes were not
+    ///            readable in the initial `ByteBuffer`.
+    @inlinable
+    public func peekSlice(length: Int) -> ByteBuffer? {
+        self.getSlice(at: self.readerIndex, length: length)
+    }
+
     /// Discard the bytes before the reader index. The byte at index `readerIndex` before calling this method will be
     /// at index `0` after the call returns.
     ///
