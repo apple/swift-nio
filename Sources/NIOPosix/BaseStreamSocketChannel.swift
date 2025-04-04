@@ -194,13 +194,28 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     self.close0(error: error, mode: .all, promise: promise)
                     return
                 }
-                try self.shutdownSocket(mode: mode)
-                // Fail all pending writes and so ensure all pending promises are notified
-                self.pendingWrites.failAll(error: error, close: false)
                 self.unregisterForWritable()
-                promise?.succeed(())
 
-                self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
+                let writesCloseResult = self.pendingWrites.close(promise)
+                switch writesCloseResult {
+                case .pending:
+                    ()  // promise is stored in `pendingWrites` state for completing on later call to `closeComplete`
+                case .readyForClose:
+                    // Shutdown the socket only when the pending writes are dealt with
+                    do {
+                        try self.shutdownSocket(mode: mode)
+                        self.pendingWrites.closeComplete()
+                    } catch let err {
+                        self.pendingWrites.closeComplete(err)
+                    }
+                    self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
+                case .closed:
+                    promise?.succeed(())
+                case .open:
+                    promise?.fail(ChannelError.inappropriateOperationForState)
+                    assertionFailure("Close resulted in an open state, this should never happen")
+                }
+
             case .input:
                 if self.inputShutdown {
                     promise?.fail(ChannelError._inputClosed)
@@ -224,6 +239,7 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 promise?.succeed(())
 
                 self.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+
             case .all:
                 if let timeout = self.connectTimeoutScheduled {
                     self.connectTimeoutScheduled = nil
