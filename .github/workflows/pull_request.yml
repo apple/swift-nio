@@ -84,6 +84,7 @@ jobs:
     with:
       runner_pool: general
       build_scheme: swift-nio-Package
+      visionos_xcode_build_enabled: true
 
   static-sdk:
     name: Static SDK
