@@ -842,7 +842,7 @@ extension EventLoopFuture {
             }
             return fulfilled
         } else {
-            let fulfilledBox = NIOLockedValueBox()
+            let fulfilledBox = NIOLockedValueBox(false)
             let group = DispatchGroup()
 
             group.enter()
