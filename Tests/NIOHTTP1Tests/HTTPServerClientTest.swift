@@ -38,26 +38,29 @@ extension Array where Array.Element == ByteBuffer {
     }
 }
 
-internal class ArrayAccumulationHandler<T>: ChannelInboundHandler {
+// Must be unchecked because of inheritance.
+internal class ArrayAccumulationHandler<T>: ChannelInboundHandler, @unchecked Sendable {
     typealias InboundIn = T
-    private var receiveds: [T] = []
-    private var allDoneBlock: DispatchWorkItem! = nil
+    private let received: NIOLockedValueBox<[T]>
+    private let allDoneBlock: DispatchWorkItem
 
-    public init(completion: @escaping ([T]) -> Void) {
-        self.allDoneBlock = DispatchWorkItem { [unowned self] () -> Void in
-            completion(self.receiveds)
+    init(completion: @escaping ([T]) -> Void) {
+        let received = NIOLockedValueBox<[T]>([])
+        self.received = received
+        self.allDoneBlock = DispatchWorkItem {
+            completion(received.withLockedValue { $0 })
         }
     }
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.receiveds.append(Self.unwrapInboundIn(data))
+    final func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        self.received.withLockedValue { $0.append(Self.unwrapInboundIn(data)) }
     }
 
-    public func channelUnregistered(context: ChannelHandlerContext) {
+    final func channelUnregistered(context: ChannelHandlerContext) {
         self.allDoneBlock.perform()
     }
 
-    public func syncWaitForCompletion() {
+    final func syncWaitForCompletion() {
         self.allDoneBlock.wait()
     }
 }
@@ -124,12 +127,13 @@ class HTTPServerClientTest: XCTestCase {
                     b.writeString(replyString)
 
                     let outbound = self.outboundBody(b)
-                    context.write(Self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
+                    context.write(Self.wrapOutboundOut(outbound.body)).assumeIsolated().whenComplete {
+                        (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete { (_: Result<Void, Error>) in
+                    }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                         let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
@@ -149,13 +153,13 @@ class HTTPServerClientTest: XCTestCase {
                         let outbound = self.outboundBody(b)
                         context.write(Self.wrapOutboundOut(outbound.body)).recover { error in
                             XCTFail("unexpected error \(error)")
-                        }.whenComplete { (_: Result<Void, Error>) in
+                        }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                             outbound.destructor()
                         }
                     }
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete { (_: Result<Void, Error>) in
+                    }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                         let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
@@ -176,7 +180,7 @@ class HTTPServerClientTest: XCTestCase {
                         let outbound = self.outboundBody(b)
                         context.write(Self.wrapOutboundOut(outbound.body)).recover { error in
                             XCTFail("unexpected error \(error)")
-                        }.whenComplete { (_: Result<Void, Error>) in
+                        }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                             outbound.destructor()
                         }
                     }
@@ -186,7 +190,7 @@ class HTTPServerClientTest: XCTestCase {
                     trailers.add(name: "X-Should-Trail", value: "sure")
                     context.write(Self.wrapOutboundOut(.end(trailers))).recover { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete { (_: Result<Void, Error>) in
+                    }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                         let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
@@ -206,12 +210,12 @@ class HTTPServerClientTest: XCTestCase {
                     let outbound = self.outboundBody(buf)
                     context.writeAndFlush(Self.wrapOutboundOut(outbound.body)).recover { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete { (_: Result<Void, Error>) in
+                    }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete { (_: Result<Void, Error>) in
+                    }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                         let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
@@ -225,7 +229,7 @@ class HTTPServerClientTest: XCTestCase {
                     }
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete { (_: Result<Void, Error>) in
+                    }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                         let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
@@ -238,7 +242,7 @@ class HTTPServerClientTest: XCTestCase {
                     }
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete { (_: Result<Void, Error>) in
+                    }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                         let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
@@ -252,12 +256,13 @@ class HTTPServerClientTest: XCTestCase {
                     b.writeString(replyString)
 
                     let outbound = self.outboundBody(b)
-                    context.write(Self.wrapOutboundOut(outbound.body)).whenComplete { (_: Result<Void, Error>) in
+                    context.write(Self.wrapOutboundOut(outbound.body)).assumeIsolated().whenComplete {
+                        (_: Result<Void, Error>) in
                         outbound.destructor()
                     }
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete { (_: Result<Void, Error>) in
+                    }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                         let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
@@ -278,7 +283,7 @@ class HTTPServerClientTest: XCTestCase {
                         }
                     context.write(Self.wrapOutboundOut(.end(nil))).recover { error in
                         XCTFail("unexpected error \(error)")
-                    }.whenComplete { (_: Result<Void, Error>) in
+                    }.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
                         let context = loopBoundContext.value
                         self.sentEnd = true
                         self.maybeClose(context: context)
@@ -318,7 +323,10 @@ class HTTPServerClientTest: XCTestCase {
         try testSimpleGet(.fileRegion)
     }
 
-    private class HTTPClientResponsePartAssertHandler: ArrayAccumulationHandler<HTTPClientResponsePart> {
+    // @unchecked because of inheritance.
+    private final class HTTPClientResponsePartAssertHandler: ArrayAccumulationHandler<HTTPClientResponsePart>,
+        @unchecked Sendable
+    {
         public init(
             _ expectedVersion: HTTPVersion,
             _ expectedStatus: HTTPResponseStatus,
@@ -375,9 +383,7 @@ class HTTPServerClientTest: XCTestCase {
         }
 
         let expectedHeaders = maybeExpectedHeaders ?? HTTPHeaders([("content-length", "14"), ("connection", "close")])
-        let accumulation = HTTPClientResponsePartAssertHandler(httpVersion, .ok, expectedHeaders, "Hello World!\r\n")
 
-        let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -385,8 +391,11 @@ class HTTPServerClientTest: XCTestCase {
                 // Set the handlers that are appled to the accepted Channels
                 .childChannelInitializer { channel in
                     // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-                    channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
-                        channel.pipeline.addHandler(httpHandler)
+                    channel.eventLoop.makeCompletedFuture {
+                        let sync = channel.pipeline.syncOperations
+                        try sync.configureHTTPServerPipeline(withPipeliningAssistance: false)
+                        let httpHandler = SimpleHTTPServer(mode)
+                        try sync.addHandlers(httpHandler)
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -395,11 +404,14 @@ class HTTPServerClientTest: XCTestCase {
             XCTAssertNoThrow(try serverChannel.syncCloseAcceptingAlreadyClosed())
         }
 
+        let accumulation = HTTPClientResponsePartAssertHandler(httpVersion, .ok, expectedHeaders, "Hello World!\r\n")
         let clientChannel = try assertNoThrowWithValue(
             ClientBootstrap(group: group)
                 .channelInitializer { channel in
-                    channel.pipeline.addHTTPClientHandlers().flatMap {
-                        channel.pipeline.addHandler(accumulation)
+                    channel.eventLoop.makeCompletedFuture {
+                        let sync = channel.pipeline.syncOperations
+                        try sync.addHTTPClientHandlers()
+                        try sync.addHandler(accumulation)
                     }
                 }
                 .connect(to: serverChannel.localAddress!)
@@ -410,8 +422,7 @@ class HTTPServerClientTest: XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: httpVersion, method: .GET, uri: uri)
-        head.headers.add(name: "Host", value: "apple.com")
+        let head = HTTPRequestHead(version: httpVersion, method: .GET, uri: uri, headers: ["Host": "apple.com"])
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
@@ -445,7 +456,6 @@ class HTTPServerClientTest: XCTestCase {
 
         let accumulation = HTTPClientResponsePartAssertHandler(.http1_1, .ok, expectedHeaders, "12345678910")
 
-        let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -454,7 +464,10 @@ class HTTPServerClientTest: XCTestCase {
                 .childChannelInitializer { channel in
                     // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                     channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
-                        channel.pipeline.addHandler(httpHandler)
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(mode)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -478,8 +491,12 @@ class HTTPServerClientTest: XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/count-to-ten")
-        head.headers.add(name: "Host", value: "apple.com")
+        let head = HTTPRequestHead(
+            version: .http1_1,
+            method: .GET,
+            uri: "/count-to-ten",
+            headers: ["Host": "apple.com"]
+        )
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
@@ -511,7 +528,6 @@ class HTTPServerClientTest: XCTestCase {
 
         let accumulation = HTTPClientResponsePartAssertHandler(.http1_1, .ok, expectedHeaders, "Hello World")
 
-        let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -520,7 +536,10 @@ class HTTPServerClientTest: XCTestCase {
                 .childChannelInitializer { channel in
                     // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                     channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: true).flatMap {
-                        channel.pipeline.addHandler(httpHandler)
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(.byteBuffer)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -544,8 +563,12 @@ class HTTPServerClientTest: XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/zero-length-body-part")
-        head.headers.add(name: "Host", value: "apple.com")
+        let head = HTTPRequestHead(
+            version: .http1_1,
+            method: .GET,
+            uri: "/zero-length-body-part",
+            headers: ["Host": "apple.com"]
+        )
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
@@ -580,13 +603,15 @@ class HTTPServerClientTest: XCTestCase {
             expectedTrailers
         )
 
-        let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
                     channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
-                        channel.pipeline.addHandler(httpHandler)
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(mode)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -609,8 +634,7 @@ class HTTPServerClientTest: XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/trailers")
-        head.headers.add(name: "Host", value: "apple.com")
+        let head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/trailers", headers: ["Host": "apple.com"])
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
@@ -647,7 +671,6 @@ class HTTPServerClientTest: XCTestCase {
             XCTAssert(expectedSuffix.elementsEqual(actualSuffix))
         }
         let numBytes = 16 * 1024
-        let httpHandler = SimpleHTTPServer(mode)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
@@ -656,7 +679,10 @@ class HTTPServerClientTest: XCTestCase {
                 .childChannelInitializer { channel in
                     // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
                     channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
-                        channel.pipeline.addHandler(httpHandler)
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(mode)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -693,13 +719,15 @@ class HTTPServerClientTest: XCTestCase {
 
         let accumulation = HTTPClientResponsePartAssertHandler(.http1_1, .ok, expectedHeaders, "")
 
-        let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
                     channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
-                        channel.pipeline.addHandler(httpHandler)
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(.byteBuffer)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -722,8 +750,7 @@ class HTTPServerClientTest: XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: .http1_1, method: .HEAD, uri: "/head")
-        head.headers.add(name: "Host", value: "apple.com")
+        let head = HTTPRequestHead(version: .http1_1, method: .HEAD, uri: "/head", headers: ["Host": "apple.com"])
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
@@ -748,13 +775,15 @@ class HTTPServerClientTest: XCTestCase {
 
         let accumulation = HTTPClientResponsePartAssertHandler(.http1_1, .noContent, expectedHeaders, "")
 
-        let httpHandler = SimpleHTTPServer(.byteBuffer)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
                     channel.pipeline.configureHTTPServerPipeline(withPipeliningAssistance: false).flatMap {
-                        channel.pipeline.addHandler(httpHandler)
+                        channel.eventLoop.makeCompletedFuture {
+                            let httpHandler = SimpleHTTPServer(.byteBuffer)
+                            return try channel.pipeline.syncOperations.addHandler(httpHandler)
+                        }
                     }
                 }.bind(host: "127.0.0.1", port: 0).wait()
         )
@@ -776,8 +805,7 @@ class HTTPServerClientTest: XCTestCase {
             XCTAssertNoThrow(try clientChannel.syncCloseAcceptingAlreadyClosed())
         }
 
-        var head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/204")
-        head.headers.add(name: "Host", value: "apple.com")
+        let head = HTTPRequestHead(version: .http1_1, method: .GET, uri: "/204", headers: ["Host": "apple.com"])
         try clientChannel.eventLoop.flatSubmit {
             let promise = clientChannel.eventLoop.makePromise(of: Void.self)
             clientChannel.pipeline.syncOperations.write(NIOAny(HTTPClientRequestPart.head(head)), promise: nil)
