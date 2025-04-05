@@ -28,7 +28,7 @@ final class TCPThroughputBenchmark: Benchmark {
 
     private var group: EventLoopGroup!
     private var serverChannel: Channel!
-    private var serverHandler: ServerHandler!
+    private var serverHandler: NIOLoopBound<ServerHandler>!
     private var clientChannel: Channel!
 
     private var message: ByteBuffer!
@@ -39,10 +39,12 @@ final class TCPThroughputBenchmark: Benchmark {
         public typealias OutboundOut = ByteBuffer
 
         private let connectionEstablishedPromise: EventLoopPromise<EventLoop>
+        private let eventLoop: EventLoop
         private var context: ChannelHandlerContext!
 
-        init(_ connectionEstablishedPromise: EventLoopPromise<EventLoop>) {
+        init(_ connectionEstablishedPromise: EventLoopPromise<EventLoop>, eventLoop: EventLoop) {
             self.connectionEstablishedPromise = connectionEstablishedPromise
+            self.eventLoop = eventLoop
         }
 
         public func channelActive(context: ChannelHandlerContext) {
@@ -114,13 +116,19 @@ final class TCPThroughputBenchmark: Benchmark {
 
         let connectionEstablishedPromise: EventLoopPromise<EventLoop> = self.group.next().makePromise()
 
+        let promise = self.group.next().makePromise(of: NIOLoopBound<ServerHandler>.self)
         self.serverChannel = try ServerBootstrap(group: self.group)
             .childChannelInitializer { channel in
-                self.serverHandler = ServerHandler(connectionEstablishedPromise)
-                return channel.pipeline.addHandler(self.serverHandler)
+                channel.eventLoop.makeCompletedFuture {
+                    let serverHandler = ServerHandler(connectionEstablishedPromise, eventLoop: channel.eventLoop)
+                    promise.succeed(NIOLoopBound(serverHandler, eventLoop: channel.eventLoop))
+                    try channel.pipeline.syncOperations.addHandler(serverHandler)
+                }
             }
             .bind(host: "127.0.0.1", port: 0)
             .wait()
+
+        self.serverHandler = try promise.futureResult.wait()
 
         self.clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
@@ -165,7 +173,7 @@ final class TCPThroughputBenchmark: Benchmark {
         let messages = self.messages
 
         self.serverEventLoop.execute {
-            serverHandler.send(message, times: messages)
+            serverHandler.value.send(message, times: messages)
         }
         try isDonePromise.futureResult.wait()
         return 0

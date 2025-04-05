@@ -76,7 +76,8 @@ func main() throws {
     }
 
     func allTestsForSuite(_ testSuite: String) -> [(String, CrashTest)] {
-        crashTestSuites[testSuite].map { testSuiteObject in
+        let crashTestSuites = makeCrashTestSuites()
+        return crashTestSuites[testSuite].map { testSuiteObject in
             Mirror(reflecting: testSuiteObject)
                 .children
                 .filter { $0.label?.starts(with: "test") ?? false }
@@ -199,6 +200,7 @@ func main() throws {
 
     switch CommandLine.arguments.dropFirst().first {
     case .some("run-all"):
+        let crashTestSuites = makeCrashTestSuites()
         for testSuite in crashTestSuites {
             for test in allTestsForSuite(testSuite.key) {
                 try runAndEval(test.0, suite: testSuite.key)
