@@ -137,13 +137,9 @@ func main() throws {
     defer {
         try! group.syncShutdownGracefully()
     }
-    #if os(Android)
-    // needed because Android returns the previous signal handler function
-    // https://github.com/apple/swift-nio/issues/3180
-    _ = signal(SIGPIPE, SIG_IGN)
-    #else
-    signal(SIGPIPE, SIG_IGN)
-    #endif
+
+    // explicit return type needed due to https://github.com/apple/swift-nio/issues/3180
+    let _: ((Int32) -> Void)? = signal(SIGPIPE, SIG_IGN)
 
     func runCrashTest(_ name: String, suite: String, binary: String) throws -> InterpretedRunResult {
         guard let crashTest = findCrashTest(name, suite: suite) else {
