@@ -87,7 +87,7 @@ class HTTPTest: XCTestCase {
             try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder()))
             var bodyData: [UInt8]? = nil
             var allBodyDatas: [[UInt8]] = []
-            try channel.pipeline.addHandler(
+            try channel.pipeline.syncOperations.addHandler(
                 TestChannelInboundHandler { reqPart in
                     switch reqPart {
                     case .head(var req):
@@ -109,7 +109,7 @@ class HTTPTest: XCTestCase {
                     }
                     return reqPart
                 }
-            ).wait()
+            )
 
             var writeFutures: [EventLoopFuture<Void>] = []
             for expected in expecteds {
@@ -143,9 +143,9 @@ class HTTPTest: XCTestCase {
             body: body,
             trailers: trailers,
             sendStrategy: { (reqString, chan) in
-                var buf = chan.allocator.buffer(capacity: 1024)
-                buf.writeString(reqString)
-                return chan.eventLoop.makeSucceededFuture(()).flatMapThrowing {
+                chan.eventLoop.makeSucceededFuture(()).flatMapThrowing {
+                    var buf = chan.allocator.buffer(capacity: 1024)
+                    buf.writeString(reqString)
                     try chan.writeInbound(buf)
                 }
             }

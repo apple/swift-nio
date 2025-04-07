@@ -500,7 +500,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOFoundationCompat",
                 "NIOTestUtils",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOTLSTests",
