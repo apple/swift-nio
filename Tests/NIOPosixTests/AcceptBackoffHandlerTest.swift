@@ -56,7 +56,9 @@ final class AcceptBackoffHandlerTest: XCTestCase {
         }
 
         // Only used from EL
-        let readCountHandler = NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        let readCountHandler = try! loop.submit {
+            NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        }.wait()
         let serverChannel = try setupChannel(
             eventLoop: loop,
             readCountHandler: readCountHandler,
@@ -107,7 +109,9 @@ final class AcceptBackoffHandlerTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let readCountHandler = NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        let readCountHandler = try! loop.submit {
+            NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        }.wait()
         let serverChannel = try setupChannel(
             eventLoop: loop,
             readCountHandler: readCountHandler,
@@ -156,7 +160,9 @@ final class AcceptBackoffHandlerTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let readCountHandler = NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        let readCountHandler = try! loop.submit {
+            NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        }.wait()
         let serverChannel = try setupChannel(
             eventLoop: loop,
             readCountHandler: readCountHandler,
@@ -221,7 +227,10 @@ final class AcceptBackoffHandlerTest: XCTestCase {
             }
         }
 
-        let readCountHandler = NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        let readCountHandler = try! loop.submit {
+            NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        }.wait()
+
         let serverChannel = try setupChannel(
             eventLoop: loop,
             readCountHandler: readCountHandler,
@@ -267,7 +276,9 @@ final class AcceptBackoffHandlerTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let readCountHandler = NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        let readCountHandler = try! loop.submit {
+            NIOLoopBound(ReadCountHandler(), eventLoop: loop)
+        }.wait()
 
         let backoffProviderCalled = ManagedAtomic(0)
         let serverChannel = try setupChannel(
