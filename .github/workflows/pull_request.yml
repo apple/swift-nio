@@ -88,4 +88,4 @@ jobs:
   static-sdk:
     name: Static SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/static_sdk.yml@install_static_sdk_resiliance
+    uses: apple/swift-nio/.github/workflows/static_sdk.yml@main
