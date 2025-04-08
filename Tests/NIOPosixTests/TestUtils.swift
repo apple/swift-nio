@@ -147,7 +147,10 @@ func withTemporaryUnixDomainSocketPathName<T>(
     return try body(shortEnoughPath)
 }
 
-func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle, String) throws -> T) rethrows -> T {
+func withTemporaryFile<T>(
+    content: String? = nil,
+    _ body: (NIOCore.NIOFileHandle, String) throws -> T
+) rethrows -> T {
     let (fd, path) = openTemporaryFile()
     let fileHandle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fd)
     defer {
@@ -178,7 +181,7 @@ func withTemporaryFile<T>(content: String? = nil, _ body: (NIOCore.NIOFileHandle
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 func withTemporaryFile<T>(
     content: String? = nil,
-    _ body: @escaping @Sendable (NIOCore.NIOFileHandle, String) async throws -> T
+    _ body: @escaping (NIOCore.NIOFileHandle, String) async throws -> T
 ) async rethrows -> T {
     let (fd, path) = openTemporaryFile()
     let fileHandle = NIOFileHandle(_deprecatedTakingOwnershipOfDescriptor: fd)
