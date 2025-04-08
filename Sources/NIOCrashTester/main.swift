@@ -137,7 +137,9 @@ func main() throws {
     defer {
         try! group.syncShutdownGracefully()
     }
-    signal(SIGPIPE, SIG_IGN)
+
+    // explicit return type needed due to https://github.com/apple/swift-nio/issues/3180
+    let _: ((Int32) -> Void)? = signal(SIGPIPE, SIG_IGN)
 
     func runCrashTest(_ name: String, suite: String, binary: String) throws -> InterpretedRunResult {
         guard let crashTest = findCrashTest(name, suite: suite) else {
