@@ -12,67 +12,48 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Dispatch
-import NIOConcurrencyHelpers
 import NIOCore
 import XCTest
 
-@testable import NIOPosix
-
-final class SALEventLoopTests: XCTestCase, SALTest {
-    var group: MultiThreadedEventLoopGroup!
-    var kernelToUserBox: LockedBox<KernelToUser>!
-    var userToKernelBox: LockedBox<UserToKernel>!
-    var wakeups: LockedBox<()>!
-
-    override func setUp() {
-        self.setUpSAL()
-    }
-
-    override func tearDown() {
-        self.tearDownSAL()
-    }
-
+final class SALEventLoopTests: XCTestCase {
     func testSchedulingTaskOnSleepingLoopWakesUpOnce() throws {
-        let thisLoop = self.group.next()
+        try withSALContext { context in
+            try context.runSALOnEventLoopAndWait { thisLoop, _, _ in
+                // We're going to execute some tasks on the loop. This will force a single wakeup, as the first task will wedge the loop open.
+                // However, we're currently _on_ the loop so the first thing we have to do is give it up.
+                let promise = thisLoop.makePromise(of: Void.self)
 
-        try thisLoop.runSAL(syscallAssertions: {
-            try self.assertParkedRightNow()
+                DispatchQueue(label: "background").asyncAfter(deadline: .now() + .milliseconds(100)) {
+                    let semaphore = DispatchSemaphore(value: 0)
 
-            try self.assertWakeup()
+                    thisLoop.execute {
+                        // Wedge the loop open. This will also _wake_ the loop.
+                        XCTAssertEqual(semaphore.wait(timeout: .now() + .milliseconds(500)), .success)
+                    }
 
-            // We actually need to wait for the inner code to exit, as the optimisation we're testing here will remove a signal that the
-            // SAL is actually going to wait for in salWait().
-            try self.assertParkedRightNow()
-        }) { () -> EventLoopFuture<Void> in
-            // We're going to execute some tasks on the loop. This will force a single wakeup, as the first task will wedge the loop open.
-            // However, we're currently _on_ the loop so the first thing we have to do is give it up.
-            let promise = thisLoop.makePromise(of: Void.self)
+                    // Now execute 10 tasks.
+                    for _ in 0..<10 {
+                        thisLoop.execute {}
+                    }
 
-            DispatchQueue(label: "background").asyncAfter(deadline: .now() + .milliseconds(100)) {
-                let semaphore = DispatchSemaphore(value: 0)
+                    // Now enqueue a "last" task.
+                    thisLoop.execute {
+                        promise.succeed(())
+                    }
 
-                thisLoop.execute {
-                    // Wedge the loop open. This will also _wake_ the loop.
-                    XCTAssertEqual(semaphore.wait(timeout: .now() + .milliseconds(500)), .success)
-                    print("Unblocking wedged task")
+                    // Now we can unblock the semaphore.
+                    semaphore.signal()
                 }
 
-                // Now execute 10 tasks.
-                for _ in 0..<10 {
-                    thisLoop.execute {}
-                }
+                return promise.futureResult
+            } syscallAssertions: { assertions in
+                try assertions.assertParkedRightNow()
+                try assertions.assertWakeup()
 
-                // Now enqueue a "last" task.
-                thisLoop.execute {
-                    promise.succeed(())
-                }
-
-                // Now we can unblock the semaphore.
-                semaphore.signal()
+                // We actually need to wait for the inner code to exit, as the optimisation we're testing here will remove a signal that the
+                // SAL is actually going to wait for in salWait().
+                try assertions.assertParkedRightNow()
             }
-
-            return promise.futureResult
-        }.salWait()
+        }
     }
 }
