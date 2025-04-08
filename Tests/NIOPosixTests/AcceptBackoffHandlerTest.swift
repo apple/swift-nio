@@ -21,6 +21,10 @@ import XCTest
 @testable import NIOPosix
 
 final class AcceptBackoffHandlerTest: XCTestCase {
+    @Sendable
+    static func defaultBackoffProvider(error: IOError) -> TimeAmount? {
+        AcceptBackoffHandler.defaultBackoffProvider(error: error)
+    }
 
     private let acceptHandlerName = "AcceptBackoffHandler"
 
@@ -339,7 +343,7 @@ final class AcceptBackoffHandlerTest: XCTestCase {
     private func setupChannel(
         eventLoop: SelectableEventLoop,
         readCountHandler: NIOLoopBound<ReadCountHandler>,
-        backoffProvider: @escaping @Sendable (IOError) -> TimeAmount? = AcceptBackoffHandler.defaultBackoffProvider,
+        backoffProvider: @escaping @Sendable (IOError) -> TimeAmount? = AcceptBackoffHandlerTest.defaultBackoffProvider,
         errors: [Int32]
     ) throws -> ServerSocketChannel {
         let socket = try NonAcceptingServerSocket(errors: errors)
