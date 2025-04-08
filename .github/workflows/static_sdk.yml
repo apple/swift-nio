@@ -19,7 +19,7 @@ jobs:
               "platform":"Linux",
               "runner":"ubuntu-latest",
               "image":"ubuntu:jammy",
-              "setup_command":"apt-get update -y -q && apt-get install -y -q curl && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_VERSION=latest INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
+              "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_VERSION=latest INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
               "command":"swift build",
               "command_arguments":"--swift-sdk x86_64-swift-linux-musl"
             },
@@ -29,7 +29,7 @@ jobs:
               "platform":"Linux",
               "runner":"ubuntu-latest",
               "image":"ubuntu:jammy",
-              "setup_command":"apt-get update -y -q && apt-get install -y -q curl && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_BRANCH=main INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
+              "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_BRANCH=main INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
               "command":"swift build",
               "command_arguments":"--swift-sdk x86_64-swift-linux-musl"
             }

@@ -20,41 +20,66 @@ import XCTest
 @testable import NIOPosix
 
 class BootstrapTest: XCTestCase {
-    var group: MultiThreadedEventLoopGroup!
-    var groupBag: [MultiThreadedEventLoopGroup]? = nil  // protected by `self.lock`
-    let lock = NIOLock()
+    var group: MultiThreadedEventLoopGroup {
+        self.state.withLockedValue {
+            $0.group!
+        }
+    }
+
+    var groupBag: [MultiThreadedEventLoopGroup]? {
+        self.state.withLockedValue {
+            $0.groupBag
+        }
+    }
+
+    struct State {
+        var group: MultiThreadedEventLoopGroup?
+        var groupBag: [MultiThreadedEventLoopGroup]?
+
+        init() {
+            self.group = nil
+            self.groupBag = nil
+        }
+    }
+
+    private let state = NIOLockedValueBox<State>(State())
 
     override func setUp() {
-        XCTAssertNil(self.group)
-        self.group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        self.lock.withLock {
-            XCTAssertNil(self.groupBag)
-            self.groupBag = []
+        self.state.withLockedValue {
+            XCTAssertNil($0.group)
+            XCTAssertNil($0.groupBag)
+
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+            $0.group = group
+            $0.groupBag = []
         }
     }
 
     override func tearDown() {
-        XCTAssertNoThrow(
-            try self.lock.withLock {
-                guard let groupBag = self.groupBag else {
+        let group = try? assertNoThrowWithValue(
+            try self.state.withLockedValue { state -> MultiThreadedEventLoopGroup? in
+                guard let groupBag = state.groupBag else {
                     XCTFail()
-                    return
+                    return nil
                 }
                 for group in groupBag {
                     XCTAssertNoThrow(try group.syncShutdownGracefully())
                 }
-                self.groupBag = nil
-                XCTAssertNotNil(self.group)
+                state.groupBag = nil
+                let group = state.group
+                state.group = nil
+                XCTAssertNotNil(group)
+                return group
             }
         )
-        XCTAssertNoThrow(try self.group?.syncShutdownGracefully())
-        self.group = nil
+
+        XCTAssertNoThrow(try group?.syncShutdownGracefully())
     }
 
-    func freshEventLoop() -> EventLoop {
+    static func freshEventLoop(_ state: NIOLockedValueBox<State>) -> EventLoop {
         let group: MultiThreadedEventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-        self.lock.withLock {
-            self.groupBag!.append(group)
+        state.withLockedValue {
+            $0.groupBag!.append(group)
         }
         return group.next()
     }
@@ -111,23 +136,23 @@ class BootstrapTest: XCTestCase {
     }
 
     func testTCPBootstrapsTolerateFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
-        let childChannelDone = self.freshEventLoop().makePromise(of: Void.self)
-        let serverChannelDone = self.freshEventLoop().makePromise(of: Void.self)
+        let childChannelDone = Self.freshEventLoop(self.state).makePromise(of: Void.self)
+        let serverChannelDone = Self.freshEventLoop(self.state).makePromise(of: Void.self)
         let serverChannel = try assertNoThrowWithValue(
-            ServerBootstrap(group: self.freshEventLoop())
-                .childChannelInitializer { channel in
+            ServerBootstrap(group: Self.freshEventLoop(self.state))
+                .childChannelInitializer { [state] channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     defer {
                         childChannelDone.succeed(())
                     }
-                    return self.freshEventLoop().makeSucceededFuture(())
+                    return Self.freshEventLoop(state).makeSucceededFuture(())
                 }
-                .serverChannelInitializer { channel in
+                .serverChannelInitializer { [state] channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     defer {
                         serverChannelDone.succeed(())
                     }
-                    return self.freshEventLoop().makeSucceededFuture(())
+                    return Self.freshEventLoop(state).makeSucceededFuture(())
                 }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
@@ -137,10 +162,10 @@ class BootstrapTest: XCTestCase {
         }
 
         let client = try assertNoThrowWithValue(
-            ClientBootstrap(group: self.freshEventLoop())
-                .channelInitializer { channel in
+            ClientBootstrap(group: Self.freshEventLoop(self.state))
+                .channelInitializer { [state] channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
-                    return self.freshEventLoop().makeSucceededFuture(())
+                    return Self.freshEventLoop(state).makeSucceededFuture(())
                 }
                 .connect(to: serverChannel.localAddress!)
                 .wait()
@@ -154,10 +179,10 @@ class BootstrapTest: XCTestCase {
 
     func testUDPBootstrapToleratesFuturesFromDifferentEventLoopsReturnedInInitializers() throws {
         XCTAssertNoThrow(
-            try DatagramBootstrap(group: self.freshEventLoop())
-                .channelInitializer { channel in
+            try DatagramBootstrap(group: Self.freshEventLoop(self.state))
+                .channelInitializer { [state] channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
-                    return self.freshEventLoop().makeSucceededFuture(())
+                    return Self.freshEventLoop(state).makeSucceededFuture(())
                 }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
@@ -182,10 +207,10 @@ class BootstrapTest: XCTestCase {
         }
 
         XCTAssertNoThrow(
-            try ClientBootstrap(group: self.freshEventLoop())
-                .channelInitializer { channel in
+            try ClientBootstrap(group: Self.freshEventLoop(self.state))
+                .channelInitializer { [state] channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
-                    return self.freshEventLoop().makeSucceededFuture(())
+                    return Self.freshEventLoop(state).makeSucceededFuture(())
                 }
                 .withConnectedSocket(socketFDs[0])
                 .wait()
@@ -207,33 +232,33 @@ class BootstrapTest: XCTestCase {
             )
         }
 
-        let childChannelDone = self.freshEventLoop().next().makePromise(of: Void.self)
-        let serverChannelDone = self.freshEventLoop().next().makePromise(of: Void.self)
+        let childChannelDone = Self.freshEventLoop(self.state).next().makePromise(of: Void.self)
+        let serverChannelDone = Self.freshEventLoop(self.state).next().makePromise(of: Void.self)
 
         let serverChannel = try assertNoThrowWithValue(
-            try ServerBootstrap(group: self.freshEventLoop())
-                .childChannelInitializer { channel in
+            try ServerBootstrap(group: Self.freshEventLoop(self.state))
+                .childChannelInitializer { [state] channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     defer {
                         childChannelDone.succeed(())
                     }
-                    return self.freshEventLoop().makeSucceededFuture(())
+                    return Self.freshEventLoop(state).makeSucceededFuture(())
                 }
-                .serverChannelInitializer { channel in
+                .serverChannelInitializer { [state] channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
                     defer {
                         serverChannelDone.succeed(())
                     }
-                    return self.freshEventLoop().makeSucceededFuture(())
+                    return Self.freshEventLoop(state).makeSucceededFuture(())
                 }
                 .withBoundSocket(socket)
                 .wait()
         )
         let client = try assertNoThrowWithValue(
-            ClientBootstrap(group: self.freshEventLoop())
-                .channelInitializer { channel in
+            ClientBootstrap(group: Self.freshEventLoop(self.state))
+                .channelInitializer { [state] channel in
                     XCTAssert(channel.eventLoop.inEventLoop)
-                    return self.freshEventLoop().makeSucceededFuture(())
+                    return Self.freshEventLoop(state).makeSucceededFuture(())
                 }
                 .connect(to: serverChannel.localAddress!)
                 .wait()
@@ -452,13 +477,13 @@ class BootstrapTest: XCTestCase {
         let eventLoop = self.group.next()
 
         XCTAssertNoThrow(
-            try eventLoop.submit {
+            try eventLoop.submit { [group = self.group] in
                 let pipe = Pipe()
                 defer {
                     XCTAssertNoThrow(try pipe.fileHandleForReading.close())
                     XCTAssertNoThrow(try pipe.fileHandleForWriting.close())
                 }
-                return NIOPipeBootstrap(group: self.group)
+                return NIOPipeBootstrap(group: group)
                     .takingOwnershipOfDescriptors(
                         input: dup(pipe.fileHandleForReading.fileDescriptor),
                         output: dup(pipe.fileHandleForWriting.fileDescriptor)
@@ -817,7 +842,7 @@ private final class WriteStringOnChannelActive: ChannelInboundHandler {
     }
 }
 
-private final class MakeSureAutoReadIsOffInChannelInitializer: ChannelInboundHandler {
+private final class MakeSureAutoReadIsOffInChannelInitializer: ChannelInboundHandler, Sendable {
     typealias InboundIn = Channel
 
     func channelActive(context: ChannelHandlerContext) {
