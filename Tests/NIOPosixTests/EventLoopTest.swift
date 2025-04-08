@@ -264,8 +264,12 @@ final class EventLoopTest: XCTestCase {
         hasFiredGroup.enter()
         isCancelledGroup.enter()
 
-        let isAllowedToFire = NIOLoopBoundBox(true, eventLoop: loop)
-        let hasFired = NIOLoopBoundBox(false, eventLoop: loop)
+        let (isAllowedToFire, hasFired) = try! loop.submit {
+            let isAllowedToFire = NIOLoopBoundBox(true, eventLoop: loop)
+            let hasFired = NIOLoopBoundBox(false, eventLoop: loop)
+            return (isAllowedToFire, hasFired)
+        }.wait()
+
         let repeatedTask = loop.scheduleRepeatedTask(initialDelay: initialDelay, delay: delay) {
             (_: RepeatedTask) -> Void in
             XCTAssertTrue(loop.inEventLoop)
@@ -784,7 +788,9 @@ final class EventLoopTest: XCTestCase {
         }
 
         let eventLoop = eventLoopGroup.next()
-        let array = NIOLoopBoundBox([(Int, NIODeadline)](), eventLoop: eventLoop)
+        let array = try! eventLoop.submit {
+            NIOLoopBoundBox([(Int, NIODeadline)](), eventLoop: eventLoop)
+        }.wait()
         let scheduled1 = eventLoop.scheduleTask(in: .milliseconds(500)) {
             array.value.append((1, .now()))
         }
