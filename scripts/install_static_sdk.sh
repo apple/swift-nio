@@ -29,10 +29,10 @@ if [[ ! ( -n "$branch" && -z "$version" ) && ! ( -z "$branch" && -n "$version") 
   fatal "Exactly one of build or version must be defined."
 fi
 
-CURL_BIN="${CURL_BIN:-$(which curl)}" || fatal "CURL_BIN unset and no curl on PATH"
-TAR_BIN="${TAR_BIN:-$(which tar)}" || fatal "TAR_BIN unset and no tar on PATH"
-JQ_BIN="${JQ_BIN:-$(which jq)}" || fatal "JQ_BIN unset and no jq on PATH"
-SED_BIN="${SED_BIN:-$(which sed)}" || fatal "SED_BIN unset and no sed on PATH"
+CURL_BIN="${CURL_BIN:-$(which curl 2> /dev/null)}" && test -n "$CURL_BIN" || fatal "CURL_BIN unset and no curl on PATH"
+TAR_BIN="${TAR_BIN:-$(which tar 2> /dev/null)}" && test -n "$TAR_BIN" || fatal "TAR_BIN unset and no tar on PATH"
+JQ_BIN="${JQ_BIN:-$(which jq 2> /dev/null)}" && test -n "$JQ_BIN" || fatal "JQ_BIN unset and no jq on PATH"
+SED_BIN="${SED_BIN:-$(which sed 2> /dev/null)}" && test -n "$SED_BIN" || fatal "SED_BIN unset and no sed on PATH"
 
 case "$arch" in
   "aarch64")
