@@ -1113,7 +1113,9 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
         }
         let allHandlers = [Handler(), Handler(), Handler()]
-        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(allHandlers[0], name: "the first one to remove"))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(allHandlers[0], name: "the first one to remove")
+        )
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(allHandlers[1]))
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(allHandlers[2], name: "the last one to remove"))
 
@@ -1156,8 +1158,12 @@ class ChannelPipelineTest: XCTestCase {
             XCTAssertNoThrow(XCTAssertTrue(try channel.finish().isClean))
         }
         let allHandlers = [Handler(), Handler(), Handler()]
-        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(allHandlers[0], name: "the first one to remove"))
-        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(allHandlers[1], name: "the second one to remove"))
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(allHandlers[0], name: "the first one to remove")
+        )
+        XCTAssertNoThrow(
+            try channel.pipeline.syncOperations.addHandler(allHandlers[1], name: "the second one to remove")
+        )
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(allHandlers[2], name: "the last one to remove"))
 
         let firstContext = try! channel.pipeline.syncOperations.context(name: "the first one to remove")
