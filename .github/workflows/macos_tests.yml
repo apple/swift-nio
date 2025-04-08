@@ -224,11 +224,15 @@ jobs:
           submodules: true
       - name: Swift build
         run: |
+<<<<<<< Updated upstream
           if [ -n "${{ matrix.config.build_arguments_override }}" ]; then
             swift build "${{ matrix.config.build_arguments_override }}"
           else
             swift build --build-tests
           fi
+=======
+          swift build --build-tests
+>>>>>>> Stashed changes
       - name: Swift test
         if: 'inputs.swift_test_enabled'
         run: |
