@@ -122,7 +122,7 @@ class SelectorTest: XCTestCase {
     private static let testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse = 10
     func testWeDoNotDeliverEventsForPreviouslyClosedChannels() {
         /// We use this class to box mutable values, generally in this test anything boxed should only be read/written
-        /// on the event loop `el`..
+        /// on the event loop `el`.
         final class Box<T>: @unchecked Sendable {
             init(_ value: T) {
                 self._value = value
