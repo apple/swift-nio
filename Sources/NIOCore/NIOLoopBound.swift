@@ -25,7 +25,13 @@
 /// or constructing it from any other place will crash your program with a precondition as it would be undefined
 /// behaviour to do so.
 public struct NIOLoopBound<Value>: @unchecked Sendable {
-    public let _eventLoop: EventLoop
+    /// The ``EventLoop`` that the value is bound to.
+    public let eventLoop: EventLoop
+
+    @available(*, deprecated, renamed: "eventLoop")
+    public var _eventLoop: EventLoop {
+        self.eventLoop
+    }
 
     @usableFromInline
     var _value: Value
@@ -34,7 +40,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     @inlinable
     public init(_ value: Value, eventLoop: EventLoop) {
         eventLoop.preconditionInEventLoop()
-        self._eventLoop = eventLoop
+        self.eventLoop = eventLoop
         self._value = value
     }
 
@@ -44,11 +50,11 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     @inlinable
     public var value: Value {
         get {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             return self._value
         }
         _modify {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             yield &self._value
         }
     }
@@ -72,14 +78,20 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
 /// whilst off the ``EventLoop`` by using ``NIOLoopBoundBox/makeEmptyBox(valueType:eventLoop:)``. Any read/write access to ``value``
 /// afterwards will require you to be on `eventLoop`.
 public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
-    public let _eventLoop: EventLoop
+    /// The ``EventLoop`` that the value is bound to.
+    public let eventLoop: EventLoop
+
+    @available(*, deprecated, renamed: "eventLoop")
+    public var _eventLoop: EventLoop {
+        self.eventLoop
+    }
 
     @usableFromInline
     var _value: Value
 
     @inlinable
     internal init(_value value: Value, uncheckedEventLoop eventLoop: EventLoop) {
-        self._eventLoop = eventLoop
+        self.eventLoop = eventLoop
         self._value = value
     }
 
@@ -155,11 +167,11 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     @inlinable
     public var value: Value {
         get {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             return self._value
         }
         _modify {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             yield &self._value
         }
     }
