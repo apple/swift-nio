@@ -18,7 +18,7 @@ import XCTest
 
 final class ByteBufferWebSocketTests: XCTestCase {
     private var buffer = ByteBuffer()
-    
+
     func testPeekWebSocketErrorCode_Normal() {
         var buffer = ByteBuffer()
         let errorCode = WebSocketErrorCode(codeNumber: 1002)
