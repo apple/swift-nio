@@ -1362,11 +1362,11 @@ extension NonBlockingFileIOTest {
     }
 
     func testAsyncDoesNotBlockTheThreadOrEventLoop() async throws {
-        try await withPipe { readFH, writeFH in
-            async let byteBufferTask = try await self.fileIO.read(
+        try await withPipe { [fileIO, allocator] readFH, writeFH in
+            async let byteBufferTask = try await fileIO!.read(
                 fileHandle: readFH,
                 byteCount: 10,
-                allocator: self.allocator
+                allocator: allocator!
             )
             do {
                 try await self.threadPool.runIfActive {
@@ -1402,11 +1402,11 @@ extension NonBlockingFileIOTest {
     }
 
     func testAsyncReadDoesNotReadShort() async throws {
-        try await withPipe { readFH, writeFH in
-            async let bufferTask = try await self.fileIO.read(
+        try await withPipe { [fileIO, allocator] readFH, writeFH in
+            async let bufferTask = try await fileIO!.read(
                 fileHandle: readFH,
                 byteCount: 10,
-                allocator: self.allocator
+                allocator: allocator!
             )
             for i in 0..<10 {
                 try await Task.sleep(nanoseconds: 5_000_000)
