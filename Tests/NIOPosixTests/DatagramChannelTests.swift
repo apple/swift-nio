@@ -914,7 +914,7 @@ class DatagramChannelTests: XCTestCase {
         }
 
         let channel2Future = DatagramBootstrap(group: self.group)
-            .channelOption(.writeBufferWaterMark, value: handler.watermark)
+            .channelOption(.writeBufferWaterMark, value: ReentrantWritabilityChangingHandler.watermark)
             .channelInitializer { channel in
                 channel.pipeline.addHandlers([EnvelopingHandler(), handler])
             }
