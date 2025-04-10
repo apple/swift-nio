@@ -165,15 +165,6 @@ extension ByteBuffer {
         endianness: Endianness = .big,
         as integer: Integer.Type
     ) -> ByteBuffer? where Integer: FixedWidthInteger {
-        guard let lengthPrefix = self.getInteger(at: self.readerIndex, endianness: endianness, as: Integer.self),
-            let messageLength = Int(exactly: lengthPrefix),
-            let messageBuffer = self.getSlice(
-                at: self.readerIndex + MemoryLayout<Integer>.size,
-                length: messageLength
-            )
-        else {
-            return nil
-        }
-        return messageBuffer
+        self.getLengthPrefixedSlice(at: self.readerIndex, endianness: endianness, as: integer)
     }
 }
