@@ -544,7 +544,7 @@ class HTTPServerPipelineHandlerTest: XCTestCase {
         }
 
         let handler = VerifyOrderHandler()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
 
         for f in 1...3 {
             XCTAssertNoThrow(

@@ -19,7 +19,7 @@ import XCTest
 
 class HTTPServerProtocolErrorHandlerTest: XCTestCase {
     func testHandlesBasicErrors() throws {
-        class CloseOnHTTPErrorHandler: ChannelInboundHandler {
+        final class CloseOnHTTPErrorHandler: ChannelInboundHandler, Sendable {
             typealias InboundIn = Never
 
             func errorCaught(context: ChannelHandlerContext, error: Error) {
@@ -139,11 +139,8 @@ class HTTPServerProtocolErrorHandlerTest: XCTestCase {
 
         }
         let channel = EmbeddedChannel()
-        XCTAssertNoThrow(
-            try channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
-                channel.pipeline.addHandler(DelayWriteHandler())
-            }.wait()
-        )
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.configureHTTPServerPipeline(withErrorHandling: true))
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(DelayWriteHandler()))
 
         var buffer = channel.allocator.buffer(capacity: 1024)
         buffer.writeStaticString("GET / HTTP/1.1\r\n\r\nGET / HTTP/1.1\r\n\r\nGET / HT")

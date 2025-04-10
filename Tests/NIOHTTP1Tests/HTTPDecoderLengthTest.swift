@@ -125,7 +125,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPResponseDecoder())))
 
         let handler = ChannelInactiveHandler(eofMechanism)
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
 
         // Prime the decoder with a GET and consume it.
         XCTAssertTrue(
@@ -197,7 +197,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(decoder)))
 
         let handler = MessageEndHandler<HTTPResponseHead, ByteBuffer>()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
 
         // Prime the decoder with a request and consume it.
         XCTAssertTrue(
@@ -351,7 +351,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder())))
 
         let handler = MessageEndHandler<HTTPRequestHead, ByteBuffer>()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
 
         // Send a GET with the appropriate Transfer Encoding header.
         XCTAssertThrowsError(
@@ -369,7 +369,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder())))
 
         let handler = MessageEndHandler<HTTPRequestHead, ByteBuffer>()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
 
         // Send a GET with the appropriate Transfer Encoding header.
         XCTAssertNoThrow(
@@ -402,7 +402,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPResponseDecoder())))
 
         let handler = MessageEndHandler<HTTPResponseHead, ByteBuffer>()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
 
         // Prime the decoder with a request and consume it.
         XCTAssertTrue(
@@ -458,7 +458,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPResponseDecoder())))
 
         let handler = MessageEndHandler<HTTPResponseHead, ByteBuffer>()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
 
         // Prime the decoder with a request and consume it.
         XCTAssertTrue(
@@ -665,7 +665,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ByteToMessageHandler(HTTPRequestDecoder())))
 
         let handler = MessageEndHandler<HTTPRequestHead, ByteBuffer>()
-        XCTAssertNoThrow(try channel.pipeline.addHandler(handler).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(handler))
 
         // Send a POST without a length field of any kind. This should be a zero-length request,
         // so .end should come immediately.
