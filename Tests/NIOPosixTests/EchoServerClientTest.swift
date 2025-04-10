@@ -749,7 +749,6 @@ class EchoServerClientTest: XCTestCase {
         }
 
         let str = "hi there"
-        let countingHandler = ByteCountingHandler(numBytes: str.utf8.count, promise: group.next().makePromise())
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(
             ClientBootstrap(group: group)
@@ -766,7 +765,7 @@ class EchoServerClientTest: XCTestCase {
         let buffer = clientChannel.allocator.buffer(string: str)
         try clientChannel.writeAndFlush(buffer).wait()
 
-        try countingHandler.assertReceived(buffer: buffer)
+        XCTAssertEqual(try promise.futureResult.wait(), buffer)
 
         // close the client channel so that the second write should fail
         try clientChannel.close().wait()
