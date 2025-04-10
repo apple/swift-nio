@@ -774,7 +774,9 @@ class EchoServerClientTest: XCTestCase {
     }
 
     func testPendingReadProcessedAfterWriteError() throws {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 2)
+        let loop1 = group.next()
+        let loop2 = group.next()
         defer {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
@@ -840,7 +842,7 @@ class EchoServerClientTest: XCTestCase {
             }
         }
         let serverChannel = try assertNoThrowWithValue(
-            ServerBootstrap(group: group)
+            ServerBootstrap(group: loop1)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
                     channel.eventLoop.makeCompletedFuture {
@@ -855,7 +857,7 @@ class EchoServerClientTest: XCTestCase {
 
         let promise = group.next().makePromise(of: ByteBuffer.self)
         let clientChannel = try assertNoThrowWithValue(
-            ClientBootstrap(group: group)
+            ClientBootstrap(group: loop2)
                 // We will only start reading once we wrote all data on the accepted channel.
                 //.channelOption(.autoRead, value: false)
                 .channelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
