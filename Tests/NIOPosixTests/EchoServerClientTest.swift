@@ -865,7 +865,9 @@ class EchoServerClientTest: XCTestCase {
                     channel.eventLoop.makeCompletedFuture {
                         try channel.pipeline.syncOperations.addHandler(WriteHandler())
                     }.flatMapThrowing {
-                        try channel.pipeline.syncOperations.addHandler(ByteCountingHandler(numBytes: str.utf8.count * 4, promise: promise))
+                        try channel.pipeline.syncOperations.addHandler(
+                            ByteCountingHandler(numBytes: str.utf8.count * 4, promise: promise)
+                        )
                     }
                 }.connect(to: serverChannel.localAddress!).wait()
         )
