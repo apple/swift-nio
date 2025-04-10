@@ -862,9 +862,9 @@ class EchoServerClientTest: XCTestCase {
                 .channelOption(.recvAllocator, value: FixedSizeRecvByteBufferAllocator(capacity: 2))
                 .channelInitializer { channel in
                     channel.eventLoop.makeCompletedFuture {
-                        let sync = channel.pipeline.syncOperations
-                        try sync.addHandler(WriteHandler())
-                        try sync.addHandler(ByteCountingHandler(numBytes: str.utf8.count * 4, promise: promise))
+                        try channel.pipeline.syncOperations.addHandler(WriteHandler())
+                    }.flatMapThrowing {
+                        try channel.pipeline.syncOperations.addHandler(ByteCountingHandler(numBytes: str.utf8.count * 4, promise: promise))
                     }
                 }.connect(to: serverChannel.localAddress!).wait()
         )
