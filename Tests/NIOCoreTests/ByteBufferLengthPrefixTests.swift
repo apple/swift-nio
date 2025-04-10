@@ -236,4 +236,45 @@ final class ByteBufferLengthPrefixTests: XCTestCase {
         )
         XCTAssertTrue(buffer.readerIndex == 0)
     }
+
+    // MARK: - peekLengthPrefixedSlice Tests
+
+    func testPeekLengthPrefixedSlice_Normal() {
+        var buffer = ByteBuffer()
+        let message: [UInt8] = [0xDE, 0xAD, 0xBE, 0xEF]
+        // Write a length prefix (UInt8).
+        buffer.writeInteger(UInt8(message.count))
+        buffer.writeBytes(message)
+
+        // Peeks the length prefix, reads that many bytes into a slice.
+        guard let slice = buffer.peekLengthPrefixedSlice(as: UInt8.self) else {
+            XCTFail("Expected a valid length-prefixed slice.")
+            return
+        }
+        XCTAssertEqual(slice.readableBytes, message.count)
+        XCTAssertEqual(slice.getBytes(at: 0, length: message.count), message)
+        XCTAssertEqual(buffer.readerIndex, 0, "peekLengthPrefixedSlice() should not advance reader index.")
+    }
+
+    func testPeekLengthPrefixedSlice_InvalidPrefix() {
+        var buffer = ByteBuffer()
+        buffer.writeInteger(UInt8(10))
+        buffer.writeBytes([1, 2, 3])
+
+        let slice = buffer.peekLengthPrefixedSlice(as: UInt8.self)
+        XCTAssertNil(slice, "Should return nil if actual data is less than the length prefix.")
+    }
+
+    func testPeekLengthPrefixedSlice_Repeated() {
+        var buffer = ByteBuffer()
+        let message: [UInt8] = [0x01, 0x02, 0x03]
+        buffer.writeInteger(UInt8(message.count))
+        buffer.writeBytes(message)
+
+        let firstPeek = buffer.peekLengthPrefixedSlice(as: UInt8.self)
+        let secondPeek = buffer.peekLengthPrefixedSlice(as: UInt8.self)
+        XCTAssertNotNil(firstPeek)
+        XCTAssertNotNil(secondPeek, "Repeated calls should yield the same slice.")
+        XCTAssertEqual(buffer.readerIndex, 0, "Reader index remains unchanged after repeated peeks.")
+    }
 }

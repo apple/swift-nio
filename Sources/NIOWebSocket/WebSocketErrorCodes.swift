@@ -154,6 +154,16 @@ extension ByteBuffer {
     public mutating func write(webSocketErrorCode code: WebSocketErrorCode) {
         self.writeInteger(UInt16(webSocketErrorCode: code))
     }
+
+    /// Read a `WebSocketErrorCode` from 2 bytes at the current `readerIndex`. Does not move the reader index.
+    ///
+    /// This method is equivalent to calling `getWebSocketErrorCode(at: readerIndex)`.
+    ///
+    /// - Returns: The error code, or `nil` if there are not enough bytes to read the code.
+    @inlinable
+    public func peekWebSocketErrorCode() -> WebSocketErrorCode? {
+        self.getWebSocketErrorCode(at: self.readerIndex)
+    }
 }
 
 extension UInt16 {

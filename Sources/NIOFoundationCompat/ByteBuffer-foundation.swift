@@ -136,6 +136,23 @@ extension ByteBuffer {
         }
     }
 
+    /// Return `length` bytes starting at the current `readerIndex` as `Data`. This will not change the reader index.
+    ///
+    /// This method is equivalent to calling `getData(at: readerIndex, length: length, byteTransferStrategy: ...)`.
+    ///
+    /// - Parameters:
+    ///   - length: The number of bytes of interest.
+    ///   - byteTransferStrategy: Controls how to transfer the bytes (see `ByteTransferStrategy`).
+    /// - Returns: A `Data` value containing the bytes of interest or `nil` if the selected bytes are not readable.
+    @inlinable
+    public func peekData(length: Int, byteTransferStrategy: ByteTransferStrategy) -> Data? {
+        self.getData(
+            at: self.readerIndex,
+            length: length,
+            byteTransferStrategy: byteTransferStrategy
+        )
+    }
+
     // MARK: - Foundation String APIs
 
     /// Get a `String` decoding `length` bytes starting at `index` with `encoding`. This will not change the reader index.
@@ -361,6 +378,18 @@ extension ByteBuffer {
         let written = self.setUUIDBytes(uuid, at: self.writerIndex)
         self.moveWriterIndex(forwardBy: written)
         return written
+    }
+
+    /// Get a `UUID` from the 16 bytes starting at the current `readerIndex`. Does not move the reader index.
+    ///
+    /// If there are fewer than 16 bytes starting at `readerIndex` then `nil` will be returned.
+    ///
+    /// This method is equivalent to calling `getUUIDBytes(at: readerIndex)`.
+    ///
+    /// - Returns: A `UUID` value containing the bytes of interest or `nil` if the selected bytes are not readable.
+    @inlinable
+    public func peekUUIDBytes() -> UUID? {
+        self.getUUIDBytes(at: self.readerIndex)
     }
 }
 
