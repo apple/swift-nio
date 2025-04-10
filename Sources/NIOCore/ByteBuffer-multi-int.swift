@@ -55,6 +55,16 @@ extension ByteBuffer {
 
     @inlinable
     @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger>(
+        endianness: Endianness = .big,
+        as: (T1, T2).Type = (T1, T2).self
+    ) -> (T1, T2)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
     @discardableResult
     public mutating func writeMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger>(
         _ value1: T1,
@@ -131,6 +141,16 @@ extension ByteBuffer {
         case .little:
             return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3))
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<T1: FixedWidthInteger, T2: FixedWidthInteger, T3: FixedWidthInteger>(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3).Type = (T1, T2, T3).self
+    ) -> (T1, T2, T3)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -226,6 +246,18 @@ extension ByteBuffer {
         case .little:
             return (T1(littleEndian: v1), T2(littleEndian: v2), T3(littleEndian: v3), T4(littleEndian: v4))
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger
+    >(endianness: Endianness = .big, as: (T1, T2, T3, T4).Type = (T1, T2, T3, T4).self) -> (T1, T2, T3, T4)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -344,6 +376,20 @@ extension ByteBuffer {
                 T5(littleEndian: v5)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger
+    >(endianness: Endianness = .big, as: (T1, T2, T3, T4, T5).Type = (T1, T2, T3, T4, T5).self) -> (T1, T2, T3, T4, T5)?
+    {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -482,6 +528,23 @@ extension ByteBuffer {
                 T5(littleEndian: v5), T6(littleEndian: v6)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6).Type = (T1, T2, T3, T4, T5, T6).self
+    ) -> (T1, T2, T3, T4, T5, T6)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -635,6 +698,24 @@ extension ByteBuffer {
                 T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7).Type = (T1, T2, T3, T4, T5, T6, T7).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -803,6 +884,25 @@ extension ByteBuffer {
                 T5(littleEndian: v5), T6(littleEndian: v6), T7(littleEndian: v7), T8(littleEndian: v8)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8).Type = (T1, T2, T3, T4, T5, T6, T7, T8).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -987,6 +1087,26 @@ extension ByteBuffer {
                 T9(littleEndian: v9)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -1186,6 +1306,27 @@ extension ByteBuffer {
                 T9(littleEndian: v9), T10(littleEndian: v10)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -1401,6 +1542,28 @@ extension ByteBuffer {
                 T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).Type = (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -1633,6 +1796,31 @@ extension ByteBuffer {
                 T9(littleEndian: v9), T10(littleEndian: v10), T11(littleEndian: v11), T12(littleEndian: v12)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -1883,6 +2071,32 @@ extension ByteBuffer {
                 T13(littleEndian: v13)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -2148,6 +2362,33 @@ extension ByteBuffer {
                 T13(littleEndian: v13), T14(littleEndian: v14)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
@@ -2428,6 +2669,34 @@ extension ByteBuffer {
                 T13(littleEndian: v13), T14(littleEndian: v14), T15(littleEndian: v15)
             )
         }
+    }
+
+    @inlinable
+    @_alwaysEmitIntoClient
+    public func peekMultipleIntegers<
+        T1: FixedWidthInteger,
+        T2: FixedWidthInteger,
+        T3: FixedWidthInteger,
+        T4: FixedWidthInteger,
+        T5: FixedWidthInteger,
+        T6: FixedWidthInteger,
+        T7: FixedWidthInteger,
+        T8: FixedWidthInteger,
+        T9: FixedWidthInteger,
+        T10: FixedWidthInteger,
+        T11: FixedWidthInteger,
+        T12: FixedWidthInteger,
+        T13: FixedWidthInteger,
+        T14: FixedWidthInteger,
+        T15: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15).Type = (
+            T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15
+        ).self
+    ) -> (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15)? {
+        var copy = self
+        return copy.readMultipleIntegers(endianness: endianness, as: `as`)
     }
 
     @inlinable
