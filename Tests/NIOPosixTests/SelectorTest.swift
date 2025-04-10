@@ -120,25 +120,7 @@ class SelectorTest: XCTestCase {
     }
 
     private static let testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse = 10
-    func testWeDoNotDeliverEventsForPreviouslyClosedChannels() {
-        /// We use this class to box mutable values, generally in this test anything boxed should only be read/written
-        /// on the event loop `el`.
-        final class Box<T>: @unchecked Sendable {
-            init(_ value: T) {
-                self._value = value
-            }
-            private var _value: T
-            var value: T {
-                get {
-                    XCTAssertNotNil(MultiThreadedEventLoopGroup.currentEventLoop)
-                    return self._value
-                }
-                set {
-                    XCTAssertNotNil(MultiThreadedEventLoopGroup.currentEventLoop)
-                    self._value = newValue
-                }
-            }
-        }
+    func testWeDoNotDeliverEventsForPreviouslyClosedChannels() throws {
         enum DidNotReadError: Error {
             case didNotReadGotInactive
             case didNotReadGotReadComplete
@@ -157,10 +139,10 @@ class SelectorTest: XCTestCase {
             typealias InboundIn = ByteBuffer
 
             private let didReadPromise: EventLoopPromise<Void>
-            private let hasReConnectEventLoopTickFinished: Box<Bool>
+            private let hasReConnectEventLoopTickFinished: NIOLoopBoundBox<Bool>
             private var didRead: Bool = false
 
-            init(hasReConnectEventLoopTickFinished: Box<Bool>, didReadPromise: EventLoopPromise<Void>) {
+            init(hasReConnectEventLoopTickFinished: NIOLoopBoundBox<Bool>, didReadPromise: EventLoopPromise<Void>) {
                 self.didReadPromise = didReadPromise
                 self.hasReConnectEventLoopTickFinished = hasReConnectEventLoopTickFinished
             }
@@ -214,14 +196,14 @@ class SelectorTest: XCTestCase {
         class CloseEveryOtherAndOpenNewOnesHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
-            private let allChannels: Box<[Channel]>
+            private let allChannels: NIOLoopBoundBox<[Channel]>
             private let serverAddress: SocketAddress
             private let everythingWasReadPromise: EventLoopPromise<Void>
-            private let hasReConnectEventLoopTickFinished: Box<Bool>
+            private let hasReConnectEventLoopTickFinished: NIOLoopBoundBox<Bool>
 
             init(
-                allChannels: Box<[Channel]>,
-                hasReConnectEventLoopTickFinished: Box<Bool>,
+                allChannels: NIOLoopBoundBox<[Channel]>,
+                hasReConnectEventLoopTickFinished: NIOLoopBoundBox<Bool>,
                 serverAddress: SocketAddress,
                 everythingWasReadPromise: EventLoopPromise<Void>
             ) {
@@ -331,13 +313,6 @@ class SelectorTest: XCTestCase {
 
         }
 
-        // all of the following are boxed as we need mutable references to them, they can only be read/written on the
-        // event loop `el`.
-        let allServerChannels: Box<[Channel]> = Box([])
-        let allChannels: Box<[Channel]> = Box([])
-        let hasReConnectEventLoopTickFinished: Box<Bool> = Box(false)
-        let numberOfConnectedChannels: Box<Int> = Box(0)
-
         /// This spawns a server, always send a character immediately and after the first
         /// `SelectorTest.numberOfChannelsToUse` have been established, we'll close them all. That will trigger
         /// an `.readEOF` in the connected client channels which will then trigger other interesting things (see above).
@@ -345,10 +320,10 @@ class SelectorTest: XCTestCase {
             typealias InboundIn = ByteBuffer
 
             private var number: Int = 0
-            private let allServerChannels: Box<[Channel]>
-            private let numberOfConnectedChannels: Box<Int>
+            private let allServerChannels: NIOLoopBoundBox<[Channel]>
+            private let numberOfConnectedChannels: NIOLoopBoundBox<Int>
 
-            init(allServerChannels: Box<[Channel]>, numberOfConnectedChannels: Box<Int>) {
+            init(allServerChannels: NIOLoopBoundBox<[Channel]>, numberOfConnectedChannels: NIOLoopBoundBox<Int>) {
                 self.allServerChannels = allServerChannels
                 self.numberOfConnectedChannels = numberOfConnectedChannels
             }
@@ -373,11 +348,27 @@ class SelectorTest: XCTestCase {
                 }
             }
         }
+
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let el = elg.next()
         defer {
             XCTAssertNoThrow(try elg.syncShutdownGracefully())
         }
+
+        // all of the following are boxed as we need mutable references to them, they can only be read/written on the
+        // event loop `el`.
+        let loopBounds = try el.submit {
+            let allServerChannels = NIOLoopBoundBox([Channel](), eventLoop: el)
+            let allChannels = NIOLoopBoundBox([Channel](), eventLoop: el)
+            let hasReConnectEventLoopTickFinished = NIOLoopBoundBox(false, eventLoop: el)
+            let numberOfConnectedChannels = NIOLoopBoundBox(0, eventLoop: el)
+            return (allServerChannels, allChannels, hasReConnectEventLoopTickFinished, numberOfConnectedChannels)
+        }.wait()
+        let allServerChannels = loopBounds.0
+        let allChannels = loopBounds.1
+        let hasReConnectEventLoopTickFinished = loopBounds.2
+        let numberOfConnectedChannels = loopBounds.3
+
         XCTAssertNoThrow(
             try withTemporaryUnixDomainSocketPathName { udsPath in
                 let secondServerChannel = try! ServerBootstrap(group: el)
