@@ -1585,8 +1585,8 @@ final class EventLoopTest: XCTestCase {
 
         var result: Bool?
         var error: Error?
-        scheduled.futureResult.whenSuccess { result = $0 }
-        scheduled.futureResult.whenFailure { error = $0 }
+        scheduled.futureResult.assumeIsolated().whenSuccess { result = $0 }
+        scheduled.futureResult.assumeIsolated().whenFailure { error = $0 }
 
         scheduled.cancel()
 
@@ -1801,22 +1801,24 @@ final class EventLoopTest: XCTestCase {
         }
 
         let eventLoop = group.next()
-        var stop = false  // no additional synchronisation needed, since only one thread is used
-        var reExecuteTask: (() -> Void)!
-        reExecuteTask = {
-            if !stop {
-                eventLoop.execute(reExecuteTask)
+        let stop = try eventLoop.submit { NIOLoopBoundBox(false, eventLoop: eventLoop) }.wait()
+
+        @Sendable
+        func reExecuteTask() {
+            if !stop.value {
+                eventLoop.execute { reExecuteTask() }
             }
         }
+
         eventLoop.execute {
             // SelectableEventLoop runs batches of up to 4096.
             // Submit significantly over that for good measure.
             for _ in (0..<10000) {
-                eventLoop.execute(reExecuteTask)
+                eventLoop.assumeIsolated().execute(reExecuteTask)
             }
         }
         let stopTask = eventLoop.scheduleTask(in: .microseconds(10)) {
-            stop = true
+            stop.value = true
         }
         try stopTask.futureResult.wait()
     }
@@ -1852,12 +1854,20 @@ final class EventLoopTest: XCTestCase {
         }
 
         let eventLoop = group.next()
-        struct Counter {
-            var submitCount: Int = 0
-            var scheduleCount: Int = 0
+        struct Counter: Sendable {
+            private var _submitCount = NIOLockedValueBox(0)
+            var submitCount: Int {
+                get { self._submitCount.withLockedValue { $0 } }
+                nonmutating set { self._submitCount.withLockedValue { $0 = newValue } }
+            }
+            private var _scheduleCount = NIOLockedValueBox(0)
+            var scheduleCount: Int {
+                get { self._scheduleCount.withLockedValue { $0 } }
+                nonmutating set { self._scheduleCount.withLockedValue { $0 = newValue } }
+            }
         }
 
-        var achieved = Counter()
+        let achieved = Counter()
         var immediateTasks = [EventLoopFuture<Void>]()
         var scheduledTasks = [Scheduled<Void>]()
         for _ in (0..<100_000) {
@@ -1894,12 +1904,20 @@ final class EventLoopTest: XCTestCase {
         }
 
         let eventLoop = group.next()
-        struct Counter {
-            var submitCount: Int = 0
-            var scheduleCount: Int = 0
+        struct Counter: Sendable {
+            private var _submitCount = NIOLockedValueBox(0)
+            var submitCount: Int {
+                get { self._submitCount.withLockedValue { $0 } }
+                nonmutating set { self._submitCount.withLockedValue { $0 = newValue } }
+            }
+            private var _scheduleCount = NIOLockedValueBox(0)
+            var scheduleCount: Int {
+                get { self._scheduleCount.withLockedValue { $0 } }
+                nonmutating set { self._scheduleCount.withLockedValue { $0 = newValue } }
+            }
         }
 
-        var achieved = Counter()
+        let achieved = Counter()
         let (immediateTasks, scheduledTasks) = try eventLoop.submit {
             var immediateTasks = [EventLoopFuture<Void>]()
             var scheduledTasks = [Scheduled<Void>]()
@@ -1969,7 +1987,7 @@ final class EventLoopTest: XCTestCase {
     }
 }
 
-private class EventLoopWithPreSucceededFuture: EventLoop {
+private final class EventLoopWithPreSucceededFuture: EventLoop {
     var inEventLoop: Bool {
         true
     }
@@ -2004,27 +2022,34 @@ private class EventLoopWithPreSucceededFuture: EventLoop {
         preconditionFailure("not implemented")
     }
 
-    var _succeededVoidFuture: EventLoopFuture<Void>?
+    // We'd need to use an IUO here in order to use a loop-bound here (self needs to be initialized
+    // to create the loop-bound box). That'd require the use of unchecked Sendable. A locked value
+    // box is fine, it's only tests.
+    private let _succeededVoidFuture: NIOLockedValueBox<EventLoopFuture<Void>?>
+
     func makeSucceededVoidFuture() -> EventLoopFuture<Void> {
-        guard self.inEventLoop, let voidFuture = self._succeededVoidFuture else {
+        guard self.inEventLoop, let voidFuture = self._succeededVoidFuture.withLockedValue({ $0 }) else {
             return self.makeSucceededFuture(())
         }
         return voidFuture
     }
 
     init() {
-        self._succeededVoidFuture = EventLoopFuture(eventLoop: self, value: ())
+        self._succeededVoidFuture = NIOLockedValueBox(nil)
+        self._succeededVoidFuture.withLockedValue {
+            $0 = EventLoopFuture(eventLoop: self, value: ())
+        }
     }
 
-    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
-        self._succeededVoidFuture = nil
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping @Sendable (Error?) -> Void) {
+        self._succeededVoidFuture.withLockedValue { $0 = nil }
         queue.async {
             callback(nil)
         }
     }
 }
 
-private class EventLoopWithoutPreSucceededFuture: EventLoop {
+private final class EventLoopWithoutPreSucceededFuture: EventLoop {
     var inEventLoop: Bool {
         true
     }
@@ -2059,7 +2084,7 @@ private class EventLoopWithoutPreSucceededFuture: EventLoop {
         preconditionFailure("not implemented")
     }
 
-    func shutdownGracefully(queue: DispatchQueue, _ callback: @escaping (Error?) -> Void) {
+    func shutdownGracefully(queue: DispatchQueue, _ callback: @Sendable @escaping (Error?) -> Void) {
         queue.async {
             callback(nil)
         }
