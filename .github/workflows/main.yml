@@ -10,7 +10,7 @@ jobs:
   unit-tests:
     name: Unit tests
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/unit_tests.yml@swift_6_1_workflows
+    uses: apple/swift-nio/.github/workflows/unit_tests.yml@main
     with:
       linux_5_9_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_5_10_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
@@ -22,12 +22,12 @@ jobs:
   cxx-interop:
     name: Cxx interop
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/cxx_interop.yml@swift_6_1_workflows
+    uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
 
   benchmarks:
     name: Benchmarks
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/benchmarks.yml@swift_6_1_workflows
+    uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
     with:
       benchmark_package_path: "Benchmarks"
 
@@ -42,7 +42,7 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "integration-test-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/swift_6_1_workflows/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        run: echo "integration-test-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q lsof dnsutils netcat-openbsd net-tools curl jq"
           MATRIX_LINUX_COMMAND: "./scripts/integration_tests.sh"
@@ -51,7 +51,7 @@ jobs:
     name: Integration tests
     needs: construct-integration-test-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@swift_6_1_workflows
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Integration tests"
       matrix_string: '${{ needs.construct-integration-test-matrix.outputs.integration-test-matrix }}'
@@ -59,12 +59,12 @@ jobs:
   static-sdk:
     name: Static SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/static_sdk.yml@swift_6_1_workflows
+    uses: apple/swift-nio/.github/workflows/static_sdk.yml@main
 
   macos-tests:
     name: macOS tests
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/macos_tests.yml@swift_6_1_workflows
+    uses: apple/swift-nio/.github/workflows/macos_tests.yml@main
     with:
       runner_pool: nightly
       build_scheme: swift-nio-Package
