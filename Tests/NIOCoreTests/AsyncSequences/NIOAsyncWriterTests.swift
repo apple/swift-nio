@@ -607,54 +607,50 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.assert(suspendCallCount: 1, yieldCallCount: 1, terminateCallCount: 1)
     }
 
+    @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
     func testWriterFinish_AndSuspendBufferedYield() async throws {
         #if compiler(>=6)
-        try await withNIOThreadPoolTaskExecutor(numberOfThreads: 2) { taskExecutor in
-            try await withThrowingTaskGroup(of: Void.self) { group in
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            try await withManualTaskExecutor { taskExecutor1, taskExecutor2 in
                 self.sink.setWritability(to: false)
-
-                let bothSuspended = expectation(description: "suspended on both yields")
-                let suspendedAgain = ConditionLock(value: false)
-                self.delegate.didSuspendHandler = {
-                    if self.delegate.didSuspendCallCount == 2 {
-                        bothSuspended.fulfill()
-                    } else if self.delegate.didSuspendCallCount > 2 {
-                        suspendedAgain.lock()
-                        suspendedAgain.unlock(withValue: true)
-                    }
-                }
 
                 self.delegate.didYieldHandler = { _ in
                     if self.delegate.didYieldCallCount == 1 {
-                        // Delay this yield until the other yield is suspended again.
-                        if suspendedAgain.lock(whenValue: true, timeoutSeconds: 5) {
-                            suspendedAgain.unlock()
-                        } else {
-                            XCTFail("Timeout while waiting for other yield to suspend again.")
-                        }
+                        // This is the yield of the first task. Run the second task until it suspends again
+                        self.assert(suspendCallCount: 2, yieldCallCount: 1, terminateCallCount: 0)
+                        taskExecutor2.runUntilQueueIsEmpty()
+                        self.assert(suspendCallCount: 3, yieldCallCount: 1, terminateCallCount: 0)
                     }
                 }
 
-                group.addTask(executorPreference: taskExecutor) { [writer] in
+                group.addTask(executorPreference: taskExecutor1) { [writer] in
                     try await writer!.yield("message1")
                 }
-                group.addTask(executorPreference: taskExecutor) { [writer] in
+                group.addTask(executorPreference: taskExecutor2) { [writer] in
                     try await writer!.yield("message2")
                 }
 
-                await fulfillment(of: [bothSuspended], timeout: 5)
-                self.writer.finish()
-
+                // Run tasks until they are both suspended
+                taskExecutor1.runUntilQueueIsEmpty()
+                taskExecutor2.runUntilQueueIsEmpty()
                 self.assert(suspendCallCount: 2, yieldCallCount: 0, terminateCallCount: 0)
 
+                self.writer.finish()
+
                 // We have to become writable again to unbuffer the yields
-                // The first call to didYield will pause, so that the other yield will be suspended again.
                 self.sink.setWritability(to: true)
 
-                await XCTAssertNoThrow(try await group.next())
-                await XCTAssertNoThrow(try await group.next())
+                // Run the first task, which will complete its yield
+                // During this yield, didYieldHandler will run the second task, which will suspend again
+                taskExecutor1.runUntilQueueIsEmpty()
+                self.assert(suspendCallCount: 3, yieldCallCount: 1, terminateCallCount: 0)
 
+                // Run the second task to complete its yield
+                taskExecutor2.runUntilQueueIsEmpty()
                 self.assert(suspendCallCount: 3, yieldCallCount: 2, terminateCallCount: 1)
+
+                await XCTAssertNoThrow(try await group.next())
+                await XCTAssertNoThrow(try await group.next())
             }
         }
         #endif  // compiler(>=6)

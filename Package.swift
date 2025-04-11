@@ -521,7 +521,6 @@ let package = Package(
             dependencies: [
                 "NIOTestUtils",
                 "NIOCore",
-                "NIOConcurrencyHelpers",
                 "NIOEmbedded",
                 "NIOPosix",
             ]
