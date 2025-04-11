@@ -65,7 +65,7 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "cxx-interop-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        run: echo "cxx-interop-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/swift_6_1_workflows/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_COMMAND: "curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-cxx-interop-compatibility.sh | bash"
           MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q curl jq"
@@ -80,7 +80,7 @@ jobs:
     name: Cxx interop
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@swift_6_1_workflows
     with:
       name: "Cxx interop"
       matrix_string: '${{ needs.construct-matrix.outputs.cxx-interop-matrix }}'
