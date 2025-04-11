@@ -21,6 +21,9 @@ private struct PendingStreamWrite {
     var promise: Optional<EventLoopPromise<Void>>
 }
 
+/// Write result is `.couldNotWriteEverything` but we have no more writes to perform.
+public struct NIOReportedIncompleteWritesWhenNoMoreToPerform: Error {}
+
 /// Does the setup required to issue a writev.
 ///
 /// - Parameters:
@@ -383,25 +386,29 @@ final class PendingStreamWritesManager: PendingWritesManager {
             }
         }
 
+        let closeResult: CloseResult
         // If we have no more writes check if we have a pending close
         if self.isEmpty {
             switch result.writeResult {
             case .writtenCompletely:
                 switch self.outboundCloseState {
                 case .open:
-                    ()
+                    closeResult = .open
                 case .pending(let closePromise):
                     self.outboundCloseState = .readyForClose(closePromise)
-                case .readyForClose:
+                    closeResult = .readyForClose(closePromise)
+                case .readyForClose(let closePromise):
                     assertionFailure("Transitioned from readyForClose to readyForClose, shouldn't we have closed?")
+                    closeResult = .readyForClose(closePromise)
                 case .closed:
-                    ()
+                    closeResult = .closed(nil)
                 }
 
             case .couldNotWriteEverything:
                 assertionFailure("Write result is .couldNotWriteEverything but we have no more writes to perform.")
+                throw NIOReportedIncompleteWritesWhenNoMoreToPerform()
             }
-            result.writeResult = .writtenCompletely(.init(self.outboundCloseState))
+            result.writeResult = .writtenCompletely(closeResult)
         }
         return result
     }
@@ -488,49 +495,59 @@ final class PendingStreamWritesManager: PendingWritesManager {
     }
 
     /// Fail all the outstanding writes.
-    func failAll(error: Error, close: Bool) {
+    func failAll(error: Error, close: Bool) -> CloseResult? {
+        let closeResult: CloseResult?
         if close {
             assert(self.isOpen)
             self.isOpen = false
             switch self.outboundCloseState {
             case .open, .closed:
                 self.outboundCloseState = .closed
+                closeResult = .closed(nil)
             case .pending(let closePromise), .readyForClose(let closePromise):
                 self.outboundCloseState = .closed
-                closePromise?.fail(error)
+                closeResult = .closed(closePromise)
             }
+        } else {
+            closeResult = nil
         }
 
         self.state.removeAll()?.fail(error)
 
         assert(self.state.isEmpty)
+        return closeResult
     }
 
     /// Signal the intention to close. Takes a promise which MUST be completed via a call to `closeComplete`
     ///
     /// - Parameters:
     ///   - promise: Optionally an `EventLoopPromise` that will be succeeded once all outstanding writes have been dealt with
-    func close(_ promise: EventLoopPromise<Void>?) -> CloseResult {
+    func closeOutbound(_ promise: EventLoopPromise<Void>?) -> CloseResult {
         assert(self.isOpen)
 
+        let closeResult: CloseResult
         if self.isEmpty {
             switch self.outboundCloseState {
             case .open:
                 self.outboundCloseState = .readyForClose(promise)
+                closeResult = .readyForClose(promise)
             case .readyForClose(var closePromise), .pending(var closePromise):
                 closePromise.setOrCascade(to: promise)
                 self.outboundCloseState = .readyForClose(closePromise)
+                closeResult = .readyForClose(closePromise)
             case .closed:
-                promise?.succeed(())
+                closeResult = .closed(promise)
             }
 
         } else {
             switch self.outboundCloseState {
             case .open:
                 self.outboundCloseState = .pending(promise)
+                closeResult = .pending
             case .pending(var closePromise):
                 closePromise.setOrCascade(to: promise)
                 self.outboundCloseState = .pending(closePromise)
+                closeResult = .pending
             case .readyForClose:
                 preconditionFailure(
                     "We are in .readyForClose state but we still have pending writes. This should never happen."
@@ -543,7 +560,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
         }
 
-        return .init(self.outboundCloseState)
+        return closeResult
     }
 
     /// Signal that the `Channel` is closed.
@@ -585,24 +602,11 @@ internal enum CloseState {
     case closed
 }
 
-internal enum CloseResult {
+internal enum CloseResult: Equatable {
     case open
     case pending
-    case readyForClose
-    case closed
-
-    init(_ state: CloseState) {
-        switch state {
-        case .open:
-            self = .open
-        case .pending:
-            self = .pending
-        case .readyForClose:
-            self = .readyForClose
-        case .closed:
-            self = .closed
-        }
-    }
+    case readyForClose(EventLoopPromise<Void>?)
+    case closed(EventLoopPromise<Void>?)
 }
 
 internal enum WriteMechanism {
@@ -642,7 +646,13 @@ extension PendingWritesManager {
             var oneResult: OneWriteOperationResult
             repeat {
                 guard self.isOpen && self.isFlushPending else {
-                    result.writeResult = .writtenCompletely(.init(self.outboundCloseState))
+                    let closeResult: CloseResult = switch self.outboundCloseState {
+                    case .open: .open
+                    case .pending: .pending
+                    case .readyForClose(let closePromise): .readyForClose(closePromise)
+                    case .closed: .closed(nil)
+                    }
+                    result.writeResult = .writtenCompletely(closeResult)
                     break writeSpinLoop
                 }
 

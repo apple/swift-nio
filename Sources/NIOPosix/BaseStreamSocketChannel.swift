@@ -196,11 +196,11 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 }
                 self.unregisterForWritable()
 
-                let writesCloseResult = self.pendingWrites.close(promise)
+                let writesCloseResult = self.pendingWrites.closeOutbound(promise)
                 switch writesCloseResult {
                 case .pending:
                     ()  // promise is stored in `pendingWrites` state for completing on later call to `closeComplete`
-                case .readyForClose:
+                case .readyForClose(let closePromise):
                     // Shutdown the socket only when the pending writes are dealt with
                     do {
                         try self.shutdownSocket(mode: mode)
@@ -208,9 +208,10 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     } catch let err {
                         self.pendingWrites.closeComplete(err)
                     }
+                    closePromise?.succeed(())
                     self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
-                case .closed:
-                    promise?.succeed(())
+                case .closed(let closePromise):
+                    closePromise?.succeed(())
                 case .open:
                     promise?.fail(ChannelError.inappropriateOperationForState)
                     assertionFailure("Close resulted in an open state, this should never happen")
@@ -263,7 +264,17 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func cancelWritesOnClose(error: Error) {
-        self.pendingWrites.failAll(error: error, close: true)
+        let closeResult = self.pendingWrites.failAll(error: error, close: true)
+        switch closeResult {
+        case .closed(let eventLoopPromise):
+            if let eventLoopPromise {
+                eventLoopPromise.fail(error)
+            }
+        case .open, .pending, .readyForClose:
+            preconditionFailure("failAll with close should never return \(closeResult!)")
+        case .none:
+            preconditionFailure("failAll with close should return a close result")
+        }
     }
 
     @discardableResult

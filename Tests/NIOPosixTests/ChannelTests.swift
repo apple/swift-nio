@@ -853,7 +853,8 @@ final class ChannelTests: XCTestCase {
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
             XCTAssertEqual(totalBytes - 2, pwm.bufferedBytes)
 
-            pwm.failAll(error: ChannelError.operationUnsupported, close: true)
+            let closeResult = pwm.failAll(error: ChannelError.operationUnsupported, close: true)
+            XCTAssertEqual(closeResult, .closed(nil))
 
             XCTAssertTrue(ps.map { $0.futureResult.isFulfilled }.allSatisfy { $0 })
         }
@@ -1259,7 +1260,8 @@ final class ChannelTests: XCTestCase {
             XCTAssertEqual(Int64(buffer.readableBytes * 3), pwm.bufferedBytes)
 
             ps[0].futureResult.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
-                pwm.failAll(error: ChannelError.inputClosed, close: true)
+                let closeResult = pwm.failAll(error: ChannelError.inputClosed, close: true)
+                XCTAssertEqual(closeResult, .closed(nil))
             }
 
             let result = try assertExpectedWritability(
@@ -1273,7 +1275,7 @@ final class ChannelTests: XCTestCase {
             )
 
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely(.closed), result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.closed(nil)), result.writeResult)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
             XCTAssertThrowsError(try ps[1].futureResult.wait())
             XCTAssertThrowsError(try ps[2].futureResult.wait())
