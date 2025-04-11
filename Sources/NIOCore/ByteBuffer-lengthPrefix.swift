@@ -149,4 +149,22 @@ extension ByteBuffer {
 
         return messageBuffer
     }
+
+    /// Reads an integer length prefix at the current `readerIndex`, then returns a `ByteBuffer` slice of that length
+    /// without advancing the reader index.
+    ///
+    /// This method is equivalent to calling `getLengthPrefixedSlice(at: readerIndex, ...)`.
+    ///
+    /// - Parameters:
+    ///   - endianness: The endianness of the length prefix (defaults to big endian).
+    ///   - integer: The `FixedWidthInteger` type for the length prefix.
+    /// - Returns: `nil` if the length prefix could not be read, the length prefix is negative, or if there aren't enough
+    ///            bytes for the message after the prefix. Otherwise, a slice of the requested length.
+    @inlinable
+    public func peekLengthPrefixedSlice<Integer>(
+        endianness: Endianness = .big,
+        as integer: Integer.Type
+    ) -> ByteBuffer? where Integer: FixedWidthInteger {
+        self.getLengthPrefixedSlice(at: self.readerIndex, endianness: endianness, as: integer)
+    }
 }
