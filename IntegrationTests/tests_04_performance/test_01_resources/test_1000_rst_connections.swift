@@ -27,10 +27,7 @@ private final class CloseAfterTimeoutHandler: ChannelInboundHandler {
 }
 
 func run(identifier: String) {
-    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-    defer {
-        try! group.syncShutdownGracefully()
-    }
+    let group = MultiThreadedEventLoopGroup.preheatedSingleton.next()
 
     let serverConnection = try! ServerBootstrap(group: group)
         .bind(host: "localhost", port: 0)

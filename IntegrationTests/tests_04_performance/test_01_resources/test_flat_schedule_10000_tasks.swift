@@ -18,24 +18,32 @@ import NIOPosix
 
 func run(identifier: String) {
     measure(identifier: identifier) {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let group = MultiThreadedEventLoopGroup.preheatedSingleton
         let loop = group.next()
-        let counter = try! loop.submit { () -> Int in
+        let (counter, tasks) = try! loop.submit { () -> (Int, [Scheduled<Int>]) in
+            let iterations = 10_000
+
             var counter: Int = 0
+            var tasks: [Scheduled<Int>] = []
+            tasks.reserveCapacity(iterations)
 
             let deadline = NIODeadline.now() + .hours(1)
 
-            for _ in 0..<10000 {
-                loop.flatScheduleTask(deadline: deadline) {
+            for _ in 0..<iterations {
+                let task = loop.flatScheduleTask(deadline: deadline) {
                     counter &+= 1
                     return loop.makeSucceededFuture(counter)
                 }
+                tasks.append(task)
             }
 
-            return counter
+            return (counter, tasks)
         }.wait()
 
-        try! group.syncShutdownGracefully()
+        for task in tasks {
+            task.cancel()
+        }
+
         return counter
     }
 }
