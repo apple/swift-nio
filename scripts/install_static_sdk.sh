@@ -29,17 +29,11 @@ if [[ ! ( -n "$branch" && -z "$version" ) && ! ( -z "$branch" && -n "$version") 
   fatal "Exactly one of build or version must be defined."
 fi
 
-log "Installing tools for this script"
-if command -v apt-get >/dev/null; then
-  package_manager="apt-get"
-  apt-get update > /dev/null
-elif command -v yum >/dev/null; then
-  package_manager="yum"
-else
-  fatal "Cannot find either 'apt' or 'yum'"
-fi
+CURL_BIN="${CURL_BIN:-$(which curl 2> /dev/null)}"; test -n "$CURL_BIN" || fatal "CURL_BIN unset and no curl on PATH"
+TAR_BIN="${TAR_BIN:-$(which tar 2> /dev/null)}"; test -n "$TAR_BIN" || fatal "TAR_BIN unset and no tar on PATH"
+JQ_BIN="${JQ_BIN:-$(which jq 2> /dev/null)}"; test -n "$JQ_BIN" || fatal "JQ_BIN unset and no jq on PATH"
+SED_BIN="${SED_BIN:-$(which sed 2> /dev/null)}"; test -n "$SED_BIN" || fatal "SED_BIN unset and no sed on PATH"
 
-"$package_manager" install -y curl rsync jq tar > /dev/null
 case "$arch" in
   "aarch64")
     arch_suffix="-$arch" ;;
@@ -54,14 +48,17 @@ os_image_sanitized="${os_image//./}"
 if [[ -n "$branch" ]]; then
   # Some snapshots may not have all the artefacts we require
   log "Discovering branch snapshot for branch $branch"
-  snapshots="$(curl -s "https://www.swift.org/api/v1/install/dev/main/${os_image_sanitized}.json" | jq -r --arg arch "$arch" '.[$arch] | unique | reverse | .[].dir')"
+
+  # shellcheck disable=SC2016  # Our use of JQ_BIN means that shellcheck can't tell this is a `jq` invocation
+  snapshots="$("$CURL_BIN" -s "https://www.swift.org/api/v1/install/dev/main/${os_image_sanitized}.json" | "$JQ_BIN" -r --arg arch "$arch" '.[$arch] | unique | reverse | .[].dir')"
+
   for snapshot in $snapshots; do
     snapshot_url="https://download.swift.org/development/${os_image_sanitized}${arch_suffix}/${snapshot}/${snapshot}-${os_image}${arch_suffix}.tar.gz"
     static_sdk_url="https://download.swift.org/development/static-sdk/${snapshot}/${snapshot}_static-linux-0.0.1.artifactbundle.tar.gz"
     
     # check that the files exist
-    curl -sILXGET --fail "$snapshot_url" > /dev/null; snapshot_return_code=$?
-    curl -sILXGET --fail "$static_sdk_url" > /dev/null; static_sdk_return_code=$?
+    "$CURL_BIN" -sILXGET --fail "$snapshot_url" > /dev/null; snapshot_return_code=$?
+    "$CURL_BIN" -sILXGET --fail "$static_sdk_url" > /dev/null; static_sdk_return_code=$?
     
     if [[ ("$snapshot_return_code" -eq 0) && ("$static_sdk_return_code" -eq 0) ]]; then
       log "Discovered branch snapshot: $snapshot"
@@ -78,7 +75,7 @@ if [[ -n "$branch" ]]; then
 elif [[ -n "$version" ]]; then
   if [[ "$version" == "latest" ]]; then
     log "Discovering latest version"
-    version=$(curl -s https://www.swift.org/api/v1/install/releases.json | jq -r '.[-1].tag' | sed -E 's/swift-([0-9]+\.[0-9]+\.?[0-9]*)-RELEASE/\1/')
+    version=$("$CURL_BIN" -s https://www.swift.org/api/v1/install/releases.json | "$JQ_BIN" -r '.[-1].tag' | "$SED_BIN" -E 's/swift-([0-9]+\.[0-9]+\.?[0-9]*)-RELEASE/\1/')
     if [[ -z "$version" ]]; then
       fatal "Failed to discover latest Swift version"
     fi
@@ -89,44 +86,22 @@ elif [[ -n "$version" ]]; then
   static_sdk_url="https://download.swift.org/swift-${version}-release/static-sdk/swift-${version}-RELEASE/swift-${version}-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz"
 fi
 
-log "Installing standard Swift pre-requisites"  # pre-reqs list taken from swift.org
-DEBIAN_FRONTEND=noninteractive "$package_manager" install -y\
-    binutils\
-    git\
-    gnupg2\
-    libc6-dev\
-    libcurl4-openssl-dev\
-    libedit2\
-    libgcc-11-dev\
-    libpython3-dev\
-    libsqlite3-0\
-    libstdc++-11-dev\
-    libxml2-dev\
-    libz3-dev\
-    pkg-config\
-    python3-lldb-13\
-    tzdata\
-    unzip\
-    zlib1g-dev\
-    > /dev/null
-
 log "Obtaining Swift toolchain"
 log "Snapshot URL: $snapshot_url"
 snapshot_path="/tmp/$(basename "$snapshot_url")"
-curl -sL "$snapshot_url" -o "$snapshot_path"
+"$CURL_BIN" -sfL "$snapshot_url" -o "$snapshot_path" || fatal "Failed to download Swift toolchain"
 
 log "Installing Swift toolchain"
 mkdir -p /tmp/snapshot
-tar xfz "$snapshot_path" --strip-components 1 -C /tmp/snapshot
-rsync -a /tmp/snapshot/* /
+"$TAR_BIN" xfz "$snapshot_path" --strip-components 1 -C /
 
 log "Obtaining Static SDK"
 log "Static SDK URL: $static_sdk_url"
 static_sdk_path="/tmp/$(basename "$static_sdk_url")"
-curl -sL "$static_sdk_url" -o "$static_sdk_path"
+"$CURL_BIN" -sfL "$static_sdk_url" -o "$static_sdk_path" || fatal "Failed to download Static SDK"
 
 log "Looking for swift"
-which swift
+which swift || fatal "Failed to locate installed Swift"
 
 log "Checking swift"
 swift --version

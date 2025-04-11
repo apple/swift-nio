@@ -15,10 +15,10 @@ import NIOCore
 import NIOEmbedded
 
 final class ChannelPipelineBenchmark: Benchmark {
-    private final class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler {
+    private final class NoOpHandler: ChannelInboundHandler, RemovableChannelHandler, Sendable {
         typealias InboundIn = Any
     }
-    private final class ConsumingHandler: ChannelInboundHandler, RemovableChannelHandler {
+    private final class ConsumingHandler: ChannelInboundHandler, RemovableChannelHandler, Sendable {
         typealias InboundIn = Any
 
         func channelReadComplete(context: ChannelHandlerContext) {
@@ -28,7 +28,7 @@ final class ChannelPipelineBenchmark: Benchmark {
     private let channel: EmbeddedChannel
     private let runCount: Int
     private let extraHandlers = 4
-    private var handlers: [RemovableChannelHandler] = []
+    private var handlers: [RemovableChannelHandler & Sendable] = []
 
     init(runCount: Int) {
         self.channel = EmbeddedChannel()
