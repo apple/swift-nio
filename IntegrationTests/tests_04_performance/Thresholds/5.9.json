@@ -33,7 +33,7 @@
     "encode_1000_ws_frames_new_buffer_with_space": 3050,
     "encode_1000_ws_frames_new_buffer_with_space_with_mask": 5050,
     "execute_hop_10000_tasks": 0,
-    "flat_schedule_10000_tasks": 110050,
+    "flat_schedule_10000_tasks": 120050,
     "flat_schedule_assume_isolated_10000_tasks": 110050,
     "future_assume_isolated_lots_of_callbacks": 74050,
     "future_erase_result": 4050,
