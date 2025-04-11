@@ -30,7 +30,7 @@ func run(identifier: String) {
             let deadline = NIODeadline.now() + .hours(1)
 
             for _ in 0..<iterations {
-                let task = loop.assumeIsolated().flatScheduleTask(deadline: deadline) {
+                let task = loop.flatScheduleTask(deadline: deadline) {
                     counter &+= 1
                     return loop.makeSucceededFuture(counter)
                 }

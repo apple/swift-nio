@@ -28,7 +28,7 @@ func run(identifier: String) {
             for _ in 0..<10000 {
                 dg.enter()
 
-                let task = loop.scheduleTask(in: .nanoseconds(0)) {
+                loop.scheduleTask(in: .nanoseconds(0)) {
                     counter &+= 1
                     dg.leave()
                 }
