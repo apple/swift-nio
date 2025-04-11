@@ -646,12 +646,13 @@ extension PendingWritesManager {
             var oneResult: OneWriteOperationResult
             repeat {
                 guard self.isOpen && self.isFlushPending else {
-                    let closeResult: CloseResult = switch self.outboundCloseState {
-                    case .open: .open
-                    case .pending: .pending
-                    case .readyForClose(let closePromise): .readyForClose(closePromise)
-                    case .closed: .closed(nil)
-                    }
+                    let closeResult: CloseResult =
+                        switch self.outboundCloseState {
+                        case .open: .open
+                        case .pending: .pending
+                        case .readyForClose(let closePromise): .readyForClose(closePromise)
+                        case .closed: .closed(nil)
+                        }
                     result.writeResult = .writtenCompletely(closeResult)
                     break writeSpinLoop
                 }
