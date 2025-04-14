@@ -430,7 +430,7 @@ class ChannelNotificationTest: XCTestCase {
                 .channelInitializer { channel in
                     channel.eventLoop.makeCompletedFuture {
                         try channel.pipeline.syncOperations.addHandler(
-                            ServerSocketChannelLifecycleVerificationHandler()
+                            SocketChannelLifecycleVerificationHandler()
                         )
                     }
                 }
