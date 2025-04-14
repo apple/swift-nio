@@ -127,7 +127,7 @@ class BlockingIOThreadPoolTest: XCTestCase {
         assert(weakThreadPool == nil, within: .seconds(1))
     }
 
-    class SomeClass {
+    final class SomeClass: Sendable {
         init() {}
         func dummy() {}
     }
