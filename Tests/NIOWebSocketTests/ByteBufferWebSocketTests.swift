@@ -19,6 +19,116 @@ import XCTest
 final class ByteBufferWebSocketTests: XCTestCase {
     private var buffer = ByteBuffer()
 
+    // MARK: - getWebSocketErrorCode(at:) Tests
+
+    func testGetWebSocketErrorCode_WithValidCode() {
+        let expected = WebSocketErrorCode.protocolError
+        buffer.write(webSocketErrorCode: expected)
+
+        let result = buffer.getWebSocketErrorCode(at: 0)
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result, expected)
+        XCTAssertEqual(buffer.readerIndex, 0, "get should not mutate readerIndex")
+    }
+
+    func testGetWebSocketErrorCode_OutOfBoundsIndex() {
+        // Write two codes, but try to get at an index beyond buffer
+        let errorCode = WebSocketErrorCode.policyViolation
+        buffer.write(webSocketErrorCode: errorCode)
+
+        let result = buffer.getWebSocketErrorCode(at: 10)
+        XCTAssertNil(result, "Should return nil for out-of-bounds index")
+    }
+
+    func testGetWebSocketErrorCode_EmptyBuffer() {
+        let result = buffer.getWebSocketErrorCode(at: 0)
+        XCTAssertNil(result, "Should return nil on empty buffer")
+    }
+
+    func testGetWebSocketErrorCode_RepeatedAccess() {
+        let errorCode = WebSocketErrorCode.goingAway
+        buffer.write(webSocketErrorCode: errorCode)
+
+        let result1 = buffer.getWebSocketErrorCode(at: 0)
+        let result2 = buffer.getWebSocketErrorCode(at: 0)
+        XCTAssertEqual(result1, result2)
+        XCTAssertEqual(buffer.readableBytes, 2)
+        XCTAssertEqual(buffer.readerIndex, 0)
+    }
+
+    // MARK: - write(webSocketErrorCode:) Tests
+
+    func testWriteWebSocketErrorCode() {
+        let errorCode = WebSocketErrorCode.protocolError
+        buffer.write(webSocketErrorCode: errorCode)
+
+        // Should have written 2 bytes (UInt16)
+        XCTAssertEqual(buffer.readableBytes, 2)
+
+        let peeked = buffer.peekWebSocketErrorCode()
+        XCTAssertEqual(peeked, errorCode)
+    }
+
+    // MARK: - readWebSocketErrorCode() Tests
+
+    func testReadWebSocketErrorCode_Valid() {
+        let expected = WebSocketErrorCode.policyViolation
+        buffer.write(webSocketErrorCode: expected)
+
+        let result = buffer.readWebSocketErrorCode()
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result, expected, "readWebSocketErrorCode should decode the correct code")
+        XCTAssertEqual(buffer.readableBytes, 0, "Buffer should be consumed after reading")
+    }
+
+    func testReadWebSocketErrorCode_NotEnoughBytes() {
+        // Write 1 byte
+        buffer.writeInteger(UInt8(0x02))
+        let result = buffer.readWebSocketErrorCode()
+        XCTAssertNil(result, "Should return nil if insufficient bytes")
+        XCTAssertEqual(buffer.readerIndex, 0, "Reader index should not move if read fails")
+    }
+
+    func testPeekThenReadConsistency() {
+        let errorCode = WebSocketErrorCode.goingAway
+        buffer.write(webSocketErrorCode: errorCode)
+
+        // Peek first
+        let peeked = buffer.peekWebSocketErrorCode()
+        XCTAssertEqual(peeked, errorCode)
+
+        // Then read
+        let read = buffer.readWebSocketErrorCode()
+        XCTAssertEqual(read, errorCode)
+
+        // After read peeking again should fail
+        let afterRead = buffer.peekWebSocketErrorCode()
+        XCTAssertNil(afterRead)
+    }
+
+    func testMultipleWritesAndReads() {
+        let errorCodes: [WebSocketErrorCode] = [.goingAway, .unacceptableData, .protocolError]
+        for errorCode in errorCodes {
+            buffer.write(webSocketErrorCode: errorCode)
+        }
+
+        // Peek each one before reading to verify
+        for (index, expected) in errorCodes.enumerated() {
+            let offset = index * 2
+            let peeked = buffer.getWebSocketErrorCode(at: buffer.readerIndex + offset)
+            XCTAssertEqual(peeked, expected)
+        }
+
+        for expected in errorCodes {
+            let read = buffer.readWebSocketErrorCode()
+            XCTAssertEqual(read, expected)
+        }
+
+        XCTAssertEqual(buffer.readableBytes, 0, "Buffer should be fully consumed")
+    }
+
+    // MARK: - peekWebSocketErrorCode() Tests
+
     func testPeekWebSocketErrorCode_Normal() {
         var buffer = ByteBuffer()
         let errorCode = WebSocketErrorCode(codeNumber: 1002)
