@@ -1029,9 +1029,9 @@ final class SocketChannelTest: XCTestCase {
         }
 
         let serverSocket = try assertNoThrowWithValue(ServerSocket(protocolFamily: .inet))
-        let serverAddress = try serverSocket.localAddress()
         XCTAssertNoThrow(try serverSocket.bind(to: .init(ipAddress: "127.0.0.1", port: 0)))
         XCTAssertNoThrow(try serverSocket.listen())
+        let serverAddress = try serverSocket.localAddress()
         let g = DispatchGroup()
         // Transfer the socket to the dispatch queue. It's not used on this thread after this point.
         let unsafeServerSocket = UnsafeTransfer(serverSocket)
