@@ -191,6 +191,10 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
         }
     }
 
+    public func errorCaught(context: ChannelHandlerContext, error: any Error) {
+        self.upgradeResultPromise.fail(error)
+    }
+
     private func channelRead(context: ChannelHandlerContext, responsePart: HTTPClientResponsePart) {
         switch self.stateMachine.channelReadResponsePart(responsePart) {
         case .fireErrorCaughtAndRemoveHandler(let error):
