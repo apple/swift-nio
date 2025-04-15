@@ -1372,7 +1372,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
 
     func testReturnsErrorsFromPriorChannelHandlers() throws {
         struct FailedError: Error {}
-        final class FailingChannelHandler: ChannelInboundHandler, RemovableChannelHandler {
+        final class FailingChannelHandler: ChannelInboundHandler, RemovableChannelHandler, Sendable {
             typealias InboundIn = Any
             typealias InboundOut = Any
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
