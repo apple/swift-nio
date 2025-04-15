@@ -79,15 +79,12 @@ class NIOHTTP1TestServerTest: XCTestCase {
         let bootstrap = ClientBootstrap(group: self.group)
             .channelOption(.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
-                channel.pipeline.addHTTPClientHandlers(
-                    position: .first,
-                    leftOverBytesStrategy: .fireError
-                ).flatMap {
-                    channel.pipeline.addHandler(AggregateBodyHandler())
-                }.flatMap {
-                    channel.pipeline.addHandler(TestHTTPHandler(responsePromise: responsePromise))
-                }.flatMap {
-                    channel.pipeline.addHandler(TransformerHandler())
+                channel.eventLoop.makeCompletedFuture {
+                    let sync = channel.pipeline.syncOperations
+                    try sync.addHTTPClientHandlers(position: .first, leftOverBytesStrategy: .fireError)
+                    try sync.addHandler(AggregateBodyHandler())
+                    try sync.addHandler(TestHTTPHandler(responsePromise: responsePromise))
+                    try sync.addHandler(TransformerHandler())
                 }
             }
         return bootstrap.connect(host: "127.0.0.1", port: serverPort)
