@@ -79,7 +79,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
         let bootstrap = ClientBootstrap(group: self.group)
             .channelOption(.socketOption(.so_reuseaddr), value: 1)
             .channelInitializer { channel in
-                return channel.eventLoop.makeCompletedFuture {
+                channel.eventLoop.makeCompletedFuture {
                     let sync = channel.pipeline.syncOperations
                     try sync.addHTTPClientHandlers(position: .first, leftOverBytesStrategy: .fireError)
                     try sync.addHandler(AggregateBodyHandler())
