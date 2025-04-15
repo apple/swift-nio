@@ -528,7 +528,8 @@ let package = Package(
                 "NIOCore",
                 "NIOEmbedded",
                 "NIOPosix",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOFoundationCompatTests",
