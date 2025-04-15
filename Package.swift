@@ -519,7 +519,8 @@ let package = Package(
                 "NIOCore",
                 "NIOEmbedded",
                 "NIOWebSocket",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOTestUtilsTests",
