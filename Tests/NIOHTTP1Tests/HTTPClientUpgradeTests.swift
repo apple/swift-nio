@@ -1217,56 +1217,6 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
                 break
             }
         }
-        /*let channel = EmbeddedChannel()
-        
-        if let previousHTTPHandler {
-            try channel.pipeline.syncOperations.addHandler(previousHTTPHandler)
-        }
-        var headers = HTTPHeaders()
-        headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
-        headers.add(name: "Content-Length", value: "\(0)")
-        
-        let requestHead = HTTPRequestHead(
-            version: .http1_1,
-            method: .GET,
-            uri: "/",
-            headers: headers
-        )
-        
-        let upgraders: [any NIOTypedHTTPClientProtocolUpgrader<Bool>] = Array(
-            clientUpgraders.map { $0 as! any NIOTypedHTTPClientProtocolUpgrader<Bool> }
-        )
-        
-        let config = NIOTypedHTTPClientUpgradeConfiguration<Bool>(
-            upgradeRequestHead: requestHead,
-            upgraders: upgraders
-        ) { channel in
-            channel.eventLoop.makeCompletedFuture {
-                try channel.pipeline.syncOperations.addHandler(clientHTTPHandler)
-            }.map { _ in
-                false
-            }
-        }
-        var configuration = NIOUpgradableHTTPClientPipelineConfiguration(upgradeConfiguration: config)
-        configuration.leftOverBytesStrategy = .forwardBytes
-        let upgradeResult = try channel.pipeline.syncOperations.configureUpgradableHTTPClientPipeline(
-            configuration: configuration
-        )
-        let context = try channel.pipeline.syncOperations.context(
-            handlerType: NIOTypedHTTPClientUpgradeHandler<Bool>.self
-        )
-        
-        let loopBoundContext = context.loopBound
-        try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
-            .wait()
-        upgradeResult.whenSuccess { result in
-            if result {
-                let context = loopBoundContext.value
-                upgradeCompletionHandler(context)
-            }
-        }
-        
-        return channel*/
     }
 
     // - MARK: The following tests are all overridden from the base class since they slightly differ in behaviour
