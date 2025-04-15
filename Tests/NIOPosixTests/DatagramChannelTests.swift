@@ -508,7 +508,7 @@ class DatagramChannelTests: XCTestCase {
         // Only run this test on platforms that support recvmmsg: the others won't even
         // try.
         #if os(Linux) || os(FreeBSD) || os(Android)
-        final class RecvMmsgHandler: ChannelInboundHandler {
+        final class RecvMmsgHandler: ChannelInboundHandler, Sendable {
             typealias InboundIn = AddressedEnvelope<ByteBuffer>
             typealias InboundOut = AddressedEnvelope<ByteBuffer>
 
