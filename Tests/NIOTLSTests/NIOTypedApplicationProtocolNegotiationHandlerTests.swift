@@ -198,8 +198,8 @@ final class NIOTypedApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let eventCounterHandler = EventCounterHandler()
 
         try channel.pipeline.syncOperations.addHandler(handler)
-        try channel.pipeline.addHandler(DuplicatingReadHandler(embeddedChannel: channel)).wait()
-        try channel.pipeline.addHandler(eventCounterHandler).wait()
+        try channel.pipeline.syncOperations.addHandler(DuplicatingReadHandler(embeddedChannel: channel))
+        try channel.pipeline.syncOperations.addHandler(eventCounterHandler)
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
