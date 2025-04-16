@@ -511,7 +511,8 @@ let package = Package(
                 "NIOTLS",
                 "NIOFoundationCompat",
                 "NIOTestUtils",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOWebSocketTests",
