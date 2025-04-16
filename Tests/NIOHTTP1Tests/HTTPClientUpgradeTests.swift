@@ -1380,7 +1380,6 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
                 context.close(promise: nil)
             }
         }
-        var upgradeResult: Result<Bool, Error>?
 
         let clientUpgrader = ExplodingClientUpgrader(forProtocol: "myProto")
         let clientHandler = RecordingHTTPHandler()
@@ -1390,21 +1389,12 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
             clientHTTPHandler: clientHandler,
             clientUpgraders: [clientUpgrader]
         ) { _, result in
-            upgradeResult = result
         }
 
         let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: myProto\r\n\r\n"
-        XCTAssertNoThrow(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response)))
-
-        clientChannel.flush()
-        clientChannel.embeddedEventLoop.run()
-
-        let result = try XCTUnwrap(upgradeResult)
-        switch result {
-        case .failure(is FailedError):
-            break
-        default:
-            XCTFail("Wrong result \(result)")
+        XCTAssertThrowsError(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response))) {
+            error in
+            XCTAssert(error is FailedError)
         }
     }
 
