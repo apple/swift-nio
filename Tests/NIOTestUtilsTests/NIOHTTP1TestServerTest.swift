@@ -474,7 +474,7 @@ class NIOHTTP1TestServerTest: XCTestCase {
             }
         )
 
-        // Create a second channel now, and again send a request head. We can't wait for the test server to receive it, because it hasn't yet.
+        // Create a second channel now.
         let secondResponsePromise = self.group.next().makePromise(of: String.self)
         let secondChannel = try self.connect(serverPort: testServer.serverPort, responsePromise: secondResponsePromise)
             .wait()
