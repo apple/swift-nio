@@ -292,7 +292,7 @@ class EventLoopFutureTest: XCTestCase {
         let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
         let futures = promises.map { $0.futureResult }
 
-        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop, +)
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop) { $0 + $1 }
         _ = promises.map { $0.fail(E()) }
         XCTAssert(fN.eventLoop === eventLoop)
         XCTAssertThrowsError(try fN.wait()) { error in
@@ -311,7 +311,7 @@ class EventLoopFutureTest: XCTestCase {
 
         let futures = promises.map { $0.futureResult }
 
-        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop, +)
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop) { $0 + $1 }
         XCTAssert(fN.eventLoop === eventLoop)
         XCTAssertThrowsError(try fN.wait()) { error in
             XCTAssertNotNil(error as? E)
@@ -327,7 +327,7 @@ class EventLoopFutureTest: XCTestCase {
         promises.insert(failedPromise, at: promises.startIndex)
 
         let futures = promises.map { $0.futureResult }
-        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop, +)
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop) { $0 + $1 }
 
         failedPromise.fail(E())
 
