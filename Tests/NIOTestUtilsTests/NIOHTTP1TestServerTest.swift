@@ -462,7 +462,8 @@ class NIOHTTP1TestServerTest: XCTestCase {
     func testCloseChannelWhileItIsWaiting() throws {
         let testServer = NIOHTTP1TestServer(group: self.group, aggregateBody: false)
         let firstResponsePromise = self.group.next().makePromise(of: String.self)
-        let firstChannel = try self.connect(serverPort: testServer.serverPort, responsePromise: firstResponsePromise).wait()
+        let firstChannel = try self.connect(serverPort: testServer.serverPort, responsePromise: firstResponsePromise)
+            .wait()
 
         // Send a request head and wait for it to be sent, and received at the test server so we know the connection is well underway.
         let requestHead = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri")
@@ -475,7 +476,8 @@ class NIOHTTP1TestServerTest: XCTestCase {
 
         // Create a second channel now, and again send a request head. We can't wait for the test server to receive it, because it hasn't yet.
         let secondResponsePromise = self.group.next().makePromise(of: String.self)
-        let secondChannel = try self.connect(serverPort: testServer.serverPort, responsePromise: secondResponsePromise).wait()
+        let secondChannel = try self.connect(serverPort: testServer.serverPort, responsePromise: secondResponsePromise)
+            .wait()
 
         // To burn a little time and convince ourselves that things are going fairly well, we can send a body payload on the first channel
         // and confirm it comes through.
