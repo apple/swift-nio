@@ -390,6 +390,7 @@ private func assertPipelineContainsUpgradeHandler(channel: Channel) {
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 class HTTPClientUpgradeTestCase: XCTestCase {
     func setUpClientChannel(
+        previousHTTPHandler: (RemovableChannelHandler & Sendable)? = nil,
         clientHTTPHandler: RemovableChannelHandler & Sendable,
         clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
         _ upgradeCompletionHandler: @escaping @Sendable (ChannelHandlerContext) -> Void
@@ -1141,14 +1142,19 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 #if !canImport(Darwin) || swift(>=5.10)
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
-    override func setUpClientChannel(
+
+    func setUpClientChannel(
+        previousHTTPHandler: (RemovableChannelHandler & Sendable)? = nil,
         clientHTTPHandler: RemovableChannelHandler & Sendable,
         clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
-        _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
+        _ upgradeCompletionHandler: @escaping (ChannelHandlerContext, Result<Bool, Error>) -> Void
     ) throws -> EmbeddedChannel {
 
         let channel = EmbeddedChannel()
 
+        if let previousHTTPHandler {
+            try channel.pipeline.syncOperations.addHandler(previousHTTPHandler)
+        }
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
@@ -1186,14 +1192,31 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         let loopBoundContext = context.loopBound
         try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
             .wait()
-        upgradeResult.assumeIsolated().whenSuccess { result in
-            if result {
-                let context = loopBoundContext.value
-                upgradeCompletionHandler(context)
-            }
+        upgradeResult.assumeIsolated().whenComplete { result in
+            upgradeCompletionHandler(loopBoundContext.value, result)
         }
 
         return channel
+    }
+
+    override func setUpClientChannel(
+        previousHTTPHandler: (RemovableChannelHandler & Sendable)? = nil,
+        clientHTTPHandler: RemovableChannelHandler & Sendable,
+        clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
+        _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
+    ) throws -> EmbeddedChannel {
+        try setUpClientChannel(
+            previousHTTPHandler: previousHTTPHandler,
+            clientHTTPHandler: clientHTTPHandler,
+            clientUpgraders: clientUpgraders
+        ) { context, result in
+            switch result {
+            case .success(true):
+                upgradeCompletionHandler(context)
+            default:
+                break
+            }
+        }
     }
 
     // - MARK: The following tests are all overridden from the base class since they slightly differ in behaviour
@@ -1345,6 +1368,47 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         // Check that the upgrade was still successful, despite the interruption.
         XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
         XCTAssertEqual(1, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
+    }
+
+    func testReturnsErrorsFromPriorChannelHandlers() throws {
+        struct FailedError: Error {}
+        final class FailingChannelHandler: ChannelInboundHandler, RemovableChannelHandler, Sendable {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                context.fireErrorCaught(FailedError())
+                context.close(promise: nil)
+            }
+        }
+        var upgradeResult: Result<Bool, Error>?
+
+        let clientUpgrader = ExplodingClientUpgrader(forProtocol: "myProto")
+        let clientHandler = RecordingHTTPHandler()
+
+        let clientChannel = try setUpClientChannel(
+            previousHTTPHandler: FailingChannelHandler(),
+            clientHTTPHandler: clientHandler,
+            clientUpgraders: [clientUpgrader]
+        ) { _, result in
+            upgradeResult = result
+        }
+
+        let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: myProto\r\n\r\n"
+        XCTAssertThrowsError(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response))) {
+            error in
+            XCTAssert(error is FailedError)
+        }
+
+        clientChannel.flush()
+        clientChannel.embeddedEventLoop.run()
+
+        let result = try XCTUnwrap(upgradeResult)
+        switch result {
+        case .failure(is FailedError):
+            break
+        default:
+            XCTFail("Wrong result \(result)")
+        }
     }
 
     override func testUpgradeResponseMissingAllProtocols() throws {
