@@ -458,6 +458,55 @@ class NIOHTTP1TestServerTest: XCTestCase {
         XCTAssertNotNil(channel)
         XCTAssertNoThrow(try channel.closeFuture.wait())
     }
+
+    func testCloseChannelWhileItIsWaiting() throws {
+        let testServer = NIOHTTP1TestServer(group: self.group, aggregateBody: false)
+        let firstResponsePromise = self.group.next().makePromise(of: String.self)
+        let firstChannel = try self.connect(serverPort: testServer.serverPort, responsePromise: firstResponsePromise)
+            .wait()
+
+        // Send a request head and wait for it to be sent, and received at the test server so we know the connection is well underway.
+        let requestHead = HTTPRequestHead(version: .http1_1, method: .POST, uri: "/uri")
+        firstChannel.writeAndFlush(SendableRequestPart.head(requestHead), promise: nil)
+        XCTAssertNoThrow(
+            try testServer.receiveHeadAndVerify { head in
+                XCTAssertEqual(head.uri, "/uri")
+            }
+        )
+
+        // Create a second channel now.
+        let secondResponsePromise = self.group.next().makePromise(of: String.self)
+        let secondChannel = try self.connect(serverPort: testServer.serverPort, responsePromise: secondResponsePromise)
+            .wait()
+
+        // To burn a little time and convince ourselves that things are going fairly well, we can send a body payload on the first channel
+        // and confirm it comes through.
+        firstChannel.writeAndFlush(
+            SendableRequestPart.body(ByteBuffer(string: "ping")),
+            promise: nil
+        )
+        XCTAssertNoThrow(
+            try testServer.receiveBodyAndVerify { buffer in
+                XCTAssertEqual(String(buffer: buffer), "ping")
+            }
+        )
+
+        // Now, close the second channel.
+        try secondChannel.close().wait()
+
+        // Now we can complete the transaction.
+        firstChannel.writeAndFlush(SendableRequestPart.end(nil), promise: nil)
+        XCTAssertNoThrow(
+            try testServer.receiveEndAndVerify { trailers in
+                XCTAssertNil(trailers)
+            }
+        )
+        XCTAssertNoThrow(try testServer.writeOutbound(.head(.init(version: .http1_1, status: .ok))))
+        XCTAssertNoThrow(try testServer.writeOutbound(.end(nil)))
+
+        // The promise for the second should error.
+        XCTAssertThrowsError(try secondResponsePromise.futureResult.wait())
+    }
 }
 
 private final class TestHTTPHandler: ChannelInboundHandler {
