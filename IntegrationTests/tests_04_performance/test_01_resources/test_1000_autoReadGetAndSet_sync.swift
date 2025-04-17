@@ -16,6 +16,7 @@ import NIOCore
 import NIOPosix
 
 func run(identifier: String) {
+    let group = MultiThreadedEventLoopGroup.preheatedSingleton
     MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { loop in
         ServerBootstrap(group: group).bind(host: "127.0.0.1", port: 0).map { server in
             measure(identifier: identifier) {

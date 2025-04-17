@@ -13,10 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import NIOCore
 import NIOPosix
 
 func run(identifier: String) {
-    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    let group = MultiThreadedEventLoopGroup.preheatedSingleton
     let loop = group.next()
     let dg = DispatchGroup()
 
@@ -37,6 +38,4 @@ func run(identifier: String) {
 
         return counter
     }
-
-    try! group.syncShutdownGracefully()
 }

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import AtomicCounter
+import Dispatch
 import Foundation
 
 #if canImport(Darwin)
@@ -139,7 +140,14 @@ func measureAll(trackFDs: Bool, _ fn: () -> Int) -> [Measurement] {
 }
 
 func measureAndPrint(desc: String, trackFDs: Bool, fn: () -> Int) {
+    let start = DispatchTime.now()
     let measurements = measureAll(trackFDs: trackFDs, fn)
+
+    let end = DispatchTime.now()
+    let durationNanos = end.uptimeNanoseconds - start.uptimeNanoseconds
+    let durationSeconds = Double(durationNanos) / 1e9
+    print("\(desc).duration: \(durationSeconds) (s)")
+
     measurements.printTotalAllocations(description: desc)
     measurements.printRemainingAllocations(description: desc)
     measurements.printTotalAllocatedBytes(description: desc)

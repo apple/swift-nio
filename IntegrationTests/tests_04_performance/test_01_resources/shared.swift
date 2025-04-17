@@ -18,7 +18,44 @@ import NIOHTTP1
 import NIOPosix
 
 let localhostPickPort = try! SocketAddress.makeAddressResolvingHost("127.0.0.1", port: 0)
-let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+let group: MultiThreadedEventLoopGroup = {
+    preHeatMTELGSingleton()
+    return MultiThreadedEventLoopGroup.singleton
+}()
+
+extension MultiThreadedEventLoopGroup {
+    static var preheatedSingleton: MultiThreadedEventLoopGroup {
+        group
+    }
+}
+
+private func preHeatMTELGSingleton() {
+    for loop in MultiThreadedEventLoopGroup.singleton.makeIterator() {
+        var futures = [EventLoopFuture<Void>]()
+        futures.reserveCapacity(10_000)
+
+        for _ in 0..<10_000 {
+            let f = loop.submit {}
+            futures.append(f)
+        }
+
+        for f in futures {
+            try! f.wait()
+        }
+
+        var scheduleds = [Scheduled<Void>]()
+        scheduleds.reserveCapacity(10_000)
+
+        for _ in 0..<10_000 {
+            let t = loop.scheduleTask(in: .hours(1)) {}
+            scheduleds.append(t)
+        }
+
+        for t in scheduleds {
+            t.cancel()
+        }
+    }
+}
 
 final class RepeatedRequests: ChannelInboundHandler {
     typealias InboundIn = HTTPClientResponsePart
