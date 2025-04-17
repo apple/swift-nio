@@ -145,13 +145,13 @@ final class NIOLoopBoundTests: XCTestCase {
     func testFlatSubmit() throws {
         let loopBound = NIOLoopBound(Ref(42), eventLoop: self.loop)
         let value1 = try loopBound.flatSubmit { [loop] ref in
-            loop.makeSucceededFuture(ref.value)
+            loop!.makeSucceededFuture(ref.value)
         }.wait()
         XCTAssertEqual(value1, 42)
 
         let loopBoundBox = NIOLoopBoundBox(Ref(42), eventLoop: self.loop)
         let value2 = try loopBoundBox.flatSubmit { [loop] ref in
-            loop.makeSucceededFuture(ref.value)
+            loop!.makeSucceededFuture(ref.value)
         }.wait()
         XCTAssertEqual(value2, 42)
     }
