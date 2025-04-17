@@ -116,6 +116,46 @@ final class NIOLoopBoundTests: XCTestCase {
         XCTAssertTrue(loopBoundBox.value.mutateInPlace())
     }
 
+    func testExecute() {
+        let loopBound = NIOLoopBound(Ref(31), eventLoop: self.loop)
+        loopBound.execute { ref in
+            XCTAssertEqual(ref.value, 31)
+            ref.value = 415
+        }
+        XCTAssertEqual(loopBound.value.value, 415)
+
+        let loopBoundBox = NIOLoopBoundBox(Ref(31), eventLoop: self.loop)
+        loopBoundBox.execute { ref in
+            XCTAssertEqual(ref.value, 31)
+            ref.value = 415
+        }
+        XCTAssertEqual(loopBoundBox.value.value, 415)
+    }
+
+    func testSubmit() throws {
+        let loopBound = NIOLoopBound(Ref(42), eventLoop: self.loop)
+        let value1 = try loopBound.submit { $0.value }.wait()
+        XCTAssertEqual(value1, 42)
+
+        let loopBoundBox = NIOLoopBoundBox(Ref(42), eventLoop: self.loop)
+        let value2 = try loopBoundBox.submit { $0.value }.wait()
+        XCTAssertEqual(value2, 42)
+    }
+
+    func testFlatSubmit() throws {
+        let loopBound = NIOLoopBound(Ref(42), eventLoop: self.loop)
+        let value1 = try loopBound.flatSubmit { ref in
+            self.loop.makeSucceededFuture(ref.value)
+        }.wait()
+        XCTAssertEqual(value1, 42)
+
+        let loopBoundBox = NIOLoopBoundBox(Ref(42), eventLoop: self.loop)
+        let value2 = try loopBoundBox.flatSubmit { ref in
+            self.loop.makeSucceededFuture(ref.value)
+        }.wait()
+        XCTAssertEqual(value2, 42)
+    }
+
     // MARK: - Helpers
     func sendableBlackhole<S: Sendable>(_ sendableThing: S) {}
 
@@ -134,3 +174,14 @@ final class NotSendable {}
 
 @available(*, unavailable)
 extension NotSendable: Sendable {}
+
+final class Ref<Value> {
+    var value: Value
+
+    init(_ value: Value) {
+        self.value = value
+    }
+}
+
+@available(*, unavailable)
+extension Ref: Sendable {}
