@@ -117,6 +117,31 @@ for f in *.c; do
     }
 done
 
+patch -p1 -V none << 'EOF'
+diff --git a/include/c_nio_llhttp.h b/include/c_nio_llhttp.h
+index 071e828c6..1e5d99cec 100644
+--- a/include/c_nio_llhttp.h
++++ b/include/c_nio_llhttp.h
+@@ -11,11 +11,16 @@
+ 
+ #ifndef INCLUDE_LLHTTP_ITSELF_H_
+ #define INCLUDE_LLHTTP_ITSELF_H_
++#ifdef __cplusplus
++#include <cstdint>
++#else
++#include <stdint.h>
++#endif
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+ 
+-#include <stdint.h>
+ 
+ typedef struct c_nio_llhttp__internal_s c_nio_llhttp__internal_t;
+ struct c_nio_llhttp__internal_s {
+EOF
+
 rm -rf "$compiletmp"
 rm -rf "$tmpdir"
 
