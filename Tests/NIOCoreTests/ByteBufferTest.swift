@@ -1315,9 +1315,11 @@ class ByteBufferTest: XCTestCase {
         XCTAssertEqual("a", buf.readString(length: 1))
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testReadUTF8ValidatedString() throws {
         #if compiler(>=6)
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+            throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         buf.clear()
         let expected = "hello"
         buf.writeString(expected)
@@ -1330,9 +1332,11 @@ class ByteBufferTest: XCTestCase {
         #endif  // compiler(>=6)
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testGetUTF8ValidatedString() throws {
         #if compiler(>=6)
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+            throw XCTSkip("'getUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         buf.clear()
         let expected = "hello, goodbye"
         buf.writeString(expected)
@@ -1343,9 +1347,11 @@ class ByteBufferTest: XCTestCase {
         #endif  // compiler(>=6)
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testReadUTF8InvalidString() throws {
         #if compiler(>=6)
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+            throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         buf.clear()
         buf.writeBytes([UInt8](repeating: 255, count: 16))
         XCTAssertThrowsError(try buf.readUTF8ValidatedString(length: 16)) { error in
@@ -4222,8 +4228,10 @@ extension ByteBufferTest {
     // MARK: - peekUTF8ValidatedString Tests (available in Swift 6+)
 
     #if compiler(>=6)
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testPeekUTF8ValidatedString_Normal() throws {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+            throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         var buffer = ByteBuffer()
         let testString = "UTF8 Validated"
         let written = buffer.writeString(testString)
@@ -4232,8 +4240,10 @@ extension ByteBufferTest {
         XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged.")
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testPeekUTF8ValidatedString_Empty() throws {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+            throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         var buffer = ByteBuffer()
         _ = buffer.writeString("")
         let peeked = try buffer.peekUTF8ValidatedString(length: 0)
@@ -4241,8 +4251,10 @@ extension ByteBufferTest {
         XCTAssertEqual(buffer.readerIndex, 0, "Reader index should remain unchanged for empty peek.")
     }
 
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
     func testPeekUTF8ValidatedString_Repeated() throws {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+            throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
+        }
         var buffer = ByteBuffer()
         let testString = "Repeat UTF8"
         let written = buffer.writeString(testString)
