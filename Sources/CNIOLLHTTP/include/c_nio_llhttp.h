@@ -12,10 +12,15 @@
 #ifndef INCLUDE_LLHTTP_ITSELF_H_
 #define INCLUDE_LLHTTP_ITSELF_H_
 #ifdef __cplusplus
+#include <cstdint>
+#else
+#include <stdint.h>
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
 
 typedef struct c_nio_llhttp__internal_s c_nio_llhttp__internal_t;
 struct c_nio_llhttp__internal_s {
