@@ -3,7 +3,7 @@
 ##
 ## This source file is part of the SwiftNIO open source project
 ##
-## Copyright (c) 2017-2022 Apple Inc. and the SwiftNIO project authors
+## Copyright (c) 2017-2025 Apple Inc. and the SwiftNIO project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -33,6 +33,8 @@ if ! hash ${sed} 2>/dev/null; then
     exit 42
 fi
 
+rm "$here"/*.c
+
 tmpdir=$(mktemp -d /tmp/.llhttp_vendor_XXXXXX)
 cd "$tmpdir"
 git clone https://github.com/nodejs/llhttp.git
@@ -40,7 +42,7 @@ cd llhttp
 npm install
 make
 
-cp "$tmpdir/llhttp/LICENSE-MIT" "$here"
+cp "$tmpdir/llhttp/LICENSE" "$here"
 cp "$tmpdir/llhttp/build/llhttp.h" "$here"
 cp "$tmpdir/llhttp/build/c/llhttp.c" "$here"
 cp "$tmpdir/llhttp/src/native/"*.c "$here"
@@ -95,6 +97,8 @@ for f in *.{c,h}; do
         -e 's/\b\(llhttp_settings_init\)/c_nio_\1/g' \
         -e 's/\b\(llhttp_should_keep_alive\)/c_nio_\1/g' \
         -e 's/\b\(llhttp_status_name\)/c_nio_\1/g' \
+        -e 's/\b\(llhttp_set_lenient_spaces_after_chunk_size\)/c_nio_\1/g' \
+        -e 's/\b\(llhttp_set_lenient_optional_cr_before_lf\)/c_nio_\1/g' \
         "$here/c_nio_$f"
 done
 
@@ -104,7 +108,7 @@ compiletmp=$(mktemp -d /tmp/.test_compile_XXXXXX)
 
 for f in *.c; do
     clang -o "$compiletmp/$f.o" -c "$here/$f"
-    num_non_nio=$(nm "$compiletmp/$f.o" | grep ' T ' | grep -cv c_nio)
+    num_non_nio=$(nm "$compiletmp/$f.o" | grep ' T ' | grep -cv c_nio || true)
 
     test 0 -eq "$num_non_nio" || {
         echo "ERROR: $num_non_nio exported non-prefixed symbols found"
