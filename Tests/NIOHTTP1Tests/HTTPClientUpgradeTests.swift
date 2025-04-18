@@ -1444,6 +1444,14 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
         clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
 
+        // Now feed inbound EOF, which will trigger an error.
+        clientChannel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+        XCTAssertThrowsError(
+            try clientChannel.throwIfErrorCaught()
+        ) { error in
+            XCTAssertEqual(.invalidEOFState, error as? HTTPParserError)
+        }
+
         // Check that the HTTP handler received its response.
         XCTAssertLessThanOrEqual(0, clientHandler.channelReadChannelHandlerContextDataCallCount)
         // Check an error is reported

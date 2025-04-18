@@ -564,7 +564,7 @@ class HTTPDecoderLengthTest: XCTestCase {
             string: "POST / HTTP/1.1\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n"
         )
         XCTAssertThrowsError(try channel.writeInbound(request)) { error in
-            XCTAssertEqual(HTTPParserError.unexpectedContentLength, error as? HTTPParserError)
+            XCTAssertEqual(HTTPParserError.invalidContentLength, error as? HTTPParserError)
         }
 
         // Must spin the loop.
@@ -592,7 +592,7 @@ class HTTPDecoderLengthTest: XCTestCase {
         // Send a 200 OK with the invalid headers.
         let response = "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 4\r\n\r\n"
         XCTAssertThrowsError(try channel.writeInbound(channel.allocator.buffer(string: response))) { error in
-            XCTAssertEqual(HTTPParserError.unexpectedContentLength, error as? HTTPParserError)
+            XCTAssertEqual(HTTPParserError.invalidContentLength, error as? HTTPParserError)
         }
 
         // Must spin the loop.

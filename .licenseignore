@@ -32,7 +32,7 @@ Dockerfile
 **/Dockerfile
 Snippets/*
 Sources/CNIOAtomics/src/cpp_magic.h
-Sources/CNIOLLHTTP/LICENSE-MIT
+Sources/CNIOLLHTTP/LICENSE
 Sources/CNIOLLHTTP/c_nio_api.c
 Sources/CNIOLLHTTP/c_nio_http.c
 Sources/CNIOLLHTTP/c_nio_llhttp.c
