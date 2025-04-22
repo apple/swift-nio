@@ -869,7 +869,21 @@ extension EventLoopFuture {
             return CallbackList()
         }
     }
-
+    #if compiler(>=6)
+    /// Adds an observer callback to this `EventLoopFuture` that is called when the
+    /// `EventLoopFuture` has any result.
+    ///
+    /// - Parameters:
+    ///   - callback: The callback that is called when the `EventLoopFuture` is fulfilled.
+    @inlinable
+    @preconcurrency
+    public func whenComplete(_ callback: @escaping @Sendable (sending Result<Value, Error>) -> Void) {
+        self._whenComplete {
+            callback(self._value!)
+            return CallbackList()
+        }
+    }
+    #else
     /// Adds an observer callback to this `EventLoopFuture` that is called when the
     /// `EventLoopFuture` has any result.
     ///
@@ -883,6 +897,7 @@ extension EventLoopFuture {
             return CallbackList()
         }
     }
+    #endif
 
     /// Internal: Set the value and return a list of callbacks that should be invoked as a result.
     @inlinable

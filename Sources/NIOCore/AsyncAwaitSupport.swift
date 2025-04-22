@@ -11,7 +11,31 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-
+#if compiler(>=6)
+extension EventLoopFuture {
+    /// Get the value/error from an `EventLoopFuture` in an `async` context.
+    ///
+    /// - warning: This method currently violates Structured Concurrency because cancellation isn't respected.
+    ///
+    /// This function can be used to bridge an `EventLoopFuture` into the `async` world. Ie. if you're in an `async`
+    /// function and want to get the result of this future.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    @preconcurrency
+    @inlinable
+    public func get() async throws -> sending Value {
+        try await withUnsafeThrowingContinuation { (cont: UnsafeContinuation<Value, Error>) in
+            self.whenComplete { result in
+                switch result {
+                    case .success(let value):
+                        cont.resume(returning: value)
+                    case .failure(let error):
+                        cont.resume(throwing: error)
+                }
+            }
+        }
+    }
+}
+#else
 extension EventLoopFuture {
     /// Get the value/error from an `EventLoopFuture` in an `async` context.
     ///
@@ -35,6 +59,7 @@ extension EventLoopFuture {
         }.wrappedValue
     }
 }
+#endif
 
 #if canImport(Dispatch)
 extension EventLoopGroup {
