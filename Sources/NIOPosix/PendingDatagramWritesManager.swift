@@ -693,13 +693,16 @@ final class PendingDatagramWritesManager: PendingWritesManager {
         }
     }
 
-    /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
-    func failAll(error: Error, close: Bool) {
-        if close {
-            assert(self.isOpen)
-            self.isOpen = false
-        }
+    /// Close the write manager and fail all the outstanding writes. This is useful if for example the `Channel` is closed.
+    func closeAndFailAll(error: Error) {
+        assert(self.isOpen)
+        self.isOpen = false
 
+        self.failAll(error: error)
+    }
+
+    /// Fail all the outstanding writes. This is useful if for example the `Channel` is closed.
+    func failAll(error: Error) {
         self.state.failAll(error: error)
 
         assert(self.state.isEmpty)
