@@ -194,27 +194,33 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     self.close0(error: error, mode: .all, promise: promise)
                     return
                 }
-                self.unregisterForWritable()
 
-                let writesCloseResult = self.pendingWrites.closeOutbound(promise)
-                switch writesCloseResult {
+                let result = self.pendingWrites.closeOutbound(promise)
+                switch result {
                 case .pending:
-                    ()  // promise is stored in `pendingWrites` state for completing on later call to `closeComplete`
+                    ()  // promise is stored in `pendingWrites` state for completing later
+
                 case .readyForClose(let closePromise):
                     // Shutdown the socket only when the pending writes are dealt with
                     do {
                         try self.shutdownSocket(mode: mode)
-                        self.pendingWrites.closeComplete()
+                        closePromise?.succeed(())
                     } catch let err {
-                        self.pendingWrites.closeComplete(err)
+                        closePromise?.fail(err)
                     }
-                    closePromise?.succeed(())
+                    self.unregisterForWritable()
                     self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
+
                 case .closed(let closePromise):
                     closePromise?.succeed(())
-                case .open:
-                    promise?.fail(ChannelError.inappropriateOperationForState)
-                    assertionFailure("Close resulted in an open state, this should never happen")
+
+                case .errored(let err, let closePromise):
+                    assertionFailure("Close errored: \(err)")
+                    closePromise?.fail(err)
+
+                    // Escalate to full closure
+                    // promise is nil here because we have used the supplied promise to convey failure of the half-close
+                    self.close0(error: err, mode: .all, promise: nil)
                 }
 
             case .input:
@@ -264,16 +270,8 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func cancelWritesOnClose(error: Error) {
-        let closeResult = self.pendingWrites.failAll(error: error, close: true)
-        switch closeResult {
-        case .closed(let eventLoopPromise):
-            if let eventLoopPromise {
-                eventLoopPromise.fail(error)
-            }
-        case .open, .pending, .readyForClose:
-            preconditionFailure("failAll with close should never return \(closeResult!)")
-        case .none:
-            preconditionFailure("failAll with close should return a close result")
+        if let eventLoopPromise = self.pendingWrites.failAll(error: error) {
+            eventLoopPromise.fail(error)
         }
     }
 

@@ -301,6 +301,86 @@ class StreamChannelTest: XCTestCase {
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
     }
 
+    func testHalfCloseOwnOutputWithWritabilityChange() throws {
+        final class BytesReadCountingHandler: ChannelInboundHandler, Sendable {
+            typealias InboundIn = ByteBuffer
+
+            private let numBytes: NIOLoopBoundBox<Int>
+
+            init(_ numBytesLoopBound: NIOLoopBoundBox<Int>) {
+                self.numBytes = numBytesLoopBound
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                let currentBuffer = Self.unwrapInboundIn(data)
+                self.numBytes.value += currentBuffer.readableBytes
+                context.fireChannelRead(data)
+            }
+        }
+
+        final class BytesWrittenCountingHandler: ChannelInboundHandler, Sendable {
+            typealias InboundIn = ByteBuffer
+
+            public typealias OutboundIn = ByteBuffer
+            public typealias OutboundOut = ByteBuffer
+
+            private let numBytes: NIOLoopBoundBox<Int>
+
+            init(_ numBytesLoopBound: NIOLoopBoundBox<Int>) {
+                self.numBytes = numBytesLoopBound
+            }
+
+            func setup(_ context: ChannelHandlerContext) {
+                let bufferLength = 1024
+                let bytesToWrite = ByteBuffer.init(repeating: 0x42, count: bufferLength)
+
+                // write until the kernel buffer and the pendingWrites buffer are full
+                while context.channel.isWritable {
+                    XCTAssertNoThrow(context.writeAndFlush(self.wrapOutboundOut(bytesToWrite), promise: nil))
+                    self.numBytes.value += bufferLength
+                }
+            }
+
+            func channelActive(context: ChannelHandlerContext) {
+                self.setup(context)
+                context.fireChannelActive()
+            }
+
+            func handlerAdded(context: ChannelHandlerContext) {
+                self.setup(context)
+            }
+        }
+
+        func runTest(chan1: Channel, chan2: Channel) throws {
+            try chan1.setOption(.autoRead, value: false).wait()
+
+            let bytesRead = NIOLoopBoundBox.makeBoxSendingValue(0, eventLoop: chan1.eventLoop)
+            let bytesReadCountingHandler = BytesReadCountingHandler(bytesRead)
+            try chan1.pipeline.addHandler(bytesReadCountingHandler).wait()
+
+            let bytesWritten = NIOLoopBoundBox.makeBoxSendingValue(0, eventLoop: chan2.eventLoop)
+            let bytesWrittenCountingHandler = BytesWrittenCountingHandler(bytesWritten)
+            try chan2.pipeline.addHandler(bytesWrittenCountingHandler).wait()
+
+            // close the writing side
+            let chan2ClosePromise = chan2.eventLoop.makePromise(of: Void.self)
+            chan2.close(mode: .output, promise: chan2ClosePromise)
+
+            // tell the read side to begin reading leading to the write buffers draining
+            try chan1.setOption(.autoRead, value: true).wait()
+
+            // wait for the reading-side close to complete
+            try chan1.closeFuture.wait()
+
+            // now the dust has settled all the bytes should be accounted for
+            try chan2.eventLoop.submit {
+                XCTAssertNotEqual(bytesWritten.value, 0)
+                XCTAssertEqual(bytesRead.value, bytesWritten.value)
+            }.wait()
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(forceSeparateEventLoops: false, runTest))
+    }
+
     func testHalfCloseOwnInput() {
         func runTest(chan1: Channel, chan2: Channel) throws {
 
