@@ -46,7 +46,7 @@ import Synchronization
 /// - Returns: The value returned by `body`.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 @inlinable
-public func withManualTaskExecutor<T, Failure>(
+package func withManualTaskExecutor<T, Failure>(
     body: (ManualTaskExecutor) async throws(Failure) -> T
 ) async throws(Failure) -> T {
     let taskExecutor = ManualTaskExecutor()
@@ -87,7 +87,7 @@ public func withManualTaskExecutor<T, Failure>(
 /// - Returns: The value returned by `body`.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 @inlinable
-public func withManualTaskExecutor<T, Failure>(
+package func withManualTaskExecutor<T, Failure>(
     body: (ManualTaskExecutor, ManualTaskExecutor) async throws(Failure) -> T
 ) async throws(Failure) -> T {
     let taskExecutor1 = ManualTaskExecutor()
@@ -105,7 +105,8 @@ public func withManualTaskExecutor<T, Failure>(
 /// Jobs are manually run by calling the `runUntilQueueIsEmpty` method.
 ///
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-public final class ManualTaskExecutor: TaskExecutor {
+@usableFromInline
+package final class ManualTaskExecutor: TaskExecutor {
     struct Storage {
         var isShutdown = false
         var jobs = Deque<UnownedJob>()
@@ -125,7 +126,7 @@ public final class ManualTaskExecutor: TaskExecutor {
     /// - finished
     ///
     /// If not all tasks are finished, this function must be called again.
-    public func runUntilQueueIsEmpty() {
+    package func runUntilQueueIsEmpty() {
         while let job = self.storage.withLock({ $0.jobs.popFirst() }) {
             job.runSynchronously(on: self.asUnownedTaskExecutor())
         }
@@ -136,7 +137,8 @@ public final class ManualTaskExecutor: TaskExecutor {
     /// Called by the concurrency runtime.
     ///
     /// - Parameter job: The job to enqueue.
-    public func enqueue(_ job: UnownedJob) {
+    @usableFromInline
+    package func enqueue(_ job: UnownedJob) {
         self.storage.withLock { storage in
             if storage.isShutdown {
                 fatalError("A job is enqueued after manual executor shutdown")
