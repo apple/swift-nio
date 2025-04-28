@@ -55,14 +55,16 @@ for test in "${all_tests[@]}"; do
         leaked_fds=$(grep "^test_$test_case.leaked_fds:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
         max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test_case"
         max_allowed=$(jq '.'\""$test_case"\" "$here/Thresholds/$SWIFT_VERSION.json")
+        
+        assert_is_number "$max_allowed" "Malformed or nonexistent ${SWIFT_VERSION}.json thresholds file"
 
         info "$test_case: allocations not freed: $not_freed_allocations"
         info "$test_case: total number of mallocs: $total_allocations"
         info "$test_case: leaked fds: $leaked_fds"
 
-        assert_less_than "$not_freed_allocations" 5     # allow some slack
-        assert_greater_than "$not_freed_allocations" -5 # allow some slack
-        assert_less_than "$leaked_fds" 1  # No slack allowed here though
+        assert_less_than "$not_freed_allocations" 5 "Allocations not freed are greater than expected"     # allow some slack
+        assert_greater_than "$not_freed_allocations" -5 "Allocations not freed are less than expected" # allow some slack
+        assert_less_than "$leaked_fds" 1 "There are leaked file descriptors" # No slack allowed here though
         if [[ -z "${!max_allowed_env_name+x}" ]] && [ -z "${max_allowed}" ]; then
             if [[ -z "${!max_allowed_env_name+x}" ]]; then
                 warn "no reference number of allocations set (set to \$$max_allowed_env_name)"
@@ -74,8 +76,8 @@ for test in "${all_tests[@]}"; do
             if [ -z "${max_allowed}" ]; then
                 max_allowed=${!max_allowed_env_name}
             fi
-            assert_less_than_or_equal "$total_allocations" "$max_allowed"
-            assert_greater_than "$total_allocations" "$(( max_allowed - 1000))"
+            assert_less_than_or_equal "$total_allocations" "$max_allowed" "Total allocations exceed the max allowed"
+            assert_greater_than "$total_allocations" "$(( max_allowed - 1000))" "Total allocations are less than expected"
         fi
     done < <(grep "^test_${test}[^\W]*.total_allocations:" "$tmp/output" | cut -d: -f1 | cut -d. -f1 | sort | uniq)
 done

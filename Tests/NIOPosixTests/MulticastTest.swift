@@ -16,7 +16,7 @@ import NIOCore
 import NIOPosix
 import XCTest
 
-final class PromiseOnReadHandler: ChannelInboundHandler {
+final class PromiseOnReadHandler: ChannelInboundHandler, Sendable {
     typealias InboundIn = AddressedEnvelope<ByteBuffer>
 
     private let promise: EventLoopPromise<InboundIn>

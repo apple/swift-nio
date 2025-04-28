@@ -58,6 +58,18 @@ extension ByteBuffer {
         return result
     }
 
+    /// Returns the Bytes at the current reader index without advancing it.
+    ///
+    /// This method is equivalent to calling `getBytes(at: readerIndex, ...)`
+    ///
+    /// - Parameters:
+    ///   - length: The number of bytes of interest.
+    /// - Returns: A `[UInt8]` value containing the bytes of interest or `nil` if the bytes `ByteBuffer` are not readable.
+    @inlinable
+    public func peekBytes(length: Int) -> [UInt8]? {
+        self.getBytes(at: self.readerIndex, length: length)
+    }
+
     // MARK: StaticString APIs
 
     /// Write the static `string` into this `ByteBuffer` using UTF-8 encoding, moving the writer index forward appropriately.
@@ -303,6 +315,27 @@ extension ByteBuffer {
         }
     }
 
+    /// Return a String decoded from the bytes at the current reader index using UTF-8 encoding.
+    ///
+    /// This is equivalent to calling `getString(at: readerIndex, length: ...)` and does not advance the reader index.
+    ///
+    /// - Parameter length: The number of bytes making up the string.
+    /// - Returns: A String containing the decoded bytes, or `nil` if the requested bytes are not readable.
+    @inlinable
+    public func peekString(length: Int) -> String? {
+        self.getString(at: self.readerIndex, length: length)
+    }
+
+    /// Return a null-terminated String starting at the current reader index.
+    ///
+    /// This is equivalent to calling `getNullTerminatedString(at: readerIndex)` and does not advance the reader index.
+    ///
+    /// - Returns: A String decoded from the null-terminated bytes, or `nil` if a complete null-terminated string is not available.
+    @inlinable
+    public func peekNullTerminatedString() -> String? {
+        self.getNullTerminatedString(at: self.readerIndex)
+    }
+
     #if canImport(Dispatch)
     // MARK: DispatchData APIs
     /// Write `dispatchData` into this `ByteBuffer`, moving the writer index forward appropriately.
@@ -367,6 +400,17 @@ extension ByteBuffer {
         }
         self._moveReaderIndex(forwardBy: length)
         return result
+    }
+
+    /// Return a DispatchData object containing the bytes at the current reader index.
+    ///
+    /// This is equivalent to calling `getDispatchData(at: readerIndex, length: ...)` and does not advance the reader index.
+    ///
+    /// - Parameter length: The number of bytes to be retrieved.
+    /// - Returns: A DispatchData object, or `nil` if the requested bytes are not readable.
+    @inlinable
+    public func peekDispatchData(length: Int) -> DispatchData? {
+        self.getDispatchData(at: self.readerIndex, length: length)
     }
     #endif
 
@@ -965,6 +1009,19 @@ extension ByteBuffer {
 
         /// The length of the bytes to copy was negative.
         public static let invalidUTF8: ReadUTF8ValidationError = .init(baseError: .invalidUTF8)
+    }
+
+    /// Return a UTF-8 validated String decoded from the bytes at the current reader index.
+    ///
+    /// This is equivalent to calling `getUTF8ValidatedString(at: readerIndex, length: ...)` and does not advance the reader index.
+    ///
+    /// - Parameter length: The number of bytes making up the string.
+    /// - Returns: A validated String, or `nil` if the requested bytes are not readable.
+    /// - Throws: `ReadUTF8ValidationError.invalidUTF8` if the bytes are not valid UTF8.
+    @inlinable
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    public func peekUTF8ValidatedString(length: Int) throws -> String? {
+        try self.getUTF8ValidatedString(at: self.readerIndex, length: length)
     }
 }
 #endif  // compiler(>=6)

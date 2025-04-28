@@ -727,7 +727,7 @@ class PendingDatagramWritesManagerTests: XCTestCase {
             _ = pwm.add(envelope: AddressedEnvelope(remoteAddress: address, data: buffer), promise: ps[2])
             XCTAssertEqual(Int64(buffer.readableBytes * 3), pwm.bufferedBytes)
 
-            ps[0].futureResult.whenComplete { (_: Result<Void, Error>) in
+            ps[0].futureResult.assumeIsolated().whenComplete { (res: Result<Void, Error>) in
                 pwm.failAll(error: ChannelError.inputClosed, close: true)
             }
 

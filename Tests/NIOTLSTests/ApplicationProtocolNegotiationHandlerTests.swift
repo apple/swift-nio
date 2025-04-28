@@ -197,7 +197,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let readCompleteHandler = ReadCompletedHandler()
 
         try channel.pipeline.syncOperations.addHandler(handler)
-        try channel.pipeline.addHandler(readCompleteHandler).wait()
+        try channel.pipeline.syncOperations.addHandler(readCompleteHandler)
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
@@ -224,7 +224,7 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let readCompleteHandler = ReadCompletedHandler()
 
         try channel.pipeline.syncOperations.addHandler(handler)
-        try channel.pipeline.addHandler(readCompleteHandler).wait()
+        try channel.pipeline.syncOperations.addHandler(readCompleteHandler)
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)
@@ -254,8 +254,8 @@ class ApplicationProtocolNegotiationHandlerTests: XCTestCase {
         let readCompleteHandler = ReadCompletedHandler()
 
         try channel.pipeline.syncOperations.addHandler(handler)
-        try channel.pipeline.addHandler(DuplicatingReadHandler(embeddedChannel: channel)).wait()
-        try channel.pipeline.addHandler(readCompleteHandler).wait()
+        try channel.pipeline.syncOperations.addHandler(DuplicatingReadHandler(embeddedChannel: channel))
+        try channel.pipeline.syncOperations.addHandler(readCompleteHandler)
 
         // Fire in the event.
         channel.pipeline.fireUserInboundEventTriggered(negotiatedEvent)

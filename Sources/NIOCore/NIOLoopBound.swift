@@ -25,7 +25,13 @@
 /// or constructing it from any other place will crash your program with a precondition as it would be undefined
 /// behaviour to do so.
 public struct NIOLoopBound<Value>: @unchecked Sendable {
-    public let _eventLoop: EventLoop
+    /// The ``EventLoop`` that the value is bound to.
+    public let eventLoop: EventLoop
+
+    @available(*, deprecated, renamed: "eventLoop")
+    public var _eventLoop: EventLoop {
+        self.eventLoop
+    }
 
     @usableFromInline
     var _value: Value
@@ -34,7 +40,7 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     @inlinable
     public init(_ value: Value, eventLoop: EventLoop) {
         eventLoop.preconditionInEventLoop()
-        self._eventLoop = eventLoop
+        self.eventLoop = eventLoop
         self._value = value
     }
 
@@ -44,11 +50,11 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
     @inlinable
     public var value: Value {
         get {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             return self._value
         }
         _modify {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             yield &self._value
         }
     }
@@ -72,14 +78,20 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
 /// whilst off the ``EventLoop`` by using ``NIOLoopBoundBox/makeEmptyBox(valueType:eventLoop:)``. Any read/write access to ``value``
 /// afterwards will require you to be on `eventLoop`.
 public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
-    public let _eventLoop: EventLoop
+    /// The ``EventLoop`` that the value is bound to.
+    public let eventLoop: EventLoop
+
+    @available(*, deprecated, renamed: "eventLoop")
+    public var _eventLoop: EventLoop {
+        self.eventLoop
+    }
 
     @usableFromInline
     var _value: Value
 
     @inlinable
     internal init(_value value: Value, uncheckedEventLoop eventLoop: EventLoop) {
-        self._eventLoop = eventLoop
+        self.eventLoop = eventLoop
         self._value = value
     }
 
@@ -128,16 +140,16 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     }
 
     #if compiler(>=6.0)
+    // Note: Whitespace changes are used to workaround compiler bug
+    // Remove when compiler version 5.10 is no longer supported.
+    // https://github.com/swiftlang/swift/issues/79285
+    // swift-format-ignore
     /// Initialise a ``NIOLoopBoundBox`` by sending a  value, validly callable off `eventLoop`.
     ///
     /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because `value` is moved into the box and can no longer be accessed outside the box.
     /// So we don't need to protect `value` itself, we just need to protect the ``NIOLoopBoundBox`` against mutations which we do because the ``value``
     /// accessors are checking that we're on `eventLoop`.
-    public static func makeBoxSendingValue(
-        _ value: sending Value,
-        as: Value.Type = Value.self,
-        eventLoop: EventLoop
-    ) -> NIOLoopBoundBox<Value> {
+    public static func makeBoxSendingValue(_ value: sending Value, as: Value.Type = Value.self, eventLoop: EventLoop) -> NIOLoopBoundBox<Value> {
         // Here, we -- possibly surprisingly -- do not precondition being on the EventLoop. This is okay for a few
         // reasons:
         // - This function takes its value as `sending` so we don't need to worry about somebody
@@ -155,11 +167,11 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     @inlinable
     public var value: Value {
         get {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             return self._value
         }
         _modify {
-            self._eventLoop.preconditionInEventLoop()
+            self.eventLoop.preconditionInEventLoop()
             yield &self._value
         }
     }

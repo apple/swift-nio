@@ -33,12 +33,20 @@ class FileRegionTest: XCTestCase {
         }
         let bytes = Array(content.utf8)
 
-        let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().makePromise())
-
+        let promise = group.next().makePromise(of: ByteBuffer.self)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
-                .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
+                .childChannelInitializer { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(
+                            ByteCountingHandler(
+                                numBytes: bytes.count,
+                                promise: promise
+                            )
+                        )
+                    }
+                }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
         )
@@ -80,7 +88,7 @@ class FileRegionTest: XCTestCase {
 
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
             buffer.writeBytes(bytes)
-            try countingHandler.assertReceived(buffer: buffer)
+            XCTAssertEqual(try promise.futureResult.wait(), buffer)
         }
     }
 
@@ -90,12 +98,20 @@ class FileRegionTest: XCTestCase {
             XCTAssertNoThrow(try group.syncShutdownGracefully())
         }
 
-        let countingHandler = ByteCountingHandler(numBytes: 0, promise: group.next().makePromise())
-
+        let promise = group.next().makePromise(of: ByteBuffer.self)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
-                .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
+                .childChannelInitializer { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(
+                            ByteCountingHandler(
+                                numBytes: 0,
+                                promise: promise
+                            )
+                        )
+                    }
+                }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
         )
@@ -152,12 +168,17 @@ class FileRegionTest: XCTestCase {
         }
         let bytes = Array(content.utf8)
 
-        let countingHandler = ByteCountingHandler(numBytes: bytes.count, promise: group.next().makePromise())
-
+        let promise = group.next().makePromise(of: ByteBuffer.self)
         let serverChannel = try assertNoThrowWithValue(
             ServerBootstrap(group: group)
                 .serverChannelOption(.socketOption(.so_reuseaddr), value: 1)
-                .childChannelInitializer { $0.pipeline.addHandler(countingHandler) }
+                .childChannelInitializer { channel in
+                    channel.eventLoop.makeCompletedFuture {
+                        try channel.pipeline.syncOperations.addHandler(
+                            ByteCountingHandler(numBytes: bytes.count, promise: promise)
+                        )
+                    }
+                }
                 .bind(host: "127.0.0.1", port: 0)
                 .wait()
         )
@@ -223,7 +244,7 @@ class FileRegionTest: XCTestCase {
 
             var buffer = clientChannel.allocator.buffer(capacity: bytes.count)
             buffer.writeBytes(bytes)
-            try countingHandler.assertReceived(buffer: buffer)
+            XCTAssertEqual(try promise.futureResult.wait(), buffer)
         }
     }
 

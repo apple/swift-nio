@@ -292,7 +292,7 @@ class EventLoopFutureTest: XCTestCase {
         let promises: [EventLoopPromise<Int>] = (0..<100).map { (_: Int) in eventLoop.makePromise() }
         let futures = promises.map { $0.futureResult }
 
-        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop, +)
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop) { $0 + $1 }
         _ = promises.map { $0.fail(E()) }
         XCTAssert(fN.eventLoop === eventLoop)
         XCTAssertThrowsError(try fN.wait()) { error in
@@ -311,7 +311,7 @@ class EventLoopFutureTest: XCTestCase {
 
         let futures = promises.map { $0.futureResult }
 
-        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop, +)
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop) { $0 + $1 }
         XCTAssert(fN.eventLoop === eventLoop)
         XCTAssertThrowsError(try fN.wait()) { error in
             XCTAssertNotNil(error as? E)
@@ -327,7 +327,7 @@ class EventLoopFutureTest: XCTestCase {
         promises.insert(failedPromise, at: promises.startIndex)
 
         let futures = promises.map { $0.futureResult }
-        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop, +)
+        let fN: EventLoopFuture<Int> = EventLoopFuture<Int>.reduce(0, futures, on: eventLoop) { $0 + $1 }
 
         failedPromise.fail(E())
 
@@ -437,7 +437,7 @@ class EventLoopFutureTest: XCTestCase {
             $0.count
         }.flatMapThrowing {
             1 + $0
-        }.whenSuccess {
+        }.assumeIsolated().whenSuccess {
             ran = true
             XCTAssertEqual($0, 6)
         }
@@ -460,7 +460,7 @@ class EventLoopFutureTest: XCTestCase {
         }.map { (x: Int) -> Int in
             XCTFail("shouldn't have been called")
             return x
-        }.whenFailure {
+        }.assumeIsolated().whenFailure {
             ran = true
             XCTAssertEqual(.some(DummyError.dummyError), $0 as? DummyError)
         }
@@ -483,7 +483,7 @@ class EventLoopFutureTest: XCTestCase {
         }.flatMapErrorThrowing { (_: Error) in
             XCTFail("shouldn't have been called")
             return 5
-        }.whenSuccess {
+        }.assumeIsolated().whenSuccess {
             ran = true
             XCTAssertEqual($0, 5)
         }
@@ -507,7 +507,7 @@ class EventLoopFutureTest: XCTestCase {
         }.map { (x: Int) -> Int in
             XCTFail("shouldn't have been called")
             return x
-        }.whenFailure {
+        }.assumeIsolated().whenFailure {
             ran = true
             XCTAssertEqual(.some(DummyError.dummyError2), $0 as? DummyError)
         }
@@ -519,7 +519,7 @@ class EventLoopFutureTest: XCTestCase {
         let eventLoop = EmbeddedEventLoop()
         var state = 0
         let p: EventLoopPromise<Void> = EventLoopPromise(eventLoop: eventLoop, file: #filePath, line: #line)
-        p.futureResult.map {
+        p.futureResult.assumeIsolated().map {
             XCTAssertEqual(state, 0)
             state += 1
         }.map {
@@ -851,8 +851,8 @@ class EventLoopFutureTest: XCTestCase {
             let promises = (0..<5).map { _ in group.next().makePromise(of: Int.self) }
             let futures = promises.map { $0.futureResult }
 
-            var succeeded = false
-            var completedPromises = false
+            let succeeded = NIOLockedValueBox(false)
+            let completedPromises = NIOLockedValueBox(false)
 
             let mainFuture: EventLoopFuture<[Int]>
 
@@ -864,13 +864,13 @@ class EventLoopFutureTest: XCTestCase {
             }
 
             mainFuture.whenSuccess { _ in
-                XCTAssertTrue(completedPromises)
-                XCTAssertFalse(succeeded)
-                succeeded = true
+                XCTAssertTrue(completedPromises.withLockedValue { $0 })
+                XCTAssertFalse(succeeded.withLockedValue { $0 })
+                succeeded.withLockedValue { $0 = true }
             }
 
             // Should be false, as none of the promises have completed yet
-            XCTAssertFalse(succeeded)
+            XCTAssertFalse(succeeded.withLockedValue { $0 })
 
             // complete the first four promises
             for (index, promise) in promises.dropLast().enumerated() {
@@ -878,10 +878,10 @@ class EventLoopFutureTest: XCTestCase {
             }
 
             // Should still be false, as one promise hasn't completed yet
-            XCTAssertFalse(succeeded)
+            XCTAssertFalse(succeeded.withLockedValue { $0 })
 
             // Complete the last promise
-            completedPromises = true
+            completedPromises.withLockedValue { $0 = true }
             promises.last!.succeed(4)
 
             let results = try assertNoThrowWithValue(mainFuture.wait())
@@ -903,8 +903,8 @@ class EventLoopFutureTest: XCTestCase {
             let promises = expected.map { _ in group.next().makePromise(of: Int.self) }
             let futures = promises.map { $0.futureResult }
 
-            var succeeded = false
-            var completedPromises = false
+            let succeeded = NIOLockedValueBox(false)
+            let completedPromises = NIOLockedValueBox(false)
 
             let mainFuture: EventLoopFuture<[Int]>
 
@@ -916,14 +916,14 @@ class EventLoopFutureTest: XCTestCase {
             }
 
             mainFuture.whenSuccess { _ in
-                XCTAssertTrue(completedPromises)
-                XCTAssertFalse(succeeded)
-                succeeded = true
+                XCTAssertTrue(completedPromises.withLockedValue { $0 })
+                XCTAssertFalse(succeeded.withLockedValue { $0 })
+                succeeded.withLockedValue { $0 = true }
             }
 
             for index in expected.reversed() {
                 if index == 0 {
-                    completedPromises = true
+                    completedPromises.withLockedValue { $0 = true }
                 }
                 promises[index].succeed(index)
             }
@@ -1009,8 +1009,8 @@ class EventLoopFutureTest: XCTestCase {
             let promises = (0..<5).map { _ in group.next().makePromise(of: Int.self) }
             let futures = promises.map { $0.futureResult }
 
-            var succeeded = false
-            var completedPromises = false
+            let succeeded = NIOLockedValueBox(false)
+            let completedPromises = NIOLockedValueBox(false)
 
             let mainFuture: EventLoopFuture<[Result<Int, Error>]>
 
@@ -1022,13 +1022,13 @@ class EventLoopFutureTest: XCTestCase {
             }
 
             mainFuture.whenSuccess { _ in
-                XCTAssertTrue(completedPromises)
-                XCTAssertFalse(succeeded)
-                succeeded = true
+                XCTAssertTrue(completedPromises.withLockedValue { $0 })
+                XCTAssertFalse(succeeded.withLockedValue { $0 })
+                succeeded.withLockedValue { $0 = true }
             }
 
             // Should be false, as none of the promises have completed yet
-            XCTAssertFalse(succeeded)
+            XCTAssertFalse(succeeded.withLockedValue { $0 })
 
             // complete the first four promises
             for (index, promise) in promises.dropLast().enumerated() {
@@ -1036,10 +1036,10 @@ class EventLoopFutureTest: XCTestCase {
             }
 
             // Should still be false, as one promise hasn't completed yet
-            XCTAssertFalse(succeeded)
+            XCTAssertFalse(succeeded.withLockedValue { $0 })
 
             // Complete the last promise
-            completedPromises = true
+            completedPromises.withLockedValue { $0 = true }
             promises.last!.succeed(4)
 
             let results = try assertNoThrowWithValue(mainFuture.wait().map { try $0.get() })
@@ -1051,28 +1051,31 @@ class EventLoopFutureTest: XCTestCase {
     }
 
     struct DatabaseError: Error {}
-    struct Database {
-        let query: () -> EventLoopFuture<[String]>
+    final class Database: Sendable {
+        private let query: @Sendable () -> EventLoopFuture<[String]>
+        private let _closed = NIOLockedValueBox(false)
 
-        var closed = false
+        var closed: Bool {
+            self._closed.withLockedValue { $0 }
+        }
 
-        init(query: @escaping () -> EventLoopFuture<[String]>) {
+        init(query: @escaping @Sendable () -> EventLoopFuture<[String]>) {
             self.query = query
         }
 
         func runQuery() -> EventLoopFuture<[String]> {
-            query()
+            self.query()
         }
 
-        mutating func close() {
-            self.closed = true
+        func close() {
+            self._closed.withLockedValue { $0 = true }
         }
     }
 
     func testAlways() throws {
         let group = EmbeddedEventLoop()
         let loop = group.next()
-        var db = Database { loop.makeSucceededFuture(["Item 1", "Item 2", "Item 3"]) }
+        let db = Database { loop.makeSucceededFuture(["Item 1", "Item 2", "Item 3"]) }
 
         XCTAssertFalse(db.closed)
         let _ = try assertNoThrowWithValue(
@@ -1087,7 +1090,7 @@ class EventLoopFutureTest: XCTestCase {
     func testAlwaysWithFailingPromise() throws {
         let group = EmbeddedEventLoop()
         let loop = group.next()
-        var db = Database { loop.makeFailedFuture(DatabaseError()) }
+        let db = Database { loop.makeFailedFuture(DatabaseError()) }
 
         XCTAssertFalse(db.closed)
         let _ = try XCTAssertThrowsError(
@@ -1173,26 +1176,26 @@ class EventLoopFutureTest: XCTestCase {
 
     func testAndAllCompleteWithZeroFutures() {
         let eventLoop = EmbeddedEventLoop()
-        let done = DispatchWorkItem {}
+        let done = DispatchSemaphore(value: 0)
         EventLoopFuture<Void>.andAllComplete([], on: eventLoop).whenComplete { (result: Result<Void, Error>) in
             _ = result.mapError { error -> Error in
                 XCTFail("unexpected error \(error)")
                 return error
             }
-            done.perform()
+            done.signal()
         }
         done.wait()
     }
 
     func testAndAllSucceedWithZeroFutures() {
         let eventLoop = EmbeddedEventLoop()
-        let done = DispatchWorkItem {}
+        let done = DispatchSemaphore(value: 0)
         EventLoopFuture<Void>.andAllSucceed([], on: eventLoop).whenComplete { result in
             _ = result.mapError { error -> Error in
                 XCTFail("unexpected error \(error)")
                 return error
             }
-            done.perform()
+            done.signal()
         }
         done.wait()
     }
@@ -1325,12 +1328,12 @@ class EventLoopFutureTest: XCTestCase {
         }
 
         let exitPromise: EventLoopPromise<Void> = elg1.next().makePromise()
-        var callNumber = 0
+        let callNumber = NIOLockedValueBox(0)
         _ = elg1.next().scheduleRepeatedAsyncTask(initialDelay: .nanoseconds(0), delay: .nanoseconds(0)) { task in
             struct Dummy: Error {}
 
-            callNumber += 1
-            switch callNumber {
+            callNumber.withLockedValue { $0 += 1 }
+            switch callNumber.withLockedValue({ $0 }) {
             case 1:
                 return elg2.next().makeSucceededFuture(())
             case 2:
@@ -1460,18 +1463,18 @@ class EventLoopFutureTest: XCTestCase {
     func testWhenFailureBlocking() {
         let eventLoop = EmbeddedEventLoop()
         let sem = DispatchSemaphore(value: 0)
-        var nonBlockingRan = false
+        let nonBlockingRan = NIOLockedValueBox(false)
         let p = eventLoop.makePromise(of: String.self)
         p.futureResult.whenFailureBlocking(onto: DispatchQueue.global()) { err in
             sem.wait()  // Block in callback
             XCTAssertEqual(err as! EventLoopFutureTestError, EventLoopFutureTestError.example)
-            XCTAssertTrue(nonBlockingRan)
+            XCTAssertTrue(nonBlockingRan.withLockedValue { $0 })
         }
         p.fail(EventLoopFutureTestError.example)
 
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
-            nonBlockingRan = true
+            nonBlockingRan.withLockedValue { $0 = true }
         }
         p2.succeed(true)
 
@@ -1481,17 +1484,17 @@ class EventLoopFutureTest: XCTestCase {
     func testWhenCompleteBlockingSuccess() {
         let eventLoop = EmbeddedEventLoop()
         let sem = DispatchSemaphore(value: 0)
-        var nonBlockingRan = false
+        let nonBlockingRan = NIOLockedValueBox(false)
         let p = eventLoop.makePromise(of: String.self)
         p.futureResult.whenCompleteBlocking(onto: DispatchQueue.global()) { _ in
             sem.wait()  // Block in callback
-            XCTAssertTrue(nonBlockingRan)
+            XCTAssertTrue(nonBlockingRan.withLockedValue { $0 })
         }
         p.succeed("hello")
 
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
-            nonBlockingRan = true
+            nonBlockingRan.withLockedValue { $0 = true }
         }
         p2.succeed(true)
 
@@ -1501,17 +1504,17 @@ class EventLoopFutureTest: XCTestCase {
     func testWhenCompleteBlockingFailure() {
         let eventLoop = EmbeddedEventLoop()
         let sem = DispatchSemaphore(value: 0)
-        var nonBlockingRan = false
+        let nonBlockingRan = NIOLockedValueBox(false)
         let p = eventLoop.makePromise(of: String.self)
         p.futureResult.whenCompleteBlocking(onto: DispatchQueue.global()) { _ in
             sem.wait()  // Block in callback
-            XCTAssertTrue(nonBlockingRan)
+            XCTAssertTrue(nonBlockingRan.withLockedValue { $0 })
         }
         p.fail(EventLoopFutureTestError.example)
 
         let p2 = eventLoop.makePromise(of: Bool.self)
         p2.futureResult.whenSuccess { _ in
-            nonBlockingRan = true
+            nonBlockingRan.withLockedValue { $0 = true }
         }
         p2.succeed(true)
 
@@ -1548,11 +1551,11 @@ class EventLoopFutureTest: XCTestCase {
 
         let futures = (1...10).map { el.makeSucceededFuture($0) }
 
-        var calls = 0
+        let calls = NIOLockedValueBox(0)
         let all = el.makeSucceededFuture(0).foldWithEventLoop(futures) { l, r, el2 in
-            calls += 1
+            calls.withLockedValue { $0 += 1 }
             XCTAssert(el === el2)
-            XCTAssertEqual(calls, r)
+            XCTAssertEqual(calls.withLockedValue { $0 }, r)
             return el2.makeSucceededFuture(l + r)
         }
 

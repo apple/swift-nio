@@ -6,16 +6,21 @@
 #define INCLUDE_LLHTTP_H_
 
 #define LLHTTP_VERSION_MAJOR 9
-#define LLHTTP_VERSION_MINOR 0
+#define LLHTTP_VERSION_MINOR 2
 #define LLHTTP_VERSION_PATCH 1
 
 #ifndef INCLUDE_LLHTTP_ITSELF_H_
 #define INCLUDE_LLHTTP_ITSELF_H_
 #ifdef __cplusplus
+#include <cstdint>
+#else
+#include <stdint.h>
+#endif
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
 
 typedef struct c_nio_llhttp__internal_s c_nio_llhttp__internal_t;
 struct c_nio_llhttp__internal_s {
@@ -33,7 +38,7 @@ struct c_nio_llhttp__internal_s {
   uint8_t http_major;
   uint8_t http_minor;
   uint8_t header_state;
-  uint8_t lenient_flags;
+  uint16_t lenient_flags;
   uint8_t upgrade;
   uint8_t finish;
   uint16_t flags;
@@ -93,7 +98,8 @@ enum llhttp_errno {
   HPE_CB_HEADER_VALUE_COMPLETE = 29,
   HPE_CB_CHUNK_EXTENSION_NAME_COMPLETE = 34,
   HPE_CB_CHUNK_EXTENSION_VALUE_COMPLETE = 35,
-  HPE_CB_RESET = 31
+  HPE_CB_RESET = 31,
+  HPE_CB_PROTOCOL_COMPLETE = 38
 };
 typedef enum llhttp_errno llhttp_errno_t;
 
@@ -118,7 +124,9 @@ enum llhttp_lenient_flags {
   LENIENT_VERSION = 0x10,
   LENIENT_DATA_AFTER_CLOSE = 0x20,
   LENIENT_OPTIONAL_LF_AFTER_CR = 0x40,
-  LENIENT_OPTIONAL_CRLF_AFTER_CHUNK = 0x80
+  LENIENT_OPTIONAL_CRLF_AFTER_CHUNK = 0x80,
+  LENIENT_OPTIONAL_CR_BEFORE_LF = 0x100,
+  LENIENT_SPACES_AFTER_CHUNK_SIZE = 0x200
 };
 typedef enum llhttp_lenient_flags llhttp_lenient_flags_t;
 
@@ -182,7 +190,8 @@ enum llhttp_method {
   HTTP_SET_PARAMETER = 42,
   HTTP_REDIRECT = 43,
   HTTP_RECORD = 44,
-  HTTP_FLUSH = 45
+  HTTP_FLUSH = 45,
+  HTTP_QUERY = 46
 };
 typedef enum llhttp_method llhttp_method_t;
 
@@ -326,6 +335,7 @@ typedef enum llhttp_status llhttp_status_t;
   XX(34, CB_CHUNK_EXTENSION_NAME_COMPLETE, CB_CHUNK_EXTENSION_NAME_COMPLETE) \
   XX(35, CB_CHUNK_EXTENSION_VALUE_COMPLETE, CB_CHUNK_EXTENSION_VALUE_COMPLETE) \
   XX(31, CB_RESET, CB_RESET) \
+  XX(38, CB_PROTOCOL_COMPLETE, CB_PROTOCOL_COMPLETE) \
 
 
 #define HTTP_METHOD_MAP(XX) \
@@ -363,6 +373,7 @@ typedef enum llhttp_status llhttp_status_t;
   XX(31, LINK, LINK) \
   XX(32, UNLINK, UNLINK) \
   XX(33, SOURCE, SOURCE) \
+  XX(46, QUERY, QUERY) \
 
 
 #define RTSP_METHOD_MAP(XX) \
@@ -429,6 +440,7 @@ typedef enum llhttp_status llhttp_status_t;
   XX(43, REDIRECT, REDIRECT) \
   XX(44, RECORD, RECORD) \
   XX(45, FLUSH, FLUSH) \
+  XX(46, QUERY, QUERY) \
 
 
 #define HTTP_STATUS_MAP(XX) \
@@ -548,6 +560,8 @@ extern "C" {
 
 #if defined(__wasm__)
 #define LLHTTP_EXPORT __attribute__((visibility("default")))
+#elif defined(_WIN32)
+#define LLHTTP_EXPORT __declspec(dllexport)
 #else
 #define LLHTTP_EXPORT
 #endif
@@ -563,6 +577,7 @@ struct llhttp_settings_s {
   llhttp_cb      on_message_begin;
 
   /* Possible return values 0, -1, HPE_USER */
+  llhttp_data_cb on_protocol;
   llhttp_data_cb on_url;
   llhttp_data_cb on_status;
   llhttp_data_cb on_method;
@@ -588,6 +603,7 @@ struct llhttp_settings_s {
 
   /* Possible return values 0, -1, `HPE_PAUSED` */
   llhttp_cb      on_message_complete;
+  llhttp_cb      on_protocol_complete;
   llhttp_cb      on_url_complete;
   llhttp_cb      on_status_complete;
   llhttp_cb      on_method_complete;
@@ -853,6 +869,19 @@ void c_nio_llhttp_set_lenient_data_after_close(llhttp_t* parser, int enabled);
 LLHTTP_EXPORT
 void c_nio_llhttp_set_lenient_optional_lf_after_cr(llhttp_t* parser, int enabled);
 
+/*
+ * Enables/disables lenient handling of line separators.
+ *
+ * Normally `llhttp` would error when a LF is not preceded by CR when terminating the
+ * request line, the status line, the headers, a chunk header or a chunk data.
+ * With this flag only a LF is required to terminate such sections.
+ *
+ * **Enabling this flag can pose a security issue since you will be exposed to
+ * request smuggling attacks. USE WITH CAUTION!**
+ */
+LLHTTP_EXPORT
+void c_nio_llhttp_set_lenient_optional_cr_before_lf(llhttp_t* parser, int enabled);
+
 /* Enables/disables lenient handling of chunks not separated via CRLF.
  *
  * Normally `llhttp` would error when after a chunk data a CRLF is missing before
@@ -864,6 +893,18 @@ void c_nio_llhttp_set_lenient_optional_lf_after_cr(llhttp_t* parser, int enabled
  */
 LLHTTP_EXPORT
 void c_nio_llhttp_set_lenient_optional_crlf_after_chunk(llhttp_t* parser, int enabled);
+
+/* Enables/disables lenient handling of spaces after chunk size.
+ *
+ * Normally `llhttp` would error when after a chunk size is followed by one or more
+ * spaces are present instead of a CRLF or `;`.
+ * With this flag this check is disabled.
+ *
+ * **Enabling this flag can pose a security issue since you will be exposed to
+ * request smuggling attacks. USE WITH CAUTION!**
+ */
+LLHTTP_EXPORT
+void c_nio_llhttp_set_lenient_spaces_after_chunk_size(llhttp_t* parser, int enabled);
 
 #ifdef __cplusplus
 }  /* extern "C" */

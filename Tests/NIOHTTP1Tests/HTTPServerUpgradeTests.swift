@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
 import NIOCore
 import NIOEmbedded
 import XCTest
@@ -115,7 +116,7 @@ private func serverHTTPChannelWithAutoremoval(
     group: EventLoopGroup,
     pipelining: Bool,
     upgraders: [any TypedAndUntypedHTTPServerProtocolUpgrader],
-    extraHandlers: [ChannelHandler],
+    extraHandlers: [ChannelHandler & Sendable],
     _ upgradeCompletionHandler: @escaping UpgradeCompletionHandler
 ) throws -> (Channel, EventLoopFuture<Channel>) {
     let p = group.next().makePromise(of: Channel.self)
@@ -141,11 +142,11 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
     private var receiveds: [InboundIn] = []
     private let allDoneBlock: ([InboundIn]) -> Void
 
-    public init(completion: @escaping ([InboundIn]) -> Void) {
+    init(completion: @escaping ([InboundIn]) -> Void) {
         self.allDoneBlock = completion
     }
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let buffer = Self.unwrapInboundIn(data)
         self.receiveds.append(buffer)
         if let finalBytes = buffer.getBytes(at: buffer.writerIndex - 4, length: 4),
@@ -159,7 +160,7 @@ private class SingleHTTPResponseAccumulator: ChannelInboundHandler {
 private class ExplodingHandler: ChannelInboundHandler {
     typealias InboundIn = Any
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         XCTFail("Received unexpected read")
     }
 }
@@ -203,7 +204,7 @@ where UpgradeResult == Bool {}
 protocol TypedAndUntypedHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader {}
 #endif
 
-private class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
+private final class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader, Sendable {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String]
 
@@ -211,12 +212,12 @@ private class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
         case KABOOM
     }
 
-    public init(forProtocol `protocol`: String, requiringHeaders: [String] = []) {
+    init(forProtocol `protocol`: String, requiringHeaders: [String] = []) {
         self.supportedProtocol = `protocol`
         self.requiredUpgradeHeaders = requiringHeaders
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -225,7 +226,7 @@ private class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
         return channel.eventLoop.makeFailedFuture(Explosion.KABOOM)
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
         return context.eventLoop.makeSucceededFuture(())
     }
@@ -236,19 +237,19 @@ private class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
     }
 }
 
-private class UpgraderSaysNo: TypedAndUntypedHTTPServerProtocolUpgrader {
+private final class UpgraderSaysNo: TypedAndUntypedHTTPServerProtocolUpgrader, Sendable {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String] = []
 
-    public enum No: Error {
+    enum No: Error {
         case no
     }
 
-    public init(forProtocol `protocol`: String) {
+    init(forProtocol `protocol`: String) {
         self.supportedProtocol = `protocol`
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -256,7 +257,7 @@ private class UpgraderSaysNo: TypedAndUntypedHTTPServerProtocolUpgrader {
         channel.eventLoop.makeFailedFuture(No.no)
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         XCTFail("upgrade called")
         return context.eventLoop.makeSucceededFuture(())
     }
@@ -267,17 +268,17 @@ private class UpgraderSaysNo: TypedAndUntypedHTTPServerProtocolUpgrader {
     }
 }
 
-private class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
+private final class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader, Sendable {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String]
-    private let onUpgradeComplete: (HTTPRequestHead) -> Void
-    private let buildUpgradeResponseFuture: (Channel, HTTPHeaders) -> EventLoopFuture<HTTPHeaders>
+    private let onUpgradeComplete: @Sendable (HTTPRequestHead) -> Void
+    private let buildUpgradeResponseFuture: @Sendable (Channel, HTTPHeaders) -> EventLoopFuture<HTTPHeaders>
 
-    public init(
+    init(
         forProtocol `protocol`: String,
         requiringHeaders headers: [String],
-        buildUpgradeResponseFuture: @escaping (Channel, HTTPHeaders) -> EventLoopFuture<HTTPHeaders>,
-        onUpgradeComplete: @escaping (HTTPRequestHead) -> Void
+        buildUpgradeResponseFuture: @escaping @Sendable (Channel, HTTPHeaders) -> EventLoopFuture<HTTPHeaders>,
+        onUpgradeComplete: @escaping @Sendable (HTTPRequestHead) -> Void
     ) {
         self.supportedProtocol = `protocol`
         self.requiredUpgradeHeaders = headers
@@ -285,10 +286,10 @@ private class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
         self.buildUpgradeResponseFuture = buildUpgradeResponseFuture
     }
 
-    public convenience init(
+    convenience init(
         forProtocol `protocol`: String,
         requiringHeaders headers: [String],
-        onUpgradeComplete: @escaping (HTTPRequestHead) -> Void
+        onUpgradeComplete: @escaping @Sendable (HTTPRequestHead) -> Void
     ) {
         self.init(
             forProtocol: `protocol`,
@@ -298,7 +299,7 @@ private class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
         )
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -308,7 +309,7 @@ private class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
         return self.buildUpgradeResponseFuture(channel, headers)
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         self.onUpgradeComplete(upgradeRequest)
         return context.eventLoop.makeSucceededFuture(())
     }
@@ -319,14 +320,15 @@ private class SuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
     }
 }
 
-private class DelayedUnsuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader {
+private final class DelayedUnsuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader, Sendable {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String]
 
-    private var upgradePromise: EventLoopPromise<Bool>?
+    private let upgradePromise: EventLoopPromise<Bool>
 
-    init(forProtocol `protocol`: String) {
+    init(forProtocol `protocol`: String, eventLoop: EventLoop) {
         self.supportedProtocol = `protocol`
+        self.upgradePromise = eventLoop.makePromise()
         self.requiredUpgradeHeaders = []
     }
 
@@ -339,36 +341,35 @@ private class DelayedUnsuccessfulUpgrader: TypedAndUntypedHTTPServerProtocolUpgr
     }
 
     func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
-        self.upgradePromise = context.eventLoop.makePromise()
-        return self.upgradePromise!.futureResult.map { _ in }
+        self.upgradePromise.futureResult.map { _ in }
     }
 
     func unblockUpgrade(withError error: Error) {
-        self.upgradePromise!.fail(error)
+        self.upgradePromise.fail(error)
     }
 
     func upgrade(channel: Channel, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Bool> {
-        self.upgradePromise = channel.eventLoop.makePromise(of: Bool.self)
-        return self.upgradePromise!.futureResult
+        self.upgradePromise.futureResult
     }
 }
 
-private class UpgradeDelayer: TypedAndUntypedHTTPServerProtocolUpgrader {
+private final class UpgradeDelayer: TypedAndUntypedHTTPServerProtocolUpgrader, Sendable {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String] = []
 
-    private var upgradePromise: EventLoopPromise<Bool>?
+    private let upgradePromise: EventLoopPromise<Bool>
     private let upgradeRequestedPromise: EventLoopPromise<Void>
 
     /// - Parameters:
     ///   - protocol: The protocol this upgrader knows how to support.
     ///   - upgradeRequestedPromise: Will be fulfilled when upgrade() is called
-    init(forProtocol `protocol`: String, upgradeRequestedPromise: EventLoopPromise<Void>) {
+    init(forProtocol `protocol`: String, upgradeRequestedPromise: EventLoopPromise<Void>, eventLoop: any EventLoop) {
         self.supportedProtocol = `protocol`
+        self.upgradePromise = eventLoop.makePromise()
         self.upgradeRequestedPromise = upgradeRequestedPromise
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -378,36 +379,36 @@ private class UpgradeDelayer: TypedAndUntypedHTTPServerProtocolUpgrader {
         return channel.eventLoop.makeSucceededFuture(headers)
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
-        self.upgradePromise = context.eventLoop.makePromise()
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         upgradeRequestedPromise.succeed()
-        return self.upgradePromise!.futureResult.map { _ in }
+        return self.upgradePromise.futureResult.map { _ in }
     }
 
-    public func unblockUpgrade() {
-        self.upgradePromise!.succeed(true)
+    func unblockUpgrade() {
+        self.upgradePromise.succeed(true)
     }
 
     func upgrade(channel: Channel, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Bool> {
-        self.upgradePromise = channel.eventLoop.makePromise()
         self.upgradeRequestedPromise.succeed()
-        return self.upgradePromise!.futureResult
+        return self.upgradePromise.futureResult
     }
 }
 
-private class UpgradeResponseDelayer: HTTPServerProtocolUpgrader {
+private final class UpgradeResponseDelayer: HTTPServerProtocolUpgrader, Sendable {
     let supportedProtocol: String
     let requiredUpgradeHeaders: [String] = []
 
-    private var context: ChannelHandlerContext?
-    private let buildUpgradeResponseHandler: () -> EventLoopFuture<Void>
+    private let buildUpgradeResponseHandler: @Sendable () -> EventLoopFuture<Void>
 
-    public init(forProtocol `protocol`: String, buildUpgradeResponseHandler: @escaping () -> EventLoopFuture<Void>) {
+    init(
+        forProtocol `protocol`: String,
+        buildUpgradeResponseHandler: @escaping @Sendable () -> EventLoopFuture<Void>
+    ) {
         self.supportedProtocol = `protocol`
         self.buildUpgradeResponseHandler = buildUpgradeResponseHandler
     }
 
-    public func buildUpgradeResponse(
+    func buildUpgradeResponse(
         channel: Channel,
         upgradeRequest: HTTPRequestHead,
         initialResponseHeaders: HTTPHeaders
@@ -419,44 +420,55 @@ private class UpgradeResponseDelayer: HTTPServerProtocolUpgrader {
         }
     }
 
-    public func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
+    func upgrade(context: ChannelHandlerContext, upgradeRequest: HTTPRequestHead) -> EventLoopFuture<Void> {
         context.eventLoop.makeSucceededFuture(())
     }
 }
 
-private class UserEventSaver<EventType>: ChannelInboundHandler {
-    public typealias InboundIn = Any
-    public var events: [EventType] = []
+private final class UserEventSaver<EventType: Sendable>: ChannelInboundHandler, Sendable {
+    typealias InboundIn = Any
 
-    public func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
-        events.append(event as! EventType)
+    private let _events = NIOLockedValueBox<[EventType]>([])
+
+    var events: [EventType] {
+        self._events.withLockedValue { $0 }
+    }
+
+    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+        self._events.withLockedValue { $0.append(event as! EventType) }
         context.fireUserInboundEventTriggered(event)
     }
 }
 
-private class ErrorSaver: ChannelInboundHandler {
-    public typealias InboundIn = Any
-    public typealias InboundOut = Any
-    public var errors: [Error] = []
+private final class ErrorSaver: ChannelInboundHandler, Sendable {
+    typealias InboundIn = Any
+    typealias InboundOut = Any
 
-    public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        errors.append(error)
+    private let _errors = NIOLockedValueBox<[any Error]>([])
+
+    var errors: [Error] {
+        self._errors.withLockedValue { $0 }
+    }
+
+    func errorCaught(context: ChannelHandlerContext, error: Error) {
+        self._errors.withLockedValue { $0.append(error) }
         context.fireErrorCaught(error)
     }
 }
 
-private class DataRecorder<T>: ChannelInboundHandler {
-    public typealias InboundIn = T
-    private var data: [T] = []
+private final class DataRecorder<T: Sendable>: ChannelInboundHandler, Sendable {
+    typealias InboundIn = T
 
-    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+    private let data = NIOLockedValueBox<[T]>([])
+
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let datum = Self.unwrapInboundIn(data)
-        self.data.append(datum)
+        self.data.withLockedValue { $0.append(datum) }
     }
 
     // Must be called from inside the event loop on pain of death!
-    public func receivedData() -> [T] {
-        self.data
+    func receivedData() -> [T] {
+        self.data.withLockedValue { $0 }
     }
 }
 
@@ -487,7 +499,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
     fileprivate func setUpTestWithAutoremoval(
         pipelining: Bool = false,
         upgraders: [any TypedAndUntypedHTTPServerProtocolUpgrader],
-        extraHandlers: [ChannelHandler],
+        extraHandlers: [ChannelHandler & Sendable],
         notUpgradingHandler: (@Sendable (Channel) -> EventLoopFuture<Bool>)? = nil,
         upgradeErrorHandler: (@Sendable (Error) -> Void)? = nil,
         _ upgradeCompletionHandler: @escaping UpgradeCompletionHandler
@@ -904,25 +916,34 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
     func testDelayedUpgradeBehaviour() throws {
         let upgradeRequestPromise = Self.eventLoop.makePromise(of: Void.self)
-        let upgrader = UpgradeDelayer(forProtocol: "myproto", upgradeRequestedPromise: upgradeRequestPromise)
+        let upgrader = UpgradeDelayer(
+            forProtocol: "myproto",
+            upgradeRequestedPromise: upgradeRequestPromise,
+            eventLoop: Self.eventLoop
+        )
         let (server, client, connectedServer) = try setUpTestWithAutoremoval(
             upgraders: [upgrader],
             extraHandlers: []
         ) { context in }
 
         let completePromise = Self.eventLoop.makePromise(of: Void.self)
-        let clientHandler = SingleHTTPResponseAccumulator { buffers in
-            let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(
-                separator: ""
-            )
-            assertResponseIs(
-                response: resultString,
-                expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
-                expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"]
-            )
-            completePromise.succeed(())
+
+        let clientHandlerAdded = client.pipeline.eventLoop.submit {
+            let clientHandler = SingleHTTPResponseAccumulator { buffers in
+                let resultString = buffers.map { $0.getString(at: $0.readerIndex, length: $0.readableBytes)! }.joined(
+                    separator: ""
+                )
+                assertResponseIs(
+                    response: resultString,
+                    expectedResponseLine: "HTTP/1.1 101 Switching Protocols",
+                    expectedResponseHeaders: ["X-Upgrade-Complete: true", "upgrade: myproto", "connection: upgrade"]
+                )
+                completePromise.succeed(())
+            }
+
+            return try client.pipeline.syncOperations.addHandler(clientHandler)
         }
-        XCTAssertNoThrow(try client.pipeline.addHandler(clientHandler).wait())
+        XCTAssertNoThrow(try clientHandlerAdded.wait())
 
         // This request is safe to upgrade.
         let request = "OPTIONS * HTTP/1.1\r\nHost: localhost\r\nUpgrade: myproto\r\nConnection: upgrade\r\n\r\n"
@@ -945,7 +966,11 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
     func testBuffersInboundDataDuringDelayedUpgrade() throws {
         let upgradeRequestPromise = Self.eventLoop.makePromise(of: Void.self)
-        let upgrader = UpgradeDelayer(forProtocol: "myproto", upgradeRequestedPromise: upgradeRequestPromise)
+        let upgrader = UpgradeDelayer(
+            forProtocol: "myproto",
+            upgradeRequestedPromise: upgradeRequestPromise,
+            eventLoop: Self.eventLoop
+        )
         let dataRecorder = DataRecorder<ByteBuffer>()
 
         let (server, client, _) = try setUpTestWithAutoremoval(
@@ -1000,12 +1025,12 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             XCTAssertNoThrow(try channel.finish())
         }
 
-        var upgradeRequested = false
+        let upgradeRequested = NIOLockedValueBox(false)
 
         let delayedPromise = channel.eventLoop.makePromise(of: Void.self)
         let delayedUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
-            XCTAssertFalse(upgradeRequested)
-            upgradeRequested = true
+            XCTAssertFalse(upgradeRequested.withLockedValue { $0 })
+            upgradeRequested.withLockedValue { $0 = true }
             return delayedPromise.futureResult
         }
 
@@ -1021,7 +1046,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
 
         // Upgrade has been requested but not proceeded.
-        XCTAssertTrue(upgradeRequested)
+        XCTAssertTrue(upgradeRequested.withLockedValue { $0 })
         channel.pipeline.assertContainsUpgrader()
         XCTAssertNoThrow(try XCTAssertNil(channel.readOutbound(as: ByteBuffer.self)))
 
@@ -1052,19 +1077,19 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             XCTAssertTrue(try channel.finish().isClean)
         }
 
-        var upgradingProtocol = ""
+        let upgradingProtocol = NIOLockedValueBox("")
 
         let failingProtocolPromise = channel.eventLoop.makePromise(of: Void.self)
         let failingProtocolUpgrader = UpgradeResponseDelayer(forProtocol: "failingProtocol") {
-            XCTAssertEqual(upgradingProtocol, "")
-            upgradingProtocol = "failingProtocol"
+            XCTAssertEqual(upgradingProtocol.withLockedValue { $0 }, "")
+            upgradingProtocol.withLockedValue { $0 = "failingProtocol" }
             return failingProtocolPromise.futureResult
         }
 
         let myprotoPromise = channel.eventLoop.makePromise(of: Void.self)
         let myprotoUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
-            XCTAssertEqual(upgradingProtocol, "failingProtocol")
-            upgradingProtocol = "myproto"
+            XCTAssertEqual(upgradingProtocol.withLockedValue { $0 }, "failingProtocol")
+            upgradingProtocol.withLockedValue { $0 = "myproto" }
             return myprotoPromise.futureResult
         }
 
@@ -1082,14 +1107,14 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
 
         // Upgrade has been requested but not proceeded for the failing protocol.
-        XCTAssertEqual(upgradingProtocol, "failingProtocol")
+        XCTAssertEqual(upgradingProtocol.withLockedValue { $0 }, "failingProtocol")
         channel.pipeline.assertContainsUpgrader()
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
 
         // Ok, now we'll fail the promise. This will catch an error, but the upgrade won't happen: instead, the second handler will be fired.
         failingProtocolPromise.fail(No.no)
-        XCTAssertEqual(upgradingProtocol, "myproto")
+        XCTAssertEqual(upgradingProtocol.withLockedValue { $0 }, "myproto")
         channel.pipeline.assertContainsUpgrader()
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
 
@@ -1118,12 +1143,12 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             XCTAssertTrue(try channel.finish().isClean)
         }
 
-        var upgradeRequested = false
+        let upgradeRequested = NIOLockedValueBox(false)
 
         let delayedPromise = channel.eventLoop.makePromise(of: Void.self)
         let delayedUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
-            XCTAssertFalse(upgradeRequested)
-            upgradeRequested = true
+            XCTAssertFalse(upgradeRequested.withLockedValue { $0 })
+            upgradeRequested.withLockedValue { $0 = true }
             return delayedPromise.futureResult
         }
 
@@ -1139,7 +1164,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
 
         // Upgrade has been requested but not proceeded.
-        XCTAssertTrue(upgradeRequested)
+        XCTAssertTrue(upgradeRequested.withLockedValue { $0 })
         channel.pipeline.assertContainsUpgrader()
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
@@ -1182,12 +1207,12 @@ class HTTPServerUpgradeTestCase: XCTestCase {
             XCTAssertTrue(try channel.finish().isClean)
         }
 
-        var upgradeRequested = false
+        let upgradeRequested = NIOLockedValueBox(false)
 
         let delayedPromise = channel.eventLoop.makePromise(of: Void.self)
         let delayedUpgrader = UpgradeResponseDelayer(forProtocol: "myproto") {
-            XCTAssertFalse(upgradeRequested)
-            upgradeRequested = true
+            XCTAssertFalse(upgradeRequested.withLockedValue { $0 })
+            upgradeRequested.withLockedValue { $0 = true }
             return delayedPromise.futureResult
         }
 
@@ -1205,7 +1230,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try channel.writeInbound(channel.allocator.buffer(string: request)))
 
         // Upgrade has been requested but not proceeded.
-        XCTAssertTrue(upgradeRequested)
+        XCTAssertTrue(upgradeRequested.withLockedValue { $0 })
         channel.pipeline.assertContainsUpgrader()
         XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self)))
         XCTAssertNoThrow(try channel.throwIfErrorCaught())
@@ -1446,7 +1471,11 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
 
         let upgradeRequestPromise = Self.eventLoop.makePromise(of: Void.self)
-        let delayer = UpgradeDelayer(forProtocol: "myproto", upgradeRequestedPromise: upgradeRequestPromise)
+        let delayer = UpgradeDelayer(
+            forProtocol: "myproto",
+            upgradeRequestedPromise: upgradeRequestPromise,
+            eventLoop: Self.eventLoop
+        )
         defer {
             delayer.unblockUpgrade()
         }
@@ -1504,7 +1533,11 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         }
 
         let upgradeRequestPromise = Self.eventLoop.makePromise(of: Void.self)
-        let delayer = UpgradeDelayer(forProtocol: "myproto", upgradeRequestedPromise: upgradeRequestPromise)
+        let delayer = UpgradeDelayer(
+            forProtocol: "myproto",
+            upgradeRequestedPromise: upgradeRequestPromise,
+            eventLoop: Self.eventLoop
+        )
         defer {
             delayer.unblockUpgrade()
         }
@@ -1542,7 +1575,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try XCTAssertNil(channel.readInbound(as: ByteBuffer.self)))
 
         // Ok, now we put in a special handler that does a weird readComplete hook thing.
-        XCTAssertNoThrow(try channel.pipeline.addHandler(ReentrantReadOnChannelReadCompleteHandler()).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(ReentrantReadOnChannelReadCompleteHandler()))
 
         // Now we're going to remove the upgrade handler.
         XCTAssertNoThrow(try channel.pipeline.removeUpgrader())
@@ -1648,7 +1681,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
         XCTAssertNoThrow(try channel.pipeline.addHandler(dataRecorder).wait())
 
         // Remove one of the extra handlers.
-        XCTAssertNoThrow(try channel.pipeline.removeHandler(handlers.last!).wait())
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.removeHandler(handlers.last!).wait())
 
         let head = HTTPServerRequestPart.head(
             .init(version: .http1_1, method: .GET, uri: "/foo", headers: ["upgrade": "myproto"])
@@ -1723,7 +1756,7 @@ class HTTPServerUpgradeTestCase: XCTestCase {
 
         struct ImAfraidICantDoThatDave: Error {}
 
-        let upgrader = DelayedUnsuccessfulUpgrader(forProtocol: "myproto")
+        let upgrader = DelayedUnsuccessfulUpgrader(forProtocol: "myproto", eventLoop: channel.eventLoop)
         let encoder = HTTPResponseEncoder()
         let handler = HTTPServerUpgradeHandler(
             upgraders: [upgrader],
@@ -1769,7 +1802,7 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
     fileprivate override func setUpTestWithAutoremoval(
         pipelining: Bool = false,
         upgraders: [any TypedAndUntypedHTTPServerProtocolUpgrader],
-        extraHandlers: [ChannelHandler],
+        extraHandlers: [ChannelHandler & Sendable],
         notUpgradingHandler: (@Sendable (Channel) -> EventLoopFuture<Bool>)? = nil,
         upgradeErrorHandler: (@Sendable (Error) -> Void)? = nil,
         _ upgradeCompletionHandler: @escaping UpgradeCompletionHandler

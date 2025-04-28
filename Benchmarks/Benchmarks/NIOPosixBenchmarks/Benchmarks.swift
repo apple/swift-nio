@@ -20,7 +20,9 @@ private let eventLoop = MultiThreadedEventLoopGroup.singleton.next()
 
 let benchmarks = {
     let defaultMetrics: [BenchmarkMetric] = [
-        .mallocCountTotal
+        .mallocCountTotal,
+        .contextSwitches,
+        .wallClock,
     ]
 
     Benchmark(
@@ -38,9 +40,6 @@ let benchmarks = {
         )
     }
 
-    // This benchmark is only available above 5.9 since our EL conformance
-    // to serial executor is also gated behind 5.9.
-    #if compiler(>=5.9)
     Benchmark(
         "TCPEchoAsyncChannel",
         configuration: .init(
@@ -66,7 +65,6 @@ let benchmarks = {
             eventLoop: eventLoop
         )
     }
-    #endif
 
     Benchmark(
         "MTELG.scheduleTask(in:_:)",
@@ -99,6 +97,47 @@ let benchmarks = {
         benchmark.startMeasurement()
         for _ in benchmark.scaledIterations {
             let handle = try! eventLoop.scheduleCallback(in: .hours(1), handler: timer)
+        }
+    }
+
+    Benchmark(
+        "Jump to EL and back using execute and unsafecontinuation",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo
+        )
+    ) { benchmark in
+        for _ in benchmark.scaledIterations {
+            await withUnsafeContinuation { (continuation: UnsafeContinuation<Void, Never>) in
+                eventLoop.execute {
+                    continuation.resume()
+                }
+            }
+        }
+    }
+
+    final actor Foo {
+        nonisolated public let unownedExecutor: UnownedSerialExecutor
+
+        init(eventLoop: any EventLoop) {
+            self.unownedExecutor = eventLoop.executor.asUnownedSerialExecutor()
+        }
+
+        func foo() {
+            blackHole(Void())
+        }
+    }
+
+    Benchmark(
+        "Jump to EL and back using actor with EL executor",
+        configuration: .init(
+            metrics: defaultMetrics,
+            scalingFactor: .kilo
+        )
+    ) { benchmark in
+        let actor = Foo(eventLoop: eventLoop)
+        for _ in benchmark.scaledIterations {
+            await actor.foo()
         }
     }
 }

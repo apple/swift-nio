@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import NIOConcurrencyHelpers
 import NIOEmbedded
 import XCTest
 
@@ -48,9 +49,25 @@ private final class SuccessfulClientUpgrader: TypedAndUntypedHTTPClientProtocolU
     fileprivate let requiredUpgradeHeaders: [String]
     fileprivate let upgradeHeaders: [(String, String)]
 
-    private(set) var addCustomUpgradeRequestHeadersCallCount = 0
-    private(set) var shouldAllowUpgradeCallCount = 0
-    private(set) var upgradeContextResponseCallCount = 0
+    private struct Counts {
+        var addCustomUpgradeRequestHeadersCallCount = 0
+        var shouldAllowUpgradeCallCount = 0
+        var upgradeContextResponseCallCount = 0
+    }
+
+    private let counts = NIOLockedValueBox(Counts())
+
+    var addCustomUpgradeRequestHeadersCallCount: Int {
+        self.counts.withLockedValue { $0.addCustomUpgradeRequestHeadersCallCount }
+    }
+
+    var shouldAllowUpgradeCallCount: Int {
+        self.counts.withLockedValue { $0.shouldAllowUpgradeCallCount }
+    }
+
+    var upgradeContextResponseCallCount: Int {
+        self.counts.withLockedValue { $0.upgradeContextResponseCallCount }
+    }
 
     fileprivate init(
         forProtocol `protocol`: String,
@@ -63,25 +80,33 @@ private final class SuccessfulClientUpgrader: TypedAndUntypedHTTPClientProtocolU
     }
 
     fileprivate func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
-        self.addCustomUpgradeRequestHeadersCallCount += 1
+        self.counts.withLockedValue {
+            $0.addCustomUpgradeRequestHeadersCallCount += 1
+        }
         for (name, value) in self.upgradeHeaders {
             upgradeRequestHeaders.replaceOrAdd(name: name, value: value)
         }
     }
 
     fileprivate func shouldAllowUpgrade(upgradeResponse: HTTPResponseHead) -> Bool {
-        self.shouldAllowUpgradeCallCount += 1
+        self.counts.withLockedValue {
+            $0.shouldAllowUpgradeCallCount += 1
+        }
         return true
     }
 
     fileprivate func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void>
     {
-        self.upgradeContextResponseCallCount += 1
+        self.counts.withLockedValue {
+            $0.upgradeContextResponseCallCount += 1
+        }
         return context.channel.eventLoop.makeSucceededFuture(())
     }
 
     func upgrade(channel: any Channel, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Bool> {
-        self.upgradeContextResponseCallCount += 1
+        self.counts.withLockedValue {
+            $0.upgradeContextResponseCallCount += 1
+        }
         return channel.eventLoop.makeSucceededFuture(true)
     }
 }
@@ -131,7 +156,11 @@ private final class DenyingClientUpgrader: TypedAndUntypedHTTPClientProtocolUpgr
     fileprivate let requiredUpgradeHeaders: [String]
     fileprivate let upgradeHeaders: [(String, String)]
 
-    private(set) var addCustomUpgradeRequestHeadersCallCount = 0
+    private let _addCustomUpgradeRequestHeadersCallCount = NIOLockedValueBox(0)
+
+    var addCustomUpgradeRequestHeadersCallCount: Int {
+        self._addCustomUpgradeRequestHeadersCallCount.withLockedValue { $0 }
+    }
 
     fileprivate init(
         forProtocol `protocol`: String,
@@ -145,7 +174,7 @@ private final class DenyingClientUpgrader: TypedAndUntypedHTTPClientProtocolUpgr
     }
 
     fileprivate func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
-        self.addCustomUpgradeRequestHeadersCallCount += 1
+        self._addCustomUpgradeRequestHeadersCallCount.withLockedValue { $0 += 1 }
         for (name, value) in self.upgradeHeaders {
             upgradeRequestHeaders.replaceOrAdd(name: name, value: value)
         }
@@ -175,7 +204,7 @@ private final class UpgradeDelayClientUpgrader: TypedAndUntypedHTTPClientProtoco
 
     fileprivate let upgradedHandler = SimpleUpgradedHandler()
 
-    private var upgradePromise: EventLoopPromise<Void>?
+    private let upgradePromise: NIOLockedValueBox<EventLoopPromise<Void>?>
 
     fileprivate init(
         forProtocol `protocol`: String,
@@ -185,6 +214,7 @@ private final class UpgradeDelayClientUpgrader: TypedAndUntypedHTTPClientProtoco
         self.supportedProtocol = `protocol`
         self.requiredUpgradeHeaders = requiredUpgradeHeaders
         self.upgradeHeaders = upgradeHeaders
+        self.upgradePromise = NIOLockedValueBox(nil)
     }
 
     fileprivate func addCustom(upgradeRequestHeaders: inout HTTPHeaders) {
@@ -199,37 +229,61 @@ private final class UpgradeDelayClientUpgrader: TypedAndUntypedHTTPClientProtoco
 
     fileprivate func upgrade(context: ChannelHandlerContext, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Void>
     {
-        self.upgradePromise = context.eventLoop.makePromise()
-        return self.upgradePromise!.futureResult.flatMap { [pipeline = context.pipeline] in
+        let promise = context.eventLoop.makePromise(of: Void.self)
+        self.upgradePromise.withLockedValue {
+            assert($0 == nil)
+            $0 = promise
+        }
+        return promise.futureResult.flatMap { [pipeline = context.pipeline] in
             pipeline.addHandler(self.upgradedHandler)
         }
     }
 
     func upgrade(channel: any Channel, upgradeResponse: HTTPResponseHead) -> EventLoopFuture<Bool> {
-        self.upgradePromise = channel.eventLoop.makePromise()
-        return self.upgradePromise!.futureResult.flatMap {
+        let promise = channel.eventLoop.makePromise(of: Void.self)
+        self.upgradePromise.withLockedValue {
+            assert($0 == nil)
+            $0 = promise
+        }
+        return promise.futureResult.flatMap {
             channel.pipeline.addHandler(self.upgradedHandler)
         }.map { _ in true }
     }
 
     fileprivate func unblockUpgrade() {
-        self.upgradePromise!.succeed(())
+        let promise = self.upgradePromise.withLockedValue { $0 }
+        promise!.succeed()
     }
 }
 
-private final class SimpleUpgradedHandler: ChannelInboundHandler {
+private final class SimpleUpgradedHandler: ChannelInboundHandler, Sendable {
     fileprivate typealias InboundIn = ByteBuffer
     fileprivate typealias OutboundOut = ByteBuffer
 
-    fileprivate var handlerAddedContextCallCount = 0
-    fileprivate var channelReadContextDataCallCount = 0
+    private struct Counts {
+        var handlerAddedContextCallCount = 0
+        var channelReadContextDataCallCount = 0
+    }
+
+    private let counts = NIOLockedValueBox(Counts())
+
+    fileprivate var handlerAddedContextCallCount: Int {
+        self.counts.withLockedValue { $0.handlerAddedContextCallCount }
+    }
+    fileprivate var channelReadContextDataCallCount: Int {
+        self.counts.withLockedValue { $0.channelReadContextDataCallCount }
+    }
 
     fileprivate func handlerAdded(context: ChannelHandlerContext) {
-        self.handlerAddedContextCallCount += 1
+        self.counts.withLockedValue {
+            $0.handlerAddedContextCallCount += 1
+        }
     }
 
     fileprivate func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.channelReadContextDataCallCount += 1
+        self.counts.withLockedValue {
+            $0.channelReadContextDataCallCount += 1
+        }
     }
 }
 
@@ -260,7 +314,7 @@ extension ChannelInboundHandler where OutboundOut == HTTPClientRequestPart {
 
 // A HTTP handler that will send a request and then fail if it receives a response or an error.
 // It can be used when there is a successful upgrade as the handler should be removed by the upgrader.
-private final class ExplodingHTTPHandler: ChannelInboundHandler, RemovableChannelHandler {
+private final class ExplodingHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, Sendable {
     fileprivate typealias InboundIn = HTTPClientResponsePart
     fileprivate typealias OutboundOut = HTTPClientRequestPart
 
@@ -280,13 +334,27 @@ private final class ExplodingHTTPHandler: ChannelInboundHandler, RemovableChanne
 
 // A HTTP handler that will send an initial request which can be augmented by the upgrade handler.
 // It will record which error or response calls it receives so that they can be measured at a later time.
-private final class RecordingHTTPHandler: ChannelInboundHandler, RemovableChannelHandler {
+private final class RecordingHTTPHandler: ChannelInboundHandler, RemovableChannelHandler, Sendable {
     fileprivate typealias InboundIn = HTTPClientResponsePart
     fileprivate typealias OutboundOut = HTTPClientRequestPart
 
-    fileprivate var channelReadChannelHandlerContextDataCallCount = 0
-    fileprivate var errorCaughtChannelHandlerContextCallCount = 0
-    fileprivate var errorCaughtChannelHandlerLatestError: Error?
+    private struct State {
+        fileprivate var channelReadChannelHandlerContextDataCallCount = 0
+        fileprivate var errorCaughtChannelHandlerContextCallCount = 0
+        fileprivate var errorCaughtChannelHandlerLatestError: Error?
+    }
+
+    private let state = NIOLockedValueBox(State())
+
+    fileprivate var channelReadChannelHandlerContextDataCallCount: Int {
+        self.state.withLockedValue { $0.channelReadChannelHandlerContextDataCallCount }
+    }
+    fileprivate var errorCaughtChannelHandlerContextCallCount: Int {
+        self.state.withLockedValue { $0.errorCaughtChannelHandlerContextCallCount }
+    }
+    fileprivate var errorCaughtChannelHandlerLatestError: Error? {
+        self.state.withLockedValue { $0.errorCaughtChannelHandlerLatestError }
+    }
 
     fileprivate func channelActive(context: ChannelHandlerContext) {
         // We are connected. It's time to send the message to the server to initialise the upgrade dance.
@@ -294,12 +362,16 @@ private final class RecordingHTTPHandler: ChannelInboundHandler, RemovableChanne
     }
 
     fileprivate func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-        self.channelReadChannelHandlerContextDataCallCount += 1
+        self.state.withLockedValue {
+            $0.channelReadChannelHandlerContextDataCallCount += 1
+        }
     }
 
     fileprivate func errorCaught(context: ChannelHandlerContext, error: Error) {
-        self.errorCaughtChannelHandlerContextCallCount += 1
-        self.errorCaughtChannelHandlerLatestError = error
+        self.state.withLockedValue {
+            $0.errorCaughtChannelHandlerContextCallCount += 1
+            $0.errorCaughtChannelHandlerLatestError = error
+        }
     }
 }
 
@@ -318,9 +390,10 @@ private func assertPipelineContainsUpgradeHandler(channel: Channel) {
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 class HTTPClientUpgradeTestCase: XCTestCase {
     func setUpClientChannel(
+        previousHTTPHandler: (RemovableChannelHandler & Sendable)? = nil,
         clientHTTPHandler: RemovableChannelHandler & Sendable,
         clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
-        _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
+        _ upgradeCompletionHandler: @escaping @Sendable (ChannelHandlerContext) -> Void
     ) throws -> EmbeddedChannel {
 
         let channel = EmbeddedChannel()
@@ -352,7 +425,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let addedUpgradeHeader = "myUpgradeHeader"
         let addedUpgradeValue = "upgradeHeader"
 
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         // This header is not required by the server but we will validate its receipt.
         let clientHeaders = [(addedUpgradeHeader, addedUpgradeValue)]
@@ -369,7 +442,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -416,7 +489,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         XCTAssertEqual(1, clientUpgrader.shouldAllowUpgradeCallCount)
         XCTAssertEqual(1, clientUpgrader.upgradeContextResponseCallCount)
 
-        XCTAssert(upgradeHandlerCallbackFired)
+        XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
     }
 
     func testUpgradeWithRequiredHeadersShowsInRequest() throws {
@@ -469,7 +542,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let addedUpgradeHeader = "myUpgradeHeader"
         let addedUpgradeValue = "upgradeHeaderValue"
 
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         // These headers are not required by the server but we will validate their receipt.
         let unusedClientHeaders = [(unusedUpgradeHeader, unusedUpgradeValue)]
@@ -494,7 +567,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { (context) in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -526,7 +599,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         XCTAssertEqual(1, clientUpgrader.shouldAllowUpgradeCallCount)
         XCTAssertEqual(1, clientUpgrader.upgradeContextResponseCallCount)
 
-        XCTAssert(upgradeHandlerCallbackFired)
+        XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
@@ -535,20 +608,26 @@ class HTTPClientUpgradeTestCase: XCTestCase {
     }
 
     func testUpgradeCompleteFlush() throws {
-        final class ChannelReadWriteHandler: ChannelDuplexHandler {
+        final class ChannelReadWriteHandler: ChannelDuplexHandler, Sendable {
             typealias OutboundIn = Any
             typealias InboundIn = Any
             typealias OutboundOut = Any
 
-            var messagesReceived = 0
+            private let _messagesReceived = NIOLockedValueBox(0)
+
+            var messagesReceived: Int {
+                self._messagesReceived.withLockedValue { $0 }
+            }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
-                self.messagesReceived += 1
+                self._messagesReceived.withLockedValue { $0 += 1 }
                 context.writeAndFlush(data, promise: nil)
             }
         }
 
-        final class AddHandlerClientUpgrader<T: ChannelInboundHandler>: TypedAndUntypedHTTPClientProtocolUpgrader {
+        final class AddHandlerClientUpgrader<T: ChannelInboundHandler & Sendable>:
+            TypedAndUntypedHTTPClientProtocolUpgrader, Sendable
+        {
             fileprivate let requiredUpgradeHeaders: [String] = []
             fileprivate let supportedProtocol: String
             fileprivate let handler: T
@@ -573,7 +652,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
             }
         }
 
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
         let handler = ChannelReadWriteHandler()
         let upgrader = AddHandlerClientUpgrader(forProtocol: "myproto", addingHandler: handler)
         let clientChannel = try setUpClientChannel(
@@ -581,7 +660,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
             clientUpgraders: [upgrader]
         ) { (context) in
 
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -606,7 +685,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
         clientChannel.embeddedEventLoop.run()
 
-        XCTAssert(upgradeHandlerCallbackFired)
+        XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertEqual(handler.messagesReceived, 1)
 
@@ -621,7 +700,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
     func testNoUpgradeAsNoServerUpgrade() throws {
 
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = ExplodingClientUpgrader(forProtocol: "myProto")
         let clientHandler = RecordingHTTPHandler()
@@ -633,7 +712,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -653,7 +732,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Is not an error, just silently remove as there is no upgrade.
         XCTAssertEqual(0, clientHandler.errorCaughtChannelHandlerContextCallCount)
 
-        XCTAssertFalse(upgradeHandlerCallbackFired)
+        XCTAssertFalse(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
@@ -663,7 +742,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
     func testFirstResponseReturnsServerError() throws {
 
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = ExplodingClientUpgrader(forProtocol: "myProto")
         let clientHandler = RecordingHTTPHandler()
@@ -675,7 +754,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -698,7 +777,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         // Check a separate error is not reported, the error response will be forwarded on.
         XCTAssertEqual(0, clientHandler.errorCaughtChannelHandlerContextCallCount)
 
-        XCTAssertFalse(upgradeHandlerCallbackFired)
+        XCTAssertFalse(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
@@ -708,7 +787,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
     func testUpgradeResponseMissingAllProtocols() throws {
 
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = ExplodingClientUpgrader(forProtocol: "myProto")
         let clientHandler = RecordingHTTPHandler()
@@ -720,7 +799,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -745,7 +824,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let reportedError = clientHandler.errorCaughtChannelHandlerLatestError! as! NIOHTTPClientUpgradeError
         XCTAssertEqual(NIOHTTPClientUpgradeError.responseProtocolNotFound, reportedError)
 
-        XCTAssertFalse(upgradeHandlerCallbackFired)
+        XCTAssertFalse(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
@@ -755,7 +834,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
     func testUpgradeOnlyHandlesKnownProtocols() throws {
 
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = ExplodingClientUpgrader(forProtocol: "myProto")
         let clientHandler = RecordingHTTPHandler()
@@ -767,7 +846,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -792,7 +871,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         let reportedError = clientHandler.errorCaughtChannelHandlerLatestError! as! NIOHTTPClientUpgradeError
         XCTAssertEqual(NIOHTTPClientUpgradeError.responseProtocolNotFound, reportedError)
 
-        XCTAssertFalse(upgradeHandlerCallbackFired)
+        XCTAssertFalse(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
@@ -804,7 +883,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
         let upgradeProtocol = "myProto"
 
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = DenyingClientUpgrader(forProtocol: upgradeProtocol)
         let clientHandler = RecordingHTTPHandler()
@@ -816,7 +895,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -843,7 +922,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
         let reportedError = clientHandler.errorCaughtChannelHandlerLatestError! as! NIOHTTPClientUpgradeError
         XCTAssertEqual(NIOHTTPClientUpgradeError.upgraderDeniedUpgrade, reportedError)
-        XCTAssertFalse(upgradeHandlerCallbackFired)
+        XCTAssertFalse(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
@@ -854,7 +933,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
     func testUpgradeIsCaseInsensitive() throws {
 
         let upgradeProtocol = "mYPrOtO123"
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = SuccessfulClientUpgrader(forProtocol: upgradeProtocol)
 
@@ -865,7 +944,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -893,7 +972,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         XCTAssertEqual(1, clientUpgrader.shouldAllowUpgradeCallCount)
         XCTAssertEqual(1, clientUpgrader.upgradeContextResponseCallCount)
 
-        XCTAssert(upgradeHandlerCallbackFired)
+        XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
@@ -906,7 +985,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
     func testBuffersInboundDataDuringAddingHandlers() throws {
 
         let upgradeProtocol = "myProto"
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = UpgradeDelayClientUpgrader(forProtocol: upgradeProtocol)
 
@@ -916,7 +995,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { (context) in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -950,7 +1029,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
                 .assertDoesNotContain(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
         )
 
-        XCTAssert(upgradeHandlerCallbackFired)
+        XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         // Check that the data gets fired to the new handler once it is added.
         XCTAssertEqual(1, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
@@ -966,7 +1045,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
         let upgradeProtocol = "myProto"
         var errorOnAdditionalChannelWrite: Error?
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = UpgradeDelayClientUpgrader(forProtocol: upgradeProtocol)
         let clientHandler = RecordingHTTPHandler()
@@ -977,7 +1056,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         ) { (context) in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -989,7 +1068,8 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 
         let promise = clientChannel.eventLoop.makePromise(of: Void.self)
 
-        promise.futureResult.whenFailure { error in
+        // Okay: uses embedded EL.
+        promise.futureResult.assumeIsolated().whenFailure { error in
             errorOnAdditionalChannelWrite = error
         }
 
@@ -1014,7 +1094,7 @@ class HTTPClientUpgradeTestCase: XCTestCase {
         clientChannel.embeddedEventLoop.run()
 
         // Check that the upgrade was still successful, despite the interruption.
-        XCTAssert(upgradeHandlerCallbackFired)
+        XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
         XCTAssertEqual(1, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
     }
 
@@ -1062,14 +1142,19 @@ class HTTPClientUpgradeTestCase: XCTestCase {
 #if !canImport(Darwin) || swift(>=5.10)
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
-    override func setUpClientChannel(
+
+    func setUpClientChannel(
+        previousHTTPHandler: (RemovableChannelHandler & Sendable)? = nil,
         clientHTTPHandler: RemovableChannelHandler & Sendable,
         clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
-        _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
+        _ upgradeCompletionHandler: @escaping (ChannelHandlerContext, Result<Bool, Error>) -> Void
     ) throws -> EmbeddedChannel {
 
         let channel = EmbeddedChannel()
 
+        if let previousHTTPHandler {
+            try channel.pipeline.syncOperations.addHandler(previousHTTPHandler)
+        }
         var headers = HTTPHeaders()
         headers.add(name: "Content-Type", value: "text/plain; charset=utf-8")
         headers.add(name: "Content-Length", value: "\(0)")
@@ -1107,20 +1192,37 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         let loopBoundContext = context.loopBound
         try channel.connect(to: SocketAddress(ipAddress: "127.0.0.1", port: 0))
             .wait()
-        upgradeResult.whenSuccess { result in
-            if result {
-                let context = loopBoundContext.value
-                upgradeCompletionHandler(context)
-            }
+        upgradeResult.assumeIsolated().whenComplete { result in
+            upgradeCompletionHandler(loopBoundContext.value, result)
         }
 
         return channel
     }
 
+    override func setUpClientChannel(
+        previousHTTPHandler: (RemovableChannelHandler & Sendable)? = nil,
+        clientHTTPHandler: RemovableChannelHandler & Sendable,
+        clientUpgraders: [any TypedAndUntypedHTTPClientProtocolUpgrader],
+        _ upgradeCompletionHandler: @escaping (ChannelHandlerContext) -> Void
+    ) throws -> EmbeddedChannel {
+        try setUpClientChannel(
+            previousHTTPHandler: previousHTTPHandler,
+            clientHTTPHandler: clientHTTPHandler,
+            clientUpgraders: clientUpgraders
+        ) { context, result in
+            switch result {
+            case .success(true):
+                upgradeCompletionHandler(context)
+            default:
+                break
+            }
+        }
+    }
+
     // - MARK: The following tests are all overridden from the base class since they slightly differ in behaviour
 
     override func testUpgradeOnlyHandlesKnownProtocols() throws {
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = ExplodingClientUpgrader(forProtocol: "myProto")
         let clientHandler = RecordingHTTPHandler()
@@ -1132,7 +1234,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -1157,7 +1259,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         // Check an error is reported
         XCTAssertEqual(0, clientHandler.errorCaughtChannelHandlerContextCallCount)
 
-        XCTAssertFalse(upgradeHandlerCallbackFired)
+        XCTAssertFalse(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
@@ -1168,7 +1270,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
     override func testUpgradeResponseCanBeRejectedByClientUpgrader() throws {
         let upgradeProtocol = "myProto"
 
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = DenyingClientUpgrader(forProtocol: upgradeProtocol)
         let clientHandler = RecordingHTTPHandler()
@@ -1180,7 +1282,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -1208,7 +1310,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         // Check an error is reported
         XCTAssertEqual(0, clientHandler.errorCaughtChannelHandlerContextCallCount)
 
-        XCTAssertFalse(upgradeHandlerCallbackFired)
+        XCTAssertFalse(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
@@ -1219,7 +1321,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
     override func testFiresOutboundErrorDuringAddingHandlers() throws {
         let upgradeProtocol = "myProto"
         var errorOnAdditionalChannelWrite: Error?
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = UpgradeDelayClientUpgrader(forProtocol: upgradeProtocol)
         let clientHandler = RecordingHTTPHandler()
@@ -1230,7 +1332,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         ) { (context) in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -1242,7 +1344,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
 
         let promise = clientChannel.eventLoop.makePromise(of: Void.self)
 
-        promise.futureResult.whenFailure { error in
+        promise.futureResult.assumeIsolated().whenFailure { error in
             errorOnAdditionalChannelWrite = error
         }
 
@@ -1264,12 +1366,53 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         clientChannel.embeddedEventLoop.run()
 
         // Check that the upgrade was still successful, despite the interruption.
-        XCTAssert(upgradeHandlerCallbackFired)
+        XCTAssert(upgradeHandlerCallbackFired.withLockedValue { $0 })
         XCTAssertEqual(1, clientUpgrader.upgradedHandler.handlerAddedContextCallCount)
     }
 
+    func testReturnsErrorsFromPriorChannelHandlers() throws {
+        struct FailedError: Error {}
+        final class FailingChannelHandler: ChannelInboundHandler, RemovableChannelHandler, Sendable {
+            typealias InboundIn = Any
+            typealias InboundOut = Any
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                context.fireErrorCaught(FailedError())
+                context.close(promise: nil)
+            }
+        }
+        var upgradeResult: Result<Bool, Error>?
+
+        let clientUpgrader = ExplodingClientUpgrader(forProtocol: "myProto")
+        let clientHandler = RecordingHTTPHandler()
+
+        let clientChannel = try setUpClientChannel(
+            previousHTTPHandler: FailingChannelHandler(),
+            clientHTTPHandler: clientHandler,
+            clientUpgraders: [clientUpgrader]
+        ) { _, result in
+            upgradeResult = result
+        }
+
+        let response = "HTTP/1.1 101 Switching Protocols\r\nConnection: upgrade\r\nUpgrade: myProto\r\n\r\n"
+        XCTAssertThrowsError(try clientChannel.writeInbound(clientChannel.allocator.buffer(string: response))) {
+            error in
+            XCTAssert(error is FailedError)
+        }
+
+        clientChannel.flush()
+        clientChannel.embeddedEventLoop.run()
+
+        let result = try XCTUnwrap(upgradeResult)
+        switch result {
+        case .failure(is FailedError):
+            break
+        default:
+            XCTFail("Wrong result \(result)")
+        }
+    }
+
     override func testUpgradeResponseMissingAllProtocols() throws {
-        var upgradeHandlerCallbackFired = false
+        let upgradeHandlerCallbackFired = NIOLockedValueBox(false)
 
         let clientUpgrader = ExplodingClientUpgrader(forProtocol: "myProto")
         let clientHandler = RecordingHTTPHandler()
@@ -1281,7 +1424,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         ) { _ in
 
             // This is called before the upgrader gets called.
-            upgradeHandlerCallbackFired = true
+            upgradeHandlerCallbackFired.withLockedValue { $0 = true }
         }
         defer {
             XCTAssertNoThrow(try clientChannel.finish())
@@ -1301,12 +1444,20 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         clientChannel.pipeline.assertContains(handlerType: HTTPRequestEncoder.self)
         clientChannel.pipeline.assertContains(handlerType: ByteToMessageHandler<HTTPResponseDecoder>.self)
 
+        // Now feed inbound EOF, which will trigger an error.
+        clientChannel.pipeline.fireUserInboundEventTriggered(ChannelEvent.inputClosed)
+        XCTAssertThrowsError(
+            try clientChannel.throwIfErrorCaught()
+        ) { error in
+            XCTAssertEqual(.invalidEOFState, error as? HTTPParserError)
+        }
+
         // Check that the HTTP handler received its response.
         XCTAssertLessThanOrEqual(0, clientHandler.channelReadChannelHandlerContextDataCallCount)
         // Check an error is reported
         XCTAssertEqual(0, clientHandler.errorCaughtChannelHandlerContextCallCount)
 
-        XCTAssertFalse(upgradeHandlerCallbackFired)
+        XCTAssertFalse(upgradeHandlerCallbackFired.withLockedValue { $0 })
 
         XCTAssertNoThrow(
             try clientChannel.pipeline
