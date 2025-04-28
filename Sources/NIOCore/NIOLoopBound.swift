@@ -11,10 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-// swift-format-ignore
-// Note: Whitespace changes are used to workaround compiler bug
-// Remove when compiler version 5.10 is no longer supported.
-// https://github.com/swiftlang/swift/issues/79285
 
 /// ``NIOLoopBound`` is an always-`Sendable`, value-typed container allowing you access to ``value`` if and only if
 /// you are accessing it on the right ``EventLoop``.
@@ -144,6 +140,10 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
     }
 
     #if compiler(>=6.0)
+    // Note: Whitespace changes are used to workaround compiler bug
+    // Remove when compiler version 5.10 is no longer supported.
+    // https://github.com/swiftlang/swift/issues/79285
+    // swift-format-ignore
     /// Initialise a ``NIOLoopBoundBox`` by sending a  value, validly callable off `eventLoop`.
     ///
     /// Contrary to ``init(_:eventLoop:)``, this method can be called off `eventLoop` because `value` is moved into the box and can no longer be accessed outside the box.

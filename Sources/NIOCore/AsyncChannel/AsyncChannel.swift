@@ -11,10 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-// swift-format-ignore
-// Note: Whitespace changes are used to workaround compiler bug
-// Remove when compiler version 5.10 is no longer supported.
-// https://github.com/swiftlang/swift/issues/79285
 
 /// Wraps a NIO ``Channel`` object into a form suitable for use in Swift Concurrency.
 ///
@@ -328,6 +324,10 @@ public struct NIOAsyncChannel<Inbound: Sendable, Outbound: Sendable>: Sendable {
     }
 
     #if compiler(>=6.0)
+    // Note: Whitespace changes are used to workaround compiler bug
+    // Remove when compiler version 5.10 is no longer supported.
+    // https://github.com/swiftlang/swift/issues/79285
+    // swift-format-ignore
     /// Provides scoped access to the inbound and outbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
@@ -420,6 +420,10 @@ extension NIOAsyncChannel {
     }
 
     #if compiler(>=6.0)
+    // Note: Whitespace changes are used to workaround compiler bug
+    // Remove when compiler version 5.10 is no longer supported.
+    // https://github.com/swiftlang/swift/issues/79285
+    // swift-format-ignore
     /// Provides scoped access to the inbound side of the underlying ``Channel``.
     ///
     /// - Important: After this method returned the underlying ``Channel`` will be closed.
