@@ -15,6 +15,7 @@
 import Atomics
 import CNIOLinux
 import NIOCore
+import NIOConcurrencyHelpers
 import NIOTestUtils
 import XCTest
 
@@ -305,15 +306,17 @@ class StreamChannelTest: XCTestCase {
         final class BytesReadCountingHandler: ChannelInboundHandler, Sendable {
             typealias InboundIn = ByteBuffer
 
-            private let numBytes: NIOLoopBoundBox<Int>
+            private let numBytes = NIOLockedValueBox<Int>(0)
 
-            init(_ numBytesLoopBound: NIOLoopBoundBox<Int>) {
-                self.numBytes = numBytesLoopBound
+            var bytesRead: Int {
+                self.numBytes.withLockedValue { $0 }
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
                 let currentBuffer = Self.unwrapInboundIn(data)
-                self.numBytes.value += currentBuffer.readableBytes
+                self.numBytes.withLockedValue { numBytes in
+                    numBytes += currentBuffer.readableBytes
+                }
                 context.fireChannelRead(data)
             }
         }
@@ -324,11 +327,8 @@ class StreamChannelTest: XCTestCase {
             public typealias OutboundIn = ByteBuffer
             public typealias OutboundOut = ByteBuffer
 
-            private let numBytes: NIOLoopBoundBox<Int>
-
-            init(_ numBytesLoopBound: NIOLoopBoundBox<Int>) {
-                self.numBytes = numBytesLoopBound
-            }
+            private let numBytes = NIOLockedValueBox<Int>(0)
+            private let seenOutputClosed = NIOLockedValueBox<Bool>(false)
 
             func setup(_ context: ChannelHandlerContext) {
                 let bufferLength = 1024
@@ -337,8 +337,18 @@ class StreamChannelTest: XCTestCase {
                 // write until the kernel buffer and the pendingWrites buffer are full
                 while context.channel.isWritable {
                     XCTAssertNoThrow(context.writeAndFlush(self.wrapOutboundOut(bytesToWrite), promise: nil))
-                    self.numBytes.value += bufferLength
+                    self.numBytes.withLockedValue { numBytes in
+                        numBytes += bufferLength
+                    }
                 }
+            }
+
+            var bytesWritten: Int {
+                self.numBytes.withLockedValue { $0 }
+            }
+
+            var seenOutputClosedEvent: Bool {
+                self.seenOutputClosed.withLockedValue { $0 }
             }
 
             func channelActive(context: ChannelHandlerContext) {
@@ -349,22 +359,31 @@ class StreamChannelTest: XCTestCase {
             func handlerAdded(context: ChannelHandlerContext) {
                 self.setup(context)
             }
+
+            func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+                if event as? ChannelEvent == .some(.outputClosed) {
+                    self.seenOutputClosed.withLockedValue { $0 = true }
+                }
+                context.fireUserInboundEventTriggered(event)
+            }
         }
 
         func runTest(chan1: Channel, chan2: Channel) throws {
             try chan1.setOption(.autoRead, value: false).wait()
 
-            let bytesRead = NIOLoopBoundBox.makeBoxSendingValue(0, eventLoop: chan1.eventLoop)
-            let bytesReadCountingHandler = BytesReadCountingHandler(bytesRead)
+            let bytesReadCountingHandler = BytesReadCountingHandler()
             try chan1.pipeline.addHandler(bytesReadCountingHandler).wait()
 
-            let bytesWritten = NIOLoopBoundBox.makeBoxSendingValue(0, eventLoop: chan2.eventLoop)
-            let bytesWrittenCountingHandler = BytesWrittenCountingHandler(bytesWritten)
+            let bytesWrittenCountingHandler = BytesWrittenCountingHandler()
             try chan2.pipeline.addHandler(bytesWrittenCountingHandler).wait()
+
+            XCTAssertFalse(bytesWrittenCountingHandler.seenOutputClosedEvent)
 
             // close the writing side
             let chan2ClosePromise = chan2.eventLoop.makePromise(of: Void.self)
             chan2.close(mode: .output, promise: chan2ClosePromise)
+
+            XCTAssertFalse(bytesWrittenCountingHandler.seenOutputClosedEvent)
 
             // tell the read side to begin reading leading to the write buffers draining
             try chan1.setOption(.autoRead, value: true).wait()
@@ -372,10 +391,12 @@ class StreamChannelTest: XCTestCase {
             // wait for the reading-side close to complete
             try chan1.closeFuture.wait()
 
+            XCTAssertTrue(bytesWrittenCountingHandler.seenOutputClosedEvent)
+
             // now the dust has settled all the bytes should be accounted for
             try chan2.eventLoop.submit {
-                XCTAssertNotEqual(bytesWritten.value, 0)
-                XCTAssertEqual(bytesRead.value, bytesWritten.value)
+                XCTAssertNotEqual(bytesWrittenCountingHandler.bytesWritten, 0)
+                XCTAssertEqual(bytesReadCountingHandler.bytesRead, bytesWrittenCountingHandler.bytesWritten)
             }.wait()
         }
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(forceSeparateEventLoops: false, runTest))

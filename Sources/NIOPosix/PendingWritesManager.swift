@@ -119,7 +119,6 @@ internal struct OverallWriteResult {
         /// is expected to fulfill it
         internal enum WrittenCompletelyResult: Equatable {
             case open
-            case pending
             case readyForClose(EventLoopPromise<Void>?)
             case closed(EventLoopPromise<Void>?)
 

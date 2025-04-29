@@ -598,7 +598,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
             case .writtenCompletely(let closeState):
                 newWriteRegistrationState = .unregister
                 switch closeState {
-                case .open, .pending:
+                case .open:
                     ()
                 case .readyForClose:
                     self.close0(error: ChannelError.outputClosed, mode: .output, promise: nil)
