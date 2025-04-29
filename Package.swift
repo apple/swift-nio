@@ -68,7 +68,7 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
+        .library(name: "NIOFileSystem",  targets: ["_NIOFileSystem", "NIOFileSystem"]),
         .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
     targets: [
@@ -556,7 +556,7 @@ let package = Package(
             name: "NIOFileSystemTests",
             dependencies: [
                 "NIOCore",
-                "_NIOFileSystem",
+                "NIOFileSystem",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -570,7 +570,7 @@ let package = Package(
             dependencies: [
                 "NIOCore",
                 "NIOPosix",
-                "_NIOFileSystem",
+                "NIOFileSystem",
                 "NIOFoundationCompat",
             ],
             exclude: [
@@ -584,7 +584,7 @@ let package = Package(
         .testTarget(
             name: "NIOFileSystemFoundationCompatTests",
             dependencies: [
-                "_NIOFileSystem",
+                "NIOFileSystem",
                 "_NIOFileSystemFoundationCompat",
             ],
             swiftSettings: strictConcurrencySettings
