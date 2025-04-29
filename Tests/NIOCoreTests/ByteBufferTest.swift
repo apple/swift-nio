@@ -1317,7 +1317,7 @@ class ByteBufferTest: XCTestCase {
 
     func testReadUTF8ValidatedString() throws {
         #if compiler(>=6)
-        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
         }
         buf.clear()
@@ -1334,7 +1334,7 @@ class ByteBufferTest: XCTestCase {
 
     func testGetUTF8ValidatedString() throws {
         #if compiler(>=6)
-        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'getUTF8ValidatedString' is only available in Swift 6 and later")
         }
         buf.clear()
@@ -1349,7 +1349,7 @@ class ByteBufferTest: XCTestCase {
 
     func testReadUTF8InvalidString() throws {
         #if compiler(>=6)
-        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'readUTF8ValidatedString' is only available in Swift 6 and later")
         }
         buf.clear()
@@ -4229,7 +4229,7 @@ extension ByteBufferTest {
 
     #if compiler(>=6)
     func testPeekUTF8ValidatedString_Normal() throws {
-        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
         }
         var buffer = ByteBuffer()
@@ -4241,7 +4241,7 @@ extension ByteBufferTest {
     }
 
     func testPeekUTF8ValidatedString_Empty() throws {
-        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
         }
         var buffer = ByteBuffer()
@@ -4252,7 +4252,7 @@ extension ByteBufferTest {
     }
 
     func testPeekUTF8ValidatedString_Repeated() throws {
-        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, *) else {
+        guard #available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *) else {
             throw XCTSkip("'peekUTF8ValidatedString' is only available in Swift 6 and later")
         }
         var buffer = ByteBuffer()
