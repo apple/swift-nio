@@ -14,8 +14,8 @@
 
 import Atomics
 import CNIOLinux
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 import NIOTestUtils
 import XCTest
 
@@ -307,9 +307,13 @@ class StreamChannelTest: XCTestCase {
             typealias InboundIn = ByteBuffer
 
             private let numBytes = NIOLockedValueBox<Int>(0)
+            private let numBytesReadAtInputClose = NIOLockedValueBox<Int>(0)
 
             var bytesRead: Int {
                 self.numBytes.withLockedValue { $0 }
+            }
+            var bytesReadAtInputClose: Int {
+                self.numBytesReadAtInputClose.withLockedValue { $0 }
             }
 
             func channelRead(context: ChannelHandlerContext, data: NIOAny) {
@@ -318,6 +322,15 @@ class StreamChannelTest: XCTestCase {
                     numBytes += currentBuffer.readableBytes
                 }
                 context.fireChannelRead(data)
+            }
+
+            func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+                if event as? ChannelEvent == .some(.inputClosed) {
+                    let numBytes = self.numBytes.withLockedValue { $0 }
+                    self.numBytesReadAtInputClose.withLockedValue { $0 = numBytes }
+                    context.close(mode: .all, promise: nil)
+                }
+                context.fireUserInboundEventTriggered(event)
             }
         }
 
@@ -370,6 +383,7 @@ class StreamChannelTest: XCTestCase {
 
         func runTest(chan1: Channel, chan2: Channel) throws {
             try chan1.setOption(.autoRead, value: false).wait()
+            try chan1.setOption(.allowRemoteHalfClosure, value: true).wait()
 
             let bytesReadCountingHandler = BytesReadCountingHandler()
             try chan1.pipeline.addHandler(bytesReadCountingHandler).wait()
@@ -394,10 +408,10 @@ class StreamChannelTest: XCTestCase {
             XCTAssertTrue(bytesWrittenCountingHandler.seenOutputClosedEvent)
 
             // now the dust has settled all the bytes should be accounted for
-            try chan2.eventLoop.submit {
-                XCTAssertNotEqual(bytesWrittenCountingHandler.bytesWritten, 0)
-                XCTAssertEqual(bytesReadCountingHandler.bytesRead, bytesWrittenCountingHandler.bytesWritten)
-            }.wait()
+            XCTAssertNotEqual(bytesWrittenCountingHandler.bytesWritten, 0)
+            XCTAssertEqual(bytesReadCountingHandler.bytesRead, bytesWrittenCountingHandler.bytesWritten)
+            XCTAssertEqual(bytesReadCountingHandler.bytesRead, bytesReadCountingHandler.bytesReadAtInputClose)
+
         }
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(forceSeparateEventLoops: false, runTest))
     }
