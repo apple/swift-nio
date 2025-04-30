@@ -528,7 +528,7 @@ final class ChannelTests: XCTestCase {
             XCTAssertFalse(pwm.isEmpty)
             XCTAssertFalse(pwm.isFlushPending)
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
 
             result = try assertExpectedWritability(
                 pendingWritesManager: pwm,
@@ -539,7 +539,7 @@ final class ChannelTests: XCTestCase {
                 returns: [],
                 promiseStates: [[true, false]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
 
             pwm.markFlushCheckpoint()
@@ -554,7 +554,7 @@ final class ChannelTests: XCTestCase {
                 promiseStates: [[true, true]]
             )
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
         }
     }
 
@@ -584,7 +584,7 @@ final class ChannelTests: XCTestCase {
                 returns: [.processed(8)],
                 promiseStates: [[true, true, false]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
 
             pwm.markFlushCheckpoint()
@@ -598,7 +598,7 @@ final class ChannelTests: XCTestCase {
                 returns: [.processed(0)],
                 promiseStates: [[true, true, true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -655,7 +655,7 @@ final class ChannelTests: XCTestCase {
                 returns: [.processed(8)],
                 promiseStates: [[true, true, true, true], [true, true, true, true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(totalBytes - 1 - 7 - 8, pwm.bufferedBytes)
         }
     }
@@ -704,7 +704,7 @@ final class ChannelTests: XCTestCase {
                 returns: [.processed(1)],
                 promiseStates: [[true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -768,7 +768,7 @@ final class ChannelTests: XCTestCase {
                 returns: [.processed(1)],
                 promiseStates: [Array(repeating: true, count: numberOfBytes)]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -819,7 +819,7 @@ final class ChannelTests: XCTestCase {
             )
 
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
         }
     }
 
@@ -853,7 +853,7 @@ final class ChannelTests: XCTestCase {
             XCTAssertEqual(.couldNotWriteEverything, result.writeResult)
             XCTAssertEqual(totalBytes - 2, pwm.bufferedBytes)
 
-            pwm.failAll(error: ChannelError.operationUnsupported, close: true)
+            _ = pwm.failAll(error: ChannelError.operationUnsupported)
 
             XCTAssertTrue(ps.map { $0.futureResult.isFulfilled }.allSatisfy { $0 })
         }
@@ -892,7 +892,7 @@ final class ChannelTests: XCTestCase {
                 returns: [.processed(2 * halfTheWriteVLimit), .processed(halfTheWriteVLimit)],
                 promiseStates: [[true, true, false], [true, true, true]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
         }
     }
@@ -962,7 +962,7 @@ final class ChannelTests: XCTestCase {
                     [true, true, true],
                 ]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
             pwm.markFlushCheckpoint()
         }
@@ -1000,7 +1000,7 @@ final class ChannelTests: XCTestCase {
                 returns: [.processed(2)],
                 promiseStates: [[true, false]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             totalBytes -= Int64(fr1.readableBytes)
             XCTAssertEqual(totalBytes, pwm.bufferedBytes)
 
@@ -1013,7 +1013,7 @@ final class ChannelTests: XCTestCase {
                 returns: [],
                 promiseStates: [[true, false]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(totalBytes, pwm.bufferedBytes)
             pwm.markFlushCheckpoint()
 
@@ -1029,7 +1029,7 @@ final class ChannelTests: XCTestCase {
 
             totalBytes -= Int64(fr2.readableBytes)
             XCTAssertEqual(totalBytes, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
         }
     }
 
@@ -1059,7 +1059,7 @@ final class ChannelTests: XCTestCase {
             )
 
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
         }
     }
 
@@ -1134,7 +1134,7 @@ final class ChannelTests: XCTestCase {
 
             totalBytes -= 4
             XCTAssertEqual(totalBytes, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
         }
     }
 
@@ -1180,7 +1180,7 @@ final class ChannelTests: XCTestCase {
                 returns: [.processed(8)],
                 promiseStates: [[true, true, false]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
 
             pwm.markFlushCheckpoint()
@@ -1196,7 +1196,7 @@ final class ChannelTests: XCTestCase {
             )
 
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
         }
     }
 
@@ -1223,7 +1223,7 @@ final class ChannelTests: XCTestCase {
                 returns: [.processed(0)],
                 promiseStates: [[true, true, false]]
             )
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
             XCTAssertEqual(0, pwm.bufferedBytes)
 
             pwm.markFlushCheckpoint()
@@ -1239,7 +1239,7 @@ final class ChannelTests: XCTestCase {
             )
 
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
         }
     }
 
@@ -1259,7 +1259,7 @@ final class ChannelTests: XCTestCase {
             XCTAssertEqual(Int64(buffer.readableBytes * 3), pwm.bufferedBytes)
 
             ps[0].futureResult.assumeIsolated().whenComplete { (_: Result<Void, Error>) in
-                pwm.failAll(error: ChannelError.inputClosed, close: true)
+                _ = pwm.failAll(error: ChannelError.inputClosed)
             }
 
             let result = try assertExpectedWritability(
@@ -1273,7 +1273,7 @@ final class ChannelTests: XCTestCase {
             )
 
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.closed(nil)), result.writeResult)
             XCTAssertNoThrow(try ps[0].futureResult.wait())
             XCTAssertThrowsError(try ps[1].futureResult.wait())
             XCTAssertThrowsError(try ps[2].futureResult.wait())
@@ -1322,7 +1322,7 @@ final class ChannelTests: XCTestCase {
                 promiseStates: [Array(repeating: true, count: Socket.writevLimitIOVectors + 1)]
             )
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
         }
     }
 
@@ -1353,7 +1353,7 @@ final class ChannelTests: XCTestCase {
             )
 
             XCTAssertEqual(0, pwm.bufferedBytes)
-            XCTAssertEqual(.writtenCompletely, result.writeResult)
+            XCTAssertEqual(.writtenCompletely(.open), result.writeResult)
         }
     }
 
