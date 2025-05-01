@@ -24,7 +24,7 @@ private enum AsynChannelUnixDomainSocketTests {
     /// The server side listens on a UNIX domain socket, and the client connects to this socket.
     ///
     /// The server and client exchange simple, line based messages.
-    @available(macOS 10.15, iOS 17, tvOS 13, watchOS 6, *)
+    @available(macOS 14.0, iOS 17, tvOS 17, watchOS 10, *)
     @Test()
     static func runServer() async throws {
         try await confirmation("Client did receive message") { clientDidReceive in
@@ -38,7 +38,7 @@ private enum AsynChannelUnixDomainSocketTests {
     }
 }
 
-@available(iOS 17.0, *)
+@available(macOS 14.0, iOS 17, tvOS 17, watchOS 10, *)
 private func check(
     clientDidReceive: Confirmation,
     serverDidReceive: Confirmation
