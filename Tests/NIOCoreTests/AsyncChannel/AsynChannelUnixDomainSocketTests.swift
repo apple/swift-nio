@@ -168,4 +168,4 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
         out.writeInteger(self.newLine)
     }
 }
-#endif // canImport(Testing)
+#endif  // canImport(Testing)
