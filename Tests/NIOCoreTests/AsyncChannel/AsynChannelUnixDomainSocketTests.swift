@@ -11,6 +11,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+#if canImport(Testing)
 import NIOPosix
 import Testing
 
@@ -167,3 +168,4 @@ private final class NewlineDelimiterCoder: ByteToMessageDecoder, MessageToByteEn
         out.writeInteger(self.newLine)
     }
 }
+#endif // canImport(Testing)
