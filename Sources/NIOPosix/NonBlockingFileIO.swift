@@ -35,10 +35,12 @@ import NIOCore
 /// of blocking.
 public struct NonBlockingFileIO: Sendable {
     /// The default and recommended size for ``NonBlockingFileIO``'s thread pool.
-    public static let defaultThreadPoolSize = 2
+    @inlinable
+    public static var defaultThreadPoolSize: Int { 2 }
 
     /// The default and recommended chunk size.
-    public static let defaultChunkSize = 128 * 1024
+    @inlinable
+    public static var defaultChunkSize: Int { 128 * 1024 }
 
     /// ``NonBlockingFileIO`` errors.
     public enum Error: Swift.Error {
