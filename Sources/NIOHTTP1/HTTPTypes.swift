@@ -697,8 +697,8 @@ public struct HTTPVersion: Equatable, Sendable {
         self._minor = UInt16(minor)
     }
 
-    /* private but */ @usableFromInline var _minor: UInt16
-    /* private but */ @usableFromInline var _major: UInt16
+    @usableFromInline var _minor: UInt16
+    @usableFromInline var _major: UInt16
 
     /// The major version number.
     @inlinable
