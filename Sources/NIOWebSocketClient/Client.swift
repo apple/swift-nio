@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-import NIOPosix
 import NIOHTTP1
+import NIOPosix
 import NIOWebSocket
 
 @available(macOS 14, iOS 17, tvOS 17, watchOS 10, *)
