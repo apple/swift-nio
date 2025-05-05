@@ -294,31 +294,6 @@ If all goes well, you'll see the message echoed back to you.
 To work on SwiftNIO in Xcode, you can just open the `Package.swift`
 file in Xcode and use Xcode's support for SwiftPM Packages.
 
-### An alternative: using `docker-compose`
-
-Alternatively, you may want to develop or test with `docker-compose`.
-
-First make sure you have [Docker](https://www.docker.com/community-edition) installed, next run the following commands:
-
-- `docker-compose -f docker/docker-compose.yaml run test`
-
-  Will create a base image with Swift runtime and other build and test dependencies, compile SwiftNIO and run the unit and integration tests
-
-- `docker-compose -f docker/docker-compose.yaml up echo`
-
-  Will create a base image, compile SwiftNIO, and run a sample `NIOEchoServer` on
-  `localhost:9999`. Test it by `echo Hello SwiftNIO | nc localhost 9999`.
-
-- `docker-compose -f docker/docker-compose.yaml up http`
-
-  Will create a base image, compile SwiftNIO, and run a sample `NIOHTTP1Server` on
-  `localhost:8888`. Test it by `curl http://localhost:8888`
-
-- `docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.2204.57.yaml run test`
-
-  Will create a base image using Ubuntu 22.04 and Swift 5.7, compile SwiftNIO and run the unit and integration tests.  Files exist for other Ubuntu and swift versions in the docker directory.
-
-
 ## Developing SwiftNIO
 
 *Note*: This section is only relevant if you would like to develop SwiftNIO yourself. You can ignore the information here if you just want to use SwiftNIO as a SwiftPM package.
