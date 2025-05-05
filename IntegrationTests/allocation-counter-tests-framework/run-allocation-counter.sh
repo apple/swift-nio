@@ -296,8 +296,9 @@ build_package \
 set -eu
 cd "$working_dir"
 swift build "${build_opts[@]}"
+build_dir=$(swift build "${build_opts[@]}" --show-bin-path)
 for f in "${files[@]}"; do
     echo "- $f"
-    swift run "${build_opts[@]}" "$(module_name_from_path "$f")"
+    "${build_dir}/$(module_name_from_path "$f")"
 done
 )

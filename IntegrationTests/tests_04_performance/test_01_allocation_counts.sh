@@ -45,8 +45,9 @@ observed_allocations="${observed_allocations}
 info "observed allocations:
 ${observed_allocations}"
 
+cat "$tmp/output"  # helps debugging
+
 for test in "${all_tests[@]}"; do
-    cat "$tmp/output"  # helps debugging
 
     while read -r test_case; do
         test_case=${test_case#test_*}
@@ -55,7 +56,7 @@ for test in "${all_tests[@]}"; do
         leaked_fds=$(grep "^test_$test_case.leaked_fds:" "$tmp/output" | cut -d: -f2 | sed 's/ //g')
         max_allowed_env_name="MAX_ALLOCS_ALLOWED_$test_case"
         max_allowed=$(jq '.'\""$test_case"\" "$here/Thresholds/$SWIFT_VERSION.json")
-        
+
         assert_is_number "$max_allowed" "Malformed or nonexistent ${SWIFT_VERSION}.json thresholds file"
 
         info "$test_case: allocations not freed: $not_freed_allocations"

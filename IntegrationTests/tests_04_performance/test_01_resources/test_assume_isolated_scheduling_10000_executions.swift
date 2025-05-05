@@ -17,7 +17,7 @@ import NIOPosix
 
 func run(identifier: String) {
     measure(identifier: identifier) {
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let group = MultiThreadedEventLoopGroup.preheatedSingleton.next()
         let loop = group.next()
         let dg = DispatchGroup()
 
@@ -28,7 +28,6 @@ func run(identifier: String) {
             }
         }.wait()
         dg.wait()
-        try! group.syncShutdownGracefully()
         return 10_000
     }
 }
