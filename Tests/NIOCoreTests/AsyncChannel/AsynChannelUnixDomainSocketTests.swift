@@ -74,7 +74,7 @@ private func check(
             for try await connectionChannel in inbound {
                 group.addTask {
                     print("Handling new connection")
-                    await handleConnection(
+                    try await handleConnection(
                         channel: connectionChannel,
                         serverDidReceive: serverDidReceive
                     )
@@ -124,20 +124,16 @@ private func makeClientChannel(
 private func handleConnection(
     channel: NIOAsyncChannel<String, String>,
     serverDidReceive: Confirmation
-) async {
-    do {
-        print("S: New channel")
-        try await channel.executeThenClose { inbound, outbound in
-            for try await message in inbound {
-                print("S: Did receive '\(message)'")
-                guard message != "QUIT" else { return }
-                serverDidReceive.confirm()
-                try await outbound.write(message)
-            }
-            print("S: Bye")
+) async throws {
+    print("S: New channel")
+    try await channel.executeThenClose { inbound, outbound in
+        for try await message in inbound {
+            print("S: Did receive '\(message)'")
+            guard message != "QUIT" else { return }
+            serverDidReceive.confirm()
+            try await outbound.write(message)
         }
-    } catch {
-        print("Error: \(error)")
+        print("S: Bye")
     }
 }
 
