@@ -14,10 +14,10 @@
 
 /// A receive buffer allocator which cycles through a pool of buffers.
 ///
-/// Channels can read multiple times per cycle (based on ChannelOptions.maxMessagesPerRead), and they reuse
-/// the inbound buffer for each read. If a ChannelHandler holds onto this buffer, then CoWing will be needed.
-/// A PooledRecvBufferAllocator cycles through preallocated buffers to avoid CoWs during the same read cycle.
-public struct PooledRecvBufferAllocator {
+/// Channels can read multiple times per cycle (based on `ChannelOptions.maxMessagesPerRead`), and they reuse
+/// the inbound buffer for each read. If a `ChannelHandler` holds onto this buffer, then CoWing will be needed.
+/// A `NIOPooledRecvBufferAllocator` cycles through preallocated buffers to avoid CoWs during the same read cycle.
+public struct NIOPooledRecvBufferAllocator {
     // The pool will either use a single buffer (i.e. `buffer`) OR store multiple buffers
     // in `buffers`. If `buffers` is non-empty then `buffer` MUST be `nil`. If `buffer`
     // is non-nil then `buffers` MUST be empty.
@@ -37,7 +37,7 @@ public struct PooledRecvBufferAllocator {
     /// The return value from the last call to `recvAllocator.record(actualReadBytes:)`.
     private var mayGrow: Bool
 
-    /// Builds a new instance of `PooledRecvBufferAllocator`
+    /// Builds a new instance of `NIOPooledRecvBufferAllocator`
     ///
     /// - Parameters:
     ///   - capacity: Maximum number of buffers to store in the pool.
