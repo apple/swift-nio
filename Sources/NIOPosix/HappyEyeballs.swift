@@ -85,8 +85,6 @@ extension NIOConnectionError: CustomStringConvertible {
                  }
              }
 
-
-
              return "Connection errors: \(descriptions.joined(separator: ", "))"
          }
 
