@@ -326,21 +326,19 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
         // upgrader code is done, we do our final cleanup steps, namely we replay the received data we
         // buffered in the meantime and then remove ourselves from the pipeline.
         let pipeline = context.pipeline
-        let loopBoundContext = context.loopBound
         return {
             self.upgradeState = .upgrading
 
             self.removeHTTPHandlers(pipeline: pipeline)
                 .map {
                     // Let the other handlers be removed before continuing with upgrade.
-                    self.upgradeCompletionHandler(loopBoundContext.value)
+                    self.upgradeCompletionHandler(context)
                     self.upgradeState = .upgradingAddingHandlers
                 }
                 .flatMap {
-                    upgrader.upgrade(context: loopBoundContext.value, upgradeResponse: response)
+                    upgrader.upgrade(context: context, upgradeResponse: response)
                 }
                 .map {
-                    let context = loopBoundContext.value
                     // We unbuffer any buffered data here.
 
                     // If we received any, we fire readComplete.
@@ -359,20 +357,19 @@ public final class NIOHTTPClientUpgradeHandler: ChannelDuplexHandler, RemovableC
                     self.upgradeState = .upgradeComplete
                 }
                 .whenComplete { _ in
-                    let context = loopBoundContext.value
                     context.pipeline.syncOperations.removeHandler(context: context, promise: nil)
                 }
         }
     }
 
     /// Removes any extra HTTP-related handlers from the channel pipeline.
-    private func removeHTTPHandlers(pipeline: ChannelPipeline) -> EventLoopFuture<Void> {
+    private func removeHTTPHandlers(pipeline: ChannelPipeline) -> EventLoopFuture<Void>.Isolated {
         guard self.httpHandlers.count > 0 else {
-            return pipeline.eventLoop.makeSucceededFuture(())
+            return pipeline.eventLoop.makeSucceededIsolatedFuture(())
         }
 
-        let removeFutures = self.httpHandlers.map { pipeline.removeHandler($0) }
-        return .andAllSucceed(removeFutures, on: pipeline.eventLoop)
+        let removeFutures = self.httpHandlers.map { pipeline.syncOperations.removeHandler($0) }
+        return EventLoopFuture.andAllSucceed(removeFutures, on: pipeline.eventLoop).assumeIsolated()
     }
 
     private func gotUpgrader(upgrader: @escaping (() -> Void)) {

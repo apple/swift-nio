@@ -263,18 +263,19 @@ public final class NIOHTTP1TestServer {
             self.handleChannels()
             return
         }
-        channel.pipeline.configureHTTPServerPipeline().flatMap {
+        do {
+            try channel.pipeline.syncOperations.configureHTTPServerPipeline()
             if self.aggregateBody {
-                return channel.pipeline.addHandler(AggregateBodyHandler())
-            } else {
-                return self.eventLoop.makeSucceededVoidFuture()
+                try channel.pipeline.syncOperations.addHandler(AggregateBodyHandler())
             }
-        }.flatMap {
-            channel.pipeline.addHandler(WebServerHandler(webServer: self))
-        }.flatMap {
-            channel.pipeline.addHandler(TransformerHandler())
-        }.whenSuccess {
-            _ = channel.setOption(.autoRead, value: true)
+            try channel.pipeline.syncOperations.addHandler(WebServerHandler(webServer: self))
+            try channel.pipeline.syncOperations.addHandler(TransformerHandler())
+            _ = try channel.syncOptions!.setOption(.autoRead, value: true)
+        } catch {
+            // This happens when the channel has been closed while it was waiting in
+            // the pipeline. It's benign: the closure passed to the close future above will
+            // have executed already, and started working on getting the next channel.
+            channel.close(promise: nil)
         }
     }
 

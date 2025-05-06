@@ -419,6 +419,13 @@ final class PendingDatagramWritesManager: PendingWritesManager {
     internal var publishedWritability = true
     internal var writeSpinCount: UInt = 16
     private(set) var isOpen = true
+    var outboundCloseState: CloseState {
+        if self.isOpen {
+            .open
+        } else {
+            .closed
+        }
+    }
 
     /// Initialize with a pre-allocated array of message headers and storage references. We pass in these pre-allocated
     /// objects to save allocations. They can be safely be re-used for all `Channel`s on a given `EventLoop` as an

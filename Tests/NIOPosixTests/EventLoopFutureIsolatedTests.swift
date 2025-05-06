@@ -288,6 +288,19 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
                 }
                 XCTAssertEqual(r, originalValue.x - 1)
             }
+            throwingFuture.map { _ in 5 }.flatMapError { (error: any Error) -> EventLoopFuture<Int>.Isolated in
+                guard let error = error as? TestError, error == .error else {
+                    XCTFail("Invalid passed error: \(error)")
+                    return loop.makeSucceededIsolatedFuture(originalValue.x)
+                }
+                return loop.makeSucceededIsolatedFuture(originalValue.x - 2)
+            }.whenComplete { (result: Result<Int, any Error>) in
+                guard case .success(let r) = result else {
+                    XCTFail("Unexpected error")
+                    return
+                }
+                XCTAssertEqual(r, originalValue.x - 2)
+            }
 
             // This block handles unwrap.
             newFuture.map { x -> SuperNotSendable? in
@@ -318,13 +331,15 @@ final class EventLoopFutureIsolatedTest: XCTestCase {
     func _eventLoopIsolated(loop: any EventLoop) throws {
         let f = loop.flatSubmit {
             let value = SuperNotSendable()
+            value.x = 4
 
             // Again, all of these need to close over value. In addition,
             // many need to return it as well.
             let isolated = loop.assumeIsolated()
             XCTAssertIdentical(isolated.nonisolated(), loop)
             isolated.execute {
-                XCTAssertEqual(value.x, 5)
+                XCTAssertEqual(value.x, 4)
+                value.x = 5
             }
             let firstFuture = isolated.submit {
                 let val = SuperNotSendable()

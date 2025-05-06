@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+import NIOConcurrencyHelpers
 import NIOCore
 import XCTest
 
@@ -119,25 +120,7 @@ class SelectorTest: XCTestCase {
     }
 
     private static let testWeDoNotDeliverEventsForPreviouslyClosedChannels_numberOfChannelsToUse = 10
-    func testWeDoNotDeliverEventsForPreviouslyClosedChannels() {
-        /// We use this class to box mutable values, generally in this test anything boxed should only be read/written
-        /// on the event loop `el`.
-        class Box<T> {
-            init(_ value: T) {
-                self._value = value
-            }
-            private var _value: T
-            var value: T {
-                get {
-                    XCTAssertNotNil(MultiThreadedEventLoopGroup.currentEventLoop)
-                    return self._value
-                }
-                set {
-                    XCTAssertNotNil(MultiThreadedEventLoopGroup.currentEventLoop)
-                    self._value = newValue
-                }
-            }
-        }
+    func testWeDoNotDeliverEventsForPreviouslyClosedChannels() throws {
         enum DidNotReadError: Error {
             case didNotReadGotInactive
             case didNotReadGotReadComplete
@@ -156,10 +139,10 @@ class SelectorTest: XCTestCase {
             typealias InboundIn = ByteBuffer
 
             private let didReadPromise: EventLoopPromise<Void>
-            private let hasReConnectEventLoopTickFinished: Box<Bool>
+            private let hasReConnectEventLoopTickFinished: NIOLoopBoundBox<Bool>
             private var didRead: Bool = false
 
-            init(hasReConnectEventLoopTickFinished: Box<Bool>, didReadPromise: EventLoopPromise<Void>) {
+            init(hasReConnectEventLoopTickFinished: NIOLoopBoundBox<Bool>, didReadPromise: EventLoopPromise<Void>) {
                 self.didReadPromise = didReadPromise
                 self.hasReConnectEventLoopTickFinished = hasReConnectEventLoopTickFinished
             }
@@ -213,14 +196,14 @@ class SelectorTest: XCTestCase {
         class CloseEveryOtherAndOpenNewOnesHandler: ChannelInboundHandler {
             typealias InboundIn = ByteBuffer
 
-            private let allChannels: Box<[Channel]>
+            private let allChannels: NIOLoopBoundBox<[Channel]>
             private let serverAddress: SocketAddress
             private let everythingWasReadPromise: EventLoopPromise<Void>
-            private let hasReConnectEventLoopTickFinished: Box<Bool>
+            private let hasReConnectEventLoopTickFinished: NIOLoopBoundBox<Bool>
 
             init(
-                allChannels: Box<[Channel]>,
-                hasReConnectEventLoopTickFinished: Box<Bool>,
+                allChannels: NIOLoopBoundBox<[Channel]>,
+                hasReConnectEventLoopTickFinished: NIOLoopBoundBox<Bool>,
                 serverAddress: SocketAddress,
                 everythingWasReadPromise: EventLoopPromise<Void>
             ) {
@@ -254,12 +237,12 @@ class SelectorTest: XCTestCase {
                 // 1. let's close half the channels
                 // 2. then re-connect (must be synchronous) the same number of channels and we'll get fd number re-use
 
-                context.channel.eventLoop.execute {
+                context.channel.eventLoop.execute { [hasReConnectEventLoopTickFinished] in
                     // this will be run immediately after we processed all `Selector` events so when
                     // `self.hasReConnectEventLoopTickFinished.value` becomes true, we're out of the event loop
                     // tick that is interesting.
-                    XCTAssertFalse(self.hasReConnectEventLoopTickFinished.value)
-                    self.hasReConnectEventLoopTickFinished.value = true
+                    XCTAssertFalse(hasReConnectEventLoopTickFinished.value)
+                    hasReConnectEventLoopTickFinished.value = true
                 }
                 XCTAssertFalse(self.hasReConnectEventLoopTickFinished.value)
 
@@ -279,24 +262,26 @@ class SelectorTest: XCTestCase {
                 // some new ones
                 var reconnectedChannelsHaveRead: [EventLoopFuture<Void>] = []
                 for _ in everyOtherIndex {
-                    var hasBeenAdded: Bool = false
+                    let hasBeenAdded = NIOLockedValueBox(false)
                     let p = context.channel.eventLoop.makePromise(of: Void.self)
                     reconnectedChannelsHaveRead.append(p.futureResult)
                     let newChannel = ClientBootstrap(group: context.eventLoop)
-                        .channelInitializer { channel in
-                            channel.pipeline.addHandler(
-                                HappyWhenReadHandler(
-                                    hasReConnectEventLoopTickFinished: self.hasReConnectEventLoopTickFinished,
-                                    didReadPromise: p
+                        .channelInitializer { [hasReConnectEventLoopTickFinished] channel in
+                            channel.eventLoop.assumeIsolated().makeCompletedFuture {
+                                let sync = channel.pipeline.syncOperations
+                                try sync.addHandler(
+                                    HappyWhenReadHandler(
+                                        hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
+                                        didReadPromise: p
+                                    )
                                 )
-                            ).map {
-                                hasBeenAdded = true
+                                hasBeenAdded.withLockedValue { $0 = true }
                             }
                         }
                         .connect(to: self.serverAddress)
-                        .map { (channel: Channel) -> Void in
+                        .map { [hasReConnectEventLoopTickFinished] (channel: Channel) -> Void in
                             XCTAssertFalse(
-                                self.hasReConnectEventLoopTickFinished.value,
+                                hasReConnectEventLoopTickFinished.value,
                                 """
                                 This is bad: the connect of the channels to be re-connected has not
                                 completed synchronously.
@@ -316,7 +301,7 @@ class SelectorTest: XCTestCase {
                     // just to make sure we got `newChannel` synchronously and we could add our handler to the
                     // pipeline synchronously too.
                     XCTAssertTrue(newChannel.isFulfilled)
-                    XCTAssertTrue(hasBeenAdded)
+                    XCTAssertTrue(hasBeenAdded.withLockedValue { $0 })
                 }
 
                 // if all the new re-connected channels have read, then we're happy here.
@@ -328,13 +313,6 @@ class SelectorTest: XCTestCase {
 
         }
 
-        // all of the following are boxed as we need mutable references to them, they can only be read/written on the
-        // event loop `el`.
-        let allServerChannels: Box<[Channel]> = Box([])
-        let allChannels: Box<[Channel]> = Box([])
-        let hasReConnectEventLoopTickFinished: Box<Bool> = Box(false)
-        let numberOfConnectedChannels: Box<Int> = Box(0)
-
         /// This spawns a server, always send a character immediately and after the first
         /// `SelectorTest.numberOfChannelsToUse` have been established, we'll close them all. That will trigger
         /// an `.readEOF` in the connected client channels which will then trigger other interesting things (see above).
@@ -342,10 +320,10 @@ class SelectorTest: XCTestCase {
             typealias InboundIn = ByteBuffer
 
             private var number: Int = 0
-            private let allServerChannels: Box<[Channel]>
-            private let numberOfConnectedChannels: Box<Int>
+            private let allServerChannels: NIOLoopBoundBox<[Channel]>
+            private let numberOfConnectedChannels: NIOLoopBoundBox<Int>
 
-            init(allServerChannels: Box<[Channel]>, numberOfConnectedChannels: Box<Int>) {
+            init(allServerChannels: NIOLoopBoundBox<[Channel]>, numberOfConnectedChannels: NIOLoopBoundBox<Int>) {
                 self.allServerChannels = allServerChannels
                 self.numberOfConnectedChannels = numberOfConnectedChannels
             }
@@ -370,21 +348,39 @@ class SelectorTest: XCTestCase {
                 }
             }
         }
+
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         let el = elg.next()
         defer {
             XCTAssertNoThrow(try elg.syncShutdownGracefully())
         }
+
+        // all of the following are boxed as we need mutable references to them, they can only be read/written on the
+        // event loop `el`.
+        let loopBounds = try el.submit {
+            let allServerChannels = NIOLoopBoundBox([Channel](), eventLoop: el)
+            let allChannels = NIOLoopBoundBox([Channel](), eventLoop: el)
+            let hasReConnectEventLoopTickFinished = NIOLoopBoundBox(false, eventLoop: el)
+            let numberOfConnectedChannels = NIOLoopBoundBox(0, eventLoop: el)
+            return (allServerChannels, allChannels, hasReConnectEventLoopTickFinished, numberOfConnectedChannels)
+        }.wait()
+        let allServerChannels = loopBounds.0
+        let allChannels = loopBounds.1
+        let hasReConnectEventLoopTickFinished = loopBounds.2
+        let numberOfConnectedChannels = loopBounds.3
+
         XCTAssertNoThrow(
             try withTemporaryUnixDomainSocketPathName { udsPath in
                 let secondServerChannel = try! ServerBootstrap(group: el)
                     .childChannelInitializer { channel in
-                        channel.pipeline.addHandler(
-                            ServerHandler(
-                                allServerChannels: allServerChannels,
-                                numberOfConnectedChannels: numberOfConnectedChannels
+                        channel.eventLoop.makeCompletedFuture {
+                            try channel.pipeline.syncOperations.addHandler(
+                                ServerHandler(
+                                    allServerChannels: allServerChannels,
+                                    numberOfConnectedChannels: numberOfConnectedChannels
+                                )
                             )
-                        )
+                        }
                     }
                     .bind(to: SocketAddress(unixDomainSocketPath: udsPath))
                     .wait()
@@ -396,14 +392,16 @@ class SelectorTest: XCTestCase {
                         ClientBootstrap(group: el)
                             .channelOption(.allowRemoteHalfClosure, value: true)
                             .channelInitializer { channel in
-                                channel.pipeline.addHandler(
-                                    CloseEveryOtherAndOpenNewOnesHandler(
-                                        allChannels: allChannels,
-                                        hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
-                                        serverAddress: secondServerChannel.localAddress!,
-                                        everythingWasReadPromise: everythingWasReadPromise
+                                channel.eventLoop.makeCompletedFuture {
+                                    try channel.pipeline.syncOperations.addHandler(
+                                        CloseEveryOtherAndOpenNewOnesHandler(
+                                            allChannels: allChannels,
+                                            hasReConnectEventLoopTickFinished: hasReConnectEventLoopTickFinished,
+                                            serverAddress: secondServerChannel.localAddress!,
+                                            everythingWasReadPromise: everythingWasReadPromise
+                                        )
                                     )
-                                )
+                                }
                             }
                             .connect(to: secondServerChannel.localAddress!)
                             .map { channel in

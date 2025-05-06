@@ -31,8 +31,7 @@ class NIOThreadPoolTest: XCTestCase {
             XCTAssertNoThrow(try pool.syncShutdownGracefully())
         }
 
-        var allThreadNames: Set<String> = []
-        let lock = NIOLock()
+        let allThreadNames = NIOLockedValueBox<Set<String>>([])
         let threadNameCollectionSem = DispatchSemaphore(value: 0)
         let threadBlockingSem = DispatchSemaphore(value: 0)
 
@@ -43,8 +42,8 @@ class NIOThreadPoolTest: XCTestCase {
                 case .cancelled:
                     XCTFail("work item \(i) cancelled")
                 case .active:
-                    lock.withLock {
-                        allThreadNames.formUnion([NIOThread.current.currentName ?? "n/a"])
+                    allThreadNames.withLockedValue {
+                        $0.formUnion([NIOThread.current.currentName ?? "n/a"])
                     }
                     threadNameCollectionSem.signal()
                 }
@@ -61,7 +60,7 @@ class NIOThreadPoolTest: XCTestCase {
             threadBlockingSem.signal()
         }
 
-        let localAllThreads = lock.withLock { allThreadNames }
+        let localAllThreads = allThreadNames.withLockedValue { $0 }
         for threadNumber in (0..<numberOfThreads) {
             XCTAssert(localAllThreads.contains("TP-#\(threadNumber)"), "\(localAllThreads)")
         }

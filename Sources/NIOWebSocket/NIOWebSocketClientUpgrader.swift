@@ -24,7 +24,7 @@ public typealias NIOWebClientSocketUpgrader = NIOWebSocketClientUpgrader
 /// This upgrader assumes that the `HTTPClientUpgradeHandler` will create and send the upgrade request.
 /// This upgrader also assumes that the `HTTPClientUpgradeHandler` will appropriately mutate the
 /// pipeline to remove the HTTP `ChannelHandler`s.
-public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader {
+public final class NIOWebSocketClientUpgrader: NIOHTTPClientProtocolUpgrader, Sendable {
     /// RFC 6455 specs this as the required entry in the Upgrade header.
     public let supportedProtocol: String = "websocket"
     /// None of the websocket headers are actually defined as 'required'.
@@ -186,7 +186,7 @@ private func _shouldAllowUpgrade(upgradeResponse: HTTPResponseHead, requestKey: 
 
 /// Called when the upgrade response has been flushed and it is safe to mutate the channel
 /// pipeline. Adds channel handlers for websocket frame encoding, decoding and errors.
-private func _upgrade<UpgradeResult>(
+private func _upgrade<UpgradeResult: Sendable>(
     channel: Channel,
     upgradeResponse: HTTPResponseHead,
     maxFrameSize: Int,

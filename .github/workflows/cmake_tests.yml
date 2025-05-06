@@ -1,0 +1,50 @@
+name: CMake build
+
+on:
+  workflow_call:
+    inputs:
+      update_cmake_lists_config:
+        type: string
+        description: "The configuration used when updating the CMake lists."
+        required: true
+      cmake_build_target_directory:
+        type: string
+        description: "The directory to pass to `cmake build`."
+        default: "."
+      cmake_version:
+        type: string
+        description: "The version of CMake to install."
+        default: ""
+      image:
+        type: string
+        description: "The docker image to run the checks in."
+        default: "swift:6.0-jammy"
+
+jobs:
+  cmake-checks:
+    name: CMake checks
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ inputs.image }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Mark the workspace as safe
+        # https://github.com/actions/checkout/issues/766
+        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+      - name: Check CMakeLists files
+        run: |
+          which curl jq || apt -q update
+          which curl || apt -yq install curl
+          which jq || apt -yq install jq
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/update-cmake-lists.sh | CONFIG_JSON='${{ inputs.update_cmake_lists_config }}' FAIL_ON_CHANGES=true bash
+      - name: CMake build
+        run: |
+          which curl cmake ninja || apt -q update
+          which curl || apt -yq install curl
+          which cmake || apt -yq install cmake
+          which ninja || apt -yq install ninja-build
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/cmake-build.sh | TARGET_DIRECTORY="${{ inputs.cmake_build_target_directory }}" CMAKE_VERSION="${{ inputs.cmake_version }}" bash

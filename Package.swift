@@ -196,7 +196,8 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "CNIOLLHTTP",
                 swiftCollections,
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOWebSocket",
@@ -206,7 +207,8 @@ let package = Package(
                 "NIOHTTP1",
                 "CNIOSHA1",
                 "_NIOBase64",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "CNIOLLHTTP",
@@ -221,7 +223,8 @@ let package = Package(
                 .target(name: "NIO", condition: .when(platforms: historicalNIOPosixDependencyRequired)),
                 "NIOCore",
                 swiftCollections,
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "NIOTestUtils",
@@ -231,7 +234,8 @@ let package = Package(
                 "NIOEmbedded",
                 "NIOHTTP1",
                 swiftAtomics,
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .target(
             name: "_NIOFileSystem",
@@ -317,7 +321,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOHTTP1Client",
@@ -327,7 +332,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOConcurrencyHelpers",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOChatServer",
@@ -357,7 +363,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOWebSocket",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOWebSocketClient",
@@ -367,7 +374,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOWebSocket",
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md"],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOMulticastChat",
@@ -401,7 +409,8 @@ let package = Package(
                 "NIOPosix",
                 "NIOCore",
                 "NIOHTTP1",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
 
         // MARK: - Tests
@@ -415,7 +424,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOFoundationCompat",
                 "NIOWebSocket",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .executableTarget(
             name: "NIOCrashTester",
@@ -426,7 +436,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOWebSocket",
                 "NIOFoundationCompat",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOCoreTests",
@@ -460,7 +471,8 @@ let package = Package(
                 "CNIOLinux",
                 "CNIODarwin",
                 "NIOTLS",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOConcurrencyHelpersTests",
@@ -489,7 +501,8 @@ let package = Package(
                 "NIOHTTP1",
                 "NIOFoundationCompat",
                 "NIOTestUtils",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOTLSTests",
@@ -499,7 +512,8 @@ let package = Package(
                 "NIOTLS",
                 "NIOFoundationCompat",
                 "NIOTestUtils",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOWebSocketTests",
@@ -507,7 +521,8 @@ let package = Package(
                 "NIOCore",
                 "NIOEmbedded",
                 "NIOWebSocket",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOTestUtilsTests",
@@ -516,7 +531,8 @@ let package = Package(
                 "NIOCore",
                 "NIOEmbedded",
                 "NIOPosix",
-            ]
+            ],
+            swiftSettings: strictConcurrencySettings
         ),
         .testTarget(
             name: "NIOFoundationCompatTests",
@@ -592,11 +608,16 @@ if Context.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
 
 // ---    STANDARD CROSS-REPO SETTINGS DO NOT EDIT   --- //
 for target in package.targets {
-    if target.type != .plugin {
+    switch target.type {
+    case .regular, .test, .executable:
         var settings = target.swiftSettings ?? []
         // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0444-member-import-visibility.md
         settings.append(.enableUpcomingFeature("MemberImportVisibility"))
         target.swiftSettings = settings
+    case .macro, .plugin, .system, .binary:
+        ()  // not applicable
+    @unknown default:
+        ()  // we don't know what to do here, do nothing
     }
 }
 // --- END: STANDARD CROSS-REPO SETTINGS DO NOT EDIT --- //

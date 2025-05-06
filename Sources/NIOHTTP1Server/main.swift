@@ -631,8 +631,8 @@ default:
 }
 
 func childChannelInitializer(channel: Channel) -> EventLoopFuture<Void> {
-    channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap {
-        channel.pipeline.addHandler(HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
+    channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMapThrowing {
+        try channel.pipeline.syncOperations.addHandler(HTTPHandler(fileIO: fileIO, htdocsPath: htdocs))
     }
 }
 

@@ -20,13 +20,13 @@ import Darwin
 import ucrt
 import WinSDK
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif canImport(Bionic)
-import Bionic
+@preconcurrency import Bionic
 #elseif canImport(WASILibc)
-import WASILibc
+@preconcurrency import WASILibc
 #else
 #error("Unsupported C library")
 #endif
@@ -47,6 +47,12 @@ extension NIOSingletons {
     /// The thread count is ``System/coreCount`` unless the environment variable `NIO_SINGLETON_GROUP_LOOP_COUNT`
     /// is set or this value was set manually by the user.
     ///
+    /// Please note that setting this value is a privileged operation which should be performed very early on in the program's lifecycle
+    /// by the main function, or ideally not at all.
+    /// Furthermore, setting the value will only have an effect if the global singleton ``EventLoopGroup`` has not already
+    /// been used.
+    ///
+    /// - Warning: This value can only be set _once_, attempts to set it again will crash the program.
     /// - Note: This value must be set _before_ any singletons are used and must only be set once.
     public static var groupLoopCountSuggestion: Int {
         set {
@@ -67,6 +73,12 @@ extension NIOSingletons {
     /// The thread count is ``System/coreCount`` unless the environment variable
     /// `NIO_SINGLETON_BLOCKING_POOL_THREAD_COUNT` is set or this value was set manually by the user.
     ///
+    /// Please note that setting this value is a privileged operation which should be performed very early on in the program's lifecycle
+    /// by the main function, or ideally not at all.
+    /// Furthermore, setting the value will only have an effect if the global singleton thread pool has not already
+    /// been used.
+    ///
+    /// - Warning: This value can only be set _once_, attempts to set it again will crash the program.
     /// - Note: This value must be set _before_ any singletons are used and must only be set once.
     public static var blockingPoolThreadCountSuggestion: Int {
         set {
@@ -85,6 +97,10 @@ extension NIOSingletons {
     ///
     /// This value cannot be changed using an environment variable.
     ///
+    /// Please note that setting this value is a privileged operation which should be performed very early on in the program's lifecycle
+    /// by the main function, or ideally not at all.
+    ///
+    /// - Warning: This value can only be set _once_, attempts to set it again will crash the program.
     /// - Note: This value must be set _before_ any singletons are used and must only be set once.
     public static var singletonsEnabledSuggestion: Bool {
         get {

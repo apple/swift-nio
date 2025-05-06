@@ -11,7 +11,7 @@ It's like [Netty](https://netty.io), but written for Swift.
 
 The SwiftNIO project is split across multiple repositories:
 
-Repository | NIO 2 (Swift 5.7+)
+Repository | NIO 2
 --- | ---
 [https://github.com/apple/swift-nio][repo-nio] <br> SwiftNIO core | `from: "2.0.0"`
 [https://github.com/apple/swift-nio-ssl][repo-nio-ssl] <br> TLS (SSL) support | `from: "2.0.0"`
@@ -19,8 +19,6 @@ Repository | NIO 2 (Swift 5.7+)
 [https://github.com/apple/swift-nio-extras][repo-nio-extras] <br>useful additions around SwiftNIO | `from: "1.0.0"`
 [https://github.com/apple/swift-nio-transport-services][repo-nio-transport-services] <br> first-class support for macOS, iOS, tvOS, and watchOS | `from: "1.0.0"`
 [https://github.com/apple/swift-nio-ssh][repo-nio-ssh] <br> SSH support | `.upToNextMinor(from: "0.2.0")`
-
-NIO 2.29.0 and older support Swift 5.0+, NIO 2.39.0 and older support Swift 5.2+.
 
 Within this repository we have a number of products that provide different functionality. This package contains the following products:
 
@@ -73,10 +71,10 @@ This is the current version of SwiftNIO and will be supported for the foreseeabl
 
 ### Swift Versions
 
-We commit to support the most recently released swift version (currently 5.10) and the last two minor releases before that unless this is impossible to do in one codebase.
-In addition checks are run against the latest beta release (if any) as well as the nightly swift builds and the intent is that these should pass.
+We commit to support the most recently released Swift version and the last two minor releases before that unless this is impossible to do in one codebase.
+In addition checks are run against the latest beta release (if any) as well as the nightly Swift builds and the intent is that these should pass.
 
-The most recent versions of SwiftNIO support Swift 5.9 and newer. The minimum Swift version supported by SwiftNIO releases are detailed below:
+The minimum Swift version supported by SwiftNIO releases are detailed below:
 
 SwiftNIO            | Minimum Swift Version
 --------------------|----------------------
@@ -295,31 +293,6 @@ If all goes well, you'll see the message echoed back to you.
 
 To work on SwiftNIO in Xcode, you can just open the `Package.swift`
 file in Xcode and use Xcode's support for SwiftPM Packages.
-
-### An alternative: using `docker-compose`
-
-Alternatively, you may want to develop or test with `docker-compose`.
-
-First make sure you have [Docker](https://www.docker.com/community-edition) installed, next run the following commands:
-
-- `docker-compose -f docker/docker-compose.yaml run test`
-
-  Will create a base image with Swift runtime and other build and test dependencies, compile SwiftNIO and run the unit and integration tests
-
-- `docker-compose -f docker/docker-compose.yaml up echo`
-
-  Will create a base image, compile SwiftNIO, and run a sample `NIOEchoServer` on
-  `localhost:9999`. Test it by `echo Hello SwiftNIO | nc localhost 9999`.
-
-- `docker-compose -f docker/docker-compose.yaml up http`
-
-  Will create a base image, compile SwiftNIO, and run a sample `NIOHTTP1Server` on
-  `localhost:8888`. Test it by `curl http://localhost:8888`
-
-- `docker-compose -f docker/docker-compose.yaml -f docker/docker-compose.2204.57.yaml run test`
-
-  Will create a base image using Ubuntu 22.04 and Swift 5.7, compile SwiftNIO and run the unit and integration tests.  Files exist for other Ubuntu and swift versions in the docker directory.
-
 
 ## Developing SwiftNIO
 

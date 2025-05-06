@@ -75,6 +75,39 @@ final class NIOLoopBoundTests: XCTestCase {
         )
     }
 
+    #if compiler(>=6.0)
+    func testLoopBoundBoxCanBeInitialisedWithTakingValueOffLoopAndLaterSetToValue() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try group.syncShutdownGracefully())
+        }
+
+        let loop = group.any()
+
+        class NonSendableIntBox {
+            var value: Int
+
+            init(value: Int) {
+                self.value = value
+            }
+        }
+
+        let instance = NonSendableIntBox(value: 15)
+        let sendableBox = NIOLoopBoundBox.makeBoxSendingValue(instance, as: NonSendableIntBox.self, eventLoop: loop)
+        for _ in 0..<(100 - 15) {
+            loop.execute {
+                sendableBox.value.value += 1
+            }
+        }
+        XCTAssertEqual(
+            100,
+            try loop.submit {
+                sendableBox.value.value
+            }.wait()
+        )
+    }
+    #endif
+
     func testInPlaceMutation() {
         var loopBound = NIOLoopBound(CoWValue(), eventLoop: loop)
         XCTAssertTrue(loopBound.value.mutateInPlace())

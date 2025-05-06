@@ -39,7 +39,7 @@ class IdleStateHandlerTest: XCTestCase {
     private func testIdle(
         _ handler: @escaping @Sendable @autoclosure () -> IdleStateHandler,
         _ writeToChannel: Bool,
-        _ assertEventFn: @escaping (IdleStateHandler.IdleStateEvent) -> Bool
+        _ assertEventFn: @escaping @Sendable (IdleStateHandler.IdleStateEvent) -> Bool
     ) throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer {

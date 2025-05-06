@@ -32,23 +32,29 @@ extension ByteBuffer {
     /// Can be either xxd output compatible, or hexdump compatible.
     public struct HexDumpFormat: Hashable, Sendable {
 
-        enum Value: Hashable {
+        @usableFromInline
+        enum Value: Hashable, Sendable {
             case plain(maxBytes: Int? = nil)
             case detailed(maxBytes: Int? = nil)
             case compact(maxBytes: Int? = nil)
         }
 
+        @usableFromInline
         let value: Value
+
+        @inlinable
         init(_ value: Value) { self.value = value }
 
         /// A plain hex dump format compatible with `xxd` CLI utility.
-        public static let plain = Self(.plain(maxBytes: nil))
+        @inlinable
+        public static var plain: HexDumpFormat { Self(.plain(maxBytes: nil)) }
 
         /// A hex dump format compatible with `hexdump` command line utility.
-        public static let detailed = Self(.detailed(maxBytes: nil))
+        @inlinable
+        public static var detailed: HexDumpFormat { Self(.detailed(maxBytes: nil)) }
 
         /// A hex dump analog to `plain` format  but without whitespaces.
-        public static let compact = Self(.compact(maxBytes: nil))
+        public static var compact: HexDumpFormat { Self(.compact(maxBytes: nil)) }
 
         /// A detailed hex dump format compatible with `xxd`, clipped to `maxBytes` bytes dumped.
         /// This format will dump first `maxBytes / 2` bytes, and the last `maxBytes / 2` bytes, replacing the rest with " ... ".
