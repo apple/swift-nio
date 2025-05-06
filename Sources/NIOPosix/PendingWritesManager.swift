@@ -497,8 +497,6 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     /// Fail all the outstanding writes.
     func failAll(error: Error) -> EventLoopPromise<Void>? {
-        assert(self.isOpen)
-
         let promise: EventLoopPromise<Void>?
         self.isOpen = false
         switch self.outboundCloseState {
@@ -562,8 +560,6 @@ final class PendingStreamWritesManager: PendingWritesManager {
     ///   - promise: Optionally an `EventLoopPromise` which is stored and is returned to be completed by the caller once
     ///              all outstanding writes have been dealt with or an error condition is encountered.
     func closeOutbound(_ promise: EventLoopPromise<Void>?) -> CloseOutboundResult {
-        assert(self.isOpen)
-
         // Update our internal state
         switch self.outboundCloseState {
         case .open:
@@ -588,6 +584,12 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
         // Decide on the result
         let result = CloseOutboundResult(self.outboundCloseState, self.isEmpty, promise)
+        switch result {
+        case .pending, .readyForClose:
+            ()
+        case .closed, .errored:
+            self.isOpen = false
+        }
 
         return result
     }
