@@ -93,7 +93,6 @@ public struct PooledRecvBufferAllocator {
     ///
     /// - Parameters:
     ///   - actualReadBytes: Number of bytes being recorded
-    /// - Returns: whether the next buffer will be larger than the last.
     public mutating func record(actualReadBytes: Int) {
         self.mayGrow = self.recvAllocator.record(actualReadBytes: actualReadBytes)
     }
