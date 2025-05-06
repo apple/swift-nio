@@ -823,8 +823,11 @@ public struct NIODeadline: Equatable, Hashable, Sendable {
         .init(self._uptimeNanoseconds)
     }
 
-    public static let distantPast = NIODeadline(0)
-    public static let distantFuture = NIODeadline(.init(Int64.max))
+    @inlinable
+    public static var distantPast: NIODeadline { NIODeadline(0) }
+
+    @inlinable
+    public static var distantFuture: NIODeadline { NIODeadline(.init(Int64.max)) }
 
     @inlinable init(_ nanoseconds: Int64) {
         precondition(nanoseconds >= 0)

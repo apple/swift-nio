@@ -67,7 +67,7 @@ The default policy for taking contributions is “Squash and Merge” - because 
 
 The CI will do this for you, but a project maintainer must kick it off for you.  Currently all versions of Swift >= 5.9 are supported.
 
-If you wish to test this locally you have two options [act](https://github.com/nektos/act) and Docker Compose files.
+If you wish to test this locally use [act](https://github.com/nektos/act).
 
 #### Act
 
@@ -76,10 +76,6 @@ If you wish to test this locally you have two options [act](https://github.com/n
 act pull_request
 ```
 Note that SwiftNIO matrix testing makes use of nightly builds, so you may want to make use of the ```--action-offline-mode``` to avoid repulling those.
-
-#### Docker Compose files
-
-You can use the docker-compose files.  For example usage of Docker Compose see the main [README](./README.md#an-alternative-using-docker-compose)
 
 ### Make sure your code is performant
 
