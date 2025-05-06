@@ -14,7 +14,9 @@
 
 /// A receive buffer allocator which cycles through a pool of buffers.
 ///
-/// This type is useful when allocating new buffers for every IO read is expensive or undesirable.
+/// Channels can read multiple times per cycle (based on ChannelOptions.maxMessagesPerRead), and they reuse
+/// the inbound buffer for each read. If a ChannelHandler holds onto this buffer, then CoWing will be needed.
+/// A PooledRecvBufferAllocator cycles through preallocated buffers to avoid CoWs during the same read cycle.
 public struct PooledRecvBufferAllocator {
     // The pool will either use a single buffer (i.e. `buffer`) OR store multiple buffers
     // in `buffers`. If `buffers` is non-empty then `buffer` MUST be `nil`. If `buffer`
