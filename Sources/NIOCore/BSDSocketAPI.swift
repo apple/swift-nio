@@ -103,22 +103,22 @@ private let sysInet_pton: @convention(c) (CInt, UnsafePointer<CChar>?, UnsafeMut
 
 #if os(Android)
 #if compiler(>=6.0)
-let IFF_BROADCAST: CUnsignedInt = numericCast(Android.IFF_BROADCAST.rawValue)
-let IFF_POINTOPOINT: CUnsignedInt = numericCast(Android.IFF_POINTOPOINT.rawValue)
-let IFF_MULTICAST: CUnsignedInt = numericCast(Android.IFF_MULTICAST.rawValue)
+@usableFromInline let IFF_BROADCAST: CUnsignedInt = numericCast(Android.IFF_BROADCAST.rawValue)
+@usableFromInline let IFF_POINTOPOINT: CUnsignedInt = numericCast(Android.IFF_POINTOPOINT.rawValue)
+@usableFromInline let IFF_MULTICAST: CUnsignedInt = numericCast(Android.IFF_MULTICAST.rawValue)
 #else
-let IFF_BROADCAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_BROADCAST.rawValue)
-let IFF_POINTOPOINT: CUnsignedInt = numericCast(SwiftGlibc.IFF_POINTOPOINT.rawValue)
-let IFF_MULTICAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_MULTICAST.rawValue)
+@usableFromInline let IFF_BROADCAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_BROADCAST.rawValue)
+@usableFromInline let IFF_POINTOPOINT: CUnsignedInt = numericCast(SwiftGlibc.IFF_POINTOPOINT.rawValue)
+@usableFromInline let IFF_MULTICAST: CUnsignedInt = numericCast(SwiftGlibc.IFF_MULTICAST.rawValue)
 #endif
 #if arch(arm)
-let SO_RCVTIMEO = SO_RCVTIMEO_OLD
-let SO_TIMESTAMP = SO_TIMESTAMP_OLD
+@usableFromInline let SO_RCVTIMEO = SO_RCVTIMEO_OLD
+@usableFromInline let SO_TIMESTAMP = SO_TIMESTAMP_OLD
 #endif
 #elseif os(Linux)
 // Work around SO_TIMESTAMP/SO_RCVTIMEO being awkwardly defined in glibc.
-let SO_TIMESTAMP = CNIOLinux_SO_TIMESTAMP
-let SO_RCVTIMEO = CNIOLinux_SO_RCVTIMEO
+@usableFromInline let SO_TIMESTAMP = CNIOLinux_SO_TIMESTAMP
+@usableFromInline let SO_RCVTIMEO = CNIOLinux_SO_RCVTIMEO
 #endif
 
 public enum NIOBSDSocket: Sendable {
@@ -134,6 +134,8 @@ extension NIOBSDSocket {
     public struct AddressFamily: RawRepresentable, Sendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
+
+        @inlinable
         public init(rawValue: RawValue) {
             self.rawValue = rawValue
         }
@@ -151,6 +153,8 @@ extension NIOBSDSocket {
     public struct ProtocolFamily: RawRepresentable, Sendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
+
+        @inlinable
         public init(rawValue: RawValue) {
             self.rawValue = rawValue
         }
@@ -168,6 +172,8 @@ extension NIOBSDSocket {
     public struct OptionLevel: RawRepresentable, Sendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
+
+        @inlinable
         public init(rawValue: RawValue) {
             self.rawValue = rawValue
         }
@@ -185,6 +191,8 @@ extension NIOBSDSocket {
     public struct Option: RawRepresentable, Sendable {
         public typealias RawValue = CInt
         public var rawValue: RawValue
+
+        @inlinable
         public init(rawValue: RawValue) {
             self.rawValue = rawValue
         }
@@ -200,40 +208,54 @@ extension NIOBSDSocket.Option: Hashable {
 // Address Family
 extension NIOBSDSocket.AddressFamily {
     /// Address for IP version 4.
-    public static let inet: NIOBSDSocket.AddressFamily =
+    @inlinable
+    public static var inet: NIOBSDSocket.AddressFamily {
         NIOBSDSocket.AddressFamily(rawValue: AF_INET)
+    }
 
     /// Address for IP version 6.
-    public static let inet6: NIOBSDSocket.AddressFamily =
+    @inlinable
+    public static var inet6: NIOBSDSocket.AddressFamily {
         NIOBSDSocket.AddressFamily(rawValue: AF_INET6)
+    }
 
     /// Unix local to host address.
-    public static let unix: NIOBSDSocket.AddressFamily =
+    @inlinable
+    public static var unix: NIOBSDSocket.AddressFamily {
         NIOBSDSocket.AddressFamily(rawValue: AF_UNIX)
+    }
 }
 
 // Protocol Family
 extension NIOBSDSocket.ProtocolFamily {
     /// IP network 4 protocol.
-    public static let inet: NIOBSDSocket.ProtocolFamily =
+    @inlinable
+    public static var inet: NIOBSDSocket.ProtocolFamily {
         NIOBSDSocket.ProtocolFamily(rawValue: PF_INET)
+    }
 
     /// IP network 6 protocol.
-    public static let inet6: NIOBSDSocket.ProtocolFamily =
+    @inlinable
+    public static var inet6: NIOBSDSocket.ProtocolFamily {
         NIOBSDSocket.ProtocolFamily(rawValue: PF_INET6)
+    }
 
     #if !os(WASI)
     /// UNIX local to the host.
-    public static let unix: NIOBSDSocket.ProtocolFamily =
+    @inlinable
+    public static var unix: NIOBSDSocket.ProtocolFamily {
         NIOBSDSocket.ProtocolFamily(rawValue: PF_UNIX)
+    }
     #endif
 }
 
 #if !os(Windows) && !os(WASI)
 extension NIOBSDSocket.ProtocolFamily {
     /// UNIX local to the host, alias for `PF_UNIX` (`.unix`)
-    public static let local: NIOBSDSocket.ProtocolFamily =
+    @inlinable
+    public static var local: NIOBSDSocket.ProtocolFamily {
         NIOBSDSocket.ProtocolFamily(rawValue: PF_LOCAL)
+    }
 }
 #endif
 
@@ -241,137 +263,194 @@ extension NIOBSDSocket.ProtocolFamily {
 extension NIOBSDSocket.OptionLevel {
     /// Socket options that apply only to IP sockets.
     #if os(Linux) || os(Android)
-    public static let ip: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var ip: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_IP))
+    }
     #else
-    public static let ip: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var ip: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IP)
+    }
     #endif
 
     /// Socket options that apply only to IPv6 sockets.
     #if os(Linux) || os(Android)
-    public static let ipv6: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var ipv6: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_IPV6))
+    }
     #elseif os(Windows)
-    public static let ipv6: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var ipv6: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IPV6.rawValue)
+    }
     #else
-    public static let ipv6: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var ipv6: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: IPPROTO_IPV6)
+    }
     #endif
 
     /// Socket options that apply only to TCP sockets.
     #if os(Linux) || os(Android)
-    public static let tcp: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var tcp: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_TCP))
+    }
     #elseif os(Windows)
-    public static let tcp: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var tcp: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: IPPROTO_TCP.rawValue)
+    }
     #else
-    public static let tcp: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var tcp: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: IPPROTO_TCP)
+    }
     #endif
 
     /// Socket options that apply to MPTCP sockets.
     ///
     /// These only work on Linux currently.
-    public static let mptcp = NIOBSDSocket.OptionLevel(rawValue: 284)
+    @inlinable
+    public static var mptcp: NIOBSDSocket.OptionLevel {
+        NIOBSDSocket.OptionLevel(rawValue: 284)
+    }
 
     /// Socket options that apply to all sockets.
-    public static let socket: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var socket: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: SOL_SOCKET)
+    }
 
     /// Socket options that apply only to UDP sockets.
     #if os(Linux) || os(Android)
-    public static let udp: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var udp: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: CInt(IPPROTO_UDP))
+    }
     #elseif os(Windows)
-    public static let udp: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var udp: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: IPPROTO_UDP.rawValue)
+    }
     #else
-    public static let udp: NIOBSDSocket.OptionLevel =
+    @inlinable
+    public static var udp: NIOBSDSocket.OptionLevel {
         NIOBSDSocket.OptionLevel(rawValue: IPPROTO_UDP)
+    }
     #endif
 }
 
 // IPv4 Options
 extension NIOBSDSocket.Option {
     /// Add a multicast group membership.
-    public static let ip_add_membership: NIOBSDSocket.Option =
+    @inlinable
+    public static var ip_add_membership: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IP_ADD_MEMBERSHIP)
+    }
 
     /// Drop a multicast group membership.
-    public static let ip_drop_membership: NIOBSDSocket.Option =
+    @inlinable
+    public static var ip_drop_membership: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IP_DROP_MEMBERSHIP)
+    }
 
     /// Set the interface for outgoing multicast packets.
-    public static let ip_multicast_if: NIOBSDSocket.Option =
+    @inlinable
+    public static var ip_multicast_if: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IP_MULTICAST_IF)
+    }
 
     /// Control multicast loopback.
-    public static let ip_multicast_loop: NIOBSDSocket.Option =
+    @inlinable
+    public static var ip_multicast_loop: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IP_MULTICAST_LOOP)
+    }
 
     /// Control multicast time-to-live.
-    public static let ip_multicast_ttl: NIOBSDSocket.Option =
+    @inlinable
+    public static var ip_multicast_ttl: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IP_MULTICAST_TTL)
+    }
 
     /// The IPv4 layer generates an IP header when sending a packet
     /// unless the ``ip_hdrincl`` socket option is enabled on the socket.
     /// When it is enabled, the packet must contain an IP header.  For
     /// receiving, the IP header is always included in the packet.
-    public static let ip_hdrincl: NIOBSDSocket.Option =
+    @inlinable
+    public static var ip_hdrincl: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IP_HDRINCL)
+    }
 }
 
 // IPv6 Options
 extension NIOBSDSocket.Option {
     /// Add an IPv6 group membership.
-    public static let ipv6_join_group: NIOBSDSocket.Option =
+    @inlinable
+    public static var ipv6_join_group: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IPV6_JOIN_GROUP)
+    }
 
     /// Drop an IPv6 group membership.
-    public static let ipv6_leave_group: NIOBSDSocket.Option =
+    @inlinable
+    public static var ipv6_leave_group: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IPV6_LEAVE_GROUP)
+    }
 
     /// Specify the maximum number of router hops for an IPv6 packet.
-    public static let ipv6_multicast_hops: NIOBSDSocket.Option =
+    @inlinable
+    public static var ipv6_multicast_hops: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_HOPS)
+    }
 
     /// Set the interface for outgoing multicast packets.
-    public static let ipv6_multicast_if: NIOBSDSocket.Option =
+    @inlinable
+    public static var ipv6_multicast_if: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_IF)
+    }
 
     /// Control multicast loopback.
-    public static let ipv6_multicast_loop: NIOBSDSocket.Option =
+    @inlinable
+    public static var ipv6_multicast_loop: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IPV6_MULTICAST_LOOP)
+    }
 
     /// Indicates if a socket created for the `AF_INET6` address family is
     /// restricted to IPv6 only.
-    public static let ipv6_v6only: NIOBSDSocket.Option =
+    @inlinable
+    public static var ipv6_v6only: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: IPV6_V6ONLY)
+    }
 }
 
 // TCP Options
 extension NIOBSDSocket.Option {
     /// Disables the Nagle algorithm for send coalescing.
-    public static let tcp_nodelay: NIOBSDSocket.Option =
+    @inlinable
+    public static var tcp_nodelay: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: TCP_NODELAY)
+    }
 }
 
 #if os(Linux) || os(FreeBSD) || os(Android)
 extension NIOBSDSocket.Option {
     /// Get information about the TCP connection.
-    public static let tcp_info: NIOBSDSocket.Option =
+    @inlinable
+    public static var tcp_info: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: TCP_INFO)
+    }
 }
 #endif
 
 #if canImport(Darwin)
 extension NIOBSDSocket.Option {
     /// Get information about the TCP connection.
-    public static let tcp_connection_info: NIOBSDSocket.Option =
+    @inlinable
+    public static var tcp_connection_info: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: TCP_CONNECTION_INFO)
+    }
 }
 #endif
 
@@ -381,10 +460,16 @@ extension NIOBSDSocket.Option {
     // hardcoded.
 
     /// Use UDP segmentation offload (UDP_SEGMENT, or 'GSO'). Only available on Linux.
-    public static let udp_segment = NIOBSDSocket.Option(rawValue: 103)
+    @inlinable
+    public static var udp_segment: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: 103)
+    }
 
     /// Use UDP generic receive offload (GRO). Only available on Linux.
-    public static let udp_gro = NIOBSDSocket.Option(rawValue: 104)
+    @inlinable
+    public static var udp_gro: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: 104)
+    }
 }
 #endif
 
@@ -394,43 +479,72 @@ extension NIOBSDSocket.Option {
 // header files yet.
 extension NIOBSDSocket.Option {
     /// Get info about an MPTCP connection
-    public static let mptcp_info = NIOBSDSocket.Option(rawValue: 1)
+    @inlinable
+    public static var mptcp_info: NIOBSDSocket.Option {
+        NIOBSDSocket.Option(rawValue: 1)
+    }
 }
 
 #if !os(WASI)
 // Socket Options
 extension NIOBSDSocket.Option {
     /// Get the error status and clear.
-    public static let so_error = Self(rawValue: SO_ERROR)
+    @inlinable
+    public static var so_error: NIOBSDSocket.Option {
+        Self(rawValue: SO_ERROR)
+    }
 
     /// Use keep-alives.
-    public static let so_keepalive = Self(rawValue: SO_KEEPALIVE)
+    @inlinable
+    public static var so_keepalive: NIOBSDSocket.Option {
+        Self(rawValue: SO_KEEPALIVE)
+    }
 
     /// Linger on close if unsent data is present.
-    public static let so_linger = Self(rawValue: SO_LINGER)
+    @inlinable
+    public static var so_linger: NIOBSDSocket.Option {
+        Self(rawValue: SO_LINGER)
+    }
 
     /// Specifies the total per-socket buffer space reserved for receives.
-    public static let so_rcvbuf = Self(rawValue: SO_RCVBUF)
+    @inlinable
+    public static var so_rcvbuf: NIOBSDSocket.Option {
+        Self(rawValue: SO_RCVBUF)
+    }
 
     /// Specifies the total per-socket buffer space reserved for sends.
-    public static let so_sndbuf = Self(rawValue: SO_SNDBUF)
+    @inlinable
+    public static var so_sndbuf: NIOBSDSocket.Option {
+        Self(rawValue: SO_SNDBUF)
+    }
 
     /// Specifies the receive timeout.
-    public static let so_rcvtimeo = Self(rawValue: SO_RCVTIMEO)
+    @inlinable
+    public static var so_rcvtimeo: NIOBSDSocket.Option {
+        Self(rawValue: SO_RCVTIMEO)
+    }
 
     /// Allows the socket to be bound to an address that is already in use.
-    public static let so_reuseaddr = Self(rawValue: SO_REUSEADDR)
+    @inlinable
+    public static var so_reuseaddr: NIOBSDSocket.Option {
+        Self(rawValue: SO_REUSEADDR)
+    }
 
     /// Allows the socket to send broadcast messages.
-    public static let so_broadcast = Self(rawValue: SO_BROADCAST)
+    @inlinable
+    public static var so_broadcast: NIOBSDSocket.Option {
+        Self(rawValue: SO_BROADCAST)
+    }
 }
 #endif
 
 #if !os(Windows) && !os(WASI)
 extension NIOBSDSocket.Option {
     /// Indicate when to generate timestamps.
-    public static let so_timestamp: NIOBSDSocket.Option =
+    @inlinable
+    public static var so_timestamp: NIOBSDSocket.Option {
         NIOBSDSocket.Option(rawValue: SO_TIMESTAMP)
+    }
 }
 #endif
 

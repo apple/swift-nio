@@ -151,6 +151,7 @@ extension NIOBSDSocket {
         public var rawValue: RawValue
 
         /// Construct a protocol subtype from its underlying value.
+        @inlinable
         public init(rawValue: RawValue) {
             self.rawValue = rawValue
         }
@@ -159,11 +160,14 @@ extension NIOBSDSocket {
 
 extension NIOBSDSocket.ProtocolSubtype {
     /// Refers to the "default" protocol subtype for a given socket type.
-    public static let `default` = Self(rawValue: 0)
+    public static var `default`: NIOBSDSocket.ProtocolSubtype {
+        Self(rawValue: 0)
+    }
 
     /// The protocol subtype for MPTCP.
     ///
     /// - Returns: nil if MPTCP is not supported.
+    @inlinable
     public static var mptcp: Self? {
         #if os(Linux)
         // Defined by the linux kernel, this is IPPROTO_MPTCP.
@@ -176,6 +180,7 @@ extension NIOBSDSocket.ProtocolSubtype {
 
 extension NIOBSDSocket.ProtocolSubtype {
     /// Construct a protocol subtype from an IP protocol.
+    @inlinable
     public init(_ protocol: NIOIPProtocol) {
         self.rawValue = CInt(`protocol`.rawValue)
     }
