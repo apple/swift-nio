@@ -192,17 +192,6 @@ internal final class NIOPooledRecvBufferAllocatorTests: XCTestCase {
     }
 }
 
-extension ByteBuffer {
-    // Copied from NIOCoreTests/ByteBufferTest.swift
-    fileprivate func storagePointerIntegerValue() -> UInt {
-        var pointer: UInt = 0
-        self.withVeryUnsafeBytes { ptr in
-            pointer = UInt(bitPattern: ptr.baseAddress!)
-        }
-        return pointer
-    }
-}
-
 extension Array where Element == ByteBuffer {
     fileprivate func allHaveUniqueStorage() -> Bool {
         self.count == Set(self.map { $0.storagePointerIntegerValue() }).count
