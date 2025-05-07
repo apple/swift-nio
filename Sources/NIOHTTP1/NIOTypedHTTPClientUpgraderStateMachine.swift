@@ -11,7 +11,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
-#if !canImport(Darwin) || swift(>=5.10)
 import DequeModule
 import NIOCore
 
@@ -334,4 +333,3 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
         }
     }
 }
-#endif

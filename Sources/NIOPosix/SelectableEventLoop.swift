@@ -588,14 +588,12 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
             switch task {
             case .function(let function):
                 function()
-            #if compiler(>=5.9)
             case .unownedJob(let erasedUnownedJob):
                 if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
                     erasedUnownedJob.unownedJob.runSynchronously(on: self.asUnownedSerialExecutor())
                 } else {
                     fatalError("Tried to run an UnownedJob without runtime support")
                 }
-            #endif
             case .callback(let handler):
                 handler.handleScheduledCallback(eventLoop: self)
             }
