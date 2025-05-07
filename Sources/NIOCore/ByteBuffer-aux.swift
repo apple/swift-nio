@@ -964,7 +964,7 @@ extension ByteBuffer {
     /// - Returns: A `String` value containing the UTF-8 decoded selected bytes from this `ByteBuffer` or `nil` if
     ///            the requested bytes are not readable.
     @inlinable
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public func getUTF8ValidatedString(at index: Int, length: Int) throws -> String? {
         guard let slice = self.getSlice(at: index, length: length) else {
             return nil
@@ -990,7 +990,7 @@ extension ByteBuffer {
     ///   - length: The number of bytes making up the string.
     /// - Returns: A `String` value deserialized from this `ByteBuffer` or `nil` if there aren't at least `length` bytes readable.
     @inlinable
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public mutating func readUTF8ValidatedString(length: Int) throws -> String? {
         guard let result = try self.getUTF8ValidatedString(at: self.readerIndex, length: length) else {
             return nil
@@ -1019,7 +1019,7 @@ extension ByteBuffer {
     /// - Returns: A validated String, or `nil` if the requested bytes are not readable.
     /// - Throws: `ReadUTF8ValidationError.invalidUTF8` if the bytes are not valid UTF8.
     @inlinable
-    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, *)
+    @available(macOS 15, iOS 18, tvOS 18, watchOS 11, visionOS 2, *)
     public func peekUTF8ValidatedString(length: Int) throws -> String? {
         try self.getUTF8ValidatedString(at: self.readerIndex, length: length)
     }

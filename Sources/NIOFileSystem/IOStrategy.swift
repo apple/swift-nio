@@ -44,7 +44,7 @@ enum IOStrategy: Hashable, Sendable {
         //
         // Anyone tuning this is encouraged to cover worst case scenarios.
         return .parallel(8)
-        #elseif os(iOS) || os(tvOS) || os(watchOS) || os(Android)
+        #elseif (canImport(Darwin) && !os(macOS)) || os(Android)
         // Reduced maximum descriptors in embedded world. This is chosen based on biasing towards
         // safety, not empirical testing.
         return .parallel(4)
