@@ -16,7 +16,7 @@
 # Parameters
 linux_command="$MATRIX_LINUX_COMMAND"  # required if any Linux pipeline is enabled
 linux_setup_command="$MATRIX_LINUX_SETUP_COMMAND"
-linux_5_9_enabled="${MATRIX_LINUX_5_9_ENABLED:=true}"
+linux_5_9_enabled="${MATRIX_LINUX_5_9_ENABLED:=false}"
 linux_5_9_command_arguments="$MATRIX_LINUX_5_9_COMMAND_ARGUMENTS"
 linux_5_10_enabled="${MATRIX_LINUX_5_10_ENABLED:=true}"
 linux_5_10_command_arguments="$MATRIX_LINUX_5_10_COMMAND_ARGUMENTS"
