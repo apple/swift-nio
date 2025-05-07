@@ -86,7 +86,7 @@ SwiftNIO            | Minimum Swift Version
 `2.60.0 ..< 2.65.0` | 5.7
 `2.65.0 ..< 2.76.0` | 5.8
 `2.76.0 ..< 2.83.0` | 5.9
-`2.83.0 ..<`        | 5.10
+`2.83.0 ...`        | 5.10
 
 ### SwiftNIO 1
 SwiftNIO 1 is considered end of life - it is strongly recommended that you move to a newer version.  The Core NIO team does not actively work on this version.  No new features will be added to this version but PRs which fix bugs or security vulnerabilities will be accepted until the end of May 2022.
