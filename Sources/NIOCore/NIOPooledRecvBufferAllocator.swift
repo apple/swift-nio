@@ -17,7 +17,7 @@
 /// Channels can read multiple times per cycle (based on `ChannelOptions.maxMessagesPerRead`), and they reuse
 /// the inbound buffer for each read. If a `ChannelHandler` holds onto this buffer, then CoWing will be needed.
 /// A `NIOPooledRecvBufferAllocator` cycles through preallocated buffers to avoid CoWs during the same read cycle.
-public struct NIOPooledRecvBufferAllocator {
+public struct NIOPooledRecvBufferAllocator: Sendable {
     // The pool will either use a single buffer (i.e. `buffer`) OR store multiple buffers
     // in `buffers`. If `buffers` is non-empty then `buffer` MUST be `nil`. If `buffer`
     // is non-nil then `buffers` MUST be empty.
