@@ -73,19 +73,19 @@ public struct NIOConnectionError: Error {
 extension NIOConnectionError: CustomStringConvertible {
     public var description: String {
         if let dnsError = (self.dnsAError ?? self.dnsAAAAError) {
-             return "DNS error: \(dnsError)"
-         }
+            return "DNS error: \(dnsError)"
+        }
 
         if !self.connectionErrors.isEmpty {
-             let descriptions = self.connectionErrors.map {
-                 String(describing: $0)
-             }
+            let descriptions = self.connectionErrors.map {
+                String(describing: $0)
+            }
 
-             return "Connection errors: \(descriptions.joined(separator: ", "))"
-         }
+            return "Connection errors: \(descriptions.joined(separator: ", "))"
+        }
 
-         return "NIOConnectionError: unknown"
-     }
+        return "NIOConnectionError: unknown"
+    }
 }
 
 /// A simple iterator that manages iterating over the possible targets.
