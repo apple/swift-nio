@@ -297,6 +297,7 @@ extension NIOFileHandle {
     public struct Mode: OptionSet, Sendable {
         public let rawValue: UInt8
 
+        @inlinable
         public init(rawValue: UInt8) {
             self.rawValue = rawValue
         }
@@ -315,17 +316,28 @@ extension NIOFileHandle {
         }
 
         /// Opens file for reading
-        public static let read = Mode(rawValue: 1 << 0)
+        @inlinable
+        public static var read: Mode { Mode(rawValue: 1 << 0) }
         /// Opens file for writing
-        public static let write = Mode(rawValue: 1 << 1)
+        @inlinable
+        public static var write: NIOFileHandle.Mode { Mode(rawValue: 1 << 1) }
     }
 
     /// `Flags` allows to specify additional flags to `Mode`, such as permission for file creation.
     public struct Flags: Sendable {
+        @usableFromInline
         internal var posixMode: NIOPOSIXFileMode
+
+        @usableFromInline
         internal var posixFlags: CInt
 
-        public static let `default` = Flags(posixMode: 0, posixFlags: 0)
+        @inlinable
+        internal init(posixMode: NIOPOSIXFileMode, posixFlags: CInt) {
+            self.posixMode = posixMode
+            self.posixFlags = posixFlags
+        }
+
+        public static var `default`: Flags { Flags(posixMode: 0, posixFlags: 0) }
 
         #if os(Windows)
         public static let defaultPermissions = _S_IREAD | _S_IWRITE
