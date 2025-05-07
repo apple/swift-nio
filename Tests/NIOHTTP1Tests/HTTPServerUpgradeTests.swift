@@ -42,15 +42,11 @@ extension ChannelPipeline {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     fileprivate func assertContainsUpgrader() {
-        #if !canImport(Darwin) || swift(>=5.10)
         do {
             _ = try self.containsHandler(type: NIOTypedHTTPServerUpgradeHandler<Bool>.self).wait()
         } catch {
             self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
         }
-        #else
-        self.assertContains(handlerType: HTTPServerUpgradeHandler.self)
-        #endif
     }
 
     func assertContains<Handler: ChannelHandler>(handlerType: Handler.Type) {
@@ -73,7 +69,6 @@ extension ChannelPipeline {
                 // handler present, keep waiting
                 usleep(50)
             } catch ChannelPipelineError.notFound {
-                #if !canImport(Darwin) || swift(>=5.10)
                 // Checking if the typed variant is present
                 do {
                     _ = try self.containsHandler(type: NIOTypedHTTPServerUpgradeHandler<Bool>.self).wait()
@@ -83,9 +78,6 @@ extension ChannelPipeline {
                     // No upgrader, we're good.
                     return
                 }
-                #else
-                return
-                #endif
             }
         }
 
@@ -195,14 +187,9 @@ internal func assertResponseIs(response: String, expectedResponseLine: String, e
     XCTAssertEqual(lines.count, 0)
 }
 
-#if !canImport(Darwin) || swift(>=5.10)
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 protocol TypedAndUntypedHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader, NIOTypedHTTPServerProtocolUpgrader
 where UpgradeResult == Bool {}
-#else
-@available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-protocol TypedAndUntypedHTTPServerProtocolUpgrader: HTTPServerProtocolUpgrader {}
-#endif
 
 private final class ExplodingUpgrader: TypedAndUntypedHTTPServerProtocolUpgrader, Sendable {
     let supportedProtocol: String
@@ -1796,7 +1783,6 @@ class HTTPServerUpgradeTestCase: XCTestCase {
     }
 }
 
-#if !canImport(Darwin) || swift(>=5.10)
 @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
 final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
     fileprivate override func setUpTestWithAutoremoval(
@@ -2432,4 +2418,3 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
         XCTAssertEqual(errorCaught.wrappedValue, true)
     }
 }
-#endif

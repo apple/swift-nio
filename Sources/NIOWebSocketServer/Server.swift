@@ -12,10 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if (!canImport(Darwin) && compiler(>=5.9)) || (canImport(Darwin) && compiler(>=5.10))
 import NIOCore
-import NIOPosix
 import NIOHTTP1
+import NIOPosix
 import NIOWebSocket
 
 let websocketResponse = """
@@ -288,12 +287,3 @@ final class HTTPByteBufferResponsePartHandler: ChannelOutboundHandler {
         }
     }
 }
-
-#else
-@main
-struct Server {
-    static func main() {
-        fatalError("Requires at least Swift 5.9")
-    }
-}
-#endif
