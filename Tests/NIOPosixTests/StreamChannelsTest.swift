@@ -416,6 +416,49 @@ class StreamChannelTest: XCTestCase {
         XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(forceSeparateEventLoops: false, runTest))
     }
 
+    func testHalfCloseAfterEOF() throws {
+        func runTest(chan1: Channel, chan2: Channel) throws {
+            let readPromise = chan2.eventLoop.makePromise(of: Void.self)
+
+            self.buffer.writeString("X")
+            XCTAssertNoThrow(
+                try chan2.pipeline.addHandler(FulfillOnFirstEventHandler(channelReadPromise: readPromise)).wait()
+            )
+
+            // let's write a byte from chan1 to chan2 and wait for it to complete
+            XCTAssertNoThrow(try chan1.writeAndFlush(self.buffer).wait(), "chan1 write failed")
+
+            // and wait for it to arrive
+            XCTAssertNoThrow(try readPromise.futureResult.wait())
+
+            // the receiver has what it wants and closes the channel
+            try chan2.close(mode: .all).wait()
+
+            // the writer's logic says that it is done writing so it closes its output
+            // we're mostly making sure we don't panic here, if we do see an error then it should be a particular type
+            do {
+                try chan1.close(mode: .output).wait()
+            } catch ChannelError.alreadyClosed {
+                ()  // expected possibility depending on ordering
+            } catch {
+                if let err = error as? NIOCore.IOError {
+                    switch err.errnoCode {
+                    case EBADF, ENOTCONN:
+                        ()  // expected possibility depending on ordering
+                    default:
+                        XCTFail("Unexpected IO error encountered during close: \(error)")
+                    }
+                } else {
+                    XCTFail("Unexpected error encountered during close: \(error)")
+                }
+            }
+
+            XCTAssertNoThrow(try chan1.syncCloseAcceptingAlreadyClosed())
+            XCTAssertNoThrow(try chan2.syncCloseAcceptingAlreadyClosed())
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
+    }
+
     func testHalfCloseOwnInput() {
         func runTest(chan1: Channel, chan2: Channel) throws {
 

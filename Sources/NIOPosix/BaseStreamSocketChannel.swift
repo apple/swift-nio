@@ -200,8 +200,9 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                 case .pending:
                     ()  // promise is stored in `pendingWrites` state for completing later
 
-                case .readyForClose(let closePromise):
-                    // Shutdown the socket only when the pending writes are dealt with
+                case .readyForClose(let closePromise), .closed(let closePromise):
+                    // Shutdown the socket only when the pending writes are dealt with ...
+                    // ... or if we think we are already closed - just to make sure it *is* closed / to match the old behavior
                     do {
                         try self.shutdownSocket(mode: mode)
                         closePromise?.succeed(())
@@ -210,9 +211,6 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
                     }
                     self.unregisterForWritable()
                     self.pipeline.fireUserInboundEventTriggered(ChannelEvent.outputClosed)
-
-                case .closed(let closePromise):
-                    closePromise?.succeed(())
 
                 case .errored(let err, let closePromise):
                     assertionFailure("Close errored: \(err)")
