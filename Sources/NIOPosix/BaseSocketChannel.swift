@@ -251,7 +251,7 @@ class BaseSocketChannel<SocketType: BaseSocketProtocol>: SelectableChannel, Chan
     // MARK: Variables, on EventLoop thread only
     var readPending = false
     var pendingConnect: Optional<EventLoopPromise<Void>>
-    var recvBufferPool: PooledRecvBufferAllocator
+    var recvBufferPool: NIOPooledRecvBufferAllocator
     var maxMessagesPerRead: UInt = 4
     private var inFlushNow: Bool = false  // Guard against re-entrance of flushNow() method.
     private var autoRead: Bool = true

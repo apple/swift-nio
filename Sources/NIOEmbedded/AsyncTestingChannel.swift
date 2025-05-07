@@ -201,15 +201,9 @@ public final class NIOAsyncTestingChannel: Channel {
 
     // These two variables are only written once, from a single thread, and never written again, so they're _technically_ thread-safe. Most methods cannot safely
     // be used from multiple threads, but `isActive`, `isOpen`, `eventLoop`, and `closeFuture` can all safely be used from any thread. Just.
-    #if compiler(>=5.10)
     @usableFromInline
     nonisolated(unsafe) var channelcore: EmbeddedChannelCore!
     nonisolated(unsafe) private var _pipeline: ChannelPipeline!
-    #else
-    @usableFromInline
-    var channelcore: EmbeddedChannelCore!
-    private var _pipeline: ChannelPipeline!
-    #endif
 
     private struct State {
         var isWritable: Bool

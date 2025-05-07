@@ -708,15 +708,3 @@ final class NIOAsyncWriterTests: XCTestCase {
         self.assert(suspendCallCount: 0, yieldCallCount: 0, terminateCallCount: 1)
     }
 }
-
-#if !canImport(Darwin) && swift(<5.9.2)
-extension XCTestCase {
-    func fulfillment(
-        of expectations: [XCTestExpectation],
-        timeout seconds: TimeInterval,
-        enforceOrder enforceOrderOfFulfillment: Bool = false
-    ) async {
-        wait(for: expectations, timeout: seconds)
-    }
-}
-#endif

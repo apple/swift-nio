@@ -427,6 +427,47 @@ extension ChannelError {
 
 extension ChannelError: Equatable {}
 
+extension ChannelError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .connectPending:
+            "Connect pending"
+        case let .connectTimeout(value):
+            "Connect timeout (\(value))"
+        case .operationUnsupported:
+            "Operation unsupported"
+        case .ioOnClosedChannel:
+            "I/O on closed channel"
+        case .alreadyClosed:
+            "Already closed"
+        case .outputClosed:
+            "Output closed"
+        case .inputClosed:
+            "Input closed"
+        case .eof:
+            "End of file"
+        case .writeMessageTooLarge:
+            "Write message too large"
+        case .writeHostUnreachable:
+            "Write host unreachable"
+        case .unknownLocalAddress:
+            "Unknown local address"
+        case .badMulticastGroupAddressFamily:
+            "Bad multicast group address family"
+        case .badInterfaceAddressFamily:
+            "Bad interface address family"
+        case let .illegalMulticastAddress(address):
+            "Illegal multicast address \(address)"
+        case let .multicastNotSupported(interface):
+            "Multicast not supported on interface \(interface)"
+        case .inappropriateOperationForState:
+            "Inappropriate operation for state"
+        case .unremovableHandler:
+            "Unremovable handler"
+        }
+    }
+}
+
 /// The removal of a `ChannelHandler` using `ChannelPipeline.removeHandler` has been attempted more than once.
 public struct NIOAttemptedToRemoveHandlerMultipleTimesError: Error {}
 

@@ -1885,15 +1885,3 @@ extension FileSystemTests {
         XCTAssertEqual(contents, [0, 1, 2])
     }
 }
-
-#if !canImport(Darwin) && swift(<5.9.2)
-extension XCTestCase {
-    func fulfillment(
-        of expectations: [XCTestExpectation],
-        timeout seconds: TimeInterval,
-        enforceOrder enforceOrderOfFulfillment: Bool = false
-    ) async {
-        wait(for: expectations, timeout: seconds)
-    }
-}
-#endif
