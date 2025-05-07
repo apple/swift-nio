@@ -479,11 +479,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testLockMutualExclusion() {
         let l = NIOLock()
 
-        #if compiler(>=5.10)
         nonisolated(unsafe) var x = 1
-        #else
-        var x = 1
-        #endif
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
@@ -517,11 +513,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testWithLockMutualExclusion() {
         let l = NIOLock()
 
-        #if compiler(>=5.10)
         nonisolated(unsafe) var x = 1
-        #else
-        var x = 1
-        #endif
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
@@ -553,11 +545,7 @@ class NIOConcurrencyHelpersTests: XCTestCase {
     func testConditionLockMutualExclusion() {
         let l = ConditionLock(value: 0)
 
-        #if compiler(>=5.10)
         nonisolated(unsafe) var x = 1
-        #else
-        var x = 1
-        #endif
         let q = DispatchQueue(label: "q")
         let g = DispatchGroup()
         let sem1 = DispatchSemaphore(value: 0)
