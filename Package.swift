@@ -446,6 +446,7 @@ let package = Package(
                 "NIOCore",
                 "NIOEmbedded",
                 "NIOFoundationCompat",
+                "NIOTestUtils",
                 swiftAtomics,
             ],
             swiftSettings: strictConcurrencySettings
