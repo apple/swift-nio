@@ -14,6 +14,7 @@
 
 import Atomics
 import CNIOLinux
+import NIOConcurrencyHelpers
 import NIOCore
 import NIOTestUtils
 import XCTest
@@ -254,6 +255,203 @@ class StreamChannelTest: XCTestCase {
 
             // and wait for it to arrive
             XCTAssertNoThrow(try readPromise.futureResult.wait())
+
+            XCTAssertNoThrow(try chan1.syncCloseAcceptingAlreadyClosed())
+            XCTAssertNoThrow(try chan2.syncCloseAcceptingAlreadyClosed())
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
+    }
+
+    func testHalfCloseOwnOutputWithPopulatedBuffer() throws {
+        func runTest(chan1: Channel, chan2: Channel) throws {
+            let readPromise = chan2.eventLoop.makePromise(of: Void.self)
+
+            XCTAssertNoThrow(try chan1.setOption(.allowRemoteHalfClosure, value: true).wait())
+
+            self.buffer.writeString("X")
+            XCTAssertNoThrow(
+                try chan2.pipeline.addHandler(FulfillOnFirstEventHandler(channelReadPromise: readPromise)).wait()
+            )
+
+            // let's write a byte from chan1 to chan2 which we leave in the buffer.
+            let writeFuture = chan1.write(self.buffer)
+
+            // close chan1's output, this shouldn't take effect until the buffer is empty
+            let closeFuture = chan1.close(mode: .output)
+
+            // flush chan1's output
+            chan1.flush()
+
+            // Attempt to write a byte from chan1 to chan2 which should be refused after the close
+            XCTAssertThrowsError(try chan1.write(self.buffer).wait()) { error in
+                XCTAssertEqual(ChannelError.outputClosed, error as? ChannelError, "\(chan1)")
+            }
+
+            // wait for the write to complete
+            XCTAssertNoThrow(try writeFuture.wait(), "chan1 write failed")
+
+            // and wait for it to arrive
+            XCTAssertNoThrow(try readPromise.futureResult.wait())
+
+            // wait for the close to complete
+            XCTAssertNoThrow(try closeFuture.wait(), "chan1 close failed")
+
+            XCTAssertNoThrow(try chan1.syncCloseAcceptingAlreadyClosed())
+            XCTAssertNoThrow(try chan2.syncCloseAcceptingAlreadyClosed())
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(runTest))
+    }
+
+    func testHalfCloseOwnOutputWithWritabilityChange() throws {
+        final class BytesReadCountingHandler: ChannelInboundHandler, Sendable {
+            typealias InboundIn = ByteBuffer
+
+            private let numBytes = NIOLockedValueBox<Int>(0)
+            private let numBytesReadAtInputClose = NIOLockedValueBox<Int>(0)
+
+            var bytesRead: Int {
+                self.numBytes.withLockedValue { $0 }
+            }
+            var bytesReadAtInputClose: Int {
+                self.numBytesReadAtInputClose.withLockedValue { $0 }
+            }
+
+            func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+                let currentBuffer = Self.unwrapInboundIn(data)
+                self.numBytes.withLockedValue { numBytes in
+                    numBytes += currentBuffer.readableBytes
+                }
+                context.fireChannelRead(data)
+            }
+
+            func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+                if event as? ChannelEvent == .some(.inputClosed) {
+                    let numBytes = self.numBytes.withLockedValue { $0 }
+                    self.numBytesReadAtInputClose.withLockedValue { $0 = numBytes }
+                    context.close(mode: .all, promise: nil)
+                }
+                context.fireUserInboundEventTriggered(event)
+            }
+        }
+
+        final class BytesWrittenCountingHandler: ChannelInboundHandler, Sendable {
+            typealias InboundIn = ByteBuffer
+
+            public typealias OutboundIn = ByteBuffer
+            public typealias OutboundOut = ByteBuffer
+
+            private let numBytes = NIOLockedValueBox<Int>(0)
+            private let seenOutputClosed = NIOLockedValueBox<Bool>(false)
+
+            func setup(_ context: ChannelHandlerContext) {
+                let bufferLength = 1024
+                let bytesToWrite = ByteBuffer.init(repeating: 0x42, count: bufferLength)
+
+                // write until the kernel buffer and the pendingWrites buffer are full
+                while context.channel.isWritable {
+                    XCTAssertNoThrow(context.writeAndFlush(self.wrapOutboundOut(bytesToWrite), promise: nil))
+                    self.numBytes.withLockedValue { numBytes in
+                        numBytes += bufferLength
+                    }
+                }
+            }
+
+            var bytesWritten: Int {
+                self.numBytes.withLockedValue { $0 }
+            }
+
+            var seenOutputClosedEvent: Bool {
+                self.seenOutputClosed.withLockedValue { $0 }
+            }
+
+            func channelActive(context: ChannelHandlerContext) {
+                self.setup(context)
+                context.fireChannelActive()
+            }
+
+            func handlerAdded(context: ChannelHandlerContext) {
+                self.setup(context)
+            }
+
+            func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
+                if event as? ChannelEvent == .some(.outputClosed) {
+                    self.seenOutputClosed.withLockedValue { $0 = true }
+                }
+                context.fireUserInboundEventTriggered(event)
+            }
+        }
+
+        func runTest(chan1: Channel, chan2: Channel) throws {
+            try chan1.setOption(.autoRead, value: false).wait()
+            try chan1.setOption(.allowRemoteHalfClosure, value: true).wait()
+
+            let bytesReadCountingHandler = BytesReadCountingHandler()
+            try chan1.pipeline.addHandler(bytesReadCountingHandler).wait()
+
+            let bytesWrittenCountingHandler = BytesWrittenCountingHandler()
+            try chan2.pipeline.addHandler(bytesWrittenCountingHandler).wait()
+
+            XCTAssertFalse(bytesWrittenCountingHandler.seenOutputClosedEvent)
+
+            // close the writing side
+            let chan2ClosePromise = chan2.eventLoop.makePromise(of: Void.self)
+            chan2.close(mode: .output, promise: chan2ClosePromise)
+
+            XCTAssertFalse(bytesWrittenCountingHandler.seenOutputClosedEvent)
+
+            // tell the read side to begin reading leading to the write buffers draining
+            try chan1.setOption(.autoRead, value: true).wait()
+
+            // wait for the reading-side close to complete
+            try chan1.closeFuture.wait()
+
+            XCTAssertTrue(bytesWrittenCountingHandler.seenOutputClosedEvent)
+
+            // now the dust has settled all the bytes should be accounted for
+            XCTAssertNotEqual(bytesWrittenCountingHandler.bytesWritten, 0)
+            XCTAssertEqual(bytesReadCountingHandler.bytesRead, bytesWrittenCountingHandler.bytesWritten)
+            XCTAssertEqual(bytesReadCountingHandler.bytesRead, bytesReadCountingHandler.bytesReadAtInputClose)
+
+        }
+        XCTAssertNoThrow(try forEachCrossConnectedStreamChannelPair(forceSeparateEventLoops: false, runTest))
+    }
+
+    func testHalfCloseAfterEOF() throws {
+        func runTest(chan1: Channel, chan2: Channel) throws {
+            let readPromise = chan2.eventLoop.makePromise(of: Void.self)
+
+            self.buffer.writeString("X")
+            XCTAssertNoThrow(
+                try chan2.pipeline.addHandler(FulfillOnFirstEventHandler(channelReadPromise: readPromise)).wait()
+            )
+
+            // let's write a byte from chan1 to chan2 and wait for it to complete
+            XCTAssertNoThrow(try chan1.writeAndFlush(self.buffer).wait(), "chan1 write failed")
+
+            // and wait for it to arrive
+            XCTAssertNoThrow(try readPromise.futureResult.wait())
+
+            // the receiver has what it wants and closes the channel
+            try chan2.close(mode: .all).wait()
+
+            // the writer's logic says that it is done writing so it closes its output
+            // we're mostly making sure we don't panic here, if we do see an error then it should be a particular type
+            do {
+                try chan1.close(mode: .output).wait()
+            } catch ChannelError.alreadyClosed {
+                ()  // expected possibility depending on ordering
+            } catch {
+                if let err = error as? NIOCore.IOError {
+                    switch err.errnoCode {
+                    case EBADF, ENOTCONN:
+                        ()  // expected possibility depending on ordering
+                    default:
+                        XCTFail("Unexpected IO error encountered during close: \(error)")
+                    }
+                } else {
+                    XCTFail("Unexpected error encountered during close: \(error)")
+                }
+            }
 
             XCTAssertNoThrow(try chan1.syncCloseAcceptingAlreadyClosed())
             XCTAssertNoThrow(try chan2.syncCloseAcceptingAlreadyClosed())
