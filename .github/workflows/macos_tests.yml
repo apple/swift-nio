@@ -117,8 +117,8 @@ on:
         default: false
       visionos_xcode_build_enabled:
         type: boolean
-        description: "Boolean to enable the Xcode build targeting visionOS. Defaults to false."
-        default: false
+        description: "Boolean to enable the Xcode build targeting visionOS. Defaults to true."
+        default: true
       visionos_xcode_test_enabled:
         type: boolean
         description: "Boolean to enable the Xcode test targeting visionOS. Defaults to false."
