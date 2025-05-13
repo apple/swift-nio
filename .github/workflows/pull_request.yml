@@ -80,7 +80,7 @@ jobs:
   macos-tests:
     name: macOS tests
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/macos_tests.yml@macos_setup_command  # TODO: test shim
+    uses: apple/swift-nio/.github/workflows/macos_tests.yml@main
     with:
       runner_pool: general
       build_scheme: swift-nio-Package
