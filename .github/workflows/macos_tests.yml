@@ -58,7 +58,7 @@ on:
       xcode_16_2_setup_command:
         type: string
         description: "The command(s) to be executed before all other work."
-        default: "xcrun simctl runtime match set iphoneos18.2 22D8075 && xcrun simctl runtime match set xros2.2 22N895"
+        default: ""
       xcode_16_3_enabled:
         type: boolean
         description: "Boolean to enable the Xcode version 16.3 jobs. Defaults to true."
