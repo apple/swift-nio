@@ -63,13 +63,17 @@ private func sysPthread_create(
     #if os(Android)
     // NDK 27 signature:
     // int pthread_create(pthread_t* _Nonnull __pthread_ptr, pthread_attr_t const* _Nullable __attr, void* _Nonnull (* _Nonnull __start_routine)(void* _Nonnull), void* _Nullable);
-    func coerceThreadDestructor(_ destructor: @escaping ThreadDestructor) -> (@convention(c) (UnsafeMutableRawPointer) -> UnsafeMutableRawPointer) {
+    func coerceThreadDestructor(
+        _ destructor: @escaping ThreadDestructor
+    ) -> (@convention(c) (UnsafeMutableRawPointer) -> UnsafeMutableRawPointer) {
         destructor
     }
 
     // NDK 28 signature:
     // int pthread_create(pthread_t* _Nonnull __pthread_ptr, pthread_attr_t const* _Nullable __attr, void* _Nullable (* _Nonnull __start_routine)(void* _Nullable), void* _Nullable);
-    func coerceThreadDestructor(_ destructor: @escaping ThreadDestructor) -> (@convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?) {
+    func coerceThreadDestructor(
+        _ destructor: @escaping ThreadDestructor
+    ) -> (@convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?) {
         unsafeBitCast(destructor, to: (@convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?).self)
     }
     #else
