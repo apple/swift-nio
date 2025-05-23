@@ -75,7 +75,7 @@ jobs:
         run: echo "benchmarks-matrix=$(curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_COMMAND: "swift package --package-path ${{ inputs.benchmark_package_path }} ${{ inputs.swift_package_arguments }} benchmark baseline check --check-absolute-path ${{ inputs.benchmark_package_path }}/Thresholds/${SWIFT_VERSION}/"
-          MATRIX_LINUX_SETUP_COMMAND: "apt-get update -y -q && apt-get install -y -q libjemalloc-dev"
+          MATRIX_LINUX_SETUP_COMMAND: "swift --version && apt-get update -y -q && apt-get install -y -q libjemalloc-dev"
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
           MATRIX_LINUX_6_0_ENABLED: ${{ inputs.linux_6_0_enabled }}
