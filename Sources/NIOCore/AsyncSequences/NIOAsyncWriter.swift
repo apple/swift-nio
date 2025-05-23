@@ -540,7 +540,7 @@ extension NIOAsyncWriter {
             let yieldID = yieldID ?? self._yieldIDGenerator.generateUniqueYieldID()
 
             return try await withTaskCancellationHandler {
-                // We are manually locking here to hold the lock across the withCheckedContinuation call
+                // We are manually locking here to hold the lock across the withUnsafeContinuation call
                 let unsafe = self._state.unsafe
                 unsafe.lock()
 
@@ -561,8 +561,8 @@ extension NIOAsyncWriter {
                     throw error
 
                 case .suspendTask:
-                    return try await withCheckedThrowingContinuation {
-                        (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
+                    return try await withUnsafeThrowingContinuation {
+                        (continuation: UnsafeContinuation<StateMachine.YieldResult, Error>) in
                         let didSuspend = unsafe.withValueAssumingLockIsAcquired {
                             $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
                             return $0.didSuspend
@@ -611,7 +611,7 @@ extension NIOAsyncWriter {
             let yieldID = yieldID ?? self._yieldIDGenerator.generateUniqueYieldID()
 
             return try await withTaskCancellationHandler {
-                // We are manually locking here to hold the lock across the withCheckedContinuation call
+                // We are manually locking here to hold the lock across the withUnsafeContinuation call
                 let unsafe = self._state.unsafe
                 unsafe.lock()
 
@@ -632,8 +632,8 @@ extension NIOAsyncWriter {
                     throw error
 
                 case .suspendTask:
-                    return try await withCheckedThrowingContinuation {
-                        (continuation: CheckedContinuation<StateMachine.YieldResult, Error>) in
+                    return try await withUnsafeThrowingContinuation {
+                        (continuation: UnsafeContinuation<StateMachine.YieldResult, Error>) in
                         let didSuspend = unsafe.withValueAssumingLockIsAcquired {
                             $0.stateMachine.yield(continuation: continuation, yieldID: yieldID)
                             return $0.didSuspend
@@ -736,10 +736,10 @@ extension NIOAsyncWriter {
             /// The yield's produced sequence of elements.
             /// The yield's continuation.
             @usableFromInline
-            var continuation: CheckedContinuation<YieldResult, Error>
+            var continuation: UnsafeContinuation<YieldResult, Error>
 
             @inlinable
-            init(yieldID: YieldID, continuation: CheckedContinuation<YieldResult, Error>) {
+            init(yieldID: YieldID, continuation: UnsafeContinuation<YieldResult, Error>) {
                 self.yieldID = yieldID
                 self.continuation = continuation
             }
@@ -1143,7 +1143,7 @@ extension NIOAsyncWriter {
         /// This method is called as a result of the above `yield` method if it decided that the task needs to get suspended.
         @inlinable
         internal mutating func yield(
-            continuation: CheckedContinuation<YieldResult, Error>,
+            continuation: UnsafeContinuation<YieldResult, Error>,
             yieldID: YieldID
         ) {
             switch self._state {
@@ -1216,7 +1216,7 @@ extension NIOAsyncWriter {
         @usableFromInline
         enum CancelAction {
             /// Indicates that the continuation should be resumed with a `CancellationError`.
-            case resumeContinuationWithCancellationError(CheckedContinuation<YieldResult, Error>)
+            case resumeContinuationWithCancellationError(UnsafeContinuation<YieldResult, Error>)
             /// Indicates that nothing should be done.
             case none
         }
