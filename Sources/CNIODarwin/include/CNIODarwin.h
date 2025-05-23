@@ -24,6 +24,10 @@
 #include <sys/stat.h>
 #include <fts.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Darwin platforms do not have a sendmmsg implementation available to them. This C module
 // provides a shim that implements sendmmsg on top of sendmsg. It also provides a shim for
 // recvmmsg, but does not actually implement that shim, instantly throwing errors if called.
@@ -59,6 +63,10 @@ size_t CNIODarwin_CMSG_SPACE(size_t);
 extern const unsigned long CNIODarwin_IOCTL_VM_SOCKETS_GET_LOCAL_CID;
 
 const char* CNIODarwin_dirent_dname(struct dirent* ent);
+
+#ifdef __cplusplus
+}  /* extern "C" */
+#endif
 
 #endif  // __APPLE__
 #endif  // C_NIO_DARWIN_H
