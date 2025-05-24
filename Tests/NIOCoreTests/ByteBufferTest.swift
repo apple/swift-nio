@@ -3932,6 +3932,47 @@ extension ByteBufferTest {
         XCTAssertEqual(0, self.buf.readableBytes, "Buffer should be fully consumed after all reads.")
     }
 
+    #if compiler(>=6.2) && !canImport(Darwin)
+    func testReadInlineArrayOfUInt8() throws {
+        let bytes = (0..<10).map { _ in UInt8.random(in: .min ... .max) }
+
+        let startWriterIndex = self.buf.writerIndex
+        let written = self.buf.writeBytes(bytes)
+        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+        XCTAssertEqual(written, self.buf.readableBytes)
+
+        let result = try XCTUnwrap(
+            self.buf.readInlineArray(as: InlineArray<10, UInt8>.self)
+        )
+        XCTAssertEqual(10, result.count)
+        for idx in result.indices {
+            XCTAssertEqual(bytes[idx], result[idx])
+        }
+        XCTAssertEqual(0, self.buf.readableBytes)
+    }
+
+    func testReadInlineArrayOfUInt64() throws {
+        let bytes = (0..<10).map { _ in UInt64.random(in: .min ... .max) }
+
+        let startWriterIndex = self.buf.writerIndex
+        var written = 0
+        for byte in bytes {
+            written += self.buf.writeInteger(byte)
+        }
+        XCTAssertEqual(startWriterIndex + written, self.buf.writerIndex)
+        XCTAssertEqual(written, self.buf.readableBytes)
+
+        let result = try XCTUnwrap(
+            self.buf.readInlineArray(as: InlineArray<10, UInt64>.self)
+        )
+        XCTAssertEqual(10, result.count)
+        for idx in result.indices {
+            XCTAssertEqual(bytes[idx], result[idx])
+        }
+        XCTAssertEqual(0, self.buf.readableBytes)
+    }
+    #endif
+
     func testByteBufferEncode() throws {
         let encoder = JSONEncoder()
         let hello = "Hello, world!"
