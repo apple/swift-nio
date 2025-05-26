@@ -1060,7 +1060,8 @@ public final class EmbeddedChannel: Channel {
     ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.embeddedEventLoop.checkCorrectThread()
-        promise?.futureResult.whenSuccess {
+        let promise = promise ?? self.embeddedEventLoop.makePromise()
+        promise.futureResult.whenSuccess {
             self.localAddress = address
         }
         self.pipeline.bind(to: address, promise: promise)
@@ -1075,7 +1076,8 @@ public final class EmbeddedChannel: Channel {
     ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
         self.embeddedEventLoop.checkCorrectThread()
-        promise?.futureResult.whenSuccess {
+        let promise = promise ?? self.embeddedEventLoop.makePromise()
+        promise.futureResult.whenSuccess {
             self.remoteAddress = address
         }
         self.pipeline.connect(to: address, promise: promise)

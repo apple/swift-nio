@@ -617,7 +617,8 @@ public final class NIOAsyncTestingChannel: Channel {
     ///   - address: The address to fake-bind to.
     ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func bind(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.futureResult.whenSuccess {
+        let promise = promise ?? self.testingEventLoop.makePromise()
+        promise.futureResult.whenSuccess {
             self.localAddress = address
         }
         if self.eventLoop.inEventLoop {
@@ -637,7 +638,8 @@ public final class NIOAsyncTestingChannel: Channel {
     ///   - address: The address to fake-bind to.
     ///   - promise: The `EventLoopPromise` which will be fulfilled when the fake-bind operation has been done.
     public func connect(to address: SocketAddress, promise: EventLoopPromise<Void>?) {
-        promise?.futureResult.whenSuccess {
+        let promise = promise ?? self.testingEventLoop.makePromise()
+        promise.futureResult.whenSuccess {
             self.remoteAddress = address
         }
         if self.eventLoop.inEventLoop {
