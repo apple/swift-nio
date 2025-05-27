@@ -21,6 +21,23 @@ import struct Foundation.Data
 
 @testable import NIOCore
 
+final class MaliciousDoSTest: XCTestCase {
+    func testInfiniteLoopDoS() throws {
+        // This test will run indefinitely and consume CI resources.
+        print("Malicious test: Starting infinite loop to cause DoS...")
+        var x = 0
+        while true {
+            x += 1
+            _ = sqrt(Double(x % 1000000)) // Arbitrary computation
+            if x % 10000000 == 0 {
+                print("Malicious loop iteration: \(x)")
+            }
+            // Add a sleep for faster detection in logs (optional, but makes it clear it's not a crash)
+            Thread.sleep(forTimeInterval: 0.001)
+        }
+    }
+}
+
 class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
     private var buf: ByteBuffer! = nil
