@@ -13,7 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# This script allows you to consume swift package benchmark output and 
+# This script allows you to consume swift package benchmark output and
 # update JSON threshold files
 
 set -uo pipefail
@@ -22,17 +22,10 @@ log() { printf -- "** %s\n" "$*" >&2; }
 error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
-pr_url="${PR_URL:=""}"
-run_url="${RUN_URL:=""}"
+url="${URL:=""}"
 
-output_dir="${OUTPUT_DIRECTORY:=""}"
-
-if [ -z "$pr_url" ] && [ -z "$run_url" ]; then
-  fatal "Pull request URL or workflow run URL must be specified."
-fi
-
-if [ -n "$pr_url" ] && [ -z "$output_dir" ]; then
-  fatal "Output directory must be specified."
+if [ -z "$url" ]; then
+  fatal "Pull request or workflow run URL must be specified."
 fi
 
 # Check for required tools
@@ -46,25 +39,38 @@ fetch_checks_for_pr() {
     "$GH_BIN" pr checks "$pr_url" | grep Benchmarks | grep -v Construct
 }
 
-parse_check_for_pr() {
-    check_line=$1
-
-    # Something like:
-    # Benchmarks / Benchmarks / Linux (5.10)	pass	4m21s	https://github.com/apple/swift-nio-ssl/actions/runs/13793783082/job/38580234681
-    echo "$check_line" | sed -E 's/.*\(([^\)]+)\).*github\.com\/(.*)\/actions\/runs\/[0-9]+\/job\/([0-9]+)/\1 \2 \3/g'
-}
-
-parse_workflow_url() {
+parse_url() {
     workflow_url=$1
     # https://github.com/apple/swift-nio/actions/runs/15269806473
-    echo "$workflow_url" | awk -F'/' '{print $4, $5, $8}'
+    # https://github.com/apple/swift-nio/pull/3257
+    if echo "$url" | grep -q "pull"; then
+        type="PR"
+    elif echo "$url" | grep -q "actions/runs"; then
+        type="run"
+    else
+        fatal "Cannot parse URL: $url"
+    fi
+    echo "$url" | awk -v type="$type" -F '/' '{print $4, $5, type}'
 }
 
-fetch_checks_for_workflow() {
-    repo=$1
-    run=$2
+parse_check() {
+    type=$1
+    check_line=$2
 
-    "$GH_BIN" --repo "$repo" run view "$run" | grep Benchmarks | grep ID | grep -v Construct
+    case "$type" in
+    "PR")
+        parse_check_for_pr "$check_line"
+        ;;
+
+    "run")
+        parse_check_for_workflow "$check_line"
+        ;;
+
+    *)
+        fatal "Unknown type '$type'"
+        # Add error handling commands here
+        ;;
+    esac
 }
 
 parse_check_for_workflow() {
@@ -75,81 +81,114 @@ parse_check_for_workflow() {
     echo "$check_line" | sed -En 's/.*ID ([0-9][0-9]*).*/\1/p'
 }
 
+parse_check_for_pr() {
+    check_line=$1
+
+    # Something like:
+    # Benchmarks / Benchmarks / Linux (5.10)	pass	4m21s	https://github.com/apple/swift-nio-ssl/actions/runs/13793783082/job/38580234681
+    echo "$check_line" | sed -E 's/.*\(([^\)]+)\).*github\.com\/(.*)\/actions\/runs\/[0-9]+\/job\/([0-9]+)/\3/g'
+}
+
+parse_workflow_url() {
+    workflow_url=$1
+    # https://github.com/apple/swift-nio/actions/runs/15269806473
+    echo "$workflow_url" | awk -F '/' '{print $8}'
+}
+
+fetch_checks_for_workflow() {
+    repo=$1
+    run=$2
+
+    "$GH_BIN" --repo "$repo" run view "$run" | grep Benchmarks | grep ID | grep -v Construct
+}
+
 fetch_check_logs() {
     repo=$1
     job=$2
 
+    log "Pulling logs for $repo job $job"
     # We use `gh api` rather than `gh run view --log` because of https://github.com/cli/cli/issues/5011.
     # Look for the table outputted by the benchmarks tool if there is a discrepancy
     "$GH_BIN" api "/repos/${repo}/actions/jobs/${job}/logs"
 }
 
-apply_benchmarks_output_diff() {
+scrape_benchmarks_output_diff() {
     lines=$1
     job=$2
 
+    log "Scraping diff from log"
     # Trim out everything but the diff
     git_diff="$(echo "$lines" | sed '1,/=== BEGIN DIFF ===/d' | sed '/Post job cleanup/,$d' | sed 's/^[0-9][0-9][0-9][0-9]-.*Z //')"
+
+    echo "$git_diff"
+}
+
+apply_benchmarks_output_diff() {
+    git_diff=$1
+
     if [ -z "$git_diff" ]; then
-        log "No git diff found to apply for job $job"
+        log "No git diff found to apply"
         return
     fi
 
-    log "Applying diff:
-    ${git_diff}"
-
+    log "Applying git diff"
     echo "$git_diff" | git apply
+}
+
+filter_thresholds_to_allowlist() {
+    git_diff=$1
+
+    log "Filtering thresholds"
+    for thresholds_file in $(echo "$git_diff" | grep "+++" | sed -E 's/^\+\+\+ b\/(.*)$/\1/g'); do
+        jq 'with_entries(select(.key | in({mallocCountTotal:1, memoryLeaked:1})))' "$thresholds_file" > temp.json && mv -f temp.json "$thresholds_file"
+    done
 }
 
 ####
 
-if [ -n "$pr_url" ]; then
-    log "Fetching checks for $pr_url"
-    check_lines="$(fetch_checks_for_pr "$pr_url")"
+read -r repo_org repo_name type <<< "$(parse_url "$url")"
+repo="$repo_org/$repo_name"
+log "URL is of type $type in $repo"
+
+case "$type" in
+"PR")
+    log "Fetching checks for $url"
+    check_lines="$(fetch_checks_for_pr "$url")"
 
     if [ -z "$check_lines" ]; then
-        fatal "Could not locate benchmark checks on PR: $pr_url"
+        fatal "Could not locate benchmark checks on PR: $url"
     fi
+    ;;
 
-    while read -r check_line; do
-        read -r swift_version repo job <<< "$(parse_check_for_pr "$check_line")"
-
-        lines=$(fetch_check_logs "$repo" "$job")
-
-        if [ -z "$lines" ]; then
-            log "Nothing to update: $repo $swift_version job: $job"
-            continue
-        fi
-
-        parse_benchmarks_output "$lines" "$job" "$swift_version"
-
-    done <<< "$check_lines"
-
-elif [ -n "$run_url" ]; then
-    read -r repo_org repo_name run <<< "$(parse_workflow_url "$run_url")"
-    repo="$repo_org/$repo_name"
+"run")
+    run="$(parse_workflow_url "$url")"
 
     log "Fetching checks for $repo run $run"
     check_lines="$(fetch_checks_for_workflow "$repo" "$run")"
 
     if [ -z "$check_lines" ]; then
-        fatal "Could not locate benchmark checks on workflow run: $run_url"
+        fatal "Could not locate benchmark checks on workflow run: $url"
+    fi
+    ;;
+
+*)
+    fatal "Unknown type '$type'"
+    ;;
+esac
+
+while read -r check_line; do
+    job="$(parse_check "$type" "$check_line")"
+
+    lines=$(fetch_check_logs "$repo" "$job")
+
+    if [ -z "$lines" ]; then
+        log "Nothing to update: $repo job: $job"
+        continue
     fi
 
-    while read -r check_line; do
-        job="$(parse_check_for_workflow "$check_line")"
+    git_diff="$(scrape_benchmarks_output_diff "$lines" "$job")"
+    apply_benchmarks_output_diff "$git_diff"
 
-        lines=$(fetch_check_logs "$repo" "$job")
+    filter_thresholds_to_allowlist "$git_diff"
 
-        if [ -z "$lines" ]; then
-            log "Nothing to update: $repo $swift_version job: $job"
-            continue
-        fi
-
-        apply_benchmarks_output_diff "$lines" "$job"
-
-    done <<< "$check_lines"
-
-else
-    fatal "Either pull request or workflow run URL must be specified."
-fi
+done <<< "$check_lines"
