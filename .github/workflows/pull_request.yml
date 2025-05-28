@@ -25,7 +25,7 @@ jobs:
   benchmarks:
     name: Benchmarks
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
+    uses: apple/swift-nio/.github/workflows/benchmarks.yml@benchmarks_print_change
     with:
       benchmark_package_path: "Benchmarks"
 
