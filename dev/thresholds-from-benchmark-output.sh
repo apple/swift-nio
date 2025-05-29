@@ -43,9 +43,9 @@ parse_url() {
     workflow_url=$1
     # https://github.com/apple/swift-nio/actions/runs/15269806473
     # https://github.com/apple/swift-nio/pull/3257
-    if echo "$url" | grep -q "pull"; then
+    if [[ "$url" =~ pull ]]; then
         type="PR"
-    elif echo "$url" | grep -q "actions/runs"; then
+    elif [[ "$url" =~ actions/runs ]]; then
         type="run"
     else
         fatal "Cannot parse URL: $url"
