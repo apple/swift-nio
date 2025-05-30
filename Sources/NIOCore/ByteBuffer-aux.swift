@@ -68,34 +68,31 @@ extension ByteBuffer {
         as: InlineArray<count, IntegerType>.Type = InlineArray<count, IntegerType>.self
     ) -> InlineArray<count, IntegerType>? {
         let length = MemoryLayout<IntegerType>.size
-        let bytesRequired = length &* count
+        let bytesRequired = length * count
 
         guard self.readableBytes >= bytesRequired else {
             return nil
         }
 
-        return self.readWithUnsafeReadableBytes {
-            ptr -> (Int, InlineArray<count, IntegerType>) in
-            assert(ptr.count >= bytesRequired)
-            let values: InlineArray<count, IntegerType> = InlineArray { index in
-                switch endianness {
-                case .big:
-                    return IntegerType(
-                        bigEndian: ptr.load(
-                            fromByteOffset: index &* length,
-                            as: IntegerType.self
-                        )
+        do {
+            let inlineArray = try InlineArray<count, IntegerType> { index in
+                guard
+                    let integer = self.getInteger(
+                        at: index * length,
+                        endianness: endianness,
+                        as: IntegerType.self
                     )
-                case .little:
-                    return IntegerType(
-                        littleEndian: ptr.load(
-                            fromByteOffset: index &* length,
-                            as: IntegerType.self
-                        )
-                    )
+                else {
+                    throw InlineArrayFailedToGetElementError()
                 }
+                return integer
             }
-            return (bytesRequired, values)
+            // Already made sure of 'self.readableBytes >= bytesRequired' above
+            self._moveReaderIndex(forwardBy: bytesRequired)
+            return inlineArray
+        } catch {
+            // Only InlineArrayFailedToGetElementError could have been thrown
+            return nil
         }
     }
     #endif
@@ -1067,3 +1064,9 @@ extension ByteBuffer {
     }
 }
 #endif  // compiler(>=6)
+
+@usableFromInline
+struct InlineArrayFailedToGetElementError: Error {
+    @usableFromInline
+    init() {}
+}
