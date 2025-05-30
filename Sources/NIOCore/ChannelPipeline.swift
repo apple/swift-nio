@@ -534,7 +534,8 @@ public final class ChannelPipeline: ChannelInvoker {
     ///   - handlerType: The type of the handler to search for.
     /// - Returns: the `EventLoopFuture` which will be notified once the the operation completes.
     @inlinable
-    public func context<Handler: ChannelHandler>(handlerType: Handler.Type) -> EventLoopFuture<ChannelHandlerContext> {
+    @preconcurrency
+    public func context<Handler: ChannelHandler & _NIOCoreSendableMetatype>(handlerType: Handler.Type) -> EventLoopFuture<ChannelHandlerContext> {
         let promise = self.eventLoop.makePromise(of: ChannelHandlerContext.self)
 
         if self.eventLoop.inEventLoop {
@@ -555,7 +556,8 @@ public final class ChannelPipeline: ChannelInvoker {
     /// - Returns: An ``EventLoopFuture`` that is succeeded if a handler of the given type is contained in the pipeline. Otherwise
     /// the future will be failed with an error.
     @inlinable
-    public func containsHandler<Handler: ChannelHandler>(type: Handler.Type) -> EventLoopFuture<Void> {
+    @preconcurrency
+    public func containsHandler<Handler: ChannelHandler & _NIOCoreSendableMetatype>(type: Handler.Type) -> EventLoopFuture<Void> {
         self.handler(type: type).map { _ in () }
     }
 
@@ -2424,7 +2426,8 @@ extension ChannelPipeline: CustomDebugStringConvertible {
     /// - Parameters:
     ///   - type: the type of `ChannelHandler` to return.
     @inlinable
-    public func handler<Handler: ChannelHandler>(type _: Handler.Type) -> EventLoopFuture<Handler> {
+    @preconcurrency
+    public func handler<Handler: ChannelHandler & _NIOCoreSendableMetatype>(type _: Handler.Type) -> EventLoopFuture<Handler> {
         self.context(handlerType: Handler.self).map { context in
             guard let typedContext = context.handler as? Handler else {
                 preconditionFailure(

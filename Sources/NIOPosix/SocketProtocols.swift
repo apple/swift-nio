@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 import NIOCore
 
-protocol BaseSocketProtocol: CustomStringConvertible {
+protocol BaseSocketProtocol: CustomStringConvertible, _NIOPosixSendableMetatype {
     associatedtype SelectableType: Selectable
 
     var isOpen: Bool { get }
