@@ -899,7 +899,7 @@ extension EventLoopFuture {
 
     /// Internal: Set the value and return a list of callbacks that should be invoked as a result.
     ///
-    /// We need a seperate method for setting the error to avoid Sendable checking of `Value`
+    /// We need a separate method for setting the error to avoid Sendable checking of `Value`
     @inlinable
     internal func _setError(_ error: Error) -> CallbackList {
         self.eventLoop.assertInEventLoop()

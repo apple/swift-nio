@@ -165,7 +165,7 @@ jobs:
           COMMAND_OVERRIDE_NIGHTLY_MAIN: ${{ inputs.matrix_linux_nightly_main_command_override }}
         run: |
           apt-get -qq update && apt-get -qq -y install curl
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
+          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
 
   windows:
     name: Windows (${{ matrix.swift.swift_version }})
@@ -189,7 +189,7 @@ jobs:
           persist-credentials: false
       - name: Donwload matrix script
         if: ${{ matrix.swift.enabled }}
-        run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
+        run: curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
       - name: Run matrix job
         if: ${{ matrix.swift.enabled }}
         run: |
@@ -221,7 +221,7 @@ jobs:
           submodules: true
       - name: Donwload matrix script
         if: ${{ matrix.swift.enabled }}
-        run: curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
+        run: curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.ps1 -o __check-matrix-job.ps1
       - name: Run matrix job
         if: ${{ matrix.swift.enabled }}
         run: |

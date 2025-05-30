@@ -40,11 +40,11 @@ jobs:
           which curl jq || apt -q update
           which curl || apt -yq install curl
           which jq || apt -yq install jq
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/update-cmake-lists.sh | CONFIG_JSON='${{ inputs.update_cmake_lists_config }}' FAIL_ON_CHANGES=true bash
+          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/update-cmake-lists.sh | CONFIG_JSON='${{ inputs.update_cmake_lists_config }}' FAIL_ON_CHANGES=true bash
       - name: CMake build
         run: |
           which curl cmake ninja || apt -q update
           which curl || apt -yq install curl
           which cmake || apt -yq install cmake
           which ninja || apt -yq install ninja-build
-          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/cmake-build.sh | TARGET_DIRECTORY="${{ inputs.cmake_build_target_directory }}" CMAKE_VERSION="${{ inputs.cmake_version }}" bash
+          curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/cmake-build.sh | TARGET_DIRECTORY="${{ inputs.cmake_build_target_directory }}" CMAKE_VERSION="${{ inputs.cmake_version }}" bash
