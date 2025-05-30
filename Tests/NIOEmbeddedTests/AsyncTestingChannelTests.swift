@@ -445,7 +445,6 @@ class AsyncTestingChannelTests: XCTestCase {
     }
 
     func testSetLocalAddressAfterSuccessfulBind() throws {
-
         let channel = NIOAsyncTestingChannel()
         let bindPromise = channel.eventLoop.makePromise(of: Void.self)
         let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
@@ -454,11 +453,19 @@ class AsyncTestingChannelTests: XCTestCase {
             XCTAssertEqual(channel.localAddress, socketAddress)
         }
         try bindPromise.futureResult.wait()
+    }
 
+    func testSetLocalAddressAfterSuccessfulBindWithoutPromise() throws {
+        let channel = NIOAsyncTestingChannel()
+        let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
+        // Call bind on-loop so we know when to expect the result
+        try channel.testingEventLoop.submit {
+            channel.bind(to: socketAddress, promise: nil)
+        }.wait()
+        XCTAssertEqual(channel.localAddress, socketAddress)
     }
 
     func testSetRemoteAddressAfterSuccessfulConnect() throws {
-
         let channel = NIOAsyncTestingChannel()
         let connectPromise = channel.eventLoop.makePromise(of: Void.self)
         let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
@@ -467,7 +474,16 @@ class AsyncTestingChannelTests: XCTestCase {
             XCTAssertEqual(channel.remoteAddress, socketAddress)
         }
         try connectPromise.futureResult.wait()
+    }
 
+    func testSetRemoteAddressAfterSuccessfulConnectWithoutPromise() throws {
+        let channel = NIOAsyncTestingChannel()
+        let socketAddress = try SocketAddress(ipAddress: "127.0.0.1", port: 0)
+        // Call connect on-loop so we know when to expect the result
+        try channel.testingEventLoop.submit {
+            channel.connect(to: socketAddress, promise: nil)
+        }.wait()
+        XCTAssertEqual(channel.remoteAddress, socketAddress)
     }
 
     func testUnprocessedOutboundUserEventFailsOnEmbeddedChannel() throws {
