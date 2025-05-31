@@ -88,12 +88,11 @@ extension ByteBuffer {
                 }
                 return integer
             }
-            // Already made sure of 'self.readableBytes >= bytesRequired' above, also
-            // 'getInteger()'s have succeeded by this point which have their own bounds checks
+            // already made sure of 'self.readableBytes >= bytesRequired' above
             self._moveReaderIndex(forwardBy: bytesRequired)
             return inlineArray
         } catch {
-            // Only 'InlineArrayFailedToGetElementError' could have been thrown
+            // only 'InlineArrayFailedToGetElementError' could have been thrown
             return nil
         }
     }
