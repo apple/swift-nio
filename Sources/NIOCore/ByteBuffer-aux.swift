@@ -68,8 +68,9 @@ extension ByteBuffer {
         endianness: Endianness = .big,
         as: InlineArray<count, IntegerType>.Type = InlineArray<count, IntegerType>.self
     ) -> InlineArray<count, IntegerType>? {
-        let length = MemoryLayout<IntegerType>.size
-        let bytesRequired = length * count
+        // use stride to account for padding bytes
+        let stride = MemoryLayout<IntegerType>.stride
+        let bytesRequired = stride * count
 
         guard self.readableBytes >= bytesRequired else {
             return nil
@@ -79,7 +80,8 @@ extension ByteBuffer {
             let inlineArray = try InlineArray<count, IntegerType> { index in
                 guard
                     let integer = self.getInteger(
-                        at: index * length,
+                        // this is less than 'bytesRequired' so is safe to multiply
+                        at: stride &* index,
                         endianness: endianness,
                         as: IntegerType.self
                     )
