@@ -1660,7 +1660,7 @@ final class ChannelTests: XCTestCase {
         // this should escalate to a full closure of the clientChannel.
         XCTAssertNoThrow(try clientChannel.close(mode: .output).wait())
 
-        // Assert that full closure of client channel occured by verifying
+        // Assert that full closure of client channel occurred by verifying
         // that channelInactive was invoked on the channel.
         XCTAssertNoThrow(try clientChannelInactivePromise.futureResult.wait())
 
