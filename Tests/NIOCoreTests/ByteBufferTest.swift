@@ -19,7 +19,7 @@ import _NIOBase64
 
 import struct Foundation.Data
 
-@testable import NIOCore
+@testable @_spi(InlineArray) import NIOCore
 
 class ByteBufferTest: XCTestCase {
     private let allocator = ByteBufferAllocator()
@@ -3932,8 +3932,8 @@ extension ByteBufferTest {
         XCTAssertEqual(0, self.buf.readableBytes, "Buffer should be fully consumed after all reads.")
     }
 
-    #if compiler(>=6.2) && !canImport(Darwin)
     func testReadInlineArrayOfUInt8() throws {
+        #if compiler(>=6.2)
         let bytes = (0..<10).map { _ in UInt8.random(in: .min ... .max) }
 
         let startWriterIndex = self.buf.writerIndex
@@ -3949,9 +3949,13 @@ extension ByteBufferTest {
             XCTAssertEqual(bytes[idx], result[idx])
         }
         XCTAssertEqual(0, self.buf.readableBytes)
+        #else
+        throw XCTSkip("'InlineArray' is only available in Swift 6.2 and later")
+        #endif  // compiler(>=6.2)
     }
 
     func testReadInlineArrayOfUInt64() throws {
+        #if compiler(>=6.2)
         let bytes = (0..<10).map { _ in UInt64.random(in: .min ... .max) }
 
         let startWriterIndex = self.buf.writerIndex
@@ -3970,8 +3974,10 @@ extension ByteBufferTest {
             XCTAssertEqual(bytes[idx], result[idx])
         }
         XCTAssertEqual(0, self.buf.readableBytes)
+        #else
+        throw XCTSkip("'InlineArray' is only available in Swift 6.2 and later")
+        #endif  // compiler(>=6.2)
     }
-    #endif
 
     func testByteBufferEncode() throws {
         let encoder = JSONEncoder()

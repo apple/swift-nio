@@ -58,7 +58,8 @@ extension ByteBuffer {
         return result
     }
 
-    #if compiler(>=6.2) && !canImport(Darwin)
+    #if compiler(>=6.2)
+    @_spi(InlineArray)
     @inlinable
     public mutating func readInlineArray<
         let count: Int,
@@ -87,11 +88,12 @@ extension ByteBuffer {
                 }
                 return integer
             }
-            // Already made sure of 'self.readableBytes >= bytesRequired' above
+            // Already made sure of 'self.readableBytes >= bytesRequired' above, also
+            // 'getInteger()'s have succeeded by this point which have their own bounds checks
             self._moveReaderIndex(forwardBy: bytesRequired)
             return inlineArray
         } catch {
-            // Only InlineArrayFailedToGetElementError could have been thrown
+            // Only 'InlineArrayFailedToGetElementError' could have been thrown
             return nil
         }
     }
