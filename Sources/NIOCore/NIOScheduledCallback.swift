@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
+
 /// A type that handles callbacks scheduled with `EventLoop.scheduleCallback(at:handler:)`.
 ///
 /// - Seealso: `EventLoop.scheduleCallback(at:handler:)`.
@@ -172,21 +174,21 @@ extension EventLoop {
 }
 
 @usableFromInline
-struct UnsafeUncheckedScheduledCallbackHandlerWrapper<Handler: NIOScheduledCallbackHandler>: @unchecked Sendable, NIOScheduledCallbackHandler {
-    private let wrapped: Handler
+struct LoopBoundScheduledCallbackHandlerWrapper<Handler: NIOScheduledCallbackHandler>: NIOScheduledCallbackHandler, Sendable {
+    private let box: NIOLoopBound<Handler>
 
     @usableFromInline
-    init(wrapping handler: Handler) {
-        self.wrapped = handler
+    init(wrapping handler: Handler, eventLoop: some EventLoop) {
+        self.box = .init(handler, eventLoop: eventLoop)
     }
 
     @usableFromInline
     func handleScheduledCallback(eventLoop: some EventLoop) {
-        self.wrapped.handleScheduledCallback(eventLoop: eventLoop)
+        self.box.value.handleScheduledCallback(eventLoop: eventLoop)
     }
 
     @usableFromInline
     func didCancelScheduledCallback(eventLoop: some EventLoop) {
-        self.wrapped.didCancelScheduledCallback(eventLoop: eventLoop)
+        self.box.value.didCancelScheduledCallback(eventLoop: eventLoop)
     }
 }
