@@ -125,6 +125,26 @@ public struct NIOIsolatedEventLoop {
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 
+    @discardableResult
+    @available(*, noasync)
+    @inlinable
+    public func scheduleCallback(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        try self._wrapped._scheduleCallbackIsolatedUnsafeUnchecked(at: deadline, handler: handler)
+    }
+
+    @discardableResult
+    @available(*, noasync)
+    @inlinable
+    public func scheduleCallback(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        try self._wrapped._scheduleCallbackIsolatedUnsafeUnchecked(in: amount, handler: handler)
+    }
+
     /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications
     /// will be done using this `EventLoop` as execution `NIOThread`.
     ///

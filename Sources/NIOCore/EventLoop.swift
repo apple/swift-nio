@@ -458,6 +458,18 @@ public protocol EventLoop: EventLoopGroup {
         in: TimeAmount,
         _ task: @escaping () throws -> T
     ) -> Scheduled<T>
+
+    @discardableResult
+    func _scheduleCallbackIsolatedUnsafeUnchecked(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback
+
+    @discardableResult
+    func _scheduleCallbackIsolatedUnsafeUnchecked(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback
 }
 
 extension EventLoop {
@@ -532,6 +544,28 @@ extension EventLoop {
         return self.scheduleTask(in: delay) {
             try unsafeTransfer.wrappedValue()
         }
+    }
+
+    @inlinable
+    @discardableResult
+    public func _scheduleCallbackIsolatedUnsafeUnchecked(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        self.assertInEventLoop()
+        let unsafeHandlerWrapper = UnsafeUncheckedScheduledCallbackHandlerWrapper(wrapping: handler)
+        return try self.scheduleCallback(at: deadline, handler: unsafeHandlerWrapper)
+    }
+
+    @inlinable
+    @discardableResult
+    public func _scheduleCallbackIsolatedUnsafeUnchecked(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        self.assertInEventLoop()
+        let unsafeHandlerWrapper = UnsafeUncheckedScheduledCallbackHandlerWrapper(wrapping: handler)
+        return try self.scheduleCallback(in: amount, handler: unsafeHandlerWrapper)
     }
 }
 
