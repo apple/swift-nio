@@ -145,6 +145,12 @@ public struct NIOIsolatedEventLoop {
         try self._wrapped._scheduleCallbackIsolatedUnsafeUnchecked(in: amount, handler: handler)
     }
 
+    @inlinable
+    @available(*, noasync)
+    public func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback) {
+        self._wrapped.cancelScheduledCallback(scheduledCallback)
+    }
+
     /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications
     /// will be done using this `EventLoop` as execution `NIOThread`.
     ///
