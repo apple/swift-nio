@@ -170,3 +170,26 @@ extension EventLoop {
         }
     }
 }
+
+@usableFromInline
+struct UnsafeUncheckedScheduledCallbackHandlerWrapper<Handler: NIOScheduledCallbackHandler>:
+    NIOScheduledCallbackHandler, @unchecked Sendable
+{
+    @usableFromInline
+    let handler: Handler
+
+    @inlinable
+    init(wrapping handler: Handler) {
+        self.handler = handler
+    }
+
+    @inlinable
+    func handleScheduledCallback(eventLoop: some EventLoop) {
+        self.handler.handleScheduledCallback(eventLoop: eventLoop)
+    }
+
+    @inlinable
+    func didCancelScheduledCallback(eventLoop: some EventLoop) {
+        self.handler.didCancelScheduledCallback(eventLoop: eventLoop)
+    }
+}
