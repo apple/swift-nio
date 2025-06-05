@@ -119,7 +119,7 @@ final class IsolatedEventLoopScheduledCallbackTests: XCTestCase {
         handler.assert(callbackCount: 0, cancelCount: 0)
     }
 
-    func testSheduledCallbackExecutedAtDeadline() throws {
+    func testScheduledCallbackExecutedAtDeadline() throws {
         let handler = NonSendableMockScheduledCallbackHandler()
 
         _ = try self.loop.assumeIsolated().scheduleCallback(in: .milliseconds(1), handler: handler)
@@ -127,7 +127,7 @@ final class IsolatedEventLoopScheduledCallbackTests: XCTestCase {
         handler.assert(callbackCount: 1, cancelCount: 0)
     }
 
-    func testMultipleSheduledCallbacksUsingSameHandler() throws {
+    func testMultipleScheduledCallbacksUsingSameHandler() throws {
         let handler = NonSendableMockScheduledCallbackHandler()
 
         _ = try self.loop.assumeIsolated().scheduleCallback(in: .milliseconds(1), handler: handler)
@@ -249,7 +249,7 @@ extension _BaseScheduledCallbackTests {
         handler.assert(callbackCount: 0, cancelCount: 0)
     }
 
-    func testSheduledCallbackExecutedAtDeadline() async throws {
+    func testScheduledCallbackExecutedAtDeadline() async throws {
         let handler = MockScheduledCallbackHandler()
 
         _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
@@ -258,7 +258,7 @@ extension _BaseScheduledCallbackTests {
         handler.assert(callbackCount: 1, cancelCount: 0)
     }
 
-    func testMultipleSheduledCallbacksUsingSameHandler() async throws {
+    func testMultipleScheduledCallbacksUsingSameHandler() async throws {
         let handler = MockScheduledCallbackHandler()
 
         _ = try self.loop.scheduleCallback(in: .milliseconds(1), handler: handler)
@@ -278,7 +278,7 @@ extension _BaseScheduledCallbackTests {
         handler.assert(callbackCount: 4, cancelCount: 0)
     }
 
-    func testMultipleSheduledCallbacksUsingDifferentHandlers() async throws {
+    func testMultipleScheduledCallbacksUsingDifferentHandlers() async throws {
         let handlerA = MockScheduledCallbackHandler()
         let handlerB = MockScheduledCallbackHandler()
 
