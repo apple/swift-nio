@@ -20,7 +20,8 @@
 /// domains.
 ///
 /// Using this type relaxes the need to have the closures for ``EventLoop/execute(_:)``,
-/// ``EventLoop/submit(_:)``, and ``EventLoop/scheduleTask(in:_:)`` to be `@Sendable`.
+/// ``EventLoop/submit(_:)``, ``EventLoop/scheduleTask(in:_:)``,
+/// and ``EventLoop/scheduleCallback(in:_:)`` to be `@Sendable`.
 public struct NIOIsolatedEventLoop {
     @usableFromInline
     let _wrapped: EventLoop
@@ -125,6 +126,12 @@ public struct NIOIsolatedEventLoop {
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
     }
 
+    /// Schedule a callback at a given time.
+    ///
+    /// - Parameters:
+    ///   - at: The instant in time before which the task will not execute.
+    ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
+    /// - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
     @discardableResult
     @available(*, noasync)
     @inlinable
@@ -135,6 +142,12 @@ public struct NIOIsolatedEventLoop {
         try self._wrapped._scheduleCallbackIsolatedUnsafeUnchecked(at: deadline, handler: handler)
     }
 
+    /// Schedule a callback after given time.
+    ///
+    /// - Parameters:
+    ///   - in: The amount of time before which the task will not execute.
+    ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
+    ///  - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
     @discardableResult
     @available(*, noasync)
     @inlinable
@@ -145,6 +158,7 @@ public struct NIOIsolatedEventLoop {
         try self._wrapped._scheduleCallbackIsolatedUnsafeUnchecked(in: amount, handler: handler)
     }
 
+    /// Cancel a scheduled callback.
     @inlinable
     @available(*, noasync)
     public func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback) {

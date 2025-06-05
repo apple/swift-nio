@@ -371,6 +371,11 @@ public protocol EventLoop: EventLoopGroup {
 
     /// Schedule a callback at a given time.
     ///
+    /// - Parameters:
+    ///   - at: The instant in time before which the task will not execute.
+    ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
+    /// - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
+    ///
     /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** also implement
     ///         `cancelScheduledCallback`. Failure to do so will result in a runtime error.
     @preconcurrency
@@ -381,6 +386,11 @@ public protocol EventLoop: EventLoopGroup {
     ) throws -> NIOScheduledCallback
 
     /// Schedule a callback after given time.
+    ///
+    /// - Parameters:
+    ///   - in: The amount of time before which the task will not execute.
+    ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
+    ///  - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
     ///
     /// - NOTE: Event loops that provide a custom scheduled callback implementation **must** also implement
     ///         `cancelScheduledCallback`. Failure to do so will result in a runtime error.
@@ -459,12 +469,34 @@ public protocol EventLoop: EventLoopGroup {
         _ task: @escaping () throws -> T
     ) -> Scheduled<T>
 
+    /// Schedule a callback that is executed by this ``EventLoop`` at a given time, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/scheduleCallback(at:_:)`` will perform better.
+    ///
+    /// - Parameters:
+    ///   - at: The instant in time before which the task will not execute.
+    ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
+    /// - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
     @discardableResult
     func _scheduleCallbackIsolatedUnsafeUnchecked(
         at deadline: NIODeadline,
         handler: some NIOScheduledCallbackHandler
     ) throws -> NIOScheduledCallback
 
+    /// Schedule a callback that is executed by this ``EventLoop`` after a given time, from a context where the caller
+    /// statically knows that the context is isolated.
+    ///
+    /// This is an optional performance hook. ``EventLoop`` implementers are not required to implement
+    /// this witness, but may choose to do so to enable better performance of the isolated EL views. If
+    /// they do so, ``EventLoop/Isolated/scheduleCallback(in:_:)`` will perform better.
+    ///
+    /// - Parameters:
+    ///   - in: The amount of time before which the task will not execute.
+    ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
+    /// - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
     @discardableResult
     func _scheduleCallbackIsolatedUnsafeUnchecked(
         in amount: TimeAmount,
