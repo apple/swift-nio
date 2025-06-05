@@ -148,6 +148,7 @@ public struct NIOIsolatedEventLoop {
     @inlinable
     @available(*, noasync)
     public func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback) {
+        self._wrapped.preconditionInEventLoop()
         self._wrapped.cancelScheduledCallback(scheduledCallback)
     }
 
