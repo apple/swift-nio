@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
-import NIOConcurrencyHelpers
 import NIOCore
 import NIOEmbedded
 import NIOPosix
@@ -437,16 +436,6 @@ private final class NonSendableMockScheduledCallbackHandler: NIOScheduledCallbac
             self.cancelCount,
             cancelCount,
             "Unexpected cancel count",
-            file: file,
-            line: line
-        )
-    }
-
-    func assertCallbackReceived(file: StaticString = #file, line: UInt = #line) {
-        XCTAssertGreaterThan(
-            self.callbackCount,
-            0,
-            "Expected at least one callback to have been received",
             file: file,
             line: line
         )

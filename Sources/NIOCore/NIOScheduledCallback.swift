@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOConcurrencyHelpers
-
 /// A type that handles callbacks scheduled with `EventLoop.scheduleCallback(at:handler:)`.
 ///
 /// - Seealso: `EventLoop.scheduleCallback(at:handler:)`.
