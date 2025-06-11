@@ -510,7 +510,7 @@ extension NIOAsyncWriter {
             switch action {
             case .resumeContinuations(let suspendedYields):
                 for yield in suspendedYields {
-                    yield.continuation.resume(returning: .retry)
+                    yield .continuation.resume(returning: .retry)
                 }
 
             case .none:
@@ -675,7 +675,7 @@ extension NIOAsyncWriter {
 
             case .resumeContinuations(let suspendedYields):
                 for yield in suspendedYields {
-                    yield.continuation.resume(returning: .retry)
+                    yield .continuation.resume(returning: .retry)
                 }
 
             case .none:
@@ -695,7 +695,7 @@ extension NIOAsyncWriter {
             switch action {
             case .resumeContinuationsWithError(let suspendedYields, let error):
                 for yield in suspendedYields {
-                    yield.continuation.resume(throwing: error)
+                    yield .continuation.resume(throwing: error)
                 }
 
             case .none:
@@ -712,7 +712,7 @@ extension NIOAsyncWriter {
 
                 case .resumeContinuations(let suspendedYields):
                     for yield in suspendedYields {
-                        yield.continuation.resume(returning: .retry)
+                        yield .continuation.resume(returning: .retry)
                     }
                     return
                 }
