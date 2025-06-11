@@ -281,7 +281,9 @@ extension ChannelPipeline {
     )
     @inlinable
     @preconcurrency
-    public func context<Handler: ChannelHandler & _NIOCoreSendableMetatype>(handlerType: Handler.Type) async throws -> ChannelHandlerContext {
+    public func context<Handler: ChannelHandler & _NIOCoreSendableMetatype>(
+        handlerType: Handler.Type
+    ) async throws -> ChannelHandlerContext {
         try await self.context(handlerType: handlerType).map { UnsafeTransfer($0) }.get().wrappedValue
     }
 
