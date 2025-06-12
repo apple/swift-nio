@@ -29,8 +29,8 @@ on:
         default: ""
       xcode_16_1_enabled:
         type: boolean
-        description: "Boolean to enable the Xcode version 16.1 jobs. Defaults to true."
-        default: true
+        description: "Boolean to enable the Xcode version 16.1 jobs. Defaults to false."
+        default: false
       xcode_16_1_build_arguments_override:
         type: string
         description: "The arguments passed to swift build in the Xcode version 16.1 job."
