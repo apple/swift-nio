@@ -584,8 +584,7 @@ extension EventLoop {
         at deadline: NIODeadline,
         handler: some NIOScheduledCallbackHandler
     ) throws -> NIOScheduledCallback {
-        self.assertInEventLoop()
-        let unsafeHandlerWrapper = UnsafeUncheckedScheduledCallbackHandlerWrapper(wrapping: handler)
+        let unsafeHandlerWrapper = LoopBoundScheduledCallbackHandlerWrapper(wrapping: handler, eventLoop: self)
         return try self.scheduleCallback(at: deadline, handler: unsafeHandlerWrapper)
     }
 
@@ -595,8 +594,7 @@ extension EventLoop {
         in amount: TimeAmount,
         handler: some NIOScheduledCallbackHandler
     ) throws -> NIOScheduledCallback {
-        self.assertInEventLoop()
-        let unsafeHandlerWrapper = UnsafeUncheckedScheduledCallbackHandlerWrapper(wrapping: handler)
+        let unsafeHandlerWrapper = LoopBoundScheduledCallbackHandlerWrapper(wrapping: handler, eventLoop: self)
         return try self.scheduleCallback(in: amount, handler: unsafeHandlerWrapper)
     }
 }
