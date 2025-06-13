@@ -28,7 +28,8 @@ internal enum BufferedOrAnyStream<Element: Sendable, Delegate: NIOAsyncSequenceP
         self = .nioThrowingAsyncSequenceProducer(stream)
     }
 
-    internal init<S: AsyncSequence & Sendable>(wrapping stream: S) where S.Element == Element {
+    internal init<S: AsyncSequence & Sendable>(wrapping stream: S)
+    where S.Element == Element, S.AsyncIterator: _NIOFileSystemSendableMetatype {
         self = .anyAsyncSequence(AnyAsyncSequence(wrapping: stream))
     }
 
@@ -72,7 +73,8 @@ internal enum BufferedOrAnyStream<Element: Sendable, Delegate: NIOAsyncSequenceP
 internal struct AnyAsyncSequence<Element>: AsyncSequence, Sendable {
     private let _makeAsyncIterator: @Sendable () -> AsyncIterator
 
-    internal init<S: AsyncSequence & Sendable>(wrapping sequence: S) where S.Element == Element {
+    internal init<S: AsyncSequence & Sendable>(wrapping sequence: S)
+    where S.Element == Element, S.AsyncIterator: _NIOFileSystemSendableMetatype {
         self._makeAsyncIterator = {
             AsyncIterator(wrapping: sequence.makeAsyncIterator())
         }
@@ -82,7 +84,7 @@ internal struct AnyAsyncSequence<Element>: AsyncSequence, Sendable {
         self._makeAsyncIterator()
     }
 
-    internal struct AsyncIterator: AsyncIteratorProtocol {
+    internal struct AsyncIterator: AsyncIteratorProtocol, _NIOFileSystemSendableMetatype {
         private var iterator: any AsyncIteratorProtocol
 
         init<I: AsyncIteratorProtocol>(wrapping iterator: I) where I.Element == Element {
