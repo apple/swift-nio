@@ -59,7 +59,7 @@ final class EventLoopMetricsDelegateTests: XCTestCase {
         promise.futureResult.whenSuccess {
             // There are 4 tasks (scheduleTask, scheduleTask, whenSuccess, wait) which can trigger a total of 2...4 ticks
             XCTAssertTrue((2...4).contains(delegate.infos.count), "Expected 2...4 ticks, got \(delegate.infos.count)")
-            // The total number of tasks across these ticks should be either 2 or 3
+            // The total number of tasks across these ticks should be either 3 or 4
             let totalTasks = delegate.infos.map { $0.numberOfTasks }.reduce(0, { $0 + $1 })
             XCTAssertTrue((3...4).contains(totalTasks), "Expected 3...4 tasks, got \(totalTasks)")
             // All tasks were run by the same event loop. The measurements are monotonically increasing.
