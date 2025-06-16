@@ -372,7 +372,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Schedule a callback at a given time.
     ///
     /// - Parameters:
-    ///   - at: The instant in time before which the task will not execute.
+    ///   - deadline: The instant in time before which the task will not execute.
     ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
     /// - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
     ///
@@ -388,7 +388,7 @@ public protocol EventLoop: EventLoopGroup {
     /// Schedule a callback after given time.
     ///
     /// - Parameters:
-    ///   - in: The amount of time before which the task will not execute.
+    ///   - amount: The amount of time before which the task will not execute.
     ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
     ///  - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
     ///

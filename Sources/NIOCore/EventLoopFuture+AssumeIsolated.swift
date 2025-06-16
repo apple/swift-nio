@@ -21,7 +21,7 @@
 ///
 /// Using this type relaxes the need to have the closures for ``EventLoop/execute(_:)``,
 /// ``EventLoop/submit(_:)``, ``EventLoop/scheduleTask(in:_:)``,
-/// and ``EventLoop/scheduleCallback(in:_:)`` to be `@Sendable`.
+/// and ``EventLoop/scheduleCallback(in:handler:)`` to be `@Sendable`.
 public struct NIOIsolatedEventLoop {
     @usableFromInline
     let _wrapped: EventLoop
@@ -129,7 +129,7 @@ public struct NIOIsolatedEventLoop {
     /// Schedule a callback at a given time.
     ///
     /// - Parameters:
-    ///   - at: The instant in time before which the task will not execute.
+    ///   - deadline: The instant in time before which the task will not execute.
     ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
     /// - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
     @discardableResult
@@ -145,7 +145,7 @@ public struct NIOIsolatedEventLoop {
     /// Schedule a callback after given time.
     ///
     /// - Parameters:
-    ///   - in: The amount of time before which the task will not execute.
+    ///   - amount: The amount of time before which the task will not execute.
     ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
     ///  - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
     @discardableResult
