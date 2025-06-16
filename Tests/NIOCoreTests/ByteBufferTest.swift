@@ -4420,3 +4420,46 @@ extension ByteBufferTest {
         XCTAssertNil(result, "peekUUIDBytes() should return nil when fewer than 16 bytes are readable.")
     }
 }
+
+#if compiler(>=6.2)
+extension ByteBufferTest {
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    func testWriteBytesRawSpan() {
+        // Write 16 bytes into buffer using a RawSpan
+        let byteArray: [UInt8] = Array(0..<16)
+        let rawSpan = byteArray.span.bytes
+        let writeLength = self.buf.writeBytes(rawSpan)
+        XCTAssertEqual(writeLength, rawSpan.byteCount)
+
+        let read = self.buf.readBytes(length: 4)
+        XCTAssertEqual([0, 1, 2, 3], read)
+        XCTAssertEqual(buf.readerIndex, 4)
+
+        let peek = self.buf.peekBytes(length: 4)
+        XCTAssertEqual([4, 5, 6, 7], peek)
+        XCTAssertEqual(buf.readerIndex, 4)
+
+        let rest = self.buf.readBytes(length: 12)
+        XCTAssertEqual([4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], rest)
+        XCTAssertEqual(buf.readerIndex, 16)
+    }
+
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    func testSetBytesRawSpan() {
+        // Write 4 bytes using setBytes
+        let byteArray: [UInt8] = Array(0..<4)
+        let rawSpan = byteArray.span.bytes
+        let writeLength = self.buf.setBytes(rawSpan, at: 0)
+        XCTAssertEqual(writeLength, rawSpan.byteCount)
+
+        // Should not be readable as writer index is not moved by setBytes
+        let shouldBeNil = self.buf.readBytes(length: 4)
+        XCTAssertNil(shouldBeNil)
+
+        // Move writer index
+        self.buf.moveWriterIndex(to: 4)
+        let result = self.buf.readBytes(length: 4)
+        XCTAssertEqual(Array(0..<4), result!)
+    }
+}
+#endif
