@@ -517,6 +517,22 @@ extension ByteBuffer {
         return written
     }
 
+    #if compiler(>=6.2)
+    /// Write `bytes` into this `ByteBuffer`. Moves the writer index forward by the number of bytes written.
+    ///
+    /// - Parameters:
+    ///   - bytes: A `RawSpan`
+    /// - Returns: The number of bytes written or `bytes.byteCount`.
+    @discardableResult
+    @inlinable
+    @available(macOS 26, iOS 26, tvOS 26, watchOS 26, visionOS 26, *)
+    public mutating func writeBytes(_ bytes: RawSpan) -> Int {
+        let written = self.setBytes(bytes, at: self.writerIndex)
+        self._moveWriterIndex(forwardBy: written)
+        return written
+    }
+    #endif
+
     /// Writes `byte` `count` times. Moves the writer index forward by the number of bytes written.
     ///
     /// - Parameters:
