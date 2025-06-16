@@ -53,13 +53,25 @@ public struct NIOEventLoopTickInfo: Sendable, Hashable {
     public var eventLoopID: ObjectIdentifier
     /// The number of tasks which were executed in this tick
     public var numberOfTasks: Int
+    /// The time the event loop slept since the last tick
+    public var sleepTime: TimeAmount
     /// The time at which the tick began
     public var startTime: NIODeadline
+    /// The time at which the tick finished
+    public var endTime: NIODeadline
 
-    internal init(eventLoopID: ObjectIdentifier, numberOfTasks: Int, startTime: NIODeadline) {
+    internal init(
+        eventLoopID: ObjectIdentifier,
+        numberOfTasks: Int,
+        sleepTime: TimeAmount,
+        startTime: NIODeadline,
+        endTime: NIODeadline
+    ) {
         self.eventLoopID = eventLoopID
         self.numberOfTasks = numberOfTasks
+        self.sleepTime = sleepTime
         self.startTime = startTime
+        self.endTime = endTime
     }
 }
 
@@ -169,6 +181,8 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 
     private let metricsDelegate: (any NIOEventLoopMetricsDelegate)?
 
+    private var lastTickEndTime: NIODeadline
+
     @usableFromInline
     internal func _promiseCreated(futureIdentifier: _NIOEventLoopFutureIdentifier, file: StaticString, line: UInt) {
         precondition(_isDebugAssertConfiguration())
@@ -246,6 +260,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         self.msgBufferPool = Pool<PooledMsgBuffer>(maxSize: 16)
         self.tasksCopy.reserveCapacity(Self.tasksCopyBatchSize)
         self.canBeShutdownIndividually = canBeShutdownIndividually
+        self.lastTickEndTime = .now()
         // note: We are creating a reference cycle here that we'll break when shutting the SelectableEventLoop down.
         // note: We have to create the promise and complete it because otherwise we'll hit a loop in `makeSucceededFuture`. This is
         //       fairly dumb, but it's the only option we have.
@@ -722,14 +737,19 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 
     private func runLoop(selfIdentifier: ObjectIdentifier) -> NIODeadline? {
         let tickStartTime: NIODeadline = .now()
+        let sleepTime: TimeAmount = tickStartTime - self.lastTickEndTime
         var tasksProcessedInTick = 0
         defer {
+            let tickEndTime: NIODeadline = .now()
             let tickInfo = NIOEventLoopTickInfo(
                 eventLoopID: selfIdentifier,
                 numberOfTasks: tasksProcessedInTick,
-                startTime: tickStartTime
+                sleepTime: sleepTime,
+                startTime: tickStartTime,
+                endTime: tickEndTime
             )
             self.metricsDelegate?.processedTick(info: tickInfo)
+            self.lastTickEndTime = tickEndTime
         }
         while true {
             let nextReadyDeadline = self._tasksLock.withLock { () -> NIODeadline? in
