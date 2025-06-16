@@ -36,7 +36,8 @@ public struct DirectoryEntries: AsyncSequence, Sendable {
     /// Creates a ``DirectoryEntries`` sequence by wrapping an `AsyncSequence` of _batches_ of
     /// directory entries.
     @preconcurrency
-    public init<S: AsyncSequence & Sendable>(wrapping sequence: S) where S.Element == Batched.Element {
+    public init<S: AsyncSequence & Sendable>(wrapping sequence: S)
+    where S.Element == Batched.Element, S.AsyncIterator: _NIOFileSystemSendableMetatype {
         self.batchedSequence = Batched(wrapping: sequence)
     }
 
@@ -95,7 +96,8 @@ extension DirectoryEntries {
         /// Creates a ``DirectoryEntries/Batched`` sequence by wrapping an `AsyncSequence`
         /// of directory entry batches.
         @preconcurrency
-        public init<S: AsyncSequence & Sendable>(wrapping sequence: S) where S.Element == Element {
+        public init<S: AsyncSequence & Sendable>(wrapping sequence: S)
+        where S.Element == Element, S.AsyncIterator: _NIOFileSystemSendableMetatype {
             self.stream = BufferedOrAnyStream<[DirectoryEntry], DirectoryEntryProducer>(wrapping: sequence)
         }
 

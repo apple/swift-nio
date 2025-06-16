@@ -29,8 +29,8 @@ on:
         default: ""
       xcode_16_1_enabled:
         type: boolean
-        description: "Boolean to enable the Xcode version 16.1 jobs. Defaults to true."
-        default: true
+        description: "Boolean to enable the Xcode version 16.1 jobs. Defaults to false."
+        default: false
       xcode_16_1_build_arguments_override:
         type: string
         description: "The arguments passed to swift build in the Xcode version 16.1 job."
@@ -72,6 +72,22 @@ on:
         description: "The arguments passed to swift test in the Xcode version 16.3 job."
         default: ""
       xcode_16_3_setup_command:
+        type: string
+        description: "The command(s) to be executed before all other work."
+        default: ""
+      xcode_26_beta_enabled:
+        type: boolean
+        description: "Boolean to enable the Xcode version 26 beta 1 jobs. Defaults to true."
+        default: true
+      xcode_26_beta_1_build_arguments_override:
+        type: string
+        description: "The arguments passed to swift build in the Xcode version 26 beta 1 job."
+        default: ""
+      xcode_26_beta_1_test_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Xcode version 26 beta 1 job."
+        default: ""
+      xcode_26_beta_1_setup_command:
         type: string
         description: "The command(s) to be executed before all other work."
         default: ""
@@ -165,6 +181,10 @@ jobs:
             xcode_16_3_build_arguments_override="${MATRIX_MACOS_16_3_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_3_test_arguments_override="${MATRIX_MACOS_16_3_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_3_setup_command="${MATRIX_MACOS_16_3_SETUP_COMMAND:=""}"
+            xcode_26_beta_1_enabled="${MATRIX_MACOS_26_BETA_1_ENABLED:=true}"
+            xcode_26_beta_1_build_arguments_override="${MATRIX_MACOS_26_BETA_1_BUILD_ARGUMENTS_OVERRIDE:=""}"
+            xcode_26_beta_1_test_arguments_override="${MATRIX_MACOS_26_BETA_1_TEST_ARGUMENTS_OVERRIDE:=""}"
+            xcode_26_beta_1_setup_command="${MATRIX_MACOS_26_BETA_1_SETUP_COMMAND:=""}"
 
             # Create matrix from inputs
             matrix='{"config": []}'
@@ -214,6 +234,15 @@ jobs:
                 '.config[.config| length] |= . + { "name": "Xcode 16.3", "xcode_version": "16.3", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
             fi
 
+            if [[ "$xcode_26_beta_1_enabled" == "true" ]]; then
+                matrix=$(echo "$matrix" | jq -c \
+                --arg setup_command "$xcode_26_beta_1_setup_command"  \
+                --arg build_arguments_override "$xcode_26_beta_1_build_arguments_override"  \
+                --arg test_arguments_override "$xcode_26_beta_1_test_arguments_override"  \
+                --arg runner_pool "$runner_pool"  \
+                '.config[.config| length] |= . + { "name": "Xcode 26 beta 1", "xcode_version": "26.b1", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
+            fi
+
             echo "$matrix" | jq -c
           )"
           EOM
@@ -239,6 +268,10 @@ jobs:
           MATRIX_MACOS_16_3_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_3_build_arguments_override }}
           MATRIX_MACOS_16_3_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_16_3_test_arguments_override }}
           MATRIX_MACOS_16_3_SETUP_COMMAND: ${{ inputs.xcode_16_3_setup_command }}
+          MATRIX_MACOS_26_BETA_1_ENABLED: ${{ inputs.xcode_26_beta_1_enabled }}
+          MATRIX_MACOS_26_BETA_1_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_beta_1_build_arguments_override }}
+          MATRIX_MACOS_26_BETA_1_TEST_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_26_beta_1_test_arguments_override }}
+          MATRIX_MACOS_26_BETA_1_SETUP_COMMAND: ${{ inputs.xcode_26_beta_1_setup_command }}
 
   darwin-job:
     name: ${{ matrix.config.name }}
