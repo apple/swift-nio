@@ -49,22 +49,36 @@ final class EventLoopMetricsDelegateTests: XCTestCase {
         XCTAssertEqual(delegate.infos.count, 0)
 
         let promise = el.makePromise(of: Void.self)
+        el.scheduleTask(in: .milliseconds(100)) {
+            // Nop. Ensures that we collect multiple tick infos.
+        }
         el.scheduleTask(in: .seconds(1)) {
             promise.succeed()
         }
+
         promise.futureResult.whenSuccess {
-            // There are 3 tasks (scheduleTask, whenSuccess, wait) which can trigger a total of 1...3 ticks
-            XCTAssertTrue((1...3).contains(delegate.infos.count), "Expected 1...3 ticks, got \(delegate.infos.count)")
-            // the total number of tasks across these ticks should be either 2 or 3
+            // There are 4 tasks (scheduleTask, scheduleTask, whenSuccess, wait) which can trigger a total of 2...4 ticks
+            XCTAssertTrue((2...4).contains(delegate.infos.count), "Expected 2...4 ticks, got \(delegate.infos.count)")
+            // The total number of tasks across these ticks should be either 3 or 4
             let totalTasks = delegate.infos.map { $0.numberOfTasks }.reduce(0, { $0 + $1 })
-            XCTAssertTrue((2...3).contains(totalTasks), "Expected 2...3 tasks, got \(totalTasks)")
+            XCTAssertTrue((3...4).contains(totalTasks), "Expected 3...4 tasks, got \(totalTasks)")
+            // All tasks were run by the same event loop. The measurements are monotonically increasing.
+            var lastEndTime: NIODeadline?
             for info in delegate.infos {
                 XCTAssertEqual(info.eventLoopID, ObjectIdentifier(el))
+                XCTAssertTrue(info.startTime < info.endTime)
+                // If this is not the first tick, verify the sleep time.
+                if let lastEndTime {
+                    XCTAssertTrue(lastEndTime < info.startTime)
+                    XCTAssertEqual(lastEndTime + info.sleepTime, info.startTime)
+                }
+                // Keep track of the last event time to verify the sleep interval.
+                lastEndTime = info.endTime
             }
             if let lastTickStartTime = delegate.infos.last?.startTime {
                 let timeSinceStart = lastTickStartTime - testStartTime
-                // This should be near instant, limiting to 100ms
-                XCTAssertLessThan(timeSinceStart.nanoseconds, 100_000_000)
+                // This should be near instantly after the delay of the first run.
+                XCTAssertLessThan(timeSinceStart.nanoseconds, 200_000_000)
                 XCTAssertGreaterThan(timeSinceStart.nanoseconds, 0)
             }
         }
