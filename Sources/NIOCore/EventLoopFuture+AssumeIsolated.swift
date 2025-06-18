@@ -20,7 +20,8 @@
 /// domains.
 ///
 /// Using this type relaxes the need to have the closures for ``EventLoop/execute(_:)``,
-/// ``EventLoop/submit(_:)``, and ``EventLoop/scheduleTask(in:_:)`` to be `@Sendable`.
+/// ``EventLoop/submit(_:)``, ``EventLoop/scheduleTask(in:_:)``,
+/// and ``EventLoop/scheduleCallback(in:handler:)`` to be `@Sendable`.
 public struct NIOIsolatedEventLoop {
     @usableFromInline
     let _wrapped: EventLoop
@@ -123,6 +124,46 @@ public struct NIOIsolatedEventLoop {
         }
 
         return .init(promise: promise, cancellationTask: { scheduled.cancel() })
+    }
+
+    /// Schedule a callback at a given time.
+    ///
+    /// - Parameters:
+    ///   - deadline: The instant in time before which the task will not execute.
+    ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
+    /// - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
+    @discardableResult
+    @available(*, noasync)
+    @inlinable
+    public func scheduleCallback(
+        at deadline: NIODeadline,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        try self._wrapped._scheduleCallbackIsolatedUnsafeUnchecked(at: deadline, handler: handler)
+    }
+
+    /// Schedule a callback after given time.
+    ///
+    /// - Parameters:
+    ///   - amount: The amount of time before which the task will not execute.
+    ///   - handler: The handler that defines the behavior of the callback when executed or canceled.
+    ///  - Returns: A ``NIOScheduledCallback`` that can be used to cancel the scheduled callback.
+    @discardableResult
+    @available(*, noasync)
+    @inlinable
+    public func scheduleCallback(
+        in amount: TimeAmount,
+        handler: some NIOScheduledCallbackHandler
+    ) throws -> NIOScheduledCallback {
+        try self._wrapped._scheduleCallbackIsolatedUnsafeUnchecked(in: amount, handler: handler)
+    }
+
+    /// Cancel a scheduled callback.
+    @inlinable
+    @available(*, noasync)
+    public func cancelScheduledCallback(_ scheduledCallback: NIOScheduledCallback) {
+        self._wrapped.preconditionInEventLoop()
+        self._wrapped.cancelScheduledCallback(scheduledCallback)
     }
 
     /// Creates and returns a new `EventLoopFuture` that is already marked as success. Notifications
