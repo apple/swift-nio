@@ -295,7 +295,7 @@ jobs:
       - name: Swift build
         run: |
           if [ -n "${{ matrix.config.build_arguments_override }}" ]; then
-            swift build "${{ matrix.config.build_arguments_override }}"
+            swift build ${{ matrix.config.build_arguments_override }}
           else
             swift build --build-tests
           fi
@@ -303,7 +303,7 @@ jobs:
         if: 'inputs.swift_test_enabled'
         run: |
           if [ -n "${{ matrix.config.test_arguments_override }}" ]; then
-            swift test "${{ matrix.config.test_arguments_override }}"
+            swift test ${{ matrix.config.test_arguments_override }}
           else
             swift test
           fi
