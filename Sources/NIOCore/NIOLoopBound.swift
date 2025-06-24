@@ -58,6 +58,56 @@ public struct NIOLoopBound<Value>: @unchecked Sendable {
             yield &self._value
         }
     }
+
+    /// Executes the closure on the event loop the value is bound to.
+    @inlinable
+    public func execute(_ task: @escaping @Sendable (Value) -> Void) {
+        if self.eventLoop.inEventLoop {
+            task(self._value)
+        } else {
+            self.eventLoop.execute {
+                task(self._value)
+            }
+        }
+    }
+
+    /// Executes the closure on the event loop the value is bound to and returns the result in
+    /// a future.
+    ///
+    /// - Parameter task: The task to execute on the event loop with the loop bound value.
+    /// - Returns: A future containing the result of the task.
+    @inlinable
+    public func submit<Result: Sendable>(
+        _ task: @escaping @Sendable (Value) throws -> Result
+    ) -> EventLoopFuture<Result> {
+        if self.eventLoop.inEventLoop {
+            self.eventLoop.makeCompletedFuture {
+                try task(self._value)
+            }
+        } else {
+            self.eventLoop.submit {
+                try task(self._value)
+            }
+        }
+    }
+
+    /// Executes the closure on the event loop the value is bound to and returns the result in
+    /// a future.
+    ///
+    /// - Parameter task: The task to execute on the event loop with the loop bound value.
+    /// - Returns: A future containing the result of the task.
+    @inlinable
+    public func flatSubmit<Result: Sendable>(
+        _ task: @escaping @Sendable (Value) -> EventLoopFuture<Result>
+    ) -> EventLoopFuture<Result> {
+        if self.eventLoop.inEventLoop {
+            task(self._value)
+        } else {
+            self.eventLoop.flatSubmit {
+                task(self._value)
+            }
+        }
+    }
 }
 
 /// ``NIOLoopBoundBox`` is an always-`Sendable`, reference-typed container allowing you access to ``value`` if and
@@ -175,4 +225,55 @@ public final class NIOLoopBoundBox<Value>: @unchecked Sendable {
             yield &self._value
         }
     }
+
+    /// Executes the closure on the event loop the value is bound to.
+    @inlinable
+    public func execute(_ task: @escaping @Sendable (Value) -> Void) {
+        if self.eventLoop.inEventLoop {
+            task(self._value)
+        } else {
+            self.eventLoop.execute {
+                task(self._value)
+            }
+        }
+    }
+
+    /// Executes the closure on the event loop the value is bound to and returns the result in
+    /// a future.
+    ///
+    /// - Parameter task: The task to execute on the event loop with the loop bound value.
+    /// - Returns: A future containing the result of the task.
+    @inlinable
+    public func submit<Result: Sendable>(
+        _ task: @escaping @Sendable (Value) throws -> Result
+    ) -> EventLoopFuture<Result> {
+        if self.eventLoop.inEventLoop {
+            self.eventLoop.makeCompletedFuture {
+                try task(self._value)
+            }
+        } else {
+            self.eventLoop.submit {
+                try task(self._value)
+            }
+        }
+    }
+
+    /// Executes the closure on the event loop the value is bound to and returns the result in
+    /// a future.
+    ///
+    /// - Parameter task: The task to execute on the event loop with the loop bound value.
+    /// - Returns: A future containing the result of the task.
+    @inlinable
+    public func flatSubmit<Result: Sendable>(
+        _ task: @escaping @Sendable (Value) -> EventLoopFuture<Result>
+    ) -> EventLoopFuture<Result> {
+        if self.eventLoop.inEventLoop {
+            task(self._value)
+        } else {
+            self.eventLoop.flatSubmit {
+                task(self._value)
+            }
+        }
+    }
+
 }
