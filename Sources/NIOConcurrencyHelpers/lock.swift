@@ -253,11 +253,7 @@ public final class ConditionLock<T: Equatable> {
         gettimeofday(&curTime, nil)
 
         let allNSecs: Int64 = timeoutNS + Int64(curTime.tv_usec) * 1000
-        #if canImport(wasi_pthread)
-        let tvSec = curTime.tv_sec + (allNSecs / nsecPerSec)
-        #else
-        let tvSec = curTime.tv_sec + Int((allNSecs / nsecPerSec))
-        #endif
+        let tvSec = curTime.tv_sec + time_t((allNSecs / nsecPerSec))
 
         var timeoutAbs = timespec(
             tv_sec: tvSec,

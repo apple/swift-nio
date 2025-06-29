@@ -46,7 +46,7 @@ extension timespec {
         let nsecPerSec: Int64 = 1_000_000_000
         let ns = amount.nanoseconds
         let sec = ns / nsecPerSec
-        self = timespec(tv_sec: Int(sec), tv_nsec: Int(ns - sec * nsecPerSec))
+        self = timespec(tv_sec: time_t(sec), tv_nsec: Int(ns - sec * nsecPerSec))
     }
 }
 #endif
