@@ -222,6 +222,6 @@ const long CNIOLinux_UDP_MAX_SEGMENTS = UDP_MAX_SEGMENTS;
 const long CNIOLinux_UDP_MAX_SEGMENTS = -1;
 
 FTS *CNIOLinux_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **)) {
-    fts_open(path_argv, options, compar);
+    return fts_open(path_argv, options, compar);
 }
 #endif
