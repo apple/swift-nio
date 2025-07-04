@@ -553,10 +553,10 @@ typedef enum llhttp_status llhttp_status_t;
 
 #ifndef INCLUDE_LLHTTP_API_H_
 #define INCLUDE_LLHTTP_API_H_
+#include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <stddef.h>
 
 #if defined(__wasm__)
 #define LLHTTP_EXPORT __attribute__((visibility("default")))
