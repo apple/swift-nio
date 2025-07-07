@@ -19,7 +19,7 @@ import Stacks
 @main
 struct Stackdiff: ParsableCommand {
     static var configuration: CommandConfiguration {
-        CommandConfiguration(subcommands: [Diff.self])
+        CommandConfiguration(subcommands: [Diff.self, Dump.self])
     }
 }
 
