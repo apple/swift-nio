@@ -70,7 +70,7 @@ extension AggregateStacks {
         case .heaptrack:
             stacks = HeaptrackParser.parse(lines: lines)
         case .dtrace:
-            fatalError("dtrace isn't supported yet, why don't you add it?")
+            stacks = DTraceParser.parse(lines: lines)
         case .bpftrace:
             fatalError("bpftrace isn't supported yet, why don't you add it?")
         }
