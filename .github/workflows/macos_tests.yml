@@ -334,10 +334,10 @@ jobs:
         # see `xcodebuild -list` for schemes, `simctl list` for destinations
       - name: macOS build
         if: '!cancelled() && inputs.macos_xcode_build_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos" build
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=macos" build
       - name: macOS test
         if: '!cancelled() && inputs.macos_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=My Mac" test
+        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=My Mac,variant=macos" test
       - name: macOS Catalyst build
         if: '!cancelled() && inputs.macos_xcode_build_enabled'
         run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=macos,variant=Mac Catalyst" build
