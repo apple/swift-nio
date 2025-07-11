@@ -45,5 +45,6 @@ dev/git.commit.template
 dev/lldb-smoker
 dev/make-single-file-spm
 dev/malloc-aggregation.d
+dev/malloc-aggregation.bt
 dev/update-alloc-limits-to-last-completed-ci-build
 scripts/nio-diagnose
