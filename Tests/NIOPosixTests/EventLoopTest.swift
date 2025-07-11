@@ -651,11 +651,12 @@ final class EventLoopTest: XCTestCase {
 
     func testEventLoopPinned() throws {
         #if os(Linux) || os(Android)
-        let target = NIOThread.current.affinity.cpuIds.first!
+        let target = NIOThread.currentAffinity.cpuIds.first!
         let body: ThreadInitializer = { t in
             let set = LinuxCPUSet(target)
-            t.affinity = set
-            XCTAssertEqual(set, t.affinity)
+            precondition(t.isCurrentAndNotDetached)
+            NIOThread.currentAffinity = set
+            XCTAssertEqual(set, NIOThread.currentAffinity)
         }
         let threads: [ThreadInitializer] = [body, body]
 
@@ -667,11 +668,11 @@ final class EventLoopTest: XCTestCase {
 
     func testEventLoopPinnedCPUIdsConstructor() throws {
         #if os(Linux) || os(Android)
-        let target = NIOThread.current.affinity.cpuIds.first!
+        let target = NIOThread.currentAffinity.cpuIds.first!
         let group = MultiThreadedEventLoopGroup(pinnedCPUIds: [target])
         let eventLoop = group.next()
         let set = try eventLoop.submit {
-            NIOThread.current.affinity
+            NIOThread.currentAffinity
         }.wait()
 
         XCTAssertEqual(LinuxCPUSet(target), set)
@@ -1361,7 +1362,7 @@ final class EventLoopTest: XCTestCase {
         }
 
         let el: EventLoop = elg.next()
-        let expectedPrefix = "SelectableEventLoop { selector = Selector { descriptor ="
+        let expectedPrefix = "SelectableEventLoop { "
         let expectedContains = "thread = NIOThread(name = NIO-ELT-"
         let expectedSuffix = " }"
         let desc = el.description
@@ -1407,13 +1408,13 @@ final class EventLoopTest: XCTestCase {
     }
 
     func testTakeOverThreadAndAlsoTakeItBack() {
-        let currentNIOThread = NIOThread.current
+        let currentNIOThread = NIOThread.currentThreadID
         let currentNSThread = Thread.current
         let hasBeenShutdown = NIOLockedValueBox(false)
         let allDoneGroup = DispatchGroup()
         allDoneGroup.enter()
         MultiThreadedEventLoopGroup.withCurrentThreadAsEventLoop { loop in
-            XCTAssertEqual(currentNIOThread, NIOThread.current)
+            XCTAssertEqual(currentNIOThread, NIOThread.currentThreadID)
             XCTAssertEqual(currentNSThread, Thread.current)
             XCTAssert(loop === MultiThreadedEventLoopGroup.currentEventLoop)
             loop.shutdownGracefully(queue: DispatchQueue.global()) { error in
