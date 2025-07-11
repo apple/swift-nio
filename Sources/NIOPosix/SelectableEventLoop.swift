@@ -1034,13 +1034,49 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvertible {
     @usableFromInline
     var description: String {
-        "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread) }"
+        if self.inEventLoop {
+            return """
+                SelectableEventLoop { \
+                selector = \(self._selector), \
+                thread = \(self.thread), \
+                state = \(self.internalState) \
+                }
+                """
+        } else {
+            // We can't print the selector or the internal state here (getting the external state under the lock
+            // is a bit too dangerous in case somebody is holding that lock and then calling description).
+            return """
+                SelectableEventLoop { \
+                thread = \(self.thread) \
+                }
+                """
+        }
     }
 
     @usableFromInline
     var debugDescription: String {
         self._tasksLock.withLock {
-            "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
+            if self.inEventLoop {
+                return """
+                    SelectableEventLoop { \
+                    selector = \(self._selector), \
+                    scheduledTasks = \(self._scheduledTasks.description), \
+                    thread = \(self.thread), \
+                    state = \(self.internalState) \
+                    }
+                    """
+            } else {
+                return self.externalStateLock.withLock {
+                    """
+                    SelectableEventLoop { \
+                    selector = \(self._selector), \
+                    scheduledTasks = \(self._scheduledTasks.description), \
+                    thread = \(self.thread), \
+                    state = \(self.externalState) \
+                    }
+                    """
+                }
+            }
         }
     }
 }
