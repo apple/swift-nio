@@ -122,12 +122,16 @@ func withSALContext<R>(body: (SALContext) throws -> R) throws -> R {
     }
 
     let wakeups = LockedBox<Void>(description: "wakeups")
-    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1, metricsDelegate: nil) {
+    let group = MultiThreadedEventLoopGroup(numberOfThreads: 1, metricsDelegate: nil) { thread in
         try HookedSelector(
             userToKernel: userToKernelBox,
             kernelToUser: kernelToUserBox,
-            wakeups: wakeups
+            wakeups: wakeups,
+            thread: thread
         )
+    }
+    defer {
+        try! group.syncShutdownGracefully()
     }
 
     let context = SALContext(
