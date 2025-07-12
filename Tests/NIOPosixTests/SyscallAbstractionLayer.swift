@@ -237,11 +237,16 @@ internal class HookedSelector: NIOPosix.Selector<NIORegistration>, UserKernelInt
     fileprivate let kernelToUser: LockedBox<KernelToUser>
     fileprivate let wakeups: LockedBox<()>
 
-    init(userToKernel: LockedBox<UserToKernel>, kernelToUser: LockedBox<KernelToUser>, wakeups: LockedBox<()>) throws {
+    init(
+        userToKernel: LockedBox<UserToKernel>,
+        kernelToUser: LockedBox<KernelToUser>,
+        wakeups: LockedBox<()>,
+        thread: NIOThread
+    ) throws {
         self.userToKernel = userToKernel
         self.kernelToUser = kernelToUser
         self.wakeups = wakeups
-        try super.init()
+        try super.init(thread: thread)
         self.lifecycleState = .open
     }
 
