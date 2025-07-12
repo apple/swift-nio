@@ -142,6 +142,25 @@ index 071e828c6..1e5d99cec 100644
  struct c_nio_llhttp__internal_s {
 EOF
 
+patch -p1 -V none << 'EOF'
+diff --git a/include/c_nio_llhttp.h b/include/c_nio_llhttp.h
+index 1e5d99ce..39cf110a 100644
+--- a/include/c_nio_llhttp.h
++++ b/include/c_nio_llhttp.h
+@@ -553,10 +553,10 @@ typedef enum llhttp_status llhttp_status_t;
+ 
+ #ifndef INCLUDE_LLHTTP_API_H_
+ #define INCLUDE_LLHTTP_API_H_
++#include <stddef.h>
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+-#include <stddef.h>
+ 
+ #if defined(__wasm__)
+ #define LLHTTP_EXPORT __attribute__((visibility("default")))
+EOF
+
 rm -rf "$compiletmp"
 rm -rf "$tmpdir"
 
