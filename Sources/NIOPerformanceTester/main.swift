@@ -838,6 +838,31 @@ measureAndPrint(desc: "future_reduce_into_10k_futures") {
     return try! EventLoopFuture<Int>.reduce(into: 0, futures, on: el1, { $0 += $1 }).wait()
 }
 
+try measureAndPrint(desc: "el_in_eventloop_100M") {
+    let el1 = group.next()
+
+    let inEL = try el1.submit {
+        var inEL = 0
+        for _ in 0..<100_000_000 {
+            inEL = inEL &+ (el1.inEventLoop ? 1 : 0)
+        }
+        return inEL
+    }.wait()
+    precondition(inEL == 100_000_000)
+    return inEL
+}
+
+measureAndPrint(desc: "el_not_in_eventloop_100M") {
+    let el1 = group.next()
+
+    var inEL = 0
+    for _ in 0..<100_000_000 {
+        inEL = inEL &+ (el1.inEventLoop ? 1 : 0)
+    }
+    precondition(inEL == 0)
+    return inEL
+}
+
 try measureAndPrint(desc: "channel_pipeline_1m_events", benchmark: ChannelPipelineBenchmark(runCount: 1_000_000))
 
 try measureAndPrint(
