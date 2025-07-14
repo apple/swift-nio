@@ -44,9 +44,9 @@ internal struct CallbackList {
     }
 
     @usableFromInline
-    internal var firstCallback: Optional<Wrapper>
+    internal var firstCallback: Optional<Element>
     @usableFromInline
-    internal var furtherCallbacks: Optional<[Wrapper]>
+    internal var furtherCallbacks: Optional<[Element]>
 
     @inlinable
     internal init() {
