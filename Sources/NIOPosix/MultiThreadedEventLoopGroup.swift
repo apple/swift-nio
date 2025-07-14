@@ -43,8 +43,6 @@ struct NIORegistration: Registration {
 @available(*, unavailable)
 extension NIORegistration: Sendable {}
 
-private let nextEventLoopGroupID = ManagedAtomic(0)
-
 /// Called per `NIOThread` that is created for an EventLoop to do custom initialization of the `NIOThread` before the actual `EventLoop` is run on it.
 typealias ThreadInitializer = (NIOThread) -> Void
 
@@ -79,6 +77,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static func runTheLoop(
         thread: NIOThread,
+        uniqueID: SelectableEventLoopUniqueID,
         parentGroup: MultiThreadedEventLoopGroup?,  // nil iff thread take-over
         canEventLoopBeShutdownIndividually: Bool,
         selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
@@ -87,11 +86,16 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         _ callback: @escaping (SelectableEventLoop) -> Void
     ) {
         assert(NIOThread.current == thread)
+        uniqueID.attachToCurrentThread()
+        defer {
+            uniqueID.detachFromCurrentThread()
+        }
         initializer(thread)
 
         do {
             let loop = SelectableEventLoop(
                 thread: thread,
+                uniqueID: uniqueID,
                 parentGroup: parentGroup,
                 selector: try selectorFactory(),
                 canBeShutdownIndividually: canEventLoopBeShutdownIndividually,
@@ -112,6 +116,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
 
     private static func setupThreadAndEventLoop(
         name: String,
+        uniqueID: SelectableEventLoopUniqueID,
         parentGroup: MultiThreadedEventLoopGroup,
         selectorFactory: @escaping () throws -> NIOPosix.Selector<NIORegistration>,
         initializer: @escaping ThreadInitializer,
@@ -125,6 +130,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         NIOThread.spawnAndRun(name: name, detachThread: false) { t in
             MultiThreadedEventLoopGroup.runTheLoop(
                 thread: t,
+                uniqueID: uniqueID,
                 parentGroup: parentGroup,
                 canEventLoopBeShutdownIndividually: false,  // part of MTELG
                 selectorFactory: selectorFactory,
@@ -270,21 +276,22 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
             .init
     ) {
         self.threadNamePrefix = threadNamePrefix
-        let myGroupID = nextEventLoopGroupID.loadThenWrappingIncrement(ordering: .relaxed)
-        self.myGroupID = myGroupID
-        var idx = 0
+        let firstLoopID = SelectableEventLoopUniqueID.makeNextGroup()
+        self.myGroupID = firstLoopID.groupID
         self.canBeShutDown = canBeShutDown
         self.eventLoops = []  // Just so we're fully initialised and can vend `self` to the `SelectableEventLoop`.
+        var loopUniqueID = firstLoopID
         self.eventLoops = threadInitializers.map { initializer in
             // Maximum name length on linux is 16 by default.
             let ev = MultiThreadedEventLoopGroup.setupThreadAndEventLoop(
-                name: "\(threadNamePrefix)\(myGroupID)-#\(idx)",
+                name: "\(threadNamePrefix)\(loopUniqueID.groupID)-#\(loopUniqueID.loopID)",
+                uniqueID: loopUniqueID,
                 parentGroup: self,
                 selectorFactory: selectorFactory,
                 initializer: initializer,
                 metricsDelegate: metricsDelegate
             )
-            idx += 1
+            loopUniqueID.nextLoop()
             return ev
         }
     }
@@ -459,6 +466,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         let callingThread = NIOThread.current
         MultiThreadedEventLoopGroup.runTheLoop(
             thread: callingThread,
+            uniqueID: .makeNextGroup(),
             parentGroup: nil,
             canEventLoopBeShutdownIndividually: true,
             selectorFactory: NIOPosix.Selector<NIORegistration>.init,
