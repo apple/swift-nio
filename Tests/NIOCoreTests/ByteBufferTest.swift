@@ -1409,7 +1409,7 @@ class ByteBufferTest: XCTestCase {
     }
 
     func testAllocationOfReallyBigByteBuffer() throws {
-        #if arch(arm) || arch(i386) || arch(arm64_32)
+        #if arch(arm) || arch(i386) || arch(arm64_32) || arch(wasm32)
         // this test doesn't work on 32-bit platforms because the address space is only 4GB large and we're trying
         // to make a 4GB ByteBuffer which just won't fit. Even going down to 2GB won't make it better.
         return
