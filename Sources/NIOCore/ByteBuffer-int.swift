@@ -180,7 +180,7 @@ extension UInt32 {
 
         var n = self
 
-        #if arch(arm) || arch(i386) || arch(arm64_32)
+        #if arch(arm) || arch(i386) || arch(arm64_32) || arch(wasm32)
         // on 32-bit platforms we can't make use of a whole UInt32.max (as it doesn't fit in an Int)
         let max = UInt32(Int.max)
         #else
