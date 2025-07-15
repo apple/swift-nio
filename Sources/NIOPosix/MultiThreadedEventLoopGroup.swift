@@ -622,3 +622,43 @@ extension NIODeadline {
         return self - target
     }
 }
+
+extension MultiThreadedEventLoopGroup {
+    #if compiler(>=6.0)
+    /// Start & automatically shut down a new ``MultiThreadedEventLoopGroup``.
+    ///
+    /// This method allows to start & automatically dispose of a ``MultiThreadedEventLoopGroup`` following the principle of Structured Concurrency.
+    /// The ``MultiThreadedEventLoopGroup`` is guaranteed to be shut down upon return, whether `body` throws or not.
+    ///
+    /// - Note: Outside of top-level code (typically in your main function) or tests, you should generally not use this function to create a new
+    ///         ``MultiThreadedEventLoopGroup`` because creating & destroying threads is expensive. Instead, share an existing one.
+    @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+    public static func withEventLoopGroup<Result>(
+        numberOfThreads: Int,
+        metricsDelegate: (any NIOEventLoopMetricsDelegate)? = nil,
+        isolation actor: isolated (any Actor)? = #isolation,
+        _ body: (MultiThreadedEventLoopGroup) async throws -> Result
+    ) async throws -> Result {
+        let group = MultiThreadedEventLoopGroup(
+            numberOfThreads: numberOfThreads,
+            canBeShutDown: .notByUser,  // We want to prevent direct user shutdowns.
+            metricsDelegate: metricsDelegate,
+            selectorFactory: NIOPosix.Selector<NIORegistration>.init
+        )
+        return try await asyncDo {
+            try await body(group)
+        } finally: { _ in
+            let q = DispatchQueue(label: "MTELG.shutdown")
+            let _: () = try await withCheckedThrowingContinuation { (cont) -> Void in
+                group._shutdownGracefully(queue: q, allowShuttingDownOverride: true) { error in
+                    if let error {
+                        cont.resume(throwing: error)
+                    } else {
+                        cont.resume()
+                    }
+                }
+            }
+        }
+    }
+    #endif
+}

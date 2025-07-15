@@ -2014,6 +2014,62 @@ final class EventLoopTest: XCTestCase {
             }
         }
     }
+
+    #if compiler(>=6.0)
+    func testStructuredConcurrencyMTELGStartStop() async throws {
+        let loops = try await MultiThreadedEventLoopGroup.withEventLoopGroup(
+            numberOfThreads: 3
+        ) { group in
+            let loops = Array(group.makeIterator()).map { $0 as! SelectableEventLoop }
+            for loop in loops {
+                XCTAssert(
+                    loop.debugDescription.contains("state = open"),
+                    loop.debugDescription
+                )
+                XCTAssert(
+                    !loop.debugDescription.contains("selector = Selector { descriptor = -1 }"),
+                    loop.debugDescription
+                )
+            }
+            return loops
+        }
+        XCTAssertEqual(3, loops.count)
+        for loop in loops {
+            XCTAssert(
+                loop.debugDescription.contains("state = resourcesReclaimed"),
+                loop.debugDescription
+            )
+            XCTAssert(
+                loop.debugDescription.contains("selector = Selector { descriptor = -1 }")
+            )
+        }
+    }
+
+    func testStructuredConcurrencyMTELGStartStopUserCannotStopMidWay() async throws {
+        let threadCount = try await MultiThreadedEventLoopGroup.withEventLoopGroup(
+            numberOfThreads: 3
+        ) { group in
+            do {
+                try await group.shutdownGracefully()
+                XCTFail("shutdown worked, it shouldn't have")
+            } catch EventLoopError.unsupportedOperation {
+                // okay
+                return Array(group.makeIterator()).count
+            }
+            return -1
+        }
+        XCTAssertEqual(3, threadCount)
+    }
+
+    func testStructuredConcurrencyMTELGStartStopCanDoBasicAsyncStuff() async throws {
+        let actual = try await MultiThreadedEventLoopGroup.withEventLoopGroup(
+            numberOfThreads: 3
+        ) { group in
+            try await group.any().scheduleTask(in: .milliseconds(10), { "cool" }).futureResult.get()
+        }
+        XCTAssertEqual("cool", actual)
+    }
+    #endif
 }
 
 private final class EventLoopWithPreSucceededFuture: EventLoop {
