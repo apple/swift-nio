@@ -654,7 +654,7 @@ final class EventLoopTest: XCTestCase {
         let target = NIOThread.currentAffinity.cpuIds.first!
         let body: ThreadInitializer = { t in
             let set = LinuxCPUSet(target)
-            precondition(t.isCurrentAndNotDetached)
+            precondition(t.isCurrentSlow)
             NIOThread.currentAffinity = set
             XCTAssertEqual(set, NIOThread.currentAffinity)
         }

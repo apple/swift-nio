@@ -91,7 +91,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         metricsDelegate: NIOEventLoopMetricsDelegate?,
         _ callback: @escaping (SelectableEventLoop) -> Void
     ) {
-        assert(thread.isCurrentAndNotDetached)
+        assert(thread.isCurrentSlow)
         uniqueID.attachToCurrentThread()
         defer {
             uniqueID.detachFromCurrentThread()
@@ -133,7 +133,7 @@ public final class MultiThreadedEventLoopGroup: EventLoopGroup {
         // synchronised by `lock`
         var _loop: SelectableEventLoop! = nil
 
-        NIOThread.spawnAndRun(name: name, detachThread: false) { t in
+        NIOThread.spawnAndRun(name: name) { t in
             MultiThreadedEventLoopGroup.runTheLoop(
                 thread: t,
                 uniqueID: uniqueID,

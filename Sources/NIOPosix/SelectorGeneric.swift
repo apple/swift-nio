@@ -220,7 +220,7 @@ internal class Selector<R: Registration> {
     var eventsCapacity = 64
 
     internal func testsOnly_withUnsafeSelectorFD<T>(_ body: (CInt) throws -> T) throws -> T {
-        assert(!self.myThread.isCurrentAndNotDetached)
+        assert(!self.myThread.isCurrentSlow)
         return try self.externalSelectorFDLock.withLock {
             guard self.selectorFD != -1 else {
                 throw EventLoopError._shutdown
@@ -230,7 +230,7 @@ internal class Selector<R: Registration> {
     }
 
     init(thread: NIOThread) throws {
-        precondition(thread.isCurrentAndNotDetached)
+        precondition(thread.isCurrentSlow)
         self.myThread = thread
         self.lifecycleState = .closed
         self.events = Selector.allocateEventsArray(capacity: self.eventsCapacity)
@@ -260,7 +260,7 @@ internal class Selector<R: Registration> {
 
     @inlinable
     func growEventArrayIfNeeded(ready: Int) {
-        assert(self.myThread.isCurrentAndNotDetached)
+        assert(self.myThread.isCurrentSlow)
         guard ready == self.eventsCapacity else {
             return
         }
@@ -282,7 +282,7 @@ internal class Selector<R: Registration> {
         interested: SelectorEventSet,
         makeRegistration: (SelectorEventSet, SelectorRegistrationID) -> R
     ) throws {
-        assert(self.myThread.isCurrentAndNotDetached)
+        assert(self.myThread.isCurrentSlow)
         assert(interested.contains([.reset, .error]))
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't register on selector as it's \(self.lifecycleState).")
@@ -307,7 +307,7 @@ internal class Selector<R: Registration> {
     ///   - selectable: The `Selectable` to re-register.
     ///   - interested: The `SelectorEventSet` in which we are interested and want to be notified about.
     func reregister<S: Selectable>(selectable: S, interested: SelectorEventSet) throws {
-        assert(self.myThread.isCurrentAndNotDetached)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't re-register on selector as it's \(self.lifecycleState).")
         }
@@ -336,7 +336,7 @@ internal class Selector<R: Registration> {
     /// - Parameters:
     ///   - selectable: The `Selectable` to deregister.
     func deregister<S: Selectable>(selectable: S) throws {
-        assert(self.myThread.isCurrentAndNotDetached)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't deregister from selector as it's \(self.lifecycleState).")
         }
@@ -373,7 +373,7 @@ internal class Selector<R: Registration> {
     ///
     /// After closing the `Selector` it's no longer possible to use it.
     public func close() throws {
-        assert(self.myThread.isCurrentAndNotDetached)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't close selector as it's \(self.lifecycleState).")
         }
@@ -395,7 +395,7 @@ extension Selector: CustomStringConvertible {
             "Selector { descriptor = \(self.selectorFD) }"
         }
 
-        if self.myThread.isCurrentAndNotDetached {
+        if self.myThread.isCurrentSlow {
             return makeDescription()
         } else {
             return self.externalSelectorFDLock.withLock {
@@ -432,7 +432,7 @@ extension SelectorEvent: Sendable {}
 extension Selector where R == NIORegistration {
     /// Gently close the `Selector` after all registered `Channel`s are closed.
     func closeGently(eventLoop: EventLoop) -> EventLoopFuture<Void> {
-        assert(self.myThread.isCurrentAndNotDetached)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             return eventLoop.makeFailedFuture(
                 IOError(errnoCode: EBADF, reason: "can't close selector gently as it's \(self.lifecycleState).")

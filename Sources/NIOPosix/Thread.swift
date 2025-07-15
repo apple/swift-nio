@@ -28,7 +28,7 @@ protocol ThreadOps {
     associatedtype ThreadSpecificKeyDestructor
 
     static func threadName(_ thread: ThreadHandle) -> String?
-    static func run(handle: inout ThreadHandle?, args: Box<NIOThread.ThreadBoxValue>, detachThread: Bool)
+    static func run(handle: inout ThreadHandle?, args: Box<NIOThread.ThreadBoxValue>)
     static func isCurrentThread(_ thread: ThreadHandle) -> Bool
     static func compareThreads(_ lhs: ThreadHandle, _ rhs: ThreadHandle) -> Bool
     static var currentThread: ThreadHandle { get }
@@ -45,7 +45,7 @@ protocol ThreadOps {
 // swift-format-ignore
 @usableFromInline
 final class NIOThread: Sendable {
-    internal typealias ThreadBoxValue = (body: (NIOThread) -> Void, name: String?, isDetached: Bool)
+    internal typealias ThreadBoxValue = (body: (NIOThread) -> Void, name: String?)
     internal typealias ThreadBox = Box<ThreadBoxValue>
 
     private let desiredName: String?
@@ -77,8 +77,8 @@ final class NIOThread: Sendable {
     ///
     /// - arguments:
     ///   - handle: The `ThreadOpsSystem.ThreadHandle` that is wrapped and used by the `NIOThread`.
-    internal init(handle: ThreadOpsSystem.ThreadHandle, isDetachedThread: Bool, desiredName: String?) {
-        self.handle = NIOLockedValueBox(isDetachedThread ? nil : handle)
+    internal init(handle: ThreadOpsSystem.ThreadHandle, desiredName: String?) {
+        self.handle = NIOLockedValueBox(handle)
         self.desiredName = desiredName
     }
 
@@ -122,33 +122,32 @@ final class NIOThread: Sendable {
     /// - arguments:
     ///   - name: The name of the `NIOThread` or `nil` if no specific name should be set.
     ///   - body: The function to execute within the spawned `NIOThread`.
-    ///   - detach: Whether to detach the thread. If the thread is not detached it must be `join`ed.
     static func spawnAndRun(
         name: String? = nil,
-        detachThread: Bool,
         body: @escaping (NIOThread) -> Void
     ) {
         var handle: ThreadOpsSystem.ThreadHandle? = nil
 
         // Store everything we want to pass into the c function in a Box so we
         // can hand-over the reference.
-        let tuple: ThreadBoxValue = (body: body, name: name, isDetached: detachThread)
+        let tuple: ThreadBoxValue = (body: body, name: name)
         let box = ThreadBox(tuple)
 
-        ThreadOpsSystem.run(handle: &handle, args: box, detachThread: detachThread)
+        ThreadOpsSystem.run(handle: &handle, args: box)
     }
 
-    /// Returns `true` if the calling thread is the same as this one unless the thread was detached in which case we can't know.
+    /// Returns `true` if the calling thread.
+    ///
+    /// - warning: Do not use in the performance path, this takes a lock and is slow.
     @usableFromInline
-    var isCurrentAndNotDetached: Bool {
+    var isCurrentSlow: Bool {
         (try? self.withHandleUnderLock { handle in
             ThreadOpsSystem.isCurrentThread(handle)
         }) ?? false
     }
 
     internal static func withCurrentThread<Return>(_ body: (NIOThread) throws -> Return) rethrows -> Return {
-        // This is a little dangerous because we assume this is a non-detached thread.
-        let thread = NIOThread(handle: ThreadOpsSystem.currentThread, isDetachedThread: false, desiredName: nil)
+        let thread = NIOThread(handle: ThreadOpsSystem.currentThread, desiredName: nil)
         defer {
             thread.takeOwnership()
         }
