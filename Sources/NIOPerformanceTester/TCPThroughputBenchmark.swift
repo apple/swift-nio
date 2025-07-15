@@ -128,8 +128,6 @@ final class TCPThroughputBenchmark: Benchmark {
             .bind(host: "127.0.0.1", port: 0)
             .wait()
 
-        self.serverHandler = try promise.futureResult.wait()
-
         self.clientChannel = try ClientBootstrap(group: group)
             .channelInitializer { channel in
                 channel.eventLoop.makeCompletedFuture {
@@ -139,6 +137,8 @@ final class TCPThroughputBenchmark: Benchmark {
             }
             .connect(to: serverChannel.localAddress!)
             .wait()
+
+        self.serverHandler = try promise.futureResult.wait()
 
         var message = self.serverChannel.allocator.buffer(capacity: self.messageSize)
         message.writeInteger(UInt16(messageSize), as: UInt16.self)

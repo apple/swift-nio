@@ -117,6 +117,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "NIOCore",
                 "_NIODataStructures",
+                "CNIOPosix",
                 swiftAtomics,
             ],
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
@@ -150,6 +151,13 @@ let package = Package(
         ),
         .target(
             name: "CNIOAtomics",
+            dependencies: [],
+            cSettings: [
+                .define("_GNU_SOURCE")
+            ]
+        ),
+        .target(
+            name: "CNIOPosix",
             dependencies: [],
             cSettings: [
                 .define("_GNU_SOURCE")

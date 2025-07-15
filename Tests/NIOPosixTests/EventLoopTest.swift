@@ -1985,6 +1985,34 @@ final class EventLoopTest: XCTestCase {
 
         scheduledTask.cancel()
     }
+
+    func testInEventLoopABAProblem() {
+        // Older SwiftNIO versions had a bug here, they held onto `pthread_t`s for ever (which is illegal) and then
+        // used `pthread_equal(pthread_self(), myPthread)`. `pthread_equal` just compares the pointer values which
+        // means there's an ABA problem here. This test checks that we don't suffer from that issue now.
+        let allELs: NIOLockedValueBox<[any EventLoop]> = NIOLockedValueBox([])
+
+        for _ in 0..<100 {
+            let group = MultiThreadedEventLoopGroup(numberOfThreads: 4)
+            defer {
+                XCTAssertNoThrow(try group.syncShutdownGracefully())
+            }
+            for loop in group.makeIterator() {
+                try! loop.submit {
+                    allELs.withLockedValue { allELs in
+                        XCTAssertTrue(loop.inEventLoop)
+                        for otherEL in allELs {
+                            XCTAssertFalse(
+                                otherEL.inEventLoop,
+                                "should only be in \(loop) but turns out also in \(otherEL)"
+                            )
+                        }
+                        allELs.append(loop)
+                    }
+                }.wait()
+            }
+        }
+    }
 }
 
 private final class EventLoopWithPreSucceededFuture: EventLoop {
