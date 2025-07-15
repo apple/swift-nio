@@ -170,7 +170,7 @@ extension Selector: _SelectorBackendProtocol {
         oldInterested: SelectorEventSet?,
         registrationID: SelectorRegistrationID
     ) throws {
-        assert(self.myThread.isCurrentAndNotDetached)
+        assert(self.myThread.isCurrentSlow)
         let oldKQueueFilters = KQueueEventFilterSet(selectorEventSet: oldInterested ?? ._none)
         let newKQueueFilters = KQueueEventFilterSet(selectorEventSet: interested)
         assert(interested.contains(.reset))
@@ -258,7 +258,7 @@ extension Selector: _SelectorBackendProtocol {
         onLoopBegin loopStart: () -> Void,
         _ body: (SelectorEvent<R>) throws -> Void
     ) throws {
-        assert(self.myThread.isCurrentAndNotDetached)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
@@ -354,7 +354,7 @@ extension Selector: _SelectorBackendProtocol {
 
     // attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`)
     func wakeup0() throws {
-        assert(!self.myThread.isCurrentAndNotDetached)
+        assert(!self.myThread.isCurrentSlow)
         try self.externalSelectorFDLock.withLock {
             guard self.selectorFD >= 0 else {
                 throw EventLoopError._shutdown

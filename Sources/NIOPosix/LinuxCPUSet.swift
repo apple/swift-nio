@@ -89,7 +89,7 @@ extension MultiThreadedEventLoopGroup {
             // This will also take care of validation of the provided id.
             let set = LinuxCPUSet(id)
             return { t in
-                precondition(t.isCurrentAndNotDetached)
+                precondition(t.isCurrentSlow)
                 NIOThread.currentAffinity = set
             }
         }

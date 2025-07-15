@@ -37,7 +37,7 @@ class SelectorTest: XCTestCase {
             var registrationID: SelectorRegistrationID
         }
 
-        let thread = NIOThread(handle: .init(handle: pthread_self()), isDetachedThread: false, desiredName: nil)
+        let thread = NIOThread(handle: .init(handle: pthread_self()), desiredName: nil)
         let selector = try NIOPosix.Selector<TestRegistration>(thread: thread)
         defer {
             XCTAssertNoThrow(try selector.close())
