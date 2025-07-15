@@ -325,7 +325,7 @@ public final class EmbeddedEventLoop: EventLoop, CustomStringConvertible {
     }
 
     public func preconditionNotInEventLoop(file: StaticString, line: UInt) {
-        // As inEventLoop always returns true, this must always preconditon.
+        // As inEventLoop always returns true, this must always precondition.
         preconditionFailure("Always in EmbeddedEventLoop", file: file, line: line)
     }
 

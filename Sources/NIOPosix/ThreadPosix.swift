@@ -170,7 +170,7 @@ enum ThreadOpsPosix: ThreadOps {
                         }
                     }
 
-                    body(NIOThread(handle: hThread, desiredName: name))
+                    body(NIOThread(handle: hThread, isDetachedThread: boxed.value.isDetached, desiredName: name))
 
                     #if os(Android)
                     return UnsafeMutableRawPointer(bitPattern: 0xdeadbee)!
