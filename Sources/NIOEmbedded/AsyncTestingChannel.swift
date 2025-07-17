@@ -209,11 +209,12 @@ public final class NIOAsyncTestingChannel: Channel {
         var isWritable: Bool
         var localAddress: SocketAddress?
         var remoteAddress: SocketAddress?
+        var options: [(option: any ChannelOption, value: any Sendable)]
     }
 
     /// Guards any of the getters/setters that can be accessed from any thread.
     private let stateLock = NIOLockedValueBox(
-        State(isWritable: true, localAddress: nil, remoteAddress: nil)
+        State(isWritable: true, localAddress: nil, remoteAddress: nil, options: [])
     )
 
     /// - see: `Channel._channelCore`
@@ -259,6 +260,15 @@ public final class NIOAsyncTestingChannel: Channel {
             self.stateLock.withLockedValue {
                 $0.remoteAddress = newValue
             }
+        }
+    }
+
+    public var options: [(option: any ChannelOption, value: any Sendable)] {
+        get {
+            self.stateLock.withLockedValue { $0.options }
+        }
+        set {
+            self.stateLock.withLockedValue { $0.options = newValue }
         }
     }
 
@@ -572,12 +582,12 @@ public final class NIOAsyncTestingChannel: Channel {
 
     @inlinable
     internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
+        addOption(option, value: value)
+
         if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
             self.allowRemoteHalfClosure = value as! Bool
             return
         }
-        // No other options supported
-        fatalError("option not supported")
     }
 
     /// - see: `Channel.getOption`
@@ -606,7 +616,28 @@ public final class NIOAsyncTestingChannel: Channel {
 
             return result as! Option.Value
         }
-        fatalError("option \(option) not supported")
+
+        guard let value = optionValue(for: option) else {
+            fatalError("option \(option) not supported")
+        }
+
+        return value
+    }
+
+    @inlinable
+    internal func optionValue<Option: ChannelOption>(for option: Option) -> Option.Value? {
+        self.options.first(where: { $0.option is Option })?.value as? Option.Value
+    }
+
+    @inlinable
+    internal func addOption<Option: ChannelOption>(_ option: Option, value: Option.Value) {
+        // override the option if it exists
+        let optionIndex = options.firstIndex(where: { $0.option is Option })
+        if let optionIndex = optionIndex {
+            self.options[optionIndex] = (option, value)
+        } else {
+            self.options.append((option, value))
+        }
     }
 
     /// Fires the (outbound) `bind` event through the `ChannelPipeline`. If the event hits the ``NIOAsyncTestingChannel`` which
