@@ -367,7 +367,7 @@ jobs:
         run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "generic/platform=visionos" build
       - name: visionOS test  # arm only
         if: '!cancelled() && inputs.visionos_xcode_test_enabled'
-        run: /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Vision Pro,OS=latest" test
+        run: TARGET_OS=""; if [ "$XCODE_VERSION" = "16.2" ]; then TARGET_OS=",OS=2.3"; fi && /usr/bin/xcodebuild -quiet -scheme ${BUILD_SCHEME} -destination "name=Apple Vision Pro$TARGET_OS" test
     env:
       XCODE_VERSION: ${{ matrix.config.xcode_version }}
       DEVELOPER_DIR: "/Applications/${{ matrix.config.xcode_app }}"
