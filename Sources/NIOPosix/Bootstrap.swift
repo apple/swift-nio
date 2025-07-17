@@ -2635,9 +2635,9 @@ extension NIOPipeBootstrap {
             return channelOptions.applyAllChannelOptions(to: channel).flatMap {
                 if let bootstrapChannelInitializer {
                     bootstrapChannelInitializer(channel)
-                 } else {
+                } else {
                     channel.eventLoop.makeSucceededVoidFuture()
-                 }
+                }
             }
             .flatMap {
                 _ -> EventLoopFuture<ChannelInitializerResult> in
