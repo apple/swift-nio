@@ -205,15 +205,19 @@ public final class NIOAsyncTestingChannel: Channel {
     nonisolated(unsafe) var channelcore: EmbeddedChannelCore!
     nonisolated(unsafe) private var _pipeline: ChannelPipeline!
 
-    private struct State {
+    @usableFromInline
+    internal struct State: Sendable {
         var isWritable: Bool
         var localAddress: SocketAddress?
         var remoteAddress: SocketAddress?
+
+        @usableFromInline
         var options: [(option: any ChannelOption, value: any Sendable)]
     }
 
     /// Guards any of the getters/setters that can be accessed from any thread.
-    private let stateLock = NIOLockedValueBox(
+    @usableFromInline
+    internal let _stateLock = NIOLockedValueBox(
         State(isWritable: true, localAddress: nil, remoteAddress: nil, options: [])
     )
 
@@ -230,10 +234,10 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.isWritable`
     public var isWritable: Bool {
         get {
-            self.stateLock.withLockedValue { $0.isWritable }
+            self._stateLock.withLockedValue { $0.isWritable }
         }
         set {
-            self.stateLock.withLockedValue {
+            self._stateLock.withLockedValue {
                 $0.isWritable = newValue
             }
         }
@@ -242,10 +246,10 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.localAddress`
     public var localAddress: SocketAddress? {
         get {
-            self.stateLock.withLockedValue { $0.localAddress }
+            self._stateLock.withLockedValue { $0.localAddress }
         }
         set {
-            self.stateLock.withLockedValue {
+            self._stateLock.withLockedValue {
                 $0.localAddress = newValue
             }
         }
@@ -254,29 +258,18 @@ public final class NIOAsyncTestingChannel: Channel {
     /// - see: `Channel.remoteAddress`
     public var remoteAddress: SocketAddress? {
         get {
-            self.stateLock.withLockedValue { $0.remoteAddress }
+            self._stateLock.withLockedValue { $0.remoteAddress }
         }
         set {
-            self.stateLock.withLockedValue {
+            self._stateLock.withLockedValue {
                 $0.remoteAddress = newValue
             }
         }
     }
 
     public var options: [(option: any ChannelOption, value: any Sendable)] {
-        _options
+        self._stateLock.withLockedValue { $0.options }
     }
-
-    @usableFromInline
-    internal var _options: [(option: any ChannelOption, value: any Sendable)] {
-        get {
-            self.stateLock.withLockedValue { $0.options }
-        }
-        set {
-            self.stateLock.withLockedValue { $0.options = newValue }
-        }
-    }
-
     /// Create a new instance.
     ///
     /// During creation it will automatically also register itself on the ``NIOAsyncTestingEventLoop``.
@@ -637,11 +630,15 @@ public final class NIOAsyncTestingChannel: Channel {
     @inlinable
     internal func addOption<Option: ChannelOption>(_ option: Option, value: Option.Value) {
         // override the option if it exists
-        let optionIndex = options.firstIndex(where: { $0.option is Option })
-        if let optionIndex = optionIndex {
-            self._options[optionIndex] = (option, value)
-        } else {
-            self._options.append((option, value))
+        _stateLock.withLockedValue { state in
+            var options = state.options
+            let optionIndex = options.firstIndex(where: { $0.option is Option })
+            if let optionIndex = optionIndex {
+               options[optionIndex] = (option, value)
+            } else {
+                options.append((option, value))
+            }
+            state.options = options
         }
     }
 
