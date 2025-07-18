@@ -267,6 +267,8 @@ public final class NIOAsyncTestingChannel: Channel {
         }
     }
 
+    /// The `ChannelOption`s set on this channel.
+    /// - see: `NIOAsyncTestingChannel.setOption`
     public var options: [(option: any ChannelOption, value: any Sendable)] {
         self._stateLock.withLockedValue { $0.options }
     }

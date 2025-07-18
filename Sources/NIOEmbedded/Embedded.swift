@@ -788,12 +788,13 @@ public final class EmbeddedChannel: Channel {
     /// - see: `Channel.isWritable`
     public var isWritable: Bool = true
 
-    public var options: [(option: any ChannelOption, value: any Sendable)] {
-        _options
-    }
 
     @usableFromInline
     internal var _options: [(option: any ChannelOption, value: any Sendable)] = []
+
+    /// The `ChannelOption`s set on this channel.
+    /// - see: `Embedded.setOption`
+    public var options: [(option: any ChannelOption, value: any Sendable)] { _options }
 
     /// Synchronously closes the `EmbeddedChannel`.
     ///
