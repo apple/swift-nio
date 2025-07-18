@@ -788,8 +788,12 @@ public final class EmbeddedChannel: Channel {
     /// - see: `Channel.isWritable`
     public var isWritable: Bool = true
 
+    public var options: [(option: any ChannelOption, value: any Sendable)] {
+        _options
+    }
+
     @usableFromInline
-    internal var options: [(option: any ChannelOption, value: any Sendable)] = []
+    internal var _options: [(option: any ChannelOption, value: any Sendable)] = []
 
     /// Synchronously closes the `EmbeddedChannel`.
     ///
@@ -1063,9 +1067,9 @@ public final class EmbeddedChannel: Channel {
     @inlinable
     internal func addOption<Option: ChannelOption>(_ option: Option, value: Option.Value) {
         if let optionIndex = self.options.firstIndex(where: { $0.option is Option }) {
-            self.options[optionIndex] = (option: option, value: value)
+            self._options[optionIndex] = (option: option, value: value)
         } else {
-            self.options.append((option: option, value: value))
+            self._options.append((option: option, value: value))
         }
     }
 

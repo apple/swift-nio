@@ -264,6 +264,11 @@ public final class NIOAsyncTestingChannel: Channel {
     }
 
     public var options: [(option: any ChannelOption, value: any Sendable)] {
+        _options
+    }
+
+    @usableFromInline
+    internal var _options: [(option: any ChannelOption, value: any Sendable)] {
         get {
             self.stateLock.withLockedValue { $0.options }
         }
@@ -634,9 +639,9 @@ public final class NIOAsyncTestingChannel: Channel {
         // override the option if it exists
         let optionIndex = options.firstIndex(where: { $0.option is Option })
         if let optionIndex = optionIndex {
-            self.options[optionIndex] = (option, value)
+            self._options[optionIndex] = (option, value)
         } else {
-            self.options.append((option, value))
+            self._options.append((option, value))
         }
     }
 
