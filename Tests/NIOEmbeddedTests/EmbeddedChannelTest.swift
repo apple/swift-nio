@@ -692,4 +692,17 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertEqual(buf, try channel.readOutbound(as: ByteBuffer.self))
         XCTAssertTrue(try channel.finish().isClean)
     }
+
+    func testGetSetOption() async throws {
+        let channel = EmbeddedChannel()
+        let option = ChannelOptions.socket(IPPROTO_IP, IP_TTL)
+        let _ = channel.setOption(option, value: 1)
+
+        let optionValue1 = try await channel.getOption(option).get()
+        XCTAssertEqual(1, optionValue1)
+
+        let _ = channel.setOption(option, value: 2)
+        let optionValue2 = try await channel.getOption(option).get()
+        XCTAssertEqual(2, optionValue2)
+    }
 }
