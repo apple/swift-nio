@@ -37,9 +37,11 @@ class SelectorTest: XCTestCase {
             var registrationID: SelectorRegistrationID
         }
 
-        let selector = try NIOPosix.Selector<TestRegistration>()
+        let thread = NIOThread(handle: .init(handle: pthread_self()), desiredName: nil)
+        let selector = try NIOPosix.Selector<TestRegistration>(thread: thread)
         defer {
             XCTAssertNoThrow(try selector.close())
+            thread.takeOwnership()
         }
 
         let socket1 = try Socket(protocolFamily: .inet, type: .stream, protocolSubtype: .default)

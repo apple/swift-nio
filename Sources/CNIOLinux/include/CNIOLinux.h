@@ -149,5 +149,8 @@ extern const unsigned long CNIOLinux_UTIME_NOW;
 
 extern const long CNIOLinux_UDP_MAX_SEGMENTS;
 
+// A workaround for incorrect nullability annotations in the Android SDK.
+FTS *CNIOLinux_fts_open(char * const *path_argv, int options, int (*compar)(const FTSENT **, const FTSENT **));
+
 #endif
 #endif

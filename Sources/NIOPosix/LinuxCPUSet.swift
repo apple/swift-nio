@@ -43,17 +43,15 @@ extension LinuxCPUSet: Equatable {}
 
 /// Linux specific extension to `NIOThread`.
 extension NIOThread {
-    /// Specify the thread-affinity of the `NIOThread` itself.
-    var affinity: LinuxCPUSet {
+    /// Specify the thread-affinity of the current thread.
+    static var currentAffinity: LinuxCPUSet {
         get {
             var cpuset = cpu_set_t()
 
             // Ensure the cpuset is empty (and so nothing is selected yet).
             CNIOLinux_CPU_ZERO(&cpuset)
 
-            let res = self.withUnsafeThreadHandle { p in
-                CNIOLinux_pthread_getaffinity_np(p.handle, MemoryLayout.size(ofValue: cpuset), &cpuset)
-            }
+            let res = CNIOLinux_pthread_getaffinity_np(pthread_self(), MemoryLayout.size(ofValue: cpuset), &cpuset)
 
             precondition(res == 0, "pthread_getaffinity_np failed: \(res)")
 
@@ -74,9 +72,7 @@ extension NIOThread {
             for cpuID in cpuSet.cpuIds {
                 CNIOLinux_CPU_SET(CInt(cpuID), &cpuset)
             }
-            let res = self.withUnsafeThreadHandle { p in
-                CNIOLinux_pthread_setaffinity_np(p.handle, MemoryLayout.size(ofValue: cpuset), &cpuset)
-            }
+            let res = CNIOLinux_pthread_setaffinity_np(pthread_self(), MemoryLayout.size(ofValue: cpuset), &cpuset)
             precondition(res == 0, "pthread_setaffinity_np failed: \(res)")
         }
     }
@@ -93,7 +89,8 @@ extension MultiThreadedEventLoopGroup {
             // This will also take care of validation of the provided id.
             let set = LinuxCPUSet(id)
             return { t in
-                t.affinity = set
+                precondition(t.isCurrentSlow)
+                NIOThread.currentAffinity = set
             }
         }
         self.init(threadInitializers: initializers, metricsDelegate: nil)

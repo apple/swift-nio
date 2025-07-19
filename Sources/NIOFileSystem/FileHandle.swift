@@ -95,7 +95,7 @@ extension _HasFileHandle {
 
 /// Implements ``FileHandleProtocol`` by making system calls to interact with the local file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct FileHandle: FileHandleProtocol {
+public struct FileHandle: FileHandleProtocol, Sendable {
     internal let systemFileHandle: SystemFileHandle
 
     internal init(wrapping handle: SystemFileHandle) {
@@ -171,7 +171,7 @@ public struct FileHandle: FileHandleProtocol {
 /// Implements ``ReadableFileHandleProtocol`` by making system calls to interact with the local
 /// file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct ReadFileHandle: ReadableFileHandleProtocol, _HasFileHandle {
+public struct ReadFileHandle: ReadableFileHandleProtocol, _HasFileHandle, Sendable {
     public let fileHandle: FileHandle
 
     internal init(wrapping systemFileHandle: SystemFileHandle) {
@@ -206,7 +206,7 @@ public struct ReadFileHandle: ReadableFileHandleProtocol, _HasFileHandle {
 /// Implements ``WritableFileHandleProtocol`` by making system calls to interact with the local
 /// file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct WriteFileHandle: WritableFileHandleProtocol, _HasFileHandle {
+public struct WriteFileHandle: WritableFileHandleProtocol, _HasFileHandle, Sendable {
     public let fileHandle: FileHandle
 
     internal init(wrapping systemFileHandle: SystemFileHandle) {
@@ -300,7 +300,7 @@ public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFi
 /// Implements ``DirectoryFileHandleProtocol`` by making system calls to interact with the local
 /// file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle {
+public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle, Sendable {
     public let fileHandle: FileHandle
 
     internal init(wrapping systemFileHandle: SystemFileHandle) {

@@ -456,7 +456,14 @@ internal func libc_fts_open(
     _ path: [UnsafeMutablePointer<CInterop.PlatformChar>?],
     _ options: CInt
 ) -> UnsafeMutablePointer<CInterop.FTS> {
+    #if os(Android)
+    // This branch is a workaround for incorrect nullability annotations in the Android SDK.
+    // They were added in https://android.googlesource.com/platform/bionic/+/dec8efd72a6ad8b807a15a614ae1519487cfa456,
+    // and lasted for more than a year: https://android.googlesource.com/platform/bionic/+/da81ec4d1cbd0279014feb60535bf38defcd9346.
+    CNIOLinux_fts_open(path, options, nil)!
+    #else
     fts_open(path, options, nil)!
+    #endif
 }
 
 /// fts(3)

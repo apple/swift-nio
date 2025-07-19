@@ -15,10 +15,6 @@
 
 import PackageDescription
 
-// Used only for environment variables, does not make its way
-// into the product code.
-import class Foundation.ProcessInfo
-
 let swiftAtomics: PackageDescription.Target.Dependency = .product(name: "Atomics", package: "swift-atomics")
 let swiftCollections: PackageDescription.Target.Dependency = .product(name: "DequeModule", package: "swift-collections")
 let swiftSystem: PackageDescription.Target.Dependency = .product(name: "SystemPackage", package: "swift-system")
@@ -117,6 +113,7 @@ let package = Package(
                 "NIOConcurrencyHelpers",
                 "NIOCore",
                 "_NIODataStructures",
+                "CNIOPosix",
                 swiftAtomics,
             ],
             exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
@@ -150,6 +147,13 @@ let package = Package(
         ),
         .target(
             name: "CNIOAtomics",
+            dependencies: [],
+            cSettings: [
+                .define("_GNU_SOURCE")
+            ]
+        ),
+        .target(
+            name: "CNIOPosix",
             dependencies: [],
             cSettings: [
                 .define("_GNU_SOURCE")

@@ -53,10 +53,10 @@ windows_6_0_runner="windows-2022"
 windows_6_0_container_image="swift:6.0-windowsservercore-ltsc2022"
 windows_6_1_runner="windows-2022"
 windows_6_1_container_image="swift:6.1-windowsservercore-ltsc2022"
-windows_nightly_next_runner="windows-2019"
-windows_nightly_next_container_image="swiftlang/swift:nightly-6.2-windowsservercore-1809"
-windows_nightly_main_runner="windows-2019"
-windows_nightly_main_container_image="swiftlang/swift:nightly-main-windowsservercore-1809"
+windows_nightly_next_runner="windows-2022"
+windows_nightly_next_container_image="swiftlang/swift:nightly-6.2-windowsservercore-ltsc2022"
+windows_nightly_main_runner="windows-2022"
+windows_nightly_main_container_image="swiftlang/swift:nightly-main-windowsservercore-ltsc2022"
 
 # Create matrix from inputs
 matrix='{"config": []}'

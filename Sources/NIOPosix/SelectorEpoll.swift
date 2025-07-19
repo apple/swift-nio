@@ -216,7 +216,7 @@ extension Selector: _SelectorBackendProtocol {
         onLoopBegin loopStart: () -> Void,
         _ body: (SelectorEvent<R>) throws -> Void
     ) throws {
-        assert(self.myThread == NIOThread.current)
+        assert(self.myThread.isCurrentSlow)
         guard self.lifecycleState == .open else {
             throw IOError(errnoCode: EBADF, reason: "can't call whenReady for selector as it's \(self.lifecycleState).")
         }
@@ -329,7 +329,7 @@ extension Selector: _SelectorBackendProtocol {
 
     // attention, this may (will!) be called from outside the event loop, ie. can't access mutable shared state (such as `self.open`)
     func wakeup0() throws {
-        assert(NIOThread.current != self.myThread)
+        assert(!self.myThread.isCurrentSlow)
         try self.externalSelectorFDLock.withLock {
             guard self.eventFD >= 0 else {
                 throw EventLoopError.shutdown

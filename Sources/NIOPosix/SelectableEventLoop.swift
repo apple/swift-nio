@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
+import CNIOPosix
 import DequeModule
 import Dispatch
 import NIOConcurrencyHelpers
@@ -134,6 +135,8 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     internal var _scheduledTasks = PriorityQueue<ScheduledTask>()
     @usableFromInline
     internal var _immediateTasks = Deque<UnderlyingTask>()
+    @usableFromInline
+    internal let _uniqueID: SelectableEventLoopUniqueID
 
     // We only need the ScheduledTask's task closure. However, an `Array<() -> Void>` allocates
     // for every appended closure. https://bugs.swift.org/browse/SR-15872
@@ -247,12 +250,14 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 
     internal init(
         thread: NIOThread,
+        uniqueID: SelectableEventLoopUniqueID,
         parentGroup: MultiThreadedEventLoopGroup?,  // nil iff thread take-over
         selector: NIOPosix.Selector<NIORegistration>,
         canBeShutdownIndividually: Bool,
         metricsDelegate: NIOEventLoopMetricsDelegate?
     ) {
         self.metricsDelegate = metricsDelegate
+        self._uniqueID = uniqueID
         self._parentGroup = parentGroup
         self._selector = selector
         self.thread = thread
@@ -267,6 +272,8 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
         let voidPromise = self.makePromise(of: Void.self)
         voidPromise.succeed(())
         self._succeededVoidFuture = voidPromise.futureResult
+        preconditionInEventLoop()
+        precondition(self._uniqueID.matchesCurrentThread)
     }
 
     deinit {
@@ -326,7 +333,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     /// - see: `EventLoop.inEventLoop`
     @usableFromInline
     internal var inEventLoop: Bool {
-        thread.isCurrent
+        self._uniqueID.matchesCurrentThread
     }
 
     /// - see: `EventLoop.now`
@@ -809,6 +816,7 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
     /// Start processing I/O and tasks for this `SelectableEventLoop`. This method will continue running (and so block) until the `SelectableEventLoop` is closed.
     internal func run() throws {
         self.preconditionInEventLoop()
+
         defer {
             var iterations = 0
             var drained = false
@@ -1026,13 +1034,49 @@ internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvertible {
     @usableFromInline
     var description: String {
-        "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread) }"
+        if self.inEventLoop {
+            return """
+                SelectableEventLoop { \
+                selector = \(self._selector), \
+                thread = \(self.thread), \
+                state = \(self.internalState) \
+                }
+                """
+        } else {
+            // We can't print the selector or the internal state here (getting the external state under the lock
+            // is a bit too dangerous in case somebody is holding that lock and then calling description).
+            return """
+                SelectableEventLoop { \
+                thread = \(self.thread) \
+                }
+                """
+        }
     }
 
     @usableFromInline
     var debugDescription: String {
         self._tasksLock.withLock {
-            "SelectableEventLoop { selector = \(self._selector), thread = \(self.thread), scheduledTasks = \(self._scheduledTasks.description) }"
+            if self.inEventLoop {
+                return """
+                    SelectableEventLoop { \
+                    selector = \(self._selector), \
+                    scheduledTasks = \(self._scheduledTasks.description), \
+                    thread = \(self.thread), \
+                    state = \(self.internalState) \
+                    }
+                    """
+            } else {
+                return self.externalStateLock.withLock {
+                    """
+                    SelectableEventLoop { \
+                    selector = \(self._selector), \
+                    scheduledTasks = \(self._scheduledTasks.description), \
+                    thread = \(self.thread), \
+                    state = \(self.externalState) \
+                    }
+                    """
+                }
+            }
         }
     }
 }
@@ -1096,5 +1140,84 @@ extension SelectableEventLoop {
             }
             handler.didCancelScheduledCallback(eventLoop: self)
         }
+    }
+}
+
+@usableFromInline
+struct SelectableEventLoopUniqueID: Sendable {
+    @usableFromInline
+    static let _nextGroupID = ManagedAtomic<UInt64>(1)  // DO NOT MAKE THIS 0.
+
+    @usableFromInline
+    var _loopID: UInt32
+
+    @usableFromInline
+    let _groupID: UInt32
+
+    @inlinable
+    var groupID: Int {
+        Int(self._groupID)
+    }
+
+    @inlinable
+    var loopID: Int {
+        Int(self._loopID)
+    }
+
+    @inlinable
+    init(_loopID: UInt32, groupID: UInt32) {
+        self._loopID = _loopID
+        self._groupID = groupID
+    }
+
+    static func makeNextGroup() -> Self {
+        let groupID = Self._nextGroupID.loadThenWrappingIncrement(ordering: .relaxed)
+
+        // If we're crashing just below, we created more 2^32 ELGs -- unlikely.
+        return Self(_loopID: 1, groupID: UInt32(groupID))
+    }
+
+    mutating func nextLoop() {
+        self._loopID += 1
+    }
+
+    @inlinable
+    internal var matchesCurrentThread: Bool {
+        let threadUniqueID = c_nio_posix_get_el_id()
+        return threadUniqueID == self.packedEventLoopID
+    }
+
+    @inlinable
+    internal var packedEventLoopID: UInt {
+        #if arch(arm) || arch(i386) || arch(arm64_32) || arch(wasm32)
+        // 32 bit
+        // If we're crashing below, we created more than 2^16 (64ki) ELGs which is unsupported.
+        precondition(self._groupID < UInt32(UInt16.max), "too many event loops created")
+        precondition(self._loopID < UInt32(UInt16.max), "event loop group with too many event loops created")
+        let packedID = IntegerBitPacking.packUInt16UInt16(
+            UInt16(self._groupID),
+            UInt16(self._loopID)
+        )
+        #else
+        // 64 bit
+        let packedID = IntegerBitPacking.packUInt32UInt32(self._groupID, self._loopID)
+        #endif
+        assert(MemoryLayout<UInt>.size == MemoryLayout.size(ofValue: packedID))
+        return UInt(packedID)
+    }
+
+    internal func attachToCurrentThread() {
+        let existingPackedID = c_nio_posix_get_el_id()
+        precondition(existingPackedID == 0, "weird, current thread ID \(existingPackedID), expected 0")
+
+        let packedID = self.packedEventLoopID
+        c_nio_posix_set_el_id(UInt(packedID))
+    }
+
+    internal func detachFromCurrentThread() {
+        let existingPackedID = c_nio_posix_get_el_id()
+        precondition(existingPackedID == self.packedEventLoopID)
+
+        c_nio_posix_set_el_id(0)
     }
 }

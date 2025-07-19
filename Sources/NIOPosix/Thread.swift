@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOConcurrencyHelpers
+
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
 #endif
@@ -26,7 +28,7 @@ protocol ThreadOps {
     associatedtype ThreadSpecificKeyDestructor
 
     static func threadName(_ thread: ThreadHandle) -> String?
-    static func run(handle: inout ThreadHandle?, args: Box<NIOThread.ThreadBoxValue>, detachThread: Bool)
+    static func run(handle: inout ThreadHandle?, args: Box<NIOThread.ThreadBoxValue>)
     static func isCurrentThread(_ thread: ThreadHandle) -> Bool
     static func compareThreads(_ lhs: ThreadHandle, _ rhs: ThreadHandle) -> Bool
     static var currentThread: ThreadHandle { get }
@@ -40,6 +42,7 @@ protocol ThreadOps {
 /// A Thread that executes some runnable block.
 ///
 /// All methods exposed are thread-safe.
+// swift-format-ignore
 @usableFromInline
 final class NIOThread: Sendable {
     internal typealias ThreadBoxValue = (body: (NIOThread) -> Void, name: String?)
@@ -48,35 +51,70 @@ final class NIOThread: Sendable {
     private let desiredName: String?
 
     /// The thread handle used by this instance.
-    private let handle: ThreadOpsSystem.ThreadHandle
+    private let handle: NIOLockedValueBox<ThreadOpsSystem.ThreadHandle?>
+
+    enum Error: Swift.Error {
+        case threadAlreadyJoinedOrDetached
+    }
+
+    deinit {
+        assert(
+            self.handle.withLockedValue { $0 } == nil,
+            "Thread leak! NIOThread released without having been .join()ed"
+        )
+    }
+
+    func withHandleUnderLock<Return>(_ body: (ThreadOpsSystem.ThreadHandle) throws -> Return) throws -> Return {
+        try self.handle.withLockedValue { handle in
+            guard let handle else {
+                throw Error.threadAlreadyJoinedOrDetached
+            }
+            return try body(handle)
+        }
+    }
 
     /// Create a new instance
     ///
     /// - arguments:
     ///   - handle: The `ThreadOpsSystem.ThreadHandle` that is wrapped and used by the `NIOThread`.
     internal init(handle: ThreadOpsSystem.ThreadHandle, desiredName: String?) {
-        self.handle = handle
+        self.handle = NIOLockedValueBox(handle)
         self.desiredName = desiredName
-    }
-
-    /// Execute the given body with the `pthread_t` that is used by this `NIOThread` as argument.
-    ///
-    /// - warning: Do not escape `pthread_t` from the closure for later use.
-    ///
-    /// - Parameters:
-    ///   - body: The closure that will accept the `pthread_t`.
-    /// - Returns: The value returned by `body`.
-    internal func withUnsafeThreadHandle<T>(_ body: (ThreadOpsSystem.ThreadHandle) throws -> T) rethrows -> T {
-        try body(self.handle)
     }
 
     /// Get current name of the `NIOThread` or `nil` if not set.
     var currentName: String? {
-        ThreadOpsSystem.threadName(self.handle)
+        try? self.withHandleUnderLock { handle in
+            ThreadOpsSystem.threadName(handle)
+        }
+    }
+
+    static var currentThreadName: String? {
+        ThreadOpsSystem.threadName(.init(handle: pthread_self()))
+    }
+
+    static var currentThreadID: UInt {
+        .init(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread.handle))
+    }
+
+    @discardableResult
+    func takeOwnership() -> ThreadOpsSystem.ThreadHandle {
+        try! self.handle.withLockedValue { handle in
+            guard let originalHandle = handle else {
+                throw Error.threadAlreadyJoinedOrDetached
+            }
+            handle = nil
+            return originalHandle
+        }
     }
 
     func join() {
-        ThreadOpsSystem.joinThread(self.handle)
+        let handle = try! self.withHandleUnderLock { $0 }
+        ThreadOpsSystem.joinThread(handle)
+        self.handle.withLockedValue { handle in
+            precondition(handle != nil, "double NIOThread.join() disallowed")
+            handle = nil
+        }
     }
 
     /// Spawns and runs some task in a `NIOThread`.
@@ -84,10 +122,8 @@ final class NIOThread: Sendable {
     /// - arguments:
     ///   - name: The name of the `NIOThread` or `nil` if no specific name should be set.
     ///   - body: The function to execute within the spawned `NIOThread`.
-    ///   - detach: Whether to detach the thread. If the thread is not detached it must be `join`ed.
     static func spawnAndRun(
         name: String? = nil,
-        detachThread: Bool = true,
         body: @escaping (NIOThread) -> Void
     ) {
         var handle: ThreadOpsSystem.ThreadHandle? = nil
@@ -97,18 +133,25 @@ final class NIOThread: Sendable {
         let tuple: ThreadBoxValue = (body: body, name: name)
         let box = ThreadBox(tuple)
 
-        ThreadOpsSystem.run(handle: &handle, args: box, detachThread: detachThread)
+        ThreadOpsSystem.run(handle: &handle, args: box)
     }
 
-    /// Returns `true` if the calling thread is the same as this one.
-    var isCurrent: Bool {
-        ThreadOpsSystem.isCurrentThread(self.handle)
+    /// Returns `true` if the calling thread.
+    ///
+    /// - warning: Do not use in the performance path, this takes a lock and is slow.
+    @usableFromInline
+    var isCurrentSlow: Bool {
+        (try? self.withHandleUnderLock { handle in
+            ThreadOpsSystem.isCurrentThread(handle)
+        }) ?? false
     }
 
-    /// Returns the current running `NIOThread`.
-    public static var current: NIOThread {
-        let handle = ThreadOpsSystem.currentThread
-        return NIOThread(handle: handle, desiredName: nil)
+    internal static func withCurrentThread<Return>(_ body: (NIOThread) throws -> Return) rethrows -> Return {
+        let thread = NIOThread(handle: ThreadOpsSystem.currentThread, desiredName: nil)
+        defer {
+            thread.takeOwnership()
+        }
+        return try body(thread)
     }
 }
 
@@ -231,13 +274,3 @@ public final class ThreadSpecificVariable<Value: AnyObject> {
 }
 
 extension ThreadSpecificVariable: @unchecked Sendable where Value: Sendable {}
-
-extension NIOThread: Equatable {
-    public static func == (lhs: NIOThread, rhs: NIOThread) -> Bool {
-        lhs.withUnsafeThreadHandle { lhs in
-            rhs.withUnsafeThreadHandle { rhs in
-                ThreadOpsSystem.compareThreads(lhs, rhs)
-            }
-        }
-    }
-}

@@ -2600,6 +2600,7 @@ extension NIOPipeBootstrap {
         let pipeChannelOutput: SelectablePipeHandle?
         let hasNoInputPipe: Bool
         let hasNoOutputPipe: Bool
+        let bootstrapChannelInitializer = self.channelInitializer
         do {
             if let input = input {
                 try self.validateFileDescriptorIsNotAFile(input)
@@ -2632,6 +2633,13 @@ extension NIOPipeBootstrap {
         func setupChannel() -> EventLoopFuture<ChannelInitializerResult> {
             eventLoop.assertInEventLoop()
             return channelOptions.applyAllChannelOptions(to: channel).flatMap {
+                if let bootstrapChannelInitializer {
+                    bootstrapChannelInitializer(channel)
+                } else {
+                    channel.eventLoop.makeSucceededVoidFuture()
+                }
+            }
+            .flatMap {
                 _ -> EventLoopFuture<ChannelInitializerResult> in
                 channelInitializer(channel)
             }.flatMap { result in
