@@ -53,11 +53,11 @@ public struct NIOTypedHTTPServerUpgradeConfiguration<UpgradeResult: Sendable> {
 
     /// A closure that is run once it is determined that no protocol upgrade is happening. This can be used
     /// to configure handlers that expect HTTP.
-    public var notUpgradingCompletionHandler: @Sendable (Channel) -> EventLoopFuture<UpgradeResult>
+    public var notUpgradingCompletionHandler: @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<UpgradeResult>
 
     public init(
         upgraders: [any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>],
-        notUpgradingCompletionHandler: @Sendable @escaping (Channel) -> EventLoopFuture<UpgradeResult>
+        notUpgradingCompletionHandler: @Sendable @escaping (Channel, HTTPRequestHead) -> EventLoopFuture<UpgradeResult>
     ) {
         self.upgraders = upgraders
         self.notUpgradingCompletionHandler = notUpgradingCompletionHandler
@@ -83,7 +83,7 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
     public typealias OutboundOut = HTTPServerResponsePart
 
     private let upgraders: [String: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>]
-    private let notUpgradingCompletionHandler: @Sendable (Channel) -> EventLoopFuture<UpgradeResult>
+    private let notUpgradingCompletionHandler: @Sendable (Channel, HTTPRequestHead) -> EventLoopFuture<UpgradeResult>
     private let httpEncoder: HTTPResponseEncoder
     private let extraHTTPHandlers: [RemovableChannelHandler]
     private var stateMachine = NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult>()
@@ -159,8 +159,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
         case .failUpgradePromise(let error):
             self.upgradeResultPromise.fail(error)
 
-        case .runNotUpgradingInitializer:
-            self.notUpgradingCompletionHandler(context.channel)
+        case .runNotUpgradingInitializer(let requestHead):
+            self.notUpgradingCompletionHandler(context.channel, requestHead)
                 .hop(to: context.eventLoop)
                 .whenComplete { result in
                     self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: nil)
@@ -319,8 +319,8 @@ public final class NIOTypedHTTPServerUpgradeHandler<UpgradeResult: Sendable>: Ch
                 proto: proto
             )
 
-        case .runNotUpgradingInitializer:
-            self.notUpgradingCompletionHandler(context.channel)
+        case .runNotUpgradingInitializer(let requestHead):
+            self.notUpgradingCompletionHandler(context.channel, requestHead)
                 .hop(to: context.eventLoop)
                 .whenComplete { result in
                     self.upgradingHandlerCompleted(context: context, result, requestHeadAndProtocol: nil)

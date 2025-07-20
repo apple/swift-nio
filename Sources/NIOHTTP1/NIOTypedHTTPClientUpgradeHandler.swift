@@ -51,12 +51,12 @@ public struct NIOTypedHTTPClientUpgradeConfiguration<UpgradeResult: Sendable> {
 
     /// A closure that is run once it is determined that no protocol upgrade is happening. This can be used
     /// to configure handlers that expect HTTP.
-    public var notUpgradingCompletionHandler: @Sendable (Channel) -> EventLoopFuture<UpgradeResult>
+    public var notUpgradingCompletionHandler: @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
 
     public init(
         upgradeRequestHead: HTTPRequestHead,
         upgraders: [any NIOTypedHTTPClientProtocolUpgrader<UpgradeResult>],
-        notUpgradingCompletionHandler: @Sendable @escaping (Channel) -> EventLoopFuture<UpgradeResult>
+        notUpgradingCompletionHandler: @Sendable @escaping (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
     ) {
         precondition(upgraders.count > 0, "A minimum of one protocol upgrader must be specified.")
         self.upgradeRequestHead = upgradeRequestHead
@@ -90,7 +90,7 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
 
     private let upgradeRequestHead: HTTPRequestHead
     private let httpHandlers: [RemovableChannelHandler]
-    private let notUpgradingCompletionHandler: @Sendable (Channel) -> EventLoopFuture<UpgradeResult>
+    private let notUpgradingCompletionHandler: @Sendable (Channel, HTTPResponseHead) -> EventLoopFuture<UpgradeResult>
     private var stateMachine: NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult>
     private var _upgradeResultPromise: EventLoopPromise<UpgradeResult>?
     private var upgradeResultPromise: EventLoopPromise<UpgradeResult> {
@@ -197,8 +197,8 @@ public final class NIOTypedHTTPClientUpgradeHandler<UpgradeResult: Sendable>: Ch
             context.fireErrorCaught(error)
             context.pipeline.removeHandler(self, promise: nil)
 
-        case .runNotUpgradingInitializer:
-            self.notUpgradingCompletionHandler(context.channel)
+        case .runNotUpgradingInitializer(let responseHead):
+            self.notUpgradingCompletionHandler(context.channel, responseHead)
                 .hop(to: context.eventLoop)
                 .whenComplete { result in
                     self.upgradingHandlerCompleted(context: context, result)

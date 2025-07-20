@@ -160,7 +160,7 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
     @usableFromInline
     enum ChannelReadResponsePartAction {
         case fireErrorCaughtAndRemoveHandler(Error)
-        case runNotUpgradingInitializer
+        case runNotUpgradingInitializer(HTTPResponseHead)
         case startUpgrading(
             upgrader: any NIOTypedHTTPClientProtocolUpgrader<UpgradeResult>,
             responseHeaders: HTTPResponseHead
@@ -187,7 +187,7 @@ struct NIOTypedHTTPClientUpgraderStateMachine<UpgradeResult> {
                 var buffer = Deque<NIOAny>()
                 buffer.append(.init(responsePart))
                 self.state = .upgrading(.init(buffer: buffer))
-                return .runNotUpgradingInitializer
+                return .runNotUpgradingInitializer(response)
             }
 
             // Ok, we have a HTTP response. Check if it's an upgrade confirmation.

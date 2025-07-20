@@ -1088,7 +1088,7 @@ final class TypedHTTPClientUpgradeTestCase: HTTPClientUpgradeTestCase {
         let config = NIOTypedHTTPClientUpgradeConfiguration<Bool>(
             upgradeRequestHead: requestHead,
             upgraders: upgraders
-        ) { channel in
+        ) { channel, _ in
             channel.eventLoop.makeCompletedFuture {
                 try channel.pipeline.syncOperations.addHandler(clientHTTPHandler)
             }.map { _ in

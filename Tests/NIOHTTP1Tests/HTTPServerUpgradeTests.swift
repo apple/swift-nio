@@ -1781,8 +1781,8 @@ final class TypedHTTPServerUpgradeTestCase: HTTPServerUpgradeTestCase {
                     var configuration = NIOUpgradableHTTPServerPipelineConfiguration(
                         upgradeConfiguration: .init(
                             upgraders: upgraders.map { $0 as! any NIOTypedHTTPServerProtocolUpgrader<Bool> },
-                            notUpgradingCompletionHandler: {
-                                notUpgradingHandler?($0) ?? $0.eventLoop.makeSucceededFuture(false)
+                            notUpgradingCompletionHandler: { channel, _ in
+                                notUpgradingHandler?(channel) ?? channel.eventLoop.makeSucceededFuture(false)
                             }
                         )
                     )
