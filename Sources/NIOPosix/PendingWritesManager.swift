@@ -16,9 +16,43 @@ import Atomics
 import CNIOLinux
 import NIOCore
 
+public struct MetadataEnvelope {
+    public var data: ByteBuffer
+    public var controlData: MessageMetadata? = nil
+
+    public init(data: ByteBuffer) {
+        self.data = data
+    }
+
+    public init(data: ByteBuffer, controlData: MessageMetadata?) {
+        self.data = data
+        self.controlData = controlData
+    }
+
+    /// Any metadata associated with an
+    public struct MessageMetadata: Hashable, Sendable {
+        init() {
+            var m: msghdr = .init()
+            // Create buffer for file descriptor
+            let fake_fd = 6666
+            let fd_pointer = UnsafeMutableRawPointer(bitPattern: fake_fd)
+            m.msg_control = fd_pointer
+            m.msg_controllen = MemoryLayout.size(ofValue: fake_fd)
+            // TODO other platoforms
+            let cm: UnsafeMutablePointer<cmsghdr> = CNIOLinux_CMSG_FIRSTHDR(&m)
+            cm.pointee.cmsg_level = SOL_SOCKET
+            cm.pointee.cmsg_type = Int32(SCM_RIGHTS)
+            cm.pointee.cmsg_len = MemoryLayout.size(ofValue: fake_fd)
+
+            // TODO send `m`
+        }
+    }
+}
+
 private struct PendingStreamWrite {
     var data: IOData
     var promise: Optional<EventLoopPromise<Void>>
+    var metadata: MetadataEnvelope?
 }
 
 /// Write result is `.couldNotWriteEverything` but we have no more writes to perform.
@@ -322,7 +356,7 @@ private struct PendingStreamWritesState {
     }
 }
 
-/// This class manages the writing of pending writes to stream sockets. The state is held in a `PendingWritesState`
+/// This class manages the writing of pending writes to stream sockets. The state is held in a `PendingStreamWritesState`
 /// value. The most important purpose of this object is to call `write`, `writev` or `sendfile` depending on the
 /// currently pending writes.
 final class PendingStreamWritesManager: PendingWritesManager {
@@ -400,6 +434,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>
     ) throws -> OverallWriteResult {
         try self.triggerWriteOperations { writeMechanism in
+            // TODO: add with metadata calls.
             switch writeMechanism {
             case .scalarBufferWrite:
                 return try triggerScalarBufferWrite({ try scalarBufferWriteOperation($0) })
