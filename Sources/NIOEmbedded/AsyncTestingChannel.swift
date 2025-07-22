@@ -617,7 +617,7 @@ public final class NIOAsyncTestingChannel: Channel {
             return result as! Option.Value
         }
 
-        guard let value = optionValue(for: option) else {
+        guard let value = self.optionValue(for: option) else {
             fatalError("option \(option) not supported")
         }
 
@@ -632,7 +632,7 @@ public final class NIOAsyncTestingChannel: Channel {
     @inlinable
     internal func addOption<Option: ChannelOption>(_ option: Option, value: Option.Value) {
         // override the option if it exists
-        _stateLock.withLockedValue { state in
+        self._stateLock.withLockedValue { state in
             var options = state.options
             let optionIndex = options.firstIndex(where: { $0.option is Option })
             if let optionIndex = optionIndex {

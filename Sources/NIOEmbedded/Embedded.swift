@@ -794,7 +794,7 @@ public final class EmbeddedChannel: Channel {
 
     /// The `ChannelOption`s set on this channel.
     /// - see: `Embedded.setOption`
-    public var options: [(option: any ChannelOption, value: any Sendable)] { _options }
+    public var options: [(option: any ChannelOption, value: any Sendable)] { self._options }
 
     /// Synchronously closes the `EmbeddedChannel`.
     ///
@@ -1067,7 +1067,7 @@ public final class EmbeddedChannel: Channel {
 
     @inlinable
     internal func addOption<Option: ChannelOption>(_ option: Option, value: Option.Value) {
-        if let optionIndex = self.options.firstIndex(where: { $0.option is Option }) {
+        if let optionIndex = self._options.firstIndex(where: { $0.option is Option }) {
             self._options[optionIndex] = (option: option, value: value)
         } else {
             self._options.append((option: option, value: value))
