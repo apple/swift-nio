@@ -8,4 +8,4 @@ To run this server execute the following from the root of the repository:
 swift run NIOTCPEchoServer
 ```
 
-You can then use the `NIOTCPClient` to send requests to the server.
+You can then use the `NIOTCPEchoClient` to send requests to the server.
