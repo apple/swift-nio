@@ -52,12 +52,11 @@ internal enum NIOOnSocketsBootstraps {
 ///
 ///         // Set the handlers that are applied to the accepted child `Channel`s.
 ///         .childChannelInitializer { channel in
-///             // Ensure we don't read faster then we can write by adding the BackPressureHandler into the pipeline.
-///             channel.pipeline.addHandler(BackPressureHandler()).flatMap { () in
-///                 // make sure to instantiate your `ChannelHandlers` inside of
-///                 // the closure as it will be invoked once per connection.
-///                 channel.pipeline.addHandler(MyChannelHandler())
-///             }
+///            channel.eventLoop.makeCompletedFuture {
+///                // Ensure we don't read faster than we can write by adding the BackPressureHandler into the pipeline.
+///                try channel.pipeline.syncOperations.addHandler(BackPressureHandler())
+///                try channel.pipeline.syncOperations.addHandler(MyChannelHandler())
+///            }
 ///         }
 ///
 ///         // Enable SO_REUSEADDR for the accepted Channels
