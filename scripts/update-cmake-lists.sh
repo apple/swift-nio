@@ -129,7 +129,7 @@ done
 
 if [[ "${fail_on_changes}" == true ]]; then
     if [ -n "$(git status --untracked-files=no --porcelain)" ]; then
-        fatal "Changes in the cmake files detected. Please update."
+        fatal "Changes in the cmake files detected. Please update. -- $(git diff)"
     else
         log "✅ CMake files are up-to-date."
     fi
