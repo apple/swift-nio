@@ -636,7 +636,7 @@ public final class NIOAsyncTestingChannel: Channel {
             var options = state.options
             let optionIndex = options.firstIndex(where: { $0.option is Option })
             if let optionIndex = optionIndex {
-               options[optionIndex] = (option, value)
+                options[optionIndex] = (option, value)
             } else {
                 options.append((option, value))
             }

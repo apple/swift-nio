@@ -788,7 +788,6 @@ public final class EmbeddedChannel: Channel {
     /// - see: `Channel.isWritable`
     public var isWritable: Bool = true
 
-
     @usableFromInline
     internal var _options: [(option: any ChannelOption, value: any Sendable)] = []
 
