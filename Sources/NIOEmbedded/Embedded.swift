@@ -32,6 +32,8 @@ import Darwin
 @preconcurrency import Android
 #elseif canImport(WASILibc)
 @preconcurrency import WASILibc
+#elseif canImport(WinSDK)
+@preconcurrency import WinSDK
 #else
 #error("Unknown C library.")
 #endif
@@ -41,7 +43,12 @@ private func printError(_ string: StaticString) {
         var buf = buf
         while buf.count > 0 {
             // 2 is stderr
+            #if canImport(WinSDK)
+            let rc = _write(2, buf.baseAddress, UInt32(truncatingIfNeeded: buf.count))
+            let errno = GetLastError()
+            #else
             let rc = write(2, buf.baseAddress, buf.count)
+            #endif
             if rc < 0 {
                 let err = errno
                 if err == EINTR { continue }
