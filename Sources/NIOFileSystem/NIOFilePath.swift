@@ -30,7 +30,7 @@ import System
 ///
 /// ### Path Components
 ///
-/// You can access the different components of the path, such as its root and each of its components :
+/// You can access the different components of the path, such as its root and each of its components:
 ///
 /// ```swift
 /// let path: NIOFilePath = "/home/user/report.txt"
@@ -73,7 +73,7 @@ public struct NIOFilePath: Equatable, Hashable, Sendable, ExpressibleByStringLit
     }
 
     #if canImport(System)
-    /// Creates a  ``NIOFilePath`` given an underlying `System.FilePath` instance.
+    /// Creates a ``NIOFilePath`` given an underlying `System.FilePath` instance.
     ///
     /// - Parameter underlying: The `System.FilePath` instance to use to create this ``NIOFilePath`` instance.
     @available(macOS 12.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)
@@ -675,7 +675,6 @@ public struct NIOFilePath: Equatable, Hashable, Sendable, ExpressibleByStringLit
     }
 }
 
-// MARK: NIOFilePath.Root
 extension NIOFilePath.Root: ExpressibleByStringLiteral, CustomStringConvertible, CustomDebugStringConvertible {
     /// Create a file path root from a string.
     ///
@@ -687,7 +686,8 @@ extension NIOFilePath.Root: ExpressibleByStringLiteral, CustomStringConvertible,
         self.underlying = underlyingInstance
     }
 
-    /// Creates a file path root by copying bytes from a null-terminated platform string. It is a precondition that a null byte indicates the end of the string. The absence of a null byte will trigger a runtime error.
+    /// Creates a file path root by copying bytes from a null-terminated platform string. It is a precondition that a null byte indicates the end of the string.
+    /// The absence of a null byte will trigger a runtime error.
     ///
     /// Returns `nil` if `platformString` is empty or is not a root.
     ///
@@ -721,6 +721,10 @@ extension NIOFilePath.Root: ExpressibleByStringLiteral, CustomStringConvertible,
         self.underlying = .init(stringLiteral: stringLiteral)
     }
 
+    /// A textual representation of the path root.
+    ///
+    /// If the content of the path root isn't a well-formed Unicode string,
+    /// this replaces invalid bytes with U+FFFD. See `String.init(decoding:)`.
     public var description: String {
         self.underlying.description
     }
@@ -743,7 +747,6 @@ extension NIOFilePath.Root: ExpressibleByStringLiteral, CustomStringConvertible,
     }
 }
 
-// MARK: NIOFilePath.Component
 extension NIOFilePath.Component: ExpressibleByStringLiteral, CustomStringConvertible, CustomDebugStringConvertible {
     /// Create a file path component from a string.
     ///
@@ -864,7 +867,6 @@ extension NIOFilePath.Component: ExpressibleByStringLiteral, CustomStringConvert
     }
 }
 
-// MARK: NIOFilePath.ComponentView
 extension NIOFilePath.ComponentView: BidirectionalCollection, RangeReplaceableCollection, Collection, Sequence {
     public typealias Element = NIOFilePath.Component
 
