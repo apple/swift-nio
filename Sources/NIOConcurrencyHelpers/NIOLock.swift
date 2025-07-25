@@ -41,7 +41,7 @@ typealias LockPrimitive = pthread_mutex_t
 #endif
 
 @usableFromInline
-enum LockOperations {}
+enum LockOperations: Sendable {}
 
 extension LockOperations {
     @inlinable
@@ -184,6 +184,9 @@ final class LockStorage<Value>: ManagedBuffer<Value, LockPrimitive> {
         }
     }
 }
+
+@available(*, unavailable)
+extension LockStorage: Sendable {}
 
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///

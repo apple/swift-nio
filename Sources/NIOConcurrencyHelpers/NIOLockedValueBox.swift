@@ -80,3 +80,6 @@ public struct NIOLockedValueBox<Value> {
 }
 
 extension NIOLockedValueBox: @unchecked Sendable where Value: Sendable {}
+
+@available(*, unavailable)
+extension NIOLockedValueBox.Unsafe: Sendable {}

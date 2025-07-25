@@ -38,7 +38,7 @@ import WinSDK
 /// `NIOSingletons.singletonsEnabledSuggestion = false`. All singleton-creating facilities should check
 /// this setting and if `false` restrain from creating any global singleton resources. Please note that disabling the
 /// global singletons will lead to a crash if _any_ code attempts to use any of the singletons.
-public enum NIOSingletons {
+public enum NIOSingletons: Sendable {
 }
 
 extension NIOSingletons {

@@ -26,7 +26,7 @@ public struct NIOAsyncChannelInboundStream<Inbound: Sendable>: Sendable {
     >
 
     /// A source used for driving a ``NIOAsyncChannelInboundStream`` during tests.
-    public struct TestSource {
+    public struct TestSource: Sendable {
         @usableFromInline
         internal let continuation: AsyncThrowingStream<Inbound, Error>.Continuation
 
@@ -160,3 +160,6 @@ extension NIOAsyncChannelInboundStream: AsyncSequence {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelInboundStream.AsyncIterator: Sendable {}
+
+@available(*, unavailable)
+extension NIOAsyncChannelInboundStream.AsyncIterator._Backing: Sendable {}
