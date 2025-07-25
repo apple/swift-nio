@@ -185,8 +185,10 @@ final class LockStorage<Value>: ManagedBuffer<Value, LockPrimitive> {
     }
 }
 
+#if compiler(<6.2)
 @available(*, unavailable)
 extension LockStorage: Sendable {}
+#endif
 
 /// A threading lock based on `libpthread` instead of `libdispatch`.
 ///
