@@ -546,7 +546,7 @@ extension ByteBuffer {
 extension HTTPHeaders: RandomAccessCollection {
     public typealias Element = (name: String, value: String)
 
-    public struct Index: Comparable {
+    public struct Index: Comparable, Sendable {
         fileprivate let base: Array<(String, String)>.Index
         public static func < (lhs: Index, rhs: Index) -> Bool {
             lhs.base < rhs.base

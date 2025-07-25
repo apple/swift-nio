@@ -77,8 +77,14 @@ public struct Trace {
     }
 }
 
+@available(*, unavailable)
+extension Trace: Sendable {}
+
+@available(*, unavailable)
+extension Trace.Entry: Sendable {}
+
 @_spi(Testing)
-public enum ForceErrno: Equatable {
+public enum ForceErrno: Equatable, Sendable {
     case none
     case always(errno: CInt)
 
@@ -100,6 +106,9 @@ public final class MockingDriver {
     // inside FilePath
     fileprivate var forceWindowsSyntaxForPaths = false
 }
+
+@available(*, unavailable)
+extension MockingDriver: Sendable {}
 
 private let driverKey: _PlatformTLSKey = { makeTLSKey() }()
 

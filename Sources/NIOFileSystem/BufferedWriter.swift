@@ -243,3 +243,6 @@ extension WritableFileHandleProtocol {
         }
     }
 }
+
+@available(*, unavailable)
+extension BufferedWriter: Sendable {}

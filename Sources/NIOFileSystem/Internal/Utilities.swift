@@ -24,6 +24,9 @@ internal final class Ref<Value> {
     }
 }
 
+@available(*, unavailable)
+extension Ref: Sendable {}
+
 extension String {
     init(randomAlphaNumericOfLength length: Int) {
         precondition(length > 0)

@@ -239,3 +239,6 @@ extension ReadableFileHandleProtocol {
         BufferedReader(wrapping: self, initialOffset: initialOffset, capacity: Int(capacity.bytes))
     }
 }
+
+@available(*, unavailable)
+extension BufferedReader: Sendable {}

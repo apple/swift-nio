@@ -42,7 +42,7 @@ public struct NIOThrowingAsyncSequenceProducer<
     /// to yield new elements to the sequence.
     /// 2. The ``sequence`` which is the actual `AsyncSequence` and
     /// should be passed to the consumer.
-    public struct NewSequence {
+    public struct NewSequence: Sendable {
         /// The source of the ``NIOThrowingAsyncSequenceProducer`` used to yield and finish.
         public let source: Source
         /// The actual sequence which should be passed to the consumer.
@@ -318,7 +318,7 @@ extension NIOThrowingAsyncSequenceProducer {
         }
 
         /// The result of a call to ``NIOThrowingAsyncSequenceProducer/Source/yield(_:)``.
-        public enum YieldResult: Hashable {
+        public enum YieldResult: Hashable, Sendable {
             /// Indicates that the caller should produce more elements.
             case produceMore
             /// Indicates that the caller should stop producing elements.
@@ -782,7 +782,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `sequenceDeinitialized()`.
         @usableFromInline
-        enum SequenceDeinitializedAction {
+        enum SequenceDeinitializedAction: Sendable {
             /// Indicates that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case callDidTerminate
             /// Indicates that nothing should be done.
@@ -872,7 +872,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `iteratorDeinitialized()`.
         @usableFromInline
-        enum IteratorDeinitializedAction {
+        enum IteratorDeinitializedAction: Sendable {
             /// Indicates that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case callDidTerminate
             /// Indicates that nothing should be done.
@@ -911,7 +911,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `yield()`.
         @usableFromInline
-        enum YieldAction {
+        enum YieldAction: Sendable {
             /// Indicates that ``NIOThrowingAsyncSequenceProducer/Source/YieldResult/produceMore`` should be returned.
             case returnProduceMore
             /// Indicates that ``NIOThrowingAsyncSequenceProducer/Source/YieldResult/stopProducing`` should be returned.
@@ -1040,7 +1040,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `finish()`.
         @usableFromInline
-        enum FinishAction {
+        enum FinishAction: Sendable {
             /// Indicates that the continuation should be resumed with `nil` and
             /// that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case resumeContinuationWithFailureAndCallDidTerminate(CheckedContinuation<Element?, Error>, Failure?)
@@ -1092,7 +1092,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `cancelled()`.
         @usableFromInline
-        enum CancelledAction {
+        enum CancelledAction: Sendable {
             /// Indicates that ``NIOAsyncSequenceProducerDelegate/didTerminate()`` should be called.
             case callDidTerminate
             /// Indicates that the continuation should be resumed with a `CancellationError` and
@@ -1154,7 +1154,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `next()`.
         @usableFromInline
-        enum NextAction {
+        enum NextAction: Sendable {
             /// Indicates that the element should be returned to the caller.
             case returnElement(Element)
             /// Indicates that the element should be returned to the caller and
@@ -1268,7 +1268,7 @@ extension NIOThrowingAsyncSequenceProducer {
 
         /// Actions returned by `next(for:)`.
         @usableFromInline
-        enum NextForContinuationAction {
+        enum NextForContinuationAction: Sendable {
             /// Indicates that ``NIOAsyncSequenceProducerDelegate/produceMore()`` should be called.
             case callProduceMore
             /// Indicates that nothing should be done.

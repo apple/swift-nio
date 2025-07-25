@@ -140,7 +140,7 @@ public struct NIOAsyncWriter<
     /// This struct contains two properties:
     /// 1. The ``sink`` which should be retained by the consumer and is used to set the writability.
     /// 2. The ``writer`` which is the actual ``NIOAsyncWriter`` and should be passed to the producer.
-    public struct NewWriter {
+    public struct NewWriter: Sendable {
         /// The ``sink`` which **MUST** be retained by the consumer and is used to set the writability.
         public let sink: Sink
         /// The ``writer`` which is the actual ``NIOAsyncWriter`` and should be passed to the producer.
@@ -339,7 +339,7 @@ extension NIOAsyncWriter {
     /// The underlying sink of the ``NIOAsyncWriter``. This type allows to set the writability of the ``NIOAsyncWriter``.
     ///
     /// - Important: Once all copies to the ``NIOAsyncWriter/Sink`` are destroyed the ``NIOAsyncWriter`` will get finished.
-    public struct Sink {
+    public struct Sink: Sendable {
         /// This class is needed to hook the deinit to observe once all references to the ``NIOAsyncWriter/Sink`` are dropped.
         @usableFromInline
         internal final class InternalClass: Sendable {
@@ -746,7 +746,7 @@ extension NIOAsyncWriter {
         }
         /// The internal result of a yield.
         @usableFromInline
-        internal enum YieldResult {
+        internal enum YieldResult: Sendable {
             /// Indicates that the elements got yielded to the sink.
             case yielded
             /// Indicates that the yield should be retried.
@@ -858,7 +858,7 @@ extension NIOAsyncWriter {
 
         /// Actions returned by `setWritability()`.
         @usableFromInline
-        enum SetWritabilityAction {
+        enum SetWritabilityAction: Sendable {
             /// Indicates that all writer continuations should be resumed.
             case resumeContinuations(_TinyArray<SuspendedYield>)
         }
@@ -983,7 +983,7 @@ extension NIOAsyncWriter {
 
         /// Actions returned by `yield()`.
         @usableFromInline
-        enum YieldAction {
+        enum YieldAction: Sendable {
             /// Indicates that ``NIOAsyncWriterSinkDelegate/didYield(contentsOf:)`` should be called.
             case callDidYield(Delegate)
             /// Indicates that the calling `Task` should get suspended.
@@ -1214,7 +1214,7 @@ extension NIOAsyncWriter {
 
         /// Actions returned by `cancel()`.
         @usableFromInline
-        enum CancelAction {
+        enum CancelAction: Sendable {
             /// Indicates that the continuation should be resumed with a `CancellationError`.
             case resumeContinuationWithCancellationError(CheckedContinuation<YieldResult, Error>)
             /// Indicates that nothing should be done.
@@ -1352,7 +1352,7 @@ extension NIOAsyncWriter {
 
         /// Actions returned by `writerFinish()`.
         @usableFromInline
-        enum WriterFinishAction {
+        enum WriterFinishAction: Sendable {
             /// Indicates that ``NIOAsyncWriterSinkDelegate/didTerminate(completion:)`` should be called.
             case callDidTerminate(Delegate)
             /// Indicates that all continuations should be resumed.
@@ -1424,7 +1424,7 @@ extension NIOAsyncWriter {
 
         /// Actions returned by `sinkFinish()`.
         @usableFromInline
-        enum SinkFinishAction {
+        enum SinkFinishAction: Sendable {
             /// Indicates that all continuations should be resumed with the given error.
             case resumeContinuationsWithError(_TinyArray<SuspendedYield>, Error)
             /// Indicates that nothing should be done.
@@ -1469,7 +1469,7 @@ extension NIOAsyncWriter {
 
         /// Actions returned by `sinkFinish()`.
         @usableFromInline
-        enum UnbufferQueuedEventsAction {
+        enum UnbufferQueuedEventsAction: Sendable {
             case resumeContinuations(_TinyArray<SuspendedYield>)
             case callDidTerminate(Delegate, Error?)
         }

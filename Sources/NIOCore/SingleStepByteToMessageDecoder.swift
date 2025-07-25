@@ -187,7 +187,7 @@ extension NIOSingleStepByteToMessageDecoder {
 ///
 public final class NIOSingleStepByteToMessageProcessor<Decoder: NIOSingleStepByteToMessageDecoder> {
     @usableFromInline
-    enum DecodeMode {
+    enum DecodeMode: Sendable {
         /// This is a usual decode, ie. not the last chunk
         case normal
         /// Last chunk

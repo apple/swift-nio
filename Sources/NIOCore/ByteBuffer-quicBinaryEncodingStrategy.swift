@@ -14,7 +14,7 @@
 
 extension ByteBuffer {
     /// A ``NIOBinaryIntegerEncodingStrategy`` which encodes bytes as defined in RFC 9000 § 16
-    public struct QUICBinaryEncodingStrategy: NIOBinaryIntegerEncodingStrategy {
+    public struct QUICBinaryEncodingStrategy: NIOBinaryIntegerEncodingStrategy, Sendable {
         /// All possible values for how many bytes a QUIC encoded integer can be
         public enum IntegerLength: Int, Sendable {
             case one = 1

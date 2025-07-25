@@ -29,7 +29,7 @@ import CNIOLinux
 #endif
 
 @_spi(Testing)
-public enum Syscall {
+public enum Syscall: Sendable {
     @_spi(Testing)
     public static func stat(path: FilePath) -> Result<CInterop.Stat, Errno> {
         path.withPlatformString { platformPath in
@@ -91,7 +91,7 @@ public enum Syscall {
     }
 
     @_spi(Testing)
-    public struct RenameOptions: OptionSet {
+    public struct RenameOptions: OptionSet, Sendable {
         public var rawValue: CUnsignedInt
 
         public init(rawValue: CUnsignedInt) {
@@ -281,7 +281,7 @@ public enum Syscall {
 }
 
 @_spi(Testing)
-public enum Libc {
+public enum Libc: Sendable {
     static func readdir(
         _ dir: CInterop.DirPointer
     ) -> Result<UnsafeMutablePointer<CInterop.DirEnt>?, Errno> {

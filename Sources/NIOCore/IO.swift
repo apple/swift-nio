@@ -45,7 +45,7 @@ import Darwin
 /// An `Error` for an IO operation.
 public struct IOError: Swift.Error {
     @available(*, deprecated, message: "NIO no longer uses FailureDescription.")
-    public enum FailureDescription {
+    public enum FailureDescription: Sendable {
         case function(StaticString)
         case reason(String)
     }

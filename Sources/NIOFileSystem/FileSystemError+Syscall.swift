@@ -435,7 +435,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public enum ReadSyscall: String {
+    public enum ReadSyscall: String, Sendable {
         case read
         case pread
     }
@@ -487,7 +487,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public enum WriteSyscall: String {
+    public enum WriteSyscall: String, Sendable {
         case write
         case pwrite
     }

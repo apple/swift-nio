@@ -33,3 +33,5 @@ enum IOResult<T: Equatable>: Equatable {
     /// Signals that the IO operation was completed.
     case processed(T)
 }
+
+extension IOResult: Sendable where T: Sendable {}
