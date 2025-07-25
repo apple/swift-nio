@@ -74,7 +74,7 @@ struct Client {
                     let clientUpgradeConfiguration = NIOTypedHTTPClientUpgradeConfiguration(
                         upgradeRequestHead: requestHead,
                         upgraders: [upgrader],
-                        notUpgradingCompletionHandler: { channel in
+                        notUpgradingCompletionHandler: { channel, _ in
                             channel.eventLoop.makeCompletedFuture {
                                 UpgradeResult.notUpgraded
                             }

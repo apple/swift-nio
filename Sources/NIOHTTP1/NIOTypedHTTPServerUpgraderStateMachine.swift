@@ -141,7 +141,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
     @usableFromInline
     enum ChannelReadRequestPartAction {
         case failUpgradePromise(Error)
-        case runNotUpgradingInitializer
+        case runNotUpgradingInitializer(HTTPRequestHead)
         case startUpgrading(
             upgrader: any NIOTypedHTTPServerProtocolUpgrader<UpgradeResult>,
             requestHead: HTTPRequestHead,
@@ -174,7 +174,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
                 var buffer = Deque<State.BufferedState>()
                 buffer.append(.data(NIOAny(requestPart)))
                 self.state = .upgrading(.init(buffer: buffer))
-                return .runNotUpgradingInitializer
+                return .runNotUpgradingInitializer(head)
             }
 
             // We can now transition to awaiting the upgrader. This means that we are trying to
@@ -302,7 +302,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
             responseHeaders: HTTPHeaders,
             proto: String
         )
-        case runNotUpgradingInitializer
+        case runNotUpgradingInitializer(HTTPRequestHead)
         case fireErrorCaughtAndStartUnbuffering(Error)
         case fireErrorCaughtAndRemoveHandler(Error)
     }
@@ -348,7 +348,7 @@ struct NIOTypedHTTPServerUpgraderStateMachine<UpgradeResult> {
                 // There was no upgrader to handle the request. We just run the not upgrading
                 // initializer now.
                 self.state = .upgrading(.init(buffer: awaitingUpgrader.buffer))
-                return .runNotUpgradingInitializer
+                return .runNotUpgradingInitializer(requestHead)
 
             case .failure(let error):
                 if !awaitingUpgrader.buffer.isEmpty {
