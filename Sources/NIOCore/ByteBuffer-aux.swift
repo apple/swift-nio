@@ -58,6 +58,48 @@ extension ByteBuffer {
         return result
     }
 
+    #if compiler(>=6.2)
+    @_spi(InlineArray)
+    @inlinable
+    public mutating func readInlineArray<
+        let count: Int,
+        IntegerType: FixedWidthInteger
+    >(
+        endianness: Endianness = .big,
+        as: InlineArray<count, IntegerType>.Type = InlineArray<count, IntegerType>.self
+    ) -> InlineArray<count, IntegerType>? {
+        // use stride to account for padding bytes
+        let stride = MemoryLayout<IntegerType>.stride
+        let bytesRequired = stride * count
+
+        guard self.readableBytes >= bytesRequired else {
+            return nil
+        }
+
+        do {
+            let inlineArray = try InlineArray<count, IntegerType> { index in
+                guard
+                    let integer = self.getInteger(
+                        // this is less than 'bytesRequired' so is safe to multiply
+                        at: stride &* index,
+                        endianness: endianness,
+                        as: IntegerType.self
+                    )
+                else {
+                    throw InlineArrayFailedToGetElementError()
+                }
+                return integer
+            }
+            // already made sure of 'self.readableBytes >= bytesRequired' above
+            self._moveReaderIndex(forwardBy: bytesRequired)
+            return inlineArray
+        } catch {
+            // only 'InlineArrayFailedToGetElementError' could have been thrown
+            return nil
+        }
+    }
+    #endif
+
     /// Returns the Bytes at the current reader index without advancing it.
     ///
     /// This method is equivalent to calling `getBytes(at: readerIndex, ...)`
@@ -1041,3 +1083,9 @@ extension ByteBuffer {
     }
 }
 #endif  // compiler(>=6)
+
+@usableFromInline
+struct InlineArrayFailedToGetElementError: Error {
+    @usableFromInline
+    init() {}
+}
