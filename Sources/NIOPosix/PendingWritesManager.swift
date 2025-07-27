@@ -16,43 +16,10 @@ import Atomics
 import CNIOLinux
 import NIOCore
 
-public struct MetadataEnvelope {
-    public var data: ByteBuffer
-    public var controlData: MessageMetadata? = nil
-
-    public init(data: ByteBuffer) {
-        self.data = data
-    }
-
-    public init(data: ByteBuffer, controlData: MessageMetadata?) {
-        self.data = data
-        self.controlData = controlData
-    }
-
-    /// Any metadata associated with an
-    public struct MessageMetadata: Hashable, Sendable {
-        init() {
-            var m: msghdr = .init()
-            // Create buffer for file descriptor
-            let fake_fd = 6666
-            let fd_pointer = UnsafeMutableRawPointer(bitPattern: fake_fd)
-            m.msg_control = fd_pointer
-            m.msg_controllen = MemoryLayout.size(ofValue: fake_fd)
-            // TODO other platoforms
-            let cm: UnsafeMutablePointer<cmsghdr> = CNIOLinux_CMSG_FIRSTHDR(&m)
-            cm.pointee.cmsg_level = SOL_SOCKET
-            cm.pointee.cmsg_type = Int32(SCM_RIGHTS)
-            cm.pointee.cmsg_len = MemoryLayout.size(ofValue: fake_fd)
-
-            // TODO send `m`
-        }
-    }
-}
-
 private struct PendingStreamWrite {
     var data: IOData
     var promise: Optional<EventLoopPromise<Void>>
-    var metadata: MetadataEnvelope?
+    var metadata: AddressedEnvelope<ByteBuffer>.Metadata?
 }
 
 /// Write result is `.couldNotWriteEverything` but we have no more writes to perform.
@@ -404,7 +371,10 @@ final class PendingStreamWritesManager: PendingWritesManager {
     func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
         assert(self.isOpen)
         self.state.append(PendingStreamWrite(data: data, promise: promise))
+        return _add()
+    }
 
+    private func _add() -> Bool {
         if self.state.bytes > waterMark.high
             && channelWritabilityFlag.compareExchange(expected: true, desired: false, ordering: .relaxed).exchanged
         {
@@ -413,6 +383,14 @@ final class PendingStreamWritesManager: PendingWritesManager {
             return false
         }
         return true
+    }
+
+    func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
+        assert(self.isOpen)
+        self.state.append(
+            PendingStreamWrite(data: .byteBuffer(envelope.data), promise: promise, metadata: envelope.metadata)
+        )
+        return _add()
     }
 
     /// Returns the best mechanism to write pending data at the current point in time.
@@ -434,6 +412,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
         scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>
     ) throws -> OverallWriteResult {
         try self.triggerWriteOperations { writeMechanism in
+            print(#function, writeMechanism)
             // TODO: add with metadata calls.
             switch writeMechanism {
             case .scalarBufferWrite:
