@@ -25,7 +25,7 @@ jobs:
   release-builds:
     name: Release builds
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/release_builds.yml@main
+    uses: apple/swift-nio/.github/workflows/release_builds.yml@release-builds
 
   benchmarks:
     name: Benchmarks
