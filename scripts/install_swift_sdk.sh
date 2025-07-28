@@ -54,7 +54,7 @@ case "$sdk" in
     sdk_suffix="_wasm"
     ;;
   *)
-    fatal "Unexpected SDK: $sdk"
+    fatal "Unexpected Swift SDK: $sdk"
     ;;
 esac
 

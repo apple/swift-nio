@@ -18,7 +18,7 @@ set -uo pipefail
 # Select the Swift SDK for WebAssembly, not the Embedded one
 SWIFT_SDK="$(swift sdk list | grep _wasm | grep -v -embedded | head -n1)"
 if [[ -z "$SWIFT_SDK" ]]; then
-  echo "No WebAssembly SDK found. Please ensure you have the WebAssembly SDK installed."
+  echo "No WebAssembly Swift SDK found. Please ensure you have the WebAssembly Swift SDK installed following https://www.swift.org/documentation/articles/wasm-getting-started.html."
   exit 1
 fi
 
