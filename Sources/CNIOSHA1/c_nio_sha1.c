@@ -56,6 +56,16 @@
 #include <sys/endian.h>
 #elif defined(__linux__) || defined(__APPLE__) || defined(__wasm32__)
 #include <sys/types.h>
+#elif defined(_WIN32) || defined(_WIN64)
+	#ifndef LITTLE_ENDIAN
+	#define LITTLE_ENDIAN 1234
+	#endif
+	#ifndef BIG_ENDIAN
+	#define BIG_ENDIAN 4321
+	#endif
+	#ifndef BYTE_ORDER
+	#define BYTE_ORDER LITTLE_ENDIAN
+	#endif
 #endif
 
 

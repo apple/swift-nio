@@ -312,10 +312,8 @@ jobs:
           persist-credentials: false
           submodules: true
       - name: Setup command
-        run: |
-          if [ -n "${{ matrix.config.setup_command }}" ]; then
-            bash -c "${{ matrix.config.setup_command }}"
-          fi
+        if: ${{ matrix.config.setup_command != '' }}
+        run: bash -c "${{ matrix.config.setup_command }}"
       - name: Swift build
         run: |
           if [ -n "${{ matrix.config.build_arguments_override }}" ]; then
