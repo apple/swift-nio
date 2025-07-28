@@ -13,8 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
-import WinSDK
 import NIOCore
+#if canImport(WinSDK)
+import WinSDK
+#endif
 
 /// The container used for writing multiple buffers via `writev`.
 #if canImport(WinSDK)
