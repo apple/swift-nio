@@ -22,11 +22,6 @@ jobs:
       linux_nightly_6_1_arguments_override: "-Xswiftc -warnings-as-errors --explicit-target-dependency-import-check error"
       linux_nightly_main_arguments_override: "--explicit-target-dependency-import-check error"
 
-  release-builds:
-    name: Release builds
-    # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/release_builds.yml@release-builds
-
   benchmarks:
     name: Benchmarks
     # Workaround https://github.com/nektos/act/issues/1875
