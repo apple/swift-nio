@@ -99,7 +99,7 @@ public struct NIOFilePath: Equatable, Hashable, Sendable, ExpressibleByStringLit
     ///   * `\\?\UNC\server\share\`
     ///   * `\\?\Volume{12345678-abcd-1111-2222-123445789abc}\`
     public struct Root: Equatable, Hashable, Sendable {
-        let underlying: SystemPackage.FilePath.Root
+        package let underlying: SystemPackage.FilePath.Root
 
         /// Creates a ``NIOFilePath/Root`` given an underlying `SystemPackage.FilePath.Root` instance.
         ///
@@ -132,7 +132,7 @@ public struct NIOFilePath: Equatable, Hashable, Sendable, ExpressibleByStringLit
     ///     file.extension                  // "txt"
     ///     path.append(file)               // path is "/tmp/foo.txt"
     public struct Component: Equatable, Hashable, Sendable {
-        let underlying: SystemPackage.FilePath.Component
+        package let underlying: SystemPackage.FilePath.Component
 
         /// Creates a ``NIOFilePath/Component`` given an underlying `SystemPackage.FilePath.Component` instance.
         ///
@@ -167,7 +167,7 @@ public struct NIOFilePath: Equatable, Hashable, Sendable, ExpressibleByStringLit
     ///     path.components.removeAll { $0.kind == .currentDirectory }
     ///     // path is "/home/username/bin/scripts/tree"
     public struct ComponentView: Equatable, Hashable, Sendable {
-        var underlying: SystemPackage.FilePath.ComponentView
+        package var underlying: SystemPackage.FilePath.ComponentView
 
         /// Creates a ``NIOFilePath/ComponentView`` given an underlying `SystemPackage.FilePath.ComponentView` instance.
         ///
@@ -183,7 +183,7 @@ public struct NIOFilePath: Equatable, Hashable, Sendable, ExpressibleByStringLit
         /// - Parameter underlying: The `System.FilePath.ComponentView` instance to use to create this
         /// ``NIOFilePath/ComponentView`` instance.
         @available(macOS 12.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *)
-        public init?(_ underlying: System.FilePath.ComponentView) {
+        public init(_ underlying: System.FilePath.ComponentView) {
             let components = underlying.compactMap(NIOFilePath.Component.init)
             self.init(components)
         }
@@ -246,7 +246,12 @@ public struct NIOFilePath: Equatable, Hashable, Sendable, ExpressibleByStringLit
     ///     path.components.removeAll { $0.kind == .currentDirectory }
     ///     // path is "/home/username/bin/scripts/tree"
     public var components: ComponentView {
-        .init(self.underlying.components)
+        get {
+            ComponentView(self.underlying.components)
+        }
+        set {
+            self.underlying.components = newValue.underlying
+        }
     }
 
     /// Creates an instance representing an empty and null-terminated filepath.
@@ -602,7 +607,7 @@ public struct NIOFilePath: Equatable, Hashable, Sendable, ExpressibleByStringLit
         NIOFilePath(self.underlying.removingLastComponent())
     }
 
-    /// In-place mutating variant of ``removeLastComponent()``.
+    /// In-place mutating variant of ``removingLastComponent()``.
     ///
     /// If `self` only contains a root, does nothing and returns `false`. Otherwise removes `lastComponent` and returns `true`.
     ///
