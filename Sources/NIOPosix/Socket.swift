@@ -13,10 +13,15 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import WinSDK
 import NIOCore
 
 /// The container used for writing multiple buffers via `writev`.
+#if canImport(WinSDK)
+typealias IOVector = WSABUF
+#else
 typealias IOVector = iovec
+#endif
 
 // TODO: scattering support
 class Socket: BaseSocket, SocketProtocol {
@@ -195,14 +200,12 @@ class Socket: BaseSocket, SocketProtocol {
         )
         let notConstCorrectDestinationPtr = UnsafeMutableRawPointer(mutating: destinationPtr)
 
-        return try withUnsafeHandle { handle in
+        return try self.withUnsafeHandle { handle in
             try withUnsafeMutablePointer(to: &vec) { vecPtr in
                 #if os(Windows)
                 var messageHeader =
                     WSAMSG(
-                        name:
-                            notConstCorrectDestinationPtr
-                            .assumingMemoryBound(to: sockaddr.self),
+                        name: notConstCorrectDestinationPtr?.assumingMemoryBound(to: sockaddr.self),
                         namelen: destinationSize,
                         lpBuffers: vecPtr,
                         dwBufferCount: 1,
