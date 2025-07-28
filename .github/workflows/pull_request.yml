@@ -91,6 +91,6 @@ jobs:
     uses: apple/swift-nio/.github/workflows/static_sdk.yml@main
 
   wasm-sdk:
-    name: WebAssembly SDK
+    name: WebAssembly Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/wasm_sdk.yml@main

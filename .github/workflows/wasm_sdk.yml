@@ -5,11 +5,11 @@ on:
 
 jobs:
   wasm-sdk:
-    name: WebAssembly SDK
+    name: WebAssembly Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
-      name: "WebAssembly SDK"
+      name: "WebAssembly Swift SDK"
       matrix_string: >-
         {
           "config":[
