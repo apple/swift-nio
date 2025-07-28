@@ -15,7 +15,12 @@
 import Atomics
 import CNIODarwin
 import CNIOLinux
+import CNIOWindows
 import NIOCore
+
+#if canImport(WinSDK)
+import struct WinSDK.socklen_t
+#endif
 
 private struct PendingDatagramWrite {
     var data: ByteBuffer
@@ -136,7 +141,7 @@ private func doPendingDatagramWriteVectorOperation(
                     protocolFamily = connectedRemoteAddress.protocol
                 }
 
-                iovecs[c] = iovec(
+                iovecs[c] = IOVector(
                     iov_base: UnsafeMutableRawPointer(mutating: ptr.baseAddress!),
                     iov_len: numericCast(toWriteForThisBuffer)
                 )

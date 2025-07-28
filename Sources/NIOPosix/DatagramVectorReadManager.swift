@@ -15,6 +15,10 @@ import CNIODarwin
 import CNIOLinux
 import NIOCore
 
+#if canImport(WinSDK)
+import WinSDK
+#endif
+
 /// An object that manages issuing vector reads for datagram channels.
 ///
 /// Datagram channels have slightly complex read semantics, as high-throughput datagram
