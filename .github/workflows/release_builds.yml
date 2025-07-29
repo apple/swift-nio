@@ -62,8 +62,8 @@ on:
         default: ""
       windows_nightly_next_enabled:
         type: boolean
-        description: "Boolean to enable the Windows matrix job using the nightly build for the next Swift version. Defaults to true."
-        default: true
+        description: "Boolean to enable the Windows matrix job using the nightly build for the next Swift version. Defaults to false."
+        default: false
       windows_nightly_next_arguments_override:
         type: string
         description: "The arguments passed to swift test in the Windows matrix job using the nightly build for the next Swift version."
