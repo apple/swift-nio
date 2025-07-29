@@ -114,7 +114,7 @@ internal typealias msghdr = WSAMSG
 internal typealias in_addr = IN_ADDR
 internal typealias in_port_t = USHORT
 internal typealias sa_family_t = ADDRESS_FAMILY
-internal typealias sockaddr = SOCKADDR
+public typealias sockaddr = SOCKADDR
 internal typealias sockaddr_in = SOCKADDR_IN
 internal typealias sockaddr_in6 = SOCKADDR_IN6
 internal typealias sockaddr_un = SOCKADDR_UN
@@ -699,6 +699,17 @@ extension NIOBSDSocket {
 
     static func getUDPReceiveOffload(socket: NIOBSDSocket.Handle) throws -> Bool {
         throw ChannelError.operationUnsupported
+    }
+}
+
+extension IOVector {
+    // An initializer thats maps `ByteBuffer`` derived pointers to WSABUF. This allows us to use the
+    // same initializer, that we use for iovecs on Windows.
+    init(iov_base: UnsafeMutableRawPointer, iov_len: UInt32) {
+        self = WSABUF(
+            len: iov_len,
+            buf: iov_base.assumingMemoryBound(to: Int8.self)
+        )
     }
 }
 #endif
