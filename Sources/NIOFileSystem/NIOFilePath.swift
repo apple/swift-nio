@@ -32,7 +32,7 @@ public struct NIOFilePath: Equatable, Hashable, Sendable, ExpressibleByStringLit
     CustomDebugStringConvertible
 {
     /// The underlying `SystemPackage.FilePath` instance that ``NIOFilePath`` uses.
-    let underlying: SystemPackage.FilePath
+    var underlying: SystemPackage.FilePath
 
     /// Creates a ``NIOFilePath`` given an underlying `SystemPackage.FilePath` instance.
     ///
