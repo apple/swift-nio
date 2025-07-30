@@ -22,7 +22,7 @@ import DequeModule
 @usableFromInline
 internal final class NIOAsyncChannelHandler<InboundIn: Sendable, ProducerElement: Sendable, OutboundOut: Sendable> {
     @usableFromInline
-    enum _ProducingState {
+    enum _ProducingState: Sendable {
         // Not .stopProducing
         case keepProducing
 
@@ -493,3 +493,6 @@ extension NIOAsyncChannelHandler {
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 @available(*, unavailable)
 extension NIOAsyncChannelHandler: Sendable {}
+
+@available(*, unavailable)
+extension NIOAsyncChannelHandler.Transformation: Sendable {}

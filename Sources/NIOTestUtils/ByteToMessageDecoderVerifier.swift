@@ -14,7 +14,7 @@
 import NIOCore
 import NIOEmbedded
 
-public enum ByteToMessageDecoderVerifier {
+public enum ByteToMessageDecoderVerifier: Sendable {
     /// - seealso: verifyDecoder(inputOutputPairs:decoderFactory:)
     ///
     /// Verify `ByteToMessageDecoder`s with `String` inputs
@@ -239,6 +239,9 @@ extension ByteToMessageDecoderVerifier {
         }
     }
 }
+
+@available(*, unavailable)
+extension ByteToMessageDecoderVerifier.VerificationError.ErrorCode: Sendable {}
 
 /// `VerificationError` conforms to `Error` and therefore needs to conform to `Sendable` too.
 /// `VerificationError` has a stored property `errorCode` of type `ErrorCode` which can store `NIOAny` which is not and can not be `Sendable`.

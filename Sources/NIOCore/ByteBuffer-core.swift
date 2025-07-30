@@ -1286,3 +1286,6 @@ extension ByteBuffer {
         return Range<Int>(uncheckedBounds: (lower: indexFromReaderIndex, upper: upperBound))
     }
 }
+
+@available(*, unavailable)
+extension ByteBuffer._Storage: Sendable {}
