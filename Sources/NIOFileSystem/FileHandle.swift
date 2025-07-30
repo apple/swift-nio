@@ -246,7 +246,7 @@ public struct WriteFileHandle: WritableFileHandleProtocol, _HasFileHandle, Senda
 /// Implements ``ReadableAndWritableFileHandleProtocol`` by making system calls to interact with the
 /// local file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFileHandle {
+public struct ReadWriteFileHandle: ReadableAndWritableFileHandleProtocol, _HasFileHandle, Sendable {
     public let fileHandle: FileHandle
 
     internal init(wrapping systemFileHandle: SystemFileHandle) {

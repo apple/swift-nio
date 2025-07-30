@@ -67,6 +67,8 @@ jobs:
     with:
       runner_pool: nightly
       build_scheme: swift-nio-Package
+      xcode_16_2_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
+      xcode_16_3_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
       macos_xcode_test_enabled: false  # Disabled because of an issue
       ios_xcode_test_enabled: true
       watchos_xcode_test_enabled: true

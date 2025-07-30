@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 @usableFromInline
-enum _IntegerBitPacking {}
+enum _IntegerBitPacking: Sendable {}
 
 extension _IntegerBitPacking {
     @inlinable
@@ -58,7 +58,7 @@ extension _IntegerBitPacking {
 }
 
 @usableFromInline
-enum IntegerBitPacking {}
+enum IntegerBitPacking: Sendable {}
 
 extension IntegerBitPacking {
     @inlinable
