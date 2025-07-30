@@ -102,8 +102,8 @@ on:
         default: ""
       windows_nightly_next_enabled:
         type: boolean
-        description: "Boolean to enable the Windows matrix job using the nightly build for the next Swift version. Defaults to true."
-        default: true
+        description: "Boolean to enable the Windows matrix job using the nightly build for the next Swift version. Defaults to false."
+        default: false
       windows_nightly_next_arguments_override:
         type: string
         description: "The arguments passed to swift test in the Windows matrix job using the nightly build for the next Swift version."
@@ -141,7 +141,7 @@ jobs:
           MATRIX_LINUX_6_0_COMMAND_ARGUMENTS: ${{ inputs.linux_6_0_arguments_override }}
           MATRIX_LINUX_6_1_ENABLED: ${{ inputs.linux_6_1_enabled }}
           MATRIX_LINUX_6_1_COMMAND_ARGUMENTS: ${{ inputs.linux_6_1_arguments_override }}
-          MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_6_1_enabled && inputs.linux_nightly_next_enabled }}
+          MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_6_1_enabled || inputs.linux_nightly_next_enabled }}
           MATRIX_LINUX_NIGHTLY_NEXT_COMMAND_ARGUMENTS: ${{ inputs.linux_nightly_6_1_arguments_override }} ${{ inputs.linux_nightly_next_arguments_override }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
           MATRIX_LINUX_NIGHTLY_MAIN_COMMAND_ARGUMENTS: ${{ inputs.linux_nightly_main_arguments_override }}
@@ -150,7 +150,7 @@ jobs:
           MATRIX_WINDOWS_6_0_COMMAND_ARGUMENTS: ${{ inputs.windows_6_0_arguments_override }}
           MATRIX_WINDOWS_6_1_ENABLED: ${{ inputs.windows_6_1_enabled }}
           MATRIX_WINDOWS_6_1_COMMAND_ARGUMENTS: ${{ inputs.windows_6_1_arguments_override }}
-          MATRIX_WINDOWS_NIGHTLY_NEXT_ENABLED: ${{ inputs.windows_nightly_6_1_enabled && inputs.windows_nightly_next_enabled }}
+          MATRIX_WINDOWS_NIGHTLY_NEXT_ENABLED: ${{ inputs.windows_nightly_6_1_enabled || inputs.windows_nightly_next_enabled }}
           MATRIX_WINDOWS_NIGHTLY_NEXT_COMMAND_ARGUMENTS: ${{ inputs.windows_nightly_6_1_arguments_override }} ${{ inputs.windows_nightly_next_arguments_override }}
           MATRIX_WINDOWS_NIGHTLY_MAIN_ENABLED: ${{ inputs.windows_nightly_main_enabled }}
           MATRIX_WINDOWS_NIGHTLY_MAIN_COMMAND_ARGUMENTS: ${{ inputs.windows_nightly_main_arguments_override }}
