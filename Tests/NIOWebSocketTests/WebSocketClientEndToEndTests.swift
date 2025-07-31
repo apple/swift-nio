@@ -502,7 +502,7 @@ class WebSocketClientEndToEndTests: XCTestCase {
 final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
     func setUpClientChannel(
         clientUpgraders: [any NIOTypedHTTPClientProtocolUpgrader<Void>],
-        notUpgradingCompletionHandler: @Sendable @escaping (Channel) -> EventLoopFuture<Void>
+        notUpgradingCompletionHandler: @Sendable @escaping (Channel, HTTPResponseHead) -> EventLoopFuture<Void>
     ) throws -> (EmbeddedChannel, EventLoopFuture<Void>) {
 
         let channel = EmbeddedChannel()
@@ -550,7 +550,7 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         // The process should kick-off independently by sending the upgrade request to the server.
         let (clientChannel, upgradeResult) = try setUpClientChannel(
             clientUpgraders: [basicUpgrader],
-            notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() }
+            notUpgradingCompletionHandler: { channel, _ in channel.eventLoop.makeSucceededVoidFuture() }
         )
 
         // Read the server request.
@@ -621,7 +621,7 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         // The process should kick-off independently by sending the upgrade request to the server.
         let (clientChannel, upgradeResult) = try setUpClientChannel(
             clientUpgraders: [basicUpgrader],
-            notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() }
+            notUpgradingCompletionHandler: { channel, _ in channel.eventLoop.makeSucceededVoidFuture() }
         )
 
         // Push the successful server response but with a missing accept key.
@@ -656,7 +656,7 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         // The process should kick-off independently by sending the upgrade request to the server.
         let (clientChannel, upgradeResult) = try setUpClientChannel(
             clientUpgraders: [basicUpgrader],
-            notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() }
+            notUpgradingCompletionHandler: { channel, _ in channel.eventLoop.makeSucceededVoidFuture() }
         )
 
         // Push the successful server response but with an incorrect response key.
@@ -692,7 +692,7 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         // The process should kick-off independently by sending the upgrade request to the server.
         let (clientChannel, upgradeResult) = try setUpClientChannel(
             clientUpgraders: [basicUpgrader],
-            notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() }
+            notUpgradingCompletionHandler: { channel, _ in channel.eventLoop.makeSucceededVoidFuture() }
         )
 
         // Push the successful server response with an incorrect protocol.
@@ -725,7 +725,7 @@ final class TypedWebSocketClientEndToEndTests: WebSocketClientEndToEndTests {
         // The process should kick-off independently by sending the upgrade request to the server.
         let (clientChannel, upgradeResult) = try setUpClientChannel(
             clientUpgraders: [basicUpgrader],
-            notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() }
+            notUpgradingCompletionHandler: { channel, _ in channel.eventLoop.makeSucceededVoidFuture() }
         )
 
         // Push the successful server response.
