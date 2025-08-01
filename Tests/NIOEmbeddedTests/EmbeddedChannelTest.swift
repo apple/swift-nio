@@ -693,16 +693,16 @@ class EmbeddedChannelTest: XCTestCase {
         XCTAssertTrue(try channel.finish().isClean)
     }
 
-    func testGetSetOption() async throws {
+    func testGetSetOption() throws {
         let channel = EmbeddedChannel()
         let option = ChannelOptions.socket(IPPROTO_IP, IP_TTL)
         let _ = channel.setOption(option, value: 1)
 
-        let optionValue1 = try await channel.getOption(option).get()
+        let optionValue1 = try channel.getOption(option).wait()
         XCTAssertEqual(1, optionValue1)
 
         let _ = channel.setOption(option, value: 2)
-        let optionValue2 = try await channel.getOption(option).get()
+        let optionValue2 = try channel.getOption(option).wait()
         XCTAssertEqual(2, optionValue2)
     }
 }
