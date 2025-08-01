@@ -72,7 +72,7 @@ extension AggregateStacks {
         case .dtrace:
             stacks = DTraceParser.parse(lines: lines)
         case .bpftrace:
-            fatalError("bpftrace isn't supported yet, why don't you add it?")
+            stacks = BPFTraceParser.parse(lines: lines)
         }
 
         // Combine equivalent stacks.
