@@ -2419,23 +2419,12 @@ public final class NIOPipeBootstrap {
     }
 
     private func _takingOwnershipOfDescriptors(input: CInt?, output: CInt?) -> EventLoopFuture<Channel> {
-        let channelInitializer: @Sendable (Channel) -> EventLoopFuture<Channel> = {
-            let eventLoop = self.group.next()
-            let channelInitializer = self.channelInitializer
-            return { channel in
-                if let channelInitializer = channelInitializer {
-                    return channelInitializer(channel).map { channel }
-                } else {
-                    return eventLoop.makeSucceededFuture(channel)
-                }
-            }
-
-        }()
         return self._takingOwnershipOfDescriptors(
             input: input,
-            output: output,
-            channelInitializer: channelInitializer
-        )
+            output: output
+        ) { channel in
+            channel.eventLoop.makeSucceededFuture(channel)
+        }
     }
 
     @available(*, deprecated, renamed: "takingOwnershipOfDescriptor(inputOutput:)")
