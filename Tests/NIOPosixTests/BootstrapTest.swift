@@ -868,34 +868,34 @@ class BootstrapTest: XCTestCase {
     func testNoDoubleAddOnPipeBootstrapTakingOwnership_inputOutput() throws {
         try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
             $0.takingOwnershipOfDescriptor(inputOutput: $1)
-         }
+        }
     }
 
     func testNoDoubleAddOnPipeBootstrapTakingOwnership_input() throws {
         try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
             $0.takingOwnershipOfDescriptor(input: $1)
-         }
+        }
     }
 
     func testNoDoubleAddOnPipeBootstrapTakingOwnership_output() throws {
         try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
             $0.takingOwnershipOfDescriptor(output: $1)
-         }
+        }
     }
 
     func testNoDoubleAddOnPipeBootstrapTakingOwnership_inputOutputSeparate() throws {
         try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
             $0.takingOwnershipOfDescriptors(input: $1, output: dup($1))
-         }
+        }
     }
 }
 
 private final class AddOnceHandler: ChannelInboundHandler, Sendable {
     typealias InboundIn = Any
-    
+
     let added = NIOLockedValueBox(0)
 
-    init() { }
+    init() {}
 
     func handlerAdded(context: ChannelHandlerContext) {
         self.added.withLockedValue { $0 += 1 }

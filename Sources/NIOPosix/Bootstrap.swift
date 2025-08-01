@@ -2419,7 +2419,7 @@ public final class NIOPipeBootstrap {
     }
 
     private func _takingOwnershipOfDescriptors(input: CInt?, output: CInt?) -> EventLoopFuture<Channel> {
-        return self._takingOwnershipOfDescriptors(
+        self._takingOwnershipOfDescriptors(
             input: input,
             output: output
         ) { channel in
