@@ -65,8 +65,8 @@ public struct BPFTraceParser: StackParser {
     ///
     /// ```
     /// Attaching 14 probes...
-    /// 
-    /// 
+    ///
+    ///
     /// =====
     /// This will collect stack shots of allocations and print it when you exit bpftrace.
     /// So go ahead, run your tests and then press Ctrl+C in this window to see the aggregated result
