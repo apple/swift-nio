@@ -823,6 +823,83 @@ class BootstrapTest: XCTestCase {
         let channelFuture = bootstrap?.takingOwnershipOfDescriptor(inputOutput: sock)
         XCTAssertThrowsError(try channelFuture?.wait())
     }
+
+    private func doTestNoDoubleAddOnPipeBootstrapTakingOwnership(
+        _ method: (NIOPipeBootstrap, CInt) -> EventLoopFuture<Channel>
+    ) throws {
+        var socketPair: [CInt] = [-1, -1]
+        XCTAssertNoThrow(
+            try socketPair.withUnsafeMutableBufferPointer { socketPairPtr in
+                precondition(socketPairPtr.count == 2)
+                try Posix.socketpair(
+                    domain: .local,
+                    type: .stream,
+                    protocolSubtype: .default,
+                    socketVector: socketPairPtr.baseAddress
+                )
+            }
+        )
+        defer {
+            XCTAssertNoThrow(try socketPair.filter { $0 > 0 }.forEach(Posix.close(descriptor:)))
+        }
+
+        let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
+
+        let handler = AddOnceHandler()
+        let bootstrap = NIOPipeBootstrap(group: elg)
+            .channelInitializer { channel in
+                channel.eventLoop.makeCompletedFuture {
+                    try channel.pipeline.syncOperations.addHandler(handler)
+                }
+            }
+
+        let channel = try method(bootstrap, dup(socketPair[0])).wait()
+
+        defer {
+            try! channel.close().wait()
+        }
+
+        XCTAssertEqual(handler.added.withLockedValue { $0 }, 1)
+    }
+
+    func testNoDoubleAddOnPipeBootstrapTakingOwnership_inputOutput() throws {
+        try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
+            $0.takingOwnershipOfDescriptor(inputOutput: $1)
+        }
+    }
+
+    func testNoDoubleAddOnPipeBootstrapTakingOwnership_input() throws {
+        try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
+            $0.takingOwnershipOfDescriptor(input: $1)
+        }
+    }
+
+    func testNoDoubleAddOnPipeBootstrapTakingOwnership_output() throws {
+        try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
+            $0.takingOwnershipOfDescriptor(output: $1)
+        }
+    }
+
+    func testNoDoubleAddOnPipeBootstrapTakingOwnership_inputOutputSeparate() throws {
+        try self.doTestNoDoubleAddOnPipeBootstrapTakingOwnership {
+            $0.takingOwnershipOfDescriptors(input: $1, output: dup($1))
+        }
+    }
+}
+
+private final class AddOnceHandler: ChannelInboundHandler, Sendable {
+    typealias InboundIn = Any
+
+    let added = NIOLockedValueBox(0)
+
+    init() {}
+
+    func handlerAdded(context: ChannelHandlerContext) {
+        self.added.withLockedValue { $0 += 1 }
+    }
 }
 
 private final class WriteStringOnChannelActive: ChannelInboundHandler {
