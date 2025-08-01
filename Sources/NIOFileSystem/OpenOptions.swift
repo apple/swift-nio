@@ -15,7 +15,7 @@
 import SystemPackage
 
 /// Options for opening file handles.
-public enum OpenOptions {
+public enum OpenOptions: Sendable {
     /// Options for opening a file for reading.
     public struct Read: Hashable, Sendable {
         /// If the last path component is a symbolic link then this flag determines whether the

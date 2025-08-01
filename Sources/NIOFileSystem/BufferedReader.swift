@@ -239,3 +239,6 @@ extension ReadableFileHandleProtocol {
         BufferedReader(wrapping: self, initialOffset: initialOffset, capacity: Int(capacity.bytes))
     }
 }
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension BufferedReader: Sendable where Handle: Sendable {}

@@ -132,6 +132,9 @@ internal struct CallbackList {
 @available(*, unavailable)
 extension CallbackList: Sendable {}
 
+@available(*, unavailable)
+extension CallbackList.Wrapper: Sendable {}
+
 /// Internal error for operations that return results that were not replaced
 @usableFromInline
 internal struct OperationPlaceholderError: Error {

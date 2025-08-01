@@ -69,7 +69,7 @@ final class Box<T> {
 
 extension Box: Sendable where T: Sendable {}
 
-public enum System {
+public enum System: Sendable {
     /// A utility function that returns an estimate of the number of *logical* cores
     /// on the system available for use.
     ///
