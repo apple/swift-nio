@@ -88,9 +88,14 @@ jobs:
       xcode_16_3_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
 
   static-sdk:
-    name: Static SDK
+    name: Static Linux Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/static_sdk.yml@main
+
+  wasm-sdk:
+    name: WebAssembly Swift SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/wasm_sdk.yml@main
 
   release-builds:
     name: Release builds
