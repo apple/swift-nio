@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2024 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -20,23 +20,23 @@ extension FileSystem {
     /// on each directory that we find, as soon as the file descriptor for
     /// `path` has been closed; also delete all files that we come across.
     func discoverAndRemoveItemsInTree(
-        at path: FilePath,
+        at path: NIOFilePath,
         _ bucket: TokenBucket
     ) async throws -> Int {
         // Discover current directory and find all files/directories. Free up
         // the handle as fast as possible.
         let (directoriesToRecurseInto, itemsToDelete) = try await bucket.withToken {
             try await self.withDirectoryHandle(atPath: path) { directory in
-                var subdirectories: [FilePath] = []
-                var itemsInDirectory: [FilePath] = []
+                var subdirectories: [NIOFilePath] = []
+                var itemsInDirectory: [NIOFilePath] = []
 
                 for try await batch in directory.listContents().batched() {
                     for entry in batch {
                         switch entry.type {
                         case .directory:
-                            subdirectories.append(entry.path)
+                            subdirectories.append(entry.filePath)
                         default:
-                            itemsInDirectory.append(entry.path)
+                            itemsInDirectory.append(entry.filePath)
                         }
                     }
                 }

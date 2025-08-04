@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -37,7 +37,7 @@ final class FileHandleTests: XCTestCase {
         let path = try await FilePath("\(FileSystem.shared.temporaryDirectory)/\(Self.temporaryFileName())")
         defer {
             // Remove the file when we're done.
-            XCTAssertNoThrow(try Libc.remove(path).get())
+            XCTAssertNoThrow(try Libc.remove(.init(path)).get())
         }
 
         try await withHandle(
@@ -66,7 +66,7 @@ final class FileHandleTests: XCTestCase {
     }
 
     private static func removeFile(atPath path: FilePath) {
-        XCTAssertNoThrow(try Libc.remove(path).get())
+        XCTAssertNoThrow(try Libc.remove(.init(path)).get())
     }
 
     func withHandle(
@@ -85,7 +85,7 @@ final class FileHandleTests: XCTestCase {
         )
         let handle = SystemFileHandle(
             takingOwnershipOf: descriptor,
-            path: path,
+            path: .init(path),
             threadPool: .singleton
         )
 
@@ -303,7 +303,7 @@ final class FileHandleTests: XCTestCase {
     }
 
     func testWriteAndReadUnseekableFile() async throws {
-        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
+        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: FilePath("test-XXX"))
         self.addTeardownBlock {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
@@ -324,7 +324,7 @@ final class FileHandleTests: XCTestCase {
     }
 
     func testWriteAndReadUnseekableFileOverMaximumSizeAllowedThrowsError() async throws {
-        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
+        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: FilePath("test-XXX"))
         self.addTeardownBlock {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
@@ -348,7 +348,7 @@ final class FileHandleTests: XCTestCase {
     }
 
     func testWriteAndReadUnseekableFileWithOffsetsThrows() async throws {
-        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
+        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: FilePath("test-XXX"))
         self.addTeardownBlock {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
@@ -1000,7 +1000,7 @@ final class FileHandleTests: XCTestCase {
         let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
         let path = temporaryDirectory.appending(Self.temporaryFileName().components)
         let handle = try SystemFileHandle.syncOpenWithMaterialization(
-            atPath: path,
+            atPath: .init(path),
             mode: .writeOnly,
             options: [.exclusiveCreate, .create],
             permissions: .ownerReadWrite,

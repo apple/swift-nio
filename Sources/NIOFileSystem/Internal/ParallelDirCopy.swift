@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2024 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -30,17 +30,19 @@ extension FileSystem {
     /// maximum open descriptors are `maxConcurrentOperations * 2`
     @usableFromInline
     func copyDirectoryParallel(
-        from sourcePath: FilePath,
-        to destinationPath: FilePath,
+        from sourcePath: NIOFilePath,
+        to destinationPath: NIOFilePath,
         maxConcurrentOperations: Int,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ entry: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyItem: @escaping @Sendable (
-            _ source: DirectoryEntry,
-            _ destination: FilePath
-        ) async -> Bool
+        shouldProceedAfterError:
+            @escaping @Sendable (
+                _ entry: DirectoryEntry,
+                _ error: Error
+            ) async throws -> Void,
+        shouldCopyItem:
+            @escaping @Sendable (
+                _ source: DirectoryEntry,
+                _ destination: NIOFilePath
+            ) async -> Bool
     ) async throws {
         // Implemented with NIOAsyncSequenceProducer rather than AsyncStream. It is approximately
         // the same speed in the best case, but has significantly less variance.

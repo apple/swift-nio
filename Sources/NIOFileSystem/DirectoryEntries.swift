@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -361,7 +361,7 @@ private struct DirectoryEnumerator: Sendable {
     internal var state: State
 
     /// The path to the directory being enumerated.
-    private let path: FilePath
+    private let path: NIOFilePath
 
     /// The route via which directory entry batches are yielded,
     /// the sourcing end of the `DirectoryEntrySequenceProducer`
@@ -560,7 +560,7 @@ private struct DirectoryEnumerator: Sendable {
                 name = FilePath.Component(platformString: CNIOLinux_dirent_dname(entry))!
                 #endif
 
-                let fullPath = self.path.appending(name)
+                let fullPath = NIOFilePath(self.path.underlying.appending(name))
                 // '!' is okay here: the init returns nil if there is an empty path which we know
                 // isn't the case as 'self.path' is non-empty.
                 entries.append(DirectoryEntry(path: fullPath, type: fileType)!)

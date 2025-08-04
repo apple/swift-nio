@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -31,8 +31,8 @@ import CNIOLinux
 @_spi(Testing)
 public enum Syscall: Sendable {
     @_spi(Testing)
-    public static func stat(path: FilePath) -> Result<CInterop.Stat, Errno> {
-        path.withPlatformString { platformPath in
+    public static func stat(path: NIOFilePath) -> Result<CInterop.Stat, Errno> {
+        path.underlying.withPlatformString { platformPath in
             var status = CInterop.Stat()
             return valueOrErrno(retryOnInterrupt: false) {
                 system_stat(platformPath, &status)
@@ -43,8 +43,8 @@ public enum Syscall: Sendable {
     }
 
     @_spi(Testing)
-    public static func lstat(path: FilePath) -> Result<CInterop.Stat, Errno> {
-        path.withPlatformString { platformPath in
+    public static func lstat(path: NIOFilePath) -> Result<CInterop.Stat, Errno> {
+        path.underlying.withPlatformString { platformPath in
             var status = CInterop.Stat()
             return valueOrErrno(retryOnInterrupt: false) {
                 system_lstat(platformPath, &status)
@@ -55,19 +55,19 @@ public enum Syscall: Sendable {
     }
 
     @_spi(Testing)
-    public static func mkdir(at path: FilePath, permissions: FilePermissions) -> Result<Void, Errno> {
+    public static func mkdir(at path: NIOFilePath, permissions: FilePermissions) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
-            path.withPlatformString { p in
+            path.underlying.withPlatformString { p in
                 system_mkdir(p, permissions.rawValue)
             }
         }
     }
 
     @_spi(Testing)
-    public static func rename(from old: FilePath, to new: FilePath) -> Result<Void, Errno> {
+    public static func rename(from old: NIOFilePath, to new: NIOFilePath) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
-            old.withPlatformString { oldPath in
-                new.withPlatformString { newPath in
+            old.underlying.withPlatformString { oldPath in
+                new.underlying.withPlatformString { newPath in
                     system_rename(oldPath, newPath)
                 }
             }
@@ -77,13 +77,13 @@ public enum Syscall: Sendable {
     #if canImport(Darwin)
     @_spi(Testing)
     public static func rename(
-        from old: FilePath,
-        to new: FilePath,
+        from old: NIOFilePath,
+        to new: NIOFilePath,
         options: RenameOptions
     ) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
-            old.withPlatformString { oldPath in
-                new.withPlatformString { newPath in
+            old.underlying.withPlatformString { oldPath in
+                new.underlying.withPlatformString { newPath in
                     system_renamex_np(oldPath, newPath, options.rawValue)
                 }
             }
@@ -111,15 +111,15 @@ public enum Syscall: Sendable {
     #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
     @_spi(Testing)
     public static func rename(
-        from old: FilePath,
+        from old: NIOFilePath,
         relativeTo oldFD: FileDescriptor,
-        to new: FilePath,
+        to new: NIOFilePath,
         relativeTo newFD: FileDescriptor,
         flags: RenameAtFlags
     ) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
-            old.withPlatformString { oldPath in
-                new.withPlatformString { newPath in
+            old.underlying.withPlatformString { oldPath in
+                new.underlying.withPlatformString { newPath in
                     system_renameat2(
                         oldFD.rawValue,
                         oldPath,
@@ -174,15 +174,15 @@ public enum Syscall: Sendable {
 
     @_spi(Testing)
     public static func linkAt(
-        from source: FilePath,
+        from source: NIOFilePath,
         relativeTo sourceFD: FileDescriptor,
-        to destination: FilePath,
+        to destination: NIOFilePath,
         relativeTo destinationFD: FileDescriptor,
         flags: LinkAtFlags
     ) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
-            source.withPlatformString { src in
-                destination.withPlatformString { dst in
+            source.underlying.withPlatformString { src in
+                destination.underlying.withPlatformString { dst in
                     system_linkat(
                         sourceFD.rawValue,
                         src,
@@ -198,12 +198,12 @@ public enum Syscall: Sendable {
 
     @_spi(Testing)
     public static func link(
-        from source: FilePath,
-        to destination: FilePath
+        from source: NIOFilePath,
+        to destination: NIOFilePath
     ) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
-            source.withPlatformString { src in
-                destination.withPlatformString { dst in
+            source.underlying.withPlatformString { src in
+                destination.underlying.withPlatformString { dst in
                     system_link(src, dst)
                 }
             }
@@ -211,9 +211,9 @@ public enum Syscall: Sendable {
     }
 
     @_spi(Testing)
-    public static func unlink(path: FilePath) -> Result<Void, Errno> {
+    public static func unlink(path: NIOFilePath) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
-            path.withPlatformString { ptr in
+            path.underlying.withPlatformString { ptr in
                 system_unlink(ptr)
             }
         }
@@ -221,12 +221,12 @@ public enum Syscall: Sendable {
 
     @_spi(Testing)
     public static func symlink(
-        to destination: FilePath,
-        from source: FilePath
+        to destination: NIOFilePath,
+        from source: NIOFilePath
     ) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
-            source.withPlatformString { src in
-                destination.withPlatformString { dst in
+            source.underlying.withPlatformString { src in
+                destination.underlying.withPlatformString { dst in
                     system_symlink(dst, src)
                 }
             }
@@ -234,9 +234,9 @@ public enum Syscall: Sendable {
     }
 
     @_spi(Testing)
-    public static func readlink(at path: FilePath) -> Result<FilePath, Errno> {
+    public static func readlink(at path: NIOFilePath) -> Result<NIOFilePath, Errno> {
         do {
-            let resolved = try path.withPlatformString { p in
+            let resolved = try path.underlying.withPlatformString { p in
                 try String(customUnsafeUninitializedCapacity: Int(CInterop.maxPathLength)) { pointer in
                     let result = pointer.withMemoryRebound(to: CInterop.PlatformChar.self) { ptr in
                         valueOrErrno(retryOnInterrupt: false) {
@@ -246,7 +246,7 @@ public enum Syscall: Sendable {
                     return try result.get()
                 }
             }
-            return .success(FilePath(resolved))
+            return .success(NIOFilePath(resolved))
         } catch let error as Errno {
             return .failure(error)
         } catch {
@@ -315,13 +315,13 @@ public enum Libc: Sendable {
     #if canImport(Darwin)
     @_spi(Testing)
     public static func copyfile(
-        from source: FilePath,
-        to destination: FilePath,
+        from source: NIOFilePath,
+        to destination: NIOFilePath,
         state: copyfile_state_t?,
         flags: copyfile_flags_t
     ) -> Result<Void, Errno> {
-        source.withPlatformString { sourcePath in
-            destination.withPlatformString { destinationPath in
+        source.underlying.withPlatformString { sourcePath in
+            destination.underlying.withPlatformString { destinationPath in
                 nothingOrErrno(retryOnInterrupt: false) {
                     libc_copyfile(sourcePath, destinationPath, state, flags)
                 }
@@ -332,16 +332,16 @@ public enum Libc: Sendable {
 
     @_spi(Testing)
     public static func remove(
-        _ path: FilePath
+        _ path: NIOFilePath
     ) -> Result<Void, Errno> {
         nothingOrErrno(retryOnInterrupt: false) {
-            path.withPlatformString {
+            path.underlying.withPlatformString {
                 libc_remove($0)
             }
         }
     }
 
-    static func getcwd() -> Result<FilePath, Errno> {
+    static func getcwd() -> Result<NIOFilePath, Errno> {
         var buffer = [CInterop.PlatformChar](
             repeating: 0,
             count: Int(CInterop.maxPathLength)
@@ -358,7 +358,7 @@ public enum Libc: Sendable {
             // At this point 'ptr' must be non-nil, because if it were 'nil' we should be on the
             // error path.
             precondition(ptr != nil)
-            return FilePath(platformString: buffer)
+            return NIOFilePath(FilePath(platformString: buffer))
         }
     }
 
@@ -388,12 +388,12 @@ public enum Libc: Sendable {
     }
     #endif
 
-    static func ftsOpen(_ path: FilePath, options: FTSOpenOptions) -> Result<CInterop.FTSPointer, Errno> {
+    static func ftsOpen(_ path: NIOFilePath, options: FTSOpenOptions) -> Result<CInterop.FTSPointer, Errno> {
         // 'fts_open' needs an unsafe mutable pointer to the C-string, `FilePath` doesn't offer this
         // so copy out its bytes.
-        var pathBytes = path.withPlatformString { pointer in
+        var pathBytes = path.underlying.withPlatformString { pointer in
             // Length excludes the null terminator, so add it back.
-            let bufferPointer = UnsafeBufferPointer(start: pointer, count: path.length + 1)
+            let bufferPointer = UnsafeBufferPointer(start: pointer, count: path.underlying.length + 1)
             return Array(bufferPointer)
         }
 

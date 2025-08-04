@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -26,6 +26,31 @@ extension String {
     @discardableResult
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public func write(
+        toFileAt path: NIOFilePath,
+        absoluteOffset offset: Int64 = 0,
+        options: OpenOptions.Write = .newFile(replaceExisting: false),
+        fileSystem: some FileSystemProtocol
+    ) async throws -> Int64 {
+        try await self.write(
+            toFileAt: path.underlying,
+            absoluteOffset: offset,
+            options: options,
+            fileSystem: fileSystem
+        )
+    }
+
+    /// Writes the UTF8 encoded `String` to a file.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to write the `String` to.
+    ///   - offset: The offset into the file to write to, defaults to zero.
+    ///   - options: Options for opening the file, defaults to creating a new file.
+    ///   - fileSystem: The ``FileSystemProtocol`` instance to use.
+    /// - Returns: The number of bytes written to the file.
+    @_disfavoredOverload
+    @discardableResult
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+    public func write(
         toFileAt path: FilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
@@ -46,6 +71,24 @@ extension String {
     ///   - offset: The offset into the file to write to, defaults to zero.
     ///   - options: Options for opening the file, defaults to creating a new file.
     /// - Returns: The number of bytes written to the file.
+    @discardableResult
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+    public func write(
+        toFileAt path: NIOFilePath,
+        absoluteOffset offset: Int64 = 0,
+        options: OpenOptions.Write = .newFile(replaceExisting: false)
+    ) async throws -> Int64 {
+        try await self.write(toFileAt: path.underlying, absoluteOffset: offset, options: options)
+    }
+
+    /// Writes the UTF8 encoded `String` to a file.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to write the `String` to.
+    ///   - offset: The offset into the file to write to, defaults to zero.
+    ///   - options: Options for opening the file, defaults to creating a new file.
+    /// - Returns: The number of bytes written to the file.
+    @_disfavoredOverload
     @discardableResult
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public func write(
@@ -74,6 +117,31 @@ extension Sequence<UInt8> where Self: Sendable {
     @discardableResult
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public func write(
+        toFileAt path: NIOFilePath,
+        absoluteOffset offset: Int64 = 0,
+        options: OpenOptions.Write = .newFile(replaceExisting: false),
+        fileSystem: some FileSystemProtocol
+    ) async throws -> Int64 {
+        try await self.write(
+            toFileAt: path.underlying,
+            absoluteOffset: offset,
+            options: options,
+            fileSystem: fileSystem
+        )
+    }
+
+    /// Writes the contents of the `Sequence` to a file.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to write the contents of the sequence to.
+    ///   - offset: The offset into the file to write to, defaults to zero.
+    ///   - options: Options for opening the file, defaults to creating a new file.
+    ///   - fileSystem: The ``FileSystemProtocol`` instance to use.
+    /// - Returns: The number of bytes written to the file.
+    @_disfavoredOverload
+    @discardableResult
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+    public func write(
         toFileAt path: FilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
@@ -91,6 +159,24 @@ extension Sequence<UInt8> where Self: Sendable {
     ///   - offset: The offset into the file to write to, defaults to zero.
     ///   - options: Options for opening the file, defaults to creating a new file.
     /// - Returns: The number of bytes written to the file.
+    @discardableResult
+    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+    public func write(
+        toFileAt path: NIOFilePath,
+        absoluteOffset offset: Int64 = 0,
+        options: OpenOptions.Write = .newFile(replaceExisting: false)
+    ) async throws -> Int64 {
+        try await self.write(toFileAt: path.underlying, absoluteOffset: offset, options: options)
+    }
+
+    /// Writes the contents of the `Sequence` to a file.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to write the contents of the sequence to.
+    ///   - offset: The offset into the file to write to, defaults to zero.
+    ///   - options: Options for opening the file, defaults to creating a new file.
+    /// - Returns: The number of bytes written to the file.
+    @_disfavoredOverload
     @discardableResult
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     public func write(
@@ -119,6 +205,30 @@ extension AsyncSequence where Self.Element: Sequence<UInt8>, Self: Sendable {
     /// - Returns: The number of bytes written to the file.
     @discardableResult
     public func write(
+        toFileAt path: NIOFilePath,
+        absoluteOffset offset: Int64 = 0,
+        options: OpenOptions.Write = .newFile(replaceExisting: false),
+        fileSystem: some FileSystemProtocol
+    ) async throws -> Int64 {
+        try await self.write(
+            toFileAt: path.underlying,
+            absoluteOffset: offset,
+            options: options,
+            fileSystem: fileSystem
+        )
+    }
+
+    /// Writes the contents of the `AsyncSequence` to a file.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to write the contents of the sequence to.
+    ///   - offset: The offset into the file to write to, defaults to zero.
+    ///   - options: Options for opening the file, defaults to creating a new file.
+    ///   - fileSystem: The ``FileSystemProtocol`` instance to use.
+    /// - Returns: The number of bytes written to the file.
+    @_disfavoredOverload
+    @discardableResult
+    public func write(
         toFileAt path: FilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
@@ -139,6 +249,23 @@ extension AsyncSequence where Self.Element: Sequence<UInt8>, Self: Sendable {
     ///   - offset: The offset into the file to write to, defaults to zero.
     ///   - options: Options for opening the file, defaults to creating a new file.
     /// - Returns: The number of bytes written to the file.
+    @discardableResult
+    public func write(
+        toFileAt path: NIOFilePath,
+        absoluteOffset offset: Int64 = 0,
+        options: OpenOptions.Write = .newFile(replaceExisting: false)
+    ) async throws -> Int64 {
+        try await self.write(toFileAt: path.underlying, absoluteOffset: offset, options: options)
+    }
+
+    /// Writes the contents of the `AsyncSequence` to a file.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to write the contents of the sequence to.
+    ///   - offset: The offset into the file to write to, defaults to zero.
+    ///   - options: Options for opening the file, defaults to creating a new file.
+    /// - Returns: The number of bytes written to the file.
+    @_disfavoredOverload
     @discardableResult
     public func write(
         toFileAt path: FilePath,
@@ -166,6 +293,30 @@ extension AsyncSequence where Self.Element == UInt8, Self: Sendable {
     /// - Returns: The number of bytes written to the file.
     @discardableResult
     public func write(
+        toFileAt path: NIOFilePath,
+        absoluteOffset offset: Int64 = 0,
+        options: OpenOptions.Write = .newFile(replaceExisting: false),
+        fileSystem: some FileSystemProtocol
+    ) async throws -> Int64 {
+        try await self.write(
+            toFileAt: path.underlying,
+            absoluteOffset: offset,
+            options: options,
+            fileSystem: fileSystem
+        )
+    }
+
+    /// Writes the contents of the `AsyncSequence` to a file.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to write the contents of the sequence to.
+    ///   - offset: The offset into the file to write to, defaults to zero.
+    ///   - options: Options for opening the file, defaults to creating a new file.
+    ///   - fileSystem: The ``FileSystemProtocol`` instance to use.
+    /// - Returns: The number of bytes written to the file.
+    @_disfavoredOverload
+    @discardableResult
+    public func write(
         toFileAt path: FilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
@@ -186,6 +337,23 @@ extension AsyncSequence where Self.Element == UInt8, Self: Sendable {
     ///   - offset: The offset into the file to write to, defaults to zero.
     ///   - options: Options for opening the file, defaults to creating a new file.
     /// - Returns: The number of bytes written to the file.
+    @discardableResult
+    public func write(
+        toFileAt path: NIOFilePath,
+        absoluteOffset offset: Int64 = 0,
+        options: OpenOptions.Write = .newFile(replaceExisting: false)
+    ) async throws -> Int64 {
+        try await self.write(toFileAt: path.underlying, absoluteOffset: offset, options: options)
+    }
+
+    /// Writes the contents of the `AsyncSequence` to a file.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to write the contents of the sequence to.
+    ///   - offset: The offset into the file to write to, defaults to zero.
+    ///   - options: Options for opening the file, defaults to creating a new file.
+    /// - Returns: The number of bytes written to the file.
+    @_disfavoredOverload
     @discardableResult
     public func write(
         toFileAt path: FilePath,

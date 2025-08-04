@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -44,7 +44,7 @@ extension FileDescriptor {
     /// - Returns: A file descriptor for the open file.
     @_spi(Testing)
     public func `open`(
-        atPath path: FilePath,
+        atPath path: NIOFilePath,
         mode: FileDescriptor.AccessMode,
         options: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
@@ -52,7 +52,7 @@ extension FileDescriptor {
     ) -> Result<FileDescriptor, Errno> {
         let oFlag = mode.rawValue | options.rawValue
         let rawValue = valueOrErrno(retryOnInterrupt: retryOnInterrupt) {
-            path.withPlatformString {
+            path.underlying.withPlatformString {
                 if let permissions = permissions {
                     return system_fdopenat(self.rawValue, $0, oFlag, permissions.rawValue)
                 } else {
