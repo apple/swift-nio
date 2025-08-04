@@ -685,12 +685,12 @@ class AsyncTestingChannelTests: XCTestCase {
     func testGetSetOption() async throws {
         let channel = NIOAsyncTestingChannel()
         let option = ChannelOptions.socket(IPPROTO_IP, IP_TTL)
-        let _ = channel.setOption(option, value: 1)
+        let _ = try await channel.setOption(option, value: 1).get()
 
         let optionValue1 = try await channel.getOption(option).get()
         XCTAssertEqual(1, optionValue1)
 
-        let _ = channel.setOption(option, value: 2)
+        let _ = try await channel.setOption(option, value: 2).get()
         let optionValue2 = try await channel.getOption(option).get()
         XCTAssertEqual(2, optionValue2)
     }
