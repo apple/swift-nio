@@ -27,7 +27,12 @@ extension ByteBuffer {
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
-        try await self.init(contentsOf: path.underlying, maximumSizeAllowed: maximumSizeAllowed, fileSystem: fileSystem)
+        self = try await fileSystem.withFileHandle(forReadingAt: path) { handle in
+            try await handle.readToEnd(
+                fromAbsoluteOffset: 0,
+                maximumSizeAllowed: maximumSizeAllowed
+            )
+        }
     }
 
     /// Reads the contents of the file at the path.
@@ -42,12 +47,7 @@ extension ByteBuffer {
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
-        self = try await fileSystem.withFileHandle(forReadingAt: path) { handle in
-            try await handle.readToEnd(
-                fromAbsoluteOffset: 0,
-                maximumSizeAllowed: maximumSizeAllowed
-            )
-        }
+        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed, fileSystem: fileSystem)
     }
 
     /// Reads the contents of the file at the path using ``FileSystem``.
@@ -59,7 +59,11 @@ extension ByteBuffer {
         contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount
     ) async throws {
-        try await self.init(contentsOf: path.underlying, maximumSizeAllowed: maximumSizeAllowed)
+        self = try await Self(
+            contentsOf: path,
+            maximumSizeAllowed: maximumSizeAllowed,
+            fileSystem: .shared
+        )
     }
 
     /// Reads the contents of the file at the path using ``FileSystem``.
@@ -72,11 +76,7 @@ extension ByteBuffer {
         contentsOf path: FilePath,
         maximumSizeAllowed: ByteCount
     ) async throws {
-        self = try await Self(
-            contentsOf: path,
-            maximumSizeAllowed: maximumSizeAllowed,
-            fileSystem: .shared
-        )
+        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed)
     }
 
     /// Writes the readable bytes of the ``ByteBuffer`` to a file.
@@ -90,30 +90,6 @@ extension ByteBuffer {
     @discardableResult
     public func write(
         toFileAt path: NIOFilePath,
-        absoluteOffset offset: Int64 = 0,
-        options: OpenOptions.Write = .newFile(replaceExisting: false),
-        fileSystem: some FileSystemProtocol
-    ) async throws -> Int64 {
-        try await self.write(
-            toFileAt: path.underlying,
-            absoluteOffset: offset,
-            options: options,
-            fileSystem: fileSystem
-        )
-    }
-
-    /// Writes the readable bytes of the ``ByteBuffer`` to a file.
-    ///
-    /// - Parameters:
-    ///   - path: The path of the file to write the contents of the sequence to.
-    ///   - offset: The offset into the file to write to, defaults to zero.
-    ///   - options: Options for opening the file, defaults to creating a new file.
-    ///   - fileSystem: The ``FileSystemProtocol`` instance to use.
-    /// - Returns: The number of bytes written to the file.
-    @_disfavoredOverload
-    @discardableResult
-    public func write(
-        toFileAt path: FilePath,
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         fileSystem: some FileSystemProtocol
@@ -132,6 +108,25 @@ extension ByteBuffer {
     ///   - path: The path of the file to write the contents of the sequence to.
     ///   - offset: The offset into the file to write to, defaults to zero.
     ///   - options: Options for opening the file, defaults to creating a new file.
+    ///   - fileSystem: The ``FileSystemProtocol`` instance to use.
+    /// - Returns: The number of bytes written to the file.
+    @_disfavoredOverload
+    @discardableResult
+    public func write(
+        toFileAt path: FilePath,
+        absoluteOffset offset: Int64 = 0,
+        options: OpenOptions.Write = .newFile(replaceExisting: false),
+        fileSystem: some FileSystemProtocol
+    ) async throws -> Int64 {
+        try await self.write(toFileAt: .init(path), absoluteOffset: offset, options: options, fileSystem: fileSystem)
+    }
+
+    /// Writes the readable bytes of the ``ByteBuffer`` to a file.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to write the contents of the sequence to.
+    ///   - offset: The offset into the file to write to, defaults to zero.
+    ///   - options: Options for opening the file, defaults to creating a new file.
     /// - Returns: The number of bytes written to the file.
     @discardableResult
     public func write(
@@ -139,7 +134,12 @@ extension ByteBuffer {
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false)
     ) async throws -> Int64 {
-        try await self.write(toFileAt: path, absoluteOffset: offset, options: options, fileSystem: .shared)
+        try await self.write(
+            toFileAt: path,
+            absoluteOffset: offset,
+            options: options,
+            fileSystem: .shared
+        )
     }
 
     /// Writes the readable bytes of the ``ByteBuffer`` to a file.
@@ -156,11 +156,6 @@ extension ByteBuffer {
         absoluteOffset offset: Int64 = 0,
         options: OpenOptions.Write = .newFile(replaceExisting: false)
     ) async throws -> Int64 {
-        try await self.write(
-            toFileAt: path,
-            absoluteOffset: offset,
-            options: options,
-            fileSystem: .shared
-        )
+        try await self.write(toFileAt: .init(path), absoluteOffset: offset, options: options)
     }
 }

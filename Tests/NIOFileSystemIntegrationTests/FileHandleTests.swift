@@ -37,7 +37,7 @@ final class FileHandleTests: XCTestCase {
         let path = try await FilePath("\(FileSystem.shared.temporaryDirectory)/\(Self.temporaryFileName())")
         defer {
             // Remove the file when we're done.
-            XCTAssertNoThrow(try Libc.remove(.init(path)).get())
+            XCTAssertNoThrow(try Libc.remove(path).get())
         }
 
         try await withHandle(
@@ -66,7 +66,7 @@ final class FileHandleTests: XCTestCase {
     }
 
     private static func removeFile(atPath path: FilePath) {
-        XCTAssertNoThrow(try Libc.remove(.init(path)).get())
+        XCTAssertNoThrow(try Libc.remove(path).get())
     }
 
     func withHandle(
@@ -85,7 +85,7 @@ final class FileHandleTests: XCTestCase {
         )
         let handle = SystemFileHandle(
             takingOwnershipOf: descriptor,
-            path: .init(path),
+            path: path,
             threadPool: .singleton
         )
 
@@ -998,9 +998,9 @@ final class FileHandleTests: XCTestCase {
         // Takes the path where 'O_TMPFILE' doesn't exist, so materializing the file is done via
         // creating a temporary file and then renaming it using 'renamex_np'/'renameat2' (Darwin/Linux).
         let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
-        let path = temporaryDirectory.appending(Self.temporaryFileName().components)
+        let path = FilePath(temporaryDirectory).appending(Self.temporaryFileName().components)
         let handle = try SystemFileHandle.syncOpenWithMaterialization(
-            atPath: .init(path),
+            atPath: path,
             mode: .writeOnly,
             options: [.exclusiveCreate, .create],
             permissions: .ownerReadWrite,

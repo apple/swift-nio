@@ -106,21 +106,6 @@ extension FileSystemProtocol {
     }
 
     // MARK: - Common directories
-
-    /// Returns the current working directory.
-    var currentWorkingDirectory: FilePath {
-        get async throws {
-            try await self.currentWorkingDirectory
-        }
-    }
-
-    /// Returns the path of the temporary directory.
-    var temporaryDirectory: FilePath {
-        get async throws {
-            try await self.temporaryDirectory
-        }
-    }
-
     /// Create a temporary directory at the given path, from a template.
     ///
     /// The template for the path of the temporary directory must end in at least
@@ -139,7 +124,7 @@ extension FileSystemProtocol {
         template: FilePath
     ) async throws -> FilePath {
         let result = try await self.createTemporaryDirectory(template: .init(template))
-        return .init(result)
+        return result.underlying
     }
 
     // MARK: - File information
@@ -186,7 +171,7 @@ extension FileSystemProtocol {
         at path: FilePath
     ) async throws -> FilePath {
         let result = try await self.destinationOfSymbolicLink(at: .init(path))
-        return .init(result)
+        return result.underlying
     }
 
     // MARK: - File copying, removal, and moving
@@ -275,7 +260,7 @@ extension FileSystemProtocol {
             strategy: copyStrategy,
             shouldProceedAfterError: shouldProceedAfterError
         ) { (source: DirectoryEntry, destination: NIOFilePath) in
-            await shouldCopyItem(source, .init(destination))
+            await shouldCopyItem(source, destination.underlying)
         }
     }
 

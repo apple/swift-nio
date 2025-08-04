@@ -23,9 +23,8 @@ extension Array where Element == UInt8 {
     ///   - path: The path of the file to read.
     ///   - maximumSizeAllowed: The maximum size of file which can be read, in bytes, as a ``ByteCount``.
     ///   - fileSystem: The ``FileSystemProtocol`` instance to use to read the file.
-    @_disfavoredOverload
     public init(
-        contentsOf path: FilePath,
+        contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
@@ -42,12 +41,13 @@ extension Array where Element == UInt8 {
     ///   - path: The path of the file to read.
     ///   - maximumSizeAllowed: The maximum size of file which can be read, in bytes, as a ``ByteCount``.
     ///   - fileSystem: The ``FileSystemProtocol`` instance to use to read the file.
+    @_disfavoredOverload
     public init(
-        contentsOf path: NIOFilePath,
+        contentsOf path: FilePath,
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
-        try await self.init(contentsOf: path.underlying, maximumSizeAllowed: maximumSizeAllowed, fileSystem: fileSystem)
+        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed, fileSystem: fileSystem)
     }
 
     /// Reads the contents of the file at the path using ``FileSystem``.
@@ -55,9 +55,8 @@ extension Array where Element == UInt8 {
     /// - Parameters:
     ///   - path: The path of the file to read.
     ///   - maximumSizeAllowed: The maximum size of file which can be read, as a ``ByteCount``.
-    @_disfavoredOverload
     public init(
-        contentsOf path: FilePath,
+        contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount
     ) async throws {
         self = try await Self(
@@ -72,11 +71,12 @@ extension Array where Element == UInt8 {
     /// - Parameters:
     ///   - path: The path of the file to read.
     ///   - maximumSizeAllowed: The maximum size of file which can be read, as a ``ByteCount``.
+    @_disfavoredOverload
     public init(
-        contentsOf path: NIOFilePath,
+        contentsOf path: FilePath,
         maximumSizeAllowed: ByteCount
     ) async throws {
-        try await self.init(contentsOf: path.underlying, maximumSizeAllowed: maximumSizeAllowed)
+        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed)
     }
 }
 #endif

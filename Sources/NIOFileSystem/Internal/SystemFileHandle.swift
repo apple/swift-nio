@@ -38,14 +38,14 @@ public final class SystemFileHandle: Sendable {
     internal var threadPool: NIOThreadPool { self.sendableView.threadPool }
 
     /// The path used to open this handle.
-    internal var path: NIOFilePath { self.sendableView.path }
+    internal var path: FilePath { self.sendableView.path }
 
     @_spi(Testing)
     public struct Materialization: Sendable {
         /// The path of the file which was created.
-        var created: NIOFilePath
+        var created: FilePath
         /// The desired path of the file.
-        var desired: NIOFilePath
+        var desired: FilePath
         /// Whether the ``desired`` file must be created exclusively. If `true` then if a file
         /// already exists at the ``desired`` path then an error is thrown, otherwise any existing
         /// file will be replaced.`
@@ -84,7 +84,7 @@ public final class SystemFileHandle: Sendable {
         internal let threadPool: NIOThreadPool
 
         /// The path used to open this handle.
-        internal let path: NIOFilePath
+        internal let path: FilePath
 
         /// An action to take when closing the file handle.
         fileprivate let materialization: Materialization?
@@ -92,7 +92,7 @@ public final class SystemFileHandle: Sendable {
         fileprivate init(
             lifecycle: Lifecycle,
             threadPool: NIOThreadPool,
-            path: NIOFilePath,
+            path: FilePath,
             materialization: Materialization?
         ) {
             self.lifecycle = NIOLockedValueBox(lifecycle)
@@ -112,7 +112,7 @@ public final class SystemFileHandle: Sendable {
     @_spi(Testing)
     public init(
         takingOwnershipOf descriptor: FileDescriptor,
-        path: NIOFilePath,
+        path: FilePath,
         materialization: Materialization? = nil,
         threadPool: NIOThreadPool
     ) {
@@ -1184,7 +1184,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         let opts = options.descriptorOptions.union(.nonBlocking)
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
-                atPath: path,
+                atPath: path.underlying,
                 mode: .readOnly,
                 options: opts,
                 transactionalIfPossible: false
@@ -1203,7 +1203,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         let opts = options.descriptorOptions.union(.nonBlocking)
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
-                atPath: path,
+                atPath: path.underlying,
                 mode: .readWrite,
                 options: opts,
                 permissions: perms,
@@ -1223,7 +1223,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         let opts = options.descriptorOptions.union(.nonBlocking)
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
-                atPath: path,
+                atPath: path.underlying,
                 mode: .writeOnly,
                 options: opts,
                 permissions: perms,
@@ -1242,7 +1242,7 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
         let opts = options.descriptorOptions.union(.nonBlocking)
         let handle = try await self.threadPool.runIfActive { [sendableView] in
             let handle = try sendableView._open(
-                atPath: path,
+                atPath: path.underlying,
                 mode: .readOnly,
                 options: opts,
                 transactionalIfPossible: false
@@ -1257,14 +1257,14 @@ extension SystemFileHandle: DirectoryFileHandleProtocol {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension SystemFileHandle.SendableView {
     func _open(
-        atPath path: NIOFilePath,
+        atPath path: FilePath,
         mode: FileDescriptor.AccessMode,
         options: FileDescriptor.OpenOptions,
         permissions: FilePermissions? = nil,
         transactionalIfPossible transactional: Bool
     ) -> Result<SystemFileHandle, FileSystemError> {
         if transactional {
-            if path.underlying.isAbsolute {
+            if path.isAbsolute {
                 // The provided path is absolute: just open the handle normally.
                 return SystemFileHandle.syncOpen(
                     atPath: path,
@@ -1274,10 +1274,10 @@ extension SystemFileHandle.SendableView {
                     transactionalIfPossible: transactional,
                     threadPool: self.threadPool
                 )
-            } else if self.path.underlying.isAbsolute {
+            } else if self.path.isAbsolute {
                 // The parent path is absolute and the provided path is relative; combine them.
                 return SystemFileHandle.syncOpen(
-                    atPath: .init(self.path.underlying.appending(path.underlying.components)),
+                    atPath: self.path.appending(path.components),
                     mode: mode,
                     options: options,
                     permissions: permissions,
@@ -1302,7 +1302,7 @@ extension SystemFileHandle.SendableView {
             ).map { newDescriptor in
                 SystemFileHandle(
                     takingOwnershipOf: newDescriptor,
-                    path: .init(self.path.underlying.appending(path.underlying.components).lexicallyNormalized()),
+                    path: self.path.appending(path.components).lexicallyNormalized(),
                     threadPool: self.threadPool
                 )
             }.mapError { errno in
@@ -1325,7 +1325,7 @@ extension SystemFileHandle.SendableView {
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension SystemFileHandle {
     static func syncOpen(
-        atPath path: NIOFilePath,
+        atPath path: FilePath,
         mode: FileDescriptor.AccessMode,
         options: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
@@ -1369,7 +1369,7 @@ extension SystemFileHandle {
     }
 
     static func syncOpen(
-        atPath path: NIOFilePath,
+        atPath path: FilePath,
         mode: FileDescriptor.AccessMode,
         options: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
@@ -1377,7 +1377,7 @@ extension SystemFileHandle {
     ) -> Result<SystemFileHandle, FileSystemError> {
         Result {
             try FileDescriptor.open(
-                .init(path),
+                path,
                 mode,
                 options: options,
                 permissions: permissions
@@ -1395,15 +1395,15 @@ extension SystemFileHandle {
 
     @_spi(Testing)
     public static func syncOpenWithMaterialization(
-        atPath path: NIOFilePath,
+        atPath path: FilePath,
         mode: FileDescriptor.AccessMode,
         options originalOptions: FileDescriptor.OpenOptions,
         permissions: FilePermissions?,
         threadPool: NIOThreadPool,
         useTemporaryFileIfPossible: Bool = true
     ) -> Result<SystemFileHandle, FileSystemError> {
-        let openedPath: NIOFilePath
-        let desiredPath: NIOFilePath
+        let openedPath: FilePath
+        let desiredPath: FilePath
 
         // There are two different approaches to materializing the file. On Linux, and where
         // supported, we can open the file with the 'O_TMPFILE' flag which creates a temporary
@@ -1433,8 +1433,8 @@ extension SystemFileHandle {
         // To work around this we will get the current working directory only if the provided path
         // is relative. That way all operations can be done on a path relative to a fixed point
         // (i.e. the current working directory at this point in time).
-        if path.underlying.isRelative {
-            let currentWorkingDirectory: NIOFilePath
+        if path.isRelative {
+            let currentWorkingDirectory: FilePath
 
             switch Libc.getcwd() {
             case .success(let path):
@@ -1450,30 +1450,27 @@ extension SystemFileHandle {
                 return .failure(error)
             }
 
-            func makePath() -> NIOFilePath {
+            func makePath() -> FilePath {
                 #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                 if useTemporaryFileIfPossible {
                     return currentWorkingDirectory.appending(path.components.dropLast())
                 }
                 #endif
-                return .init(
-                    currentWorkingDirectory.underlying.appending(path.underlying.components.dropLast())
-                        .appending(".tmp-" + String(randomAlphaNumericOfLength: 6))
-                )
+                return currentWorkingDirectory.appending(path.components.dropLast())
+                    .appending(".tmp-" + String(randomAlphaNumericOfLength: 6))
             }
 
             openedPath = makePath()
-            desiredPath = .init(currentWorkingDirectory.underlying.appending(path.underlying.components))
+            desiredPath = currentWorkingDirectory.appending(path.components)
         } else {
-            func makePath() -> NIOFilePath {
+            func makePath() -> FilePath {
                 #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
                 if useTemporaryFileIfPossible {
                     return path.removingLastComponent()
                 }
                 #endif
-                return .init(
-                    path.underlying.removingLastComponent().appending(".tmp-" + String(randomAlphaNumericOfLength: 6))
-                )
+                return path.removingLastComponent()
+                    .appending(".tmp-" + String(randomAlphaNumericOfLength: 6))
             }
 
             openedPath = makePath()
@@ -1505,7 +1502,7 @@ extension SystemFileHandle {
 
         do {
             let descriptor = try FileDescriptor.open(
-                openedPath.underlying,
+                openedPath,
                 mode,
                 options: options,
                 permissions: permissions

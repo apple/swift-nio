@@ -46,7 +46,7 @@ extension FileSystemError {
     public static func stat(
         _ name: String,
         errno: Errno,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -78,7 +78,7 @@ extension FileSystemError {
         operand: FilePermissions,
         permissions: FilePermissions,
         errno: Errno,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let message: String
@@ -130,7 +130,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func flistxattr(errno: Errno, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func flistxattr(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
         let code: FileSystemError.Code
         let message: String
 
@@ -169,7 +169,7 @@ extension FileSystemError {
     public static func fgetxattr(
         attribute name: String,
         errno: Errno,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -210,7 +210,7 @@ extension FileSystemError {
     public static func fsetxattr(
         attribute name: String,
         errno: Errno,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -265,7 +265,7 @@ extension FileSystemError {
     public static func fremovexattr(
         attribute name: String,
         errno: Errno,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -307,7 +307,7 @@ extension FileSystemError {
     @_spi(Testing)
     public static func fsync(
         errno: Errno,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -335,7 +335,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func dup(error: Error, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func dup(error: Error, path: FilePath, location: SourceLocation) -> Self {
         let code: FileSystemError.Code
         let message: String
         let cause: Error
@@ -365,7 +365,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func ftruncate(error: Error, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func ftruncate(error: Error, path: FilePath, location: SourceLocation) -> Self {
         let code: FileSystemError.Code
         let message: String
         let cause: Error
@@ -401,7 +401,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func close(error: Error, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func close(error: Error, path: FilePath, location: SourceLocation) -> Self {
         let code: FileSystemError.Code
         let message: String
         let cause: Error
@@ -444,7 +444,7 @@ extension FileSystemError {
     public static func read(
         usingSyscall syscall: ReadSyscall,
         error: Error,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -496,7 +496,7 @@ extension FileSystemError {
     public static func write(
         usingSyscall syscall: WriteSyscall,
         error: Error,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -539,7 +539,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func fdopendir(errno: Errno, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func fdopendir(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
         FileSystemError(
             code: .unknown,
             message: "Unable to open directory stream for '\(path)'.",
@@ -550,7 +550,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func readdir(errno: Errno, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func readdir(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
         FileSystemError(
             code: .unknown,
             message: "Unable to read directory stream for '\(path)'.",
@@ -561,7 +561,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func ftsRead(errno: Errno, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func ftsRead(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
         FileSystemError(
             code: .unknown,
             message: "Unable to read FTS stream for '\(path)'.",
@@ -575,7 +575,7 @@ extension FileSystemError {
     public static func open(
         _ name: String,
         error: Error,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -641,7 +641,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func mkdir(errno: Errno, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func mkdir(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
         let code: Code
         let message: String
 
@@ -690,8 +690,8 @@ extension FileSystemError {
     public static func rename(
         _ name: String,
         errno: Errno,
-        oldName: NIOFilePath,
-        newName: NIOFilePath,
+        oldName: FilePath,
+        newName: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: Code
@@ -746,7 +746,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func remove(errno: Errno, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func remove(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
         let code: Code
         let message: String
 
@@ -792,8 +792,8 @@ extension FileSystemError {
     @_spi(Testing)
     public static func symlink(
         errno: Errno,
-        link: NIOFilePath,
-        target: NIOFilePath,
+        link: FilePath,
+        target: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: Code
@@ -850,7 +850,7 @@ extension FileSystemError {
     }
 
     @_spi(Testing)
-    public static func readlink(errno: Errno, path: NIOFilePath, location: SourceLocation) -> Self {
+    public static func readlink(errno: Errno, path: FilePath, location: SourceLocation) -> Self {
         let code: Code
         let message: String
 
@@ -893,8 +893,8 @@ extension FileSystemError {
     @_spi(Testing)
     public static func link(
         errno: Errno,
-        from sourcePath: NIOFilePath,
-        to destinationPath: NIOFilePath,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -927,7 +927,7 @@ extension FileSystemError {
     @_spi(Testing)
     public static func unlink(
         errno: Errno,
-        path: NIOFilePath,
+        path: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: FileSystemError.Code
@@ -988,8 +988,8 @@ extension FileSystemError {
     @_spi(Testing)
     public static func fcopyfile(
         errno: Errno,
-        from sourcePath: NIOFilePath,
-        to destinationPath: NIOFilePath,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
         location: SourceLocation
     ) -> Self {
         Self._copyfile(
@@ -1004,8 +1004,8 @@ extension FileSystemError {
     @_spi(Testing)
     public static func copyfile(
         errno: Errno,
-        from sourcePath: NIOFilePath,
-        to destinationPath: NIOFilePath,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
         location: SourceLocation
     ) -> Self {
         Self._copyfile(
@@ -1020,8 +1020,8 @@ extension FileSystemError {
     private static func _copyfile(
         _ name: String,
         errno: Errno,
-        from sourcePath: NIOFilePath,
-        to destinationPath: NIOFilePath,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
         location: SourceLocation
     ) -> Self {
         let code: Code
@@ -1083,8 +1083,8 @@ extension FileSystemError {
     @_spi(Testing)
     public static func sendfile(
         errno: Errno,
-        from sourcePath: NIOFilePath,
-        to destinationPath: NIOFilePath,
+        from sourcePath: FilePath,
+        to destinationPath: FilePath,
         location: SourceLocation
     ) -> FileSystemError {
         let code: FileSystemError.Code
@@ -1120,7 +1120,7 @@ extension FileSystemError {
     @_spi(Testing)
     public static func futimens(
         errno: Errno,
-        path: NIOFilePath,
+        path: FilePath,
         lastAccessTime: FileInfo.Timespec?,
         lastDataModificationTime: FileInfo.Timespec?,
         location: SourceLocation

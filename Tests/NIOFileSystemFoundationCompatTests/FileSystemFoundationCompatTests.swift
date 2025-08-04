@@ -21,9 +21,9 @@ extension FileSystem {
     func temporaryFilePath(
         _ function: String = #function,
         inTemporaryDirectory: Bool = true
-    ) async throws -> NIOFilePath {
+    ) async throws -> FilePath {
         if inTemporaryDirectory {
-            let directory = NIOFilePath(try await self.temporaryDirectory)
+            let directory = FilePath(try await self.temporaryDirectory)
             return self.temporaryFilePath(function, inDirectory: directory)
         } else {
             return self.temporaryFilePath(function, inDirectory: nil)
@@ -32,17 +32,17 @@ extension FileSystem {
 
     func temporaryFilePath(
         _ function: String = #function,
-        inDirectory directory: NIOFilePath?
-    ) -> NIOFilePath {
+        inDirectory directory: FilePath?
+    ) -> FilePath {
         let index = function.firstIndex(of: "(")!
         let functionName = function.prefix(upTo: index)
         let random = UInt32.random(in: .min ... .max)
         let fileName = "\(functionName)-\(random)"
 
         if let directory = directory {
-            return NIOFilePath(FilePath(directory).appending(fileName))
+            return directory.appending(fileName)
         } else {
-            return NIOFilePath(fileName)
+            return FilePath(fileName)
         }
     }
 }

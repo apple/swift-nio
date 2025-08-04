@@ -106,16 +106,10 @@ public protocol FileSystemProtocol: Sendable {
     // MARK: - Common directories
 
     /// Returns the current working directory.
-    var currentWorkingDirectory: FilePath { get async throws }
-
-    /// Returns the current working directory.
-    var currentWorkingDirectoryNIO: NIOFilePath { get async throws }
+    var currentWorkingDirectory: NIOFilePath { get async throws }
 
     /// Returns the path of the temporary directory.
-    var temporaryDirectory: FilePath { get async throws }
-
-    /// Returns the path of the temporary directory.
-    var temporaryDirectoryNIO: NIOFilePath { get async throws }
+    var temporaryDirectory: NIOFilePath { get async throws }
 
     /// Create a temporary directory at the given path, from a template.
     ///
@@ -1044,7 +1038,7 @@ extension FileSystemProtocol {
         if let prefix = prefix {
             template = prefix.appending("XXXXXXXX")
         } else {
-            template = try await self.temporaryDirectory.appending("XXXXXXXX")
+            template = try await self.temporaryDirectory.underlying.appending("XXXXXXXX")
         }
 
         let directory = try await self.createTemporaryDirectory(template: template)

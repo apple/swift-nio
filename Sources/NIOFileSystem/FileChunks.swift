@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -133,7 +133,7 @@ where
 private final class FileChunkProducer: NIOAsyncSequenceProducerDelegate, Sendable {
     let state: NIOLockedValueBox<ProducerState>
 
-    let path: NIOFilePath
+    let path: FilePath
     let chunkLength: Int64
 
     init(range: FileChunks.ChunkRange, handle: SystemFileHandle, chunkLength: Int64) {

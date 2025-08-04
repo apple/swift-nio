@@ -31,7 +31,11 @@ extension Data {
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
-        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed, fileSystem: fileSystem)
+        let byteBuffer = try await fileSystem.withFileHandle(forReadingAt: path) { handle in
+            try await handle.readToEnd(maximumSizeAllowed: maximumSizeAllowed)
+        }
+
+        self = Data(buffer: byteBuffer)
     }
 
     /// Reads the contents of the file at the path.
@@ -46,11 +50,7 @@ extension Data {
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
-        let byteBuffer = try await fileSystem.withFileHandle(forReadingAt: path) { handle in
-            try await handle.readToEnd(maximumSizeAllowed: maximumSizeAllowed)
-        }
-
-        self = Data(buffer: byteBuffer)
+        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed, fileSystem: fileSystem)
     }
 
     /// Reads the contents of the file at the path using ``FileSystem``.
@@ -62,7 +62,11 @@ extension Data {
         contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount
     ) async throws {
-        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed)
+        self = try await Self(
+            contentsOf: path,
+            maximumSizeAllowed: maximumSizeAllowed,
+            fileSystem: .shared
+        )
     }
 
     /// Reads the contents of the file at the path using ``FileSystem``.
@@ -75,11 +79,7 @@ extension Data {
         contentsOf path: FilePath,
         maximumSizeAllowed: ByteCount
     ) async throws {
-        self = try await Self(
-            contentsOf: path,
-            maximumSizeAllowed: maximumSizeAllowed,
-            fileSystem: .shared
-        )
+        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed)
     }
 }
 #endif

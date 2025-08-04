@@ -734,7 +734,13 @@ extension DirectoryFileHandleProtocol {
         options: OpenOptions.Read = OpenOptions.Read(),
         execute body: (_ read: ReadFileHandle) async throws -> Result
     ) async throws -> Result {
-        try await self.withFileHandle(forReadingAt: .init(path), options: options, execute: body)
+        let handle = try await self.openFile(forReadingAt: path, options: options)
+
+        return try await withUncancellableTearDown {
+            try await body(handle)
+        } tearDown: { _ in
+            try await handle.close()
+        }
     }
 
     /// Opens the file at the given path and provides scoped read access to it.
@@ -762,13 +768,7 @@ extension DirectoryFileHandleProtocol {
         options: OpenOptions.Read = OpenOptions.Read(),
         execute body: (_ read: ReadFileHandle) async throws -> Result
     ) async throws -> Result {
-        let handle = try await self.openFile(forReadingAt: path, options: options)
-
-        return try await withUncancellableTearDown {
-            try await body(handle)
-        } tearDown: { _ in
-            try await handle.close()
-        }
+        try await self.withFileHandle(forReadingAt: .init(path), options: options, execute: body)
     }
 
     /// Opens the file at the given path and provides scoped write access to it.
@@ -793,7 +793,18 @@ extension DirectoryFileHandleProtocol {
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute body: (_ write: WriteFileHandle) async throws -> Result
     ) async throws -> Result {
-        try await self.withFileHandle(forWritingAt: .init(path), options: options, execute: body)
+        let handle = try await self.openFile(forWritingAt: path, options: options)
+
+        return try await withUncancellableTearDown {
+            try await body(handle)
+        } tearDown: { result in
+            switch result {
+            case .success:
+                try await handle.close(makeChangesVisible: true)
+            case .failure:
+                try await handle.close(makeChangesVisible: false)
+            }
+        }
     }
 
     /// Opens the file at the given path and provides scoped write access to it.
@@ -819,18 +830,7 @@ extension DirectoryFileHandleProtocol {
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute body: (_ write: WriteFileHandle) async throws -> Result
     ) async throws -> Result {
-        let handle = try await self.openFile(forWritingAt: path, options: options)
-
-        return try await withUncancellableTearDown {
-            try await body(handle)
-        } tearDown: { result in
-            switch result {
-            case .success:
-                try await handle.close(makeChangesVisible: true)
-            case .failure:
-                try await handle.close(makeChangesVisible: false)
-            }
-        }
+        try await self.withFileHandle(forWritingAt: .init(path), options: options, execute: body)
     }
 
     /// Opens the file at the given path and provides scoped read-write access to it.
@@ -854,7 +854,18 @@ extension DirectoryFileHandleProtocol {
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute body: (_ readWrite: ReadWriteFileHandle) async throws -> Result
     ) async throws -> Result {
-        try await self.withFileHandle(forReadingAndWritingAt: .init(path), options: options, execute: body)
+        let handle = try await self.openFile(forReadingAndWritingAt: path, options: options)
+
+        return try await withUncancellableTearDown {
+            try await body(handle)
+        } tearDown: { result in
+            switch result {
+            case .success:
+                try await handle.close(makeChangesVisible: true)
+            case .failure:
+                try await handle.close(makeChangesVisible: false)
+            }
+        }
     }
 
     /// Opens the file at the given path and provides scoped read-write access to it.
@@ -879,18 +890,7 @@ extension DirectoryFileHandleProtocol {
         options: OpenOptions.Write = .newFile(replaceExisting: false),
         execute body: (_ readWrite: ReadWriteFileHandle) async throws -> Result
     ) async throws -> Result {
-        let handle = try await self.openFile(forReadingAndWritingAt: path, options: options)
-
-        return try await withUncancellableTearDown {
-            try await body(handle)
-        } tearDown: { result in
-            switch result {
-            case .success:
-                try await handle.close(makeChangesVisible: true)
-            case .failure:
-                try await handle.close(makeChangesVisible: false)
-            }
-        }
+        try await self.withFileHandle(forReadingAndWritingAt: .init(path), options: options, execute: body)
     }
 
     /// Opens the directory at the given path and provides scoped access to it.
@@ -906,7 +906,13 @@ extension DirectoryFileHandleProtocol {
         options: OpenOptions.Directory = OpenOptions.Directory(),
         execute body: (_ directory: Self) async throws -> Result
     ) async throws -> Result {
-        try await self.withDirectoryHandle(atPath: .init(path), options: options, execute: body)
+        let handle = try await self.openDirectory(atPath: path, options: options)
+
+        return try await withUncancellableTearDown {
+            try await body(handle)
+        } tearDown: { _ in
+            try await handle.close()
+        }
     }
 
     /// Opens the directory at the given path and provides scoped access to it.
@@ -923,12 +929,6 @@ extension DirectoryFileHandleProtocol {
         options: OpenOptions.Directory = OpenOptions.Directory(),
         execute body: (_ directory: Self) async throws -> Result
     ) async throws -> Result {
-        let handle = try await self.openDirectory(atPath: path, options: options)
-
-        return try await withUncancellableTearDown {
-            try await body(handle)
-        } tearDown: { _ in
-            try await handle.close()
-        }
+        try await self.withDirectoryHandle(atPath: .init(path), options: options, execute: body)
     }
 }

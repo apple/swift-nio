@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -149,7 +149,7 @@ final class FileSystemErrorTests: XCTestCase {
     @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
     func testErrorsMapToCorrectSyscallCause() throws {
         let here = FileSystemError.SourceLocation(function: "fn", file: "file", line: 42)
-        let path = NIOFilePath("/foo")
+        let path = FilePath("/foo")
 
         for statName in ["stat", "lstat", "fstat"] {
             assertCauseIsSyscall(statName, here) {
