@@ -19,6 +19,7 @@ import NIOCore
 private struct PendingStreamWrite {
     var data: IOData
     var promise: Optional<EventLoopPromise<Void>>
+    var metadata: AddressedEnvelope<ByteBuffer>.Metadata?
 }
 
 /// Write result is `.couldNotWriteEverything` but we have no more writes to perform.
@@ -322,7 +323,7 @@ private struct PendingStreamWritesState {
     }
 }
 
-/// This class manages the writing of pending writes to stream sockets. The state is held in a `PendingWritesState`
+/// This class manages the writing of pending writes to stream sockets. The state is held in a `PendingStreamWritesState`
 /// value. The most important purpose of this object is to call `write`, `writev` or `sendfile` depending on the
 /// currently pending writes.
 final class PendingStreamWritesManager: PendingWritesManager {
@@ -370,7 +371,10 @@ final class PendingStreamWritesManager: PendingWritesManager {
     func add(data: IOData, promise: EventLoopPromise<Void>?) -> Bool {
         assert(self.isOpen)
         self.state.append(PendingStreamWrite(data: data, promise: promise))
+        return _add()
+    }
 
+    private func _add() -> Bool {
         if self.state.bytes > waterMark.high
             && channelWritabilityFlag.compareExchange(expected: true, desired: false, ordering: .relaxed).exchanged
         {
@@ -379,6 +383,14 @@ final class PendingStreamWritesManager: PendingWritesManager {
             return false
         }
         return true
+    }
+
+    func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
+        assert(self.isOpen)
+        self.state.append(
+            PendingStreamWrite(data: .byteBuffer(envelope.data), promise: promise, metadata: envelope.metadata)
+        )
+        return _add()
     }
 
     /// Returns the best mechanism to write pending data at the current point in time.
@@ -400,6 +412,8 @@ final class PendingStreamWritesManager: PendingWritesManager {
         scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>
     ) throws -> OverallWriteResult {
         try self.triggerWriteOperations { writeMechanism in
+            print(#function, writeMechanism)
+            // TODO: add with metadata calls.
             switch writeMechanism {
             case .scalarBufferWrite:
                 return try triggerScalarBufferWrite({ try scalarBufferWriteOperation($0) })
