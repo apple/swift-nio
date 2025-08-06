@@ -681,6 +681,19 @@ class AsyncTestingChannelTests: XCTestCase {
         try await XCTAsyncAssertEqual(buf, try await channel.waitForOutboundWrite(as: ByteBuffer.self))
         try await XCTAsyncAssertTrue(try await channel.finish().isClean)
     }
+
+    func testGetSetOption() async throws {
+        let channel = NIOAsyncTestingChannel()
+        let option = ChannelOptions.socket(IPPROTO_IP, IP_TTL)
+        let _ = try await channel.setOption(option, value: 1).get()
+
+        let optionValue1 = try await channel.getOption(option).get()
+        XCTAssertEqual(1, optionValue1)
+
+        let _ = try await channel.setOption(option, value: 2).get()
+        let optionValue2 = try await channel.getOption(option).get()
+        XCTAssertEqual(2, optionValue2)
+    }
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)

@@ -795,6 +795,13 @@ public final class EmbeddedChannel: Channel {
     /// - see: `Channel.isWritable`
     public var isWritable: Bool = true
 
+    @usableFromInline
+    internal var _options: [(option: any ChannelOption, value: any Sendable)] = []
+
+    /// The `ChannelOption`s set on this channel.
+    /// - see: `Embedded.setOption`
+    public var options: [(option: any ChannelOption, value: any Sendable)] { self._options }
+
     /// Synchronously closes the `EmbeddedChannel`.
     ///
     /// Errors in the `EmbeddedChannel` can be consumed using `throwIfErrorCaught`.
@@ -1023,12 +1030,13 @@ public final class EmbeddedChannel: Channel {
     @inlinable
     internal func setOptionSync<Option: ChannelOption>(_ option: Option, value: Option.Value) {
         self.embeddedEventLoop.checkCorrectThread()
+
+        self.addOption(option, value: value)
+
         if option is ChannelOptions.Types.AllowRemoteHalfClosureOption {
             self.allowRemoteHalfClosure = value as! Bool
             return
         }
-        // No other options supported
-        fatalError("option not supported")
     }
 
     /// - see: `Channel.getOption`
@@ -1055,7 +1063,26 @@ public final class EmbeddedChannel: Channel {
 
             return result as! Option.Value
         }
-        fatalError("option \(option) not supported")
+
+        guard let value = optionValue(for: option) else {
+            fatalError("option \(option) not supported")
+        }
+
+        return value
+    }
+
+    @inlinable
+    internal func addOption<Option: ChannelOption>(_ option: Option, value: Option.Value) {
+        if let optionIndex = self._options.firstIndex(where: { $0.option is Option }) {
+            self._options[optionIndex] = (option: option, value: value)
+        } else {
+            self._options.append((option: option, value: value))
+        }
+    }
+
+    @inlinable
+    internal func optionValue<Option: ChannelOption>(for option: Option) -> Option.Value? {
+        self.options.first(where: { $0.option is Option })?.value as? Option.Value
     }
 
     /// Fires the (outbound) `bind` event through the `ChannelPipeline`. If the event hits the `EmbeddedChannel` which
