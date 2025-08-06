@@ -303,17 +303,18 @@ final class FileHandleTests: XCTestCase {
     }
 
     func testWriteAndReadUnseekableFile() async throws {
-        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: FilePath("test-XXX"))
+        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
-        guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
+        let fifoPath = FilePath(privateTempDirPath).appending("fifo")
+        guard mkfifo(fifoPath.string, 0o644) == 0 else {
             XCTFail("Error calling mkfifo.")
             return
         }
 
-        try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
             handle in
             let someBytes = ByteBuffer(repeating: 42, count: 1546)
             try await handle.write(contentsOf: someBytes.readableBytesView, toAbsoluteOffset: 0)
@@ -324,17 +325,18 @@ final class FileHandleTests: XCTestCase {
     }
 
     func testWriteAndReadUnseekableFileOverMaximumSizeAllowedThrowsError() async throws {
-        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: FilePath("test-XXX"))
+        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
-        guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
+        let fifoPath = FilePath(privateTempDirPath).appending("fifo")
+        guard mkfifo(fifoPath.string, 0o644) == 0 else {
             XCTFail("Error calling mkfifo.")
             return
         }
 
-        try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
             handle in
             let someBytes = [UInt8](repeating: 42, count: 10)
             try await handle.write(contentsOf: someBytes, toAbsoluteOffset: 0)
@@ -348,17 +350,18 @@ final class FileHandleTests: XCTestCase {
     }
 
     func testWriteAndReadUnseekableFileWithOffsetsThrows() async throws {
-        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: FilePath("test-XXX"))
+        let privateTempDirPath = try await FileSystem.shared.createTemporaryDirectory(template: "test-XXX")
         self.addTeardownBlock {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
-        guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
+        let fifoPath = FilePath(privateTempDirPath).appending("fifo")
+        guard mkfifo(fifoPath.string, 0o644) == 0 else {
             XCTFail("Error calling mkfifo.")
             return
         }
 
-        try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
             handle in
             let someBytes = [UInt8](repeating: 42, count: 1546)
 

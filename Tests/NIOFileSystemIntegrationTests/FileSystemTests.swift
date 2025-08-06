@@ -1317,8 +1317,8 @@ final class FileSystemTests: XCTestCase {
         let fs = FileSystem.shared
 
         let createdPath = try await fs.withTemporaryDirectory { directory, path in
-            let root = (try await fs.temporaryDirectory).underlying
-            XCTAssert(path.starts(with: root))
+            let root = try await fs.temporaryDirectory
+            XCTAssert(path.starts(with: root.underlying))
             return path
         }
 
