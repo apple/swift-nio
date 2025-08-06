@@ -19,6 +19,10 @@ import XCTest
 
 @testable import NIOEmbedded
 
+#if canImport(Android)
+import Android
+#endif
+
 final class ChannelLifecycleHandler: ChannelInboundHandler, Sendable {
     public typealias InboundIn = Any
 
