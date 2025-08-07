@@ -34,15 +34,19 @@ final class RecorderDelegate: NIOEventLoopMetricsDelegate, Sendable {
 }
 
 final class EventLoopMetricsDelegateTests: XCTestCase {
-    func testMetricsDelegateNotCalledWhenNoEvents() {
+    func testMetricsDelegateNotCalledWhenNoEvents() throws {
         let delegate = RecorderDelegate()
-        _ = MultiThreadedEventLoopGroup(numberOfThreads: 1, metricsDelegate: delegate)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1, metricsDelegate: delegate)
         XCTAssertEqual(delegate.infos.count, 0)
+        try group.syncShutdownGracefully()
     }
 
     func testMetricsDelegateTickInfo() {
         let delegate = RecorderDelegate()
         let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1, metricsDelegate: delegate)
+        defer {
+            XCTAssertNoThrow(try elg.syncShutdownGracefully())
+        }
         let el = elg.any()
         let testStartTime = NIODeadline.now()
 
@@ -57,11 +61,37 @@ final class EventLoopMetricsDelegateTests: XCTestCase {
         }
 
         promise.futureResult.whenSuccess {
-            // There are 4 tasks (scheduleTask, scheduleTask, whenSuccess, wait) which can trigger a total of 2...4 ticks
-            XCTAssertTrue((2...4).contains(delegate.infos.count), "Expected 2...4 ticks, got \(delegate.infos.count)")
-            // The total number of tasks across these ticks should be either 3 or 4
-            let totalTasks = delegate.infos.map { $0.numberOfTasks }.reduce(0, { $0 + $1 })
-            XCTAssertTrue((3...4).contains(totalTasks), "Expected 3...4 tasks, got \(totalTasks)")
+            // There are 4 tasks here:
+            // 1. scheduleTask in 100ms,
+            // 2. scheduleTask in 1s,
+            // 3. whenSuccess (this callback),
+            // 4. wait() (which is secrectly a whenComplete)
+            //
+            // These can run in 2...6 event loop ticks. The worst case happens when:
+            // 1. The selector blocks after the EL is created and is woken by the 100ms task being
+            //    scheduled. The EL wakes up but has no tasks to run so goes blocks until no later
+            //    than the 100ms task needs running.
+            // 2. The 1s task is scheduled which causes the selector to wakeup again but it has
+            //    nothing to do. It goes back to sleep blocking until the 100ms task is run.
+            // 3. whenSuccess is called which wakes the selector as whenSuccess executes onto
+            //    the EL to enqueue the task. The selector goes back to sleep waiting for the
+            //    100ms task.
+            // 4. wait() is called which under the hood does a whenComplete which can then wake the
+            //    as per (3). The selector goes back to sleep waiting for the 100ms task.
+            // 5. The EL wakes up and runs the 100ms task. It goes back to sleep waiting for the
+            //    1s task.
+            // 6. The 1s task is run which succeeds the promise and runs both this whenSuccess
+            //    callback and the whenComplete in the wait().
+            //
+            // Why a maximum of five? I literally just listed six times the loop can tick. This
+            // task (whenSuccess) is running as part of the last tick, and so the info hasn't
+            // been published to the delegate yet.
+            XCTAssertTrue((2...5).contains(delegate.infos.count), "Expected 2...5 ticks, got \(delegate.infos.count)")
+
+            // The total number of tasks across these ticks should be 3. Not four, because this
+            // task is the fourth and it hasn't finished running yet.
+            let totalTasks = delegate.infos.map { $0.numberOfTasks }.reduce(0, +)
+            XCTAssertEqual(totalTasks, 3, "Expected 3 tasks, got \(totalTasks)")
             // All tasks were run by the same event loop. The measurements are monotonically increasing.
             var lastEndTime: NIODeadline?
             for info in delegate.infos {
