@@ -56,9 +56,14 @@ jobs:
       matrix_string: '${{ needs.construct-integration-test-matrix.outputs.integration-test-matrix }}'
 
   static-sdk:
-    name: Static SDK
+    name: Static Linux Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/static_sdk.yml@main
+
+  wasm-sdk:
+    name: WebAssembly Swift SDK
+    # Workaround https://github.com/nektos/act/issues/1875
+    uses: apple/swift-nio/.github/workflows/wasm_sdk.yml@main
 
   macos-tests:
     name: macOS tests
