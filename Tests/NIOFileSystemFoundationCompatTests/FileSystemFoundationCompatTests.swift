@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -23,7 +23,7 @@ extension FileSystem {
         inTemporaryDirectory: Bool = true
     ) async throws -> FilePath {
         if inTemporaryDirectory {
-            let directory = try await self.temporaryDirectory
+            let directory = FilePath(try await self.temporaryDirectory)
             return self.temporaryFilePath(function, inDirectory: directory)
         } else {
             return self.temporaryFilePath(function, inDirectory: nil)
