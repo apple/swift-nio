@@ -18,6 +18,10 @@ import XCTest
 
 @testable import NIOEmbedded
 
+#if canImport(Android)
+import Android
+#endif
+
 @available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 class AsyncTestingChannelTests: XCTestCase {
     func testSingleHandlerInit() async throws {
