@@ -7,40 +7,40 @@
 Files and directories can be opened and have their lifecycles managed by using the
 following methods:
 
-- ``withFileHandle(forReadingAt:options:execute:)-(NIOFilePath,_,_)``
-- ``withFileHandle(forWritingAt:options:execute:)-(NIOFilePath,_,_)``
-- ``withFileHandle(forReadingAndWritingAt:options:execute:)-(NIOFilePath,_,_)``
-- ``withDirectoryHandle(atPath:options:execute:)-(NIOFilePath,_,_)``
+- ``withFileHandle(forReadingAt:options:execute:)-nsue``
+- ``withFileHandle(forWritingAt:options:execute:)-1p6ka``
+- ``withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3``
+- ``withDirectoryHandle(atPath:options:execute:)-4wzzz``
 
 ### Opening files
 
 Files and directories can be opened using the following methods. The caller is responsible for
 closing it to avoid leaking resources.
 
-- ``openFile(forReadingAt:)-(NIOFilePath)``
-- ``openFile(forWritingAt:options:)-(NIOFilePath,_)``
-- ``openFile(forReadingAndWritingAt:options:)-(NIOFilePath,_)``
-- ``openDirectory(atPath:options:)-(NIOFilePath,_)``
+- ``openFile(forReadingAt:)-6v2b8``
+- ``openFile(forWritingAt:options:)``
+- ``openFile(forReadingAndWritingAt:options:)``
+- ``openDirectory(atPath:options:)``
 
 ### File information
 
-- ``info(forFileAt:infoAboutSymbolicLink:)-(NIOFilePath,_)``
+- ``info(forFileAt:infoAboutSymbolicLink:)``
 
 ### Symbolic links
 
-- ``createSymbolicLink(at:withDestination:)-(NIOFilePath,_)``
-- ``destinationOfSymbolicLink(at:)->NIOFilePath``
+- ``createSymbolicLink(at:withDestination:)``
+- ``destinationOfSymbolicLink(at:)``
 
 ### Managing files
 
-- ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)-(NIOFilePath,_,_,_,_)``
-- ``removeItem(at:)-(NIOFilePath)``
-- ``moveItem(at:to:)-(NIOFilePath,_)``
-- ``replaceItem(at:withItemAt:)-(NIOFilePath,_)``
-- ``createDirectory(at:withIntermediateDirectories:permissions:)-(NIOFilePath,_,_)``
+- ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
+- ``removeItem(at:)-1vii4``
+- ``moveItem(at:to:)``
+- ``replaceItem(at:withItemAt:)``
+- ``createDirectory(at:withIntermediateDirectories:permissions:)``
 
 ### System directories
 
 - ``currentWorkingDirectory``
 - ``temporaryDirectory``
-- ``withTemporaryDirectory(prefix:options:execute:)-(NIOFilePath?,_,_)``
+- ``withTemporaryDirectory(prefix:options:execute:)-rbkk``

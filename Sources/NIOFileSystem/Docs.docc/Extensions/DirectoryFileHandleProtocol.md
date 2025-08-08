@@ -11,17 +11,17 @@
 Open files and directories at paths relative to the directory handle. These methods manage
 the lifecycle of the handles by closing them when the `execute` closure returns.
 
-- ``withFileHandle(forReadingAt:options:execute:)-(NIOFilePath,_,_)``
-- ``withFileHandle(forWritingAt:options:execute:)-(NIOFilePath,_,_)``
-- ``withFileHandle(forReadingAndWritingAt:options:execute:)-(NIOFilePath,_,_)``
-- ``withDirectoryHandle(atPath:options:execute:)-(NIOFilePath,_,_)``
+- ``withFileHandle(forReadingAt:options:execute:)-52xsn``
+- ``withFileHandle(forWritingAt:options:execute:)-36f0k``
+- ``withFileHandle(forReadingAndWritingAt:options:execute:)-5j0f3``
+- ``withDirectoryHandle(atPath:options:execute:)-2jszb``
 
 ### Opening files
 
 Open files and directories at paths relative to the directory handle. These methods return
 the handle to the caller who is responsible for closing it.
 
-- ``openFile(forReadingAt:options:)-(NIOFilePath,_)``
-- ``openFile(forWritingAt:options:)-(NIOFilePath,_)``
-- ``openFile(forReadingAndWritingAt:options:)-(NIOFilePath,_)``
-- ``openDirectory(atPath:options:)-(NIOFilePath,_)``
+- ``openFile(forReadingAt:options:)``
+- ``openFile(forWritingAt:options:)``
+- ``openFile(forReadingAndWritingAt:options:)``
+- ``openDirectory(atPath:options:)``

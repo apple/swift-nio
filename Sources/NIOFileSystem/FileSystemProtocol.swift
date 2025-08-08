@@ -313,8 +313,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-write or write-only
-    /// mode by calling ``withFileHandle(forReadingAndWritingAt:options:execute:)-(NIOFilePath,_,_)`` and
-    /// ``withFileHandle(forWritingAt:options:execute:)-(NIOFilePath,_,_)``.
+    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -340,8 +340,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-write or write-only
-    /// mode by calling ``withFileHandle(forReadingAndWritingAt:options:execute:)-(FilePath,_,_)`` and
-    /// ``withFileHandle(forWritingAt:options:execute:)-(FilePath,_,_)``.
+    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-3822z`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-41x6r``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -363,8 +363,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-write or read-only
-    /// mode by calling ``withFileHandle(forReadingAndWritingAt:options:execute:)-(NIOFilePath,_,_)`` and
-    /// ``withFileHandle(forReadingAt:options:execute:)-(NIOFilePath,_,_)``.
+    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` and
+    /// ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-nsue``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -395,8 +395,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-write or read-only
-    /// mode by calling ``withFileHandle(forReadingAndWritingAt:options:execute:)-(FilePath,_,_)`` and
-    /// ``withFileHandle(forReadingAt:options:execute:)-(FilePath,_,_)``.
+    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-3822z`` and
+    /// ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-20x3l``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -418,8 +418,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the function returns. Files may also be opened in read-only or
-    /// write-only mode by with ``withFileHandle(forReadingAt:options:execute:)-(NIOFilePath,_,_)`` and
-    /// ``withFileHandle(forWritingAt:options:execute:)-(NIOFilePath,_,_)``.
+    /// write-only mode by with ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-nsue`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading and writing.
@@ -445,8 +445,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the function returns. Files may also be opened in read-only or
-    /// write-only mode by with ``withFileHandle(forReadingAt:options:execute:)-(FilePath,_,_)`` and
-    /// ``withFileHandle(forWritingAt:options:execute:)-(FilePath,_,_)``.
+    /// write-only mode by with ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-20x3l`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-41x6r``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading and writing.

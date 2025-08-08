@@ -590,10 +590,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// The destination of the symbolic link is not guaranteed to be a valid path, nor is it
     /// guaranteed to be an absolute path. If you need to open a file which is the destination of a
     /// symbolic link then the appropriate `open` function:
-    /// - ``openFile(forReadingAt:)-(NIOFilePath)``
-    /// - ``openFile(forWritingAt:options:)-(NIOFilePath,_)``
-    /// - ``openFile(forReadingAndWritingAt:options:)-(NIOFilePath,_)``
-    /// - ``openDirectory(atPath:options:)-(NIOFilePath,_)``
+    /// - ``openFile(forReadingAt:)-55z6f``
+    /// - ``openFile(forWritingAt:options:)``
+    /// - ``openFile(forReadingAndWritingAt:options:)``
+    /// - ``openDirectory(atPath:options:)``
     ///
     /// #### Errors
     ///

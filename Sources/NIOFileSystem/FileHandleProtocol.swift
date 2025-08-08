@@ -714,8 +714,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in write-only and read-write
-    /// mode by calling ``withFileHandle(forWritingAt:options:execute:)-(NIOFilePath,_,_)``
-    /// and ``withFileHandle(forReadingAndWritingAt:options:execute:)-(NIOFilePath,_,_)``,
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)-36f0k``
+    /// and ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-5j0f3``,
     /// respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle. The file being
@@ -747,8 +747,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in write-only and read-write
-    /// mode by calling ``withFileHandle(forWritingAt:options:execute:)-(FilePath,_,_)``
-    /// and ``withFileHandle(forReadingAndWritingAt:options:execute:)-(FilePath,_,_)``,
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)-8xwbq``
+    /// and ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-5zcub``,
     /// respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle. The file being
@@ -775,8 +775,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-only or read-write
-    /// mode by calling ``withFileHandle(forReadingAt:options:execute:)-(NIOFilePath,_,_)`` and
-    /// ``withFileHandle(forReadingAndWritingAt:options:execute:)-(NIOFilePath,_,_)``,
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)-52xsn`` and
+    /// ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-5j0f3``,
     /// respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle.
@@ -811,8 +811,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-only or read-write
-    /// mode by calling ``withFileHandle(forReadingAt:options:execute:)-(FilePath,_,_)`` and
-    /// ``withFileHandle(forReadingAndWritingAt:options:execute:)-(FilePath,_,_)``,
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)-6cqam`` and
+    /// ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-5zcub``,
     /// respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle.
@@ -837,8 +837,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-only or write-only
-    /// mode by calling ``withFileHandle(forReadingAt:options:execute:)-(NIOFilePath,_,_)`` and
-    /// ``withFileHandle(forWritingAt:options:execute:)-(NIOFilePath,_,_)``, respectively.
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)-52xsn`` and
+    /// ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)-36f0k``, respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle.
     ///
@@ -872,8 +872,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-only or write-only
-    /// mode by calling ``withFileHandle(forReadingAt:options:execute:)-(FilePath,_,_)`` and
-    /// ``withFileHandle(forWritingAt:options:execute:)-(FilePath,_,_)``, respectively.
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)-6cqam`` and
+    /// ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)-8xwbq``, respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle.
     ///
