@@ -685,7 +685,7 @@ final class TypedWebSocketServerEndToEndTests: WebSocketServerEndToEndTests {
                 configuration: .init(
                     upgradeConfiguration: NIOTypedHTTPServerUpgradeConfiguration<Void>(
                         upgraders: upgraders,
-                        notUpgradingCompletionHandler: { $0.eventLoop.makeSucceededVoidFuture() }
+                        notUpgradingCompletionHandler: { channel, _ in channel.eventLoop.makeSucceededVoidFuture() }
                     )
                 )
             )

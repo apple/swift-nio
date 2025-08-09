@@ -94,7 +94,7 @@ struct Server {
 
                 let serverUpgradeConfiguration = NIOTypedHTTPServerUpgradeConfiguration(
                     upgraders: [upgrader],
-                    notUpgradingCompletionHandler: { channel in
+                    notUpgradingCompletionHandler: { channel, requestHead in
                         channel.eventLoop.makeCompletedFuture {
                             try channel.pipeline.syncOperations.addHandler(HTTPByteBufferResponsePartHandler())
                             let asyncChannel = try NIOAsyncChannel<
