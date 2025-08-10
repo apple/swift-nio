@@ -293,6 +293,9 @@ final class ChannelTests: XCTestCase {
         var multiState = 0
         var fileState = 0
         let result = try pwm.triggerAppropriateWriteOperations(
+            writeMessage: { (_, _, _, _) in
+                return .processed(0)
+            },
             scalarBufferWriteOperation: { buf in
                 defer {
                     singleState += 1
