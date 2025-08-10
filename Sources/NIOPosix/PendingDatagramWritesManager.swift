@@ -365,7 +365,7 @@ private struct PendingDatagramWritesState {
         case .some(let e):
             // The compiler can't prove this, but it must be so.
             assert(self.pendingWrites.distance(from: e, to: self.pendingWrites.startIndex) == 0)
-            return .scalarBufferWrite
+            return .scalarBufferWrite(withMetaData: self.pendingWrites.first!.metadata == nil)
         default:
             return .nothingToBeWritten
         }

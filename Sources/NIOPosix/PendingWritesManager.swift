@@ -302,7 +302,7 @@ private struct PendingStreamWritesState {
         case 1:
             switch self.pendingWrites.first!.data {
             case .byteBuffer:
-                return .scalarBufferWrite
+                return .scalarBufferWrite(withMetaData: self.pendingWrites.first!.metadata != nil)
             case .fileRegion:
                 return .scalarFileWrite
             }
@@ -315,7 +315,7 @@ private struct PendingStreamWritesState {
             case (.byteBuffer, .byteBuffer):
                 return .vectorBufferWrite
             case (.byteBuffer, .fileRegion):
-                return .scalarBufferWrite
+                return .scalarBufferWrite(withMetaData: self.pendingWrites.first!.metadata != nil)
             case (.fileRegion, _):
                 return .scalarFileWrite
             }
@@ -387,6 +387,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
         assert(self.isOpen)
+        print(#function, envelope.metadata)
         self.state.append(
             PendingStreamWrite(data: .byteBuffer(envelope.data), promise: promise, metadata: envelope.metadata)
         )
@@ -407,16 +408,22 @@ final class PendingStreamWritesManager: PendingWritesManager {
     ///   - scalarFileWriteOperation: An operation that writes a region of a file descriptor (usually `sendfile`).
     /// - Returns: The `OneWriteOperationResult` and whether the `Channel` is now writable.
     func triggerAppropriateWriteOperations(
+        writeMessage: (
+            UnsafeRawBufferPointer, UnsafePointer<sockaddr>?, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?
+        ) throws -> IOResult<Int>,
         scalarBufferWriteOperation: (UnsafeRawBufferPointer) throws -> IOResult<Int>,
         vectorBufferWriteOperation: (UnsafeBufferPointer<IOVector>) throws -> IOResult<Int>,
         scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>
     ) throws -> OverallWriteResult {
         try self.triggerWriteOperations { writeMechanism in
             print(#function, writeMechanism)
-            // TODO: add with metadata calls.
             switch writeMechanism {
-            case .scalarBufferWrite:
-                return try triggerScalarBufferWrite({ try scalarBufferWriteOperation($0) })
+            case .scalarBufferWrite(let metaData):
+                if metaData {
+                    return try _triggerScalarBufferWrite(scalarWriteOperation: { try writeMessage($0, $1, $2, $3) })
+                } else {
+                    return try triggerScalarBufferWrite({ try scalarBufferWriteOperation($0) })
+                }
             case .vectorBufferWrite:
                 return try triggerVectorBufferWrite({ try vectorBufferWriteOperation($0) })
             case .scalarFileWrite:
@@ -462,6 +469,32 @@ final class PendingStreamWritesManager: PendingWritesManager {
             return self.didWrite(itemCount: 1, result: try buffer.withUnsafeReadableBytes({ try operation($0) }))
         case .fileRegion:
             preconditionFailure("called \(#function) but first item to write was a FileRegion")
+        }
+    }
+
+    private func _triggerScalarBufferWrite(
+        scalarWriteOperation: (
+            UnsafeRawBufferPointer, UnsafePointer<sockaddr>?, socklen_t, AddressedEnvelope<ByteBuffer>.Metadata?
+        ) throws -> IOResult<Int>
+    ) rethrows -> OneWriteOperationResult {
+        assert(
+            self.state.isFlushPending && self.isOpen && !self.state.isEmpty,
+            "illegal state for scalar datagram write operation: flushPending: \(self.state.isFlushPending), isOpen: \(self.isOpen), empty: \(self.state.isEmpty)"
+        )
+        let pending = self.state[0]
+        do {
+            let writeResult: IOResult<Int>
+            switch pending.data {
+            case .byteBuffer(let data):
+                writeResult = try data.withUnsafeReadableBytes {
+                    try scalarWriteOperation($0, nil, 0, pending.metadata)
+                }
+            case .fileRegion(_):
+                fatalError("IDK")
+            }
+            return self.didWrite(itemCount: 1, result: writeResult)
+        } catch {
+            fatalError("Unable to catch: \(error)")
         }
     }
 
@@ -621,7 +654,7 @@ final class PendingStreamWritesManager: PendingWritesManager {
 }
 
 internal enum WriteMechanism {
-    case scalarBufferWrite
+    case scalarBufferWrite(withMetaData: Bool)
     case vectorBufferWrite
     case scalarFileWrite
     case nothingToBeWritten
