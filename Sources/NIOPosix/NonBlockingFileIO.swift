@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import CNIOWindows
 import NIOConcurrencyHelpers
 import NIOCore
 
