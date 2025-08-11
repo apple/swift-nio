@@ -17,6 +17,7 @@ import NIOCore
 
 #if canImport(WinSDK)
 import WinSDK
+import CNIOWindows
 #endif
 
 /// An object that manages issuing vector reads for datagram channels.
@@ -133,8 +134,7 @@ struct DatagramVectorReadManager {
                 msgHdr.msg_namelen = socklen_t(MemoryLayout<sockaddr_storage>.size)
                 msgHdr.msg_iov = self.ioVector.baseAddress! + i
                 msgHdr.msg_iovlen = 1  // This is weird, but each message gets only one array. Duh
-                msgHdr.msg_control = controlBytes.baseAddress
-                msgHdr.msg_controllen = .init(controlBytes.count)
+                msgHdr.control_ptr = controlBytes
                 msgHdr.msg_flags = 0
                 self.messageVector[i] = MMsgHdr(msg_hdr: msgHdr, msg_len: 0)
 

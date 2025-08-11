@@ -21,6 +21,10 @@ import XCTest
 @testable import NIOCore
 @testable import NIOPosix
 
+#if os(Linux)
+import CNIOLinux
+#endif
+
 class ChannelLifecycleHandler: ChannelInboundHandler {
     public typealias InboundIn = Any
 

@@ -11,7 +11,12 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
 import NIOCore
+
+#if canImport(WinSDK)
+import struct WinSDK.socklen_t
+#endif
 
 final class SelectablePipeHandle {
     var fileDescriptor: CInt

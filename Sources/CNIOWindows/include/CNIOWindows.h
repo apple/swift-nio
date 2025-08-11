@@ -20,6 +20,7 @@
 #include <WinSock2.h>
 #include <time.h>
 #include <stdint.h>
+#include <basetsd.h>
 
 #define NIO(name) CNIOWindows_ ## name
 
