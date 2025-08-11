@@ -712,4 +712,61 @@ extension IOVector {
         )
     }
 }
+
+extension WSAMSG {
+    var msg_name: UnsafeMutableRawPointer? {
+        set {
+            self.name = newValue?.assumingMemoryBound(to: sockaddr.self)
+        }
+        get {
+            UnsafeMutableRawPointer(self.name)
+        }
+    }
+
+    var msg_namelen: socklen_t {
+        set {
+            self.namelen = newValue
+        }
+        get {
+            self.namelen
+        }
+    }
+
+    var msg_iov: UnsafeMutablePointer<IOVector> {
+        set {
+            self.lpBuffers = newValue
+        }
+        get {
+            self.lpBuffers
+        }
+    }
+
+    var msg_iovlen: UInt32 {
+        set {
+            self.dwBufferCount = newValue
+        }
+        get {
+            self.dwBufferCount
+        }
+    }
+
+    var control_ptr: UnsafeMutableRawBufferPointer {
+        set {
+            self.Control.buf = newValue.baseAddress?.bindMemory(to: CHAR.self, capacity: newValue.count)
+            self.Control.len = numericCast(newValue.count)
+        }
+        get {
+            UnsafeMutableRawBufferPointer(start: self.Control.buf, count: numericCast(self.Control.len))
+        }
+    }
+
+    var msg_flags: Int {
+        set {
+            self.dwFlags = numericCast(newValue)
+        }
+        get {
+            numericCast(self.dwFlags)
+        }
+    }
+}
 #endif

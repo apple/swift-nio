@@ -398,4 +398,16 @@ extension NIOBSDSocket {
         #endif
     }
 }
+
+extension msghdr {
+    var control_ptr: UnsafeMutableRawBufferPointer {
+        set {
+            self.msg_control = newValue.baseAddress
+            self.msg_controllen = numericCast(newValue.count)
+        }
+        get {
+            UnsafeMutableRawBufferPointer(start: self.msg_control, count: numericCast(self.msg_controllen))
+        }
+    }
+}
 #endif
