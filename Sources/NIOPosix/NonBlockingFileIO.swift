@@ -15,6 +15,7 @@
 import CNIOLinux
 import NIOConcurrencyHelpers
 import NIOCore
+import CNIOWindows
 
 /// ``NonBlockingFileIO`` is a helper that allows you to read files without blocking the calling thread.
 ///
