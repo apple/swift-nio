@@ -711,5 +711,80 @@ extension IOVector {
             buf: iov_base.assumingMemoryBound(to: Int8.self)
         )
     }
+
+    var iov_len: UInt32 {
+        set {
+            self.len = newValue
+        }
+        get {
+            self.len
+        }
+    }
+
+    var iov_base: UnsafeMutableRawPointer {
+        set {
+            self.buf = newValue.assumingMemoryBound(to: Int8.self)
+        }
+        get {
+            UnsafeMutableRawPointer(self.buf)
+        }
+    }
+}
+
+extension WSAMSG {
+    var msg_name: UnsafeMutableRawPointer? {
+        set {
+            self.name = newValue?.assumingMemoryBound(to: sockaddr.self)
+        }
+        get {
+            UnsafeMutableRawPointer(self.name)
+        }
+    }
+
+    var msg_namelen: socklen_t {
+        set {
+            self.namelen = newValue
+        }
+        get {
+            self.namelen
+        }
+    }
+
+    var msg_iov: UnsafeMutablePointer<IOVector> {
+        set {
+            self.lpBuffers = newValue
+        }
+        get {
+            self.lpBuffers
+        }
+    }
+
+    var msg_iovlen: UInt32 {
+        set {
+            self.dwBufferCount = newValue
+        }
+        get {
+            self.dwBufferCount
+        }
+    }
+
+    var control_ptr: UnsafeMutableRawBufferPointer {
+        set {
+            self.Control.buf = newValue.baseAddress?.bindMemory(to: CHAR.self, capacity: newValue.count)
+            self.Control.len = numericCast(newValue.count)
+        }
+        get {
+            UnsafeMutableRawBufferPointer(start: self.Control.buf, count: Int(self.Control.len))
+        }
+    }
+
+    var msg_flags: Int {
+        set {
+            self.dwFlags = numericCast(newValue)
+        }
+        get {
+            Int(self.dwFlags)
+        }
+    }
 }
 #endif
