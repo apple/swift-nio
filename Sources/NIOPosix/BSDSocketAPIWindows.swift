@@ -711,6 +711,24 @@ extension IOVector {
             buf: iov_base.assumingMemoryBound(to: Int8.self)
         )
     }
+
+    var iov_len: UInt32 {
+        set {
+            self.len = newValue
+        }
+        get {
+            self.len
+        }
+    }
+
+    var iov_base: UnsafeMutableRawPointer {
+        set {
+            self.buf = newValue.assumingMemoryBound(to: Int8.self)
+        }
+        get {
+            UnsafeMutableRawPointer(self.buf)
+        }
+    }
 }
 
 extension WSAMSG {
