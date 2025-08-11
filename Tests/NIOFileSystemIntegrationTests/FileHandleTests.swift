@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -308,12 +308,13 @@ final class FileHandleTests: XCTestCase {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
-        guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
+        let fifoPath = FilePath(privateTempDirPath).appending("fifo")
+        guard mkfifo(fifoPath.string, 0o644) == 0 else {
             XCTFail("Error calling mkfifo.")
             return
         }
 
-        try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
             handle in
             let someBytes = ByteBuffer(repeating: 42, count: 1546)
             try await handle.write(contentsOf: someBytes.readableBytesView, toAbsoluteOffset: 0)
@@ -329,12 +330,13 @@ final class FileHandleTests: XCTestCase {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
-        guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
+        let fifoPath = FilePath(privateTempDirPath).appending("fifo")
+        guard mkfifo(fifoPath.string, 0o644) == 0 else {
             XCTFail("Error calling mkfifo.")
             return
         }
 
-        try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
             handle in
             let someBytes = [UInt8](repeating: 42, count: 10)
             try await handle.write(contentsOf: someBytes, toAbsoluteOffset: 0)
@@ -353,12 +355,13 @@ final class FileHandleTests: XCTestCase {
             try await FileSystem.shared.removeItem(at: privateTempDirPath, recursively: true)
         }
 
-        guard mkfifo(privateTempDirPath.appending("fifo").string, 0o644) == 0 else {
+        let fifoPath = FilePath(privateTempDirPath).appending("fifo")
+        guard mkfifo(fifoPath.string, 0o644) == 0 else {
             XCTFail("Error calling mkfifo.")
             return
         }
 
-        try await self.withHandle(forFileAtPath: privateTempDirPath.appending("fifo"), accessMode: .readWrite) {
+        try await self.withHandle(forFileAtPath: fifoPath, accessMode: .readWrite) {
             handle in
             let someBytes = [UInt8](repeating: 42, count: 1546)
 
@@ -998,7 +1001,7 @@ final class FileHandleTests: XCTestCase {
         // Takes the path where 'O_TMPFILE' doesn't exist, so materializing the file is done via
         // creating a temporary file and then renaming it using 'renamex_np'/'renameat2' (Darwin/Linux).
         let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
-        let path = temporaryDirectory.appending(Self.temporaryFileName().components)
+        let path = FilePath(temporaryDirectory).appending(Self.temporaryFileName().components)
         let handle = try SystemFileHandle.syncOpenWithMaterialization(
             atPath: path,
             mode: .writeOnly,
@@ -1020,7 +1023,7 @@ final class FileHandleTests: XCTestCase {
         // fallback path where 'renameat2' returns EINVAL so the 'rename' is used in combination
         // with 'stat'. This path is only reachable on Linux.
         #if canImport(Glibc) || canImport(Musl) || canImport(Bionic)
-        let temporaryDirectory = try await FileSystem.shared.temporaryDirectory
+        let temporaryDirectory = FilePath(try await FileSystem.shared.temporaryDirectory)
         let path = temporaryDirectory.appending(Self.temporaryFileName().components)
         let handle = try SystemFileHandle.syncOpenWithMaterialization(
             atPath: path,

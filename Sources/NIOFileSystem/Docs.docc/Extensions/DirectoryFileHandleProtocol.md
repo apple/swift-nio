@@ -11,10 +11,10 @@
 Open files and directories at paths relative to the directory handle. These methods manage
 the lifecycle of the handles by closing them when the `execute` closure returns.
 
-- ``withFileHandle(forReadingAt:options:execute:)``
-- ``withFileHandle(forWritingAt:options:execute:)``
-- ``withFileHandle(forReadingAndWritingAt:options:execute:)``
-- ``withDirectoryHandle(atPath:options:execute:)``
+- ``withFileHandle(forReadingAt:options:execute:)-52xsn``
+- ``withFileHandle(forWritingAt:options:execute:)-36f0k``
+- ``withFileHandle(forReadingAndWritingAt:options:execute:)-5j0f3``
+- ``withDirectoryHandle(atPath:options:execute:)-2jszb``
 
 ### Opening files
 

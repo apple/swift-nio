@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -35,7 +35,7 @@ extension FileSystem {
         inTemporaryDirectory: Bool = true
     ) async throws -> FilePath {
         if inTemporaryDirectory {
-            let directory = try await self.temporaryDirectory
+            let directory = (try await self.temporaryDirectory).underlying
             return self.temporaryFilePath(function, inDirectory: directory)
         } else {
             return self.temporaryFilePath(function, inDirectory: nil)
@@ -505,14 +505,14 @@ final class FileSystemTests: XCTestCase {
 
     func testCurrentWorkingDirectory() async throws {
         let directory = try await self.fs.currentWorkingDirectory
-        XCTAssert(!directory.isEmpty)
-        XCTAssert(directory.isAbsolute)
+        XCTAssert(!directory.underlying.isEmpty)
+        XCTAssert(directory.underlying.isAbsolute)
     }
 
     func testTemporaryDirectory() async throws {
         let directory = try await self.fs.temporaryDirectory
-        XCTAssert(!directory.isEmpty)
-        XCTAssert(directory.isAbsolute)
+        XCTAssert(!directory.underlying.isEmpty)
+        XCTAssert(directory.underlying.isAbsolute)
     }
 
     func testInfo() async throws {
@@ -1318,7 +1318,7 @@ final class FileSystemTests: XCTestCase {
 
         let createdPath = try await fs.withTemporaryDirectory { directory, path in
             let root = try await fs.temporaryDirectory
-            XCTAssert(path.starts(with: root))
+            XCTAssert(path.starts(with: root.underlying))
             return path
         }
 
@@ -1329,7 +1329,7 @@ final class FileSystemTests: XCTestCase {
 
     func testWithTemporaryDirectoryPrefix() async throws {
         let fs = FileSystem.shared
-        let prefix = try await fs.currentWorkingDirectory
+        let prefix = (try await fs.currentWorkingDirectory).underlying
 
         let createdPath = try await fs.withTemporaryDirectory(prefix: prefix) { directory, path in
             XCTAssert(path.starts(with: prefix))
@@ -1685,7 +1685,7 @@ extension FileSystemTests {
         if let envTmpDir = getenv("TMPDIR") {
             let envTmpDirString = String(cString: envTmpDir)
             let fsTempDirectory = try await fs.temporaryDirectory
-            XCTAssertEqual(fsTempDirectory, FilePath(envTmpDirString))
+            XCTAssertEqual(fsTempDirectory.underlying, FilePath(envTmpDirString))
         }
     }
 
