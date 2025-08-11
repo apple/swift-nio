@@ -48,11 +48,11 @@ func main() async throws {
 
     // Directories can be opened like regular files but they cannot be read from or
     // written to. However, their contents can be listed:
-    let path: FilePath? = try await fileSystem.withDirectoryHandle(atPath: "/Users/hal9000/Music") { directory in
+    let path: NIOFilePath? = try await fileSystem.withDirectoryHandle(atPath: "/Users/hal9000/Music") { directory in
         for try await entry in directory.listContents() {
             if entry.name.extension == "mp3", entry.name.stem.contains("daisy") {
                 // Found it!
-                return entry.path
+                return entry.filePath
             }
         }
         // No luck.

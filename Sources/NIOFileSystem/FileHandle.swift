@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -312,7 +312,7 @@ public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle, 
     }
 
     public func openFile(
-        forReadingAt path: FilePath,
+        forReadingAt path: NIOFilePath,
         options: OpenOptions.Read
     ) async throws -> ReadFileHandle {
         let systemFileHandle = try await self.fileHandle.systemFileHandle.openFile(
@@ -323,7 +323,7 @@ public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle, 
     }
 
     public func openFile(
-        forWritingAt path: FilePath,
+        forWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> WriteFileHandle {
         let systemFileHandle = try await self.fileHandle.systemFileHandle.openFile(
@@ -334,7 +334,7 @@ public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle, 
     }
 
     public func openFile(
-        forReadingAndWritingAt path: FilePath,
+        forReadingAndWritingAt path: NIOFilePath,
         options: OpenOptions.Write
     ) async throws -> ReadWriteFileHandle {
         let systemFileHandle = try await self.fileHandle.systemFileHandle.openFile(
@@ -345,7 +345,7 @@ public struct DirectoryFileHandle: DirectoryFileHandleProtocol, _HasFileHandle, 
     }
 
     public func openDirectory(
-        atPath path: FilePath,
+        atPath path: NIOFilePath,
         options: OpenOptions.Directory
     ) async throws -> DirectoryFileHandle {
         let systemFileHandle = try await self.fileHandle.systemFileHandle.openDirectory(

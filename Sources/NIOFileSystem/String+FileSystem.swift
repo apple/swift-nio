@@ -25,7 +25,7 @@ extension String {
     ///
     /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError/Code-swift.struct/resourceExhausted`` error will be thrown.
     public init(
-        contentsOf path: FilePath,
+        contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount,
         fileSystem: some FileSystemProtocol
     ) async throws {
@@ -36,6 +36,23 @@ extension String {
         self = Self(buffer: byteBuffer)
     }
 
+    /// Reads the contents of the file at the path into a String.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to read.
+    ///   - maximumSizeAllowed: The maximum size of file which can be read, in bytes, as a ``ByteCount``. If the file is larger than this, an error is thrown.
+    ///   - fileSystem: The ``FileSystemProtocol`` instance to use to read the file.
+    ///
+    /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError/Code-swift.struct/resourceExhausted`` error will be thrown.
+    @_disfavoredOverload
+    public init(
+        contentsOf path: FilePath,
+        maximumSizeAllowed: ByteCount,
+        fileSystem: some FileSystemProtocol
+    ) async throws {
+        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed, fileSystem: fileSystem)
+    }
+
     /// Reads the contents of the file at the path using ``FileSystem``.
     ///
     /// - Parameters:
@@ -44,7 +61,7 @@ extension String {
     ///
     /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError/Code-swift.struct/resourceExhausted`` error will be thrown.
     public init(
-        contentsOf path: FilePath,
+        contentsOf path: NIOFilePath,
         maximumSizeAllowed: ByteCount
     ) async throws {
         self = try await Self(
@@ -52,5 +69,20 @@ extension String {
             maximumSizeAllowed: maximumSizeAllowed,
             fileSystem: .shared
         )
+    }
+
+    /// Reads the contents of the file at the path using ``FileSystem``.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to read.
+    ///   - maximumSizeAllowed: The maximum size of file which can be read, in bytes, as a ``ByteCount``. If the file is larger than this, an error is thrown.
+    ///
+    /// - Throws: If the file is larger than `maximumSizeAllowed`, an ``FileSystemError/Code-swift.struct/resourceExhausted`` error will be thrown.
+    @_disfavoredOverload
+    public init(
+        contentsOf path: FilePath,
+        maximumSizeAllowed: ByteCount
+    ) async throws {
+        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed)
     }
 }

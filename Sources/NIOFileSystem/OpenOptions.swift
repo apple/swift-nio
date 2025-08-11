@@ -2,7 +2,7 @@
 //
 // This source file is part of the SwiftNIO open source project
 //
-// Copyright (c) 2023 Apple Inc. and the SwiftNIO project authors
+// Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -177,8 +177,8 @@ extension OpenOptions {
         ///
         /// When this option is set and applied the newly created file will only materialize
         /// on the file system when the file is closed. When used in conjunction with
-        /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)`` and
-        /// ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)`` the
+        /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka`` and
+        /// ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` the
         /// file will only materialize when the file is closed and no errors have been thrown.
         ///
         /// - Important: This flag is only applied if ``OpenOptions/Write/existingFile`` is
