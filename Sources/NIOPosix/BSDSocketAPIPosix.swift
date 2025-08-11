@@ -406,7 +406,7 @@ extension msghdr {
             self.msg_controllen = numericCast(newValue.count)
         }
         get {
-            UnsafeMutableRawBufferPointer(start: self.msg_control, count: numericCast(self.msg_controllen))
+            UnsafeMutableRawBufferPointer(start: self.msg_control, count: Int(self.msg_controllen))
         }
     }
 }

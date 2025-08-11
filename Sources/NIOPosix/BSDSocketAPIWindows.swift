@@ -774,7 +774,7 @@ extension WSAMSG {
             self.Control.len = numericCast(newValue.count)
         }
         get {
-            UnsafeMutableRawBufferPointer(start: self.Control.buf, count: numericCast(self.Control.len))
+            UnsafeMutableRawBufferPointer(start: self.Control.buf, count: Int(self.Control.len))
         }
     }
 
@@ -783,7 +783,7 @@ extension WSAMSG {
             self.dwFlags = numericCast(newValue)
         }
         get {
-            numericCast(self.dwFlags)
+            Int(self.dwFlags)
         }
     }
 }
