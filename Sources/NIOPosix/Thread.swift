@@ -16,6 +16,8 @@ import NIOConcurrencyHelpers
 
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
+#elseif os(Windows)
+import WinSDK
 #endif
 
 enum LowLevelThreadOperations {
@@ -90,11 +92,19 @@ final class NIOThread: Sendable {
     }
 
     static var currentThreadName: String? {
+        #if os(Windows)
+        ThreadOpsSystem.threadName(.init(GetCurrentThread()))
+        #else
         ThreadOpsSystem.threadName(.init(handle: pthread_self()))
+        #endif
     }
 
     static var currentThreadID: UInt {
-        .init(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread.handle))
+        #if os(Windows)
+        UInt(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread))
+        #else
+        UInt(bitPattern: .init(bitPattern: ThreadOpsSystem.currentThread.handle))
+        #endif
     }
 
     @discardableResult
