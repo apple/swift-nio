@@ -541,8 +541,10 @@ internal enum Posix: Sendable {
     static let IPV6_RECVPKTINFO: CInt = CInt(CNIOLinux.IPV6_RECVPKTINFO)
     static let IPV6_PKTINFO: CInt = CInt(CNIOLinux.IPV6_PKTINFO)
     #elseif os(Windows)
+    static let IP_RECVPKTINFO: CInt = CInt(WinSDK.IP_PKTINFO)
     static let IP_PKTINFO: CInt = CInt(WinSDK.IP_PKTINFO)
 
+    static let IPV6_RECVPKTINFO: CInt = CInt(WinSDK.IPV6_PKTINFO)
     static let IPV6_PKTINFO: CInt = CInt(WinSDK.IPV6_PKTINFO)
     #endif
 
