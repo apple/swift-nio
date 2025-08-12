@@ -63,27 +63,46 @@ public final class NIOHTTPResponseHeadersValidator: ChannelOutboundHandler, Remo
     public typealias OutboundIn = HTTPServerResponsePart
     public typealias OutboundOut = HTTPServerResponsePart
 
-    public init() {}
+    private enum State {
+        /// Validating response parts.
+        case validating
+        /// Dropping all response parts. This is a terminal state.
+        case dropping
+    }
+
+    private var state: State
+
+    public init() {
+        self.state = .validating
+    }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        switch Self.unwrapOutboundIn(data) {
-        case .head(let head):
-            guard head.headers.areValidToSend else {
+        switch (Self.unwrapOutboundIn(data), self.state) {
+        case (.head(let head), .validating):
+            if head.headers.areValidToSend {
+                context.write(data, promise: promise)
+            } else {
+                self.state = .dropping
                 promise?.fail(HTTPParserError.invalidHeaderToken)
                 context.fireErrorCaught(HTTPParserError.invalidHeaderToken)
-                return
             }
-        case .body, .end(.none):
-            ()
-        case .end(.some(let trailers)):
-            guard trailers.areValidToSend else {
-                promise?.fail(HTTPParserError.invalidHeaderToken)
-                context.fireErrorCaught(HTTPParserError.invalidHeaderToken)
-                return
-            }
-        }
 
-        context.write(data, promise: promise)
+        case (.body, .validating):
+            context.write(data, promise: promise)
+
+        case (.end(let trailers), .validating):
+            // No trailers are always valid trailers.
+            if trailers?.areValidToSend ?? true {
+                context.write(data, promise: promise)
+            } else {
+                self.state = .dropping
+                promise?.fail(HTTPParserError.invalidHeaderToken)
+                context.fireErrorCaught(HTTPParserError.invalidHeaderToken)
+            }
+
+        case (.head, .dropping), (.body, .dropping), (.end, .dropping):
+            promise?.fail(HTTPParserError.invalidHeaderToken)
+        }
     }
 }
 
