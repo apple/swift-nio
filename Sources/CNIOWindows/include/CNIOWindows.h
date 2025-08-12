@@ -24,9 +24,6 @@
 
 #define NIO(name) CNIOWindows_ ## name
 
-// Map Windows naming conventions to Unix/Posix naming conventions.
-typedef SSIZE_T ssize_t;
-
 // This is a DDK type which is not available in the WinSDK as it is not part of
 // the shared, usermode (um), or ucrt portions of the code.  We must replicate
 // this datastructure manually from the MSDN references or the DDK.
