@@ -23,6 +23,7 @@ import let WinSDK.IPV6_RECVTCLASS
 
 import let WinSDK.SOCK_DGRAM
 import let WinSDK.SOCK_STREAM
+import let WinSDK.SOCK_RAW
 
 import struct WinSDK.socklen_t
 #endif
