@@ -22,11 +22,11 @@ import CNIOWindows
 #endif
 
 #if os(Windows)
-fileprivate let _IPPROTO_IP = WinSDK.IPPROTO_IPV4.rawValue
-fileprivate let _IPPROTO_IPV6 = WinSDK.IPPROTO_IPV6.rawValue
+private let _IPPROTO_IP = WinSDK.IPPROTO_IPV4.rawValue
+private let _IPPROTO_IPV6 = WinSDK.IPPROTO_IPV6.rawValue
 #else
-fileprivate let _IPPROTO_IP = IPPROTO_IP
-fileprivate let _IPPROTO_IPV6 = IPPROTO_IPV6
+private let _IPPROTO_IP = IPPROTO_IP
+private let _IPPROTO_IPV6 = IPPROTO_IPV6
 #endif
 
 /// Memory for use as `cmsghdr` and associated data.
