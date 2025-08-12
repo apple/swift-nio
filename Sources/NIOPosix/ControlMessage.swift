@@ -21,6 +21,14 @@ import CNIOLinux
 import CNIOWindows
 #endif
 
+#if os(Windows)
+private let _IPPROTO_IP = WinSDK.IPPROTO_IPV4.rawValue
+private let _IPPROTO_IPV6 = WinSDK.IPPROTO_IPV6.rawValue
+#else
+private let _IPPROTO_IP = IPPROTO_IP
+private let _IPPROTO_IPV6 = IPPROTO_IPV6
+#endif
+
 /// Memory for use as `cmsghdr` and associated data.
 /// Supports multiple messages each with enough storage for multiple `cmsghdr`
 struct UnsafeControlMessageStorage: Collection {
@@ -210,9 +218,9 @@ struct ControlMessageParser {
     }
 
     private mutating func receiveMessage(_ controlMessage: UnsafeControlMessage) {
-        if controlMessage.level == IPPROTO_IP {
+        if controlMessage.level == _IPPROTO_IP {
             self.receiveIPv4Message(controlMessage)
-        } else if controlMessage.level == IPPROTO_IPV6 {
+        } else if controlMessage.level == _IPPROTO_IPV6 {
             self.receiveIPv6Message(controlMessage)
         }
     }
@@ -371,7 +379,7 @@ extension UnsafeOutboundControlBytes {
             )
         case .some(.inet6):
             self.appendControlMessage(
-                level: .init(IPPROTO_IPV6),
+                level: .init(_IPPROTO_IPV6),
                 type: IPV6_TCLASS,
                 payload: CInt(ecnValue: metadata.ecnState)
             )
