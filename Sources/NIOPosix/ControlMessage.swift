@@ -19,7 +19,6 @@ import CNIODarwin
 import CNIOLinux
 #elseif os(Windows)
 import CNIOWindows
-import let WinSDK.IPPROTO_IPV6
 #endif
 
 #if os(Windows)
@@ -29,7 +28,6 @@ fileprivate let _IPPROTO_IPV6 = WinSDK.IPPROTO_IPV6.rawValue
 fileprivate let _IPPROTO_IP = IPPROTO_IP
 fileprivate let _IPPROTO_IPV6 = IPPROTO_IPV6
 #endif
-
 
 /// Memory for use as `cmsghdr` and associated data.
 /// Supports multiple messages each with enough storage for multiple `cmsghdr`
