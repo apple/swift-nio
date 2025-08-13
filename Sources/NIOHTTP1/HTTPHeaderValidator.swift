@@ -71,9 +71,16 @@ public final class NIOHTTPResponseHeadersValidator: ChannelOutboundHandler, Remo
     }
 
     private var state: State
+    private let sendResponseOnInvalidHeader: Bool
 
     public init() {
         self.state = .validating
+        self.sendResponseOnInvalidHeader = false
+    }
+
+    public init(sendResponseOnInvalidHeader: Bool) {
+        self.state = .validating
+        self.sendResponseOnInvalidHeader = sendResponseOnInvalidHeader
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
@@ -82,6 +89,14 @@ public final class NIOHTTPResponseHeadersValidator: ChannelOutboundHandler, Remo
             if head.headers.areValidToSend {
                 context.write(data, promise: promise)
             } else {
+                // We won't write another header since we drop them going forward to write
+                // out a response if configured to do so
+                if self.sendResponseOnInvalidHeader {
+                    let headers = HTTPHeaders([("Connection", "close"), ("Content-Length", "0")])
+                    let head = HTTPResponseHead(version: .http1_1, status: .badRequest, headers: headers)
+                    context.write(Self.wrapOutboundOut(.head(head)), promise: nil)
+                    context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
+                }
                 self.state = .dropping
                 promise?.fail(HTTPParserError.invalidHeaderToken)
                 context.fireErrorCaught(HTTPParserError.invalidHeaderToken)

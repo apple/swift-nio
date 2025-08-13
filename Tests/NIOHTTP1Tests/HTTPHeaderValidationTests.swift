@@ -666,7 +666,21 @@ final class HTTPHeaderValidationTests: XCTestCase {
         // response being dropped.
         let head = HTTPResponseHead(version: .http1_1, status: .ok, headers: [":pseudo-header": "not-here"])
         XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.head(head)))
-        XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
+
+        // We expect exactly one ByteBuffer in the output.
+        guard var written = try channel.readOutbound(as: ByteBuffer.self) else {
+            XCTFail("No writes")
+            return
+        }
+
+        XCTAssertNoThrow(XCTAssertNil(try channel.readOutbound()))
+
+        // Check the response.
+        assertResponseIs(
+            response: written.readString(length: written.readableBytes)!,
+            expectedResponseLine: "HTTP/1.1 400 Bad Request",
+            expectedResponseHeaders: ["Connection: close", "Content-Length: 0"]
+        )
         XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer()))))
         XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
         XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.end(nil)))

@@ -971,7 +971,7 @@ extension ChannelPipeline.SynchronousOperations {
         withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true,
         withOutboundHeaderValidation headerValidation: Bool = true,
-        withOutboundHeaderValidationRepsonse headerValidationResponse: Bool = true,
+        withOutboundHeaderValidationRepsonse headerValidationResponse: Bool = false,
         withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init()
     ) throws {
         self.eventLoop.assertInEventLoop()
@@ -986,7 +986,7 @@ extension ChannelPipeline.SynchronousOperations {
         }
 
         if headerValidation {
-            handlers.append(NIOHTTPResponseHeadersValidator())
+            handlers.append(NIOHTTPResponseHeadersValidator(sendResponseOnInvalidHeader: headerValidationResponse))
         }
 
         if errorHandling {
