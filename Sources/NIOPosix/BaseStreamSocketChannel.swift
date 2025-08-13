@@ -161,7 +161,21 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     }
 
     final override func writeToSocket() throws -> OverallWriteResult {
+        print(#fileID, #function)
         let result = try self.pendingWrites.triggerAppropriateWriteOperations(
+            writeMessage: { ptr, destinationPtr, destinationSize, controlBytes in
+                let s = UnsafeControlMessageStorage.allocate(msghdrCount: 1)
+                var cb = UnsafeOutboundControlBytes(controlBytes: s[0])
+                cb.appendControlMessage(level: SOL_SOCKET, type: Int32(SCM_RIGHTS), payload: Int32(controlBytes!.fd!))
+                let controlMessageBytePointer = cb.validControlBytes
+                print("HERE!!! FD sent?")
+                return try self.socket.sendmsg(
+                    pointer: ptr,
+                    destinationPtr: destinationPtr,
+                    destinationSize: destinationSize,
+                    controlBytes: controlMessageBytePointer
+                )
+            },
             scalarBufferWriteOperation: { ptr in
                 guard ptr.count > 0 else {
                     // No need to call write if the buffer is empty.
@@ -291,6 +305,13 @@ class BaseStreamSocketChannel<Socket: SocketProtocol>: BaseSocketChannel<Socket>
     final override func bufferPendingWrite(data: NIOAny, promise: EventLoopPromise<Void>?) {
         if self.outputShutdown {
             promise?.fail(ChannelError._outputClosed)
+            return
+        }
+
+        if let envelope = self.tryUnwrapData(data, as: AddressedEnvelope<ByteBuffer>.self) {
+            if self.pendingWrites.add(envelope: envelope, promise: promise) {
+                self.pipeline.syncOperations.fireChannelWritabilityChanged()
+            }
             return
         }
 
