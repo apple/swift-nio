@@ -72,7 +72,7 @@ internal func isUnacceptableErrno(_ code: Int32) -> Bool {
 
 @inlinable
 internal func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) {
-    guard !isUnacceptableErrno(err) else {
+    guard isUnacceptableErrno(err) else {
         return
     }
 
