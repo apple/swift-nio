@@ -72,11 +72,23 @@ internal func isUnacceptableErrno(_ code: Int32) -> Bool {
 
 @inlinable
 internal func preconditionIsNotUnacceptableErrno(err: CInt, where function: String) {
+    guard !isUnacceptableErrno(err) else {
+        return
+    }
+
+    #if os(Windows)
+    let errorDesc = withUnsafeTemporaryAllocation(of: CChar.self, capacity: 256) { ptr -> String? in
+        if strerror_s(ptr.baseAddress, ptr.count, err) == 0 {
+            return String(cString: UnsafePointer(ptr.baseAddress!))
+        }
+        return nil
+    }
+    #else
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    precondition(
-        !isUnacceptableErrno(err),
-        "unacceptable errno \(err) \(String(cString: strerror(err)!)) in \(function))"
-    )
+    let errorDesc = strerror(errnoCode)
+    #endif
+
+    preconditionFailure("unacceptable errno \(err) \(errorDesc ?? "Broken strerror, unknown error") in \(function))")
 }
 
 // Sorry, we really try hard to not use underscored attributes. In this case

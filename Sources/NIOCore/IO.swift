@@ -125,8 +125,18 @@ public struct IOError: Swift.Error {
 ///   - reason: what failed
 /// - Returns: the constructed reason.
 private func reasonForError(errnoCode: CInt, reason: String) -> String {
-    if let errorDescC = strerror(errnoCode) {
-        return "\(reason): \(String(cString: errorDescC)) (errno: \(errnoCode))"
+    #if os(Windows)
+    let errorDesc = withUnsafeTemporaryAllocation(of: CChar.self, capacity: 256) { ptr -> String? in
+        if strerror_s(ptr.baseAddress, ptr.count, errnoCode) == 0 {
+            return String(cString: UnsafePointer(ptr.baseAddress!))
+        }
+        return nil
+    }
+    #else
+    let errorDesc = strerror(errnoCode).flatMap { String(cString: $0) }
+    #endif
+    if let errorDesc {
+        return "\(reason): \(errorDesc)) (errno: \(errnoCode))"
     } else {
         return "\(reason): Broken strerror, unknown error: \(errnoCode)"
     }
