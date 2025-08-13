@@ -678,7 +678,7 @@ final class HTTPHeaderValidationTests: XCTestCase {
         // Check the response.
         assertResponseIs(
             response: written.readString(length: written.readableBytes)!,
-            expectedResponseLine: "HTTP/1.1 400 Bad Request",
+            expectedResponseLine: "HTTP/1.1 500 Internal Server Error",
             expectedResponseHeaders: ["Connection: close", "Content-Length: 0"]
         )
         XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.body(.byteBuffer(ByteBuffer()))))

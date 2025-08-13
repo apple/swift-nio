@@ -93,7 +93,7 @@ public final class NIOHTTPResponseHeadersValidator: ChannelOutboundHandler, Remo
                 // out a response if configured to do so
                 if self.sendResponseOnInvalidHeader {
                     let headers = HTTPHeaders([("Connection", "close"), ("Content-Length", "0")])
-                    let head = HTTPResponseHead(version: .http1_1, status: .badRequest, headers: headers)
+                    let head = HTTPResponseHead(version: .http1_1, status: .internalServerError, headers: headers)
                     context.write(Self.wrapOutboundOut(.head(head)), promise: nil)
                     context.writeAndFlush(Self.wrapOutboundOut(.end(nil)), promise: nil)
                 }
