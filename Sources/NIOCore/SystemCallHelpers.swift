@@ -85,7 +85,7 @@ internal func preconditionIsNotUnacceptableErrno(err: CInt, where function: Stri
     }
     #else
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
-    let errorDesc = strerror(err)
+    let errorDesc = strerror(err).flatMap { String(cString: $0) }
     #endif
 
     preconditionFailure("unacceptable errno \(err) \(errorDesc ?? "Broken strerror, unknown error") in \(function))")
