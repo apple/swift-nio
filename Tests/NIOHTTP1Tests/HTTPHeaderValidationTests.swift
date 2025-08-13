@@ -663,7 +663,7 @@ final class HTTPHeaderValidationTests: XCTestCase {
         XCTAssertNil(try channel.readInbound(as: HTTPServerRequestPart.self))
 
         // Respond with bad headers; they should cause an error and result in the rest of the
-        // response being dropped.
+        // response being dropped, but a fallback response being sent
         let head = HTTPResponseHead(version: .http1_1, status: .ok, headers: [":pseudo-header": "not-here"])
         XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.head(head)))
 
@@ -685,6 +685,8 @@ final class HTTPHeaderValidationTests: XCTestCase {
         XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
         XCTAssertThrowsError(try channel.writeOutbound(HTTPServerResponsePart.end(nil)))
         XCTAssertNil(try channel.readOutbound(as: ByteBuffer.self))
+
+        _ = try? channel.finish()
     }
 }
 
