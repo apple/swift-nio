@@ -913,12 +913,65 @@ extension ChannelPipeline.SynchronousOperations {
         )
     }
 
+    /// Configure a `ChannelPipeline` for use as a HTTP server.
+    ///
+    /// This function knows how to set up all first-party HTTP channel handlers appropriately
+    /// for server use. It supports the following features:
+    ///
+    /// 1. Providing assistance handling clients that pipeline HTTP requests, using the
+    ///     `HTTPServerPipelineHandler`.
+    /// 2. Supporting HTTP upgrade, using the `HTTPServerUpgradeHandler`.
+    /// 3. Providing assistance handling protocol errors.
+    /// 4. Validating outbound header fields to protect against response splitting attacks.
+    /// 5. Specifying whether the header validation should return a response
+    ///
+    /// This method will likely be extended in future with more support for other first-party
+    /// features.
+    ///
+    /// - important: This **must** be called on the Channel's event loop.
+    /// - Parameters:
+    ///   - position: Where in the pipeline to add the HTTP server handlers, defaults to `.last`.
+    ///   - pipelining: Whether to provide assistance handling HTTP clients that pipeline
+    ///         their requests. Defaults to `true`. If `false`, users will need to handle
+    ///         clients that pipeline themselves.
+    ///   - upgrade: Whether to add a `HTTPServerUpgradeHandler` to the pipeline, configured for
+    ///         HTTP upgrade. Defaults to `nil`, which will not add the handler to the pipeline. If
+    ///         provided should be a tuple of an array of `HTTPServerProtocolUpgrader` and the upgrade
+    ///         completion handler. See the documentation on `HTTPServerUpgradeHandler` for more
+    ///         details.
+    ///   - errorHandling: Whether to provide assistance handling protocol errors (e.g.
+    ///         failure to parse the HTTP request) by sending 400 errors. Defaults to `true`.
+    ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
+    ///         spec compliance. Defaults to `true`.
+    ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
+    ///   - headerValidationResponse: Whether to return a response when the header validation fails.
+    /// - Throws: If the pipeline could not be configured.
+    public func configureHTTPServerPipeline(
+        position: ChannelPipeline.SynchronousOperations.Position = .last,
+        withPipeliningAssistance pipelining: Bool = true,
+        withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
+        withErrorHandling errorHandling: Bool = true,
+        withOutboundHeaderValidation headerValidation: Bool = true,
+        withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init(),
+        withOutboundHeaderValidationRepsonse headerValidationResponse: Bool
+    ) throws {
+        try self._configureHTTPServerPipeline(
+            position: position,
+            withPipeliningAssistance: pipelining,
+            withServerUpgrade: upgrade,
+            withErrorHandling: errorHandling,
+            withOutboundHeaderValidation: headerValidation,
+            withOutboundHeaderValidationRepsonse: headerValidationResponse, withEncoderConfiguration: encoderConfiguration
+        )
+    }
+
     private func _configureHTTPServerPipeline(
         position: ChannelPipeline.SynchronousOperations.Position = .last,
         withPipeliningAssistance pipelining: Bool = true,
         withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true,
         withOutboundHeaderValidation headerValidation: Bool = true,
+        withOutboundHeaderValidationRepsonse headerValidationResponse: Bool = true,
         withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init()
     ) throws {
         self.eventLoop.assertInEventLoop()
