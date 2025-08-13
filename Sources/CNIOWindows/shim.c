@@ -17,6 +17,7 @@
 #include "CNIOWindows.h"
 
 #include <assert.h>
+#include <errno.h>
 
 int CNIOWindows_sendmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec, unsigned int vlen,
                          int flags) {
@@ -53,6 +54,10 @@ size_t CNIOWindows_CMSG_LEN(size_t length) {
 
 size_t CNIOWindows_CMSG_SPACE(size_t length) {
   return WSA_CMSG_SPACE(length);
+}
+
+int CNIOWindows_errno(void) {
+    return errno;
 }
 
 #endif

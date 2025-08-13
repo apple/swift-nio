@@ -107,6 +107,8 @@ WSACMSGHDR *NIO(CMSG_NXTHDR)(const WSAMSG *, LPWSACMSGHDR);
 size_t NIO(CMSG_LEN)(size_t);
 size_t NIO(CMSG_SPACE)(size_t);
 
+int NIO(errno)(void);
+
 #undef NIO
 
 #endif
