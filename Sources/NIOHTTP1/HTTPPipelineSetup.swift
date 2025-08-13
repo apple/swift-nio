@@ -944,7 +944,8 @@ extension ChannelPipeline.SynchronousOperations {
     ///   - headerValidation: Whether to validate outbound request headers to confirm that they meet
     ///         spec compliance. Defaults to `true`.
     ///   - encoderConfiguration: The configuration for the ``HTTPRequestEncoder``.
-    ///   - headerValidationResponse: Whether to return a response when the header validation fails.
+    ///   - configuration: Confguration for setting up for the pipeline. Provides additional options
+    ///         for configuring the pipeline.
     /// - Throws: If the pipeline could not be configured.
     public func configureHTTPServerPipeline(
         position: ChannelPipeline.SynchronousOperations.Position = .last,
@@ -953,7 +954,7 @@ extension ChannelPipeline.SynchronousOperations {
         withErrorHandling errorHandling: Bool = true,
         withOutboundHeaderValidation headerValidation: Bool = true,
         withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init(),
-        withOutboundHeaderValidationRepsonse headerValidationResponse: Bool
+        withConfiguration configuration: Configuration
     ) throws {
         try self._configureHTTPServerPipeline(
             position: position,
@@ -961,7 +962,7 @@ extension ChannelPipeline.SynchronousOperations {
             withServerUpgrade: upgrade,
             withErrorHandling: errorHandling,
             withOutboundHeaderValidation: headerValidation,
-            withOutboundHeaderValidationRepsonse: headerValidationResponse, withEncoderConfiguration: encoderConfiguration
+            configuration: configuration
         )
     }
 
@@ -971,8 +972,8 @@ extension ChannelPipeline.SynchronousOperations {
         withServerUpgrade upgrade: NIOHTTPServerUpgradeConfiguration? = nil,
         withErrorHandling errorHandling: Bool = true,
         withOutboundHeaderValidation headerValidation: Bool = true,
-        withOutboundHeaderValidationRepsonse headerValidationResponse: Bool = false,
-        withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init()
+        withEncoderConfiguration encoderConfiguration: HTTPResponseEncoder.Configuration = .init(),
+        configuration: Configuration = .init(),
     ) throws {
         self.eventLoop.assertInEventLoop()
 
@@ -986,7 +987,7 @@ extension ChannelPipeline.SynchronousOperations {
         }
 
         if headerValidation {
-            handlers.append(NIOHTTPResponseHeadersValidator(sendResponseOnInvalidHeader: headerValidationResponse))
+            handlers.append(NIOHTTPResponseHeadersValidator(sendResponseOnInvalidHeader: configuration.headerValidationResponse))
         }
 
         if errorHandling {
@@ -1004,5 +1005,15 @@ extension ChannelPipeline.SynchronousOperations {
         }
 
         try self.addHandlers(handlers, position: position)
+    }
+
+    /// Configuration for setting up an HTTP client pipeline.
+    public struct Configuration {
+        /// Whether or not a response is returned when the header validation fails.
+        public var headerValidationResponse: Bool
+
+        public init() {
+            self.headerValidationResponse = false
+        }
     }
 }

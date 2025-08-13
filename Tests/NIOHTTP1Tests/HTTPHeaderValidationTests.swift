@@ -638,7 +638,9 @@ final class HTTPHeaderValidationTests: XCTestCase {
 
     func testBadRequestResponseIsReturnedIfHeadersInvalidAndConfiguredToDoSo() throws {
         let channel = EmbeddedChannel()
-        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withOutboundHeaderValidationRepsonse: true)
+        var pipelineConfig = ChannelPipeline.SynchronousOperations.Configuration()
+        pipelineConfig.headerValidationResponse = true
+        try channel.pipeline.syncOperations.configureHTTPServerPipeline(withConfiguration: pipelineConfig)
         try channel.primeForResponse()
 
         func assertReadHead(from channel: EmbeddedChannel) throws {
