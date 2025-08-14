@@ -184,7 +184,11 @@ extension NIOSingletons {
         case 0:  // == 0
             // Not set by user, not yet finalised, let's try to get it from the env var and fall back to
             // `System.coreCount`.
+            #if os(Windows)
+            let envVarString = Windows.getenv(environmentVariable)
+            #else
             let envVarString = getenv(environmentVariable).map { String(cString: $0) }
+            #endif
             returnedValueUnchecked = envVarString.flatMap(Int.init) ?? System.coreCount
         case .min..<0:  // < 0
             // Untrusted and unchecked user value. Let's invert and then sanitise/check.
