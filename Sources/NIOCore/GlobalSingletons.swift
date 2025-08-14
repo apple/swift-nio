@@ -185,7 +185,7 @@ extension NIOSingletons {
             // Not set by user, not yet finalised, let's try to get it from the env var and fall back to
             // `System.coreCount`.
             #if os(Windows)
-            let envVarString = windows_getenv(environmentVariable)
+            let envVarString = Windows.getenv(environmentVariable)
             #else
             let envVarString = getenv(environmentVariable).map { String(cString: $0) }
             #endif
