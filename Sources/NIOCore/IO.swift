@@ -126,7 +126,7 @@ public struct IOError: Swift.Error {
 /// - Returns: the constructed reason.
 private func reasonForError(errnoCode: CInt, reason: String) -> String {
     #if os(Windows)
-    let errorDesc = windows_strerror(errnoCode)
+    let errorDesc = Windows.strerror(errnoCode)
     #else
     let errorDesc = strerror(errnoCode).flatMap { String(cString: $0) }
     #endif
