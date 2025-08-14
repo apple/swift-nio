@@ -21,6 +21,7 @@ import CNIOLinux
 @preconcurrency import Android
 #endif
 #elseif os(Windows)
+import ucrt
 import let WinSDK.RelationProcessorCore
 
 import let WinSDK.AF_UNSPEC
@@ -269,3 +270,30 @@ extension System {
         return nil
     }
 }
+
+#if os(Windows)
+@usableFromInline
+func windows_strerror(_ errnoCode: CInt) -> String? {
+    withUnsafeTemporaryAllocation(of: CChar.self, capacity: 256) { ptr in
+        if strerror_s(ptr.baseAddress, ptr.count, errnoCode) == 0 {
+            return String(cString: UnsafePointer(ptr.baseAddress!))
+        }
+        return nil
+    }
+}
+
+func windows_getenv(_ env: String) -> String? {
+    var count = 0
+    var ptr: UnsafeMutablePointer<CChar>? = nil
+    withUnsafeMutablePointer(to: &ptr) { buffer in
+        // according to docs only EINVAL and ENOMEM are possible here.
+        _ = _dupenv_s(buffer, &count, env)
+    }
+    defer { ptr?.deallocate() }
+    return if count > 0, let ptr {
+        String(cString: ptr)
+    } else {
+        nil
+    }
+}
+#endif

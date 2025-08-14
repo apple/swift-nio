@@ -185,18 +185,7 @@ extension NIOSingletons {
             // Not set by user, not yet finalised, let's try to get it from the env var and fall back to
             // `System.coreCount`.
             #if os(Windows)
-            var count = 0
-            var ptr: UnsafeMutablePointer<CChar>? = nil
-            withUnsafeMutablePointer(to: &ptr) { buffer in
-                // according to docs only EINVAL and ENOMEM are possible here.
-                _ = _dupenv_s(buffer, &count, environmentVariable)
-            }
-            ptr?.deallocate()
-            let envVarString: String? = if count > 0, let ptr {
-                String(cString: ptr)
-            } else {
-                nil
-            }
+            let envVarString = windows_getenv(environmentVariable)
             #else
             let envVarString = getenv(environmentVariable).map { String(cString: $0) }
             #endif

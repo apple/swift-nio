@@ -126,12 +126,7 @@ public struct IOError: Swift.Error {
 /// - Returns: the constructed reason.
 private func reasonForError(errnoCode: CInt, reason: String) -> String {
     #if os(Windows)
-    let errorDesc = withUnsafeTemporaryAllocation(of: CChar.self, capacity: 256) { ptr -> String? in
-        if strerror_s(ptr.baseAddress, ptr.count, errnoCode) == 0 {
-            return String(cString: UnsafePointer(ptr.baseAddress!))
-        }
-        return nil
-    }
+    let errorDesc = windows_strerror(errnoCode)
     #else
     let errorDesc = strerror(errnoCode).flatMap { String(cString: $0) }
     #endif

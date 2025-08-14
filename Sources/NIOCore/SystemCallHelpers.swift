@@ -77,12 +77,7 @@ internal func preconditionIsNotUnacceptableErrno(err: CInt, where function: Stri
     }
 
     #if os(Windows)
-    let errorDesc = withUnsafeTemporaryAllocation(of: CChar.self, capacity: 256) { ptr -> String? in
-        if strerror_s(ptr.baseAddress, ptr.count, err) == 0 {
-            return String(cString: UnsafePointer(ptr.baseAddress!))
-        }
-        return nil
-    }
+    let errorDesc = windows_strerror(err)
     #else
     // strerror is documented to return "Unknown error: ..." for illegal value so it won't ever fail
     let errorDesc = strerror(err).flatMap { String(cString: $0) }
