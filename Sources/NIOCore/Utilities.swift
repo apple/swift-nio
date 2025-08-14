@@ -294,7 +294,7 @@ enum Windows {
         if count > 0, let ptr {
             let buffer = UnsafeBufferPointer(start: ptr, count: count)
             return buffer.withMemoryRebound(to: UInt8.self) {
-                return String(decoding: $0, as: Unicode.UTF8.self)
+                String(decoding: $0, as: Unicode.UTF8.self)
             }
         } else {
             return nil
