@@ -126,7 +126,7 @@ extension NIOSingletons {
         #else
         return false
         #endif
-        #endif // windows unimplemented
+        #endif  // windows unimplemented
     }
 }
 
