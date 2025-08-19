@@ -109,6 +109,8 @@ size_t NIO(CMSG_SPACE)(size_t);
 
 int NIO(errno)(void);
 
+DWORD NIO(FormatGetLastError)(DWORD errorCode, LPSTR errorMsg);
+
 #undef NIO
 
 #endif
