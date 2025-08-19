@@ -276,7 +276,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
         case _ as ChannelOptions.Types.BacklogOption:
             return backlog as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
+            #if os(Windows)
+            fallthrough
+            #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
+            #endif
         default:
             return try super.getOption0(option)
         }
@@ -312,7 +316,11 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             case .socketAddress(let address):
                 try socket.bind(to: address)
             case .vsockAddress(let address):
-                try socket.bind(to: address)
+                #if os(Windows)
+                fatalError(vsockUnimplemented)
+                #else
+                return try self.socket.getLocalVsockContextID() as! Option.Value
+                #endif
             }
             self.updateCachedAddressesFromSocket(updateRemote: false)
             try self.socket.listen(backlog: backlog)
@@ -1185,11 +1193,17 @@ extension DatagramChannel: MulticastChannel {
                 )
                 try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
             case (.v4(let groupAddress), .none):
+                #if os(Windows)
+                var addr = in_addr()
+                addr.S_un.S_addr = INADDR_ANY
+                #else
+                let addr = in_addr(s_addr: INADDR_ANY)
+                #endif
                 // IPv4 binding without target interface.
                 let multicastRequest = ip_mreq(
                     imr_multiaddr: groupAddress.address.sin_addr,
-                    imr_interface: in_addr(s_addr: INADDR_ANY)
-                )
+                    imr_interface: addr
+                )                
                 try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
             case (.v6(let groupAddress), .some(.v6)):
                 // IPv6 binding with specific target interface.
