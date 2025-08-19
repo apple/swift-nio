@@ -20,7 +20,7 @@ import SystemPackage
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #elseif canImport(Bionic)

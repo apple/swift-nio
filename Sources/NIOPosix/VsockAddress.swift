@@ -18,7 +18,7 @@ import NIOCore
 import CNIODarwin
 #elseif os(Linux) || os(Android)
 #if canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #endif

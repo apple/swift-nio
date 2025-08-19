@@ -14,7 +14,7 @@
 #if os(Linux) || os(FreeBSD) || os(Android)
 import CNIOLinux
 #if canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #elseif canImport(Android)

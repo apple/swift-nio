@@ -18,7 +18,7 @@ import SystemPackage
 import Darwin
 import CNIODarwin
 #elseif canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 import CNIOLinux
 #elseif canImport(Musl)
 @preconcurrency import Musl

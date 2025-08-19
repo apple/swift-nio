@@ -18,7 +18,7 @@
 // Required due to https://github.com/swiftlang/swift/issues/76842
 
 #if canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #endif

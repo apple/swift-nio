@@ -27,7 +27,7 @@ private func sys_sched_yield() {
 }
 #else
 #if canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #elseif canImport(Bionic)

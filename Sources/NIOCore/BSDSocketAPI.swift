@@ -65,7 +65,7 @@ import func WinSDK.WSAGetLastError
 internal typealias socklen_t = ucrt.size_t
 #elseif os(Linux) || os(Android)
 #if canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #elseif canImport(Android)

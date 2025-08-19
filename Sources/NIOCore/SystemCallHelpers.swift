@@ -22,7 +22,7 @@
 #if canImport(Darwin)
 import Darwin.C
 #elseif canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #elseif canImport(WASILibc)

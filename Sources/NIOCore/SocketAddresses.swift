@@ -45,7 +45,7 @@ private typealias sa_family_t = WinSDK.ADDRESS_FAMILY
 import Darwin
 #elseif os(Linux) || os(FreeBSD) || os(Android)
 #if canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #elseif canImport(Android)

@@ -29,7 +29,7 @@ internal func MAKELANGID(_ p: WORD, _ s: WORD) -> DWORD {
     DWORD((s << 10) | p)
 }
 #elseif canImport(Glibc)
-@preconcurrency import Glibc
+import Glibc
 #elseif canImport(Musl)
 @preconcurrency import Musl
 #elseif canImport(Bionic)
