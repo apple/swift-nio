@@ -24,7 +24,7 @@ import CNIODarwin
 #endif
 import CNIOLinux
 #endif
-private let vsockUnimplemented = "VSOCK support is not implemented for this platform"
+let vsockUnimplemented = "VSOCK support is not implemented for this platform"
 
 // MARK: - Public API that's available on all platforms.
 
