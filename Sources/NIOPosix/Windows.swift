@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if os(Windows)
+import NIOCore
 import WinSDK
 import CNIOWindows
 
@@ -26,6 +27,23 @@ func write(_ fd: Int32, _ ptr: UnsafeRawPointer?, _ count: Int) -> Int32 {
 
 var errno: Int32 {
     CNIOWindows_errno()
+}
+
+extension NIOCore.Windows {
+    /// Call this to get a string representation from an error code that was returned from `GetLastError`.
+    static func makeErrorMessageFromCode(_ errorCode: DWORD) -> String? {
+        var errorMsg = UnsafeMutablePointer<CHAR>?.none
+        CNIOWindows_FormatGetLastError(errorCode, &errorMsg)
+
+        if let errorMsg {
+            let result = String(cString: errorMsg)
+            LocalFree(errorMsg)
+            return result
+        } else {
+            // we could check GetLastError here again. But that feels quite recursive.
+            return nil
+        }
+    }
 }
 
 #endif

@@ -18,6 +18,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <winbase.h>
 
 int CNIOWindows_sendmmsg(SOCKET s, CNIOWindows_mmsghdr *msgvec, unsigned int vlen,
                          int flags) {
@@ -58,6 +59,18 @@ size_t CNIOWindows_CMSG_SPACE(size_t length) {
 
 int CNIOWindows_errno(void) {
     return errno;
+}
+
+DWORD CNIOWindows_FormatGetLastError(DWORD errorCode, LPSTR errorMsg) {
+  return FormatMessage(
+    FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+    NULL,
+    errorCode,
+    0, // Default language
+    errorMsg,
+    0,
+    NULL
+  );
 }
 
 #endif
