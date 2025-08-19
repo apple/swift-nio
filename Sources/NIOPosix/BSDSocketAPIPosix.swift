@@ -133,7 +133,7 @@ extension NIOBSDSocket {
     static func writev(
         socket s: NIOBSDSocket.Handle,
         iovecs: UnsafeBufferPointer<IOVector>
-    ) -> IOResult<Int> {
+    ) throws -> IOResult<Int> {
         try Posix.writev(descriptor: s, iovecs: iovecs)
     }
 
