@@ -272,9 +272,10 @@ extension System {
 }
 
 #if os(Windows)
-enum Windows {
+@usableFromInline
+package enum Windows {
     @usableFromInline
-    static func strerror(_ errnoCode: CInt) -> String? {
+    package static func strerror(_ errnoCode: CInt) -> String? {
         withUnsafeTemporaryAllocation(of: CChar.self, capacity: 256) { ptr in
             if strerror_s(ptr.baseAddress, ptr.count, errnoCode) == 0 {
                 return String(cString: UnsafePointer(ptr.baseAddress!))
@@ -283,7 +284,7 @@ enum Windows {
         }
     }
 
-    static func getenv(_ env: String) -> String? {
+    package static func getenv(_ env: String) -> String? {
         var count = 0
         var ptr: UnsafeMutablePointer<CChar>? = nil
         withUnsafeMutablePointer(to: &ptr) { buffer in
