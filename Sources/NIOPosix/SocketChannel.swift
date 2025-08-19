@@ -1203,7 +1203,7 @@ extension DatagramChannel: MulticastChannel {
                 let multicastRequest = ip_mreq(
                     imr_multiaddr: groupAddress.address.sin_addr,
                     imr_interface: addr
-                )                
+                )
                 try self.socket.setOption(level: .ip, name: operation.optionName(level: .ip), value: multicastRequest)
             case (.v6(let groupAddress), .some(.v6)):
                 // IPv6 binding with specific target interface.
