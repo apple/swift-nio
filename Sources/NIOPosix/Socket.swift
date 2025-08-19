@@ -175,7 +175,7 @@ class Socket: BaseSocket, SocketProtocol {
     /// - Throws: An `IOError` if the operation failed.
     func writev(iovecs: UnsafeBufferPointer<IOVector>) throws -> IOResult<Int> {
         try withUnsafeHandle {
-            try Posix.writev(descriptor: $0, iovecs: iovecs)
+            try NIOBSDSocket.writev(socket: $0, iovecs: iovecs)
         }
     }
 
