@@ -121,7 +121,11 @@ final class SocketChannel: BaseStreamSocketChannel<Socket>, @unchecked Sendable 
         case _ as ChannelOptions.Types.ConnectTimeoutOption:
             return connectTimeout as! Option.Value
         case _ as ChannelOptions.Types.LocalVsockContextID:
+            #if os(Windows)
+            fallthrough
+            #else
             return try self.socket.getLocalVsockContextID() as! Option.Value
+            #endif
         default:
             return try super.getOption0(option)
         }
@@ -315,12 +319,13 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
             switch target {
             case .socketAddress(let address):
                 try socket.bind(to: address)
-            case .vsockAddress(let address):
-                #if os(Windows)
+            #if os(Windows)
+            case .vsockAddress:
                 fatalError(vsockUnimplemented)
-                #else
-                return try self.socket.getLocalVsockContextID() as! Option.Value
-                #endif
+            #else
+            case .vsockAddress(let address):
+                try self.socket.getLocalVsockContextID() as! Option.Value
+            #endif
             }
             self.updateCachedAddressesFromSocket(updateRemote: false)
             try self.socket.listen(backlog: backlog)
