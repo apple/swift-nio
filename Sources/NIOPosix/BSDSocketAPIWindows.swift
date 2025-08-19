@@ -89,6 +89,7 @@ import func WinSDK.TransmitFile
 import func WinSDK.WriteFile
 import func WinSDK.WSAGetLastError
 import func WinSDK.WSAIoctl
+import func WinSDK.WSASend
 
 import struct WinSDK.socklen_t
 import struct WinSDK.u_long
@@ -391,6 +392,20 @@ extension NIOBSDSocket {
             throw IOError(winsock: WSAGetLastError(), reason: "send")
         }
         return .processed(size_t(iResult))
+    }
+
+    @inline(never)
+    static func writev(
+        socket s: NIOBSDSocket.Handle,
+        iovecs: UnsafeBufferPointer<IOVector>
+    ) throws -> IOResult<Int> {
+        var bytesSent: DWORD = 0
+        let ptr = UnsafeMutablePointer(mutating: iovecs.baseAddress)
+        let result = WSASend(s, ptr, UInt32(iovecs.count), &bytesSent, 0, nil, nil)
+        if result == SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "WSASend")
+        }
+        return .processed(Int(bytesSent))
     }
 
     @inline(never)
