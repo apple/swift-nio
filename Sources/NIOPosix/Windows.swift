@@ -30,7 +30,8 @@ var errno: Int32 {
 }
 
 extension NIOCore.Windows {
-    static func FormatLastError(_ errorCode: DWORD) -> String? {
+    /// Call this to get a string representation from an error code that was returned from `GetLastError`.
+    static func makeErrorMessageFromCode(_ errorCode: DWORD) -> String? {
         var errorMsg = UnsafeMutablePointer<CHAR>?.none
         CNIOWindows_FormatGetLastError(errorCode, &errorMsg)
 
