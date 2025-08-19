@@ -133,7 +133,11 @@ private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>, CInt) -> ss
 private let sysRecvMsg: @convention(c) (CInt, UnsafeMutablePointer<msghdr>?, CInt) -> ssize_t = recvmsg
 private let sysSendMsg: @convention(c) (CInt, UnsafePointer<msghdr>?, CInt) -> ssize_t = sendmsg
 #endif
+#if os(Windows)
+private let sysDup: @convention(c) (CInt) -> CInt = _dup
+#else
 private let sysDup: @convention(c) (CInt) -> CInt = dup
+#endif
 #if canImport(Android)
 private let sysGetpeername:
     @convention(c) (CInt, UnsafeMutablePointer<sockaddr>, UnsafeMutablePointer<socklen_t>) -> CInt = getpeername
