@@ -130,6 +130,13 @@ extension NIOBSDSocket {
         try Posix.write(descriptor: s, pointer: buf, size: len)
     }
 
+    static func writev(
+        socket s: NIOBSDSocket.Handle,
+        iovecs: UnsafeBufferPointer<IOVector>
+    ) -> IOResult<Int> {
+        try Posix.writev(descriptor: s, iovecs: iovecs)
+    }
+
     static func setsockopt(
         socket: NIOBSDSocket.Handle,
         level: NIOBSDSocket.OptionLevel,
