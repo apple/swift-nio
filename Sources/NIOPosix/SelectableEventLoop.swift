@@ -92,7 +92,12 @@ public protocol NIOEventLoopMetricsDelegate: Sendable {
 internal final class SelectableEventLoop: EventLoop, @unchecked Sendable {
 
     static let strictModeEnabled: Bool = {
-        switch getenv("SWIFTNIO_STRICT").map({ String.init(cString: $0).lowercased() }) {
+        #if os(Windows)
+        let env = Windows.getenv("SWIFTNIO_STRICT")
+        #else
+        let env = getenv("SWIFTNIO_STRICT").flatMap { String(cString: $0) }
+        #endif
+        switch env?.lowercased() {
         case "true", "y", "yes", "on", "1":
             return true
         default:
