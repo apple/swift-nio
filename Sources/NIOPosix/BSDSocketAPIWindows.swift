@@ -403,7 +403,7 @@ extension NIOBSDSocket {
         let ptr = UnsafeMutablePointer(mutating: iovecs.baseAddress)
         let result = WSASend(s, ptr, UInt32(iovecs.count), &bytesSent, 0, nil, nil)
         if result == SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "wsasend")
+            throw IOError(winsock: WSAGetLastError(), reason: "WSASend")
         }
         return .processed(Int(bytesSent))
     }
