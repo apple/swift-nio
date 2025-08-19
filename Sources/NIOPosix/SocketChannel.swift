@@ -324,7 +324,7 @@ final class ServerSocketChannel: BaseSocketChannel<ServerSocket>, @unchecked Sen
                 fatalError(vsockUnimplemented)
             #else
             case .vsockAddress(let address):
-                try self.socket.getLocalVsockContextID() as! Option.Value
+                try socket.bind(to: address)
             #endif
             }
             self.updateCachedAddressesFromSocket(updateRemote: false)
