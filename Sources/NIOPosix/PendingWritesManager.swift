@@ -387,7 +387,6 @@ final class PendingStreamWritesManager: PendingWritesManager {
 
     func add(envelope: AddressedEnvelope<ByteBuffer>, promise: EventLoopPromise<Void>?) -> Bool {
         assert(self.isOpen)
-        print(#function, envelope.metadata)
         self.state.append(
             PendingStreamWrite(data: .byteBuffer(envelope.data), promise: promise, metadata: envelope.metadata)
         )
@@ -416,7 +415,6 @@ final class PendingStreamWritesManager: PendingWritesManager {
         scalarFileWriteOperation: (CInt, Int, Int) throws -> IOResult<Int>
     ) throws -> OverallWriteResult {
         try self.triggerWriteOperations { writeMechanism in
-            print(#function, writeMechanism)
             switch writeMechanism {
             case .scalarBufferWrite(let metaData):
                 if metaData {
