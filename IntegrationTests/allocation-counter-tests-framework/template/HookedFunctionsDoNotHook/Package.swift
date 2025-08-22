@@ -22,7 +22,7 @@ let package = Package(
         .library(name: "HookedFunctions", type: .dynamic, targets: ["HookedFunctions"])
     ],
     dependencies: [
-        .package(url: "../AtomicCounter/", branch: "main")
+        .package(path: "../AtomicCounter")
     ],
     targets: [
         .target(name: "HookedFunctions", dependencies: ["AtomicCounter"])
