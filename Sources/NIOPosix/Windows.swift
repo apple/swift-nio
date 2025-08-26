@@ -19,6 +19,8 @@ import CNIOWindows
 
 typealias ssize_t = SSIZE_T
 
+let missingPipeSupportWindows = "Unimplemented: NIOPosix does not support PipeChannel on Windows"
+
 // overwrite the windows write method, as the one without underscore is deprecated.
 // also we can use this to downcast the count Int to UInt32
 func write(_ fd: Int32, _ ptr: UnsafeRawPointer?, _ count: Int) -> Int32 {
