@@ -78,9 +78,9 @@ public final class NIOHTTPResponseHeadersValidator: ChannelOutboundHandler, Remo
         self.sendResponseOnInvalidHeader = false
     }
 
-    public init(sendResponseOnInvalidHeader: Bool) {
+    public init(pipelineConfiguration: ChannelPipeline.SynchronousOperations.Configuration) {
         self.state = .validating
-        self.sendResponseOnInvalidHeader = sendResponseOnInvalidHeader
+        self.sendResponseOnInvalidHeader = pipelineConfiguration.headerValidationResponse
     }
 
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {

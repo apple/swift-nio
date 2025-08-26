@@ -987,7 +987,7 @@ extension ChannelPipeline.SynchronousOperations {
         }
 
         if headerValidation {
-            handlers.append(NIOHTTPResponseHeadersValidator(sendResponseOnInvalidHeader: configuration.headerValidationResponse))
+            handlers.append(NIOHTTPResponseHeadersValidator(pipelineConfiguration: configuration))
         }
 
         if errorHandling {
