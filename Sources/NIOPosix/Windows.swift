@@ -46,9 +46,9 @@ extension NIOCore.Windows {
     }
 
     static func recv(
-        socket: SOCKET, 
-        pointer: UnsafeMutableRawPointer, 
-        size: Int32, 
+        socket: SOCKET,
+        pointer: UnsafeMutableRawPointer,
+        size: Int32,
         flags: Int32
     ) throws -> IOResult<Int> {
         let result = WinSDK.recv(socket, pointer.assumingMemoryBound(to: CChar.self), size, flags)
