@@ -44,6 +44,14 @@ extension NIOCore.Windows {
             return nil
         }
     }
+
+    static func recv(socket: SOCKET, pointer: UnsafeMutableRawPointer, size: Int32, flags: Int32) throws -> IOResult<Int> {
+        let result = WinSDK.recv(socket, pointer.assumingMemoryBound(to: CChar.self), size, flags)
+        if result == WinSDK.SOCKET_ERROR {
+            throw IOError(winsock: WSAGetLastError(), reason: "accept")
+        }
+        return .processed(Int(result))
+    }
 }
 
 #endif
