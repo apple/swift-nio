@@ -224,7 +224,7 @@ class Socket: BaseSocket, SocketProtocol {
     /// - Returns: The `IOResult` which indicates how much data could be read and if the operation returned before all could be read (because the socket is in non-blocking mode).
     /// - Throws: An `IOError` if the operation failed.
     func read(pointer: UnsafeMutableRawBufferPointer) throws -> IOResult<Int> {
-        try withUnsafeHandle {(handle) -> IOResult<Int> in
+        try withUnsafeHandle { (handle) -> IOResult<Int> in
             #if os(Windows)
             try Windows.recv(socket: handle, pointer: pointer.baseAddress!, size: Int32(pointer.count), flags: 0)
             #else
