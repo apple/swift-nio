@@ -720,7 +720,7 @@ extension NIOBSDSocket {
 extension IOVector {
     // An initializer thats maps `ByteBuffer`` derived pointers to WSABUF. This allows us to use the
     // same initializer, that we use for iovecs on Windows.
-    init(iov_base: UnsafeMutableRawPointer, iov_len: UInt32) {
+    init(iov_base: UnsafeMutableRawPointer!, iov_len: UInt32) {
         self = WSABUF(
             len: iov_len,
             buf: iov_base.assumingMemoryBound(to: Int8.self)
