@@ -20,7 +20,7 @@ import WinSDK
 extension SelectorEventSet {
     var wsaPollEventSet: Int16 {
         var result: Int16 = 0
-        if self.contains(.read) || self.contains(.readEOF) {
+        if self.contains(.read) {
             result |= Int16(WinSDK.POLLRDNORM)
         }
         if self.contains(.write) || self.contains(.writeEOF) {
@@ -31,14 +31,14 @@ extension SelectorEventSet {
 
     @usableFromInline
     init(wsaEvent: Int16) {
-        // Event Constant	Meaning	                What to do (Typical Socket API)
-        // POLLRDNORM	    Normal data readable	Use recv, WSARecv, or ReadFile
-        // POLLRDBAND	    Priority data readable	Use recv, WSARecv (with MSG_OOB for out-of-band)
-        // POLLWRNORM	    Normal data writable	Use send, WSASend, or WriteFile
-        // POLLWRBAND	    Priority data writable	Use send (with MSG_OOB for out-of-band data)
-        // POLLERR	        Error condition	        Use getsockopt with SO_ERROR; may need closesocket
-        // POLLHUP	        Hang up (closed)	    Usually just cleanup: closesocket
-        // POLLNVAL 	    Invalid fd (not open)	Fix your code; close and remove fd
+        // Event Constant   Meaning	                What to do (Typical Socket API)
+        // POLLRDNORM       Normal data readable    Use recv, WSARecv, or ReadFile
+        // POLLRDBAND       Priority data readable  Use recv, WSARecv (with MSG_OOB for out-of-band)
+        // POLLWRNORM       Normal data writable    Use send, WSASend, or WriteFile
+        // POLLWRBAND       Priority data writable  Use send (with MSG_OOB for out-of-band data)
+        // POLLERR          Error condition         Use getsockopt with SO_ERROR; may need closesocket
+        // POLLHUP          Closed                  Usually just cleanup: closesocket
+        // POLLNVAL         Invalid fd (not open)   Fix your code; close and remove fd
         self.rawValue = 0
         let mapped = Int32(wsaEvent)
         if mapped & WinSDK.POLLRDNORM != 0 {
@@ -130,6 +130,8 @@ extension Selector: _SelectorBackendProtocol {
         interested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
+        // TODO (@fabian): We need to replace the pollFDs array with something 
+        //                 that will allow O(1) access here.
         let poll = pollfd(fd: UInt64(fileDescriptor), events: interested.wsaPollEventSet, revents: 0)
         self.pollFDs.append(poll)
     }
@@ -167,11 +169,11 @@ extension Selector: _SelectorBackendProtocol {
     }
 
     func close0() throws {
-        // Throw away all pollFDs?
+        self.pollFDs.removeAll()
     }
 }
 
-func wakeupTarget(_ ptr: UInt64) {
+fileprivate func wakeupTarget(_ ptr: UInt64) {
     // This is the target of our wakeup call.
     // We don't really need to do anything here. We just need any target
 }
