@@ -1060,28 +1060,31 @@ extension SelectableEventLoop: CustomStringConvertible, CustomDebugStringConvert
 
     @usableFromInline
     var debugDescription: String {
-        self._tasksLock.withLock {
-            if self.inEventLoop {
-                return """
-                    SelectableEventLoop { \
-                    selector = \(self._selector), \
-                    scheduledTasks = \(self._scheduledTasks.description), \
-                    thread = \(self.thread), \
-                    state = \(self.internalState) \
-                    }
-                    """
-            } else {
-                return self.externalStateLock.withLock {
-                    """
-                    SelectableEventLoop { \
-                    selector = \(self._selector), \
-                    scheduledTasks = \(self._scheduledTasks.description), \
-                    thread = \(self.thread), \
-                    state = \(self.externalState) \
-                    }
-                    """
+        let scheduledTasks = self._tasksLock.withLock {
+            self._scheduledTasks.description
+        }
+
+        if self.inEventLoop {
+            return """
+                SelectableEventLoop { \
+                selector = \(self._selector), \
+                scheduledTasks = \(scheduledTasks), \
+                thread = \(self.thread), \
+                state = \(self.internalState) \
                 }
+                """
+        } else {
+            let externalState = self.externalStateLock.withLock {
+                self.externalState
             }
+            return """
+                SelectableEventLoop { \
+                selector = \(self._selector), \
+                scheduledTasks = \(scheduledTasks), \
+                thread = \(self.thread), \
+                state = \(externalState) \
+                }
+                """
         }
     }
 }

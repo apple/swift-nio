@@ -2070,6 +2070,40 @@ final class EventLoopTest: XCTestCase {
         XCTAssertEqual("cool", actual)
     }
     #endif
+
+    func testRegressionSelectableEventLoopDeadlock() throws {
+        let iterations = 1_000
+        let loop = MultiThreadedEventLoopGroup.singleton.next() as! SelectableEventLoop
+        let threadsReadySem = DispatchSemaphore(value: 0)
+        let go = DispatchSemaphore(value: 0)
+
+        let scheduleds = NIOThreadPool.singleton.runIfActive(eventLoop: loop) {
+            threadsReadySem.signal()
+            go.wait()
+            var tasks: [Scheduled<()>] = []
+            for _ in 0..<iterations {
+                tasks.append(loop.scheduleTask(in: .milliseconds(1)) {})
+            }
+            return tasks
+        }
+
+        let descriptions = NIOThreadPool.singleton.runIfActive(eventLoop: loop) {
+            threadsReadySem.signal()
+            go.wait()
+            var descriptions: [String] = []
+            for _ in 0..<iterations {
+                descriptions.append(loop.debugDescription)
+            }
+            return descriptions
+        }
+
+        threadsReadySem.wait()
+        threadsReadySem.wait()
+        go.signal()
+        go.signal()
+        XCTAssertEqual(iterations, try scheduleds.wait().map { $0.cancel() }.count)
+        XCTAssertEqual(iterations, try descriptions.wait().count)
+    }
 }
 
 private final class EventLoopWithPreSucceededFuture: EventLoop {
