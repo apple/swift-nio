@@ -17,6 +17,8 @@ import NIOCore
 
 #if os(Linux)
 import CNIOLinux
+#elseif os(Windows)
+import WinSDK
 #endif
 
 @usableFromInline
@@ -210,6 +212,11 @@ internal class Selector<R: Registration> {
     @usableFromInline
     var deferredReregistrationsPending = false  // true if flush needed when reentring whenReady()
     #endif
+    #elseif os(Windows)
+    @usableFromInline
+    typealias EventType = WinSDK.pollfd
+    @usableFromInline
+    var pollFDs = [WinSDK.pollfd]()
     #else
     #error("Unsupported platform, no suitable selector backend (we need kqueue or epoll support)")
     #endif
