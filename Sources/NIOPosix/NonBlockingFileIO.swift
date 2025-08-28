@@ -440,7 +440,7 @@ public struct NonBlockingFileIO: Sendable {
                 switch res {
                 case .processed(let n):
                     assert(n >= 0, "read claims to have read a negative number of bytes \(n)")
-                    return numericCast(n) // ssize_t is Int64 on Windows and Int everywhere else.
+                    return numericCast(n)  // ssize_t is Int64 on Windows and Int everywhere else.
                 case .wouldBlock:
                     throw Error.descriptorSetToNonBlocking
                 }
