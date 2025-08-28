@@ -18,7 +18,10 @@ import NIOCore
 import WinSDK
 
 extension SelectorEventSet {
-    var wsaPollEventSet: Int16 {
+    // Use this property to create pollfd's event field. Reset and errors are (hopefully) always included.
+    // According to the docs we don't need to listen for them explicitly.
+    // Source: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/ns-winsock2-wsapollfd
+    var wsaPollEvent: Int16 {
         var result: Int16 = 0
         if self.contains(.read) {
             result |= Int16(WinSDK.POLLRDNORM)
@@ -29,8 +32,9 @@ extension SelectorEventSet {
         return result
     }
 
+    // Use this initializer to create a EventSet from the wsa pollfd's revent field
     @usableFromInline
-    init(wsaEvent: Int16) {
+    init(revents: Int16) {
         // Event Constant   Meaning	                What to do (Typical Socket API)
         // POLLRDNORM       Normal data readable    Use recv, WSARecv, or ReadFile
         // POLLRDBAND       Priority data readable  Use recv, WSARecv (with MSG_OOB for out-of-band)
@@ -107,7 +111,7 @@ extension Selector: _SelectorBackendProtocol {
                     continue
                 }
 
-                var selectorEvent = SelectorEventSet(wsaEvent: pollFD.revents)
+                var selectorEvent = SelectorEventSet(revents: pollFD.revents)
                 // in any case we only want what the user is currently registered for & what we got
                 selectorEvent = selectorEvent.intersection(registration.interested)
 
@@ -130,9 +134,9 @@ extension Selector: _SelectorBackendProtocol {
         interested: SelectorEventSet,
         registrationID: SelectorRegistrationID
     ) throws {
-        // TODO (@fabian): We need to replace the pollFDs array with something 
+        // TODO (@fabian): We need to replace the pollFDs array with something
         //                 that will allow O(1) access here.
-        let poll = pollfd(fd: UInt64(fileDescriptor), events: interested.wsaPollEventSet, revents: 0)
+        let poll = pollfd(fd: UInt64(fileDescriptor), events: interested.wsaPollEvent, revents: 0)
         self.pollFDs.append(poll)
     }
 
@@ -173,7 +177,7 @@ extension Selector: _SelectorBackendProtocol {
     }
 }
 
-fileprivate func wakeupTarget(_ ptr: UInt64) {
+private func wakeupTarget(_ ptr: UInt64) {
     // This is the target of our wakeup call.
     // We don't really need to do anything here. We just need any target
 }
