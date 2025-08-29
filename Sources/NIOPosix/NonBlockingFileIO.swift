@@ -385,52 +385,27 @@ public struct NonBlockingFileIO: Sendable {
         var bytesRead = 0
         var buf = allocator.buffer(capacity: byteCount)
 
-        #if os(Windows)
-        // Windows does not offer pread. Because of this we have to
-        // 1. get the current offset in the fd
-        // 2. change the offset to the value we want
-        // 3. read
-        // 4. reset the offset to the og value
-        if let fromOffset {
-            let ogOffset = try fileHandle.withUnsafeFileDescriptor { descriptor -> off_t in
-                let ogOffset = try Posix.lseek(
-                    descriptor: descriptor,
-                    offset: 0,
-                    whence: SEEK_SET
-                )
-                try Posix.lseek(
-                    descriptor: descriptor,
-                    offset: off_t(fromOffset),
-                    whence: SEEK_SET
-                )
-                return ogOffset
-            }
-            defer {
-                // Swallow any error here?
-                _ = try? fileHandle.withUnsafeFileDescriptor { descriptor in
-                    try Posix.lseek(
-                        descriptor: descriptor,
-                        offset: ogOffset,
-                        whence: SEEK_SET
-                    )
-                }
-            }
-        }
-        #endif
-
         while bytesRead < byteCount {
             let n = try buf.writeWithUnsafeMutableBytes(minimumWritableBytes: byteCount - bytesRead) { ptr -> Int in
                 let res = try fileHandle.withUnsafeFileDescriptor { descriptor -> IOResult<ssize_t> in
-                    #if !os(Windows)
                     if let offset = fromOffset {
+                        #if !os(Windows)
                         return try Posix.pread(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
                             size: byteCount - bytesRead,
                             offset: off_t(offset) + off_t(bytesRead)
                         )
+                        #else
+                        return try Windows.pread(
+                            descriptor: descriptor, 
+                            pointer: ptr.baseAddress!, 
+                            size: byteCount - bytesRead, 
+                            offset: off_t(offset) + off_t(bytesRead)
+                        )
+                        #endif
                     }
-                    #endif
+                    
                     return try Posix.read(
                         descriptor: descriptor,
                         pointer: ptr.baseAddress!,
