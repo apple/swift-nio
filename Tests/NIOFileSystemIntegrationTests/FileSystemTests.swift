@@ -1387,7 +1387,7 @@ extension FileSystemTests {
         for (path, type) in root1Entries where type == .regular {
             try await self.checkRegularFilesMatch(
                 NIOFilePath(root1.underlying.appending(path)),
-                NIOFilePath(root2.underlying.appending(path)),
+                NIOFilePath(root2.underlying.appending(path))
             )
         }
 
@@ -1395,7 +1395,7 @@ extension FileSystemTests {
         for (path, type) in root1Entries where type == .symlink {
             try await self.checkSymbolicLinksMatch(
                 NIOFilePath(root1.underlying.appending(path)),
-                NIOFilePath(root2.underlying.appending(path)),
+                NIOFilePath(root2.underlying.appending(path))
             )
         }
 

@@ -1039,7 +1039,7 @@ final class FileHandleTests: XCTestCase {
         let result = handle.sendableView._close(materialize: true, failRenameat2WithEINVAL: true)
         try result.get()
 
-        let info = try await FileSystem.shared.info(forFileAt: path)
+        let info = try await FileSystem.shared.info(forFileAt: NIOFilePath(path))
         XCTAssertNotNil(info)
         #else
         throw XCTSkip("This test requires 'renameat2' which isn't supported on this platform")
