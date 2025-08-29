@@ -68,6 +68,7 @@ extension NIOCore.Windows {
     ) throws -> IOResult<ssize_t> {
         var overlapped = OVERLAPPED()
         // off_t is Int32 anyway. Therefore high is always zero.
+        precondition(off_t.self == Int32.self)
         overlapped.OffsetHigh = 0
         overlapped.Offset = UInt32(offset)
 
