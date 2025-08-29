@@ -19,7 +19,7 @@ import NIOCore
 ///
 /// You can create a reader from a ``ReadableFileHandleProtocol`` by calling
 /// ``ReadableFileHandleProtocol/bufferedReader(startingAtAbsoluteOffset:capacity:)``. Call
-/// ``read(_:)`` to read a fixed number of bytes from the file or ``read(while:)-8aukk`` to read
+/// ``read(_:)`` to read a fixed number of bytes from the file or ``read(while:)`` to read
 /// from the file while the bytes match a predicate.
 ///
 /// You can also read bytes without returning them to caller by calling ``drop(_:)`` and

@@ -177,8 +177,8 @@ extension OpenOptions {
         ///
         /// When this option is set and applied the newly created file will only materialize
         /// on the file system when the file is closed. When used in conjunction with
-        /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka`` and
-        /// ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` the
+        /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)`` and
+        /// ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)`` the
         /// file will only materialize when the file is closed and no errors have been thrown.
         ///
         /// - Important: This flag is only applied if ``OpenOptions/Write/existingFile`` is

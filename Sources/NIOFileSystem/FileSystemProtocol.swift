@@ -313,8 +313,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-write or write-only
-    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` and
-    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka``.
+    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -340,8 +340,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-write or read-only
-    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3`` and
-    /// ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-nsue``.
+    /// mode by calling ``FileSystemProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)`` and
+    /// ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading.
@@ -372,8 +372,8 @@ extension FileSystemProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the function returns. Files may also be opened in read-only or
-    /// write-only mode by with ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)-nsue`` and
-    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)-1p6ka``.
+    /// write-only mode by with ``FileSystemProtocol/withFileHandle(forReadingAt:options:execute:)`` and
+    /// ``FileSystemProtocol/withFileHandle(forWritingAt:options:execute:)``.
     ///
     /// - Parameters:
     ///   - path: The path of the file to open for reading and writing.

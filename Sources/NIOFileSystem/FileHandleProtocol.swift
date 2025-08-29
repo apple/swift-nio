@@ -298,7 +298,7 @@ extension ReadableFileHandleProtocol {
     ///
     /// - Parameters:
     ///   - chunkLength: The length of chunks to read, defaults to 128 KiB.
-    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)-2dz6``.
+    /// - SeeAlso: ``ReadableFileHandleProtocol/readChunks(in:chunkLength:)``.
     /// - Returns: An `AsyncSequence` of chunks read from the file.
     public func readChunks(
         chunkLength: ByteCount = .kibibytes(128)
@@ -645,8 +645,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in write-only and read-write
-    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)-36f0k``
-    /// and ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-5j0f3``,
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)``
+    /// and ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)``,
     /// respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle. The file being
@@ -678,8 +678,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-only or read-write
-    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)-52xsn`` and
-    /// ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)-5j0f3``,
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)`` and
+    /// ``DirectoryFileHandleProtocol/withFileHandle(forReadingAndWritingAt:options:execute:)``,
     /// respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle.
@@ -714,8 +714,8 @@ extension DirectoryFileHandleProtocol {
     ///
     /// The file remains open during lifetime of the `execute` block and will be closed
     /// automatically before the call returns. Files may also be opened in read-only or write-only
-    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)-52xsn`` and
-    /// ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)-36f0k``, respectively.
+    /// mode by calling ``DirectoryFileHandleProtocol/withFileHandle(forReadingAt:options:execute:)`` and
+    /// ``DirectoryFileHandleProtocol/withFileHandle(forWritingAt:options:execute:)``, respectively.
     ///
     /// If `path` is a relative path then it is opened relative to the handle.
     ///
