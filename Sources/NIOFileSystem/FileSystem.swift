@@ -291,7 +291,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
     // MARK: - File copying, removal, and moving
 
-    /// See ``FileSystemProtocol/copyItem(at:to:shouldProceedAfterError:shouldCopyFile:)``
+    /// Copies the item at the specified path to a new location.
     ///
     /// The item to be copied must be a:
     /// - regular file,
@@ -444,7 +444,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at path: FilePath
     ) async throws -> Int {
         var (subdirectories, filesRemoved) = try await self.withDirectoryHandle(
-            atPath: path
+            atPath: NIOFilePath(path)
         ) { directory in
             var subdirectories = [FilePath]()
             var filesRemoved = 0
@@ -453,10 +453,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 for entry in batch {
                     switch entry.type {
                     case .directory:
-                        subdirectories.append(entry.path)
+                        subdirectories.append(entry.path.underlying)
 
                     default:
-                        filesRemoved += try await self.removeOneItem(at: entry.path)
+                        filesRemoved += try await self.removeOneItem(at: entry.path.underlying)
                     }
                 }
             }
@@ -590,7 +590,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
     /// The destination of the symbolic link is not guaranteed to be a valid path, nor is it
     /// guaranteed to be an absolute path. If you need to open a file which is the destination of a
     /// symbolic link then the appropriate `open` function:
-    /// - ``openFile(forReadingAt:)-55z6f``
+    /// - ``openFile(forReadingAt:)``
     /// - ``openFile(forWritingAt:options:)``
     /// - ``openFile(forReadingAndWritingAt:options:)``
     /// - ``openDirectory(atPath:options:)``
@@ -673,20 +673,6 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 }
 
 // MARK: - Creating FileSystems
-
-extension NIOSingletons {
-    /// A suggestion of how many threads the global singleton ``FileSystem`` uses for blocking I/O.
-    ///
-    /// The thread count is the system's available core count unless the environment variable
-    /// `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` is set or this value was set manually by the user.
-    ///
-    /// - Note: This value must be set _before_ any singletons are used and must only be set once.
-    @available(*, deprecated, renamed: "blockingPoolThreadCountSuggestion")
-    public static var fileSystemThreadCountSuggestion: Int {
-        set { Self.blockingPoolThreadCountSuggestion = newValue }
-        get { Self.blockingPoolThreadCountSuggestion }
-    }
-}
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 private let globalFileSystem: FileSystem = {
@@ -920,11 +906,11 @@ extension FileSystem {
             _ destination: FilePath
         ) async -> Bool
     ) async throws -> [DirCopyItem] {
-        try await self.withDirectoryHandle(atPath: sourcePath) { dir in
+        try await self.withDirectoryHandle(atPath: NIOFilePath(sourcePath)) { dir in
             // Grab the directory info to copy permissions.
             let info = try await dir.info()
             try await self.createDirectory(
-                at: destinationPath,
+                at: NIOFilePath(destinationPath),
                 withIntermediateDirectories: false,
                 permissions: info.permissions
             )
@@ -935,7 +921,9 @@ extension FileSystem {
                 let attributes = try await dir.attributeNames()
 
                 if !attributes.isEmpty {
-                    try await self.withDirectoryHandle(atPath: destinationPath) { destinationDir in
+                    try await self.withDirectoryHandle(
+                        atPath: NIOFilePath(destinationPath)
+                    ) { destinationDir in
                         for attribute in attributes {
                             let value = try await dir.valueForAttribute(attribute)
                             try await destinationDir.updateValueForAttribute(
@@ -1031,7 +1019,7 @@ extension FileSystem {
                 case .regular:
                     do {
                         try await self.copyRegularFile(
-                            from: source.path,
+                            from: source.path.underlying,
                             to: destination
                         )
                     } catch {
@@ -1041,7 +1029,7 @@ extension FileSystem {
                 case .symlink:
                     do {
                         try await self.copySymbolicLink(
-                            from: source.path,
+                            from: source.path.underlying,
                             to: destination
                         )
                     } catch {
@@ -1050,7 +1038,7 @@ extension FileSystem {
 
                 case .directory:
                     try await self.copyDirectorySequential(
-                        from: source.path,
+                        from: source.path.underlying,
                         to: destination,
                         shouldProceedAfterError: shouldProceedAfterError,
                         shouldCopyItem: shouldCopyItem
@@ -1135,7 +1123,7 @@ extension FileSystem {
         case .regular:
             do {
                 try await self.copyRegularFile(
-                    from: from.path,
+                    from: from.path.underlying,
                     to: to
                 )
             } catch {
@@ -1145,7 +1133,7 @@ extension FileSystem {
         case .symlink:
             do {
                 try await self.copySymbolicLink(
-                    from: from.path,
+                    from: from.path.underlying,
                     to: to
                 )
             } catch {
@@ -1154,7 +1142,7 @@ extension FileSystem {
 
         case .directory:
             let addToQueue = try await self.prepareDirectoryForRecusiveCopy(
-                from: from.path,
+                from: from.path.underlying,
                 to: to,
                 shouldProceedAfterError: shouldProceedAfterError,
                 shouldCopyItem: shouldCopyItem

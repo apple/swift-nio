@@ -1,11 +1,11 @@
-# ``_NIOFileSystem/WritableFileHandleProtocol``
+# ``NIOFileSystem/WritableFileHandleProtocol``
 
 ## Topics
 
 ### Write bytes to a file
 
-- ``write(contentsOf:toAbsoluteOffset:)-57fnc``
-- ``write(contentsOf:toAbsoluteOffset:)-4na03``
+- ``write(contentsOf:toAbsoluteOffset:)``
+- ``write(contentsOf:toAbsoluteOffset:)``
 - ``bufferedWriter(startingAtAbsoluteOffset:capacity:)``
 
 ### Resize a file

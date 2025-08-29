@@ -12,16 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+@_spi(Testing) import NIOFileSystem
 import SystemPackage
 import XCTest
-@_spi(Testing) import _NIOFileSystem
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystemTests {
     func testRemoveOneItemIgnoresNonExistentFile() async throws {
         let fs = FileSystem.shared
         let path = try await fs.temporaryFilePath()
-        let removed = try await fs.removeOneItem(at: path)
+        let removed = try await fs.removeOneItem(at: FilePath(path))
         XCTAssertEqual(removed, 0)
     }
 }

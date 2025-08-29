@@ -19,9 +19,9 @@
 //
 //See https://swift.org/LICENSE.txt for license information
 
+@_spi(Testing) import NIOFileSystem
 import SystemPackage
 import XCTest
-@_spi(Testing) import _NIOFileSystem
 
 #if ENABLE_MOCKING
 internal struct Wildcard: Hashable {}

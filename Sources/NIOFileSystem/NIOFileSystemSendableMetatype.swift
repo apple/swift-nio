@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #if compiler(>=6.2)
-public typealias _NIOFileSystemSendableMetatype = SendableMetatype
+public typealias NIOFileSystemSendableMetatype = SendableMetatype
 #else
-public typealias _NIOFileSystemSendableMetatype = Any
+public typealias NIOFileSystemSendableMetatype = Any
 #endif

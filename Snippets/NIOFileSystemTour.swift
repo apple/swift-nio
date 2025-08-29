@@ -1,7 +1,7 @@
 // snippet.hide
 
 import NIOCore
-import _NIOFileSystem
+import NIOFileSystem
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 func main() async throws {
@@ -50,9 +50,9 @@ func main() async throws {
     // written to. However, their contents can be listed:
     let path: NIOFilePath? = try await fileSystem.withDirectoryHandle(atPath: "/Users/hal9000/Music") { directory in
         for try await entry in directory.listContents() {
-            if entry.name.extension == "mp3", entry.name.stem.contains("daisy") {
+            if entry.name == "daisy.mp3" {
                 // Found it!
-                return entry.filePath
+                return entry.path
             }
         }
         // No luck.

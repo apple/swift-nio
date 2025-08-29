@@ -1,4 +1,4 @@
-# ``_NIOFileSystem/FileSystemProtocol``
+# ``NIOFileSystem/FileSystemProtocol``
 
 ## Topics
 
@@ -7,17 +7,17 @@
 Files and directories can be opened and have their lifecycles managed by using the
 following methods:
 
-- ``withFileHandle(forReadingAt:options:execute:)-nsue``
-- ``withFileHandle(forWritingAt:options:execute:)-1p6ka``
-- ``withFileHandle(forReadingAndWritingAt:options:execute:)-9nqu3``
-- ``withDirectoryHandle(atPath:options:execute:)-4wzzz``
+- ``withFileHandle(forReadingAt:options:execute:)``
+- ``withFileHandle(forWritingAt:options:execute:)``
+- ``withFileHandle(forReadingAndWritingAt:options:execute:)``
+- ``withDirectoryHandle(atPath:options:execute:)``
 
 ### Opening files
 
 Files and directories can be opened using the following methods. The caller is responsible for
 closing it to avoid leaking resources.
 
-- ``openFile(forReadingAt:)-6v2b8``
+- ``openFile(forReadingAt:)``
 - ``openFile(forWritingAt:options:)``
 - ``openFile(forReadingAndWritingAt:options:)``
 - ``openDirectory(atPath:options:)``
@@ -34,7 +34,7 @@ closing it to avoid leaking resources.
 ### Managing files
 
 - ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
-- ``removeItem(at:)-1vii4``
+- ``removeItem(at:)``
 - ``moveItem(at:to:)``
 - ``replaceItem(at:withItemAt:)``
 - ``createDirectory(at:withIntermediateDirectories:permissions:)``
@@ -43,4 +43,4 @@ closing it to avoid leaking resources.
 
 - ``currentWorkingDirectory``
 - ``temporaryDirectory``
-- ``withTemporaryDirectory(prefix:options:execute:)-rbkk``
+- ``withTemporaryDirectory(prefix:options:execute:)``

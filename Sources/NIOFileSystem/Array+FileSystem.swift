@@ -35,21 +35,6 @@ extension Array where Element == UInt8 {
         self = Self(buffer: byteBuffer)
     }
 
-    /// Reads the contents of the file at the path.
-    ///
-    /// - Parameters:
-    ///   - path: The path of the file to read.
-    ///   - maximumSizeAllowed: The maximum size of file which can be read, in bytes, as a ``ByteCount``.
-    ///   - fileSystem: The ``FileSystemProtocol`` instance to use to read the file.
-    @_disfavoredOverload
-    public init(
-        contentsOf path: FilePath,
-        maximumSizeAllowed: ByteCount,
-        fileSystem: some FileSystemProtocol
-    ) async throws {
-        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed, fileSystem: fileSystem)
-    }
-
     /// Reads the contents of the file at the path using ``FileSystem``.
     ///
     /// - Parameters:
@@ -64,19 +49,6 @@ extension Array where Element == UInt8 {
             maximumSizeAllowed: maximumSizeAllowed,
             fileSystem: .shared
         )
-    }
-
-    /// Reads the contents of the file at the path using ``FileSystem``.
-    ///
-    /// - Parameters:
-    ///   - path: The path of the file to read.
-    ///   - maximumSizeAllowed: The maximum size of file which can be read, as a ``ByteCount``.
-    @_disfavoredOverload
-    public init(
-        contentsOf path: FilePath,
-        maximumSizeAllowed: ByteCount
-    ) async throws {
-        try await self.init(contentsOf: .init(path), maximumSizeAllowed: maximumSizeAllowed)
     }
 }
 #endif

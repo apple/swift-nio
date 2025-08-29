@@ -19,7 +19,7 @@ import NIOCore
 ///
 /// You can create a reader from a ``ReadableFileHandleProtocol`` by calling
 /// ``ReadableFileHandleProtocol/bufferedReader(startingAtAbsoluteOffset:capacity:)``. Call
-/// ``read(_:)`` to read a fixed number of bytes from the file or ``read(while:)-8aukk`` to read
+/// ``read(_:)`` to read a fixed number of bytes from the file or ``read(while:)`` to read
 /// from the file while the bytes match a predicate.
 ///
 /// You can also read bytes without returning them to caller by calling ``drop(_:)`` and
@@ -203,24 +203,6 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
                 return
             }
         }
-    }
-}
-
-// swift-format-ignore: AmbiguousTrailingClosureOverload
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension BufferedReader {
-    /// Reads from  the current position in the file until `predicate` returns `false` and returns
-    /// the read bytes.
-    ///
-    /// - Parameters:
-    ///   - predicate: A predicate which evaluates to `true` for all bytes returned.
-    /// - Returns: The bytes read from the file.
-    /// - Important: This method has been deprecated: use ``read(while:)-8aukk`` instead.
-    @available(*, deprecated, message: "Use the read(while:) method returning a (ByteBuffer, Bool) tuple instead.")
-    public mutating func read(
-        while predicate: (UInt8) -> Bool
-    ) async throws -> ByteBuffer {
-        try await self.read(while: predicate).bytes
     }
 }
 

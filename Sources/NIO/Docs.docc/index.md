@@ -168,7 +168,7 @@ The core SwiftNIO repository will contain a few extremely important protocol imp
 [module-tls]: ./NIOTLS
 [module-websocket]: ./NIOWebSocket
 [module-test-utilities]: ./NIOTestUtils
-[module-filesystem]: ./_NIOFileSystem
+[module-filesystem]: ./NIOFileSystem
 
 [ch]: ./NIOCore/ChannelHandler
 [c]: ./NIOCore/Channel

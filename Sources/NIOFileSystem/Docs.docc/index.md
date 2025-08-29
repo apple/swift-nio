@@ -1,4 +1,4 @@
-# ``_NIOFileSystem``
+# ``NIOFileSystem``
 
 A file system library for Swift.
 
@@ -8,7 +8,7 @@ This module implements a file system library for Swift, providing ways to intera
 files. It provides a concrete ``FileSystem`` for interacting with the local file system in addition
 to a set of protocols for creating other file system implementations.
 
-``_NIOFileSystem`` is cross-platform with the following caveats:
+``NIOFileSystem`` is cross-platform with the following caveats:
 - _Platforms don't have feature parity or system-level API parity._ Where this is the case these
   implementation details are documented. One example is copying files, on Apple platforms files are
   cloned if possible.
