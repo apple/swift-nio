@@ -21,7 +21,7 @@ extension FileSystemTests {
     func testRemoveOneItemIgnoresNonExistentFile() async throws {
         let fs = FileSystem.shared
         let path = try await fs.temporaryFilePath()
-        let removed = try await fs.removeOneItem(at: path)
+        let removed = try await fs.removeOneItem(at: FilePath(path))
         XCTAssertEqual(removed, 0)
     }
 }
