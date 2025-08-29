@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-import _NIOFileSystem
-import _NIOFileSystemFoundationCompat
+import NIOFileSystem
+import NIOFileSystemFoundationCompat
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension FileSystem {

@@ -1,4 +1,4 @@
-# ``_NIOFileSystem/DirectoryFileHandleProtocol``
+# ``NIOFileSystem/DirectoryFileHandleProtocol``
 
 ## Topics
 

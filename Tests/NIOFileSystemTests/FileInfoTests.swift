@@ -14,7 +14,7 @@
 
 import CNIOLinux
 import XCTest
-import _NIOFileSystem
+import NIOFileSystem
 
 #if canImport(Darwin)
 import Darwin

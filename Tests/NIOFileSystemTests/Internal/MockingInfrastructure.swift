@@ -21,7 +21,7 @@
 
 import SystemPackage
 import XCTest
-@_spi(Testing) import _NIOFileSystem
+@_spi(Testing) import NIOFileSystem
 
 #if ENABLE_MOCKING
 internal struct Wildcard: Hashable {}

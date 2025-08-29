@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@_spi(Testing) import _NIOFileSystem
+@_spi(Testing) import NIOFileSystem
 
 #if canImport(Darwin)
 import Darwin

@@ -14,7 +14,7 @@
 
 import SystemPackage
 import XCTest
-@_spi(Testing) @testable import _NIOFileSystem
+@_spi(Testing) @testable import NIOFileSystem
 
 #if canImport(System)
 import System

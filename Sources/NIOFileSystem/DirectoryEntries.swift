@@ -37,7 +37,7 @@ public struct DirectoryEntries: AsyncSequence, Sendable {
     /// directory entries.
     @preconcurrency
     public init<S: AsyncSequence & Sendable>(wrapping sequence: S)
-    where S.Element == Batched.Element, S.AsyncIterator: _NIOFileSystemSendableMetatype {
+    where S.Element == Batched.Element, S.AsyncIterator: NIOFileSystemSendableMetatype {
         self.batchedSequence = Batched(wrapping: sequence)
     }
 
@@ -97,7 +97,7 @@ extension DirectoryEntries {
         /// of directory entry batches.
         @preconcurrency
         public init<S: AsyncSequence & Sendable>(wrapping sequence: S)
-        where S.Element == Element, S.AsyncIterator: _NIOFileSystemSendableMetatype {
+        where S.Element == Element, S.AsyncIterator: NIOFileSystemSendableMetatype {
             self.stream = BufferedOrAnyStream<[DirectoryEntry], DirectoryEntryProducer>(wrapping: sequence)
         }
 

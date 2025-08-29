@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
-@_spi(Testing) import _NIOFileSystem
+@_spi(Testing) import NIOFileSystem
 
 final class FileOpenOptionsTests: XCTestCase {
     private let expectedDefaults: FilePermissions = [

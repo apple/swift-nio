@@ -16,7 +16,7 @@ import NIOConcurrencyHelpers
 import NIOCore
 import SystemPackage
 import XCTest
-@_spi(Testing) @testable import _NIOFileSystem
+@_spi(Testing) @testable import NIOFileSystem
 
 extension NIOFilePath {
     static let testData = NIOFilePath(
