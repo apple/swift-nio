@@ -444,7 +444,7 @@ public struct FileSystem: Sendable, FileSystemProtocol {
         at path: FilePath
     ) async throws -> Int {
         var (subdirectories, filesRemoved) = try await self.withDirectoryHandle(
-            atPath: path
+            atPath: NIOFilePath(path)
         ) { directory in
             var subdirectories = [FilePath]()
             var filesRemoved = 0
@@ -453,10 +453,10 @@ public struct FileSystem: Sendable, FileSystemProtocol {
                 for entry in batch {
                     switch entry.type {
                     case .directory:
-                        subdirectories.append(entry.path)
+                        subdirectories.append(entry.path.underlying)
 
                     default:
-                        filesRemoved += try await self.removeOneItem(at: entry.path)
+                        filesRemoved += try await self.removeOneItem(at: entry.path.underlying)
                     }
                 }
             }
@@ -920,11 +920,11 @@ extension FileSystem {
             _ destination: FilePath
         ) async -> Bool
     ) async throws -> [DirCopyItem] {
-        try await self.withDirectoryHandle(atPath: sourcePath) { dir in
+        try await self.withDirectoryHandle(atPath: NIOFilePath(sourcePath)) { dir in
             // Grab the directory info to copy permissions.
             let info = try await dir.info()
             try await self.createDirectory(
-                at: destinationPath,
+                at: NIOFilePath(destinationPath),
                 withIntermediateDirectories: false,
                 permissions: info.permissions
             )
@@ -935,7 +935,9 @@ extension FileSystem {
                 let attributes = try await dir.attributeNames()
 
                 if !attributes.isEmpty {
-                    try await self.withDirectoryHandle(atPath: destinationPath) { destinationDir in
+                    try await self.withDirectoryHandle(
+                        atPath: NIOFilePath(destinationPath)
+                    ) { destinationDir in
                         for attribute in attributes {
                             let value = try await dir.valueForAttribute(attribute)
                             try await destinationDir.updateValueForAttribute(
@@ -1031,7 +1033,7 @@ extension FileSystem {
                 case .regular:
                     do {
                         try await self.copyRegularFile(
-                            from: source.path,
+                            from: source.path.underlying,
                             to: destination
                         )
                     } catch {
@@ -1041,7 +1043,7 @@ extension FileSystem {
                 case .symlink:
                     do {
                         try await self.copySymbolicLink(
-                            from: source.path,
+                            from: source.path.underlying,
                             to: destination
                         )
                     } catch {
@@ -1050,7 +1052,7 @@ extension FileSystem {
 
                 case .directory:
                     try await self.copyDirectorySequential(
-                        from: source.path,
+                        from: source.path.underlying,
                         to: destination,
                         shouldProceedAfterError: shouldProceedAfterError,
                         shouldCopyItem: shouldCopyItem
@@ -1135,7 +1137,7 @@ extension FileSystem {
         case .regular:
             do {
                 try await self.copyRegularFile(
-                    from: from.path,
+                    from: from.path.underlying,
                     to: to
                 )
             } catch {
@@ -1145,7 +1147,7 @@ extension FileSystem {
         case .symlink:
             do {
                 try await self.copySymbolicLink(
-                    from: from.path,
+                    from: from.path.underlying,
                     to: to
                 )
             } catch {
@@ -1154,7 +1156,7 @@ extension FileSystem {
 
         case .directory:
             let addToQueue = try await self.prepareDirectoryForRecusiveCopy(
-                from: from.path,
+                from: from.path.underlying,
                 to: to,
                 shouldProceedAfterError: shouldProceedAfterError,
                 shouldCopyItem: shouldCopyItem

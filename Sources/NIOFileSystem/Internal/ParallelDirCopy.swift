@@ -61,7 +61,7 @@ extension FileSystem {
         // Kick-start the procees by enqueuing the root entry. The calling function already
         // validated the root needed copying, so it is safe to force unwrap the value.
         _ = copyRequiredQueue.source.yield(
-            .toCopy(from: .init(path: sourcePath, type: .directory)!, to: destinationPath)
+            .toCopy(from: .init(path: NIOFilePath(sourcePath), type: .directory)!, to: destinationPath)
         )
 
         // The processing of the very first item (the root) will increment this counter. Processing

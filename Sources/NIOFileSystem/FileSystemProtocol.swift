@@ -530,12 +530,12 @@ extension FileSystemProtocol {
         ) async -> Bool
     ) async throws {
         try await self.copyItem(
-            at: sourcePath,
-            to: destinationPath,
+            at: NIOFilePath(sourcePath),
+            to: NIOFilePath(destinationPath),
             strategy: .sequential,
             shouldProceedAfterError: shouldProceedAfterError,
             shouldCopyItem: { (source, destination) in
-                await shouldCopyFile(source.path, destination)
+                await shouldCopyFile(source.path.underlying, destination.underlying)
             }
         )
     }
@@ -709,7 +709,7 @@ extension FileSystemProtocol {
             template = try await self.temporaryDirectory.underlying.appending("XXXXXXXX")
         }
 
-        let directory = NIOFilePath(try await self.createTemporaryDirectory(template: template))
+        let directory = try await self.createTemporaryDirectory(template: NIOFilePath(template))
         return try await withUncancellableTearDown {
             try await withDirectoryHandle(atPath: directory, options: options) { handle in
                 try await execute(handle, directory)
