@@ -51,14 +51,4 @@ public struct DirectoryEntry: Sendable, Hashable, Equatable {
         self.filePath = path
         self.type = type
     }
-
-    /// Creates a directory entry; returns `nil` if `path` has no components.
-    ///
-    /// - Parameters:
-    ///   - path: The path of the directory entry which must contain at least one component.
-    ///   - type: The type of entry.
-    @_disfavoredOverload
-    public init?(path: FilePath, type: FileType) {
-        self.init(path: .init(path), type: type)
-    }
 }
