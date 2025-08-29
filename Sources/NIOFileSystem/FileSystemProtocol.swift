@@ -489,59 +489,6 @@ extension FileSystemProtocol {
 
     /// Copies the item at the specified path to a new location.
     ///
-    /// The item to be copied must be a:
-    /// - regular file,
-    /// - symbolic link, or
-    /// - directory.
-    ///
-    /// If `sourcePath` is a symbolic link then only the link is copied. The copied file will
-    /// preserve permissions and any extended attributes (if supported by the file system).
-    ///
-    /// #### Errors
-    ///
-    /// Error codes thrown include:
-    /// - ``FileSystemError/Code-swift.struct/notFound`` if `sourcePath` doesn't exist.
-    /// - ``FileSystemError/Code-swift.struct/fileAlreadyExists`` if `destinationPath` exists.
-    ///
-    /// #### Backward Compatibility details
-    ///
-    /// This is implemented in terms of ``copyItem(at:to:strategy:shouldProceedAfterError:shouldCopyItem:)``
-    /// using ``CopyStrategy/sequential`` to avoid changing the concurrency semantics of the should callbacks
-    ///
-    /// - Parameters:
-    ///   - sourcePath: The path to the item to copy.
-    ///   - destinationPath: The path at which to place the copy.
-    ///   - shouldProceedAfterError: Determines whether to continue copying files if an error is
-    ///       thrown during the operation. This error does not have to match the error passed
-    ///       to the closure.
-    ///   - shouldCopyFile: A closure which is executed before each file to determine whether the
-    ///       file should be copied.
-    @available(*, deprecated, message: "please use copyItem overload taking CopyStrategy")
-    public func copyItem(
-        at sourcePath: FilePath,
-        to destinationPath: FilePath,
-        shouldProceedAfterError: @escaping @Sendable (
-            _ entry: DirectoryEntry,
-            _ error: Error
-        ) async throws -> Void,
-        shouldCopyFile: @escaping @Sendable (
-            _ source: FilePath,
-            _ destination: FilePath
-        ) async -> Bool
-    ) async throws {
-        try await self.copyItem(
-            at: NIOFilePath(sourcePath),
-            to: NIOFilePath(destinationPath),
-            strategy: .sequential,
-            shouldProceedAfterError: shouldProceedAfterError,
-            shouldCopyItem: { (source, destination) in
-                await shouldCopyFile(source.path.underlying, destination.underlying)
-            }
-        )
-    }
-
-    /// Copies the item at the specified path to a new location.
-    ///
     /// The following error codes may be thrown:
     /// - ``FileSystemError/Code-swift.struct/notFound`` if the item at `sourcePath` does not exist,
     /// - ``FileSystemError/Code-swift.struct/invalidArgument`` if an item at `destinationPath`

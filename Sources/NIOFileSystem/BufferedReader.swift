@@ -206,24 +206,6 @@ public struct BufferedReader<Handle: ReadableFileHandleProtocol> {
     }
 }
 
-// swift-format-ignore: AmbiguousTrailingClosureOverload
-@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-extension BufferedReader {
-    /// Reads from  the current position in the file until `predicate` returns `false` and returns
-    /// the read bytes.
-    ///
-    /// - Parameters:
-    ///   - predicate: A predicate which evaluates to `true` for all bytes returned.
-    /// - Returns: The bytes read from the file.
-    /// - Important: This method has been deprecated: use ``read(while:)-8aukk`` instead.
-    @available(*, deprecated, message: "Use the read(while:) method returning a (ByteBuffer, Bool) tuple instead.")
-    public mutating func read(
-        while predicate: (UInt8) -> Bool
-    ) async throws -> ByteBuffer {
-        try await self.read(while: predicate).bytes
-    }
-}
-
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension ReadableFileHandleProtocol {
     /// Creates a new ``BufferedReader`` for this file handle.

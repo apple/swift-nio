@@ -674,20 +674,6 @@ public struct FileSystem: Sendable, FileSystemProtocol {
 
 // MARK: - Creating FileSystems
 
-extension NIOSingletons {
-    /// A suggestion of how many threads the global singleton ``FileSystem`` uses for blocking I/O.
-    ///
-    /// The thread count is the system's available core count unless the environment variable
-    /// `NIO_SINGLETON_FILESYSTEM_THREAD_COUNT` is set or this value was set manually by the user.
-    ///
-    /// - Note: This value must be set _before_ any singletons are used and must only be set once.
-    @available(*, deprecated, renamed: "blockingPoolThreadCountSuggestion")
-    public static var fileSystemThreadCountSuggestion: Int {
-        set { Self.blockingPoolThreadCountSuggestion = newValue }
-        get { Self.blockingPoolThreadCountSuggestion }
-    }
-}
-
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 private let globalFileSystem: FileSystem = {
     guard NIOSingletons.singletonsEnabledSuggestion else {
