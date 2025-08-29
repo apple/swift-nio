@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @_spi(Testing) import NIOFileSystem
+import XCTest
 
 final class FileSystemErrorTests: XCTestCase {
     func testFileSystemErrorCustomStringConvertible() throws {

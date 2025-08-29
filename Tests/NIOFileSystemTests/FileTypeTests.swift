@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
 @_spi(Testing) import NIOFileSystem
+import XCTest
 
 #if canImport(Darwin)
 import Darwin
