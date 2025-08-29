@@ -64,8 +64,8 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem", "NIOFileSystem"]),
-        .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
+        .library(name: "NIOFileSystem", targets: ["NIOFileSystem"]),
+        .library(name: "NIOFileSystemFoundationCompat", targets: ["NIOFileSystemFoundationCompat"]),
     ],
     targets: [
         // MARK: - Targets
@@ -242,7 +242,7 @@ let package = Package(
             swiftSettings: strictConcurrencySettings
         ),
         .target(
-            name: "_NIOFileSystem",
+            name: "NIOFileSystem",
             dependencies: [
                 "NIOCore",
                 "NIOPosix",
@@ -260,17 +260,9 @@ let package = Package(
             ]
         ),
         .target(
-            name: "NIOFileSystem",
+            name: "NIOFileSystemFoundationCompat",
             dependencies: [
-                "_NIOFileSystem"
-            ],
-            path: "Sources/_NIOFileSystemExported",
-            swiftSettings: strictConcurrencySettings
-        ),
-        .target(
-            name: "_NIOFileSystemFoundationCompat",
-            dependencies: [
-                "_NIOFileSystem",
+                "NIOFileSystem",
                 "NIOFoundationCompat",
             ],
             path: "Sources/NIOFileSystemFoundationCompat",
@@ -561,7 +553,7 @@ let package = Package(
             name: "NIOFileSystemTests",
             dependencies: [
                 "NIOCore",
-                "_NIOFileSystem",
+                "NIOFileSystem",
                 swiftAtomics,
                 swiftCollections,
                 swiftSystem,
@@ -575,7 +567,7 @@ let package = Package(
             dependencies: [
                 "NIOCore",
                 "NIOPosix",
-                "_NIOFileSystem",
+                "NIOFileSystem",
                 "NIOFoundationCompat",
             ],
             exclude: [
@@ -589,8 +581,8 @@ let package = Package(
         .testTarget(
             name: "NIOFileSystemFoundationCompatTests",
             dependencies: [
-                "_NIOFileSystem",
-                "_NIOFileSystemFoundationCompat",
+                "NIOFileSystem",
+                "NIOFileSystemFoundationCompat",
             ],
             swiftSettings: strictConcurrencySettings
         ),
