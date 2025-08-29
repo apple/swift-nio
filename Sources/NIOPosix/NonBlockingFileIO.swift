@@ -398,14 +398,14 @@ public struct NonBlockingFileIO: Sendable {
                         )
                         #else
                         return try Windows.pread(
-                            descriptor: descriptor, 
-                            pointer: ptr.baseAddress!, 
-                            size: byteCount - bytesRead, 
+                            descriptor: descriptor,
+                            pointer: ptr.baseAddress!,
+                            size: byteCount - bytesRead,
                             offset: off_t(offset) + off_t(bytesRead)
                         )
                         #endif
                     }
-                    
+
                     return try Posix.read(
                         descriptor: descriptor,
                         pointer: ptr.baseAddress!,
