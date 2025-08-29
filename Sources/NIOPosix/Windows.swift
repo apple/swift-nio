@@ -59,6 +59,55 @@ extension NIOCore.Windows {
         }
         return .processed(Int(result))
     }
+
+    static func pread(
+        descriptor: CInt,
+        pointer: UnsafeMutableRawPointer,
+        size: size_t,
+        offset: off_t
+    ) throws -> IOResult<ssize_t> {
+        var overlapped = OVERLAPPED()
+        // off_t is Int32 anyway. Therefore high is always zero.
+        precondition(off_t.self == Int32.self)
+        overlapped.OffsetHigh = 0
+        overlapped.Offset = UInt32(offset)
+
+        let file = HANDLE(bitPattern: _get_osfhandle(descriptor))
+        SetLastError(0)
+        var readBytes: DWORD = 0
+        let clampedSize = UInt32(clamping: size)
+        let rf = ReadFile(file, pointer, clampedSize, &readBytes, &overlapped)
+        let lastError = GetLastError()
+        if rf == false && lastError != ERROR_HANDLE_EOF {
+            throw IOError(errnoCode: Self.windowsErrorToPosixErrno(lastError), reason: "pread")
+        }
+        return .processed(Int64(readBytes))
+    }
+
+    private static func windowsErrorToPosixErrno(_ dwError: DWORD) -> Int32 {
+        switch Int32(dwError) {
+        case ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND:
+            return ENOENT
+        case ERROR_TOO_MANY_OPEN_FILES:
+            return EMFILE
+        case ERROR_ACCESS_DENIED:
+            return EACCES
+        case ERROR_INVALID_HANDLE:
+            return EBADF
+        case ERROR_NOT_ENOUGH_MEMORY, ERROR_OUTOFMEMORY:
+            return ENOMEM
+        case ERROR_NOT_READY, ERROR_CRC:
+            return EIO
+        case ERROR_SHARING_VIOLATION, ERROR_LOCK_VIOLATION:
+            return EBUSY
+        case ERROR_HANDLE_EOF:
+            return 0
+        case ERROR_BROKEN_PIPE:
+            return EPIPE
+        default:
+            return EINVAL
+        }
+    }
 }
 
 #endif

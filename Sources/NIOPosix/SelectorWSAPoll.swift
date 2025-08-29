@@ -44,7 +44,7 @@ extension SelectorEventSet {
         // POLLHUP          Closed                  Usually just cleanup: closesocket
         // POLLNVAL         Invalid fd (not open)   Fix your code; close and remove fd
         self.rawValue = 0
-        let mapped = Int32(wsaEvent)
+        let mapped = Int32(revents)
         if mapped & WinSDK.POLLRDNORM != 0 {
             self.formUnion(.read)
         }

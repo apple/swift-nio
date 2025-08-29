@@ -11,6 +11,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+
+#if !os(Windows)
 import NIOCore
 
 extension FileDescriptor {
@@ -28,3 +30,4 @@ extension FileDescriptor {
         }
     }
 }
+#endif
