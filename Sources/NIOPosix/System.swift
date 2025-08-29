@@ -105,6 +105,7 @@ private let sysPread = pread
 private let sysLseek = lseek
 private let sysPoll = poll
 #else
+private let sysWrite = _write
 private let sysRead = _read
 private let sysLseek = _lseek
 private let sysFtruncate = _chsize_s
@@ -696,13 +697,6 @@ internal enum Posix: Sendable {
     }
 
     @inline(never)
-    public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
-        try syscall(blocking: true) {
-            sysWrite(descriptor, pointer, size)
-        }
-    }
-
-    @inline(never)
     public static func pwrite(
         descriptor: CInt,
         pointer: UnsafeRawPointer,
@@ -770,6 +764,16 @@ internal enum Posix: Sendable {
             #else
             sysRead(descriptor, pointer, size)
             #endif
+        }
+    }
+
+    @inline(never)
+    public static func write(descriptor: CInt, pointer: UnsafeRawPointer, size: Int) throws -> IOResult<Int> {
+        try syscall(blocking: true) {
+            #if os(Windows)
+            let size = UInt32(clamping: size)
+            #endif
+            return numericCast(sysWrite(descriptor, pointer, size))
         }
     }
 
