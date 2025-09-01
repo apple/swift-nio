@@ -84,6 +84,28 @@ extension NIOCore.Windows {
         return .processed(Int64(readBytes))
     }
 
+    static func pwrite(
+        descriptor: CInt,
+        pointer: UnsafeRawPointer,
+        size: size_t,
+        offset: off_t
+    ) throws -> IOResult<ssize_t> {
+        var overlapped = OVERLAPPED()
+        // off_t is Int32 anyway. Therefore high is always zero.
+        precondition(off_t.self == Int32.self)
+        overlapped.OffsetHigh = 0
+        overlapped.Offset = UInt32(offset)
+
+        let file = HANDLE(bitPattern: _get_osfhandle(descriptor))
+        SetLastError(0)
+        var writtenBytes: DWORD = 0
+        let clampedSize = UInt32(clamping: size)
+        if !WriteFile(file, pointer, clampedSize, &writtenBytes, &overlapped) {
+            throw IOError(errnoCode: Self.windowsErrorToPosixErrno(GetLastError()), reason: "pwrite")
+        }
+        return .processed(Int64(writtenBytes))
+    }
+
     private static func windowsErrorToPosixErrno(_ dwError: DWORD) -> Int32 {
         switch Int32(dwError) {
         case ERROR_FILE_NOT_FOUND, ERROR_PATH_NOT_FOUND:

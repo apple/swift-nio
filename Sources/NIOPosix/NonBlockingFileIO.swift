@@ -535,24 +535,38 @@ public struct NonBlockingFileIO: Sendable {
                 precondition(ptr.count == byteCount - offsetAccumulator)
                 let res: IOResult<ssize_t> = try fileHandle.withUnsafeFileDescriptor { descriptor in
                     if let toOffset = toOffset {
+                        #if os(Windows)
+                        return try Windows.pwrite(
+                            descriptor: descriptor,
+                            pointer: ptr.baseAddress!,
+                            size: byteCount - offsetAccumulator,
+                            offset: off_t(toOffset + Int64(offsetAccumulator))
+                        )
+                        #else
                         return try Posix.pwrite(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
                             size: byteCount - offsetAccumulator,
                             offset: off_t(toOffset + Int64(offsetAccumulator))
                         )
+                        #endif
                     } else {
-                        return try Posix.write(
+                        let result = try Posix.write(
                             descriptor: descriptor,
                             pointer: ptr.baseAddress!,
                             size: byteCount - offsetAccumulator
                         )
+                        #if os(Windows)
+                        return result.map { ssize_t($0) }
+                        #else
+                        return result
+                        #endif
                     }
                 }
                 switch res {
                 case .processed(let n):
                     assert(n >= 0, "write claims to have written a negative number of bytes \(n)")
-                    return n
+                    return numericCast(n)
                 case .wouldBlock:
                     throw Error.descriptorSetToNonBlocking
                 }
