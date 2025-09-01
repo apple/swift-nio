@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOFileSystem
 import XCTest
-import _NIOFileSystem
 
 class ByteCountTests: XCTestCase {
     func testByteCountBytes() {

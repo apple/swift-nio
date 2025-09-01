@@ -19,20 +19,13 @@ public struct DirectoryEntry: Sendable, Hashable, Equatable {
     /// The path of the directory entry.
     ///
     /// - Precondition: The path must have at least one component.
-    public let filePath: NIOFilePath
-
-    /// The path of the directory entry.
-    ///
-    /// - Note: This property returns the underlying `SystemPackage.FilePath` instance of ``filePath``.
-    public var path: FilePath {
-        self.filePath.underlying
-    }
+    public let path: NIOFilePath
 
     /// The name of the entry; the final component of the ``path``.
     ///
     /// If `path` is "/Users/tim/path-to-4T.key" then `name` will be "path-to-4T.key".
-    public var name: FilePath.Component {
-        self.path.lastComponent!
+    public var name: String {
+        self.path.underlying.lastComponent!.string
     }
 
     /// The type of entry.
@@ -48,17 +41,7 @@ public struct DirectoryEntry: Sendable, Hashable, Equatable {
             return nil
         }
 
-        self.filePath = path
+        self.path = path
         self.type = type
-    }
-
-    /// Creates a directory entry; returns `nil` if `path` has no components.
-    ///
-    /// - Parameters:
-    ///   - path: The path of the directory entry which must contain at least one component.
-    ///   - type: The type of entry.
-    @_disfavoredOverload
-    public init?(path: FilePath, type: FileType) {
-        self.init(path: .init(path), type: type)
     }
 }

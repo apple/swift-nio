@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import _NIOFileSystem
+import NIOFileSystem
 
 import struct Foundation.Date
 
