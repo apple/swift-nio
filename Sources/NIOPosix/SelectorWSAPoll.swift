@@ -96,7 +96,7 @@ extension Selector: _SelectorBackendProtocol {
         // woken up by an APC (Asynchronous Procedure Call).
         if self.pollFDs.isEmpty {
             if time > 0 {
-                SleepEx((UInt32(time) / 1000), true)
+                SleepEx(UInt32(time), true)
             } else if time == -1 {
                 SleepEx(INFINITE, true)
             }
