@@ -92,7 +92,7 @@ extension Selector: _SelectorBackendProtocol {
             }
 
         // WSAPoll requires at least one pollFD structure. If we don't have any pending IO
-        // we should just sleep. By passing true as the second argument our el can be 
+        // we should just sleep. By passing true as the second argument our el can be
         // woken up by an APC (Asynchronous Procedure Call).
         if self.pollFDs.isEmpty {
             if time > 0 {
