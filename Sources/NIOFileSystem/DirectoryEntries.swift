@@ -37,7 +37,7 @@ public struct DirectoryEntries: AsyncSequence, Sendable {
     /// directory entries.
     @preconcurrency
     public init<S: AsyncSequence & Sendable>(wrapping sequence: S)
-    where S.Element == Batched.Element, S.AsyncIterator: _NIOFileSystemSendableMetatype {
+    where S.Element == Batched.Element, S.AsyncIterator: NIOFileSystemSendableMetatype {
         self.batchedSequence = Batched(wrapping: sequence)
     }
 
@@ -97,7 +97,7 @@ extension DirectoryEntries {
         /// of directory entry batches.
         @preconcurrency
         public init<S: AsyncSequence & Sendable>(wrapping sequence: S)
-        where S.Element == Element, S.AsyncIterator: _NIOFileSystemSendableMetatype {
+        where S.Element == Element, S.AsyncIterator: NIOFileSystemSendableMetatype {
             self.stream = BufferedOrAnyStream<[DirectoryEntry], DirectoryEntryProducer>(wrapping: sequence)
         }
 
@@ -563,7 +563,7 @@ private struct DirectoryEnumerator: Sendable {
                 let fullPath = self.path.appending(name)
                 // '!' is okay here: the init returns nil if there is an empty path which we know
                 // isn't the case as 'self.path' is non-empty.
-                entries.append(DirectoryEntry(path: fullPath, type: fileType)!)
+                entries.append(DirectoryEntry(path: NIOFilePath(fullPath), type: fileType)!)
 
             case .success(.none):
                 // Nothing we can do on failure so ignore the result.
@@ -601,23 +601,23 @@ private struct DirectoryEnumerator: Sendable {
                 let info = FTSInfo(rawValue: entry.pointee.fts_info)
                 switch info {
                 case .directoryPreOrder:
-                    let entry = DirectoryEntry(path: entry.path, type: .directory)!
+                    let entry = DirectoryEntry(path: NIOFilePath(entry.path), type: .directory)!
                     entries.append(entry)
 
                 case .directoryPostOrder:
                     ()  // Don't visit directories twice.
 
                 case .regularFile:
-                    let entry = DirectoryEntry(path: entry.path, type: .regular)!
+                    let entry = DirectoryEntry(path: NIOFilePath(entry.path), type: .regular)!
                     entries.append(entry)
 
                 case .symbolicLink, .symbolicLinkToNonExistentTarget:
-                    let entry = DirectoryEntry(path: entry.path, type: .symlink)!
+                    let entry = DirectoryEntry(path: NIOFilePath(entry.path), type: .symlink)!
                     entries.append(entry)
 
                 case .ftsDefault:
                     // File type is unknown.
-                    let entry = DirectoryEntry(path: entry.path, type: .unknown)!
+                    let entry = DirectoryEntry(path: NIOFilePath(entry.path), type: .unknown)!
                     entries.append(entry)
 
                 case .error:

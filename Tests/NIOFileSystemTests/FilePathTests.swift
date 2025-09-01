@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+@_spi(Testing) @testable import NIOFileSystem
 import SystemPackage
 import XCTest
-@_spi(Testing) @testable import _NIOFileSystem
 
 #if canImport(System)
 import System

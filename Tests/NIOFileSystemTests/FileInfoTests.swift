@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import CNIOLinux
+import NIOFileSystem
 import XCTest
-import _NIOFileSystem
 
 #if canImport(Darwin)
 import Darwin

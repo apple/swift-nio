@@ -33,7 +33,7 @@ public struct FileChunks: AsyncSequence, Sendable {
     /// Create a ``FileChunks`` sequence backed by wrapping an `AsyncSequence`.
     @preconcurrency
     public init<S: AsyncSequence & Sendable>(wrapping sequence: S)
-    where S.Element == ByteBuffer, S.AsyncIterator: _NIOFileSystemSendableMetatype {
+    where S.Element == ByteBuffer, S.AsyncIterator: NIOFileSystemSendableMetatype {
         self.stream = BufferedOrAnyStream(wrapping: sequence)
     }
 

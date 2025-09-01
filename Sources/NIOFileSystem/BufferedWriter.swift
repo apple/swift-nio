@@ -19,9 +19,9 @@ import NIOCore
 /// You can create a ``BufferedWriter`` by calling
 /// ``WritableFileHandleProtocol/bufferedWriter(startingAtAbsoluteOffset:capacity:)`` on
 /// ``WritableFileHandleProtocol`` and write bytes to it with one of the following methods:
-/// - ``BufferedWriter/write(contentsOf:)-1rkf6``
-/// - ``BufferedWriter/write(contentsOf:)-7cs3v``
-/// - ``BufferedWriter/write(contentsOf:)-66cts``
+/// - ``BufferedWriter/write(contentsOf:)-8dhyg``
+/// - ``BufferedWriter/write(contentsOf:)-2i7d9``
+/// - ``BufferedWriter/write(contentsOf:)-1on0y``
 ///
 /// If a call to one of the write functions reaches the buffers ``BufferedWriter/capacity`` the
 /// buffer automatically writes its contents to the file.
