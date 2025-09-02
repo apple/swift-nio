@@ -91,40 +91,51 @@ extension Selector: _SelectorBackendProtocol {
                 Int32(clamping: timeAmount.nanoseconds / 1_000_000)
             }
 
-        let result = self.pollFDs.withUnsafeMutableBufferPointer { ptr in
-            WSAPoll(ptr.baseAddress!, UInt32(ptr.count), time)
-        }
-
-        if result > 0 {
-            // something has happened
-            for i in self.pollFDs.indices {
-                let pollFD = self.pollFDs[i]
-                guard pollFD.revents != 0 else {
-                    continue
-                }
-                // reset the revents
-                self.pollFDs[i].revents = 0
-                let fd = pollFD.fd
-
-                // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
-                guard let registration = registrations[Int(fd)] else {
-                    continue
-                }
-
-                var selectorEvent = SelectorEventSet(revents: pollFD.revents)
-                // in any case we only want what the user is currently registered for & what we got
-                selectorEvent = selectorEvent.intersection(registration.interested)
-
-                guard selectorEvent != ._none else {
-                    continue
-                }
-
-                try body((SelectorEvent(io: selectorEvent, registration: registration)))
+        // WSAPoll requires at least one pollFD structure. If we don't have any pending IO
+        // we should just sleep. By passing true as the second argument our el can be
+        // woken up by an APC (Asynchronous Procedure Call).
+        if self.pollFDs.isEmpty {
+            if time > 0 {
+                SleepEx(UInt32(time), true)
+            } else if time == -1 {
+                SleepEx(INFINITE, true)
             }
-        } else if result == 0 {
-            // nothing has happened
-        } else if result == WinSDK.SOCKET_ERROR {
-            throw IOError(winsock: WSAGetLastError(), reason: "WSAPoll")
+        } else {
+            let result = self.pollFDs.withUnsafeMutableBufferPointer { ptr in
+                WSAPoll(ptr.baseAddress!, UInt32(ptr.count), time)
+            }
+
+            if result > 0 {
+                // something has happened
+                for i in self.pollFDs.indices {
+                    let pollFD = self.pollFDs[i]
+                    guard pollFD.revents != 0 else {
+                        continue
+                    }
+                    // reset the revents
+                    self.pollFDs[i].revents = 0
+                    let fd = pollFD.fd
+
+                    // If the registration is not in the Map anymore we deregistered it during the processing of whenReady(...). In this case just skip it.
+                    guard let registration = registrations[Int(fd)] else {
+                        continue
+                    }
+
+                    var selectorEvent = SelectorEventSet(revents: pollFD.revents)
+                    // in any case we only want what the user is currently registered for & what we got
+                    selectorEvent = selectorEvent.intersection(registration.interested)
+
+                    guard selectorEvent != ._none else {
+                        continue
+                    }
+
+                    try body((SelectorEvent(io: selectorEvent, registration: registration)))
+                }
+            } else if result == 0 {
+                // nothing has happened
+            } else if result == WinSDK.SOCKET_ERROR {
+                throw IOError(winsock: WSAGetLastError(), reason: "WSAPoll")
+            }
         }
     }
 
