@@ -66,6 +66,8 @@ let package = Package(
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
         .library(name: "NIOFileSystem", targets: ["NIOFileSystem"]),
         .library(name: "NIOFileSystemFoundationCompat", targets: ["NIOFileSystemFoundationCompat"]),
+        .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem"]),
+        .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
     targets: [
         // MARK: - Targets
@@ -266,6 +268,34 @@ let package = Package(
                 "NIOFoundationCompat",
             ],
             path: "Sources/NIOFileSystemFoundationCompat",
+            swiftSettings: strictConcurrencySettings
+        ),
+
+        .target(
+            name: "_NIOFileSystem",
+            dependencies: [
+                "NIOCore",
+                "NIOPosix",
+                "CNIOLinux",
+                "CNIODarwin",
+                swiftAtomics,
+                swiftCollections,
+                swiftSystem,
+            ],
+            path: "Sources/_NIOFileSystem",
+            exclude: includePrivacyManifest ? [] : ["PrivacyInfo.xcprivacy"],
+            resources: includePrivacyManifest ? [.copy("PrivacyInfo.xcprivacy")] : [],
+            swiftSettings: strictConcurrencySettings + [
+                .define("ENABLE_MOCKING", .when(configuration: .debug))
+            ]
+        ),
+        .target(
+            name: "_NIOFileSystemFoundationCompat",
+            dependencies: [
+                "_NIOFileSystem",
+                "NIOFoundationCompat",
+            ],
+            path: "Sources/_NIOFileSystemFoundationCompat",
             swiftSettings: strictConcurrencySettings
         ),
 
