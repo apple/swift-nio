@@ -16,6 +16,20 @@ import SystemPackage
 
 /// The interface for interacting with a file system.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(
+    *,
+    deprecated,
+    message: """
+        The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+        on or after January 1st 2026.
+
+        You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+        and is both API stable and supported by the SwiftNIO maintainers.
+
+        The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that 'FilePath' \
+        has been replaced with 'NIOFilePath'. Each type offers an init to convert from the other.
+        """
+)
 public protocol FileSystemProtocol: Sendable {
     /// The type of ``ReadableFileHandleProtocol`` to return when opening files for reading.
     associatedtype ReadFileHandle: ReadableFileHandleProtocol
@@ -308,6 +322,20 @@ public protocol FileSystemProtocol: Sendable {
 // MARK: - Open existing files/directories
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(
+    *,
+    deprecated,
+    message: """
+        The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+        on or after January 1st 2026.
+
+        You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+        and is both API stable and supported by the SwiftNIO maintainers.
+
+        The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that 'FilePath' \
+        has been replaced with 'NIOFilePath'. Each type offers an init to convert from the other.
+        """
+)
 extension FileSystemProtocol {
     /// Opens the file at the given path and provides scoped read-only access to it.
     ///
@@ -418,6 +446,20 @@ extension FileSystemProtocol {
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(
+    *,
+    deprecated,
+    message: """
+        The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+        on or after January 1st 2026.
+
+        You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+        and is both API stable and supported by the SwiftNIO maintainers.
+
+        The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that 'FilePath' \
+        has been replaced with 'NIOFilePath'. Each type offers an init to convert from the other.
+        """
+)
 extension FileSystemProtocol {
     /// Opens the file at `path` for reading and returns a handle to it.
     ///

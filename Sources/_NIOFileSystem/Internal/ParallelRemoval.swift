@@ -15,6 +15,20 @@
 import NIOCore
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(
+    *,
+    deprecated,
+    message: """
+        The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+        on or after January 1st 2026.
+
+        You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+        and is both API stable and supported by the SwiftNIO maintainers.
+
+        The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that 'FilePath' \
+        has been replaced with 'NIOFilePath'. Each type offers an init to convert from the other.
+        """
+)
 extension FileSystem {
     /// Recursively walk all objects found in `path`. Call ourselves recursively
     /// on each directory that we find, as soon as the file descriptor for

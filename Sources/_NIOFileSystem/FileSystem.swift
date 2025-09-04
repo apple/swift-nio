@@ -49,6 +49,20 @@ import Darwin
 /// more information about the error by calling ``FileSystemError/detailedDescription()`` which
 /// returns a structured multi-line string containing information about the error.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(
+    *,
+    deprecated,
+    message: """
+        The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+        on or after January 1st 2026.
+
+        You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+        and is both API stable and supported by the SwiftNIO maintainers.
+
+        The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that 'FilePath' \
+        has been replaced with 'NIOFilePath'. Each type offers an init to convert from the other.
+        """
+)
 public struct FileSystem: Sendable, FileSystemProtocol {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
@@ -689,6 +703,20 @@ extension NIOSingletons {
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(
+    *,
+    deprecated,
+    message: """
+        The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+        on or after January 1st 2026.
+
+        You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+        and is both API stable and supported by the SwiftNIO maintainers.
+
+        The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that 'FilePath' \
+        has been replaced with 'NIOFilePath'. Each type offers an init to convert from the other.
+        """
+)
 private let globalFileSystem: FileSystem = {
     guard NIOSingletons.singletonsEnabledSuggestion else {
         fatalError(
@@ -702,15 +730,44 @@ private let globalFileSystem: FileSystem = {
 }()
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+
 extension NIOSingletons {
     /// Returns a shared global instance of the ``FileSystem``.
     ///
     /// The file system executes blocking work in a thread pool. See
     /// `blockingPoolThreadCountSuggestion` for the default behaviour and ways to control it.
+    @available(
+        *,
+        deprecated,
+        message: """
+            The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+            on or after January 1st 2026.
+
+            You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+            and is both API stable and supported by the SwiftNIO maintainers.
+
+            The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that 'FilePath' \
+            has been replaced with 'NIOFilePath'. Each type offers an init to convert from the other.
+            """
+    )
     public static var fileSystem: FileSystem { globalFileSystem }
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(
+    *,
+    deprecated,
+    message: """
+        The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+        on or after January 1st 2026.
+
+        You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+        and is both API stable and supported by the SwiftNIO maintainers.
+
+        The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that 'FilePath' \
+        has been replaced with 'NIOFilePath'. Each type offers an init to convert from the other.
+        """
+)
 extension FileSystemProtocol where Self == FileSystem {
     /// A global shared instance of ``FileSystem``.
     public static var shared: FileSystem {
@@ -720,6 +777,21 @@ extension FileSystemProtocol where Self == FileSystem {
 
 /// Provides temporary scoped access to a ``FileSystem`` with the given number of threads.
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(
+    *,
+    deprecated,
+    message: """
+        The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+        on or after January 1st 2026.
+
+        You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+        and is both API stable and supported by the SwiftNIO maintainers.
+
+        The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that usage of \
+        the 'FilePath' type has been replaced with 'NIOFilePath'. Each type offers an init to \
+        convert from the other.
+        """
+)
 public func withFileSystem<Result>(
     numberOfThreads: Int,
     _ body: (FileSystem) async throws -> Result
@@ -733,6 +805,20 @@ public func withFileSystem<Result>(
 }
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+@available(
+    *,
+    deprecated,
+    message: """
+        The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
+        on or after January 1st 2026.
+
+        You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
+        and is both API stable and supported by the SwiftNIO maintainers.
+
+        The most notable change between '_NIOFileSystem' and 'NIOFileSystem' is that 'FilePath' \
+        has been replaced with 'NIOFilePath'. Each type offers an init to convert from the other.
+        """
+)
 extension FileSystem {
     /// Opens `path` for reading and returns ``ReadFileHandle`` or ``FileSystemError``.
     private func _openFile(
