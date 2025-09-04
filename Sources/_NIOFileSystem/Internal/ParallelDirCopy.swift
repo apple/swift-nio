@@ -20,7 +20,7 @@ import NIOCore
     deprecated,
     message: """
         The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
-        on or after April 1st 2026.
+        on or after January 1st 2026.
 
         You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
         and is both API stable and supported by the SwiftNIO maintainers.

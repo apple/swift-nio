@@ -19,7 +19,7 @@ import SystemPackage
     deprecated,
     message: """
         The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
-        on or after April 1st 2026.
+        on or after January 1st 2026.
 
         You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
         and is both API stable and supported by the SwiftNIO maintainers.
@@ -81,7 +81,7 @@ extension String {
     deprecated,
     message: """
         The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
-        on or after April 1st 2026.
+        on or after January 1st 2026.
 
         You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
         and is both API stable and supported by the SwiftNIO maintainers.
@@ -141,7 +141,7 @@ extension Sequence<UInt8> where Self: Sendable {
     deprecated,
     message: """
         The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
-        on or after April 1st 2026.
+        on or after January 1st 2026.
 
         You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
         and is both API stable and supported by the SwiftNIO maintainers.
@@ -202,7 +202,7 @@ extension AsyncSequence where Self.Element: Sequence<UInt8>, Self: Sendable {
     deprecated,
     message: """
         The '_NIOFileSystem' module has been deprecated and will be removed from SwiftNIO \
-        on or after April 1st 2026.
+        on or after January 1st 2026.
 
         You should switch to using the 'NIOFileSystem' module which replaces '_NIOFileSystem' \
         and is both API stable and supported by the SwiftNIO maintainers.
