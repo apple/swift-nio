@@ -832,6 +832,36 @@ extension ByteBuffer {
         self = ByteBufferAllocator().buffer(dispatchData: dispatchData)
     }
     #endif
+
+    #if compiler(>=6.2)
+    /// Create a fresh ``ByteBuffer`` with a minimum size, and initializing it safely via an `OutputSpan`.
+    ///
+    /// This will allocate a new ``ByteBuffer`` with at least `capacity` bytes of storage, and then calls
+    /// `initializer` with an `OutputSpan` over the entire allocated storage. This is a convenient method
+    /// to initialize a buffer directly and safely in a single allocation, including from C code.
+    ///
+    /// Once this call returns, the buffer will have its ``ByteBuffer/writerIndex`` appropriately advanced to encompass
+    /// any memory initialized by the `initializer`. Uninitialized memory will be after the ``ByteBuffer/writerIndex``,
+    /// available for subsequent use.
+    ///
+    /// - info: If you have access to a `Channel`, `ChannelHandlerContext`, or `ByteBufferAllocator` we
+    ///         recommend using `channel.allocator.buffer(capacity:initializingWith:)`. Or if you want to write multiple items into
+    ///         the buffer use `channel.allocator.buffer(capacity: ...)` to allocate a `ByteBuffer` of the right
+    ///         size followed by a `write(minimumWritableBytes:initializingWith:)` instead of using this method. This allows SwiftNIO to do
+    ///         accounting and optimisations of resources acquired for operations on a given `Channel` in the future.
+    ///
+    /// - parameters:
+    ///     - capacity: The minimum initial space to allocate for the buffer.
+    ///     - initializer: The initializer that will be invoked to initialize the allocated memory.
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public init(
+        initialCapacity capacity: Int,
+        initializingWith initializer: (inout OutputRawSpan) throws -> Void
+    ) rethrows {
+        self = try ByteBufferAllocator().buffer(capacity: capacity, initializingWith: initializer)
+    }
+    #endif
 }
 
 extension ByteBuffer: Codable {
@@ -968,6 +998,32 @@ extension ByteBufferAllocator {
     public func buffer(dispatchData: DispatchData) -> ByteBuffer {
         var buffer = self.buffer(capacity: dispatchData.count)
         buffer.writeDispatchData(dispatchData)
+        return buffer
+    }
+    #endif
+
+    #if compiler(>=6.2)
+    /// Create a fresh ``ByteBuffer`` with a minimum size, and initializing it safely via an `OutputSpan`.
+    ///
+    /// This will allocate a new ``ByteBuffer`` with at least `capacity` bytes of storage, and then calls
+    /// `initializer` with an `OutputSpan` over the entire allocated storage. This is a convenient method
+    /// to initialize a buffer directly and safely in a single allocation, including from C code.
+    ///
+    /// Once this call returns, the buffer will have its ``ByteBuffer/writerIndex`` appropriately advanced to encompass
+    /// any memory initialized by the `initializer`. Uninitialized memory will be after the ``ByteBuffer/writerIndex``,
+    /// available for subsequent use.
+    ///
+    /// - parameters:
+    ///     - capacity: The minimum initial space to allocate for the buffer.
+    ///     - initializer: The initializer that will be invoked to initialize the allocated memory.
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public func buffer(
+        capacity: Int,
+        initializingWith initializer: (inout OutputRawSpan) throws -> Void
+    ) rethrows -> ByteBuffer {
+        var buffer = self.buffer(capacity: capacity)
+        try buffer.write(minimumWritableBytes: capacity, initializingWith: initializer)
         return buffer
     }
     #endif
