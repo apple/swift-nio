@@ -64,8 +64,6 @@ let package = Package(
         .library(name: "NIOFoundationCompat", targets: ["NIOFoundationCompat"]),
         .library(name: "NIOWebSocket", targets: ["NIOWebSocket"]),
         .library(name: "NIOTestUtils", targets: ["NIOTestUtils"]),
-        .library(name: "NIOFileSystem", targets: ["NIOFileSystem"]),
-        .library(name: "NIOFileSystemFoundationCompat", targets: ["NIOFileSystemFoundationCompat"]),
         .library(name: "_NIOFileSystem", targets: ["_NIOFileSystem"]),
         .library(name: "_NIOFileSystemFoundationCompat", targets: ["_NIOFileSystemFoundationCompat"]),
     ],
