@@ -691,6 +691,45 @@ public struct ByteBuffer {
         return try body(.init(rebasing: self._slicedStorageBuffer[range]))
     }
 
+    #if compiler(>=6.2)
+    /// Provides safe high-performance read-only access to the readable bytes of this buffer.
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public var readableBytesSpan: RawSpan {
+        @_lifetime(borrow self)
+        borrowing get {
+            let range = Range<Int>(uncheckedBounds: (lower: self.readerIndex, upper: self.writerIndex))
+            return _overrideLifetime(RawSpan(_unsafeBytes: self._slicedStorageBuffer[range]), borrowing: self)
+        }
+    }
+
+    /// Provides mutable access to the readable bytes of this buffer.
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public var mutableReadableBytesSpan: MutableRawSpan {
+        @_lifetime(&self)
+        mutating get {
+            self._copyStorageAndRebaseIfNeeded()
+            let range = Range<Int>(uncheckedBounds: (lower: self.readerIndex, upper: self.writerIndex))
+            return _overrideLifetime(MutableRawSpan(_unsafeBytes: self._slicedStorageBuffer[range]), mutating: &self)
+        }
+    }
+
+    /// Enables high-performance low-level appending into the writable section of this buffer.
+    @inlinable
+    @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
+    public mutating func write(
+        minimumWritableBytes: Int,
+        initializingWith initializer: (inout OutputRawSpan) throws -> Void
+    ) rethrows {
+        try self.writeWithUnsafeMutableBytes(minimumWritableBytes: minimumWritableBytes) { ptr in
+            var span = OutputRawSpan(buffer: ptr, initializedCount: 0)
+            try initializer(&span)
+            return span.byteCount
+        }
+    }
+    #endif
+
     /// Yields the bytes currently writable (`bytesWritable` = `capacity` - `writerIndex`). Before reading those bytes you must first
     /// write to them otherwise you will trigger undefined behaviour. The writer index will remain unchanged.
     ///
