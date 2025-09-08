@@ -16,9 +16,9 @@ import XCTest
 
 import NIOCore
 
+#if compiler(>=6.2)
 @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
 final class ByteBufferSpanTests: XCTestCase {
-    #if compiler(>=6.2)
     func testReadableBytesSpanOfEmptyByteBuffer() {
         let bb = ByteBuffer()
         XCTAssertEqual(bb.readableBytesSpan.byteCount, 0)
@@ -204,10 +204,8 @@ final class ByteBufferSpanTests: XCTestCase {
         XCTAssertEqual(bb.readableBytes, 13)
         XCTAssertEqual(String(buffer: bb), "Hello, world!")
     }
-    #endif
 }
 
-#if compiler(>=6.2)
 @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
 extension RawSpan {
     func elementsEqual<Other: Collection>(_ other: Other) -> Bool where Other.Element == UInt8 {
