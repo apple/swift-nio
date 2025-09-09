@@ -103,7 +103,7 @@ final class ByteBufferSpanTests: XCTestCase {
 
     func testAppendingToEmptyBufferViaOutputSpan() {
         var bb = ByteBuffer()
-        bb.write(minimumWritableBytes: 15) { span in
+        bb.writeWithOutputRawSpan(minimumWritableBytes: 15) { span in
             XCTAssertEqual(span.byteCount, 0)
             XCTAssertGreaterThanOrEqual(span.capacity, 15)
             XCTAssertGreaterThanOrEqual(span.freeCapacity, 15)
@@ -123,7 +123,7 @@ final class ByteBufferSpanTests: XCTestCase {
     func testAppendingToNonEmptyBufferViaOutputSpanDoesNotExposeInitialBytes() {
         var bb = ByteBuffer()
         bb.writeString("Hello")
-        bb.write(minimumWritableBytes: 8) { span in
+        bb.writeWithOutputRawSpan(minimumWritableBytes: 8) { span in
             XCTAssertEqual(span.byteCount, 0)
             XCTAssertGreaterThanOrEqual(span.capacity, 8)
             XCTAssertGreaterThanOrEqual(span.freeCapacity, 8)
@@ -146,7 +146,7 @@ final class ByteBufferSpanTests: XCTestCase {
         XCTAssertEqual(bb.mutableReadableBytesSpan.byteCount, 5)
         XCTAssertTrue(bb.mutableReadableBytesSpan.elementsEqual(", wor".utf8))
 
-        bb.write(minimumWritableBytes: 5) { span in
+        bb.writeWithOutputRawSpan(minimumWritableBytes: 5) { span in
             span.append(contentsOf: "olleh".utf8)
         }
 
@@ -162,7 +162,7 @@ final class ByteBufferSpanTests: XCTestCase {
         let secondBackingPtr = second.withVeryUnsafeBytes { $0 }.baseAddress
         XCTAssertEqual(firstBackingPtr, secondBackingPtr)
 
-        second.write(minimumWritableBytes: 5) { _ in}
+        second.writeWithOutputRawSpan(minimumWritableBytes: 5) { _ in}
         let firstNewBackingPtr = first.withVeryUnsafeBytes { $0 }.baseAddress
         let secondNewBackingPtr = second.withVeryUnsafeBytes { $0 }.baseAddress
         XCTAssertNotEqual(firstNewBackingPtr, secondNewBackingPtr)

@@ -716,11 +716,18 @@ public struct ByteBuffer {
     }
 
     /// Enables high-performance low-level appending into the writable section of this buffer.
+    ///
+    /// The writer index will be advanced by the number of bytes written into the
+    /// `OutputRawSpan`.
+    ///
+    /// - parameters:
+    ///     - minimumWritableBytes: The minimum initial space to allocate for the buffer.
+    ///     - initializer: The initializer that will be invoked to initialize the allocated memory.
     @inlinable
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
-    public mutating func write(
+    public mutating func writeWithOutputRawSpan(
         minimumWritableBytes: Int,
-        initializingWith initializer: (inout OutputRawSpan) throws -> Void
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws -> Void
     ) rethrows {
         try self.writeWithUnsafeMutableBytes(minimumWritableBytes: minimumWritableBytes) { ptr in
             var span = OutputRawSpan(buffer: ptr, initializedCount: 0)
