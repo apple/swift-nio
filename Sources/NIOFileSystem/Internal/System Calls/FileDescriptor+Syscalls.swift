@@ -191,7 +191,7 @@ extension FileDescriptor {
     ///     caller should not modify the descriptor or close the descriptor via `close()`. Once
     ///     directory iteration has been completed then `Libc.closdir(_:)` must be called.
     internal func opendir() -> Result<CInterop.DirPointer, Errno> {
-        valueOrErrno(retryOnInterrupt: false) {
+        unwrapValueOrErrno(retryOnInterrupt: false) {
             libc_fdopendir(self.rawValue)
         }
     }
