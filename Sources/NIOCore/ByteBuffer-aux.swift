@@ -857,7 +857,7 @@ extension ByteBuffer {
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public init(
         initialCapacity capacity: Int,
-        initializingWith initializer: (inout OutputRawSpan) throws -> Void
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws -> Void
     ) rethrows {
         self = try ByteBufferAllocator().buffer(capacity: capacity, initializingWith: initializer)
     }
@@ -1020,10 +1020,10 @@ extension ByteBufferAllocator {
     @available(macOS 10.14.4, iOS 12.2, watchOS 5.2, tvOS 12.2, visionOS 1.0, *)
     public func buffer(
         capacity: Int,
-        initializingWith initializer: (inout OutputRawSpan) throws -> Void
+        initializingWith initializer: (_ span: inout OutputRawSpan) throws -> Void
     ) rethrows -> ByteBuffer {
         var buffer = self.buffer(capacity: capacity)
-        try buffer.write(minimumWritableBytes: capacity, initializingWith: initializer)
+        try buffer.writeWithOutputRawSpan(minimumWritableBytes: capacity, initializingWith: initializer)
         return buffer
     }
     #endif
