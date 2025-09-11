@@ -116,10 +116,10 @@ extension ByteBuffer {
     /// - Returns: Number of total bytes written. This is the length of the written data + the number of bytes used to write the length before it.
     @discardableResult
     @inlinable
-    public mutating func writeLengthPrefixed<Strategy: NIOBinaryIntegerEncodingStrategy>(
+    public mutating func writeLengthPrefixed<Strategy: NIOBinaryIntegerEncodingStrategy, ErrorType: Error>(
         strategy: Strategy,
-        writeData: (_ buffer: inout ByteBuffer) throws -> Int
-    ) rethrows -> Int {
+        writeData: (_ buffer: inout ByteBuffer) throws(ErrorType) -> Int
+    ) throws(ErrorType) -> Int {
         /// The index at which we write the length
         let lengthPrefixIndex = self.writerIndex
         /// The space which we reserve for writing the length
