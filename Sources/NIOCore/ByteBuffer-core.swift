@@ -726,7 +726,9 @@ public struct ByteBuffer {
         if minimumWritableBytes > 0 {
             self.reserveCapacity(minimumWritableBytes: minimumWritableBytes)
         }
-        let bytesWritten = try self.withUnsafeMutableWritableBytes({ (ptr: UnsafeMutableRawBufferPointer) throws(ErrorType) -> Int in try body(ptr) })
+        let bytesWritten = try self.withUnsafeMutableWritableBytes({
+            (ptr: UnsafeMutableRawBufferPointer) throws(ErrorType) -> Int in try body(ptr)
+        })
         self._moveWriterIndex(to: self._writerIndex + _toIndex(bytesWritten))
         return bytesWritten
     }
@@ -742,7 +744,10 @@ public struct ByteBuffer {
     public mutating func writeWithUnsafeMutableBytes<ErrorType: Error>(
         _ body: (UnsafeMutableRawBufferPointer) throws(ErrorType) -> Int
     ) throws(ErrorType) -> Int {
-        try self.writeWithUnsafeMutableBytes(minimumWritableBytes: 0, { (ptr: UnsafeMutableRawBufferPointer) throws(ErrorType) -> Int in try body(ptr) })
+        try self.writeWithUnsafeMutableBytes(
+            minimumWritableBytes: 0,
+            { (ptr: UnsafeMutableRawBufferPointer) throws(ErrorType) -> Int in try body(ptr) }
+        )
     }
 
     /// This vends a pointer to the storage of the `ByteBuffer`. It's marked as _very unsafe_ because it might contain
@@ -750,7 +755,9 @@ public struct ByteBuffer {
     ///
     /// - warning: Do not escape the pointer from the closure for later use.
     @inlinable
-    public func withVeryUnsafeBytes<T, ErrorType: Error>(_ body: (UnsafeRawBufferPointer) throws(ErrorType) -> T) throws(ErrorType) -> T {
+    public func withVeryUnsafeBytes<T, ErrorType: Error>(
+        _ body: (UnsafeRawBufferPointer) throws(ErrorType) -> T
+    ) throws(ErrorType) -> T {
         try body(.init(self._slicedStorageBuffer))
     }
 
@@ -774,7 +781,9 @@ public struct ByteBuffer {
     ///   - body: The closure that will accept the yielded bytes.
     /// - Returns: The value returned by `body`.
     @inlinable
-    public func withUnsafeReadableBytes<T, ErrorType: Error>(_ body: (UnsafeRawBufferPointer) throws(ErrorType) -> T) throws(ErrorType) -> T {
+    public func withUnsafeReadableBytes<T, ErrorType: Error>(
+        _ body: (UnsafeRawBufferPointer) throws(ErrorType) -> T
+    ) throws(ErrorType) -> T {
         // This is safe, writerIndex >= readerIndex
         let range = Range<Int>(uncheckedBounds: (lower: self.readerIndex, upper: self.writerIndex))
         return try body(.init(rebasing: self._slicedStorageBuffer[range]))
@@ -1257,7 +1266,9 @@ extension ByteBuffer {
     ///   - body: The modification operation to execute, with this `ByteBuffer` passed `inout` as an argument.
     /// - Returns: The return value of `body`.
     @inlinable
-    public mutating func modifyIfUniquelyOwned<T, ErrorType: Error>(_ body: (inout ByteBuffer) throws(ErrorType) -> T) throws(ErrorType) -> T? {
+    public mutating func modifyIfUniquelyOwned<T, ErrorType: Error>(
+        _ body: (inout ByteBuffer) throws(ErrorType) -> T
+    ) throws(ErrorType) -> T? {
         if isKnownUniquelyReferenced(&self._storage) {
             return try body(&self)
         } else {

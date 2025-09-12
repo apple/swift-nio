@@ -38,7 +38,9 @@ public struct ByteBufferView: RandomAccessCollection, Sendable {
     }
 
     @inlinable
-    public func withUnsafeBytes<R, ErrorType: Error>(_ body: (UnsafeRawBufferPointer) throws(ErrorType) -> R) throws(ErrorType) -> R {
+    public func withUnsafeBytes<R, ErrorType: Error>(
+        _ body: (UnsafeRawBufferPointer) throws(ErrorType) -> R
+    ) throws(ErrorType) -> R {
         try self._buffer.withVeryUnsafeBytes { (ptr: UnsafeRawBufferPointer) throws(ErrorType) -> R in
             try body(
                 UnsafeRawBufferPointer(
@@ -98,7 +100,9 @@ public struct ByteBufferView: RandomAccessCollection, Sendable {
     }
 
     @inlinable
-    public func withContiguousStorageIfAvailable<R, ErrorType: Error>(_ body: (UnsafeBufferPointer<UInt8>) throws(ErrorType) -> R) throws(ErrorType) -> R? {
+    public func withContiguousStorageIfAvailable<R, ErrorType: Error>(
+        _ body: (UnsafeBufferPointer<UInt8>) throws(ErrorType) -> R
+    ) throws(ErrorType) -> R? {
         try self.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) throws(ErrorType) -> R in
             try body(bytes.bindMemory(to: UInt8.self))
         }
