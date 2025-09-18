@@ -80,7 +80,7 @@ jobs:
   macos-tests:
     name: macOS tests
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/macos_tests.yml@update_macos_ci_xcode_26
+    uses: apple/swift-nio/.github/workflows/macos_tests.yml@main
     with:
       runner_pool: general
       build_scheme: swift-nio-Package
