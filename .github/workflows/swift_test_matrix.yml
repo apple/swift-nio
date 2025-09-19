@@ -78,8 +78,8 @@ jobs:
           $docker_args = @(
               "run", "-v", "${{ github.workspace }}:$($workspace)",
               "-w", $workspace,
-              "-e", "CI=%CI%",
-              "-e", "GITHUB_ACTIONS=%GITHUB_ACTIONS%",
+              "-e", "CI=$env:CI",
+              "-e", "GITHUB_ACTIONS=$env:GITHUB_ACTIONS",
               "-e", "SWIFT_VERSION=${{ matrix.config.swift_version }}"
           )
 
