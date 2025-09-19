@@ -2,7 +2,11 @@ name: Static SDK
 
 on:
   workflow_call:
-
+    inputs:
+      command_arguments:
+        type: string
+        description: "The arguments passed to swift build. Defaults to '--swift-sdk x86_64-swift-linux-musl'."
+        default: "--swift-sdk x86_64-swift-linux-musl"
 jobs:
   static-sdk:
     name: Static SDK
@@ -21,7 +25,8 @@ jobs:
               "image":"ubuntu:jammy",
               "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_VERSION=latest INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
               "command":"swift build",
-              "command_arguments":"--swift-sdk x86_64-swift-linux-musl"
+              "command_arguments":"${{ inputs.command_arguments }}",
+              "env":{}
             },
             {
               "name":"main Jammy",
@@ -31,7 +36,8 @@ jobs:
               "image":"ubuntu:jammy",
               "setup_command":"apt update -q && apt install -y -q curl jq tar && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_swift_prerequisites.sh | bash && curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/install_static_sdk.sh | INSTALL_SWIFT_STATIC_SDK_BRANCH=main INSTALL_SWIFT_STATIC_SDK_ARCH=x86_64 bash && hash -r",
               "command":"swift build",
-              "command_arguments":"--swift-sdk x86_64-swift-linux-musl"
+              "command_arguments":"${{ inputs.command_arguments }}",
+              "env":{}
             }
           ]
         }
