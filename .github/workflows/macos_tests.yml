@@ -409,7 +409,7 @@ jobs:
         run: |
           echo "Exporting environment variables from matrix configuration..."
           echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> $GITHUB_ENV
-          echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"'
+          echo '${{ toJSON(matrix.config.env) }}' | jq -r 'to_entries[] | "exporting \(.key)=\(.value)"'
       - name: Setup command
         if: ${{ matrix.config.setup_command != '' }}
         run: bash -c "${{ matrix.config.setup_command }}"
