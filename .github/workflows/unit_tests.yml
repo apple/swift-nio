@@ -172,7 +172,6 @@ jobs:
       - id: generate-matrix
         run: |
           # Parse Linux environment variables
-          echo ENV_VARS="${{ inputs.linux_env_vars }}" ENV_VAR_PAIR_SEPARATOR="${{ inputs.linux_env_var_pair_separator }}" ENV_VAR_LIST_SEPARATOR="${{ inputs.linux_env_var_list_separator }}"
           linux_env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/parse_env_vars.sh | ENV_VARS="${{ inputs.linux_env_vars }}" ENV_VAR_PAIR_SEPARATOR="${{ inputs.linux_env_var_pair_separator }}" ENV_VAR_LIST_SEPARATOR="${{ inputs.linux_env_var_list_separator }}" bash)
 
           # Parse Windows environment variables
