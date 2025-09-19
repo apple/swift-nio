@@ -179,7 +179,8 @@ if [[ "$linux_6_2_enabled" == "true" ]]; then
     --arg command_arguments "$linux_6_2_command_arguments" \
     --arg container_image "$linux_6_2_container_image" \
     --arg runner "$linux_runner" \
-    '.config[.config| length] |= . + { "name": "6.2", "image": $container_image, "swift_version": "6.2", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner}')
+    --argjson env_vars "$linux_env_vars_json" \
+    '.config[.config| length] |= . + { "name": "6.2", "image": $container_image, "swift_version": "6.2", "platform": "Linux", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars}')
 fi
 
 if [[ "$linux_nightly_next_enabled" == "true" ]]; then
@@ -245,7 +246,8 @@ if [[ "$windows_6_2_enabled" == "true" ]]; then
     --arg command_arguments "$windows_6_2_command_arguments" \
     --arg container_image "$windows_6_2_container_image" \
     --arg runner "$windows_6_2_runner" \
-    '.config[.config| length] |= . + { "name": "6.2", "image": $container_image, "swift_version": "6.2", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner }')
+    --argjson env_vars "$windows_env_vars_json" \
+    '.config[.config| length] |= . + { "name": "6.2", "image": $container_image, "swift_version": "6.2", "platform": "Windows", "command": $command, "command_arguments": $command_arguments, "setup_command": $setup_command, "runner": $runner, "env": $env_vars }')
 fi
 
 if [[ "$windows_nightly_next_enabled" == "true" ]]; then
