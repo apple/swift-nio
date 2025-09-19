@@ -80,18 +80,6 @@ on:
         type: string
         description: "Separator between environment variable pairs for Linux."
         default: ","
-      windows_env_vars:
-        type: string
-        description: "Environment variables for Windows jobs (e.g., 'DEBUG=1,LOG_LEVEL=info')."
-        default: ""
-      windows_env_var_pair_separator:
-        type: string
-        description: "Separator between key and value for Windows environment variables."
-        default: "="
-      windows_env_var_list_separator:
-        type: string
-        description: "Separator between environment variable pairs for Windows."
-        default: ","
 
 jobs:
   construct-matrix:
@@ -119,9 +107,6 @@ jobs:
           MATRIX_LINUX_6_2_ENABLED: ${{ inputs.linux_6_2_enabled }}
           MATRIX_LINUX_NIGHTLY_NEXT_ENABLED: ${{ inputs.linux_nightly_6_1_enabled && inputs.linux_nightly_next_enabled  }}
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
-          MATRIX_WINDOWS_ENV_VARS: ${{ inputs.windows_env_vars }}
-          MATRIX_WINDOWS_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.windows_env_var_pair_separator }}
-          MATRIX_WINDOWS_ENV_VAR_LIST_SEPARATOR: ${{ inputs.windows_env_var_list_separator }}
 
   benchmarks:
     name: Benchmarks
