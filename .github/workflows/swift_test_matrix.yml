@@ -41,15 +41,30 @@ jobs:
             setup_command_expression=""
           fi
           workspace="/$(basename ${{ github.workspace }})"
-          docker run -v ${{ github.workspace }}:"$workspace" \
-            -w "$workspace" \
-            -e CI="$CI" \
-            -e GITHUB_ACTIONS="$GITHUB_ACTIONS" \
-            -e SWIFT_VERSION="${{ matrix.config.swift_version }}" \
-            -e setup_command_expression="$setup_command_expression" \
-            -e workspace="$workspace" \
-            ${{ matrix.config.image }} \
-            bash -c "$setup_command_expression ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"
+
+          docker_args=(
+            "run"
+            "-v" "${{ github.workspace }}:$workspace"
+            "-w" "$workspace"
+            "-e" "CI=$CI"
+            "-e" "GITHUB_ACTIONS=$GITHUB_ACTIONS"
+            "-e" "SWIFT_VERSION=${{ matrix.config.swift_version }}"
+            "-e" "workspace=$workspace"
+          )
+
+          if [[ '${{ toJson(matrix.config.env) }}' != '{}' ]]; then
+            while IFS="=" read -r key value; do
+              if [[ -n "$key" && -n "$value" ]]; then
+                docker_args+=("-e" "$key=$value")
+              fi
+            done < <(echo '${{ toJson(matrix.config.env) }}' | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+          fi
+
+          docker_args+=("${{ matrix.config.image }}")
+          docker_args+=("bash" "-c" "$setup_command_expression ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}")
+
+          echo "Executing Docker command: docker ${docker_args[*]}"
+          docker "${docker_args[@]}"
       - name: Run matrix job (Windows)
         if: ${{ matrix.config.platform == 'Windows' }}
         run: |
@@ -59,13 +74,29 @@ jobs:
               $setup_command_expression = ""
           }
           $workspace = "C:\" + (Split-Path ${{ github.workspace }} -Leaf)
-          docker run -v ${{ github.workspace }}:$($workspace) `
-            -w $($workspace) `
-            -e CI=%CI% `
-            -e GITHUB_ACTIONS=%GITHUB_ACTIONS% `
-            -e SWIFT_VERSION="${{ matrix.config.swift_version }}" `
-            -e setup_command_expression=%setup_command_expression% `
-            ${{ matrix.config.image }} `
-            cmd /s /c  "swift --version & $($setup_command_expression) ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}"
+
+          $docker_args = @(
+              "run", "-v", "${{ github.workspace }}:$($workspace)",
+              "-w", $workspace,
+              "-e", "CI=$env:CI",
+              "-e", "GITHUB_ACTIONS=$env:GITHUB_ACTIONS",
+              "-e", "SWIFT_VERSION=${{ matrix.config.swift_version }}"
+          )
+
+          $env_args = @()
+          $env_json = '${{ toJson(matrix.config.env) }}'
+          if ($env_json -ne '{}') {
+              $env_obj = $env_json | ConvertFrom-Json
+              $env_obj.PSObject.Properties | ForEach-Object {
+                  $env_args += "-e"
+                  $env_args += "$($_.Name)=$($_.Value)"
+              }
+          }
+          $docker_args += $env_args
+
+          $docker_args += @("${{ matrix.config.image }}", "cmd", "/s", "/c", "swift --version & $($setup_command_expression) ${{ matrix.config.command }} ${{ matrix.config.command_arguments }}")
+
+          Write-Host "Executing Docker command: docker $($docker_args -join ' ')"
+          & docker @docker_args
     env:
       SWIFT_VERSION: ${{ matrix.config.swift_version }}
