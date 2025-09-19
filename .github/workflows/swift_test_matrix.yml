@@ -49,7 +49,6 @@ jobs:
             "-e" "CI=$CI"
             "-e" "GITHUB_ACTIONS=$GITHUB_ACTIONS"
             "-e" "SWIFT_VERSION=${{ matrix.config.swift_version }}"
-            "-e" "setup_command_expression=$setup_command_expression"
             "-e" "workspace=$workspace"
           )
 
@@ -81,8 +80,7 @@ jobs:
               "-w", $workspace,
               "-e", "CI=%CI%",
               "-e", "GITHUB_ACTIONS=%GITHUB_ACTIONS%",
-              "-e", "SWIFT_VERSION=${{ matrix.config.swift_version }}",
-              "-e", "setup_command_expression=%setup_command_expression%"
+              "-e", "SWIFT_VERSION=${{ matrix.config.swift_version }}"
           )
 
           $env_args = @()
