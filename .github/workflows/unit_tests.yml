@@ -149,6 +149,7 @@ jobs:
         env:
           MATRIX_LINUX_SETUP_COMMAND: "swift --version"
           MATRIX_LINUX_COMMAND: "swift test"
+          MATRIX_LINUX_ENV_VARS: "TEST_VAR_DEBUG=1,TEST_VAR_LOG_LEVEL=info"  # TODO: remove, testing
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_9_COMMAND_ARGUMENTS: ${{ inputs.linux_5_9_arguments_override }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
@@ -164,6 +165,7 @@ jobs:
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
           MATRIX_LINUX_NIGHTLY_MAIN_COMMAND_ARGUMENTS: ${{ inputs.linux_nightly_main_arguments_override }}
           MATRIX_WINDOWS_COMMAND: "swift test"
+          MATRIX_WINDOWS_ENV_VARS: "TEST_VAR_DEBUG=1,TEST_VAR_LOG_LEVEL=info"  # TODO: remove, testing
           MATRIX_WINDOWS_6_0_ENABLED: ${{ inputs.windows_6_0_enabled }}
           MATRIX_WINDOWS_6_0_COMMAND_ARGUMENTS: ${{ inputs.windows_6_0_arguments_override }}
           MATRIX_WINDOWS_6_1_ENABLED: ${{ inputs.windows_6_1_enabled }}
