@@ -170,7 +170,7 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "unit-test-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        run: echo "unit-test-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_SETUP_COMMAND: "swift --version"
           MATRIX_LINUX_COMMAND: "swift test"
@@ -212,7 +212,7 @@ jobs:
     name: Unit tests
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@matrix_custom_env_vars
     with:
       name: "Unit tests"
       matrix_string: '${{ needs.construct-matrix.outputs.unit-test-matrix }}'

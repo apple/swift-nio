@@ -89,7 +89,7 @@ jobs:
     name: Cxx interop
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@matrix_custom_env_vars
     with:
       name: "Cxx interop"
       matrix_string: '${{ needs.construct-matrix.outputs.cxx-interop-matrix }}'
