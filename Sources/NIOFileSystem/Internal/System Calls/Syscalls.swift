@@ -368,8 +368,8 @@ internal func system_futimens(
 /// fdopendir(3): Opens a directory stream for the file descriptor
 internal func libc_fdopendir(
     _ fd: FileDescriptor.RawValue
-) -> CInterop.DirPointer {
-    fdopendir(fd)!
+) -> CInterop.DirPointer? {
+    fdopendir(fd)
 }
 
 /// readdir(3): Returns a pointer to the next directory entry

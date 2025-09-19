@@ -146,3 +146,24 @@ public func valueOrErrno<R>(
         }
     }
 }
+
+/// As `valueOrErrno` but returns `Errno` if result is nil.
+@_spi(Testing)
+public func unwrapValueOrErrno<R>(
+    retryOnInterrupt: Bool = true,
+    _ fn: () -> R?
+) -> Result<R, Errno> {
+    while true {
+        Errno.clear()
+        if let result = fn() {
+            return .success(result)
+        } else {
+            let errno = Errno._current
+            if errno == .interrupted, retryOnInterrupt {
+                continue
+            } else {
+                return .failure(errno)
+            }
+        }
+    }
+}
