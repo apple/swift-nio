@@ -67,8 +67,8 @@ windows_nightly_main_runner="windows-2022"
 windows_nightly_main_container_image="swiftlang/swift:nightly-main-windowsservercore-ltsc2022"
 
 # Get pre-parsed environment variables JSON
-linux_env_vars_json="${MATRIX_LINUX_ENV_VARS_JSON:-{}}"
-windows_env_vars_json="${MATRIX_WINDOWS_ENV_VARS_JSON:-{}}"
+linux_env_vars_json="${MATRIX_LINUX_ENV_VARS_JSON:-"{}"}"
+windows_env_vars_json="${MATRIX_WINDOWS_ENV_VARS_JSON:-"{}"}"
 
 # Create matrix from inputs
 matrix='{"config": []}'
