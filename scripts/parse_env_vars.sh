@@ -3,7 +3,7 @@
 ##
 ## This source file is part of the SwiftNIO open source project
 ##
-## Copyright (c) 2024 Apple Inc. and the SwiftNIO project authors
+## Copyright (c) 2025 Apple Inc. and the SwiftNIO project authors
 ## Licensed under Apache License v2.0
 ##
 ## See LICENSE.txt for license information
@@ -12,6 +12,7 @@
 ## SPDX-License-Identifier: Apache-2.0
 ##
 ##===----------------------------------------------------------------------===##
+
 env_vars="${ENV_VARS:=""}"
 env_var_pair_separator="${ENV_VAR_PAIR_SEPARATOR:="="}"
 env_var_list_separator="${ENV_VAR_LIST_SEPARATOR:=","}"
