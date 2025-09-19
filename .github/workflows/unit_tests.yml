@@ -133,6 +133,31 @@ on:
         description: "The arguments passed to swift test in the Windows nightly main Swift version matrix job."
         default: ""
 
+      linux_env_vars:
+        type: string
+        description: "Environment variables for Linux jobs (e.g., 'DEBUG=1,LOG_LEVEL=info')."
+        default: ""
+      linux_env_var_pair_separator:
+        type: string
+        description: "Separator between key and value for Linux environment variables."
+        default: "="
+      linux_env_var_list_separator:
+        type: string
+        description: "Separator between environment variable pairs for Linux."
+        default: ","
+      windows_env_vars:
+        type: string
+        description: "Environment variables for Windows jobs (e.g., 'DEBUG=1,LOG_LEVEL=info')."
+        default: ""
+      windows_env_var_pair_separator:
+        type: string
+        description: "Separator between key and value for Windows environment variables."
+        default: "="
+      windows_env_var_list_separator:
+        type: string
+        description: "Separator between environment variable pairs for Windows."
+        default: ","
+
 jobs:
   construct-matrix:
     name: Construct unit test matrix
@@ -150,6 +175,9 @@ jobs:
           MATRIX_LINUX_SETUP_COMMAND: "swift --version"
           MATRIX_LINUX_COMMAND: "swift test"
           MATRIX_LINUX_ENV_VARS: "TEST_VAR_DEBUG=1,TEST_VAR_LOG_LEVEL=info"  # TODO: remove, testing
+        #   MATRIX_LINUX_ENV_VARS: ${{ inputs.linux_env_vars }}
+          MATRIX_LINUX_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.linux_env_var_pair_separator }}
+          MATRIX_LINUX_ENV_VAR_LIST_SEPARATOR: ${{ inputs.linux_env_var_list_separator }}
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_9_COMMAND_ARGUMENTS: ${{ inputs.linux_5_9_arguments_override }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
@@ -166,6 +194,9 @@ jobs:
           MATRIX_LINUX_NIGHTLY_MAIN_COMMAND_ARGUMENTS: ${{ inputs.linux_nightly_main_arguments_override }}
           MATRIX_WINDOWS_COMMAND: "swift test"
           MATRIX_WINDOWS_ENV_VARS: "TEST_VAR_DEBUG=1,TEST_VAR_LOG_LEVEL=info"  # TODO: remove, testing
+        #   MATRIX_WINDOWS_ENV_VARS: ${{ inputs.windows_env_vars }}
+          MATRIX_WINDOWS_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.windows_env_var_pair_separator }}
+          MATRIX_WINDOWS_ENV_VAR_LIST_SEPARATOR: ${{ inputs.windows_env_var_list_separator }}
           MATRIX_WINDOWS_6_0_ENABLED: ${{ inputs.windows_6_0_enabled }}
           MATRIX_WINDOWS_6_0_COMMAND_ARGUMENTS: ${{ inputs.windows_6_0_arguments_override }}
           MATRIX_WINDOWS_6_1_ENABLED: ${{ inputs.windows_6_1_enabled }}
