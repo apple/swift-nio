@@ -87,6 +87,10 @@ on:
         type: string
         description: "The arguments passed to swift test in the Xcode version 16.4 job."
         default: ""
+      xcode_16_4_setup_command:
+        type: string
+        description: "The command(s) to be executed before all other work."
+        default: ""
       xcode_26_0_enabled:
         type: boolean
         description: "Boolean to enable the Xcode version 26.0 jobs. Defaults to true."
@@ -100,10 +104,6 @@ on:
         description: "The arguments passed to swift test in the Xcode version 26.0 job."
         default: ""
       xcode_26_0_setup_command:
-        type: string
-        description: "The command(s) to be executed before all other work."
-        default: ""
-      xcode_16_4_setup_command:
         type: string
         description: "The command(s) to be executed before all other work."
         default: ""
@@ -233,7 +233,7 @@ jobs:
             xcode_16_4_build_arguments_override="${MATRIX_MACOS_16_4_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_4_test_arguments_override="${MATRIX_MACOS_16_4_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_16_4_setup_command="${MATRIX_MACOS_16_4_SETUP_COMMAND:=""}"
-            xcode_26_0_enabled="${MATRIX_MACOS_12_30ENABLED:=true}"
+            xcode_26_0_enabled="${MATRIX_MACOS_26_0_ENABLED:=true}"
             xcode_26_0_build_arguments_override="${MATRIX_MACOS_26_0_BUILD_ARGUMENTS_OVERRIDE:=""}"
             xcode_26_0_test_arguments_override="${MATRIX_MACOS_26_0_TEST_ARGUMENTS_OVERRIDE:=""}"
             xcode_26_0_setup_command="${MATRIX_MACOS_26_0_SETUP_COMMAND:=""}"

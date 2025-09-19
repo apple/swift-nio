@@ -26,6 +26,7 @@ command_5_9="${COMMAND_OVERRIDE_5_9:=""}"
 command_5_10="${COMMAND_OVERRIDE_5_10:=""}"
 command_6_0="${COMMAND_OVERRIDE_6_0:=""}"
 command_6_1="${COMMAND_OVERRIDE_6_1:=""}"
+command_6_2="${COMMAND_OVERRIDE_6_2:=""}"
 command_nightly_next="${COMMAND_OVERRIDE_NIGHTLY_NEXT:=""}"
 command_nightly_main="${COMMAND_OVERRIDE_NIGHTLY_MAIN:=""}"
 
@@ -41,6 +42,9 @@ elif [[ "$swift_version" == "6.0" ]] && [[ -n "$command_6_0" ]]; then
 elif [[ "$swift_version" == "6.1" ]] && [[ -n "$command_6_1" ]]; then
   log "Running 6.1 command override"
   eval "$command_6_1"
+elif [[ "$swift_version" == "6.2" ]] && [[ -n "$command_6_2" ]]; then
+  log "Running 6.2 command override"
+  eval "$command_6_2"
 elif [[ "$swift_version" == "nightly-next" ]] && [[ -n "$command_nightly_next" ]]; then
   log "Running nightly 6.1 command override"
   eval "$command_nightly_next"
