@@ -12,7 +12,7 @@
 ## SPDX-License-Identifier: Apache-2.0
 ##
 ##===----------------------------------------------------------------------===##
-env_vars="${$ENV_VARS:=""}"
+env_vars="${ENV_VARS:=""}"
 env_var_pair_separator="${ENV_VAR_PAIR_SEPARATOR:="="}"
 env_var_list_separator="${ENV_VAR_LIST_SEPARATOR:=","}"
 
