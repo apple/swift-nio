@@ -174,8 +174,7 @@ jobs:
         env:
           MATRIX_LINUX_SETUP_COMMAND: "swift --version"
           MATRIX_LINUX_COMMAND: "swift test"
-          MATRIX_LINUX_ENV_VARS: "TEST_VAR_DEBUG=1,TEST_VAR_LOG_LEVEL=info"  # TODO: remove, testing
-        #   MATRIX_LINUX_ENV_VARS: ${{ inputs.linux_env_vars }}
+          MATRIX_LINUX_ENV_VARS: ${{ inputs.linux_env_vars }}
           MATRIX_LINUX_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.linux_env_var_pair_separator }}
           MATRIX_LINUX_ENV_VAR_LIST_SEPARATOR: ${{ inputs.linux_env_var_list_separator }}
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
@@ -193,8 +192,7 @@ jobs:
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
           MATRIX_LINUX_NIGHTLY_MAIN_COMMAND_ARGUMENTS: ${{ inputs.linux_nightly_main_arguments_override }}
           MATRIX_WINDOWS_COMMAND: "swift test"
-          MATRIX_WINDOWS_ENV_VARS: "TEST_VAR_DEBUG=1,TEST_VAR_LOG_LEVEL=info"  # TODO: remove, testing
-        #   MATRIX_WINDOWS_ENV_VARS: ${{ inputs.windows_env_vars }}
+          MATRIX_WINDOWS_ENV_VARS: ${{ inputs.windows_env_vars }}
           MATRIX_WINDOWS_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.windows_env_var_pair_separator }}
           MATRIX_WINDOWS_ENV_VAR_LIST_SEPARATOR: ${{ inputs.windows_env_var_list_separator }}
           MATRIX_WINDOWS_6_0_ENABLED: ${{ inputs.windows_6_0_enabled }}
