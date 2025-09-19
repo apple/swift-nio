@@ -11,7 +11,7 @@ jobs:
   static-sdk:
     name: Static SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@static_sdk_allow_custom_args
     with:
       name: "Static SDK"
       matrix_string: >-

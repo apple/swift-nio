@@ -21,12 +21,12 @@ jobs:
   cxx-interop:
     name: Cxx interop
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/cxx_interop.yml@main
+    uses: apple/swift-nio/.github/workflows/cxx_interop.yml@static_sdk_allow_custom_args
 
   benchmarks:
     name: Benchmarks
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/benchmarks.yml@main
+    uses: apple/swift-nio/.github/workflows/benchmarks.yml@static_sdk_allow_custom_args
     with:
       benchmark_package_path: "Benchmarks"
 
@@ -50,7 +50,7 @@ jobs:
     name: Integration tests
     needs: construct-integration-test-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@static_sdk_allow_custom_args
     with:
       name: "Integration tests"
       matrix_string: '${{ needs.construct-integration-test-matrix.outputs.integration-test-matrix }}'
@@ -58,17 +58,17 @@ jobs:
   static-sdk:
     name: Static Linux Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/static_sdk.yml@main
+    uses: apple/swift-nio/.github/workflows/static_sdk.yml@static_sdk_allow_custom_args
 
   wasm-sdk:
     name: WebAssembly Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/wasm_sdk.yml@main
+    uses: apple/swift-nio/.github/workflows/wasm_sdk.yml@static_sdk_allow_custom_args
 
   macos-tests:
     name: macOS tests
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/macos_tests.yml@main
+    uses: apple/swift-nio/.github/workflows/macos_tests.yml@static_sdk_allow_custom_args
     with:
       runner_pool: nightly
       build_scheme: swift-nio-Package
@@ -82,4 +82,4 @@ jobs:
 
   release-builds:
     name: Release builds
-    uses: apple/swift-nio/.github/workflows/release_builds.yml@main
+    uses: apple/swift-nio/.github/workflows/release_builds.yml@static_sdk_allow_custom_args
