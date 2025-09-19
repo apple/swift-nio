@@ -16,9 +16,6 @@
 # Parameters
 linux_command="$MATRIX_LINUX_COMMAND"  # required if any Linux pipeline is enabled
 linux_setup_command="$MATRIX_LINUX_SETUP_COMMAND"
-linux_env_vars="$MATRIX_LINUX_ENV_VARS"
-linux_env_var_pair_separator="${MATRIX_LINUX_ENV_VAR_PAIR_SEPARATOR:="="}"
-linux_env_var_list_separator="${MATRIX_LINUX_ENV_VAR_LIST_SEPARATOR:=","}"
 linux_5_9_enabled="${MATRIX_LINUX_5_9_ENABLED:=false}"
 linux_5_9_command_arguments="$MATRIX_LINUX_5_9_COMMAND_ARGUMENTS"
 linux_5_10_enabled="${MATRIX_LINUX_5_10_ENABLED:=true}"
@@ -36,9 +33,6 @@ linux_nightly_main_command_arguments="$MATRIX_LINUX_NIGHTLY_MAIN_COMMAND_ARGUMEN
 
 windows_command="$MATRIX_WINDOWS_COMMAND"  # required if any Windows pipeline is enabled
 windows_setup_command="$MATRIX_WINDOWS_SETUP_COMMAND"
-windows_env_vars="$MATRIX_WINDOWS_ENV_VARS"
-windows_env_var_pair_separator="${MATRIX_WINDOWS_ENV_VAR_PAIR_SEPARATOR:="="}"
-windows_env_var_list_separator="${MATRIX_WINDOWS_ENV_VAR_LIST_SEPARATOR:=","}"
 windows_6_0_enabled="${MATRIX_WINDOWS_6_0_ENABLED:=false}"
 windows_6_1_enabled="${MATRIX_WINDOWS_6_1_ENABLED:=false}"
 windows_6_2_enabled="${MATRIX_WINDOWS_6_2_ENABLED:=false}"
@@ -49,10 +43,6 @@ windows_nightly_next_enabled="${MATRIX_WINDOWS_NIGHTLY_NEXT_ENABLED:=${MATRIX_WI
 windows_nightly_next_command_arguments="${MATRIX_WINDOWS_NIGHTLY_NEXT_COMMAND_ARGUMENTS:=${MATRIX_WINDOWS_NIGHTLY_6_1_COMMAND_ARGUMENTS}}"
 windows_nightly_main_enabled="${MATRIX_WINDOWS_NIGHTLY_MAIN_ENABLED:=false}"
 windows_nightly_main_command_arguments="$MATRIX_WINDOWS_NIGHTLY_MAIN_COMMAND_ARGUMENTS"
-
-# Specifying custom environment variables example:
-#   MATRIX_WINDOWS_ENV_VARS="BUILD:Release;ARCH:x64" MATRIX_WINDOWS_ENV_VAR_PAIR_SEPARATOR=":" MATRIX_WINDOWS_ENV_VAR_LIST_SEPARATOR=";" ./generate_matrix.sh
-
 
 # Defaults
 linux_runner="ubuntu-latest"
@@ -75,39 +65,9 @@ windows_nightly_next_container_image="swiftlang/swift:nightly-6.2-windowsserverc
 windows_nightly_main_runner="windows-2022"
 windows_nightly_main_container_image="swiftlang/swift:nightly-main-windowsservercore-ltsc2022"
 
-# Function to parse environment variables and convert to JSON object
-parse_env_vars() {
-  local env_vars="$1"
-  local pair_separator="$2"
-  local list_separator="$3"
-
-  if [[ -z "$env_vars" ]]; then
-    echo "{}"
-    return
-  fi
-
-  local json_obj="{}"
-
-  # Split the env_vars string by list_separator
-  IFS="$list_separator" read -ra env_pairs <<< "$env_vars"
-
-  for pair in "${env_pairs[@]}"; do
-    # Split each pair by pair_separator
-    IFS="$pair_separator" read -ra kv <<< "$pair"
-    if [[ ${#kv[@]} -eq 2 ]]; then
-      local key="${kv[0]}"
-      local value="${kv[1]}"
-      # Add to JSON object using jq
-      json_obj=$(echo "$json_obj" | jq -c --arg key "$key" --arg value "$value" '. + {($key): $value}')
-    fi
-  done
-
-  echo "$json_obj"
-}
-
-# Parse environment variables for Linux and Windows
-linux_env_vars_json=$(parse_env_vars "$linux_env_vars" "$linux_env_var_pair_separator" "$linux_env_var_list_separator")
-windows_env_vars_json=$(parse_env_vars "$windows_env_vars" "$windows_env_var_pair_separator" "$windows_env_var_list_separator")
+# Get pre-parsed environment variables JSON
+linux_env_vars_json="${MATRIX_LINUX_ENV_VARS_JSON:-{}}"
+windows_env_vars_json="${MATRIX_WINDOWS_ENV_VARS_JSON:-{}}"
 
 # Create matrix from inputs
 matrix='{"config": []}'

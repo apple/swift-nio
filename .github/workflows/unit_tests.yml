@@ -170,13 +170,18 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "unit-test-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        run: |
+          # Parse Linux environment variables
+          linux_env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/parse_env_vars.sh | ENV_VARS="${{ inputs.linux_env_vars }}" ENV_VAR_PAIR_SEPARATOR="${{ inputs.linux_env_var_pair_separator }}" ENV_VAR_LIST_SEPARATOR="${{ inputs.linux_env_var_list_separator }}" bash)
+
+          # Parse Windows environment variables
+          windows_env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/parse_env_vars.sh | ENV_VARS="${{ inputs.windows_env_vars }}" ENV_VAR_PAIR_SEPARATOR="${{ inputs.windows_env_var_pair_separator }}" ENV_VAR_LIST_SEPARATOR="${{ inputs.windows_env_var_list_separator }}" bash)
+
+          # Generate matrix
+          echo "unit-test-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/generate_matrix.sh | MATRIX_LINUX_ENV_VARS_JSON="${linux_env_vars_json}" MATRIX_WINDOWS_ENV_VARS_JSON="${windows_env_vars_json}" bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_SETUP_COMMAND: "swift --version"
           MATRIX_LINUX_COMMAND: "swift test"
-          MATRIX_LINUX_ENV_VARS: ${{ inputs.linux_env_vars }}
-          MATRIX_LINUX_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.linux_env_var_pair_separator }}
-          MATRIX_LINUX_ENV_VAR_LIST_SEPARATOR: ${{ inputs.linux_env_var_list_separator }}
           MATRIX_LINUX_5_9_ENABLED: ${{ inputs.linux_5_9_enabled }}
           MATRIX_LINUX_5_9_COMMAND_ARGUMENTS: ${{ inputs.linux_5_9_arguments_override }}
           MATRIX_LINUX_5_10_ENABLED: ${{ inputs.linux_5_10_enabled }}
@@ -192,9 +197,6 @@ jobs:
           MATRIX_LINUX_NIGHTLY_MAIN_ENABLED: ${{ inputs.linux_nightly_main_enabled }}
           MATRIX_LINUX_NIGHTLY_MAIN_COMMAND_ARGUMENTS: ${{ inputs.linux_nightly_main_arguments_override }}
           MATRIX_WINDOWS_COMMAND: "swift test"
-          MATRIX_WINDOWS_ENV_VARS: ${{ inputs.windows_env_vars }}
-          MATRIX_WINDOWS_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.windows_env_var_pair_separator }}
-          MATRIX_WINDOWS_ENV_VAR_LIST_SEPARATOR: ${{ inputs.windows_env_var_list_separator }}
           MATRIX_WINDOWS_6_0_ENABLED: ${{ inputs.windows_6_0_enabled }}
           MATRIX_WINDOWS_6_0_COMMAND_ARGUMENTS: ${{ inputs.windows_6_0_arguments_override }}
           MATRIX_WINDOWS_6_1_ENABLED: ${{ inputs.windows_6_1_enabled }}

@@ -193,6 +193,19 @@ on:
         description: "The runner pool which will be requested."
         default: "nightly"
 
+      env_vars:
+        type: string
+        description: "Environment variables for jobs (e.g., 'DEBUG=1,LOG_LEVEL=info')."
+        default: ""
+      env_var_pair_separator:
+        type: string
+        description: "Separator between key and value for environment variables."
+        default: "="
+      env_var_list_separator:
+        type: string
+        description: "Separator between environment variable pairs."
+        default: ","
+
 jobs:
   construct-matrix:
     name: Construct Darwin matrix
@@ -206,6 +219,9 @@ jobs:
           persist-credentials: false
       - id: generate-matrix
         run: |
+          # Parse environment variables using the parse_env_vars script
+          env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/parse_env_vars.sh | ENV_VARS="$MATRIX_ENV_VARS" ENV_VAR_PAIR_SEPARATOR="$MATRIX_ENV_VAR_PAIR_SEPARATOR" ENV_VAR_LIST_SEPARATOR="$MATRIX_ENV_VAR_LIST_SEPARATOR" bash)
+
           cat >> "$GITHUB_OUTPUT" << EOM
           darwin-matrix=$(
             runner_pool="${MATRIX_RUNNER_POOL:="nightly"}"
@@ -255,7 +271,8 @@ jobs:
                 --arg build_arguments_override "$xcode_15_4_build_arguments_override"  \
                 --arg test_arguments_override "$xcode_15_4_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
-                '.config[.config| length] |= . + { "name": "Xcode 15.4", "xcode_version": "15.4", "xcode_app": "Xcode_15.4.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Xcode 15.4", "xcode_version": "15.4", "xcode_app": "Xcode_15.4.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
             if [[ "$xcode_16_0_enabled" == "true" ]]; then
@@ -264,7 +281,8 @@ jobs:
                 --arg build_arguments_override "$xcode_16_0_build_arguments_override"  \
                 --arg test_arguments_override "$xcode_16_0_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
-                '.config[.config| length] |= . + { "name": "Xcode 16.0", "xcode_version": "16.0", "xcode_app": "Xcode_16.0.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Xcode 16.0", "xcode_version": "16.0", "xcode_app": "Xcode_16.0.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
             if [[ "$xcode_16_1_enabled" == "true" ]]; then
@@ -273,7 +291,8 @@ jobs:
                 --arg build_arguments_override "$xcode_16_1_build_arguments_override"  \
                 --arg test_arguments_override "$xcode_16_1_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
-                '.config[.config| length] |= . + { "name": "Xcode 16.1", "xcode_version": "16.1", "xcode_app": "Xcode_16.1.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Xcode 16.1", "xcode_version": "16.1", "xcode_app": "Xcode_16.1.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
             if [[ "$xcode_16_2_enabled" == "true" ]]; then
@@ -282,7 +301,8 @@ jobs:
                 --arg build_arguments_override "$xcode_16_2_build_arguments_override"  \
                 --arg test_arguments_override "$xcode_16_2_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
-                '.config[.config| length] |= . + { "name": "Xcode 16.2", "xcode_version": "16.2", "xcode_app": "Xcode_16.2.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Xcode 16.2", "xcode_version": "16.2", "xcode_app": "Xcode_16.2.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
             if [[ "$xcode_16_3_enabled" == "true" ]]; then
@@ -291,7 +311,8 @@ jobs:
                 --arg build_arguments_override "$xcode_16_3_build_arguments_override"  \
                 --arg test_arguments_override "$xcode_16_3_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
-                '.config[.config| length] |= . + { "name": "Xcode 16.3", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Xcode 16.3", "xcode_version": "16.3", "xcode_app": "Xcode_16.3.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
             if [[ "$xcode_16_4_enabled" == "true" ]]; then
@@ -300,7 +321,8 @@ jobs:
                 --arg build_arguments_override "$xcode_16_4_build_arguments_override"  \
                 --arg test_arguments_override "$xcode_16_4_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
-                '.config[.config| length] |= . + { "name": "Xcode 16.4", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Xcode 16.4", "xcode_version": "16.4", "xcode_app": "Xcode_16.4.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
             if [[ "$xcode_26_0_enabled" == "true" ]]; then
@@ -309,7 +331,8 @@ jobs:
                 --arg build_arguments_override "$xcode_26_0_build_arguments_override"  \
                 --arg test_arguments_override "$xcode_26_0_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
-                '.config[.config| length] |= . + { "name": "Xcode 26.0", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Xcode 26.0", "xcode_version": "26.0", "xcode_app": "Xcode_26.0.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
             if [[ "$xcode_latest_beta_enabled" == "true" ]]; then
@@ -318,13 +341,17 @@ jobs:
                 --arg build_arguments_override "$xcode_latest_beta_build_arguments_override"  \
                 --arg test_arguments_override "$xcode_latest_beta_test_arguments_override"  \
                 --arg runner_pool "$runner_pool"  \
-                '.config[.config| length] |= . + { "name": "Xcode latest beta", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool }')
+                --argjson env_vars "$env_vars_json" \
+                '.config[.config| length] |= . + { "name": "Xcode latest beta", "xcode_version": "latest beta", "xcode_app": "Xcode-latest.app", "setup_command": $setup_command, "build_arguments_override": $build_arguments_override, "test_arguments_override": $test_arguments_override, "os": "sequoia", "arch": "ARM64", "pool": $runner_pool, "env": $env_vars }')
             fi
 
             echo "$matrix" | jq -c
           )"
           EOM
         env:
+          MATRIX_ENV_VARS: ${{ inputs.env_vars }}
+          MATRIX_ENV_VAR_PAIR_SEPARATOR: ${{ inputs.env_var_pair_separator }}
+          MATRIX_ENV_VAR_LIST_SEPARATOR: ${{ inputs.env_var_list_separator }}
           MATRIX_RUNNER_POOL: ${{ inputs.runner_pool }}
           MATRIX_MACOS_15_4_ENABLED: ${{ inputs.xcode_15_4_enabled }}
           MATRIX_MACOS_15_4_BUILD_ARGUMENTS_OVERRIDE: ${{ inputs.xcode_15_4_build_arguments_override }}
