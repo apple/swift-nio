@@ -172,10 +172,10 @@ jobs:
       - id: generate-matrix
         run: |
           # Parse Linux environment variables
-          linux_env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/parse_env_vars.sh | ENV_VARS="${{ inputs.linux_env_vars }}" ENV_VAR_PAIR_SEPARATOR="${{ inputs.linux_env_var_pair_separator }}" ENV_VAR_LIST_SEPARATOR="${{ inputs.linux_env_var_list_separator }}" bash)
+          linux_env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/parse_env_vars.sh | ENV_VARS="${{ inputs.linux_env_vars }}" ENV_VAR_PAIR_SEPARATOR="${{ inputs.linux_env_var_pair_separator }}" ENV_VAR_LIST_SEPARATOR="${{ inputs.linux_env_var_list_separator }}" bash)
 
           # Parse Windows environment variables
-          windows_env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/parse_env_vars.sh | ENV_VARS="${{ inputs.windows_env_vars }}" ENV_VAR_PAIR_SEPARATOR="${{ inputs.windows_env_var_pair_separator }}" ENV_VAR_LIST_SEPARATOR="${{ inputs.windows_env_var_list_separator }}" bash)
+          windows_env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/parse_env_vars.sh | ENV_VARS="${{ inputs.windows_env_vars }}" ENV_VAR_PAIR_SEPARATOR="${{ inputs.windows_env_var_pair_separator }}" ENV_VAR_LIST_SEPARATOR="${{ inputs.windows_env_var_list_separator }}" bash)
 
           # Generate matrix
           echo "unit-test-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/generate_matrix.sh | MATRIX_LINUX_ENV_VARS_JSON="${linux_env_vars_json}" MATRIX_WINDOWS_ENV_VARS_JSON="${windows_env_vars_json}" bash)" >> "$GITHUB_OUTPUT"

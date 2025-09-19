@@ -220,7 +220,7 @@ jobs:
       - id: generate-matrix
         run: |
           # Parse environment variables using the parse_env_vars script
-          env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/parse_env_vars.sh | ENV_VARS="$MATRIX_ENV_VARS" ENV_VAR_PAIR_SEPARATOR="$MATRIX_ENV_VAR_PAIR_SEPARATOR" ENV_VAR_LIST_SEPARATOR="$MATRIX_ENV_VAR_LIST_SEPARATOR" bash)
+          env_vars_json=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/matrix_custom_env_vars/scripts/parse_env_vars.sh | ENV_VARS="$MATRIX_ENV_VARS" ENV_VAR_PAIR_SEPARATOR="$MATRIX_ENV_VAR_PAIR_SEPARATOR" ENV_VAR_LIST_SEPARATOR="$MATRIX_ENV_VAR_LIST_SEPARATOR" bash)
 
           cat >> "$GITHUB_OUTPUT" << EOM
           darwin-matrix=$(
