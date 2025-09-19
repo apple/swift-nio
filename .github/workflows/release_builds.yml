@@ -117,7 +117,7 @@ jobs:
     name: Release builds
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@static_sdk_allow_custom_args
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Release builds"
       matrix_string: '${{ needs.construct-matrix.outputs.release-build-matrix }}'

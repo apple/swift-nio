@@ -159,7 +159,7 @@ jobs:
     name: Unit tests
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@static_sdk_allow_custom_args
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Unit tests"
       matrix_string: '${{ needs.construct-matrix.outputs.unit-test-matrix }}'
