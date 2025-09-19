@@ -93,8 +93,8 @@ on:
         default: ""
       xcode_26_0_enabled:
         type: boolean
-        description: "Boolean to enable the Xcode version 26.0 jobs. Defaults to false."
-        default: false
+        description: "Boolean to enable the Xcode version 26.0 jobs. Defaults to true."
+        default: true
       xcode_26_0_build_arguments_override:
         type: string
         description: "The arguments passed to swift build in the Xcode version 26.0 job."
