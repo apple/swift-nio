@@ -112,7 +112,7 @@ jobs:
     name: Benchmarks
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@matrix_custom_env_vars
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Benchmarks"
       matrix_string: '${{ needs.construct-matrix.outputs.benchmarks-matrix }}'
