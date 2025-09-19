@@ -105,7 +105,7 @@ jobs:
         with:
           persist-credentials: false
       - id: generate-matrix
-        run: echo "release-build-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/ff-update-ci-scripts/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
+        run: echo "release-build-matrix=$(curl -s --retry 3 https://raw.githubusercontent.com/apple/swift-nio/main/scripts/generate_matrix.sh | bash)" >> "$GITHUB_OUTPUT"
         env:
           MATRIX_LINUX_SETUP_COMMAND: "swift --version"
           MATRIX_LINUX_COMMAND: "swift build -c release"
@@ -137,7 +137,7 @@ jobs:
     name: Release builds
     needs: construct-matrix
     # Workaround https://github.com/nektos/act/issues/1875
-    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@ff-update-ci-scripts
+    uses: apple/swift-nio/.github/workflows/swift_test_matrix.yml@main
     with:
       name: "Release builds"
       matrix_string: '${{ needs.construct-matrix.outputs.release-build-matrix }}'
