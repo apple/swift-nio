@@ -86,6 +86,7 @@ jobs:
     with:
       runner_pool: general
       build_scheme: swift-nio-Package
+      env_vars: "TEST_VAR_DEBUG=1,TEST_VAR_LOG_LEVEL=info"  # TODO: remove, testing
       xcode_16_2_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
       xcode_16_3_build_arguments_override: "-Xswiftc -Xfrontend -Xswiftc -require-explicit-sendable"
 
@@ -93,6 +94,8 @@ jobs:
     name: Static Linux Swift SDK
     # Workaround https://github.com/nektos/act/issues/1875
     uses: apple/swift-nio/.github/workflows/static_sdk.yml@matrix_custom_env_vars
+    with:
+      env_vars: "TEST_VAR_DEBUG=1,TEST_VAR_LOG_LEVEL=info"  # TODO: remove, testing
 
   wasm-sdk:
     name: WebAssembly Swift SDK
